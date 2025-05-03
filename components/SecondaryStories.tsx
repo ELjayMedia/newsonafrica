@@ -1,0 +1,86 @@
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { Clock } from "lucide-react"
+import { memo, useMemo } from "react"
+import { generateBlurDataURL } from "@/utils/lazyLoad"
+
+interface SecondaryStoriesProps {
+  posts: Array<{
+    id: string
+    title: string
+    slug: string
+    date: string
+    featuredImage?: {
+      node: {
+        sourceUrl: string
+      }
+    }
+  }>
+  layout?: "horizontal" | "vertical"
+}
+
+const formatDate = (date: string) => {
+  const now = new Date()
+  const postDate = new Date(date)
+  const diffInHours = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60))
+  return diffInHours < 24
+    ? `${diffInHours}h ago`
+    : postDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+export const SecondaryStories = memo(function SecondaryStories({ posts, layout = "vertical" }: SecondaryStoriesProps) {
+  const formattedPosts = useMemo(() => {
+    if (!posts?.length) return []
+
+    return posts.slice(0, 3).map((post) => ({
+      ...post,
+      formattedDate: formatDate(post.date),
+      blurDataURL: generateBlurDataURL(400, 225),
+    }))
+  }, [posts])
+
+  if (!posts?.length) return null
+
+  return (
+    <div
+      className={`grid gap-6 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"}`}
+    >
+      {formattedPosts.map((post, index) => (
+        <Link
+          key={post.id}
+          href={`/post/${post.slug}`}
+          className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200`}
+        >
+          {post.featuredImage && (
+            <div
+              className={`relative ${layout === "horizontal" ? "w-1/3 md:w-full h-24 md:h-auto md:aspect-video" : "w-full aspect-video"} overflow-hidden`}
+            >
+              <Image
+                src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                alt={post.title}
+                layout="fill"
+                objectFit="cover"
+                className="rounded-md transition-transform duration-300 group-hover:scale-105"
+                priority={index === 0}
+                loading={index === 0 ? "eager" : "lazy"}
+                placeholder="blur"
+                blurDataURL={post.blurDataURL}
+              />
+            </div>
+          )}
+          <div className={`p-2 flex-1 flex flex-col ${layout === "horizontal" ? "ml-4 md:ml-0" : ""}`}>
+            <h3 className="text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+              {post.title}
+            </h3>
+            <div className="flex items-center gap-1 text-xs text-gray-500 mt-auto">
+              <Clock className="h-3 w-3" />
+              <span>{post.formattedDate}</span>
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  )
+})
