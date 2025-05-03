@@ -1,0 +1,105 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Facebook, Twitter, Mail, LinkIcon, Share2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { LinkedInShare } from "./LinkedInShare"
+
+interface SocialShareProps {
+  url: string
+  title: string
+  description: string
+  className?: string
+}
+
+export function SocialShare({ url, title, description, className = "" }: SocialShareProps) {
+  const [isMobile, setIsMobile] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  const encodedUrl = encodeURIComponent(url)
+  const encodedTitle = encodeURIComponent(title)
+
+  const shareLinks = {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&via=newsonafrica_&related=newsonafrica_`,
+  }
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Link copied to clipboard!")
+    })
+  }
+
+  const shareByEmail = () => {
+    window.location.href = `mailto:?subject=${encodedTitle}&body=${encodedUrl}`
+  }
+
+  const toggleShareOptions = () => setShowOptions(!showOptions)
+
+  const handleTwitterShare = () => {
+    if (typeof window !== "undefined" && (window as any).fbq) {
+      ;(window as any).fbq("track", "Share", { platform: "twitter" })
+    }
+    window.open(shareLinks.twitter, "_blank", "width=550,height=420")
+  }
+
+  const ShareButton: React.FC<{ onClick: () => void; icon: React.ReactNode; label: string }> = ({
+    onClick,
+    icon,
+    label,
+  }) => (
+    <Button variant="outline" size="icon" onClick={onClick} className="rounded-full p-2" aria-label={label}>
+      {icon}
+    </Button>
+  )
+
+  const ShareOptions = () => (
+    <>
+      <ShareButton
+        onClick={() => window.open(shareLinks.facebook, "_blank")}
+        icon={<Facebook className="h-4 w-4" />}
+        label="Share on Facebook"
+      />
+      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-4 w-4" />} label="Share on X (Twitter)" />
+      <LinkedInShare url={url} title={title} />
+      <ShareButton onClick={shareByEmail} icon={<Mail className="h-4 w-4" />} label="Share by Email" />
+      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-4 w-4" />} label="Copy link" />
+    </>
+  )
+
+  return (
+    <div className={`relative ${className}`}>
+      {isMobile ? (
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleShareOptions}
+            className="rounded-full p-2"
+            aria-label="Share"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+          {showOptions && (
+            <div className="absolute top-full left-0 mt-2 bg-white shadow-md rounded-md p-2 flex flex-col gap-2 z-50">
+              <ShareOptions />
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <ShareOptions />
+        </div>
+      )}
+    </div>
+  )
+}

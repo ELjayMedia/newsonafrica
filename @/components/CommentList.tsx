@@ -1,0 +1,228 @@
+"use client"
+
+import { useEffect, useState, useRef, useCallback } from "react"
+import { fetchComments } from "@/lib/comment-service"
+import { CommentForm } from "@/components/CommentForm"
+import { CommentItem } from "@/components/CommentItem"
+import type { Comment } from "@/lib/supabase-schema"
+import { MessageSquare, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useInView } from "react-intersection-observer"
+import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
+import { useUser } from "@/contexts/UserContext"
+
+interface CommentListProps {
+  postId: string
+}
+
+export function CommentList({ postId }: CommentListProps) {
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalComments, setTotalComments] = useState(0)
+  const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
+  const [showMigrationInfo, setShowMigrationInfo] = useState(false)
+  const { user } = useUser()
+
+  // For infinite scroll
+  const { ref, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: false,
+  })
+
+  // For rate limiting
+  const lastCommentTime = useRef<number | null>(null)
+  const RATE_LIMIT_MS = 10000 // 10 seconds
+
+  // For optimistic updates
+  const [failedComments, setFailedComments] = useState<string[]>([])
+
+  const loadComments = useCallback(
+    async (pageNum = 0, append = false) => {
+      try {
+        setLoading(true)
+        const { comments: fetchedComments, hasMore: moreAvailable, total } = await fetchComments(postId, pageNum)
+
+        if (append) {
+          setComments((prevComments) => [...prevComments, ...fetchedComments])
+        } else {
+          setComments(fetchedComments)
+        }
+
+        setHasMore(moreAvailable)
+        setTotalComments(total)
+        setError(null)
+      } catch (err: any) {
+        console.error("Error loading comments:", err)
+
+        // Check if this is a schema-related error
+        if (
+          err.message &&
+          (err.message.includes("status") || err.message.includes("column") || err.message.includes("schema"))
+        ) {
+          setShowMigrationInfo(true)
+          setError("The comment system needs a database update. Please contact the administrator.")
+        } else {
+          setError("Failed to load comments. Please try refreshing the page.")
+        }
+      } finally {
+        setLoading(false)
+      }
+    },
+    [postId],
+  )
+
+  // Load initial comments
+  useEffect(() => {
+    loadComments()
+  }, [loadComments])
+
+  // Handle infinite scroll
+  useEffect(() => {
+    if (inView && hasMore && !loading) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      loadComments(nextPage, true)
+    }
+  }, [inView, hasMore, loading, loadComments, page])
+
+  // Handle optimistic updates
+  const handleCommentAdded = useCallback(
+    (optimisticComment?: Comment) => {
+      if (optimisticComment?.isOptimistic) {
+        // Add optimistic comment to the UI
+        setOptimisticComments((prev) => [optimisticComment, ...prev])
+      } else {
+        // Real comment was added, refresh the list and clear optimistic comments
+        loadComments()
+        setOptimisticComments([])
+      }
+    },
+    [loadComments],
+  )
+
+  // Handle comment failure
+  const handleCommentFailed = useCallback((commentId: string) => {
+    setFailedComments((prev) => [...prev, commentId])
+
+    // Remove from optimistic comments after a delay
+    setTimeout(() => {
+      setOptimisticComments((prev) => prev.filter((comment) => comment.id !== commentId))
+      setFailedComments((prev) => prev.filter((id) => id !== commentId))
+    }, 5000) // Show error state for 5 seconds
+  }, [])
+
+  // Check if user is rate limited
+  const isRateLimited = useCallback(() => {
+    if (!lastCommentTime.current) return false
+
+    const timeSinceLastComment = Date.now() - lastCommentTime.current
+    return timeSinceLastComment < RATE_LIMIT_MS
+  }, [])
+
+  // Calculate time remaining for rate limit
+  const getRateLimitTimeRemaining = useCallback(() => {
+    if (!lastCommentTime.current) return 0
+
+    const timeSinceLastComment = Date.now() - lastCommentTime.current
+    return Math.max(0, Math.ceil((RATE_LIMIT_MS - timeSinceLastComment) / 1000))
+  }, [])
+
+  // Combine real and optimistic comments for display
+  const displayComments = [...optimisticComments, ...comments]
+
+  return (
+    <div className="mt-8 space-y-6">
+      <h3 className="text-xl font-semibold flex items-center">
+        <MessageSquare className="mr-2 h-5 w-5" />
+        Comments {totalComments > 0 && `(${totalComments})`}
+      </h3>
+
+      <CommentForm
+        postId={postId}
+        onCommentAdded={handleCommentAdded}
+        onCommentFailed={handleCommentFailed}
+        isRateLimited={isRateLimited}
+        rateLimitTimeRemaining={getRateLimitTimeRemaining}
+      />
+
+      {showMigrationInfo && (
+        <Alert variant="warning" className="my-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">Database Migration Required</p>
+            <p className="text-sm mt-1">
+              The enhanced comment system requires a database update. Please provide the following SQL to your database
+              administrator:
+            </p>
+            <pre className="text-xs bg-gray-100 p-2 mt-2 rounded overflow-auto max-h-40">{MIGRATION_INSTRUCTIONS}</pre>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {loading && page === 0 ? (
+        <div className="space-y-4 mt-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="animate-pulse flex space-x-4">
+              <div className="rounded-full bg-gray-200 h-10 w-10"></div>
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="p-4 bg-red-50 text-red-700 rounded-md">{error}</div>
+      ) : displayComments.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>No comments yet. Be the first to comment!</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-6 mt-6">
+            {displayComments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                postId={postId}
+                onCommentUpdated={() => loadComments()}
+                onReplyAdded={handleCommentAdded}
+                onReplyFailed={handleCommentFailed}
+                isRateLimited={isRateLimited}
+                rateLimitTimeRemaining={getRateLimitTimeRemaining}
+                isFailed={failedComments.includes(comment.id)}
+              />
+            ))}
+          </div>
+
+          {/* Infinite scroll trigger */}
+          {hasMore && (
+            <div ref={ref} className="flex justify-center py-4" aria-live="polite">
+              {loading && page > 0 ? (
+                <p className="text-gray-500">Loading more comments...</p>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const nextPage = page + 1
+                    setPage(nextPage)
+                    loadComments(nextPage, true)
+                  }}
+                >
+                  Load More Comments
+                </Button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
