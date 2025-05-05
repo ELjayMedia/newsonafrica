@@ -1,11 +1,9 @@
-"use client";
-
-import { AdErrorBoundary } from "./AdErrorBoundary";
-import { AdSense } from "./AdSense";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { AdErrorBoundary } from "./AdErrorBoundary"
+import { AdSense } from "./AdSense"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 export function TopBannerAd() {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 768px)")
 
   return (
     <div className="w-full my-2 flex justify-center">
@@ -29,5 +27,5 @@ export function TopBannerAd() {
         )}
       </AdErrorBoundary>
     </div>
-  );
+  )
 }

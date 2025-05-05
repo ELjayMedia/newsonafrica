@@ -1,3 +1,4 @@
+// TODO: Implement these functions or ensure they exist in @/lib/wordpress-api
 const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
