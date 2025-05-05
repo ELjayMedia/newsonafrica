@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, memo } from "react"
 import { useInView } from "react-intersection-observer"
+import { createHash } from 'crypto'; // Import the crypto module
 
 interface AdSenseProps {
   slot: string
@@ -9,7 +10,7 @@ interface AdSenseProps {
   responsive?: "true" | "false"
   className?: string
   lazyLoad?: boolean
-  id?: string
+  id?: string // Remove the default value here
   minWidth?: number
 }
 
@@ -22,7 +23,7 @@ export const AdSense = memo(function AdSense({
   responsive = "true",
   className = "",
   lazyLoad = true,
-  id = `ad-${Math.random().toString(36).substring(2, 9)}`,
+  id, // Make id required, or handle undefined case
   minWidth = format === "horizontal" ? 728 : 300,
 }: AdSenseProps) {
   const [isLoading, setIsLoading] = useState(true)
