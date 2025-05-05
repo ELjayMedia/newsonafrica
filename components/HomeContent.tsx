@@ -10,7 +10,13 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import { HomeMidContentAd } from "@/components/HomeMidContentAd"
 import useSWR from "swr"
-import { fetchFeaturedPosts, fetchCategorizedPosts, fetchTaggedPosts } from "@/lib/wordpress-api"
+import {
+  fetchFeaturedPosts,
+  fetchCategorizedPosts,
+  fetchTaggedPosts,
+  Post, // Import the Post interface
+  Category, // Import the Category interface
+} from "@/lib/wordpress-api"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
@@ -18,15 +24,21 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 
 interface HomeContentProps {
-  initialData: {
-    taggedPosts: any[]
-    featuredPosts: any[]
-    categories: any[]
-    recentPosts: any[]
+  initialData?: {
+    taggedPosts: Post[]
+    featuredPosts: Post[]
+    categories: Category[]
+    recentPosts: Post[]
   }
 }
 
-const fetcher = async () => {
+interface HomeContentData {
+  taggedPosts: Post[]
+  featuredPosts: Post[]
+  categories: Category[]
+}
+
+const fetcher = async (): Promise<HomeContentData> => {
   try {
     const [taggedPosts, featuredPosts, categories] = await Promise.all([
       fetchTaggedPosts("fp", 4), // Fetch 4 posts with "fp" tag
@@ -42,8 +54,8 @@ const fetcher = async () => {
 
 export function HomeContent({ initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const { data, error, isLoading } = useSWR("/api/home-content", fetcher, {
-    initialData,
+  const { data, error, isLoading } = useSWR<HomeContentData>("/api/home-content", fetcher, {
+    initialData: initialData || undefined, // Use initialData if available
     revalidateOnMount: true,
     refreshInterval: 60000, // Refresh every 60 seconds
   })
@@ -72,7 +84,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
   const secondaryStories = featuredPosts?.slice(1, 4) || []
   const verticalCardPosts = taggedPosts?.slice(1, 4) || [] // Use the next 3 tagged posts for vertical cards
 
-  const getPostsForCategoryAndChildren = (categoryName: string, allCategories: any[]) => {
+  const getPostsForCategoryAndChildren = (categoryName: string, allCategories: Category[]): Post[] => {
     if (!allCategories || !Array.isArray(allCategories)) {
       console.warn(`Invalid categories data for ${categoryName}`)
       return []
@@ -92,7 +104,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
 
     return Array.from(new Set(allPosts.map((post) => post?.id)))
       .map((id) => allPosts.find((post) => post?.id === id))
-      .filter((post) => post && !post.tags?.nodes?.some((tag) => tag?.slug === "fp"))
+      .filter((post): post is Post => post !== undefined && post.tags?.nodes?.some((tag) => tag?.slug !== "fp"))
       .slice(0, 5)
   }
 
@@ -110,7 +122,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
       "@context": "https://schema.org",
       "@type": "ItemList",
       itemListElement:
-        taggedPosts?.map((post, index) => ({
+        taggedPosts?.map((post: Post, index: number) => ({
           "@type": "ListItem",
           position: index + 1,
           url: `${siteConfig.url}/post/${post.slug}`,

@@ -104,46 +104,60 @@ export const fetchSingleCategory = async (slug: string) =>
   fetchWithRetry(queries.singleCategory, { slug }).then((data: any) => data.category)
 
 export interface Post {
-  id: string
-  title: string
-  excerpt: string
-  slug: string
-  date: string
-  modified: string
+  id: string;
+  title: string;
+  excerpt: string;
+  slug: string;
+  date: string;
+  modified: string;
   featuredImage?: {
     node: {
-      sourceUrl: string
-      altText: string
-    }
-  }
+      sourceUrl: string;
+      altText: string;
+    };
+  };
   author: {
     node: {
-      name: string
-      slug: string
-      description: string
+      name: string;
+      slug: string;
+      description: string;
       avatar: {
-        url: string
-      }
-    }
-  }
+        url: string;
+      };
+    };
+  };
   categories: {
     nodes: {
-      name: string
-      slug: string
-    }[]
-  }
+      name: string;
+      slug: string;
+    }[];
+  };
   tags: {
     nodes: {
-      name: string
-      slug: string
-    }[]
-  }
+      name: string;
+      slug: string;
+    }[];
+  };
   seo?: {
-    title: string
-    metaDesc: string
+    title: string;
+    metaDesc: string;
     opengraphImage?: {
-      sourceUrl: string
-    }
-  }
-  content?: string
+      sourceUrl: string;
+    };
+  };
+  content?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  posts?: {
+    nodes: Post[];
+  };
+  parent?: {
+    node: {
+      name: string;
+    };
+  };
 }
