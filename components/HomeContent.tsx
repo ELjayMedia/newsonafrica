@@ -56,19 +56,32 @@ const CategorySection = ({ categoryName, categories }) => {
 
   return (
     <section className="bg-white p-4 rounded-lg shadow-sm">
-      <h2 className="text-xl font-bold mb-4 capitalize">
-        <Link href={`/category/${categoryName.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
-          {categoryName}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold capitalize">
+          <Link href={`/category/${categoryName.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+            {categoryName}
+          </Link>
+        </h2>
+        <Link
+          href={`/category/${categoryName.toLowerCase()}`}
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+        >
+          View all <span className="ml-1">→</span>
         </Link>
-      </h2>
-      <NewsGrid
-        posts={posts.map((post) => ({
-          ...post,
-          type: categoryName === "Opinion" ? "OPINION" : undefined,
-        }))}
-        layout="horizontal"
-        className="compact-grid"
-      />
+      </div>
+
+      {posts.length > 0 ? (
+        <NewsGrid
+          posts={posts.map((post) => ({
+            ...post,
+            type: categoryName === "Opinion" ? "OPINION" : undefined,
+          }))}
+          layout="horizontal"
+          className="compact-grid"
+        />
+      ) : (
+        <div className="text-center py-8 text-gray-500">No recent posts available in this category.</div>
+      )}
     </section>
   )
 }
