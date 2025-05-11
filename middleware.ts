@@ -3,11 +3,6 @@ import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 
 export async function middleware(request: NextRequest) {
-  // If the request is for the _not-found page, redirect to the 404 page
-  if (request.nextUrl.pathname === "/_not-found") {
-    return NextResponse.redirect(new URL("/404", request.url))
-  }
-
   try {
     // Check if this is a preview environment
     const isPreview =
@@ -55,5 +50,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/_not-found", "/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 }

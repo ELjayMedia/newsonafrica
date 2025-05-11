@@ -5,17 +5,17 @@ import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import { VerticalCard } from "@/components/VerticalCard"
 import Link from "next/link"
-import React, { useEffect, Suspense } from "react"
+import React, { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import { HomeMidContentAd } from "@/components/HomeMidContentAd"
-import { useQuery } from "@tanstack/react-query"
-import { fetchFeaturedPosts, fetchCategorizedPosts, fetchTaggedPosts } from "@/lib/wordpress-api"
+import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
+import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
 
 interface HomeContentProps {
   initialData: {
@@ -26,18 +26,157 @@ interface HomeContentProps {
   }
 }
 
-// Separate component for each category section to enable independent loading
-const CategorySection = ({ categoryName, categories }) => {
+// Check if we're in a browser environment and if we're online
+const isOnline = () => {
+  if (typeof navigator !== "undefined" && "onLine" in navigator) {
+    return navigator.onLine
+  }
+  return true // Assume online in SSR context
+}
+
+// Update the fetchHomeData function to better handle errors
+const fetchHomeData = async () => {
+  try {
+    if (!isOnline()) {
+      console.log("Device is offline, using cached or mock data")
+      throw new Error("Device is offline")
+    }
+
+    // Use Promise.allSettled to handle partial failures
+    const results = await Promise.allSettled([
+      fetchTaggedPosts("fp", 4),
+      fetchFeaturedPosts(4),
+      fetchCategorizedPosts(),
+      fetchRecentPosts(10),
+    ])
+
+    return {
+      taggedPosts: results[0].status === "fulfilled" ? results[0].value : [],
+      featuredPosts: results[1].status === "fulfilled" ? results[1].value : [],
+      categories: results[2].status === "fulfilled" ? results[2].value : [],
+      recentPosts: results[3].status === "fulfilled" ? results[3].value : [],
+    }
+  } catch (error) {
+    console.error("Error fetching home data:", error)
+    throw error
+  }
+}
+
+export function HomeContent({ initialData }: HomeContentProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const [isOffline, setIsOffline] = useState(!isOnline())
+
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
+  // Update the useSWR configuration for better error handling
+  const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
+    initialData,
+    revalidateOnMount: false, // Changed from !isOffline to false to prevent losing initial data
+    revalidateOnFocus: false, // Changed to false to prevent losing data on focus
+    refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
+    dedupingInterval: 60000, // Increased to 1 minute
+    errorRetryCount: 3,
+    errorRetryInterval: 5000,
+    onError: (err) => {
+      console.error("SWR Error:", err)
+      // Don't show error UI if we have initial data
+      if (!initialData) {
+        setIsOffline(true) // Treat any error as offline for UI purposes
+      }
+    },
+    shouldRetryOnError: !isOffline, // Don't retry if offline
+    fallbackData: initialData, // Ensure we always have fallback data
+  })
+
+  // Log errors but don't crash the UI
+  useEffect(() => {
+    if (error) {
+      console.error("Error in HomeContent:", error)
+    }
+  }, [error])
+
+  // Show offline notification if needed
+  const renderOfflineNotification = () => {
+    if (isOffline) {
+      return (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">You are currently offline. Some content may not be up to date.</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Safely extract data with fallbacks
+  const {
+    taggedPosts = [],
+    featuredPosts = [],
+    categories = [],
+    recentPosts = [],
+  } = data || initialData || { taggedPosts: [], featuredPosts: [], categories: [], recentPosts: [] }
+
+  // Show skeleton during initial loading
+  if (isLoading && !initialData) {
+    return <HomePageSkeleton />
+  }
+
+  // Show error message if data fetch failed and we have no initial data
+  if (error && !initialData?.featuredPosts?.length && !isOffline) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-bold mb-2">Unable to load content</h2>
+        <p>We're experiencing technical difficulties. Please try again later.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Refresh Page
+        </button>
+      </div>
+    )
+  }
+
+  // Extract main content posts
+  const mainStory = taggedPosts?.[0] || featuredPosts?.[0] || null
+  const secondaryStories = featuredPosts?.slice(0, 4) || []
+  const verticalCardPosts = taggedPosts?.slice(1, 4) || [] // Use the next 3 tagged posts for vertical cards
+
+  // Helper function to safely get posts for a category
   const getPostsForCategoryAndChildren = (categoryName: string, allCategories: any[]) => {
-    if (!allCategories || !Array.isArray(allCategories)) {
-      console.warn(`Invalid categories data for ${categoryName}`)
-      return []
+    if (!allCategories || !Array.isArray(allCategories) || allCategories.length === 0) {
+      // Return recent posts as fallback if categories are missing
+      return recentPosts.slice(0, 5).filter((post) => post && !post.tags?.nodes?.some((tag: any) => tag?.slug === "fp"))
     }
 
     const category = allCategories.find((cat) => cat?.name?.toLowerCase() === categoryName.toLowerCase())
+
     if (!category) {
-      console.warn(`Category not found: ${categoryName}`)
-      return []
+      return recentPosts.slice(0, 5).filter((post) => post && !post.tags?.nodes?.some((tag: any) => tag?.slug === "fp"))
     }
 
     const childCategories = allCategories.filter(
@@ -51,109 +190,6 @@ const CategorySection = ({ categoryName, categories }) => {
       .filter((post) => post && !post.tags?.nodes?.some((tag) => tag?.slug === "fp"))
       .slice(0, 5)
   }
-
-  const posts = getPostsForCategoryAndChildren(categoryName, categories)
-
-  return (
-    <section className="bg-white p-4 rounded-lg shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold capitalize">
-          <Link href={`/category/${categoryName.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
-            {categoryName}
-          </Link>
-        </h2>
-        <Link
-          href={`/category/${categoryName.toLowerCase()}`}
-          className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-        >
-          View all <span className="ml-1">→</span>
-        </Link>
-      </div>
-
-      {posts.length > 0 ? (
-        <NewsGrid
-          posts={posts.map((post) => ({
-            ...post,
-            type: categoryName === "Opinion" ? "OPINION" : undefined,
-          }))}
-          layout="horizontal"
-          className="compact-grid"
-        />
-      ) : (
-        <div className="text-center py-8 text-gray-500">No recent posts available in this category.</div>
-      )}
-    </section>
-  )
-}
-
-export function HomeContent({ initialData }: HomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
-
-  // Use React Query for data fetching with optimized settings
-  const {
-    data: taggedPostsData,
-    error: taggedError,
-    isLoading: taggedLoading,
-  } = useQuery({
-    queryKey: ["taggedPosts", "fp", 4],
-    queryFn: () => fetchTaggedPosts("fp", 4),
-    initialData: initialData?.taggedPosts,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-  })
-
-  const {
-    data: featuredPostsData,
-    error: featuredError,
-    isLoading: featuredLoading,
-  } = useQuery({
-    queryKey: ["featuredPosts"],
-    queryFn: fetchFeaturedPosts,
-    initialData: initialData?.featuredPosts,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-  })
-
-  const {
-    data: categoriesData,
-    error: categoriesError,
-    isLoading: categoriesLoading,
-  } = useQuery({
-    queryKey: ["categorizedPosts"],
-    queryFn: fetchCategorizedPosts,
-    initialData: initialData?.categories,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: false,
-  })
-
-  // Combine all loading states
-  const isLoading = taggedLoading || featuredLoading || categoriesLoading
-
-  // Combine all errors
-  const error = taggedError || featuredError || categoriesError
-
-  useEffect(() => {
-    if (error) {
-      console.error("Error in HomeContent:", error)
-    }
-  }, [error])
-
-  if (isLoading && !initialData) {
-    return <HomePageSkeleton />
-  }
-
-  if (error && !initialData) {
-    return <div>Error loading content. Please try again later.</div>
-  }
-
-  // Use data or fallback to initialData
-  const taggedPosts = taggedPostsData || initialData?.taggedPosts || []
-  const featuredPosts = featuredPostsData || initialData?.featuredPosts || []
-  const categories = categoriesData || initialData?.categories || []
-
-  const mainStory = taggedPosts?.[0] || featuredPosts?.[0] || null
-  const secondaryStories = featuredPosts?.slice(1, 4) || []
-  const verticalCardPosts = taggedPosts?.slice(1, 4) || [] // Use the next 3 tagged posts for vertical cards
 
   // Generate schema.org structured data for the homepage
   const schemas = [
@@ -182,83 +218,77 @@ export function HomeContent({ initialData }: HomeContentProps) {
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
       <div className="space-y-4">
-        {/* Hero section - highest priority */}
+        {renderOfflineNotification()}
+
+        {/* Hero Section - Show the latest post tagged 'fp' */}
         <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
           {mainStory && <FeaturedHero post={mainStory} />}
         </section>
 
-        {/* Vertical cards - high priority */}
-        <section className="grid grid-cols-2 md:grid-cols-3 gap-2 px-2">
-          {verticalCardPosts.map((post) => (
-            <div key={post.id} className="flex">
-              <VerticalCard post={post} className="w-full" />
-            </div>
-          ))}
-        </section>
+        {/* Vertical Cards - Show the next 3 posts tagged 'fp' */}
+        {verticalCardPosts.length > 0 && (
+          <section className="grid grid-cols-2 md:grid-cols-3 gap-2 px-2">
+            {verticalCardPosts.map((post) => (
+              <div key={post.id} className="flex">
+                <VerticalCard post={post} className="w-full" />
+              </div>
+            ))}
+          </section>
+        )}
 
         <HomeAfterHeroAd />
 
-        {/* Secondary stories - medium priority */}
-        <section className="bg-white p-4 rounded-lg shadow-sm md:flex md:flex-col">
-          {secondaryStories.length > 0 && <SecondaryStories posts={secondaryStories} layout="horizontal" />}
-        </section>
+        {/* Secondary Stories - Show featured posts */}
+        {secondaryStories.length > 0 && (
+          <section className="bg-white p-4 rounded-lg shadow-sm md:flex md:flex-col">
+            <SecondaryStories posts={secondaryStories} layout="horizontal" />
+          </section>
+        )}
 
-        {/* Category sections - lower priority, load progressively */}
+        {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-4">
           {["news", "business", "entertainment", "sport", "editorial"].map((categoryName, index) => (
             <React.Fragment key={categoryName}>
-              <ErrorBoundary>
-                <Suspense fallback={<CategorySectionSkeleton />}>
-                  <CategorySection categoryName={categoryName} categories={categories} />
-                </Suspense>
-              </ErrorBoundary>
+              <section className="bg-white p-4 rounded-lg shadow-sm">
+                <h2 className="text-xl font-bold mb-4 capitalize">
+                  <Link
+                    href={`/category/${categoryName.toLowerCase()}`}
+                    className="hover:text-blue-600 transition-colors"
+                  >
+                    {categoryName}
+                  </Link>
+                </h2>
+                <NewsGrid
+                  posts={getPostsForCategoryAndChildren(categoryName, categories).map((post) => ({
+                    ...post,
+                    type: categoryName === "Opinion" ? "OPINION" : undefined,
+                  }))}
+                  layout="horizontal"
+                  className="compact-grid"
+                />
+              </section>
               {index === 1 && <HomeMidContentAd />}
             </React.Fragment>
           ))}
         </div>
 
-        {/* Health section - lowest priority */}
-        <ErrorBoundary>
-          <Suspense fallback={<CategorySectionSkeleton />}>
-            <section className="bg-white p-4 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold mb-4">
-                <Link href="/category/health" className="hover:text-blue-600 transition-colors">
-                  Health
-                </Link>
-              </h2>
-              <NewsGrid
-                posts={(categories.find((c) => c?.name?.toLowerCase() === "health")?.posts?.nodes || [])
-                  .filter((post) => post && !post.tags?.nodes?.some((tag) => tag?.slug === "fp"))
-                  .slice(0, 5)
-                  .map((post) => ({
-                    ...post,
-                    type: "HEALTH",
-                  }))}
-                layout="vertical"
-                className="compact-grid"
-              />
-            </section>
-          </Suspense>
-        </ErrorBoundary>
+        {/* Health Section */}
+        <section className="bg-white p-4 rounded-lg shadow-sm">
+          <h2 className="text-xl font-bold mb-4">
+            <Link href="/category/health" className="hover:text-blue-600 transition-colors">
+              Health
+            </Link>
+          </h2>
+          <NewsGrid
+            posts={getPostsForCategoryAndChildren("health", categories).map((post) => ({
+              ...post,
+              type: "HEALTH",
+            }))}
+            layout="vertical"
+            className="compact-grid"
+          />
+        </section>
       </div>
     </ErrorBoundary>
   )
 }
-
-// Skeleton for category sections
-const CategorySectionSkeleton = () => (
-  <div className="bg-white p-4 rounded-lg shadow-sm animate-pulse">
-    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="flex gap-3">
-          <div className="w-24 h-16 bg-gray-200 rounded"></div>
-          <div className="flex-1">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)

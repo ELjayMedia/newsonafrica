@@ -1,12 +1,10 @@
 import { Suspense } from "react"
-import { ClientLostPasswordContent } from "@/components/ClientLostPasswordContent"
-
-export const dynamic = "force-dynamic"
+import { LostPasswordContent } from "@/components/LostPasswordContent"
 
 export default function LostPasswordPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <ClientLostPasswordContent />
+      <LostPasswordContent />
     </Suspense>
   )
 }

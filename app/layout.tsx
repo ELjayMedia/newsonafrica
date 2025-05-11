@@ -5,7 +5,7 @@ import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
 import { HeaderSkeleton } from "@/components/HeaderSkeleton"
-import { ClientBottomNavigation } from "@/components/client-bottom-navigation"
+import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import { Footer } from "@/components/Footer"
 import { TopBannerAd } from "@/components/TopBannerAd"
@@ -13,20 +13,50 @@ import { BelowHeaderAd } from "@/components/BelowHeaderAd"
 import { FooterBannerAd } from "@/components/FooterBannerAd"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
+import { siteConfig } from "@/config/site"
 import { Suspense } from "react"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration"
 import NetworkStatus from "@/components/NetworkStatus"
 import WebVitals from "@/components/WebVitals"
+import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "News On Africa",
-  description: "Where the Continent Connects",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: ["News", "Africa", "Current Events", "Politics", "Business"],
+  authors: [{ name: "News On Africa Team" }],
+  creator: "News On Africa",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteConfig.url,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [`${siteConfig.url}/og-image.jpg`],
+    creator: "@newsonafrica",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: `${siteConfig.url}/site.webmanifest`,
     generator: 'v0.dev'
 }
 
@@ -83,7 +113,7 @@ export default function RootLayout({
               <FooterBannerAd />
             </div>
           </div>
-          <ClientBottomNavigation />
+          <BottomNavigation />
           <Footer />
           <div className="text-center text-sm text-gray-500 mt-4">
             <Link href="/privacy-policy" className="hover:underline">
@@ -100,6 +130,7 @@ export default function RootLayout({
           </div>
           <NetworkStatus />
         </ClientWrapper>
+        <NetworkStatusHandler />
       </body>
     </html>
   )

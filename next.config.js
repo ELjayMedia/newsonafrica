@@ -27,7 +27,7 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   experimental: {
-    // optimizeCss: true,  // Comment out or remove this line
+    optimizeCss: true,
     optimizeServerReact: true,
   },
 }
