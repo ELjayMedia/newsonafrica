@@ -27,7 +27,8 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   experimental: {
-    optimizeCss: true,
+    // Remove or disable optimizeCss which requires critters
+    // optimizeCss: true,
     optimizeServerReact: true,
   },
 }
