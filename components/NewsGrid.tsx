@@ -46,7 +46,10 @@ export const NewsGrid = memo(function NewsGrid({
   sportCategoryPosts = [],
   showSportCategory = false,
 }: NewsGridProps) {
-  if (!posts?.length && !showSportCategory) return null
+  const hasPosts = posts?.length > 0
+  const hasSportCategoryPosts = sportCategoryPosts?.length > 0
+
+  if (!hasPosts && !showSportCategory) return null
 
   const mainPost = posts?.[0]
   const secondaryPosts = posts?.slice(1, 4) || []
@@ -54,9 +57,11 @@ export const NewsGrid = memo(function NewsGrid({
   const secondarySportPosts = sportCategoryPosts?.slice(1, 4) || []
 
   const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
+
   const secondaryPostsBlurURLs = useMemo(() => {
+    const maxLength = Math.max(secondaryPosts.length, secondarySportPosts.length)
     const blurURLs: string[] = []
-    for (let i = 0; i < Math.max(secondaryPosts.length, secondarySportPosts.length); i++) {
+    for (let i = 0; i < maxLength; i++) {
       blurURLs.push(generateBlurDataURL(70, 70))
     }
     return blurURLs
@@ -64,11 +69,11 @@ export const NewsGrid = memo(function NewsGrid({
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${className}`}>
-      {showSportCategory && sportCategoryPosts.length > 0 ? (
+      {showSportCategory && hasSportCategoryPosts ? (
         <>
           {/* Sport Category Header */}
           <div className="md:col-span-2 flex items-center mb-2">
-            <h2 className="text-lg font-bold text-blue-600">Sport News</h2>
+            <h2 className="text-lg font-bold text-blue-600">Sports News</h2>
             <Link href="/category/sport" className="ml-auto text-sm text-blue-500 hover:underline">
               View all
             </Link>

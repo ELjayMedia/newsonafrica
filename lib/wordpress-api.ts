@@ -315,7 +315,19 @@ export const fetchCategoryPosts = cache(async (slug: string, limit = 5, after: s
 export const fetchCategorizedPosts = cache(async () => {
   try {
     const data = await fetchWithRetry(queries.categorizedPosts)
-    return data.categories.nodes
+
+    // Ensure we have valid category data
+    if (!data?.categories?.nodes || !Array.isArray(data.categories.nodes)) {
+      console.error("Invalid category data structure:", data)
+      return []
+    }
+
+    // Filter out categories with no posts
+    const categoriesWithPosts = data.categories.nodes.filter(
+      (category) => category?.posts?.nodes && category.posts.nodes.length > 0,
+    )
+
+    return categoriesWithPosts
   } catch (error) {
     console.log("Falling back to REST API for categorized posts")
     try {
@@ -384,7 +396,8 @@ export const fetchCategorizedPosts = cache(async () => {
         }),
       )
 
-      return categoriesWithPosts
+      // Filter out categories with no posts
+      return categoriesWithPosts.filter((category) => category?.posts?.nodes && category.posts.nodes.length > 0)
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return [] // Return empty array as last resort

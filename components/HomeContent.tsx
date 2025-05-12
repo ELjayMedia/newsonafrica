@@ -88,12 +88,14 @@ export function HomeContent({ initialData }: HomeContentProps) {
         const posts = await fetchSportPosts(5)
         setSportPosts(posts)
       } catch (error) {
-        console.error("Error fetching sport posts:", error)
+        console.error("Error fetching sport/sports posts:", error)
       }
     }
 
-    getSportPosts()
-  }, [])
+    if (!isOffline) {
+      getSportPosts()
+    }
+  }, [isOffline])
 
   // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
@@ -184,25 +186,31 @@ export function HomeContent({ initialData }: HomeContentProps) {
   // Helper function to safely get posts for a category
   const getPostsForCategoryAndChildren = (categoryName: string, allCategories: any[]) => {
     if (!allCategories || !Array.isArray(allCategories) || allCategories.length === 0) {
-      // Return recent posts as fallback if categories are missing
-      return recentPosts.slice(0, 5).filter((post) => post && !post.tags?.nodes?.some((tag: any) => tag?.slug === "fp"))
+      // Return empty array if categories are missing
+      console.log(`No categories found for ${categoryName}`)
+      return []
     }
 
+    // Find the exact category by name (case insensitive)
     const category = allCategories.find((cat) => cat?.name?.toLowerCase() === categoryName.toLowerCase())
 
     if (!category) {
-      return recentPosts.slice(0, 5).filter((post) => post && !post.tags?.nodes?.some((tag: any) => tag?.slug === "fp"))
+      console.log(`Category not found: ${categoryName}`)
+      return []
     }
 
+    // Find child categories
     const childCategories = allCategories.filter(
       (cat) => cat?.parent?.node?.name?.toLowerCase() === categoryName.toLowerCase(),
     )
 
+    // Collect posts from the main category and its children
     const allPosts = [...(category.posts?.nodes || []), ...childCategories.flatMap((child) => child.posts?.nodes || [])]
 
+    // Remove duplicates by ID and filter out posts without IDs
     return Array.from(new Set(allPosts.map((post) => post?.id)))
       .map((id) => allPosts.find((post) => post?.id === id))
-      .filter((post) => post && !post.tags?.nodes?.some((tag) => tag?.slug === "fp"))
+      .filter((post) => post && post.id) // Ensure post exists and has an ID
       .slice(0, 5)
   }
 
@@ -262,47 +270,58 @@ export function HomeContent({ initialData }: HomeContentProps) {
 
         {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-4">
-          {["news", "business", "entertainment", "sport", "editorial"].map((categoryName, index) => (
-            <React.Fragment key={categoryName}>
-              <section className="bg-white p-4 rounded-lg shadow-sm">
-                <h2 className="text-xl font-bold mb-4 capitalize">
-                  <Link
-                    href={`/category/${categoryName.toLowerCase()}`}
-                    className="hover:text-blue-600 transition-colors"
-                  >
-                    {categoryName}
-                  </Link>
-                </h2>
-                <NewsGrid
-                  posts={getPostsForCategoryAndChildren(categoryName, categories).map((post) => ({
-                    ...post,
-                    type: categoryName === "Opinion" ? "OPINION" : undefined,
-                  }))}
-                  layout="horizontal"
-                  className="compact-grid"
-                />
-              </section>
-              {index === 1 && <HomeMidContentAd />}
-            </React.Fragment>
-          ))}
+          {["news", "business", "entertainment", "sport", "editorial"].map((categoryName, index) => {
+            // Get posts for this specific category
+            const categoryPosts = getPostsForCategoryAndChildren(categoryName, categories)
+
+            // Only render the section if there are posts
+            return categoryPosts.length > 0 ? (
+              <React.Fragment key={categoryName}>
+                <section className="bg-white p-4 rounded-lg shadow-sm">
+                  <h2 className="text-xl font-bold mb-4 capitalize">
+                    <Link
+                      href={`/category/${categoryName.toLowerCase()}`}
+                      className="hover:text-blue-600 transition-colors"
+                    >
+                      {categoryName}
+                    </Link>
+                  </h2>
+                  <NewsGrid
+                    posts={categoryPosts.map((post) => ({
+                      ...post,
+                      type: categoryName === "Opinion" ? "OPINION" : undefined,
+                    }))}
+                    layout="horizontal"
+                    className="compact-grid"
+                  />
+                </section>
+                {index === 1 && <HomeMidContentAd />}
+              </React.Fragment>
+            ) : null
+          })}
         </div>
 
         {/* Health Section */}
-        <section className="bg-white p-4 rounded-lg shadow-sm">
-          <h2 className="text-xl font-bold mb-4">
-            <Link href="/category/health" className="hover:text-blue-600 transition-colors">
-              Health
-            </Link>
-          </h2>
-          <NewsGrid
-            posts={getPostsForCategoryAndChildren("health", categories).map((post) => ({
-              ...post,
-              type: "HEALTH",
-            }))}
-            layout="vertical"
-            className="compact-grid"
-          />
-        </section>
+        {(() => {
+          const healthPosts = getPostsForCategoryAndChildren("health", categories)
+          return healthPosts.length > 0 ? (
+            <section className="bg-white p-4 rounded-lg shadow-sm">
+              <h2 className="text-xl font-bold mb-4">
+                <Link href="/category/health" className="hover:text-blue-600 transition-colors">
+                  Health
+                </Link>
+              </h2>
+              <NewsGrid
+                posts={healthPosts.map((post) => ({
+                  ...post,
+                  type: "HEALTH",
+                }))}
+                layout="vertical"
+                className="compact-grid"
+              />
+            </section>
+          ) : null
+        })()}
         <NewsGrid posts={recentPosts} className="mb-8" sportCategoryPosts={sportPosts} showSportCategory={true} />
       </div>
     </ErrorBoundary>

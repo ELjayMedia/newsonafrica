@@ -7,7 +7,6 @@ import { Header } from "@/components/Header"
 import { HeaderSkeleton } from "@/components/HeaderSkeleton"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
-import { Footer } from "@/components/Footer"
 import { TopBannerAd } from "@/components/TopBannerAd"
 import { BelowHeaderAd } from "@/components/BelowHeaderAd"
 import { FooterBannerAd } from "@/components/FooterBannerAd"
@@ -114,18 +113,13 @@ export default function RootLayout({
             </div>
           </div>
           <BottomNavigation />
-          <Footer />
-          <div className="text-center text-sm text-gray-500 mt-4">
+          <div className="text-center text-sm text-gray-500 mt-4 mb-2">
             <Link href="/privacy-policy" className="hover:underline">
               Privacy Policy
             </Link>
             {" | "}
             <Link href="/terms-of-service" className="hover:underline">
               Terms of Service
-            </Link>
-            {" | "}
-            <Link href="/sitemap.xml" className="hover:underline">
-              Sitemap
             </Link>
           </div>
           <NetworkStatus />

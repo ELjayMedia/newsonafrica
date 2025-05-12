@@ -186,30 +186,53 @@ export const queries = {
     }
   `,
   categorizedPosts: `
-    query CategorizedPosts {
-      categories {
-        nodes {
-          id
-          name
-          slug
-          posts {
-            nodes {
-              id
-              title
-              slug
-              date
-              excerpt
-              featuredImage {
-                node {
-                  sourceUrl
-                }
+  query CategorizedPosts {
+    categories(first: 100) {
+      nodes {
+        id
+        name
+        slug
+        parent {
+          node {
+            name
+          }
+        }
+        posts(first: 5) {
+          nodes {
+            id
+            title
+            excerpt
+            slug
+            date
+            featuredImage {
+              node {
+                sourceUrl
+              }
+            }
+            author {
+              node {
+                name
+                slug
+              }
+            }
+            categories {
+              nodes {
+                name
+                slug
+              }
+            }
+            tags {
+              nodes {
+                name
+                slug
               }
             }
           }
         }
       }
     }
-  `,
+  }
+`,
   singlePost: `
     query SinglePost($slug: ID!) {
       post(id: $slug, idType: SLUG) {
@@ -376,7 +399,7 @@ export const mutations = {
     }
   `,
   createComment: `
-    mutation CreateComment($input: CreateCommentInput!) {
+    mutation CreateCommentInput!) {
       createComment(input: $input) {
         success
         comment {

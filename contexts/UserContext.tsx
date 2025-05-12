@@ -30,6 +30,7 @@ interface UserContextType {
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -253,6 +254,27 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) throw error
+
+      return data
+    } catch (error) {
+      console.error("Error signing in with Google:", error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <UserContext.Provider
       value={{
@@ -266,6 +288,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         signOut,
         updateProfile,
         resetPassword,
+        signInWithGoogle,
       }}
     >
       {children}

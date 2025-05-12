@@ -4,7 +4,6 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
-import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { CategoryAd } from "@/components/CategoryAd"
 import { HorizontalCard } from "@/components/HorizontalCard"
@@ -77,19 +76,26 @@ export default function CategoryPage({ slug, initialData }: { slug: string; init
           {morePosts.map((post) => (
             <HorizontalCard key={post.id} post={post} />
           ))}
-        </div>
 
-        <div ref={ref} className="flex justify-center mt-8">
-          {isFetchingNextPage ? (
-            <p className="text-gray-600">Loading more posts...</p>
-          ) : hasNextPage ? (
-            <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-              Load More
-            </Button>
-          ) : (
-            <p className="text-gray-600">No more posts to load</p>
+          {/* Infinite scroll loading indicator */}
+          {isFetchingNextPage && (
+            <div className="col-span-full flex justify-center py-4">
+              <div className="animate-pulse flex space-x-4">
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+              </div>
+            </div>
           )}
         </div>
+
+        {/* Invisible sentinel element for infinite scroll */}
+        {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
+
+        {/* End of content message */}
+        {!hasNextPage && !isFetchingNextPage && morePosts.length > 0 && (
+          <p className="text-center text-gray-600 mt-8">You've reached the end of the content</p>
+        )}
       </div>
     </ErrorBoundary>
   )

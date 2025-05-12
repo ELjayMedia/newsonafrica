@@ -3,10 +3,30 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get("code")
-  const state = searchParams.get("state") // This contains our redirect URL
+  const stateParam = searchParams.get("state")
+
+  let state = { redirectUrl: "/", popupMode: false }
+
+  try {
+    if (stateParam) {
+      state = JSON.parse(decodeURIComponent(stateParam))
+    }
+  } catch (e) {
+    console.error("Error parsing state parameter:", e)
+  }
 
   if (!code) {
     return NextResponse.redirect(new URL("/auth/error?message=No+authorization+code+received", request.url))
+  }
+
+  // Only use server-side environment variables
+  const linkedInApiKey = process.env.LINKEDIN_API_KEY
+  const linkedInApiSecret = process.env.LINKEDIN_API_SECRET
+  const siteUrl = process.env.SITE_URL
+
+  if (!linkedInApiKey || !linkedInApiSecret || !siteUrl) {
+    console.error("LinkedIn API credentials or site URL not configured")
+    return NextResponse.redirect(new URL("/auth/error?message=LinkedIn+API+not+configured", request.url))
   }
 
   try {
@@ -19,9 +39,9 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
-        client_id: process.env.LINKEDIN_API_KEY || "",
-        client_secret: process.env.LINKEDIN_API_SECRET || "",
+        redirect_uri: `${siteUrl}/api/linkedin/callback`,
+        client_id: linkedInApiKey,
+        client_secret: linkedInApiSecret,
       }).toString(),
     })
 
@@ -32,7 +52,12 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json()
 
     // Store token in a secure HTTP-only cookie
-    const response = NextResponse.redirect(new URL(state || "/", request.url))
+    const response = state.popupMode
+      ? NextResponse.html(
+          `<html><body><script>window.opener && window.opener.postMessage("linkedin-auth-success", "*"); window.close();</script><p>Authentication successful! You can close this window.</p></body></html>`,
+        )
+      : NextResponse.redirect(new URL(state.redirectUrl || "/", request.url))
+
     response.cookies.set("linkedin_token", tokenData.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -44,6 +69,13 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error("LinkedIn OAuth error:", error)
+
+    if (state.popupMode) {
+      return NextResponse.html(
+        `<html><body><script>window.opener && window.opener.postMessage("linkedin-auth-error", "*"); window.close();</script><p>Authentication failed. You can close this window.</p></body></html>`,
+      )
+    }
+
     return NextResponse.redirect(new URL("/auth/error?message=LinkedIn+authentication+failed", request.url))
   }
 }

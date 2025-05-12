@@ -15,6 +15,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: "noa_supabase_auth",
+    flowType: "pkce", // Add this line for better OAuth security
   },
 })
 

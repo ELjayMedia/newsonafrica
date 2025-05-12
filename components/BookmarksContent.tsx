@@ -5,118 +5,51 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
-import type { Session } from "@supabase/supabase-js"
-import { createClient } from "@/utils/supabase/client"
+import { useBookmarks, type Bookmark } from "@/contexts/BookmarksContext"
 import { BookmarkButton } from "./BookmarkButton"
 import { formatDate } from "@/utils/date-utils"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Bookmark, AlertTriangle } from "lucide-react"
+import { BookmarkIcon, AlertTriangle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import type { Session } from "@supabase/supabase-js"
 
 interface BookmarksContentProps {
   initialSession: Session | null
 }
 
-type BookmarkType = {
-  id: string
-  user_id: string
-  post_id: string
-  title?: string
-  slug?: string
-  featuredImage?: {
-    url: string
-    width?: number
-    height?: number
-  }
-  created_at: string
-}
-
-function BookmarksSkeleton() {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[...Array(6)].map((_, i) => (
-        <Card key={i} className="overflow-hidden flex flex-col h-full animate-pulse">
-          <div className="relative">
-            <div className="aspect-video relative overflow-hidden bg-gray-200"></div>
-          </div>
-          <CardContent className="flex-grow pt-4">
-            <div className="h-6 bg-gray-200 rounded mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-          </CardContent>
-          <CardFooter className="pt-0 text-sm text-gray-500">
-            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
 export function BookmarksContent({ initialSession }: BookmarksContentProps) {
   const router = useRouter()
-  const { user, loading, isAuthenticated } = useUser()
-  const [bookmarks, setBookmarks] = useState<BookmarkType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, loading: userLoading, isAuthenticated } = useUser()
+  const { bookmarks, loading, error, refreshBookmarks } = useBookmarks()
   const [isRLSError, setIsRLSError] = useState(false)
-  const supabase = createClient()
 
   // Check authentication and redirect if needed
   useEffect(() => {
-    if (!loading && !isAuthenticated && initialSession === null) {
+    if (!userLoading && !isAuthenticated && initialSession === null) {
       router.push("/auth?redirectTo=/bookmarks")
     }
-  }, [loading, isAuthenticated, initialSession, router])
+  }, [userLoading, isAuthenticated, initialSession, router])
 
-  // Fetch bookmarks
+  // Check if error is related to RLS
   useEffect(() => {
-    const fetchBookmarks = async () => {
-      if (!user) return
-
-      try {
-        setIsLoading(true)
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-
-        if (error) {
-          console.error("Error fetching bookmarks:", error)
-
-          // Check if it's an RLS error
-          if (error.message.includes("row-level security")) {
-            setIsRLSError(true)
-            throw new Error("Permission error: Row-level security policies need to be configured.")
-          }
-
-          throw error
-        }
-
-        setBookmarks(data || [])
-        setIsRLSError(false)
-      } catch (err: any) {
-        console.error("Error fetching bookmarks:", err)
-        setError(err.message || "Failed to load bookmarks")
-      } finally {
-        setIsLoading(false)
-      }
+    if (
+      error &&
+      (error.includes("row-level security") || error.includes("permission denied") || error.includes("policy"))
+    ) {
+      setIsRLSError(true)
+    } else {
+      setIsRLSError(false)
     }
-
-    if (isAuthenticated && user) {
-      fetchBookmarks()
-    }
-  }, [isAuthenticated, user, supabase])
+  }, [error])
 
   // Handle bookmark removal
   const handleBookmarkRemoved = (postId: string) => {
-    setBookmarks((prevBookmarks) => prevBookmarks.filter((bookmark) => bookmark.post_id !== postId))
+    // The state is already updated in the context
   }
 
   // Show loading state for initial data fetch
-  if (loading || isLoading) {
+  if (userLoading || loading) {
     return <BookmarksSkeleton />
   }
 
@@ -161,8 +94,12 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
   if (error && !isRLSError) {
     return (
       <div className="py-8 text-center">
+        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
         <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <Button onClick={() => refreshBookmarks()} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Try Again
+        </Button>
       </div>
     )
   }
@@ -171,7 +108,7 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
   if (bookmarks.length === 0) {
     return (
       <div className="text-center py-12">
-        <Bookmark className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+        <BookmarkIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
         <h2 className="text-2xl font-bold mb-2">You have no bookmarks yet</h2>
         <p className="text-gray-500 mb-6">Save articles to read later by clicking the bookmark icon on any article.</p>
         <Button asChild>
@@ -185,53 +122,89 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
     <ErrorBoundary>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {bookmarks.map((bookmark) => (
-          <Card key={bookmark.id} className="overflow-hidden flex flex-col h-full">
-            <div className="relative">
-              <Link href={`/article/${bookmark.slug}`}>
-                <div className="aspect-video relative overflow-hidden">
-                  {bookmark.featuredImage?.url ? (
-                    <Image
-                      src={bookmark.featuredImage.url || "/placeholder.svg"}
-                      alt={bookmark.title || "Bookmarked article"}
-                      className="object-cover transition-transform hover:scale-105"
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400">No image</span>
-                    </div>
-                  )}
-                </div>
-              </Link>
-              <div className="absolute top-2 right-2">
-                <BookmarkButton
-                  postId={bookmark.post_id}
-                  title={bookmark.title}
-                  slug={bookmark.slug}
-                  featuredImage={bookmark.featuredImage}
-                  variant="default"
-                  size="icon"
-                  className="bg-white/90 hover:bg-white text-primary"
-                  onRemoveSuccess={() => handleBookmarkRemoved(bookmark.post_id)}
-                />
-              </div>
-            </div>
-
-            <CardContent className="flex-grow pt-4">
-              <Link href={`/article/${bookmark.slug}`} className="group">
-                <h2 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-                  {bookmark.title || "Untitled Article"}
-                </h2>
-              </Link>
-            </CardContent>
-
-            <CardFooter className="pt-0 text-sm text-gray-500">
-              <span>{formatDate(bookmark.created_at)}</span>
-            </CardFooter>
-          </Card>
+          <BookmarkCard key={bookmark.id} bookmark={bookmark} onRemoveSuccess={handleBookmarkRemoved} />
         ))}
       </div>
     </ErrorBoundary>
+  )
+}
+
+function BookmarkCard({
+  bookmark,
+  onRemoveSuccess,
+}: {
+  bookmark: Bookmark
+  onRemoveSuccess: (postId: string) => void
+}) {
+  const imageUrl = bookmark.featuredImage?.node?.sourceUrl || "/news-collage.png"
+  const articleUrl = `/post/${bookmark.slug}`
+
+  return (
+    <Card className="overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+      <div className="relative">
+        <Link href={articleUrl}>
+          <div className="aspect-video relative overflow-hidden">
+            <Image
+              src={imageUrl || "/placeholder.svg"}
+              alt={bookmark.title || "Bookmarked article"}
+              className="object-cover transition-transform hover:scale-105"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
+        </Link>
+        <div className="absolute top-2 right-2">
+          <BookmarkButton
+            postId={bookmark.post_id}
+            title={bookmark.title}
+            slug={bookmark.slug}
+            variant="default"
+            size="icon"
+            className="bg-white/90 hover:bg-white text-primary shadow-sm"
+            onRemoveSuccess={() => onRemoveSuccess(bookmark.post_id)}
+          />
+        </div>
+      </div>
+
+      <CardContent className="flex-grow pt-4">
+        <Link href={articleUrl} className="group">
+          <h2 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
+            {bookmark.title || "Untitled Article"}
+          </h2>
+        </Link>
+        {bookmark.excerpt && (
+          <p className="text-gray-600 line-clamp-2 text-sm mb-2">{bookmark.excerpt.replace(/<[^>]*>/g, "")}</p>
+        )}
+      </CardContent>
+
+      <CardFooter className="pt-0 text-sm text-gray-500 flex justify-between items-center">
+        <span>{formatDate(bookmark.created_at || bookmark.date || "")}</span>
+        <Button asChild variant="ghost" size="sm" className="text-primary">
+          <Link href={articleUrl}>Read Article</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function BookmarksSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, i) => (
+        <Card key={i} className="overflow-hidden flex flex-col h-full animate-pulse">
+          <div className="relative">
+            <div className="aspect-video relative overflow-hidden bg-gray-200"></div>
+          </div>
+          <CardContent className="flex-grow pt-4">
+            <div className="h-6 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+          </CardContent>
+          <CardFooter className="pt-0 text-sm text-gray-500">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   )
 }

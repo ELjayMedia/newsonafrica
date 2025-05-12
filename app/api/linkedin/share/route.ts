@@ -1,23 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
-  // Get the LinkedIn access token from the cookie
-  const linkedInToken = request.cookies.get("linkedin_token")?.value
+  const token = request.cookies.get("linkedin_token")?.value
 
-  if (!linkedInToken) {
-    return NextResponse.json({ error: "Not authenticated with LinkedIn" }, { status: 401 })
+  if (!token) {
+    return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 })
   }
 
   try {
     const body = await request.json()
     const { title, url, summary, imageUrl } = body
 
-    // Create the share content
-    const shareContent = {
-      owner: "urn:li:person:me",
+    // Get user profile to get URN
+    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!profileResponse.ok) {
+      return NextResponse.json({ success: false, error: "Failed to get profile" }, { status: 401 })
+    }
+
+    const profile = await profileResponse.json()
+    const userUrn = profile.id
+
+    // Create share
+    const shareData = {
+      owner: `urn:li:person:${userUrn}`,
       subject: title,
       text: {
-        text: summary,
+        text: summary || title,
       },
       content: {
         contentEntities: [
@@ -26,31 +39,32 @@ export async function POST(request: NextRequest) {
             thumbnails: imageUrl ? [{ resolvedUrl: imageUrl }] : undefined,
           },
         ],
-        title,
+        title: title,
       },
       distribution: {
         linkedInDistributionTarget: {},
       },
     }
 
-    // Post to LinkedIn API
     const shareResponse = await fetch("https://api.linkedin.com/v2/shares", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${linkedInToken}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(shareContent),
+      body: JSON.stringify(shareData),
     })
 
     if (!shareResponse.ok) {
-      throw new Error("Failed to share content on LinkedIn")
+      const errorData = await shareResponse.json()
+      console.error("LinkedIn share error:", errorData)
+      return NextResponse.json({ success: false, error: "Failed to share" }, { status: 500 })
     }
 
-    const shareData = await shareResponse.json()
-    return NextResponse.json({ success: true, data: shareData })
+    const shareResult = await shareResponse.json()
+    return NextResponse.json({ success: true, data: shareResult })
   } catch (error) {
-    console.error("LinkedIn sharing error:", error)
-    return NextResponse.json({ error: "Failed to share content on LinkedIn" }, { status: 500 })
+    console.error("LinkedIn share error:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
