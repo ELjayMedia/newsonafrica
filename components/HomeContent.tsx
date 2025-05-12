@@ -16,6 +16,7 @@ import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
+import { fetchSportPosts } from "@/lib/sport-utils"
 
 interface HomeContentProps {
   initialData: {
@@ -65,6 +66,7 @@ const fetchHomeData = async () => {
 export function HomeContent({ initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
+  const [sportPosts, setSportPosts] = useState<any[]>([])
 
   // Listen for online/offline events
   useEffect(() => {
@@ -78,6 +80,19 @@ export function HomeContent({ initialData }: HomeContentProps) {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
+  }, [])
+
+  useEffect(() => {
+    const getSportPosts = async () => {
+      try {
+        const posts = await fetchSportPosts(5)
+        setSportPosts(posts)
+      } catch (error) {
+        console.error("Error fetching sport posts:", error)
+      }
+    }
+
+    getSportPosts()
   }, [])
 
   // Update the useSWR configuration for better error handling
@@ -288,6 +303,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
             className="compact-grid"
           />
         </section>
+        <NewsGrid posts={recentPosts} className="mb-8" sportCategoryPosts={sportPosts} showSportCategory={true} />
       </div>
     </ErrorBoundary>
   )
