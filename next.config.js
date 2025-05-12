@@ -22,13 +22,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  compress: true,
-  poweredByHeader: false,
-  productionBrowserSourceMaps: false,
-  experimental: {
-    // Remove optimizeCss which requires critters
-    optimizeServerReact: true,
-  },
 }
 
 module.exports = nextConfig
