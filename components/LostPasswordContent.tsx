@@ -9,3 +9,6 @@ export function LostPasswordContent() {
     </div>
   )
 }
+
+// Default export for dynamic import
+export default LostPasswordContent
