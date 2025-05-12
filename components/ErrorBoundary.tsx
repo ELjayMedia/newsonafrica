@@ -1,16 +1,14 @@
 "use client"
 
 import { Component, type ErrorInfo, type ReactNode } from "react"
-import { Button } from "@/components/ui/button"
 
 interface Props {
-  children?: ReactNode
+  children: ReactNode
   fallback?: ReactNode
 }
 
 interface State {
   hasError: boolean
-  error?: Error
 }
 
 class ErrorBoundary extends Component<Props, State> {
@@ -18,8 +16,9 @@ class ErrorBoundary extends Component<Props, State> {
     hasError: false,
   }
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  public static getDerivedStateFromError(_: Error): State {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true }
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -33,18 +32,17 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="p-6 rounded-lg bg-red-50 text-center">
-          <h2 className="text-xl font-bold text-red-700 mb-2">Something went wrong</h2>
-          <p className="text-red-600 mb-4">
-            {this.state.error?.message || "An error occurred while rendering this component."}
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+          <h2 className="text-lg font-semibold text-red-800">Something went wrong</h2>
+          <p className="text-sm text-red-600 mt-1">
+            The application encountered an error. Please try refreshing the page.
           </p>
-          <Button
+          <button
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
             onClick={() => this.setState({ hasError: false })}
-            variant="outline"
-            className="border-red-300 hover:border-red-400 text-red-700"
           >
             Try again
-          </Button>
+          </button>
         </div>
       )
     }

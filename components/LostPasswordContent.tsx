@@ -1,14 +1,18 @@
 "use client"
 
-import { LostPasswordForm } from "@/components/LostPasswordForm"
+import { LostPasswordForm } from "./LostPasswordForm"
 
-export function LostPasswordContent() {
+export default function LostPasswordContent() {
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+    <div className="max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Reset Password</h1>
+      <p className="mb-4 text-gray-600">
+        Enter your email address below and we'll send you a link to reset your password.
+      </p>
       <LostPasswordForm />
     </div>
   )
 }
 
-// Default export for dynamic import
-export default LostPasswordContent
+// For backwards compatibility
+export { LostPasswordContent }
