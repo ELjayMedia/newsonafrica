@@ -4,9 +4,11 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sun, Moon, Search, Menu, User, BellRing } from "lucide-react"
 import { useState } from "react"
+import { useUser } from "@/contexts/UserContext"
 
 export function TopNavigation() {
   const [isDark, setIsDark] = useState(false)
+  const { isAuthenticated } = useUser()
 
   const toggleTheme = () => {
     setIsDark(!isDark)
@@ -35,8 +37,10 @@ export function TopNavigation() {
             <Button variant="ghost" size="icon">
               <BellRing className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href={isAuthenticated ? "/profile" : "/auth"}>
+                <User className="h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>

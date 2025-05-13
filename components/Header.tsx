@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import Link from "next/link"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,7 @@ import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useDebounce } from "@/hooks/useDebounce"
+import { ProfileDropdown } from "@/components/ProfileDropdown"
 
 const categories = [
   { name: "NEWS", href: "/category/news" },
@@ -28,7 +28,7 @@ const categories = [
 export function Header() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
-  const { user, signOut } = useUser()
+  const { user, signOut, isAuthenticated } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -87,6 +87,7 @@ export function Header() {
               </form>
 
               <div className="flex items-center space-x-2">
+                {/* Social media links */}
                 <div className="flex items-center space-x-2">
                   <a
                     href="https://linkedin.com"
@@ -123,6 +124,13 @@ export function Header() {
                   </a>
                 </div>
               </div>
+
+              {/* Only show ProfileDropdown in desktop view */}
+              {isAuthenticated && (
+                <div className="hidden md:block">
+                  <ProfileDropdown />
+                </div>
+              )}
 
               <div className="flex items-center gap-2 text-sm ml-4">
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}

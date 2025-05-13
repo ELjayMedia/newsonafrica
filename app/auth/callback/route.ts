@@ -13,8 +13,12 @@ export async function GET(request: NextRequest) {
 
     // Exchange the code for a session
     await supabase.auth.exchangeCodeForSession(code)
+
+    // Check if this is a new user from a social login
+    // We'll redirect to profile completion in the client component
   }
 
   // URL to redirect to after sign in process completes
+  // For social logins, we'll check in the client if profile completion is needed
   return NextResponse.redirect(new URL("/", request.url))
 }

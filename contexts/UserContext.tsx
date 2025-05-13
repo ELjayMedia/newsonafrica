@@ -25,15 +25,21 @@ interface UserContextType {
   session: Session | null
   loading: boolean
   isAuthenticated: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, username: string) => Promise<void>
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>
+  signUp: (email: string, password: string, username: string, rememberMe?: boolean) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   resetPassword: (email: string) => Promise<void>
-  signInWithGoogle: () => Promise<void>
+  signInWithGoogle: (rememberMe?: boolean) => Promise<void>
+  signInWithFacebook: (rememberMe?: boolean) => Promise<void>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
+
+// Default session expiry is 24 hours (in seconds)
+const DEFAULT_SESSION_EXPIRY = 60 * 60 * 24
+// Extended session expiry is 30 days (in seconds)
+const EXTENDED_SESSION_EXPIRY = 60 * 60 * 24 * 30
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -102,10 +108,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     initAuth()
   }, [fetchProfile])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+        options: {
+          expiresIn: rememberMe ? EXTENDED_SESSION_EXPIRY : DEFAULT_SESSION_EXPIRY,
+        },
+      })
 
       if (error) throw error
 
@@ -123,7 +135,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, username: string) => {
+  const signUp = async (email: string, password: string, username: string, rememberMe = false) => {
     try {
       setLoading(true)
 
@@ -150,6 +162,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           data: {
             username,
           },
+          expiresIn: rememberMe ? EXTENDED_SESSION_EXPIRY : DEFAULT_SESSION_EXPIRY,
         },
       })
 
@@ -254,13 +267,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (rememberMe = false) => {
     try {
       setLoading(true)
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            session_expiry: rememberMe ? EXTENDED_SESSION_EXPIRY.toString() : DEFAULT_SESSION_EXPIRY.toString(),
+          },
         },
       })
 
@@ -268,7 +284,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       return data
     } catch (error) {
-      console.error("Error signing in with Google:", error)
+      console.error("Error authenticating with Google:", error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithFacebook = async (rememberMe = false) => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            session_expiry: rememberMe ? EXTENDED_SESSION_EXPIRY.toString() : DEFAULT_SESSION_EXPIRY.toString(),
+          },
+        },
+      })
+
+      if (error) throw error
+
+      return data
+    } catch (error) {
+      console.error("Error signing in with Facebook:", error)
       throw error
     } finally {
       setLoading(false)
@@ -289,6 +329,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         updateProfile,
         resetPassword,
         signInWithGoogle,
+        signInWithFacebook,
       }}
     >
       {children}
