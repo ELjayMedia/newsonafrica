@@ -24,8 +24,7 @@ export function AuthForm({ redirectTo }: AuthFormProps) {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
-  const { signIn, signUp, resetPassword, signInWithGoogle } = useUser()
+  const { signIn, signUp, signInWithGoogle } = useUser()
   const router = useRouter()
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -102,26 +101,6 @@ export function AuthForm({ redirectTo }: AuthFormProps) {
     }
   }
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) {
-      setError("Please enter your email address to reset your password.")
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      await resetPassword(email)
-      setResetSent(true)
-    } catch (error) {
-      console.error("Password reset error:", error)
-      setError("Failed to send password reset email. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleGoogleSignIn = async () => {
     setError("")
     setGoogleLoading(true)
@@ -146,12 +125,6 @@ export function AuthForm({ redirectTo }: AuthFormProps) {
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {resetSent && (
-        <Alert className="mb-4">
-          <AlertDescription>Password reset email sent. Please check your inbox.</AlertDescription>
         </Alert>
       )}
 
@@ -230,9 +203,6 @@ export function AuthForm({ redirectTo }: AuthFormProps) {
               </svg>
             )}
             {googleLoading ? "Signing in..." : "Sign in with Google"}
-          </Button>
-          <Button type="button" variant="link" className="w-full" onClick={handlePasswordReset} disabled={isLoading}>
-            Forgot password?
           </Button>
         </form>
       </TabsContent>
