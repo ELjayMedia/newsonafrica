@@ -1,159 +1,72 @@
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
 
-if (!WORDPRESS_API_URL) {
-  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
-}
+export async function resetPassword(email: string) {
+  const cookieStore = cookies()
+  const supabase = createClient({ cookies: () => cookieStore })
 
-export async function signIn(username: string, password: string) {
   try {
-    // Check if API URL is defined
-    if (!WORDPRESS_API_URL) {
-      console.error("WORDPRESS_API_URL is not defined in environment variables")
-      throw new Error("API configuration error")
-    }
-
-    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_API_URL)
-
-    const response = await fetch(`${WORDPRESS_API_URL}/jwt-auth/v1/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username,
-        password,
-      }),
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.SITE_URL}/reset-password`,
     })
 
-    // Log response status to help with debugging
-    console.log("Authentication response status:", response.status)
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      console.error("Authentication error details:", errorData)
-      throw new Error(errorData?.message || "Authentication failed")
+    if (error) {
+      console.error("Error resetting password:", error)
+      throw new Error("Failed to send reset password email")
     }
 
-    const data = await response.json()
-    return {
-      authToken: data.token,
-      user: {
-        id: data.user_id,
-        name: data.user_display_name,
-        email: data.user_email,
-      },
-    }
+    return { success: true, message: "Reset password email sent successfully" }
   } catch (error) {
-    console.error("Login error:", error)
-
-    // Provide more specific error messages based on the error type
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new Error("Unable to connect to authentication service. Please check your network connection.")
-    }
-
-    throw new Error(error instanceof Error ? error.message : "Authentication failed")
-  }
-}
-
-export async function getCurrentUser(token: string) {
-  try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user data")
-    }
-
-    const userData = await response.json()
-    return {
-      id: userData.id,
-      name: userData.name,
-      email: userData.email,
-    }
-  } catch (error) {
-    console.error("Error fetching current user:", error)
-    throw error
+    console.error("Error in resetPassword function:", error)
+    throw new Error("Failed to send reset password email")
   }
 }
 
 export async function signUp(username: string, email: string, password: string) {
+  const cookieStore = cookies()
+  const supabase = createClient({ cookies: () => cookieStore })
+
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`)}`,
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+        },
       },
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-      }),
     })
 
-    if (!response.ok) {
-      throw new Error("Registration failed")
+    if (error) {
+      console.error("Error signing up:", error)
+      throw new Error("Failed to create user")
     }
 
-    const userData = await response.json()
-    return {
-      user: {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-      },
-    }
+    return data.user
   } catch (error) {
-    console.error("Registration error:", error)
-    throw new Error("Registration failed")
+    console.error("Error in signUp function:", error)
+    throw new Error("Failed to create user")
   }
 }
 
-export async function resetPassword(email: string) {
+export async function signIn(email: string, password: string) {
+  const cookieStore = cookies()
+  const supabase = createClient({ cookies: () => cookieStore })
+
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/lost-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_login: email,
-      }),
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     })
 
-    if (!response.ok) {
-      throw new Error("Failed to send reset password email")
+    if (error) {
+      console.error("Error signing in:", error)
+      throw new Error("Authentication failed")
     }
 
-    return { success: true }
+    return data.session?.access_token
   } catch (error) {
-    console.error("Reset password error:", error)
-    throw new Error("Reset password request failed")
+    console.error("Error in signIn function:", error)
+    throw new Error("Authentication failed")
   }
-}
-
-// Add the missing exports
-export async function getAuthToken(request: Request) {
-  const cookieHeader = request.headers.get("cookie")
-  if (!cookieHeader) return null
-
-  const cookies = cookieHeader.split(";").reduce(
-    (acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    },
-    {} as Record<string, string>,
-  )
-
-  return cookies.auth_token || null
-}
-
-export async function signOut() {
-  // Clear auth token from cookies
-  document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
-  return { success: true }
 }
