@@ -1,9 +1,14 @@
+export const dynamic = "force-dynamic"
+
 import { Suspense } from "react"
-import { NewsContent } from "@/components/NewsContent"
+import dynamic from "next/dynamic"
+
+// Use dynamic import with ssr: false to ensure client-only rendering
+const NewsContent = dynamic(() => import("@/components/NewsContent").then((mod) => mod.NewsContent), { ssr: false })
 
 export default function NewsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="p-6 text-center">Loading news content...</div>}>
       <NewsContent />
     </Suspense>
   )

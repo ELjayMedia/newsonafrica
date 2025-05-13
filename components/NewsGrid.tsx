@@ -60,18 +60,13 @@ export const NewsGrid = memo(function NewsGrid({
 
   const secondaryPostsBlurURLs = useMemo(() => {
     const maxLength = Math.max(secondaryPosts.length, secondarySportPosts.length)
-    const blurURLs: string[] = []
-    for (let i = 0; i < maxLength; i++) {
-      blurURLs.push(generateBlurDataURL(70, 70))
-    }
+    const blurURLs: string[] = Array(maxLength).fill(generateBlurDataURL(70, 70))
     return blurURLs
   }, [secondaryPosts.length, secondarySportPosts.length])
 
-  const renderSportCategoryContent = useMemo(() => {
-    let content = null
-
-    if (showSportCategory && hasSportCategoryPosts) {
-      content = (
+  return (
+    <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${className}`}>
+      {showSportCategory && hasSportCategoryPosts ? (
         <>
           {/* Sport Category Header */}
           <div className="md:col-span-2 flex items-center mb-2">
@@ -147,17 +142,7 @@ export const NewsGrid = memo(function NewsGrid({
             ))}
           </div>
         </>
-      )
-    }
-
-    return content
-  }, [showSportCategory, hasSportCategoryPosts, sportCategoryPosts, mainPostBlurURL, secondaryPostsBlurURLs])
-
-  const renderMainContent = useMemo(() => {
-    let content = null
-
-    if (hasPosts) {
-      content = (
+      ) : (
         <>
           {/* Main Featured Article */}
           <Link
@@ -225,15 +210,10 @@ export const NewsGrid = memo(function NewsGrid({
             ))}
           </div>
         </>
-      )
-    }
-
-    return content
-  }, [hasPosts, mainPost, secondaryPosts, mainPostBlurURL, secondaryPostsBlurURLs])
-
-  return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${className}`}>
-      {renderSportCategoryContent || renderMainContent}
+      )}
     </div>
   )
 })
+
+// Add a default export for dynamic import
+export default { NewsGrid }

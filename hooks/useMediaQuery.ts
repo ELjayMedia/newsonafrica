@@ -33,3 +33,6 @@ export function useMediaQuery(query: string): boolean {
   // Return false during server-side rendering
   return mounted ? matches : false
 }
+
+// Add a default export for dynamic import
+export default { useMediaQuery }
