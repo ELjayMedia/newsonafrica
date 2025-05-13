@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react"
 
 export function useMediaQuery(query: string): boolean {
-  // Default to false on server
+  // Default to false on server and during initial client render
   const [matches, setMatches] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Only run on client
-    if (typeof window === "undefined") return
+    setMounted(true)
 
-    // Create media query list
+    // Only run on client after mount
     const media = window.matchMedia(query)
 
     // Set initial value
@@ -30,5 +30,12 @@ export function useMediaQuery(query: string): boolean {
     }
   }, [query])
 
-  return matches
+  // Return false if not mounted (during SSR)
+  return mounted ? matches : false
+}
+
+// Create a safe version that can be imported in server components
+// but will only execute the hook logic on the client
+export default function SafeMediaQuery() {
+  return { useMediaQuery }
 }
