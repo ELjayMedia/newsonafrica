@@ -26,10 +26,10 @@ export default function CategoryPage({ slug, initialData }: { slug: string; init
   })
 
   useEffect(() => {
-    if (inView && hasNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage()
     }
-  }, [inView, hasNextPage, fetchNextPage])
+  }, [inView, hasNextPage, fetchNextPage, isFetchingNextPage])
 
   if (isLoading) return <NewsGridSkeleton />
   if (error) return <div>Error loading category: {(error as Error).message}</div>
@@ -74,28 +74,65 @@ export default function CategoryPage({ slug, initialData }: { slug: string; init
         <h2 className="text-xl font-bold mt-12 mb-6">More from {category.name}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {morePosts.map((post) => (
-            <HorizontalCard key={post.id} post={post} />
+            <HorizontalCard key={post.id} post={post} showBookmarkButton />
           ))}
 
-          {/* Infinite scroll loading indicator */}
+          {/* Improved loading skeletons for infinite scroll */}
           {isFetchingNextPage && (
-            <div className="col-span-full flex justify-center py-4">
-              <div className="animate-pulse flex space-x-4">
-                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
-                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
-                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
-              </div>
-            </div>
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={`skeleton-${i}`} className="border border-gray-200 rounded-lg shadow-sm p-3 animate-pulse">
+                  <div className="flex flex-row items-center justify-between space-x-3">
+                    <div className="flex-1 space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 bg-gray-200 rounded-full mr-1"></div>
+                        <div className="h-2 bg-gray-200 rounded w-16"></div>
+                      </div>
+                    </div>
+                    <div className="w-20 h-20 bg-gray-200 rounded-md"></div>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
         </div>
 
-        {/* Invisible sentinel element for infinite scroll */}
-        {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
+        {/* Improved sentinel with loading trigger */}
+        <div ref={ref} className="w-full py-8 flex justify-center" aria-live="polite" role="status">
+          {hasNextPage && !isFetchingNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium transition-colors"
+            >
+              Load more articles
+            </button>
+          )}
 
-        {/* End of content message */}
-        {!hasNextPage && !isFetchingNextPage && morePosts.length > 0 && (
-          <p className="text-center text-gray-600 mt-8">You've reached the end of the content</p>
-        )}
+          {isFetchingNextPage && (
+            <div className="text-gray-500 flex items-center">
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Loading more articles...
+            </div>
+          )}
+
+          {!hasNextPage && morePosts.length > 0 && (
+            <p className="text-center text-gray-600">You've reached the end of the content</p>
+          )}
+        </div>
       </div>
     </ErrorBoundary>
   )

@@ -1,5 +1,43 @@
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
+import jwt from "jsonwebtoken"
+
+export async function getCurrentUser(token: string) {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+
+    const cookieStore = cookies()
+    const supabase = createClient({ cookies: () => cookieStore })
+
+    const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", decoded.userId).single()
+
+    if (error) {
+      console.error("Error fetching profile:", error)
+      throw new Error("Failed to fetch user profile")
+    }
+
+    return profile
+  } catch (error) {
+    console.error("Error decoding or fetching user:", error)
+    throw new Error("Invalid or expired token")
+  }
+}
+
+export async function getAuthToken(request: Request) {
+  const token = request.headers.get("Authorization")?.split(" ")[1]
+
+  if (!token) {
+    return null
+  }
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET as string)
+    return token
+  } catch (error) {
+    console.error("JWT verification failed:", error)
+    return null
+  }
+}
 
 export async function resetPassword(email: string) {
   const cookieStore = cookies()
