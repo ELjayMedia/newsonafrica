@@ -1,87 +1,93 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import Link from "next/link"
-import Image from "next/image"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { useToast } from "@/hooks/use-toast"
 
 export function LostPasswordForm() {
   const [email, setEmail] = useState("")
-  const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState("")
+  const [success, setSuccess] = useState(false)
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setIsLoading(true)
 
     try {
       const response = await fetch("/api/auth/lost-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ email }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.message || "Password reset request failed")
+        const error = await response.json()
+        throw new Error(error.message || "Failed to send reset link")
       }
 
-      setSuccessMessage("Check your email for the confirmation link.")
-      setEmail("")
-    } catch (err: any) {
-      setError(err.message)
+      setSuccess(true)
+      toast({
+        title: "Reset link sent",
+        description: "Check your email for the password reset link",
+      })
+    } catch (error) {
+      console.error("Lost password error:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send reset link",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex justify-center mb-6">
-        <Image
-          src="https://sjc.microlink.io/EGIGWUGCsspaGZT7vB38DeVeLCEqQ3PrYnFQQtDY8_NlqzLfaU7r_r6RZUHqgPuNn_mQYtipBPpK8Qgz3gCgjg.jpeg"
-          alt="News On Africa"
-          width={200}
-          height={80}
-          priority
-        />
-      </div>
+    <div>
+      <h1 className="text-2xl font-bold mb-6 text-center">Reset Password</h1>
 
-      <p className="text-sm text-gray-600 mb-4">
-        Please enter your username or email address. You will receive a link to create a new password via email.
-      </p>
+      {success ? (
+        <div className="text-center p-4 bg-green-50 rounded-md">
+          <p className="text-green-700 mb-2">Password reset link sent!</p>
+          <p className="text-sm text-gray-600">Please check your email for instructions to reset your password.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              className="w-full"
+            />
+          </div>
 
-      <div className="space-y-2">
-        <Input
-          type="email"
-          placeholder="Username or Email Address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2"
-        />
-      </div>
+          <Button type="submit" className={`w-full ${isMobile ? "py-3" : "py-2"}`} disabled={isLoading}>
+            {isLoading ? "Sending..." : "Send Reset Link"}
+          </Button>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-      {successMessage && <p className="text-green-500 text-sm">{successMessage}</p>}
-
-      <Button type="submit" className="w-full" variant="primary" disabled={isLoading}>
-        {isLoading ? "Sending..." : "Get New Password"}
-      </Button>
-
-      <div className="mt-6 text-center space-y-4">
-        <Link href="/auth" className="text-[#2271b1] hover:underline text-sm block">
-          Log In
-        </Link>
-        <Link href="/" className="text-[#2271b1] hover:underline text-sm block">
-          ← Go to News On Africa
-        </Link>
-      </div>
-    </form>
+          <p className="text-sm text-center text-gray-600 mt-4">
+            Remember your password?{" "}
+            <a href="/auth" className="text-blue-600 hover:underline">
+              Sign in
+            </a>
+          </p>
+        </form>
+      )}
+    </div>
   )
 }

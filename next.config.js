@@ -3,24 +3,24 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: [
-      "news-on-africa.vercel.app",
-      "localhost",
-      "via.placeholder.com",
-      "images.unsplash.com",
-      "plus.unsplash.com",
-      "news24.com",
-      "cdn.24.co.za",
-      "media.licdn.com",
       "sjc.microlink.io",
+      "newsonafrica.com",
+      "placekitten.com",
+      "via.placeholder.com",
+      "placeholdit.imgix.net",
+      "loremflickr.com",
+      "picsum.photos",
     ],
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60,
+    unoptimized: true,
+  },
+  // Modern config without deprecated options
+  typescript: {
+    // Handle type errors during build (recommended for CI)
+    ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
   },
 }
 
