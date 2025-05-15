@@ -24,6 +24,41 @@ export interface Profile {
 }
 
 /**
+ * Create a new user profile
+ *
+ * @param userId - The user ID to create the profile for
+ * @param profileData - The initial profile data
+ * @returns The created profile or null if creation failed
+ */
+export async function createProfile(userId: string, profileData: Partial<Profile>): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        username: profileData.username || userId.substring(0, 8),
+        full_name: profileData.full_name || "",
+        email: profileData.email || "",
+        avatar_url: profileData.avatar_url || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error creating profile:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error in createProfile:", error)
+    return null
+  }
+}
+
+/**
  * Fetch a user profile by ID
  *
  * @param userId - The user ID to fetch the profile for
