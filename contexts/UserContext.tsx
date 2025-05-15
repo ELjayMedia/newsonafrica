@@ -21,7 +21,7 @@ interface UserContextType {
   signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
-  resetPassword: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInWithFacebook: () => Promise<void>
   refreshSession: () => Promise<boolean>

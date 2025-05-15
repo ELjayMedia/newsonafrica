@@ -1,4 +1,4 @@
-"\"use client"
+"use client"
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -24,3 +24,6 @@ export default function ClientRedirect() {
     </div>
   )
 }
+
+// Add named export for compatibility
+export { ClientRedirect }

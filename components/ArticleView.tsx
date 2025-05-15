@@ -1,4 +1,5 @@
 "use client"
+import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { formatDate } from "@/utils/date-utils"
@@ -8,6 +9,7 @@ import { ShareButtons } from "./ShareButtons"
 import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
 import { usePathname } from "next/navigation"
+import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 
 interface ArticleViewProps {
   post: {
@@ -52,6 +54,42 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const { isAuthenticated } = useUser()
   const pathname = usePathname()
   const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
+  const isNewVisit = useRef(true)
+
+  // Use our custom hook to manage scroll position
+  const { scrollPosition, hasRestoredPosition, restoreScrollPosition, clearScrollPosition } =
+    useArticleScrollPosition(id)
+
+  // Handle scroll to top for authenticated users on new visits
+  useEffect(() => {
+    if (isAuthenticated && isNewVisit.current) {
+      // Check if we have a saved position
+      if (scrollPosition > 0 && !hasRestoredPosition) {
+        // If we have a saved position, restore it
+        restoreScrollPosition()
+      } else {
+        // If no saved position or first visit, scroll to top
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        })
+      }
+      isNewVisit.current = false
+    }
+  }, [isAuthenticated, pathname, scrollPosition, hasRestoredPosition, restoreScrollPosition])
+
+  // Clear scroll position when user explicitly navigates to a different article
+  useEffect(() => {
+    return () => {
+      // This runs when the component unmounts
+      // We don't clear if it's a page refresh or browser navigation
+      if (performance.navigation?.type !== 1) {
+        // 1 is TYPE_RELOAD
+        // We keep the position in sessionStorage, just mark that we're leaving
+        isNewVisit.current = true
+      }
+    }
+  }, [id])
 
   const formatReadingTime = (time?: string) => {
     if (!time) return "5 min read"

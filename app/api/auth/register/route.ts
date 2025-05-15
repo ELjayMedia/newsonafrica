@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
+import { createProfile } from "@/services/profile-service"
 
 export async function POST(request: Request) {
   try {
@@ -30,15 +31,13 @@ export async function POST(request: Request) {
 
     // Create the profile
     if (authData.user) {
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: authData.user.id,
+      const profile = await createProfile(authData.user.id, {
         username,
         email,
-        created_at: new Date().toISOString(),
       })
 
-      if (profileError) {
-        return NextResponse.json({ error: profileError.message }, { status: 400 })
+      if (!profile) {
+        return NextResponse.json({ error: "Failed to create user profile" }, { status: 400 })
       }
     }
 

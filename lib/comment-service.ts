@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase"
-import type { Comment, NewComment, ReportCommentData } from "@/lib/supabase-schema"
+import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
+import { createCommentReplyNotification } from "@/services/notification-service"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
@@ -38,21 +39,28 @@ export function recordSubmission(userId: string): void {
 
 // Check if the status column exists in the comments table
 let hasStatusColumn: boolean | null = null
+let hasRichTextColumn: boolean | null = null
 
-async function checkStatusColumn(): Promise<boolean> {
-  if (hasStatusColumn !== null) return hasStatusColumn
+async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
+  if (hasStatusColumn !== null && hasRichTextColumn !== null) {
+    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
+  }
 
   try {
     // Try to select the status column
-    const { data, error } = await supabase.from("comments").select("status").limit(1)
+    const { data: statusData, error: statusError } = await supabase.from("comments").select("status").limit(1)
+    hasStatusColumn = !statusError
 
-    // If there's no error, the column exists
-    hasStatusColumn = !error
-    return hasStatusColumn
+    // Try to select the is_rich_text column
+    const { data: richTextData, error: richTextError } = await supabase.from("comments").select("is_rich_text").limit(1)
+    hasRichTextColumn = !richTextError
+
+    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
   } catch (error) {
-    console.error("Error checking status column:", error)
+    console.error("Error checking columns:", error)
     hasStatusColumn = false
-    return false
+    hasRichTextColumn = false
+    return { hasStatus: false, hasRichText: false }
   }
 }
 
@@ -61,10 +69,11 @@ export async function fetchComments(
   postId: string,
   page = 0,
   pageSize = 10,
+  sortOption: CommentSortOption = "newest",
 ): Promise<{ comments: Comment[]; hasMore: boolean; total: number }> {
   try {
-    // Check if status column exists
-    const hasStatus = await checkStatusColumn()
+    // Check if columns exist
+    const { hasStatus, hasRichText } = await checkColumns()
 
     // Get total count first
     let countQuery = supabase
@@ -86,13 +95,28 @@ export async function fetchComments(
     }
 
     // Then fetch paginated comments
-    let commentsQuery = supabase
-      .from("comments")
-      .select("*")
-      .eq("post_id", postId)
-      .is("parent_id", null) // Only fetch root comments for pagination
-      .order("created_at", { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1)
+    let commentsQuery = supabase.from("comments").select("*").eq("post_id", postId).is("parent_id", null) // Only fetch root comments for pagination
+
+    // Add sort order based on option
+    switch (sortOption) {
+      case "newest":
+        commentsQuery = commentsQuery.order("created_at", { ascending: false })
+        break
+      case "oldest":
+        commentsQuery = commentsQuery.order("created_at", { ascending: true })
+        break
+      case "popular":
+        // If we have a reaction_count column, use it
+        commentsQuery = commentsQuery
+          .order("reaction_count", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+        break
+      default:
+        commentsQuery = commentsQuery.order("created_at", { ascending: false })
+    }
+
+    // Add pagination
+    commentsQuery = commentsQuery.range(page * pageSize, (page + 1) * pageSize - 1)
 
     // Add status filter only if the column exists
     if (hasStatus) {
@@ -130,6 +154,22 @@ export async function fetchComments(
     // Combine all comment IDs (root comments and replies)
     const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
 
+    // Fetch reactions for all comments
+    let reactions = []
+    try {
+      const { data: reactionData, error: reactionError } = await supabase
+        .from("comment_reactions")
+        .select("*")
+        .in("comment_id", allCommentIds)
+
+      if (!reactionError && reactionData) {
+        reactions = reactionData
+      }
+    } catch (error) {
+      console.error("Error fetching reactions (table might not exist):", error)
+      // Continue without reactions if table doesn't exist
+    }
+
     // Extract all user IDs from comments and replies
     const userIds = [
       ...new Set([...comments.map((comment) => comment.user_id), ...(replies?.map((reply) => reply.user_id) || [])]),
@@ -152,23 +192,35 @@ export async function fetchComments(
       profileMap.set(profile.id, profile)
     })
 
-    // Process all comments with profile data
+    // Create a map of comment_id to reactions
+    const reactionMap = new Map()
+    reactions.forEach((reaction) => {
+      if (!reactionMap.has(reaction.comment_id)) {
+        reactionMap.set(reaction.comment_id, [])
+      }
+      reactionMap.get(reaction.comment_id).push(reaction)
+    })
+
+    // Process all comments with profile data and reactions
     const processedComments = comments.map((comment) => {
       const profile = profileMap.get(comment.user_id)
       return {
         ...comment,
         // Add status if it doesn't exist
         status: comment.status || "active",
+        // Add is_rich_text if it doesn't exist
+        is_rich_text: hasRichText ? comment.is_rich_text : false,
         profile: profile
           ? {
               username: profile.username,
               avatar_url: profile.avatar_url,
             }
           : undefined,
+        reactions: reactionMap.get(comment.id) || [],
       }
     })
 
-    // Process all replies with profile data
+    // Process all replies with profile data and reactions
     const processedReplies =
       replies?.map((reply) => {
         const profile = profileMap.get(reply.user_id)
@@ -176,12 +228,15 @@ export async function fetchComments(
           ...reply,
           // Add status if it doesn't exist
           status: reply.status || "active",
+          // Add is_rich_text if it doesn't exist
+          is_rich_text: hasRichText ? reply.is_rich_text : false,
           profile: profile
             ? {
                 username: profile.username,
                 avatar_url: profile.avatar_url,
               }
             : undefined,
+          reactions: reactionMap.get(reply.id) || [],
         }
       }) || []
 
@@ -202,11 +257,26 @@ export async function fetchComments(
 // Add a new comment
 export async function addComment(comment: NewComment): Promise<Comment> {
   try {
-    // Check if status column exists
-    const hasStatus = await checkStatusColumn()
+    // Check if columns exist
+    const { hasStatus, hasRichText } = await checkColumns()
 
-    // Only include status if the column exists
-    const commentData = hasStatus ? { ...comment, status: "active" } : comment
+    // Build comment data based on available columns
+    const commentData: any = {
+      post_id: comment.post_id,
+      user_id: comment.user_id,
+      content: comment.content,
+      parent_id: comment.parent_id || null,
+    }
+
+    // Add status if the column exists
+    if (hasStatus) {
+      commentData.status = "active"
+    }
+
+    // Add is_rich_text if the column exists
+    if (hasRichText && comment.is_rich_text !== undefined) {
+      commentData.is_rich_text = comment.is_rich_text
+    }
 
     // Insert the comment
     const { data: newComment, error } = await supabase.from("comments").insert(commentData).select().single()
@@ -231,17 +301,73 @@ export async function addComment(comment: NewComment): Promise<Comment> {
     // Record this submission for rate limiting
     recordSubmission(comment.user_id)
 
+    // If this is a reply, create a notification for the parent comment author
+    if (comment.parent_id) {
+      try {
+        // Get the parent comment to find its author
+        const { data: parentComment, error: parentError } = await supabase
+          .from("comments")
+          .select("user_id, post_id")
+          .eq("id", comment.parent_id)
+          .single()
+
+        if (!parentError && parentComment) {
+          // Get the post title
+          const { data: post, error: postError } = await supabase
+            .from("posts")
+            .select("title")
+            .eq("id", comment.post_id)
+            .single()
+
+          // If we can't get the post from Supabase, try WordPress
+          let postTitle = "a post"
+          if (postError || !post) {
+            try {
+              // Try to get the post title from WordPress
+              const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
+              if (response.ok) {
+                const wpPost = await response.json()
+                postTitle = wpPost.title.rendered || "a post"
+              }
+            } catch (wpError) {
+              console.error("Error fetching post from WordPress:", wpError)
+            }
+          } else {
+            postTitle = post.title
+          }
+
+          // Create notification
+          await createCommentReplyNotification({
+            recipientId: parentComment.user_id,
+            senderId: comment.user_id,
+            senderName: profile?.username || "Someone",
+            senderAvatar: profile?.avatar_url || undefined,
+            postId: comment.post_id,
+            postTitle,
+            commentId: newComment.id,
+            commentContent: comment.content,
+          })
+        }
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError)
+        // Don't throw here, we still want to return the comment
+      }
+    }
+
     // Return the comment with profile data
     return {
       ...newComment,
       // Add status if it doesn't exist
       status: newComment.status || "active",
+      // Add is_rich_text if it doesn't exist
+      is_rich_text: hasRichText ? newComment.is_rich_text : false,
       profile: profile
         ? {
             username: profile.username,
             avatar_url: profile.avatar_url,
           }
         : undefined,
+      reactions: [],
     }
   } catch (error) {
     console.error("Error in addComment:", error)
@@ -250,12 +376,23 @@ export async function addComment(comment: NewComment): Promise<Comment> {
 }
 
 // Update an existing comment
-export async function updateComment(id: string, content: string): Promise<Comment> {
+export async function updateComment(id: string, content: string, isRichText?: boolean): Promise<Comment> {
   try {
+    // Check if columns exist
+    const { hasRichText } = await checkColumns()
+
+    // Build update data
+    const updateData: any = { content }
+
+    // Add is_rich_text if the column exists and value is provided
+    if (hasRichText && isRichText !== undefined) {
+      updateData.is_rich_text = isRichText
+    }
+
     // Update the comment
     const { data: updatedComment, error } = await supabase
       .from("comments")
-      .update({ content })
+      .update(updateData)
       .eq("id", id)
       .select()
       .single()
@@ -280,8 +417,6 @@ export async function updateComment(id: string, content: string): Promise<Commen
     // Return the updated comment with profile data
     return {
       ...updatedComment,
-      // Add status if it doesn't exist
-      status: updatedComment.status || "active",
       profile: profile
         ? {
             username: profile.username,
@@ -298,7 +433,7 @@ export async function updateComment(id: string, content: string): Promise<Commen
 // Delete a comment (soft delete by updating status if the column exists, otherwise hard delete)
 export async function deleteComment(id: string): Promise<void> {
   // Check if status column exists
-  const hasStatus = await checkStatusColumn()
+  const { hasStatus } = await checkColumns()
 
   if (hasStatus) {
     // Soft delete
@@ -319,10 +454,117 @@ export async function deleteComment(id: string): Promise<void> {
   }
 }
 
+// Add a reaction to a comment
+export async function addReaction(
+  commentId: string,
+  userId: string,
+  reactionType: "like" | "love" | "laugh" | "sad" | "angry",
+): Promise<void> {
+  try {
+    // First check if the user already has a reaction on this comment
+    const { data: existingReaction, error: checkError } = await supabase
+      .from("comment_reactions")
+      .select("id")
+      .eq("comment_id", commentId)
+      .eq("user_id", userId)
+      .single()
+
+    if (checkError && checkError.code !== "PGRST116") {
+      // PGRST116 is "no rows returned"
+      console.error("Error checking existing reaction:", checkError)
+      throw checkError
+    }
+
+    // If user already has a reaction, update it
+    if (existingReaction) {
+      const { error: updateError } = await supabase
+        .from("comment_reactions")
+        .update({ reaction_type: reactionType })
+        .eq("id", existingReaction.id)
+
+      if (updateError) {
+        console.error("Error updating reaction:", updateError)
+        throw updateError
+      }
+    } else {
+      // Otherwise, insert a new reaction
+      const { error: insertError } = await supabase.from("comment_reactions").insert({
+        comment_id: commentId,
+        user_id: userId,
+        reaction_type: reactionType,
+      })
+
+      if (insertError) {
+        console.error("Error adding reaction:", insertError)
+        throw insertError
+      }
+    }
+
+    // Update the reaction_count on the comment
+    await updateReactionCount(commentId)
+  } catch (error) {
+    console.error("Error in addReaction:", error)
+    throw error
+  }
+}
+
+// Remove a reaction from a comment
+export async function removeReaction(commentId: string, userId: string): Promise<void> {
+  try {
+    // Delete the reaction
+    const { error } = await supabase
+      .from("comment_reactions")
+      .delete()
+      .eq("comment_id", commentId)
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("Error removing reaction:", error)
+      throw error
+    }
+
+    // Update the reaction_count on the comment
+    await updateReactionCount(commentId)
+  } catch (error) {
+    console.error("Error in removeReaction:", error)
+    throw error
+  }
+}
+
+// Update the reaction count on a comment
+async function updateReactionCount(commentId: string): Promise<void> {
+  try {
+    // Count the reactions for this comment
+    const { count, error: countError } = await supabase
+      .from("comment_reactions")
+      .select("*", { count: "exact", head: true })
+      .eq("comment_id", commentId)
+
+    if (countError) {
+      console.error("Error counting reactions:", countError)
+      throw countError
+    }
+
+    // Update the comment with the new count
+    const { error: updateError } = await supabase
+      .from("comments")
+      .update({ reaction_count: count || 0 })
+      .eq("id", commentId)
+
+    if (updateError) {
+      console.error("Error updating reaction count:", updateError)
+      throw updateError
+    }
+  } catch (error) {
+    console.error("Error in updateReactionCount:", error)
+    // Don't throw here, as this is a background operation
+  }
+}
+
 // Report a comment
 export async function reportComment(data: ReportCommentData): Promise<void> {
   // Check if status column exists
-  const hasStatus = await checkStatusColumn()
+  const { hasStatus } = await checkColumns()
 
   if (!hasStatus) {
     throw new Error("Comment reporting requires database migration. Please run the migration script first.")
@@ -382,11 +624,14 @@ export function createOptimisticComment(comment: NewComment, username: string, a
     parent_id: comment.parent_id || null,
     created_at: new Date().toISOString(),
     status: "active",
+    is_rich_text: comment.is_rich_text || false,
+    reaction_count: 0,
     isOptimistic: true, // Flag to identify optimistic comments
     profile: {
       username,
       avatar_url: avatarUrl || null,
     },
+    reactions: [],
     replies: [],
   }
 }

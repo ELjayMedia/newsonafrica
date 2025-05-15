@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
-export function SetupRLS() {
+const SetupRLS = () => {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -53,3 +53,7 @@ export function SetupRLS() {
     </div>
   )
 }
+
+export default SetupRLS
+// Also export as named export for backward compatibility
+export { SetupRLS }

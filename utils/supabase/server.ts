@@ -37,6 +37,14 @@ export const createClient = (cookieStore: ReturnType<typeof cookies>) => {
         "x-application-name": "news-on-africa",
       },
     },
+    db: {
+      schema: "public",
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10, // Limit realtime events to avoid rate limiting
+      },
+    },
   })
 
   // Store the client in the cache
@@ -51,4 +59,34 @@ export const createClient = (cookieStore: ReturnType<typeof cookies>) => {
   )
 
   return client
+}
+
+// Create a client with service role for admin operations
+// IMPORTANT: This should only be used in server-side code
+export const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseServiceKey) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
+  }
+
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, supabaseServiceKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll() {
+        // No-op for admin client
+      },
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        "x-application-name": "news-on-africa-admin",
+      },
+    },
+  })
 }

@@ -21,17 +21,67 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // Define OAuth providers we're using
     providers: ["facebook", "google"],
   },
+  global: {
+    headers: {
+      "x-application-name": "news-on-africa",
+    },
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Limit realtime events to avoid rate limiting
+    },
+  },
+  db: {
+    schema: "public",
+  },
 })
 
-// Helper function to get user profile with error handling
+// Create a client with service role for admin operations
+// IMPORTANT: This should only be used in server-side code
+export const createAdminClient = () => {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseServiceKey) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        "x-application-name": "news-on-africa-admin",
+      },
+    },
+  })
+}
+
+// Helper function to get user profile with error handling and caching
+const profileCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export async function getUserProfile(userId: string) {
   try {
+    // Check cache first
+    const cached = profileCache.get(userId)
+    const now = Date.now()
+
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      return cached.data
+    }
+
+    // If not in cache or expired, fetch from database
     const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
     if (error) {
       console.error("Error fetching user profile:", error)
       throw error
     }
+
+    // Update cache
+    profileCache.set(userId, { data, timestamp: now })
 
     return data
   } catch (error) {
@@ -49,6 +99,9 @@ export async function updateUserProfile(userId: string, updates: Partial<Profile
       console.error("Error updating user profile:", error)
       throw error
     }
+
+    // Update cache
+    profileCache.set(userId, { data, timestamp: Date.now() })
 
     return data
   } catch (error) {
@@ -181,10 +234,22 @@ export async function handleSocialLoginProfile(user: any) {
       throw error
     }
 
+    // Update cache
+    profileCache.set(user.id, { data, timestamp: Date.now() })
+
     return data
   } catch (error) {
     console.error("Error handling social login profile:", error)
     throw error
+  }
+}
+
+// Clear cache function for testing or manual cache invalidation
+export function clearProfileCache(userId?: string) {
+  if (userId) {
+    profileCache.delete(userId)
+  } else {
+    profileCache.clear()
   }
 }
 

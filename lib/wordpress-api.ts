@@ -105,7 +105,10 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      const timeoutId = setTimeout(() => {
+        controller.abort()
+        console.log("Request timed out after 15 seconds")
+      }, 15000) // 15 second timeout
 
       const response = await client.request(query, variables, {
         ...headers,
@@ -115,21 +118,38 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
       clearTimeout(timeoutId)
       return response
     } catch (error) {
-      console.error(`GraphQL API request attempt ${attempt + 1} failed:`, error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`GraphQL API request attempt ${attempt + 1} failed: ${errorMessage}`, error)
       lastError = error
 
       // Check if it's a network error or timeout
       const isNetworkError =
         error instanceof Error &&
-        (error.message.includes("Failed to fetch") ||
-          error.message.includes("Network request failed") ||
-          error.message.includes("aborted"))
+        (errorMessage.includes("Failed to fetch") ||
+          errorMessage.includes("Network request failed") ||
+          errorMessage.includes("aborted") ||
+          errorMessage.includes("NetworkError") ||
+          errorMessage.includes("ECONNREFUSED") ||
+          errorMessage.includes("ETIMEDOUT"))
 
-      if (isNetworkError && attempt === maxRetries - 1) {
-        // If we've exhausted GraphQL retries, try REST API as last resort
-        console.log("Falling back to REST API...")
-        // We'll handle the fallback in the specific functions
-        throw new Error("GraphQL failed, try REST API")
+      // If it's a network error and we have more retries, wait longer before retrying
+      if (isNetworkError) {
+        console.log(`Network error detected, retry ${attempt + 1}/${maxRetries}`)
+
+        if (attempt === maxRetries - 1) {
+          // If we've exhausted GraphQL retries, try REST API as last resort
+          console.log("Falling back to REST API...")
+          throw new Error(`GraphQL failed after ${maxRetries} attempts: ${errorMessage}`)
+        }
+
+        // Exponential backoff with jitter before retrying
+        const baseBackoff = Math.min(1000 * Math.pow(2, attempt), 8000)
+        const jitter = Math.random() * 1000
+        const backoffTime = baseBackoff + jitter
+
+        console.log(`Waiting ${Math.round(backoffTime)}ms before retry ${attempt + 1}`)
+        await new Promise((resolve) => setTimeout(resolve, backoffTime))
+        continue
       }
 
       if (attempt === maxRetries - 1) throw error
@@ -139,6 +159,7 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
       await new Promise((resolve) => setTimeout(resolve, backoffTime))
     }
   }
+
   throw lastError
 }
 
@@ -625,7 +646,100 @@ export const fetchBusinessPosts = async () => fetchCategoryPosts("business")
  *
  * @returns {Promise<any>} - A promise that resolves with the news posts.
  */
-export const fetchNewsPosts = async () => fetchCategoryPosts("news")
+export const fetchNewsPosts = async () => {
+  try {
+    const data = await fetchCategoryPosts("news")
+    return {
+      posts: data?.posts?.nodes || [],
+      pageInfo: data?.posts?.pageInfo || { hasNextPage: false, endCursor: null },
+    }
+  } catch (error) {
+    console.error("Error fetching news posts:", error)
+
+    // Try REST API as fallback
+    try {
+      console.log("Attempting to fetch news posts via REST API fallback")
+      const posts = await fetchFromRestApi("posts", {
+        categories: await getCategoryIdBySlug("news"),
+        per_page: 10,
+        _embed: 1,
+      })
+
+      return {
+        posts: transformRestApiPosts(posts),
+        pageInfo: { hasNextPage: posts.length >= 10, endCursor: null },
+      }
+    } catch (restError) {
+      console.error("REST API fallback also failed:", restError)
+      // Re-throw the original error if both methods fail
+      throw error
+    }
+  }
+}
+
+// Helper function to get category ID by slug (for REST API fallback)
+const categoryCache = new Map()
+async function getCategoryIdBySlug(slug) {
+  if (categoryCache.has(slug)) {
+    return categoryCache.get(slug)
+  }
+
+  try {
+    const categories = await fetchFromRestApi("categories", { slug })
+    if (categories && categories.length > 0) {
+      const id = categories[0].id
+      categoryCache.set(slug, id)
+      return id
+    }
+    return null
+  } catch (error) {
+    console.error(`Failed to get category ID for slug ${slug}:`, error)
+    return null
+  }
+}
+
+// Helper function to transform REST API posts to match GraphQL structure
+function transformRestApiPosts(posts) {
+  if (!Array.isArray(posts)) return []
+
+  return posts.map((post) => ({
+    id: post.id,
+    title: post.title.rendered,
+    excerpt: post.excerpt.rendered,
+    slug: post.slug,
+    date: post.date,
+    featuredImage: post._embedded?.["wp:featuredmedia"]
+      ? {
+          node: {
+            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+            altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+          },
+        }
+      : null,
+    author: post._embedded?.["author"]
+      ? {
+          node: {
+            name: post._embedded["author"][0].name,
+            slug: post._embedded["author"][0].slug,
+          },
+        }
+      : null,
+    categories: {
+      nodes:
+        post._embedded?.["wp:term"]?.[0]?.map((cat) => ({
+          name: cat.name,
+          slug: cat.slug,
+        })) || [],
+    },
+    tags: {
+      nodes:
+        post._embedded?.["wp:term"]?.[1]?.map((tag) => ({
+          name: tag.name,
+          slug: tag.slug,
+        })) || [],
+    },
+  }))
+}
 
 /**
  * Fetches author data.
