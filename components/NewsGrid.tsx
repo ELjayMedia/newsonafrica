@@ -60,7 +60,10 @@ export const NewsGrid = memo(function NewsGrid({
 
   const secondaryPostsBlurURLs = useMemo(() => {
     const maxLength = Math.max(secondaryPosts.length, secondarySportPosts.length)
-    const blurURLs: string[] = Array(maxLength).fill(generateBlurDataURL(70, 70))
+    const blurURLs: string[] = []
+    for (let i = 0; i < maxLength; i++) {
+      blurURLs.push(generateBlurDataURL(70, 70))
+    }
     return blurURLs
   }, [secondaryPosts.length, secondarySportPosts.length])
 
@@ -214,6 +217,3 @@ export const NewsGrid = memo(function NewsGrid({
     </div>
   )
 })
-
-// Add a default export for dynamic import
-export default { NewsGrid }

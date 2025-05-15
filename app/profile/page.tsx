@@ -13,11 +13,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
-interface ProfilePageProps {
-  searchParams: { section?: string }
-}
-
-export default async function ProfilePage({ searchParams }: ProfilePageProps) {
+export default async function ProfilePage() {
   const cookieStore = cookies()
   const supabase = createClient(cookieStore)
 

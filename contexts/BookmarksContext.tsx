@@ -1,34 +1,32 @@
 "use client"
 
+import type React from "react"
+
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
-import type { ReactNode } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
-export interface Bookmark {
+interface Bookmark {
   id: string
   post_id: string
-  title?: string
-  slug?: string
-  excerpt?: string
-  date?: string
-  featuredImage?: {
-    node?: {
-      sourceUrl?: string
+  title: string
+  slug: string
+  date: string
+  excerpt: string
+  featuredImage: {
+    node: {
+      sourceUrl: string
     }
   }
-  created_at: string
 }
 
 interface BookmarksContextType {
   bookmarks: Bookmark[]
   loading: boolean
-  error: string | null
-  addBookmark: (post: Omit<Bookmark, "id" | "created_at">) => Promise<void>
+  addBookmark: (post: Omit<Bookmark, "id">) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
   isBookmarked: (postId: string) => boolean
-  refreshBookmarks: () => Promise<void>
 }
 
 const BookmarksContext = createContext<BookmarksContextType | undefined>(undefined)
@@ -41,24 +39,31 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: ReactNode }) {
+export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
   const supabase = createClient()
 
-  const fetchBookmarks = useCallback(async () => {
-    if (!user) {
+  // Fetch bookmarks when user changes
+  useEffect(() => {
+    if (user) {
+      fetchBookmarks()
+    } else {
       setBookmarks([])
       setLoading(false)
-      return
     }
+  }, [user])
 
+  const fetchBookmarks = async () => {
     try {
       setLoading(true)
-      setError(null)
+
+      if (!user) {
+        setBookmarks([])
+        return
+      }
 
       const { data, error } = await supabase
         .from("bookmarks")
@@ -68,37 +73,23 @@ export function BookmarksProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error("Error fetching bookmarks:", error)
-        setError(error.message)
         return
       }
 
-      setBookmarks(data || [])
-    } catch (err: any) {
-      console.error("Failed to fetch bookmarks:", err)
-      setError(err.message || "Failed to load bookmarks")
+      setBookmarks(data as Bookmark[])
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error)
     } finally {
       setLoading(false)
     }
-  }, [user, supabase])
-
-  // Fetch bookmarks when user changes
-  useEffect(() => {
-    fetchBookmarks()
-  }, [fetchBookmarks])
+  }
 
   const addBookmark = useCallback(
-    async (post: Omit<Bookmark, "id" | "created_at">) => {
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "You must be logged in to save bookmarks",
-          variant: "destructive",
-        })
-        return
-      }
+    async (post: Omit<Bookmark, "id">) => {
+      if (!user) return
 
       try {
-        // Check if already bookmarked to prevent duplicates
+        // Check if already bookmarked
         if (isBookmarked(post.post_id)) {
           return
         }
@@ -106,12 +97,12 @@ export function BookmarksProvider({ children }: { children: ReactNode }) {
         const { data, error } = await supabase
           .from("bookmarks")
           .insert({
-            user_id: user.id,
+            user_id: user.id, // Explicitly pass the user_id
             post_id: post.post_id,
-            title: post.title || "Untitled",
+            title: post.title,
             slug: post.slug,
-            excerpt: post.excerpt,
             date: post.date,
+            excerpt: post.excerpt,
             featuredImage: post.featuredImage,
           })
           .select()
@@ -134,28 +125,21 @@ export function BookmarksProvider({ children }: { children: ReactNode }) {
           title: "Bookmarked",
           description: "Article added to your bookmarks",
         })
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to add bookmark:", error)
         toast({
           title: "Error",
-          description: error.message || "Failed to bookmark article",
+          description: "Failed to bookmark article",
           variant: "destructive",
         })
       }
     },
-    [user, toast, supabase],
+    [user, toast],
   )
 
   const removeBookmark = useCallback(
     async (postId: string) => {
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "You must be logged in to manage bookmarks",
-          variant: "destructive",
-        })
-        return
-      }
+      if (!user) return
 
       try {
         const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
@@ -177,33 +161,29 @@ export function BookmarksProvider({ children }: { children: ReactNode }) {
           title: "Bookmark removed",
           description: "Article removed from your bookmarks",
         })
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to remove bookmark:", error)
         toast({
           title: "Error",
-          description: error.message || "Failed to remove bookmark",
+          description: "Failed to remove bookmark",
           variant: "destructive",
         })
       }
     },
-    [user, toast, supabase],
+    [user, toast],
   )
 
   const isBookmarked = useCallback((postId: string) => bookmarks.some((b) => b.post_id === postId), [bookmarks])
-
-  const refreshBookmarks = useCallback(() => fetchBookmarks(), [fetchBookmarks])
 
   const contextValue = useMemo(
     () => ({
       bookmarks,
       loading,
-      error,
       addBookmark,
       removeBookmark,
       isBookmarked,
-      refreshBookmarks,
     }),
-    [bookmarks, loading, error, addBookmark, removeBookmark, isBookmarked, refreshBookmarks],
+    [bookmarks, loading, addBookmark, removeBookmark, isBookmarked],
   )
 
   return <BookmarksContext.Provider value={contextValue}>{children}</BookmarksContext.Provider>

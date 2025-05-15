@@ -19,16 +19,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/error?message=No+authorization+code+received", request.url))
   }
 
-  // Only use server-side environment variables
-  const linkedInApiKey = process.env.LINKEDIN_API_KEY
-  const linkedInApiSecret = process.env.LINKEDIN_API_SECRET
-  const siteUrl = process.env.SITE_URL
-
-  if (!linkedInApiKey || !linkedInApiSecret || !siteUrl) {
-    console.error("LinkedIn API credentials or site URL not configured")
-    return NextResponse.redirect(new URL("/auth/error?message=LinkedIn+API+not+configured", request.url))
-  }
-
   try {
     // Exchange code for access token
     const tokenResponse = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
@@ -39,9 +29,9 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${siteUrl}/api/linkedin/callback`,
-        client_id: linkedInApiKey,
-        client_secret: linkedInApiSecret,
+        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
+        client_id: process.env.LINKEDIN_API_KEY || "",
+        client_secret: process.env.LINKEDIN_API_SECRET || "",
       }).toString(),
     })
 

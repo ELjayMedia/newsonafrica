@@ -1,7 +1,10 @@
-export const dynamic = "force-dynamic"
-
-import { NewsClientWrapper } from "./NewsClientWrapper"
+import { Suspense } from "react"
+import { NewsContent } from "@/components/NewsContent"
 
 export default function NewsPage() {
-  return <NewsClientWrapper />
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewsContent />
+    </Suspense>
+  )
 }

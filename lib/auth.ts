@@ -1,110 +1,159 @@
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
-import jwt from "jsonwebtoken"
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+
+if (!WORDPRESS_API_URL) {
+  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+}
+
+export async function signIn(username: string, password: string) {
+  try {
+    // Check if API URL is defined
+    if (!WORDPRESS_API_URL) {
+      console.error("WORDPRESS_API_URL is not defined in environment variables")
+      throw new Error("API configuration error")
+    }
+
+    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_API_URL)
+
+    const response = await fetch(`${WORDPRESS_API_URL}/jwt-auth/v1/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    })
+
+    // Log response status to help with debugging
+    console.log("Authentication response status:", response.status)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      console.error("Authentication error details:", errorData)
+      throw new Error(errorData?.message || "Authentication failed")
+    }
+
+    const data = await response.json()
+    return {
+      authToken: data.token,
+      user: {
+        id: data.user_id,
+        name: data.user_display_name,
+        email: data.user_email,
+      },
+    }
+  } catch (error) {
+    console.error("Login error:", error)
+
+    // Provide more specific error messages based on the error type
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error("Unable to connect to authentication service. Please check your network connection.")
+    }
+
+    throw new Error(error instanceof Error ? error.message : "Authentication failed")
+  }
+}
 
 export async function getCurrentUser(token: string) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
-
-    const cookieStore = cookies()
-    const supabase = createClient({ cookies: () => cookieStore })
-
-    const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", decoded.userId).single()
-
-    if (error) {
-      console.error("Error fetching profile:", error)
-      throw new Error("Failed to fetch user profile")
-    }
-
-    return profile
-  } catch (error) {
-    console.error("Error decoding or fetching user:", error)
-    throw new Error("Invalid or expired token")
-  }
-}
-
-export async function getAuthToken(request: Request) {
-  const token = request.headers.get("Authorization")?.split(" ")[1]
-
-  if (!token) {
-    return null
-  }
-
-  try {
-    jwt.verify(token, process.env.JWT_SECRET as string)
-    return token
-  } catch (error) {
-    console.error("JWT verification failed:", error)
-    return null
-  }
-}
-
-export async function resetPassword(email: string) {
-  const cookieStore = cookies()
-  const supabase = createClient({ cookies: () => cookieStore })
-
-  try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.SITE_URL}/reset-password`,
+    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
 
-    if (error) {
-      console.error("Error resetting password:", error)
-      throw new Error("Failed to send reset password email")
+    if (!response.ok) {
+      throw new Error("Failed to fetch user data")
     }
 
-    return { success: true, message: "Reset password email sent successfully" }
+    const userData = await response.json()
+    return {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+    }
   } catch (error) {
-    console.error("Error in resetPassword function:", error)
-    throw new Error("Failed to send reset password email")
+    console.error("Error fetching current user:", error)
+    throw error
   }
 }
 
 export async function signUp(username: string, email: string, password: string) {
-  const cookieStore = cookies()
-  const supabase = createClient({ cookies: () => cookieStore })
-
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
-        },
+    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${btoa(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`)}`,
       },
+      body: JSON.stringify({
+        username,
+        email,
+        password,
+      }),
     })
 
-    if (error) {
-      console.error("Error signing up:", error)
-      throw new Error("Failed to create user")
+    if (!response.ok) {
+      throw new Error("Registration failed")
     }
 
-    return data.user
+    const userData = await response.json()
+    return {
+      user: {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+      },
+    }
   } catch (error) {
-    console.error("Error in signUp function:", error)
-    throw new Error("Failed to create user")
+    console.error("Registration error:", error)
+    throw new Error("Registration failed")
   }
 }
 
-export async function signIn(email: string, password: string) {
-  const cookieStore = cookies()
-  const supabase = createClient({ cookies: () => cookieStore })
-
+export async function resetPassword(email: string) {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/lost-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_login: email,
+      }),
     })
 
-    if (error) {
-      console.error("Error signing in:", error)
-      throw new Error("Authentication failed")
+    if (!response.ok) {
+      throw new Error("Failed to send reset password email")
     }
 
-    return data.session?.access_token
+    return { success: true }
   } catch (error) {
-    console.error("Error in signIn function:", error)
-    throw new Error("Authentication failed")
+    console.error("Reset password error:", error)
+    throw new Error("Reset password request failed")
   }
+}
+
+// Add the missing exports
+export async function getAuthToken(request: Request) {
+  const cookieHeader = request.headers.get("cookie")
+  if (!cookieHeader) return null
+
+  const cookies = cookieHeader.split(";").reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split("=")
+      acc[key] = value
+      return acc
+    },
+    {} as Record<string, string>,
+  )
+
+  return cookies.auth_token || null
+}
+
+export async function signOut() {
+  // Clear auth token from cookies
+  document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+  return { success: true }
 }

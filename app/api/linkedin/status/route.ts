@@ -1,28 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get("linkedin_token")?.value
+  // Get the LinkedIn access token from the cookie
+  const linkedInToken = request.cookies.get("linkedin_token")?.value
 
-  if (!token) {
+  if (!linkedInToken) {
     return NextResponse.json({ authenticated: false })
   }
 
   try {
-    // Verify token is still valid by making a simple API call
-    const response = await fetch("https://api.linkedin.com/v2/me", {
+    // Verify the token is still valid
+    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${linkedInToken}`,
       },
     })
 
-    if (!response.ok) {
+    if (!profileResponse.ok) {
       // Token is invalid or expired
-      const newResponse = NextResponse.json({ authenticated: false })
-      newResponse.cookies.delete("linkedin_token")
-      return newResponse
+      return NextResponse.json({ authenticated: false })
     }
 
-    const profile = await response.json()
+    const profile = await profileResponse.json()
     return NextResponse.json({
       authenticated: true,
       profile: {
@@ -33,6 +32,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("LinkedIn status check error:", error)
-    return NextResponse.json({ authenticated: false, error: "Failed to verify authentication" })
+    return NextResponse.json({ authenticated: false })
   }
 }

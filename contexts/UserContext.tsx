@@ -2,23 +2,15 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
 import type { User, Session } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
+import * as AuthService from "@/services/auth-service"
+import * as ProfileService from "@/services/profile-service"
+import type { Profile } from "@/services/profile-service"
 
-interface Profile {
-  id: string
-  username: string
-  full_name?: string
-  bio?: string
-  avatar_url?: string
-  website?: string
-  email?: string
-  country?: string
-  interests?: string[]
-  updated_at?: string
-  created_at?: string
-}
-
+/**
+ * User context type definition
+ */
 interface UserContextType {
   user: User | null
   profile: Profile | null
@@ -26,21 +18,25 @@ interface UserContextType {
   loading: boolean
   isAuthenticated: boolean
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>
-  signUp: (email: string, password: string, username: string, rememberMe?: boolean) => Promise<void>
+  signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
-  resetPassword: (email: string) => Promise<void>
-  signInWithGoogle: (rememberMe?: boolean) => Promise<void>
-  signInWithFacebook: (rememberMe?: boolean) => Promise<void>
+  resetPassword: () => Promise<void>
+  signInWithGoogle: () => Promise<void>
+  signInWithFacebook: () => Promise<void>
+  refreshSession: () => Promise<boolean>
 }
 
+/**
+ * User context for authentication and profile management
+ */
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
-// Default session expiry is 24 hours (in seconds)
-const DEFAULT_SESSION_EXPIRY = 60 * 60 * 24
-// Extended session expiry is 30 days (in seconds)
-const EXTENDED_SESSION_EXPIRY = 60 * 60 * 24 * 30
-
+/**
+ * Provider component for user authentication and profile management
+ *
+ * @param children - React children components
+ */
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -48,42 +44,106 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Fetch user profile with error handling
-  const fetchProfile = useCallback(async (userId: string) => {
+  /**
+   * Handle social login profile creation/update
+   */
+  const handleSocialLoginProfile = async (user: User) => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      const existingProfile = await ProfileService.fetchProfile(user.id)
+      if (!existingProfile) {
+        // Create a default profile for the user
+        const username = user.email?.split("@")[0] || user.id // Generate a default username
+        await ProfileService.createProfile(user.id, {
+          username: username,
+          fullName: (user.user_metadata?.full_name as string) || "",
+          avatarUrl: (user.user_metadata?.avatar_url as string) || "",
+          website: (user.user_metadata?.website as string) || "",
+        })
+        // Refresh the profile
+        await fetchProfile(user.id)
+      }
+    } catch (error) {
+      console.error("Error handling social login profile:", error)
+    }
+  }
 
-      if (error) {
-        console.error("Error fetching profile:", error)
-        return
+  /**
+   * Fetch user profile with error handling
+   */
+  const fetchProfile = useCallback(async (userId: string) => {
+    const profileData = await ProfileService.fetchProfile(userId)
+    if (profileData) {
+      setProfile(profileData)
+    }
+    setLoading(false)
+  }, [])
+
+  /**
+   * Refresh session helper function
+   */
+  const refreshSession = async (): Promise<boolean> => {
+    try {
+      const result = await AuthService.refreshSession()
+
+      if (!result.success) {
+        // If refresh failed, clear the session
+        await AuthService.signOut()
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+        setIsAuthenticated(false)
+        return false
       }
 
-      setProfile(data)
+      setSession(result.session)
+      setUser(result.user)
+      setIsAuthenticated(!!result.user)
+
+      if (result.user) {
+        await fetchProfile(result.user.id)
+      }
+
+      return true
     } catch (error) {
-      console.error("Error in fetchProfile:", error)
-    } finally {
-      setLoading(false)
+      console.error("Error refreshing session:", error)
+      return false
     }
-  }, [])
+  }
 
   // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       try {
         // Get initial session
-        const { data } = await supabase.auth.getSession()
-        setSession(data.session)
-        setUser(data.session?.user ?? null)
-        setIsAuthenticated(!!data.session?.user)
+        const { session: currentSession, user: currentUser } = await AuthService.getCurrentSession()
 
-        if (data.session?.user) {
-          fetchProfile(data.session.user.id)
+        setSession(currentSession)
+        setUser(currentUser)
+        setIsAuthenticated(!!currentUser)
+
+        if (currentUser) {
+          fetchProfile(currentUser.id)
         } else {
           setLoading(false)
         }
 
         // Listen for auth changes
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("Auth state changed:", event)
+
+          // Handle social login profile creation/update
+          if (event === "SIGNED_IN" && session?.user) {
+            try {
+              // For social logins, ensure profile exists
+              const provider = session.user.app_metadata?.provider as string
+              if (provider && (provider === "facebook" || provider === "google")) {
+                await handleSocialLoginProfile(session.user)
+              }
+            } catch (error) {
+              console.error("Error handling social login profile:", error)
+            }
+          }
+
           setSession(session)
           setUser(session?.user ?? null)
           setIsAuthenticated(!!session?.user)
@@ -108,18 +168,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     initAuth()
   }, [fetchProfile])
 
+  /**
+   * Sign in with email and password
+   */
   const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options: {
-          expiresIn: rememberMe ? EXTENDED_SESSION_EXPIRY : DEFAULT_SESSION_EXPIRY,
-        },
-      })
-
-      if (error) throw error
+      const data = await AuthService.signInWithEmail(email, password, rememberMe)
 
       // Fetch user profile after successful sign-in
       if (data.user) {
@@ -135,74 +190,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, username: string, rememberMe = false) => {
+  /**
+   * Sign up with email, password and username
+   */
+  const signUp = async (email: string, password: string, username: string) => {
     try {
       setLoading(true)
-
-      // Check if username already exists before attempting signup
-      const { data: existingUsers, error: checkError } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("username", username)
-        .maybeSingle()
-
-      if (checkError) {
-        console.error("Error checking existing username:", checkError)
-      }
-
-      if (existingUsers) {
-        throw new Error("Username already exists. Please choose another username.")
-      }
-
-      // First, create the user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-          },
-          expiresIn: rememberMe ? EXTENDED_SESSION_EXPIRY : DEFAULT_SESSION_EXPIRY,
-        },
-      })
-
-      if (error) {
-        console.error("Supabase auth signup error:", error)
-        throw error
-      }
-
-      if (!data.user) {
-        throw new Error("User creation failed")
-      }
-
-      // Wait a moment to allow any database triggers to complete
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Check if profile was created by trigger
-      const { data: profile, error: profileCheckError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", data.user.id)
-        .single()
-
-      // If profile doesn't exist yet, create it manually
-      if (profileCheckError || !profile) {
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: data.user.id,
-          username,
-          email,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError)
-          // Don't throw here, as the user was created successfully
-        }
-      }
+      const data = await AuthService.signUpWithEmail(email, password, username)
 
       // Fetch the profile after creation
-      await fetchProfile(data.user.id)
+      if (data.user) {
+        await fetchProfile(data.user.id)
+      }
 
       return data
     } catch (error) {
@@ -213,11 +212,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  /**
+   * Sign out the current user
+   */
   const signOut = async () => {
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      await AuthService.signOut()
+
+      // Clear local state
+      setUser(null)
+      setSession(null)
+      setProfile(null)
+      setIsAuthenticated(false)
     } catch (error) {
       console.error("Error signing out:", error)
       throw error
@@ -226,24 +233,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  /**
+   * Update the user profile
+   */
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
       setLoading(true)
       if (!user) throw new Error("User not authenticated")
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id)
-        .select()
-        .single()
+      const updatedProfile = await ProfileService.updateProfile(user.id, updates)
+      if (updatedProfile) {
+        setProfile(updatedProfile)
+      }
 
-      if (error) throw error
-      setProfile(data)
-      return data
+      return updatedProfile
     } catch (error) {
       console.error("Error updating profile:", error)
       throw error
@@ -252,13 +255,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  /**
+   * Reset the user password
+   */
   const resetPassword = async (email: string) => {
     try {
       setLoading(true)
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      })
-      if (error) throw error
+      await AuthService.resetPassword(email)
     } catch (error) {
       console.error("Error resetting password:", error)
       throw error
@@ -267,46 +270,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signInWithGoogle = async (rememberMe = false) => {
+  /**
+   * Sign in with Google
+   */
+  const signInWithGoogle = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            session_expiry: rememberMe ? EXTENDED_SESSION_EXPIRY.toString() : DEFAULT_SESSION_EXPIRY.toString(),
-          },
-        },
-      })
-
-      if (error) throw error
-
-      return data
+      return await AuthService.signInWithSocialProvider("google")
     } catch (error) {
-      console.error("Error authenticating with Google:", error)
+      console.error("Error signing in with Google:", error)
       throw error
     } finally {
       setLoading(false)
     }
   }
 
-  const signInWithFacebook = async (rememberMe = false) => {
+  /**
+   * Sign in with Facebook
+   */
+  const signInWithFacebook = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            session_expiry: rememberMe ? EXTENDED_SESSION_EXPIRY.toString() : DEFAULT_SESSION_EXPIRY.toString(),
-          },
-        },
-      })
-
-      if (error) throw error
-
-      return data
+      return await AuthService.signInWithSocialProvider("facebook")
     } catch (error) {
       console.error("Error signing in with Facebook:", error)
       throw error
@@ -330,6 +315,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         signInWithGoogle,
         signInWithFacebook,
+        refreshSession,
       }}
     >
       {children}
@@ -337,6 +323,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Hook to access the user context
+ *
+ * @returns The user context
+ * @throws Error if used outside of UserProvider
+ */
 export function useUser() {
   const context = useContext(UserContext)
   if (context === undefined) {

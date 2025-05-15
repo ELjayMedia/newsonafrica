@@ -1,46 +1,140 @@
-# News on Africa PWA
+# News On Africa PWA
 
-A Progressive Web App for delivering news content across Africa.
+A Progressive Web App for delivering news content across Africa with a focus on performance, offline capabilities, and user engagement.
 
-## Features
+## 🌟 Features
 
-- Mobile-first, responsive design
-- Offline reading capabilities
-- Push notifications for breaking news
-- Fast loading times with optimized assets
-- Authentication and personalized content
-- Ad integration for monetization
-- Powerful search functionality
+- **Mobile-first, responsive design**: Optimized for all devices with a focus on mobile experience
+- **Offline reading capabilities**: Service worker implementation for offline content access
+- **Push notifications**: Real-time alerts for breaking news
+- **Fast loading times**: Optimized assets and code splitting for performance
+- **Authentication**: Multi-provider auth with email, Google, and Facebook
+- **Personalization**: User profiles, bookmarks, and preferences
+- **Ad integration**: Flexible ad placement system for monetization
+- **Search functionality**: Fast, relevant content discovery
+- **Multi-site architecture**: Support for country-specific editions
 
-## Environment Variables
+## 🏗️ Architecture
 
-This project requires the following environment variables to be set:
+### Frontend Architecture
 
-- `NEXT_PUBLIC_ADSENSE_CLIENT_ID`: Your Google AdSense client ID
-- `WORDPRESS_API_URL`: Your WordPress API URL
-- `NEXT_PUBLIC_WORDPRESS_API_URL`: Your WordPress API URL (for client-side)
-- `WP_APP_USERNAME`: WordPress application username
-- `WP_APP_PASSWORD`: WordPress application password
-- `JWT_SECRET`: Secret for JWT token generation
-- `CSRF_SECRET`: Secret for CSRF protection
-- `NEXT_PUBLIC_SITE_URL`: Public URL of your site
-- `NEXT_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics measurement ID
-- `NEXT_PUBLIC_FACEBOOK_APP_ID`: Facebook App ID
-- `FACEBOOK_APP_SECRET`: Facebook App Secret
-- `NEXT_PUBLIC_ALGOLIA_APP_ID`: Algolia App ID
-- `NEXT_PUBLIC_ALGOLIA_INDEX_NAME`: Algolia Index Name
-- `NEXT_PUBLIC_DISQUS_SHORTNAME`: Disqus Shortname
-- `DISQUS_PUBLIC_KEY`: Disqus Public Key
-- `DISQUS_SECRET_KEY`: Disqus Secret Key
+The application follows a feature-based architecture with the following structure:
 
-Additional API keys for search and social sharing are configured through server-side components and are not exposed to the client.
+\`\`\`
+news-on-africa/
+├── app/                  # Next.js App Router pages and layouts
+│   ├── api/              # API routes
+│   ├── auth/             # Authentication pages
+│   ├── category/         # Category pages
+│   ├── post/             # Post pages
+│   └── ...               # Other page routes
+├── components/           # Shared React components
+│   ├── ui/               # UI components (buttons, inputs, etc.)
+│   ├── layout/           # Layout components
+│   └── features/         # Feature-specific components
+├── contexts/             # React context providers
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility libraries
+├── services/             # API service modules
+├── types/                # TypeScript type definitions
+└── utils/                # Utility functions
+\`\`\`
 
-Make sure to set these variables in your Vercel project settings or in a `.env.local` file for local development.
+### Data Flow
 
-To set up these variables:
+1. **Content Source**: WordPress CMS with REST API
+2. **Authentication**: Supabase Auth with JWT tokens
+3. **Data Storage**: Supabase PostgreSQL for user data
+4. **Caching**: Next.js ISR (Incremental Static Regeneration)
+5. **CDN**: Vercel Edge Network
 
-1. Create the necessary accounts for each service
-2. Copy the required keys and IDs from each service
-3. Set the environment variables in your Vercel project settings or `.env.local` file
+## 🚀 Getting Started
 
-Note: Never commit your `.env.local` file or expose your secrets publicly.
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
+- Supabase account
+- WordPress instance with REST API
+
+### Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+\`\`\`
+# WordPress
+WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+WP_APP_USERNAME=your_app_username
+WP_APP_PASSWORD=your_app_password
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Authentication
+NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
+FACEBOOK_APP_SECRET=your_facebook_app_secret
+
+# Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
+
+# Site
+NEXT_PUBLIC_SITE_URL=https://your-site-url.com
+\`\`\`
+
+### Installation
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-org/news-on-africa.git
+cd news-on-africa
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
+\`\`\`
+
+## 📦 Deployment
+
+The application is deployed on Vercel with the following configuration:
+
+1. **Build Command**: `npm run build`
+2. **Output Directory**: `.next`
+3. **Environment Variables**: Set all required variables in Vercel dashboard
+
+## 🧪 Testing
+
+\`\`\`bash
+# Run unit tests
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run linting
+npm run lint
+\`\`\`
+
+## 📚 Documentation
+
+Additional documentation:
+
+- [Component Documentation](./docs/components.md)
+- [API Documentation](./docs/api.md)
+- [Authentication Flow](./docs/auth.md)
+- [Deployment Guide](./docs/deployment.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add some amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

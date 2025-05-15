@@ -1,3 +1,10 @@
+/**
+ * WordPress API Utilities
+ *
+ * This module provides functions for interacting with the WordPress REST API.
+ * It handles fetching posts, categories, tags, and other content from WordPress.
+ */
+
 import { GraphQLClient } from "graphql-request"
 import { queries, mutations } from "./wordpress-queries"
 import { cache } from "react"
@@ -23,7 +30,13 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
-// Replace the entire fetchFromRestApi function with this improved version
+/**
+ * Fetches data from the WordPress REST API with retry logic.
+ *
+ * @param {string} endpoint - The REST API endpoint to fetch from.
+ * @param {Record<string, any>} [params={}] - Optional parameters to include in the request.
+ * @returns {Promise<any>} - A promise that resolves with the JSON response from the API.
+ */
 const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = {}) => {
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
@@ -71,7 +84,15 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
   throw lastError
 }
 
-// Replace the fetchWithRetry function with this improved version
+/**
+ * Fetches data from the GraphQL API with retry logic and REST API fallback.
+ *
+ * @param {string} query - The GraphQL query to execute.
+ * @param {Record<string, any>} [variables={}] - Optional variables to include in the query.
+ * @param {number} [maxRetries=3] - The maximum number of retries.
+ * @param {Record<string, string>} [headers={}] - Optional headers to include in the request.
+ * @returns {Promise<any>} - A promise that resolves with the JSON response from the API.
+ */
 const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, headers: Record<string, string> = {}) => {
   // If we're offline, don't even try to fetch
   if (!isOnline()) {
@@ -121,7 +142,13 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
   throw lastError
 }
 
-// Fetch posts with a specific tag (like 'fp')
+/**
+ * Fetches posts with a specific tag.
+ *
+ * @param {string} tag - The tag slug to fetch posts for.
+ * @param {number} [limit=5] - The number of posts to fetch.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ */
 export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
   try {
     const data = await fetchWithRetry(queries.taggedPosts, { tag, limit })
@@ -180,7 +207,12 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
   }
 })
 
-// Fetch featured posts
+/**
+ * Fetches featured posts.
+ *
+ * @param {number} [limit=5] - The number of posts to fetch.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ */
 export const fetchFeaturedPosts = cache(async (limit = 5) => {
   try {
     const data = await fetchWithRetry(queries.featuredPosts)
@@ -239,7 +271,14 @@ export const fetchFeaturedPosts = cache(async (limit = 5) => {
   }
 })
 
-// Fetch posts by category
+/**
+ * Fetches posts by category.
+ *
+ * @param {string} slug - The category slug to fetch posts for.
+ * @param {number} [limit=5] - The number of posts to fetch.
+ * @param {string | null} [after=null] - The cursor to fetch posts after.
+ * @returns {Promise<any>} - A promise that resolves with the category data.
+ */
 export const fetchCategoryPosts = cache(async (slug: string, limit = 5, after: string | null = null) => {
   try {
     const data = await fetchWithRetry(queries.categoryPosts, { slug, after })
@@ -311,7 +350,11 @@ export const fetchCategoryPosts = cache(async (slug: string, limit = 5, after: s
   }
 })
 
-// Fetch all categories with their posts
+/**
+ * Fetches all categories with their posts.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of categories with posts.
+ */
 export const fetchCategorizedPosts = cache(async () => {
   try {
     const data = await fetchWithRetry(queries.categorizedPosts)
@@ -405,7 +448,12 @@ export const fetchCategorizedPosts = cache(async () => {
   }
 })
 
-// Fetch recent posts
+/**
+ * Fetches recent posts.
+ *
+ * @param {number} [limit=10] - The number of posts to fetch.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ */
 export const fetchRecentPosts = cache(async (limit = 10) => {
   try {
     const data = await fetchWithRetry(queries.recentPosts, { limit })
@@ -462,7 +510,11 @@ export const fetchRecentPosts = cache(async (limit = 10) => {
   }
 })
 
-// Keep other functions as they are...
+/**
+ * Fetches all categories.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of categories.
+ */
 export const fetchAllCategories = cache(async () => {
   try {
     const data = await fetchWithRetry(queries.allCategories)
@@ -483,40 +535,163 @@ export const fetchAllCategories = cache(async () => {
   }
 })
 
-// Export other functions and interfaces as they were...
+/**
+ * Fetches all authors.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of authors.
+ */
 export const fetchAllAuthors = async () => fetchWithRetry(queries.allAuthors).then((data: any) => data.users.nodes)
+
+/**
+ * Fetches all posts.
+ *
+ * @param {number} [limit=1000] - The number of posts to fetch.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ */
 export const fetchAllPosts = cache(async (limit = 1000) =>
   fetchWithRetry(queries.allPosts, { limit }).then((data: any) => data.posts.nodes),
 )
+
+/**
+ * Fetches all tags.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of tags.
+ */
 export const fetchAllTags = cache(async () => fetchWithRetry(queries.allTags).then((data: any) => data.tags.nodes))
+
+/**
+ * Fetches pending comments.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of pending comments.
+ */
 export const fetchPendingComments = async () =>
   fetchWithRetry(queries.pendingComments).then((data: any) => data.comments.nodes)
+
+/**
+ * Approves a comment.
+ *
+ * @param {string} id - The ID of the comment to approve.
+ * @returns {Promise<boolean>} - A promise that resolves with a boolean indicating success.
+ */
 export const approveComment = async (id: string) =>
   fetchWithRetry(mutations.approveComment, { id }).then((data: any) => data.updateComment.success)
+
+/**
+ * Deletes a comment.
+ *
+ * @param {string} id - The ID of the comment to delete.
+ * @returns {Promise<boolean>} - A promise that resolves with a boolean indicating success.
+ */
 export const deleteComment = async (id: string) =>
   fetchWithRetry(mutations.deleteComment, { id }).then((data: any) => data.deleteComment.success)
+
+/**
+ * Fetches comments for a post.
+ *
+ * @param {number} postId - The ID of the post to fetch comments for.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of comments.
+ */
 export const fetchComments = async (postId: number) =>
   fetchWithRetry(queries.postComments, { postId }).then((data: any) => data.comments.nodes)
+
+/**
+ * Posts a comment.
+ *
+ * @param {any} commentData - The comment data.
+ * @returns {Promise<any>} - A promise that resolves with the created comment data.
+ */
 export const postComment = async (commentData: any) =>
   fetchWithRetry(mutations.createComment, { input: commentData }).then((data: any) => data.createComment)
+
+/**
+ * Searches posts.
+ *
+ * @param {string} query - The search query.
+ * @param {string | null} [after=null] - The cursor to fetch posts after.
+ * @returns {Promise<any>} - A promise that resolves with the search results.
+ */
 export const searchPosts = async (query: string, after: string | null = null) =>
   fetchWithRetry(queries.searchPosts, { query, after }).then((data: any) => data.posts)
+
+/**
+ * Fetches business posts.
+ *
+ * @returns {Promise<any>} - A promise that resolves with the business posts.
+ */
 export const fetchBusinessPosts = async () => fetchCategoryPosts("business")
+
+/**
+ * Fetches news posts.
+ *
+ * @returns {Promise<any>} - A promise that resolves with the news posts.
+ */
 export const fetchNewsPosts = async () => fetchCategoryPosts("news")
+
+/**
+ * Fetches author data.
+ *
+ * @param {string} slug - The author slug.
+ * @param {string | null} [after=null] - The cursor to fetch posts after.
+ * @returns {Promise<any>} - A promise that resolves with the author data.
+ */
 export const fetchAuthorData = async (slug: string, after: string | null = null) =>
   fetchWithRetry(queries.authorData, { slug, after }).then((data: any) => data.user)
+
+/**
+ * Fetches a single post.
+ *
+ * @param {string} slug - The post slug.
+ * @returns {Promise<any>} - A promise that resolves with the post data.
+ */
 export const fetchSinglePost = async (slug: string) =>
   fetchWithRetry(queries.singlePost, { slug }).then((data: any) => data.post)
+
+/**
+ * Fetches the user profile.
+ *
+ * @param {string} token - The user token.
+ * @returns {Promise<any>} - A promise that resolves with the user profile data.
+ */
 export const fetchUserProfile = async (token: string) =>
   fetchWithRetry(queries.currentUser, {}, 1, { Authorization: `Bearer ${token}` }).then((data: any) => data.viewer)
+
+/**
+ * Updates the user profile.
+ *
+ * @param {string} token - The user token.
+ * @param {any} userData - The user data to update.
+ * @returns {Promise<any>} - A promise that resolves with the updated user data.
+ */
 export const updateUserProfile = async (token: string, userData: any) =>
   fetchWithRetry(mutations.updateUser, { input: userData }, 1, { Authorization: `Bearer ${token}` }).then(
     (data: any) => data.updateUser.user,
   )
+
+/**
+ * Fetches posts by tag.
+ *
+ * @param {string} tag - The tag slug.
+ * @param {string | null} [after=null] - The cursor to fetch posts after.
+ * @returns {Promise<any>} - A promise that resolves with the posts data.
+ */
 export const fetchPostsByTag = async (tag: string, after: string | null = null) =>
   fetchWithRetry(queries.postsByTag, { tag, after }).then((data: any) => data.posts)
+
+/**
+ * Fetches a single tag.
+ *
+ * @param {string} slug - The tag slug.
+ * @returns {Promise<any>} - A promise that resolves with the tag data.
+ */
 export const fetchSingleTag = async (slug: string) =>
   fetchWithRetry(queries.singleTag, { slug }).then((data: any) => data.tag)
+
+/**
+ * Fetches a single category.
+ *
+ * @param {string} slug - The category slug.
+ * @returns {Promise<any>} - A promise that resolves with the category data.
+ */
 export const fetchSingleCategory = async (slug: string) =>
   fetchWithRetry(queries.singleCategory, { slug }).then((data: any) => data.category)
 

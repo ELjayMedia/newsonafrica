@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
 import { BookmarksContent } from "@/components/BookmarksContent"
-import { BookmarksSkeleton } from "@/components/BookmarksSkeleton"
+import BookmarksSkeleton from "@/components/BookmarksSkeleton"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -11,7 +11,6 @@ export const metadata: Metadata = {
 }
 
 export const dynamic = "force-dynamic"
-export const revalidate = 0
 
 export default async function BookmarksPage() {
   const cookieStore = cookies()

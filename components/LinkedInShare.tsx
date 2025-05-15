@@ -71,7 +71,7 @@ export function LinkedInShare({
         const top = window.innerHeight / 2 - height / 2
 
         const authWindow = window.open(
-          `/api/linkedin/auth?redirect_uri=${encodeURIComponent(window.location.href)}&popup=true`,
+          `/api/linkedin/auth?redirect_uri=${encodeURIComponent(window.location.href)}`,
           "linkedin-auth",
           `width=${width},height=${height},left=${left},top=${top}`,
         )

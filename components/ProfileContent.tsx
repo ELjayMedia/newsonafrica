@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/contexts/UserContext"
 import type { Session } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
@@ -12,19 +12,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ProfileEditor } from "@/components/ProfileEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare, Shield, Key, Eye, Mail } from "lucide-react"
+import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import ErrorBoundary from "@/components/ErrorBoundary"
-
-// Define valid section types for type safety
-export type ProfileSection =
-  | "profile"
-  | "preferences"
-  | "bookmarks"
-  | "notifications"
-  | "security"
-  | "privacy"
-  | "email"
 
 interface ProfileContentProps {
   initialSession?: Session | null
@@ -32,47 +22,18 @@ interface ProfileContentProps {
 
 export default function ProfileContent({ initialSession }: ProfileContentProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { user, profile, loading, isAuthenticated, signOut } = useUser()
   const isMobile = useMediaQuery("(max-width: 768px)")
   const { toast } = useToast()
-
-  // Get section from URL or default to "profile"
-  const sectionParam = searchParams.get("section") as ProfileSection | null
-  const [activeTab, setActiveTab] = useState<ProfileSection>(
-    sectionParam && isValidSection(sectionParam) ? sectionParam : "profile",
-  )
-
-  // Validate section parameter
-  function isValidSection(section: string): section is ProfileSection {
-    return ["profile", "preferences", "bookmarks", "notifications", "security", "privacy", "email"].includes(section)
-  }
-
-  // Update URL when tab changes
-  const handleTabChange = (value: string) => {
-    if (isValidSection(value)) {
-      setActiveTab(value)
-      // Update URL without full page reload
-      const url = new URL(window.location.href)
-      url.searchParams.set("section", value)
-      window.history.pushState({}, "", url.toString())
-    }
-  }
+  const [activeTab, setActiveTab] = useState("profile")
 
   // Check if user is authenticated
   useEffect(() => {
     // If we have initial session data and user context has loaded but no user
     if (initialSession === null && !loading && !isAuthenticated) {
-      router.push("/auth?redirectTo=/profile" + (sectionParam ? `?section=${sectionParam}` : ""))
+      router.push("/auth?redirectTo=/profile")
     }
-  }, [initialSession, loading, isAuthenticated, router, sectionParam])
-
-  // Update active tab when URL changes
-  useEffect(() => {
-    if (sectionParam && isValidSection(sectionParam)) {
-      setActiveTab(sectionParam)
-    }
-  }, [sectionParam])
+  }, [initialSession, loading, isAuthenticated, router])
 
   // Handle logout
   const handleLogout = async () => {
@@ -103,25 +64,20 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
       <div className="text-center py-8">
         <h2 className="text-2xl font-bold mb-4">Please log in</h2>
         <p className="mb-6">You need to be logged in to view your profile.</p>
-        <Button
-          onClick={() => router.push("/auth?redirectTo=/profile" + (sectionParam ? `?section=${sectionParam}` : ""))}
-        >
-          Log in
-        </Button>
+        <Button onClick={() => router.push("/auth?redirectTo=/profile")}>Log in</Button>
       </div>
     )
   }
 
   // Show mobile profile menu on mobile devices
   if (isMobile && user) {
-    return <MobileProfileMenu activeSection={activeTab} onSectionChange={handleTabChange} />
+    return <MobileProfileMenu />
   }
 
-  // Render the main profile content with tabs
   return (
     <ErrorBoundary>
       <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="profile" value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-4 mb-8">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCircle className="h-4 w-4" />
@@ -179,30 +135,12 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
                   </p>
 
                   <h3 className="text-lg font-medium">Privacy Settings</h3>
-                  <p>Control who can see your profile and activity.</p>
-                  <div className="mt-2">
-                    <Button variant="outline" onClick={() => handleTabChange("privacy")}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Manage Privacy Settings
-                    </Button>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Security Settings</h3>
-                  <p>Manage your account security and password.</p>
-                  <div className="mt-2">
-                    <Button variant="outline" onClick={() => handleTabChange("security")}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Manage Security Settings
-                    </Button>
-                  </div>
+                  <p>Coming soon: Control who can see your profile and activity.</p>
 
                   <h3 className="text-lg font-medium">Account Management</h3>
                   <div className="flex flex-col space-y-2 mt-2">
                     <Button variant="outline" asChild>
-                      <Link href="/reset-password">
-                        <Key className="mr-2 h-4 w-4" />
-                        Change Password
-                      </Link>
+                      <Link href="/reset-password">Change Password</Link>
                     </Button>
                     <Button variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
                       Download My Data
@@ -245,128 +183,14 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Notification Preferences</h3>
-                  <p>Choose which notifications you want to receive.</p>
-                  <div className="space-y-2">
-                    {/* Notification preferences would go here */}
-                    <p className="text-sm text-gray-500">Notification preferences will be available soon.</p>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Email Notifications</h3>
-                  <p>Manage email notification settings.</p>
-                  <div className="mt-2">
-                    <Button variant="outline" onClick={() => handleTabChange("email")}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Email Settings
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Additional tabs that are accessible via direct links */}
-          <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Manage your account security.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Password</h3>
-                  <p>Change your password or set up two-factor authentication.</p>
-                  <div className="mt-2">
-                    <Button variant="outline" asChild>
-                      <Link href="/reset-password">Change Password</Link>
-                    </Button>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Login History</h3>
-                  <p>View your recent login activity.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Login history will be available soon.</p>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Connected Accounts</h3>
-                  <p>Manage social accounts connected to your profile.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Connected accounts will be available soon.</p>
-                  </div>
-
-                  <Button variant="outline" onClick={() => handleTabChange("preferences")}>
-                    Back to Preferences
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="privacy">
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>Control who can see your profile and activity.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Profile Visibility</h3>
-                  <p>Control who can see your profile information.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Profile visibility settings will be available soon.</p>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Activity Privacy</h3>
-                  <p>Control who can see your activity on the platform.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Activity privacy settings will be available soon.</p>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Data Usage</h3>
-                  <p>Control how your data is used for personalization and recommendations.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Data usage settings will be available soon.</p>
-                  </div>
-
-                  <Button variant="outline" onClick={() => handleTabChange("preferences")}>
-                    Back to Preferences
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="email">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>Manage your email notifications and preferences.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Email Notifications</h3>
-                  <p>Choose which email notifications you want to receive.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Email notification settings will be available soon.</p>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Newsletter Subscriptions</h3>
-                  <p>Manage your newsletter subscriptions.</p>
-                  <div className="mt-2">
-                    <Button variant="outline" asChild>
-                      <Link href="/newsletters">Manage Newsletters</Link>
-                    </Button>
-                  </div>
-
-                  <h3 className="text-lg font-medium">Email Address</h3>
-                  <p>Update your email address or add a backup email.</p>
-                  <div className="mt-2 border rounded-md p-4">
-                    <p className="text-sm text-gray-500">Email address management will be available soon.</p>
-                  </div>
-
-                  <Button variant="outline" onClick={() => handleTabChange("notifications")}>
-                    Back to Notifications
-                  </Button>
+                  <h3 className="text-lg font-medium">Coming Soon</h3>
+                  <p>Notification settings will be available soon. You'll be able to control:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Breaking news alerts</li>
+                    <li>Comment notifications</li>
+                    <li>Newsletter notifications</li>
+                    <li>Account updates</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

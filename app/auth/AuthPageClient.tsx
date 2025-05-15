@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle } from "lucide-react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { MobileProfileMenu } from "@/components/MobileProfileMenu"
-import { FacebookLogin } from "@/components/FacebookLogin"
 
 // Update the redirectTo handling to support "back" navigation
 export default function AuthPageClient({
@@ -93,9 +92,6 @@ export default function AuthPageClient({
     <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6 text-center">Welcome to News On Africa</h1>
       <AuthForm redirectTo={searchParams.redirectTo} />
-      <div className="mt-4">
-        <FacebookLogin />
-      </div>
     </div>
   )
 }

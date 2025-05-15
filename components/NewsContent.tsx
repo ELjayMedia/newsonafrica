@@ -2,26 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { fetchNewsPosts } from "@/lib/wordpress-api"
-import dynamic from "next/dynamic"
+import { NewsGrid } from "@/components/NewsGrid"
+import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-
-// Use dynamic import for NewsGrid to ensure it's only loaded on the client
-const NewsGrid = dynamic(
-  () =>
-    import("@/components/NewsGrid").then((mod) => ({
-      default: mod.NewsGrid,
-    })),
-  {
-    ssr: false,
-    loading: () => <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>,
-  },
-)
-
-// Use dynamic import for NewsGridSkeleton
-const NewsGridSkeleton = dynamic(() => import("@/components/NewsGridSkeleton").then((mod) => mod.NewsGridSkeleton), {
-  ssr: false,
-})
 
 export function NewsContent() {
   const [posts, setPosts] = useState([])
@@ -30,15 +14,10 @@ export function NewsContent() {
 
   useEffect(() => {
     async function loadPosts() {
-      try {
-        const { posts, pageInfo } = await fetchNewsPosts()
-        setPosts(posts)
-        setPageInfo(pageInfo)
-      } catch (error) {
-        console.error("Error loading posts:", error)
-      } finally {
-        setLoading(false)
-      }
+      const { posts, pageInfo } = await fetchNewsPosts()
+      setPosts(posts)
+      setPageInfo(pageInfo)
+      setLoading(false)
     }
     loadPosts()
   }, [])
@@ -64,6 +43,3 @@ export function NewsContent() {
     </div>
   )
 }
-
-// Add a default export for dynamic import
-export default { NewsContent }

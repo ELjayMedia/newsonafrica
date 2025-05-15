@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react"
 
 export function useMediaQuery(query: string): boolean {
-  // Default to false on server to prevent hydration issues
+  // Default to false on server
   const [matches, setMatches] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    // Only run on client
+    if (typeof window === "undefined") return
 
-    // Only run on client after mount
+    // Create media query list
     const media = window.matchMedia(query)
 
     // Set initial value
@@ -30,9 +30,5 @@ export function useMediaQuery(query: string): boolean {
     }
   }, [query])
 
-  // Return false during server-side rendering
-  return mounted ? matches : false
+  return matches
 }
-
-// Add a default export for dynamic import
-export default { useMediaQuery }

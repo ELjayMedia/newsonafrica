@@ -3,24 +3,33 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: [
-      "sjc.microlink.io",
-      "newsonafrica.com",
-      "placekitten.com",
+      "news-on-africa.vercel.app",
+      "localhost",
       "via.placeholder.com",
-      "placeholdit.imgix.net",
-      "loremflickr.com",
-      "picsum.photos",
+      "images.unsplash.com",
+      "plus.unsplash.com",
+      "news24.com",
+      "cdn.24.co.za",
+      "media.licdn.com",
     ],
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60,
     unoptimized: true,
-  },
-  // Modern config without deprecated options
-  typescript: {
-    // Handle type errors during build (recommended for CI)
-    ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  swcMinify: true,
+  compress: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  experimental: {
+    // Remove or disable optimizeCss which requires critters
+    // optimizeCss: true,
+    optimizeServerReact: true,
   },
 }
 
