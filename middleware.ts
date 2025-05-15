@@ -2,59 +2,64 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 
-export async function middleware(request: NextRequest) {
-  try {
-    // Check if this is a preview environment
-    const isPreview =
-      request.headers.get("x-vercel-protection-bypass") === "preview" ||
-      request.url.includes("vusercontent.net") ||
-      request.url.includes("vercel.app") ||
-      process.env.NODE_ENV === "development"
-
-    // Skip middleware in preview environments
-    if (isPreview) {
-      return NextResponse.next()
-    }
-
-    // Create a Supabase client configured to use cookies
-    const res = NextResponse.next()
-    const supabase = createMiddlewareClient({ req: request, res })
-
-    // Refresh session if expired - required for Server Components
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      // Protect routes that require authentication
-      const protectedRoutes = ["/profile", "/bookmarks", "/comments", "/newsletters", "/shared", "/editions"]
-      if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
-        if (!session) {
-          // Store the original URL to redirect back after login
-          const redirectUrl = new URL("/auth", request.url)
-
-          // If the request is for a specific page, store it as redirectTo
-          if (request.nextUrl.pathname !== "/") {
-            redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname + request.nextUrl.search)
-          }
-
-          return NextResponse.redirect(redirectUrl)
-        }
-      }
-
-      return res
-    } catch (error) {
-      console.error("Auth session error:", error)
-      // Don't block the request on auth errors, just continue
-      return res
-    }
-  } catch (error) {
-    console.error("Middleware error:", error)
-    // In case of error, allow the request to continue to avoid blocking users
-    return NextResponse.next()
+// Log API requests in development
+function logApiRequest(request: NextRequest) {
+  if (process.env.NODE_ENV === "development") {
+    const { pathname, search } = request.nextUrl
+    console.log(`[${request.method}] ${pathname}${search}`)
   }
 }
 
+export async function middleware(request: NextRequest) {
+  // Log API requests
+  logApiRequest(request)
+
+  // Handle authentication for protected routes
+  if (
+    request.nextUrl.pathname.startsWith("/api/user") ||
+    request.nextUrl.pathname.startsWith("/api/bookmarks") ||
+    request.nextUrl.pathname.startsWith("/api/subscriptions") ||
+    (request.nextUrl.pathname.startsWith("/api/comments") &&
+      (request.method === "POST" || request.method === "PATCH" || request.method === "DELETE"))
+  ) {
+    const res = NextResponse.next()
+    const supabase = createMiddlewareClient({ req: request, res })
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
+  }
+
+  // Add CORS headers for API routes
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const response = NextResponse.next()
+
+    // Define allowed origins based on environment
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? [process.env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
+        : ["http://localhost:3000"]
+
+    const origin = request.headers.get("origin") || ""
+
+    if (allowedOrigins.includes(origin)) {
+      response.headers.set("Access-Control-Allow-Origin", origin)
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+      response.headers.set("Access-Control-Max-Age", "86400")
+    }
+
+    return response
+  }
+
+  return NextResponse.next()
+}
+
+// Only run middleware on API routes and auth-protected pages
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/api/:path*", "/profile/:path*", "/subscriptions/:path*", "/bookmarks/:path*", "/admin/:path*"],
 }

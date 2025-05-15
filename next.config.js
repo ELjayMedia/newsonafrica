@@ -14,7 +14,6 @@ const nextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,
-    unoptimized: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -27,10 +26,53 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   experimental: {
-    // Remove or disable optimizeCss which requires critters
-    // optimizeCss: true,
-    optimizeServerReact: true,
+    serverComponentsExternalPackages: ["sharp"],
+    optimizePackageImports: ["lucide-react"],
+  },
+  async redirects() {
+    return [
+      // Legacy routes redirects
+      {
+        source: "/pages/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+      {
+        source: "/articles/:slug",
+        destination: "/post/:slug",
+        permanent: true,
+      },
+      {
+        source: "/news-category/:slug",
+        destination: "/category/:slug",
+        permanent: true,
+      },
+      {
+        source: "/tags/:slug",
+        destination: "/tag/:slug",
+        permanent: true,
+      },
+      {
+        source: "/writers/:slug",
+        destination: "/author/:slug",
+        permanent: true,
+      },
+    ]
   },
 }
 
-module.exports = nextConfig
+// Configure PWA
+const withPWA = require("next-pwa")({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+})
+
+// Configure Bundle Analyzer
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+})
+
+// Export with all configurations applied
+module.exports = withBundleAnalyzer(withPWA(nextConfig))

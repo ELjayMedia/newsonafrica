@@ -1,15 +1,30 @@
-import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
+import { z } from "zod"
 import { createProfile } from "@/services/profile-service"
+import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
-export async function POST(request: Request) {
+// Input validation schema
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+})
+
+export async function POST(request: NextRequest) {
   try {
-    const { email, password, username } = await request.json()
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, 3, "REGISTER_API_CACHE_TOKEN")
+    if (rateLimitResponse) return rateLimitResponse
 
-    if (!email || !password || !username) {
-      return NextResponse.json({ error: "Email, password, and username are required" }, { status: 400 })
-    }
+    const body = await request.json()
+
+    // Validate request body
+    const { email, password, username } = registerSchema.parse(body)
 
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
@@ -26,7 +41,7 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
+      return handleApiError(new Error(authError.message))
     }
 
     // Create the profile
@@ -37,16 +52,15 @@ export async function POST(request: Request) {
       })
 
       if (!profile) {
-        return NextResponse.json({ error: "Failed to create user profile" }, { status: 400 })
+        return handleApiError(new Error("Failed to create user profile"))
       }
     }
 
-    return NextResponse.json({
+    return successResponse({
       user: authData.user,
       session: authData.session,
     })
   } catch (error) {
-    console.error("Registration error:", error)
-    return NextResponse.json({ error: "Registration failed" }, { status: 400 })
+    return handleApiError(error)
   }
 }

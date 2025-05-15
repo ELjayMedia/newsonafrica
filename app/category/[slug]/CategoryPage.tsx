@@ -72,50 +72,30 @@ export default function CategoryPage({ slug, initialData }: { slug: string; init
         <CategoryAd />
 
         <h2 className="text-xl font-bold mt-12 mb-6">More from {category.name}</h2>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {morePosts.map((post) => (
-              <HorizontalCard key={post.id} post={post} />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {morePosts.map((post) => (
+            <HorizontalCard key={post.id} post={post} />
+          ))}
 
-          {/* Improved infinite scroll experience */}
-          <div className="mt-8 flex flex-col items-center">
-            {isFetchingNextPage ? (
-              <div className="w-full py-6 flex justify-center items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-pulse h-3 w-3 bg-gray-500 rounded-full"></div>
-                  <div className="animate-pulse h-3 w-3 bg-gray-500 rounded-full animation-delay-200"></div>
-                  <div className="animate-pulse h-3 w-3 bg-gray-500 rounded-full animation-delay-400"></div>
-                  <span className="ml-2 text-gray-600">Loading more articles...</span>
-                </div>
+          {/* Infinite scroll loading indicator */}
+          {isFetchingNextPage && (
+            <div className="col-span-full flex justify-center py-4">
+              <div className="animate-pulse flex space-x-4">
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+                <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
               </div>
-            ) : hasNextPage ? (
-              <div className="w-full flex flex-col items-center">
-                {/* Invisible sentinel element for infinite scroll */}
-                <div ref={ref} className="h-10 w-full" aria-hidden="true" />
-
-                {/* Fallback button in case intersection observer fails */}
-                <button
-                  onClick={() => fetchNextPage()}
-                  className="mt-4 px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full transition-colors duration-200"
-                >
-                  Load more articles
-                </button>
-              </div>
-            ) : morePosts.length > 0 ? (
-              <div className="text-center py-6 border-t border-gray-100 w-full">
-                <p className="text-gray-600">You've reached the end of the content</p>
-                <button
-                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="mt-4 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                >
-                  Back to top
-                </button>
-              </div>
-            ) : null}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* Invisible sentinel element for infinite scroll */}
+        {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
+
+        {/* End of content message */}
+        {!hasNextPage && !isFetchingNextPage && morePosts.length > 0 && (
+          <p className="text-center text-gray-600 mt-8">You've reached the end of the content</p>
+        )}
       </div>
     </ErrorBoundary>
   )

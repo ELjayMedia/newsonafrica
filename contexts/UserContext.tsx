@@ -25,6 +25,7 @@ interface UserContextType {
   signInWithGoogle: () => Promise<void>
   signInWithFacebook: () => Promise<void>
   refreshSession: () => Promise<boolean>
+  syncSocialProfile: () => Promise<void>
 }
 
 /**
@@ -45,25 +46,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   /**
-   * Handle social login profile creation/update
+   * Sync social profile data
    */
-  const handleSocialLoginProfile = async (user: User) => {
+  const syncSocialProfile = async () => {
     try {
-      const existingProfile = await ProfileService.fetchProfile(user.id)
-      if (!existingProfile) {
-        // Create a default profile for the user
-        const username = user.email?.split("@")[0] || user.id // Generate a default username
-        await ProfileService.createProfile(user.id, {
-          username: username,
-          fullName: (user.user_metadata?.full_name as string) || "",
-          avatarUrl: (user.user_metadata?.avatar_url as string) || "",
-          website: (user.user_metadata?.website as string) || "",
-        })
-        // Refresh the profile
-        await fetchProfile(user.id)
+      if (!session || !user) {
+        return
+      }
+
+      const provider = user.app_metadata?.provider as string
+      if (!provider || (provider !== "facebook" && provider !== "google")) {
+        return
+      }
+
+      const updatedProfile = await AuthService.processSocialLoginData(session)
+      if (updatedProfile) {
+        setProfile(updatedProfile)
       }
     } catch (error) {
-      console.error("Error handling social login profile:", error)
+      console.error("Error syncing social profile:", error)
     }
   }
 
@@ -86,8 +87,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const result = await AuthService.refreshSession()
 
       if (!result.success) {
-        // If refresh failed, clear the session
-        await AuthService.signOut()
+        // If refresh failed but we still have a user in state,
+        // we'll keep them signed in until they explicitly sign out
+        if (user) {
+          console.log("Session refresh failed, but keeping existing user state")
+          return true
+        }
+
+        // Otherwise clear the session
         setUser(null)
         setSession(null)
         setProfile(null)
@@ -106,7 +113,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return true
     } catch (error) {
       console.error("Error refreshing session:", error)
-      return false
+      // Don't clear user state on refresh errors
+      return !!user
     }
   }
 
@@ -123,33 +131,37 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         if (currentUser) {
           fetchProfile(currentUser.id)
+
+          // If this is a social login, process the profile data
+          if (
+            currentSession &&
+            (currentUser.app_metadata?.provider === "facebook" || currentUser.app_metadata?.provider === "google")
+          ) {
+            await AuthService.processSocialLoginData(currentSession)
+          }
         } else {
           setLoading(false)
         }
 
         // Listen for auth changes
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
           console.log("Auth state changed:", event)
 
-          // Handle social login profile creation/update
-          if (event === "SIGNED_IN" && session?.user) {
-            try {
-              // For social logins, ensure profile exists
-              const provider = session.user.app_metadata?.provider as string
-              if (provider && (provider === "facebook" || provider === "google")) {
-                await handleSocialLoginProfile(session.user)
-              }
-            } catch (error) {
-              console.error("Error handling social login profile:", error)
+          setSession(newSession)
+          setUser(newSession?.user ?? null)
+          setIsAuthenticated(!!newSession?.user)
+
+          if (newSession?.user) {
+            // For social logins, process profile data
+            if (
+              event === "SIGNED_IN" &&
+              (newSession.user.app_metadata?.provider === "facebook" ||
+                newSession.user.app_metadata?.provider === "google")
+            ) {
+              await AuthService.processSocialLoginData(newSession)
             }
-          }
 
-          setSession(session)
-          setUser(session?.user ?? null)
-          setIsAuthenticated(!!session?.user)
-
-          if (session?.user) {
-            fetchProfile(session.user.id)
+            fetchProfile(newSession.user.id)
           } else {
             setProfile(null)
             setLoading(false)
@@ -316,6 +328,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signInWithFacebook,
         refreshSession,
+        syncSocialProfile,
       }}
     >
       {children}

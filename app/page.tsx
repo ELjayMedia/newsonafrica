@@ -1,14 +1,19 @@
-"use client"
-
+import { Suspense } from "react"
 import { HomeContent } from "@/components/HomeContent"
 import { HomePageSkeleton } from "@/components/HomePageSkeleton"
 import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { Suspense } from "react"
+import type { Metadata } from "next"
+import { siteConfig } from "@/config/site"
+
+export const metadata: Metadata = {
+  title: siteConfig.name,
+  description: siteConfig.description,
+}
 
 export const revalidate = 60 // Revalidate every 60 seconds
 
-export default async function Home() {
+export default function Home() {
   return (
     <Suspense fallback={<HomePageSkeleton />}>
       <ErrorBoundary>

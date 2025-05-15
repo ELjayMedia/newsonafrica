@@ -6,6 +6,8 @@
 
 import { supabase } from "@/lib/supabase"
 import type { Provider, User, Session } from "@supabase/supabase-js"
+import { getFacebookUserData, updateProfileWithFacebookData } from "@/lib/facebook-utils"
+import { getGoogleUserData, updateProfileWithGoogleData } from "@/lib/google-utils"
 
 // Session durations in seconds
 export const SESSION_DURATIONS = {
@@ -111,6 +113,9 @@ export async function signUpWithEmail(email: string, password: string, username:
         email,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        metadata: {
+          source: "email_signup",
+        },
       })
 
       if (profileError) {
@@ -187,10 +192,16 @@ export async function signInWithSocialProvider(provider: Provider) {
     }
 
     // Add provider-specific scopes
-    if (provider === "google" && rememberMe) {
-      options.scopes = "offline_access"
+    if (provider === "google") {
+      options.scopes = "email profile"
+      if (rememberMe) {
+        options.scopes += " offline_access"
+      }
     } else if (provider === "facebook") {
-      options.scopes = rememberMe ? "email,public_profile,user_friends" : "email,public_profile"
+      options.scopes = "email,public_profile"
+      if (rememberMe) {
+        options.scopes += ",user_friends"
+      }
     }
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -208,12 +219,56 @@ export async function signInWithSocialProvider(provider: Provider) {
 }
 
 /**
+ * Process social login data after successful authentication
+ * @param session - The user session
+ * @returns The updated user profile
+ */
+export async function processSocialLoginData(session: Session): Promise<any> {
+  try {
+    if (!session || !session.user) {
+      throw new Error("No session or user found")
+    }
+
+    const { user, provider_token, provider_refresh_token } = session
+    const provider = user.app_metadata?.provider as string
+
+    if (!provider) {
+      return null // Not a social login
+    }
+
+    // Process based on provider
+    if (provider === "facebook" && provider_token) {
+      const facebookData = await getFacebookUserData(provider_token)
+      return await updateProfileWithFacebookData(user.id, facebookData)
+    } else if (provider === "google" && provider_token) {
+      const googleData = await getGoogleUserData(provider_token)
+      return await updateProfileWithGoogleData(user.id, googleData)
+    }
+
+    return null
+  } catch (error) {
+    console.error("Error processing social login data:", error)
+    // Don't throw, just return null to avoid breaking the auth flow
+    return null
+  }
+}
+
+/**
  * Refresh the current session
  *
  * @returns The refreshed session data and success status
  */
 export async function refreshSession(): Promise<{ success: boolean; session: Session | null; user: User | null }> {
   try {
+    // First check if we have a session
+    const { data: sessionData } = await supabase.auth.getSession()
+
+    // If no session exists, return early with success: false
+    if (!sessionData.session) {
+      return { success: false, session: null, user: null }
+    }
+
+    // Only try to refresh if we have an existing session
     const { data, error } = await supabase.auth.refreshSession()
 
     if (error) {

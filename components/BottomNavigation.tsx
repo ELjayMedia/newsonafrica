@@ -4,44 +4,70 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Search, Bookmark, User } from "lucide-react"
 import { useUser } from "@/contexts/UserContext"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 export function BottomNavigation() {
   const pathname = usePathname()
-  const { user } = useUser()
+  const { user, profile } = useUser()
 
-  // Define navigation items, but we'll modify the Profile link based on auth state
-  const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Search", href: "/search", icon: Search },
-    { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
-    // Profile link will lead to profile page if logged in, otherwise to auth page
-    {
-      name: "Profile",
-      href: user ? "/profile" : "/auth?redirectTo=/profile",
-      icon: User,
-    },
-  ]
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part?.[0] || "")
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
+  }
+
+  const displayName = profile?.full_name || profile?.username || user?.email?.split("@")[0] || ""
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
-      <div className="mx-auto max-w-[980px]">
-        <ul className="flex justify-around">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`flex flex-col items-center pt-2 pb-1 ${isActive ? "text-blue-600" : "text-gray-600"}`}
-                >
-                  <item.icon className="h-6 w-6" />
-                  <span className="text-xs mt-1">{item.name}</span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 py-2 px-3 md:hidden">
+      <div className="flex justify-around items-center">
+        <Link href="/" className="flex flex-col items-center">
+          <div className={cn("p-1 rounded-full", pathname === "/" ? "text-blue-600" : "text-gray-500")}>
+            <Home size={20} />
+          </div>
+          <span className="text-xs mt-1">Home</span>
+        </Link>
+
+        <Link href="/search" className="flex flex-col items-center">
+          <div className={cn("p-1 rounded-full", pathname === "/search" ? "text-blue-600" : "text-gray-500")}>
+            <Search size={20} />
+          </div>
+          <span className="text-xs mt-1">Search</span>
+        </Link>
+
+        <Link href="/bookmarks" className="flex flex-col items-center">
+          <div className={cn("p-1 rounded-full", pathname === "/bookmarks" ? "text-blue-600" : "text-gray-500")}>
+            <Bookmark size={20} />
+          </div>
+          <span className="text-xs mt-1">Bookmarks</span>
+        </Link>
+
+        <Link href={user ? "/profile" : "/auth"} className="flex flex-col items-center">
+          <div
+            className={cn(
+              "flex items-center justify-center",
+              pathname === "/profile" || pathname === "/auth" ? "text-blue-600" : "text-gray-500",
+            )}
+          >
+            {user ? (
+              <Avatar className="h-7 w-7">
+                <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
+                <AvatarFallback className="text-xs bg-blue-600 text-white">
+                  {displayName ? getInitials(displayName) : "U"}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <User size={20} />
+            )}
+          </div>
+          <span className="text-xs mt-1">Profile</span>
+        </Link>
       </div>
-    </nav>
+    </div>
   )
 }

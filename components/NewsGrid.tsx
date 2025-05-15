@@ -46,6 +46,16 @@ export const NewsGrid = memo(function NewsGrid({
   sportCategoryPosts = [],
   showSportCategory = false,
 }: NewsGridProps) {
+  const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
+  const secondaryPostsBlurURLs = useMemo(() => {
+    const maxLength = Math.max(posts.length, sportCategoryPosts.length)
+    const blurURLs: string[] = []
+    for (let i = 0; i < maxLength; i++) {
+      blurURLs.push(generateBlurDataURL(70, 70))
+    }
+    return blurURLs
+  }, [posts.length, sportCategoryPosts.length])
+
   const hasPosts = posts?.length > 0
   const hasSportCategoryPosts = sportCategoryPosts?.length > 0
 
@@ -55,17 +65,6 @@ export const NewsGrid = memo(function NewsGrid({
   const secondaryPosts = posts?.slice(1, 4) || []
   const mainSportPost = sportCategoryPosts?.[0]
   const secondarySportPosts = sportCategoryPosts?.slice(1, 4) || []
-
-  const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
-
-  const secondaryPostsBlurURLs = useMemo(() => {
-    const maxLength = Math.max(secondaryPosts.length, secondarySportPosts.length)
-    const blurURLs: string[] = []
-    for (let i = 0; i < maxLength; i++) {
-      blurURLs.push(generateBlurDataURL(70, 70))
-    }
-    return blurURLs
-  }, [secondaryPosts.length, secondarySportPosts.length])
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${className}`}>

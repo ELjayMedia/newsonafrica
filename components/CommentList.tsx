@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
+import { fetchComments } from "@/lib/comment-service"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -11,24 +12,22 @@ import { useInView } from "react-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useComments } from "@/hooks/useComments"
 
 interface CommentListProps {
   postId: string
 }
 
 export function CommentList({ postId }: CommentListProps) {
-  const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalComments, setTotalComments] = useState(0)
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
+  const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
   const { user } = useUser()
-
-  // Use our optimized comments hook
-  const { comments, loading, error, hasMore, totalComments, loadMore, refresh } = useComments({
-    postId,
-    pageSize: 10,
-    sortOption,
-  })
 
   // For infinite scroll
   const { ref, inView } = useInView({
@@ -43,6 +42,60 @@ export function CommentList({ postId }: CommentListProps) {
   // For optimistic updates
   const [failedComments, setFailedComments] = useState<string[]>([])
 
+  const loadComments = useCallback(
+    async (pageNum = 0, append = false) => {
+      try {
+        setLoading(true)
+        const {
+          comments: fetchedComments,
+          hasMore: moreAvailable,
+          total,
+        } = await fetchComments(postId, pageNum, 10, sortOption)
+
+        if (append) {
+          setComments((prevComments) => [...prevComments, ...fetchedComments])
+        } else {
+          setComments(fetchedComments)
+        }
+
+        setHasMore(moreAvailable)
+        setTotalComments(total)
+        setError(null)
+      } catch (err: any) {
+        console.error("Error loading comments:", err)
+
+        // Check if this is a schema-related error
+        if (
+          err.message &&
+          (err.message.includes("status") || err.message.includes("column") || err.message.includes("schema"))
+        ) {
+          setShowMigrationInfo(true)
+          setError("The comment system needs a database update. Please contact the administrator.")
+        } else {
+          setError("Failed to load comments. Please try refreshing the page.")
+        }
+      } finally {
+        setLoading(false)
+      }
+    },
+    [postId, sortOption],
+  )
+
+  // Load initial comments
+  useEffect(() => {
+    setPage(0)
+    loadComments()
+  }, [loadComments, sortOption])
+
+  // Handle infinite scroll
+  useEffect(() => {
+    if (inView && hasMore && !loading) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      loadComments(nextPage, true)
+    }
+  }, [inView, hasMore, loading, loadComments, page])
+
   // Handle optimistic updates
   const handleCommentAdded = useCallback(
     (optimisticComment?: Comment) => {
@@ -51,11 +104,11 @@ export function CommentList({ postId }: CommentListProps) {
         setOptimisticComments((prev) => [optimisticComment, ...prev])
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
-        refresh()
+        loadComments()
         setOptimisticComments([])
       }
     },
-    [refresh],
+    [loadComments],
   )
 
   // Handle comment failure
@@ -102,11 +155,6 @@ export function CommentList({ postId }: CommentListProps) {
       default:
         return "Sort"
     }
-  }
-
-  // Effect to load more comments when scrolling to the bottom
-  if (inView && hasMore && !loading) {
-    loadMore()
   }
 
   // Combine real and optimistic comments for display
@@ -157,7 +205,7 @@ export function CommentList({ postId }: CommentListProps) {
         </Alert>
       )}
 
-      {loading && comments.length === 0 ? (
+      {loading && page === 0 ? (
         <div className="space-y-4 mt-6">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="animate-pulse flex space-x-4">
@@ -186,7 +234,7 @@ export function CommentList({ postId }: CommentListProps) {
                 key={comment.id}
                 comment={comment}
                 postId={postId}
-                onCommentUpdated={refresh}
+                onCommentUpdated={() => loadComments()}
                 onReplyAdded={handleCommentAdded}
                 onReplyFailed={handleCommentFailed}
                 isRateLimited={isRateLimited}
@@ -199,10 +247,17 @@ export function CommentList({ postId }: CommentListProps) {
           {/* Infinite scroll trigger */}
           {hasMore && (
             <div ref={ref} className="flex justify-center py-4" aria-live="polite">
-              {loading ? (
+              {loading && page > 0 ? (
                 <p className="text-gray-500">Loading more comments...</p>
               ) : (
-                <Button variant="outline" onClick={loadMore}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const nextPage = page + 1
+                    setPage(nextPage)
+                    loadComments(nextPage, true)
+                  }}
+                >
                   Load More Comments
                 </Button>
               )}

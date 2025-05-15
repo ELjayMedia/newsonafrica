@@ -1,14 +1,25 @@
-import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
+import { z } from "zod"
+import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
-export async function POST(request: Request) {
+// Input validation schema
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+})
+
+export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    // Apply rate limiting
+    const rateLimitResponse = await applyRateLimit(request, 5, "LOGIN_API_CACHE_TOKEN")
+    if (rateLimitResponse) return rateLimitResponse
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
-    }
+    const body = await request.json()
+
+    // Validate request body
+    const { email, password } = loginSchema.parse(body)
 
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
@@ -19,15 +30,14 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return handleApiError(new Error(error.message))
     }
 
-    return NextResponse.json({
+    return successResponse({
       user: data.user,
       session: data.session,
     })
   } catch (error) {
-    console.error("Request parsing error in login API:", error)
-    return NextResponse.json({ error: "Invalid request format" }, { status: 400 })
+    return handleApiError(error)
   }
 }

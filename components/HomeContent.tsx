@@ -17,6 +17,7 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
 import { fetchSportPosts } from "@/lib/sport-utils"
+import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 
 interface HomeContentProps {
   initialData: {
@@ -214,6 +215,42 @@ export function HomeContent({ initialData }: HomeContentProps) {
       .slice(0, 5)
   }
 
+  // Reusable CategorySection component
+  const CategorySection = ({
+    name,
+    layout,
+    typeOverride,
+    showAdAfter,
+    categories,
+  }: CategoryConfig & { categories: any[] }) => {
+    // Get posts for this specific category
+    const categoryPosts = getPostsForCategoryAndChildren(name, categories)
+
+    // Only render the section if there are posts
+    if (categoryPosts.length === 0) return null
+
+    return (
+      <React.Fragment key={name}>
+        <section className="bg-white p-4 rounded-lg shadow-sm">
+          <h2 className="text-xl font-bold mb-4 capitalize">
+            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+              {name}
+            </Link>
+          </h2>
+          <NewsGrid
+            posts={categoryPosts.map((post) => ({
+              ...post,
+              type: typeOverride,
+            }))}
+            layout={layout}
+            className="compact-grid"
+          />
+        </section>
+        {showAdAfter && <HomeMidContentAd />}
+      </React.Fragment>
+    )
+  }
+
   // Generate schema.org structured data for the homepage
   const schemas = [
     // WebPage schema for the homepage
@@ -270,59 +307,10 @@ export function HomeContent({ initialData }: HomeContentProps) {
 
         {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-4">
-          {["news", "business", "entertainment", "sport", "editorial"].map((categoryName, index) => {
-            // Get posts for this specific category
-            const categoryPosts = getPostsForCategoryAndChildren(categoryName, categories)
-
-            // Only render the section if there are posts
-            return categoryPosts.length > 0 ? (
-              <React.Fragment key={categoryName}>
-                <section className="bg-white p-4 rounded-lg shadow-sm">
-                  <h2 className="text-xl font-bold mb-4 capitalize">
-                    <Link
-                      href={`/category/${categoryName.toLowerCase()}`}
-                      className="hover:text-blue-600 transition-colors"
-                    >
-                      {categoryName}
-                    </Link>
-                  </h2>
-                  <NewsGrid
-                    posts={categoryPosts.map((post) => ({
-                      ...post,
-                      type: categoryName === "Opinion" ? "OPINION" : undefined,
-                    }))}
-                    layout="horizontal"
-                    className="compact-grid"
-                  />
-                </section>
-                {index === 1 && <HomeMidContentAd />}
-              </React.Fragment>
-            ) : null
-          })}
-        </div>
-
-        {/* Health Section */}
-        {(() => {
-          const healthPosts = getPostsForCategoryAndChildren("health", categories)
-          return healthPosts.length > 0 ? (
-            <section className="bg-white p-4 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold mb-4">
-                <Link href="/category/health" className="hover:text-blue-600 transition-colors">
-                  Health
-                </Link>
-              </h2>
-              <NewsGrid
-                posts={healthPosts.map((post) => ({
-                  ...post,
-                  type: "HEALTH",
-                }))}
-                layout="vertical"
-                className="compact-grid"
-              />
-            </section>
-          ) : null
-        })()}
-        <NewsGrid posts={recentPosts} className="mb-8" sportCategoryPosts={sportPosts} showSportCategory={true} />
+          {categoryConfigs.map((config) => (
+            <CategorySection key={config.name} {...config} categories={categories} />
+          ))}
+        </div>        
       </div>
     </ErrorBoundary>
   )

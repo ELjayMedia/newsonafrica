@@ -52,7 +52,7 @@ export function Header() {
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <header
-        className={`bg-white mx-auto max-w-[980px] ${
+        className={`bg-white mx-auto max-w-[980px] shadow-md z-10 ${
           hideOnMobile ? "hidden md:block" : pathname === "/search" ? "hidden sm:block" : ""
         }`}
       >
