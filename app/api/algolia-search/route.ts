@@ -1,116 +1,48 @@
-import { type NextRequest, NextResponse } from "next/server"
-import algoliasearch from "algoliasearch"
+import { NextResponse } from "next/server"
+import algoliasearch from "algoliasearch/lite"
 
-// Input validation
-const validateSearchParams = (params: any) => {
-  const { query, indexName } = params
-
-  if (!query || typeof query !== "string") {
-    return { valid: false, error: "Query parameter is required and must be a string" }
-  }
-
-  if (!indexName || typeof indexName !== "string") {
-    return { valid: false, error: "Index name is required and must be a string" }
-  }
-
-  return { valid: true }
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // Parse request body
-    let params
-    try {
-      params = await request.json()
-    } catch (parseError) {
-      console.error("Failed to parse request JSON:", parseError)
-      return NextResponse.json(
-        { error: "Invalid request format", details: "Could not parse request body as JSON" },
-        { status: 400 },
-      )
+    // Parse the request body
+    const body = await request.json()
+    const { query, hitsPerPage = 10, page = 0 } = body
+
+    // Validate the query
+    if (!query) {
+      return NextResponse.json({ error: "Query parameter is required" }, { status: 400 })
     }
 
-    // Validate search parameters
-    const validation = validateSearchParams(params)
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
-    }
-
-    const { query, indexName, filters, page = 1, hitsPerPage = 10 } = params
-
-    // Initialize Algolia client - COMPLETELY FIXED: Only use server-side environment variables
+    // Get Algolia credentials from environment variables
     const appId = process.env.ALGOLIA_APP_ID
     const apiKey = process.env.ALGOLIA_SEARCH_API_KEY
+    const indexName = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME
 
-    // Debug logging for troubleshooting
-    if (!appId) {
-      console.error("Missing Algolia App ID")
-      return NextResponse.json(
-        { error: "Search service configuration error", details: "Missing application identifier" },
-        { status: 500 },
-      )
+    // Validate credentials
+    if (!appId || !apiKey || !indexName) {
+      console.error("Missing Algolia credentials:", {
+        hasAppId: !!appId,
+        hasApiKey: !!apiKey,
+        hasIndexName: !!indexName,
+      })
+      return NextResponse.json({ error: "Search service configuration error" }, { status: 500 })
     }
 
-    if (!apiKey) {
-      console.error("Missing search credentials")
-      return NextResponse.json(
-        { error: "Search service configuration error", details: "Missing search credentials" },
-        { status: 500 },
-      )
-    }
-
-    // Create Algolia client with error handling
-    let client
-    try {
-      client = algoliasearch(appId, apiKey)
-    } catch (clientError) {
-      console.error("Failed to initialize search client:", clientError)
-      return NextResponse.json({ error: "Failed to initialize search client", hits: [], nbHits: 0 }, { status: 500 })
-    }
-
+    // Initialize Algolia client
+    const client = algoliasearch(appId, apiKey)
     const index = client.initIndex(indexName)
 
-    // Perform search with better error handling
-    const searchOptions: any = {
-      page: page - 1, // Algolia uses 0-based pagination
+    // Perform the search
+    const searchResults = await index.search(query, {
       hitsPerPage,
-    }
+      page,
+    })
 
-    if (filters) {
-      searchOptions.filters = filters
-    }
-
-    try {
-      const results = await index.search(query, searchOptions)
-      return NextResponse.json(results)
-    } catch (searchError: any) {
-      console.error("Search operation failed:", searchError)
-
-      // Provide more specific error information
-      const errorDetails = searchError.message || "Unknown search error"
-      const statusCode = searchError.status || 500
-
-      return NextResponse.json(
-        {
-          error: `Search operation failed: ${errorDetails}`,
-          searchError: true,
-          hits: [],
-          nbHits: 0,
-        },
-        { status: statusCode },
-      )
-    }
+    // Return the search results
+    return NextResponse.json(searchResults)
   } catch (error) {
-    console.error("Unhandled exception in search API:", error)
+    console.error("Search API error:", error)
 
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Internal search error",
-        stack: process.env.NODE_ENV !== "production" ? (error instanceof Error ? error.stack : undefined) : undefined,
-        hits: [],
-        nbHits: 0,
-      },
-      { status: 500 },
-    )
+    // Return a proper JSON error response
+    return NextResponse.json({ error: "An error occurred while searching" }, { status: 500 })
   }
 }

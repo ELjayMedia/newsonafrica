@@ -1,96 +1,68 @@
-type SearchParams = {
-  query: string
-  filters?: string
-  page?: number
-  hitsPerPage?: number
-  indexName?: string
-}
+/**
+ * Client-side utility for searching with Algolia
+ */
 
-export async function searchAlgolia<T = any>(params: SearchParams) {
+export async function searchAlgolia(query: string, hitsPerPage = 10, page = 0) {
   try {
-    // Validate required parameters
-    if (!params.query?.trim()) {
-      return {
-        error: "Search query is required",
-        hits: [],
-        nbHits: 0,
-      }
+    // Make sure we have a valid query
+    if (!query || query.trim() === "") {
+      return { hits: [], nbHits: 0, page, nbPages: 0 }
     }
 
-    // Make sure we have an index name
-    const indexName = params.indexName || process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME
-    if (!indexName) {
-      console.error("Missing Algolia index name")
-      return {
-        error: "Search configuration error: missing index name",
-        hits: [],
-        nbHits: 0,
-      }
-    }
-
-    // Execute search request with timeout
+    // Set up request with timeout
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    try {
-      const response = await fetch("/api/algolia-search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...params,
-          indexName,
-        }),
-        signal: controller.signal,
-      })
+    // Make the request to our API endpoint
+    const response = await fetch("/api/algolia-search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query, hitsPerPage, page }),
+      signal: controller.signal,
+    })
 
-      clearTimeout(timeoutId)
+    // Clear the timeout
+    clearTimeout(timeoutId)
 
-      // Check if the response is ok before trying to parse JSON
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Search API error: ${response.status} ${errorText}`)
-        return {
-          error: `Search failed with status ${response.status}: ${errorText.slice(0, 100)}`,
-          statusCode: response.status,
-          hits: [],
-          nbHits: 0,
-        }
+    // Check if the response is ok
+    if (!response.ok) {
+      // Try to get error details if available
+      let errorDetails = ""
+      try {
+        const errorData = await response.json()
+        errorDetails = errorData.error || ""
+      } catch (e) {
+        // If we can't parse the JSON, use the status text
+        errorDetails = response.statusText
       }
 
-      // Safely parse the JSON
+      throw new Error(`Search API error: ${response.status} ${errorDetails}`)
+    }
+
+    // Check if the response is valid JSON
+    const contentType = response.headers.get("content-type")
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Search API error: Invalid response format")
+    }
+
+    // Parse the JSON response
+    try {
       const data = await response.json()
       return data
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-
-      if (fetchError.name === "AbortError") {
-        console.error("Search request timed out")
-        return {
-          error: "Search request timed out. Please try again.",
-          hits: [],
-          nbHits: 0,
-        }
-      }
-
-      throw fetchError // Re-throw for the outer catch block
+    } catch (error) {
+      console.error("JSON parsing error:", error)
+      throw new Error("Search client error: Failed to parse search results")
     }
   } catch (error) {
-    console.error("Search client error:", error)
-    return {
-      error: error instanceof Error ? error.message : "Unknown search error",
-      hits: [],
-      nbHits: 0,
+    // Re-throw the error with a clear message
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        throw new Error("Search request timed out")
+      }
+      throw error
     }
+    throw new Error("An unexpected error occurred during search")
   }
 }
-
-// Provide app info for components that need it
-export const getAlgoliaAppInfo = () => ({
-  appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
-  indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "",
-
-  // Check if we have the necessary config
-  isConfigured: !!(process.env.NEXT_PUBLIC_ALGOLIA_APP_ID && process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME),
-})

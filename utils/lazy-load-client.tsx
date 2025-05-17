@@ -4,26 +4,27 @@ import dynamic from "next/dynamic"
 import type { ComponentType } from "react"
 
 /**
- * Helper function to lazy load components with a skeleton loading state
- * Client component version that supports ssr: false
+ * Lazily loads a component with a loading fallback
  */
 export function lazyLoadComponent<T>(
   importFunc: () => Promise<{ default: ComponentType<T> }>,
-  options = { ssr: true },
+  LoadingComponent: ComponentType<T> | null = null,
 ) {
   return dynamic(importFunc, {
-    ssr: options.ssr,
-    loading: () => <div className="animate-pulse bg-gray-200 rounded-md h-full w-full min-h-[100px]"></div>,
+    loading: LoadingComponent ? () => <LoadingComponent /> : undefined,
+    ssr: false,
   })
 }
 
 /**
- * Helper function to lazy load skeleton components with default loading state
- * Client component version that supports ssr: false
+ * Lazily loads a component with a skeleton loading state
  */
-export function lazyLoadSkeleton<T>(importFunc: () => Promise<{ default: ComponentType<T> }>, options = { ssr: true }) {
+export function lazyLoadSkeleton<T>(
+  importFunc: () => Promise<{ default: ComponentType<T> }>,
+  SkeletonComponent: ComponentType<T>,
+) {
   return dynamic(importFunc, {
-    ssr: options.ssr,
-    loading: () => <div className="animate-pulse bg-gray-200 rounded-md h-full w-full min-h-[100px]"></div>,
+    loading: () => <SkeletonComponent />,
+    ssr: false,
   })
 }
