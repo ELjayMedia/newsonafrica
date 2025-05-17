@@ -38,23 +38,23 @@ export async function POST(request: NextRequest) {
 
     const { query, indexName, filters, page = 1, hitsPerPage = 10 } = params
 
-    // Initialize Algolia client
-    const appId = process.env.ALGOLIA_APP_ID || process.env.NEXT_PUBLIC_ALGOLIA_APP_ID
-    const apiKey = process.env.ALGOLIA_SEARCH_API_KEY || process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY
+    // Initialize Algolia client - COMPLETELY FIXED: Only use server-side environment variables
+    const appId = process.env.ALGOLIA_APP_ID
+    const apiKey = process.env.ALGOLIA_SEARCH_API_KEY
 
     // Debug logging for troubleshooting
     if (!appId) {
       console.error("Missing Algolia App ID")
       return NextResponse.json(
-        { error: "Search service configuration error", details: "Missing Algolia App ID" },
+        { error: "Search service configuration error", details: "Missing application identifier" },
         { status: 500 },
       )
     }
 
     if (!apiKey) {
-      console.error("Missing Algolia API Key")
+      console.error("Missing search credentials")
       return NextResponse.json(
-        { error: "Search service configuration error", details: "Missing Algolia API Key" },
+        { error: "Search service configuration error", details: "Missing search credentials" },
         { status: 500 },
       )
     }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     try {
       client = algoliasearch(appId, apiKey)
     } catch (clientError) {
-      console.error("Failed to initialize Algolia client:", clientError)
+      console.error("Failed to initialize search client:", clientError)
       return NextResponse.json({ error: "Failed to initialize search client", hits: [], nbHits: 0 }, { status: 500 })
     }
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       const results = await index.search(query, searchOptions)
       return NextResponse.json(results)
     } catch (searchError: any) {
-      console.error("Algolia search operation failed:", searchError)
+      console.error("Search operation failed:", searchError)
 
       // Provide more specific error information
       const errorDetails = searchError.message || "Unknown search error"
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: `Search operation failed: ${errorDetails}`,
-          algoliaError: true,
+          searchError: true,
           hits: [],
           nbHits: 0,
         },
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error("Unhandled exception in Algolia search API:", error)
+    console.error("Unhandled exception in search API:", error)
 
     return NextResponse.json(
       {
