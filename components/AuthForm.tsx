@@ -17,9 +17,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 interface AuthFormProps {
   redirectTo?: string
   onAuthSuccess?: () => void
+  defaultTab?: "signin" | "signup"
+  inModal?: boolean
+  onComplete?: () => void
 }
 
-export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
+export function AuthForm({
+  redirectTo,
+  onAuthSuccess,
+  defaultTab = "signin",
+  inModal = false,
+  onComplete,
+}: AuthFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -38,23 +47,30 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
   const [error, setError] = useState<AuthError | null>(null)
 
   const onSuccess = useCallback(() => {
-    const redirectTo = searchParams.get("redirectTo")
-    if (redirectTo === "back") {
+    if (onComplete) {
+      onComplete()
+      return
+    }
+
+    const redirectParam = searchParams.get("redirectTo")
+    if (redirectParam === "back") {
       router.back()
-    } else if (redirectTo) {
+    } else if (redirectParam) {
       // Check if the redirect URL has a hash
-      const hasHash = redirectTo.includes("#")
+      const hasHash = redirectParam.includes("#")
       if (hasHash) {
-        router.push(redirectTo)
+        router.push(redirectParam)
       } else {
         // Preserve any hash from the current URL if the redirect doesn't have one
         const currentHash = window.location.hash
-        router.push(redirectTo + (currentHash || ""))
+        router.push(redirectParam + (currentHash || ""))
       }
+    } else if (redirectTo) {
+      router.push(redirectTo)
     } else {
       router.push("/")
     }
-  }, [router, searchParams])
+  }, [router, searchParams, redirectTo, onComplete])
 
   // Handle sign in with email
   const handleSignIn = async (e: React.FormEvent) => {
@@ -87,7 +103,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
         onAuthSuccess()
       }
 
-      // No redirect - stay on the current page
+      onSuccess()
     } catch (error: any) {
       // Handle the error based on its category
       if (error.category) {
@@ -182,7 +198,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
         onAuthSuccess()
       }
 
-      // No redirect - stay on the current page
+      onSuccess()
     } catch (error: any) {
       // Handle the error based on its category
       if (error.category) {
@@ -322,14 +338,33 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
   if (isResetMode) {
     return (
       <div className="space-y-4">
-        <Button type="button" variant="link" className="mb-4 px-0" onClick={() => setIsResetMode(false)}>
-          ← Back to sign in
+        <Button
+          type="button"
+          variant="ghost"
+          className="mb-4 px-0 flex items-center text-blue-600"
+          onClick={() => setIsResetMode(false)}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mr-1"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Back to sign in
         </Button>
 
         {renderErrorAlert()}
 
         {resetSent && (
-          <Alert variant="success" className="bg-green-50 border-green-200 text-green-600">
+          <Alert className="bg-green-50 border-green-200 text-green-600">
             <div className="flex items-center">
               <Info className="h-4 w-4" />
               <AlertTitle className="ml-2">Password reset email sent. Please check your inbox.</AlertTitle>
@@ -348,10 +383,11 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               required
               disabled={isLoading}
               placeholder="Enter your email address"
+              className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">We'll send you a link to reset your password.</p>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -368,7 +404,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
   // Main auth form
   return (
-    <Tabs defaultValue="signin" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="grid w-full grid-cols-2 mb-6">
         <TabsTrigger value="signin">Sign In</TabsTrigger>
         <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -387,6 +423,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              className="mt-1"
             />
           </div>
           <div>
@@ -398,6 +435,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
+              className="mt-1"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -410,7 +448,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               Remember me for 30 days
             </Label>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -477,7 +515,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
           <Button
             type="button"
             variant="link"
-            className="w-full"
+            className="w-full text-blue-600"
             onClick={() => setIsResetMode(true)}
             disabled={isLoading}
           >
@@ -497,6 +535,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              className="mt-1"
             />
           </div>
           <div>
@@ -509,6 +548,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               required
               disabled={isLoading}
               minLength={3}
+              className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">Username must be at least 3 characters</p>
           </div>
@@ -522,6 +562,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               required
               disabled={isLoading}
               minLength={6}
+              className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
           </div>
@@ -534,9 +575,10 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={isLoading}
+              className="mt-1"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

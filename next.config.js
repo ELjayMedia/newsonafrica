@@ -1,78 +1,53 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
   images: {
     domains: [
-      "news-on-africa.vercel.app",
-      "localhost",
-      "via.placeholder.com",
       "images.unsplash.com",
-      "plus.unsplash.com",
-      "news24.com",
-      "cdn.24.co.za",
-      "media.licdn.com",
+      "news-on-africa-images.s3.amazonaws.com",
+      "news-on-africa.com",
+      "api.news-on-africa.com",
+      "picsum.photos",
+      "placehold.co",
+      "via.placeholder.com",
+      "lh3.googleusercontent.com", // Google avatars
+      "graph.facebook.com", // Facebook avatars
+      "avatars.githubusercontent.com", // GitHub avatars
+      "images.example.com",
     ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60,
+    unoptimized: true, // Added from updates
+  },
+  env: {
+    NEXT_PUBLIC_APP_ENV: process.env.NODE_ENV || "development",
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // Added from updates
   },
   typescript: {
-    ignoreBuildErrors: true,
-  },
-  swcMinify: true,
-  compress: true,
-  poweredByHeader: false,
-  productionBrowserSourceMaps: false,
-  experimental: {
-    serverComponentsExternalPackages: ["sharp"],
-    optimizePackageImports: ["lucide-react"],
+    ignoreBuildErrors: true, // Added from updates
   },
   async redirects() {
     return [
-      // Legacy routes redirects
       {
-        source: "/pages/:path*",
-        destination: "/:path*",
+        source: "/login",
+        destination: "/auth",
         permanent: true,
       },
       {
-        source: "/articles/:slug",
-        destination: "/post/:slug",
+        source: "/signup",
+        destination: "/auth?mode=signup",
         permanent: true,
       },
       {
-        source: "/news-category/:slug",
-        destination: "/category/:slug",
-        permanent: true,
-      },
-      {
-        source: "/tags/:slug",
-        destination: "/tag/:slug",
-        permanent: true,
-      },
-      {
-        source: "/writers/:slug",
-        destination: "/author/:slug",
+        source: "/logout",
+        destination: "/api/auth/logout",
         permanent: true,
       },
     ]
   },
 }
 
-// Configure PWA
-const withPWA = require("next-pwa")({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-  skipWaiting: true,
-})
-
-// Configure Bundle Analyzer
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
-  enabled: process.env.ANALYZE === "true",
-})
-
-// Export with all configurations applied
-module.exports = withBundleAnalyzer(withPWA(nextConfig))
+module.exports = nextConfig

@@ -1,64 +1,97 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth } from "@/hooks/useAuth"
-import { AuthForm } from "@/components/AuthForm"
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useUser } from "@/contexts/UserContext"
+import { AuthContent } from "@/components/AuthContent"
+import { createClient } from "@/utils/supabase/client"
 
 export default function AuthPageClient({
   searchParams,
 }: {
   searchParams: { redirectTo?: string; error?: string }
 }) {
-  const { isAuthenticated, loading } = useAuth()
+  const [mode, setMode] = useState<"signin" | "signup">("signin")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [username, setUsername] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const { signIn, signUp, signInWithGoogle, signInWithFacebook, isAuthenticated } = useUser()
   const router = useRouter()
-  const params = useSearchParams()
-  const [returnTo, setReturnTo] = useState<string | null>(null)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Get returnTo from URL params
-    const returnToParam = params?.get("returnTo") || searchParams.redirectTo || null
-    setReturnTo(returnToParam)
-
-    // Redirect authenticated users to profile or returnTo
-    if (!loading && isAuthenticated) {
-      if (returnToParam) {
-        router.push(decodeURIComponent(returnToParam))
-      } else {
-        router.push("/profile")
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (data?.session) {
+        // User is already logged in, redirect
+        if (searchParams.redirectTo) {
+          router.push(searchParams.redirectTo)
+        } else {
+          router.push("/")
+        }
       }
     }
-  }, [isAuthenticated, loading, router, params, searchParams.redirectTo])
 
-  // Show nothing while loading or redirecting
-  if (loading || isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
-      </div>
-    )
+    checkUser()
+  }, [router, searchParams.redirectTo, supabase.auth])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/")
+    }
+
+    // Check for errors from OAuth redirects
+    const errorParam = searchParams?.error
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+  }, [isAuthenticated, router, searchParams])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      if (mode === "signin") {
+        await signIn(email, password)
+        // Router automatically redirects on successful login due to useEffect
+      } else {
+        await signUp(email, password, username)
+        setSuccessMessage("Account created successfully! You can now sign in.")
+        setMode("signin")
+      }
+    } catch (error) {
+      console.error("Auth error:", error)
+      setError(error instanceof Error ? error.message : "Authentication failed")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSocialSignIn = async (provider: "google" | "facebook") => {
+    setError(null)
+    try {
+      if (provider === "google") {
+        await signInWithGoogle()
+      } else {
+        await signInWithFacebook()
+      }
+    } catch (error) {
+      console.error(`${provider} sign in error:`, error)
+      setError(error instanceof Error ? error.message : `${provider} sign in failed`)
+    }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center">Sign In to News On Africa</h1>
-        {searchParams.error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-            {searchParams.error === "OAuthSignin" && "Error during OAuth sign in. Please try again."}
-            {searchParams.error === "OAuthCallback" && "Error during OAuth callback. Please try again."}
-            {searchParams.error === "OAuthCreateAccount" && "Error creating OAuth account. Please try again."}
-            {searchParams.error === "EmailCreateAccount" && "Error creating email account. Please try again."}
-            {searchParams.error === "Callback" && "Error during callback. Please try again."}
-            {searchParams.error === "OAuthAccountNotLinked" &&
-              "Email already in use with different provider. Please sign in using original provider."}
-            {searchParams.error === "EmailSignin" && "Error during email sign in. Please check your email."}
-            {searchParams.error === "CredentialsSignin" && "Invalid credentials. Please try again."}
-            {searchParams.error === "SessionRequired" && "Please sign in to access this page."}
-            {searchParams.error === "Default" && "An error occurred. Please try again."}
-          </div>
-        )}
-        <AuthForm returnTo={returnTo} />
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="container mx-auto">
+        <AuthContent />
       </div>
     </div>
   )

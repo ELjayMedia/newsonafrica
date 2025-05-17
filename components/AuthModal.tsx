@@ -4,9 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AuthForm } from "@/components/AuthForm"
 import { useAuth } from "@/hooks/useAuth"
 import { usePathname } from "next/navigation"
-import { useUser } from "@/contexts/UserContext"
-import { createClient } from "@/utils/supabase-client" // Import createClient
-import { useRouter } from "next/router" // Import useRouter
 
 interface AuthModalProps {
   open: boolean
@@ -18,9 +15,6 @@ interface AuthModalProps {
 export function AuthModal({ open, onOpenChange, defaultTab = "signin", returnTo }: AuthModalProps) {
   const { isAuthenticated } = useAuth()
   const pathname = usePathname()
-  const supabase = createClient() // Use imported createClient
-  const router = useRouter() // Use imported useRouter
-  const { refreshSession } = useUser()
 
   // Use current path as returnTo if not provided
   const returnPath = returnTo || pathname || "/"
@@ -34,11 +28,20 @@ export function AuthModal({ open, onOpenChange, defaultTab = "signin", returnTo 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{defaultTab === "signin" ? "Sign In" : "Create Account"}</DialogTitle>
+      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-0">
+          <DialogTitle className="text-center text-xl font-bold">
+            {defaultTab === "signin" ? "Sign In" : "Create Account"}
+          </DialogTitle>
         </DialogHeader>
-        <AuthForm defaultTab={defaultTab} returnTo={returnPath} inModal onComplete={() => onOpenChange(false)} />
+        <div className="px-6 py-4">
+          <AuthForm
+            defaultTab={defaultTab}
+            redirectTo={returnPath}
+            inModal={true}
+            onComplete={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   )

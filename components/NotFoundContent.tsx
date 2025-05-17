@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import ReturnToPathButton from "./ReturnToPathButton"
+import ReturnLink from "./ReturnLink"
 
 export function NotFoundContent() {
   return (
@@ -20,7 +20,7 @@ export function NotFoundContent() {
           </Link>
         }
       >
-        <ReturnToPathButton />
+        <ReturnLink />
       </Suspense>
     </div>
   )

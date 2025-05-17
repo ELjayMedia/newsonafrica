@@ -45,10 +45,11 @@ export function recordSubmission(userId: string): void {
 // Check if the status column exists in the comments table
 let hasStatusColumn: boolean | null = null
 let hasRichTextColumn: boolean | null = null
+let hasReactionsTable: boolean | null = null
 
-async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
-  if (hasStatusColumn !== null && hasRichTextColumn !== null) {
-    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
+async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean; hasReactions: boolean }> {
+  if (hasStatusColumn !== null && hasRichTextColumn !== null && hasReactionsTable !== null) {
+    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn, hasReactions: hasReactionsTable }
   }
 
   try {
@@ -122,12 +123,26 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
       hasRichTextColumn = false
     }
 
-    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
+    // Check if comment_reactions table exists
+    try {
+      const { data, error } = await supabase.from("comment_reactions").select("id").limit(1)
+      hasReactionsTable = !error
+    } catch (error) {
+      console.error("Error checking comment_reactions table:", error)
+      hasReactionsTable = false
+    }
+
+    return {
+      hasStatus: hasStatusColumn,
+      hasRichText: hasRichTextColumn,
+      hasReactions: hasReactionsTable,
+    }
   } catch (error) {
     console.error("Error checking columns:", error)
     hasStatusColumn = false
     hasRichTextColumn = false
-    return { hasStatus: false, hasRichText: false }
+    hasReactionsTable = false
+    return { hasStatus: false, hasRichText: false, hasReactions: false }
   }
 }
 
@@ -140,7 +155,7 @@ export async function fetchComments(
 ): Promise<{ comments: Comment[]; hasMore: boolean; total: number }> {
   try {
     // Check if columns exist
-    const { hasStatus, hasRichText } = await checkColumns()
+    const { hasStatus, hasRichText, hasReactions } = await checkColumns()
 
     // Get total count first - using a more robust approach
     let count = 0
@@ -233,18 +248,20 @@ export async function fetchComments(
 
     // Fetch reactions for all comments in a single query
     let reactions = []
-    try {
-      const { data: reactionData, error: reactionError } = await supabase
-        .from("comment_reactions")
-        .select("*")
-        .in("comment_id", allCommentIds)
+    if (hasReactions) {
+      try {
+        const { data: reactionData, error: reactionError } = await supabase
+          .from("comment_reactions")
+          .select("*")
+          .in("comment_id", allCommentIds)
 
-      if (!reactionError && reactionData) {
-        reactions = reactionData
+        if (!reactionError && reactionData) {
+          reactions = reactionData
+        }
+      } catch (error) {
+        console.error("Error fetching reactions:", error)
+        // Continue without reactions if there's an error
       }
-    } catch (error) {
-      console.error("Error fetching reactions (table might not exist):", error)
-      // Continue without reactions if table doesn't exist
     }
 
     // Extract all user IDs from comments and replies
@@ -537,6 +554,14 @@ export async function addReaction(
   reactionType: "like" | "love" | "laugh" | "sad" | "angry",
 ): Promise<void> {
   try {
+    // Check if reactions table exists
+    const { hasReactions } = await checkColumns()
+
+    if (!hasReactions) {
+      // Create the table and policies if it doesn't exist
+      await createReactionsTableAndPolicies()
+    }
+
     // First check if the user already has a reaction on this comment
     const { data: existingReaction, error: checkError } = await supabase
       .from("comment_reactions")
@@ -584,9 +609,66 @@ export async function addReaction(
   }
 }
 
+// Create the reactions table and policies if they don't exist
+async function createReactionsTableAndPolicies(): Promise<void> {
+  try {
+    // Create the table if it doesn't exist
+    await supabase.query(`
+      CREATE TABLE IF NOT EXISTS public.comment_reactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        reaction_type TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(comment_id, user_id)
+      );
+    `)
+
+    // Enable RLS
+    await supabase.query(`
+      ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;
+    `)
+
+    // Create policies
+    await supabase.query(`
+      CREATE POLICY IF NOT EXISTS "Anyone can view comment reactions" 
+        ON public.comment_reactions FOR SELECT USING (true);
+    `)
+
+    await supabase.query(`
+      CREATE POLICY IF NOT EXISTS "Users can add their own reactions" 
+        ON public.comment_reactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+    `)
+
+    await supabase.query(`
+      CREATE POLICY IF NOT EXISTS "Users can update their own reactions" 
+        ON public.comment_reactions FOR UPDATE USING (auth.uid() = user_id);
+    `)
+
+    await supabase.query(`
+      CREATE POLICY IF NOT EXISTS "Users can delete their own reactions" 
+        ON public.comment_reactions FOR DELETE USING (auth.uid() = user_id);
+    `)
+
+    // Update the cache
+    hasReactionsTable = true
+  } catch (error) {
+    console.error("Error creating reactions table and policies:", error)
+    throw error
+  }
+}
+
 // Remove a reaction from a comment
 export async function removeReaction(commentId: string, userId: string): Promise<void> {
   try {
+    // Check if reactions table exists
+    const { hasReactions } = await checkColumns()
+
+    if (!hasReactions) {
+      // If the table doesn't exist, there's nothing to remove
+      return
+    }
+
     // Delete the reaction
     const { error } = await supabase
       .from("comment_reactions")

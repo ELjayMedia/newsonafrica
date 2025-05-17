@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/types/supabase"
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/news", "/business", "/sport", "/entertainment", "/search", "/post"]
@@ -21,7 +22,7 @@ export async function middleware(request: NextRequest) {
   logApiRequest(request)
 
   const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req: request, res })
+  const supabase = createMiddlewareClient<Database>({ req: request, res })
 
   // Check if the user is authenticated
   const {
