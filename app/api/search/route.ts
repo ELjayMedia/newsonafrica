@@ -204,7 +204,10 @@ async function searchWithREST(
   dateTo?: string,
 ) {
   // Get WordPress API URL from environment
-  const wpApiUrl = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+  const wpApiUrl =
+    process.env.WORDPRESS_REST_API_URL ||
+    process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+    "https://newsonafrica.com/sz/wp-json/wp/v2"
 
   // Build search URL
   let searchUrl = `${wpApiUrl}/posts?search=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}&_embed=true`
@@ -264,7 +267,7 @@ async function searchWithREST(
     items: posts.map((post: any) => ({
       id: post.id.toString(),
       title: post.title.rendered,
-      excerpt: post.excerpt.rendered,
+      excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, "").slice(0, 150) + "...",
       slug: post.slug,
       date: post.date,
       featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
@@ -316,10 +319,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse and validate search parameters
-    const { searchParams } = new URL(request.url)
-    const params = Object.fromEntries(searchParams.entries())
+    const searchParams = request.nextUrl.searchParams
+    const query = searchParams.get("q")
 
-    const validationResult = searchParamsSchema.safeParse(params)
+    if (!query) {
+      return NextResponse.json({ error: "Missing search query" }, { status: 400 })
+    }
+
+    const { searchParams: params } = new URL(request.url)
+    const parsedParams = Object.fromEntries(params.entries())
+
+    const validationResult = searchParamsSchema.safeParse(parsedParams)
     if (!validationResult.success) {
       return NextResponse.json(
         {
@@ -330,7 +340,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { query, page, perPage, sort, categories, tags, dateFrom, dateTo } = validationResult.data
+    const { page, perPage, sort, categories, tags, dateFrom, dateTo } = validationResult.data
 
     // Create cache key
     const cacheKey = JSON.stringify({ query, page, perPage, sort, categories, tags, dateFrom, dateTo })

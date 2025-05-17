@@ -67,6 +67,7 @@
     "fs": "latest",
     "graphql": "latest",
     "graphql-request": "latest",
+    "graphql-tag": "latest",
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",
     "imagemin-pngquant": "latest",
