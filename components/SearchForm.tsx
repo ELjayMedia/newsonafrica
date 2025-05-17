@@ -1,66 +1,111 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { SearchIcon } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 interface SearchFormProps {
   initialQuery?: string
   className?: string
   minimal?: boolean
+  onSearch?: (query: string) => void
+  autoFocus?: boolean
 }
 
-export function SearchForm({ initialQuery = "", className = "", minimal = false }: SearchFormProps) {
+export function SearchForm({
+  initialQuery = "",
+  className = "",
+  minimal = false,
+  onSearch,
+  autoFocus = false,
+}: SearchFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [searchTerm, setSearchTerm] = useState(initialQuery)
+  const [query, setQuery] = useState(initialQuery)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  // Update search term when URL changes
+  // Update query when URL changes
   useEffect(() => {
-    const query = searchParams.get("query") || ""
-    if (query !== searchTerm) {
-      setSearchTerm(query)
+    const urlQuery = searchParams.get("query") || ""
+    if (urlQuery !== query) {
+      setQuery(urlQuery)
     }
-  }, [searchParams, searchTerm])
+  }, [searchParams, query])
 
-  const handleSearch = async (e: React.FormEvent) => {
+  // Auto focus input if needed
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [autoFocus])
+
+  // Handle form submission
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
 
-    if (searchTerm.trim()) {
-      setIsSubmitting(true)
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) return
 
-      // Preserve existing search parameters except 'page'
+    setIsSubmitting(true)
+
+    // Call onSearch callback if provided
+    if (onSearch) {
+      onSearch(trimmedQuery)
+    } else {
+      // Otherwise navigate to search page
       const params = new URLSearchParams(searchParams.toString())
-      params.set("query", searchTerm.trim())
-      params.delete("page") // Reset to first page on new search
+      params.set("query", trimmedQuery)
+      params.delete("page") // Reset pagination
 
       router.push(`/search?${params.toString()}`)
+    }
 
-      // Small delay to show loading state
-      setTimeout(() => {
-        setIsSubmitting(false)
-      }, 300)
+    // Reset submitting state after a short delay
+    setTimeout(() => {
+      setIsSubmitting(false)
+    }, 300)
+  }
+
+  // Clear search input
+  const handleClear = () => {
+    setQuery("")
+    if (inputRef.current) {
+      inputRef.current.focus()
     }
   }
 
   return (
     <form
-      onSubmit={handleSearch}
+      onSubmit={handleSubmit}
       className={`flex ${minimal ? "flex-row" : "flex-col sm:flex-row"} gap-2 ${className}`}
+      role="search"
     >
       <div className="relative flex-grow">
         <Input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          ref={inputRef}
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Search articles..."
-          className="pr-10"
+          className={`pr-${query ? "10" : "4"}`}
           disabled={isSubmitting}
+          aria-label="Search query"
         />
+
+        {query && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-10 top-0 h-full px-2 flex items-center justify-center text-gray-400 hover:text-gray-600"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+
         {minimal && (
           <Button
             type="submit"
@@ -68,14 +113,15 @@ export function SearchForm({ initialQuery = "", className = "", minimal = false 
             variant="ghost"
             className="absolute right-0 top-0 h-full"
             disabled={isSubmitting}
+            aria-label="Search"
           >
-            <SearchIcon className="h-4 w-4" />
+            <Search className="h-4 w-4" />
           </Button>
         )}
       </div>
 
       {!minimal && (
-        <Button type="submit" variant="primary" className="min-w-[100px]" disabled={isSubmitting}>
+        <Button type="submit" className="min-w-[100px]" disabled={isSubmitting || !query.trim()}>
           {isSubmitting ? "Searching..." : "Search"}
         </Button>
       )}

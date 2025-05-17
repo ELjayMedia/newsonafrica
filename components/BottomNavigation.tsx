@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 
 export function BottomNavigation() {
   const pathname = usePathname()
-  const { user, profile } = useUser()
+  const { user, profile, loading } = useUser()
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -54,7 +54,7 @@ export function BottomNavigation() {
               pathname === "/profile" || pathname === "/auth" ? "text-blue-600" : "text-gray-500",
             )}
           >
-            {user ? (
+            {user && !loading ? (
               <Avatar className="h-7 w-7">
                 <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
                 <AvatarFallback className="text-xs bg-blue-600 text-white">

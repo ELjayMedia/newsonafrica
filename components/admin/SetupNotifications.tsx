@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
-export function SetupNotifications() {
+export default function SetupNotifications() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [isComplete, setIsComplete] = useState(false)

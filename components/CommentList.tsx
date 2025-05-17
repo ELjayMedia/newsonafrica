@@ -28,6 +28,8 @@ export function CommentList({ postId }: CommentListProps) {
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
   const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
   const { user } = useUser()
+  const [retryCount, setRetryCount] = useState(0)
+  const maxRetries = 3
 
   // For infinite scroll
   const { ref, inView } = useInView({
@@ -46,6 +48,12 @@ export function CommentList({ postId }: CommentListProps) {
     async (pageNum = 0, append = false) => {
       try {
         setLoading(true)
+
+        // Add a small delay to prevent rapid retries
+        if (retryCount > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
+        }
+
         const {
           comments: fetchedComments,
           hasMore: moreAvailable,
@@ -61,13 +69,24 @@ export function CommentList({ postId }: CommentListProps) {
         setHasMore(moreAvailable)
         setTotalComments(total)
         setError(null)
+        setRetryCount(0) // Reset retry count on success
       } catch (err: any) {
         console.error("Error loading comments:", err)
+
+        // Check if we should retry
+        if (retryCount < maxRetries) {
+          setRetryCount((prev) => prev + 1)
+          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
+          return loadComments(pageNum, append)
+        }
 
         // Check if this is a schema-related error
         if (
           err.message &&
-          (err.message.includes("status") || err.message.includes("column") || err.message.includes("schema"))
+          (err.message.includes("status") ||
+            err.message.includes("column") ||
+            err.message.includes("schema") ||
+            err.message.includes("execute is not a function"))
         ) {
           setShowMigrationInfo(true)
           setError("The comment system needs a database update. Please contact the administrator.")
@@ -78,12 +97,13 @@ export function CommentList({ postId }: CommentListProps) {
         setLoading(false)
       }
     },
-    [postId, sortOption],
+    [postId, sortOption, retryCount, maxRetries],
   )
 
   // Load initial comments
   useEffect(() => {
     setPage(0)
+    setRetryCount(0) // Reset retry count when sort option changes
     loadComments()
   }, [loadComments, sortOption])
 
@@ -104,6 +124,7 @@ export function CommentList({ postId }: CommentListProps) {
         setOptimisticComments((prev) => [optimisticComment, ...prev])
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
+        setRetryCount(0) // Reset retry count
         loadComments()
         setOptimisticComments([])
       }
@@ -157,11 +178,18 @@ export function CommentList({ postId }: CommentListProps) {
     }
   }
 
+  // Handle retry
+  const handleRetry = () => {
+    setRetryCount(0)
+    setError(null)
+    loadComments()
+  }
+
   // Combine real and optimistic comments for display
   const displayComments = [...optimisticComments, ...comments]
 
   return (
-    <div className="mt-8 space-y-6">
+    <div id="comments" className="mt-8 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-semibold flex items-center">
           <MessageSquare className="mr-2 h-5 w-5" />
@@ -221,7 +249,12 @@ export function CommentList({ postId }: CommentListProps) {
           ))}
         </div>
       ) : error ? (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md">{error}</div>
+        <div className="p-4 bg-red-50 text-red-700 rounded-md">
+          <p>{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={handleRetry}>
+            Try Again
+          </Button>
+        </div>
       ) : displayComments.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>No comments yet. Be the first to comment!</p>

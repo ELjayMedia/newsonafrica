@@ -1,54 +1,315 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { applyRateLimit } from "@/lib/api-utils"
+import { client } from "@/lib/wordpress-api"
+import { queries } from "@/lib/wordpress-queries"
 
 // Input validation schema
 const searchParamsSchema = z.object({
   query: z.string().min(2, "Search query must be at least 2 characters").max(100),
-  page: z.coerce.number().positive().default(1),
-  hitsPerPage: z.coerce.number().positive().max(50).default(10),
-  sort: z.enum(["relevance", "date", "title"]).optional().default("relevance"),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(50).default(10),
+  sort: z.enum(["relevance", "date", "title"]).default("relevance"),
   categories: z.string().optional(),
   tags: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 })
 
-// Cache to store recent search results
-const searchCache = new Map()
+// Simple in-memory cache with TTL
+type CacheEntry = {
+  data: any
+  timestamp: number
+}
 
-// Clean old cache entries periodically
+const CACHE_TTL = 15 * 60 * 1000 // 15 minutes
+const searchCache = new Map<string, CacheEntry>()
+
+// Clean cache periodically
 setInterval(() => {
   const now = Date.now()
-  for (const [key, { timestamp }] of searchCache.entries()) {
-    if (now - timestamp > 5 * 60 * 1000) {
-      // 5 minutes expiration
+  for (const [key, entry] of searchCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
       searchCache.delete(key)
     }
   }
 }, 60 * 1000) // Check every minute
 
+// Rate limiting
+type RateLimitEntry = {
+  count: number
+  resetAt: number
+}
+
+const RATE_LIMIT = 20 // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const rateLimitMap = new Map<string, RateLimitEntry>()
+
+// Clean rate limit entries periodically
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of rateLimitMap.entries()) {
+    if (now > entry.resetAt) {
+      rateLimitMap.delete(key)
+    }
+  }
+}, 60 * 1000) // Check every minute
+
+function getRateLimitKey(request: NextRequest): string {
+  // Use IP address as rate limit key
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+  return `search:${ip}`
+}
+
+function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: number } {
+  const key = getRateLimitKey(request)
+  const now = Date.now()
+
+  if (!rateLimitMap.has(key)) {
+    rateLimitMap.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW,
+    })
+    return { limited: false }
+  }
+
+  const entry = rateLimitMap.get(key)!
+
+  // Reset if window has passed
+  if (now > entry.resetAt) {
+    entry.count = 1
+    entry.resetAt = now + RATE_LIMIT_WINDOW
+    return { limited: false }
+  }
+
+  // Check if over limit
+  if (entry.count >= RATE_LIMIT) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
+    return { limited: true, retryAfter }
+  }
+
+  // Increment count
+  entry.count++
+  return { limited: false }
+}
+
+/**
+ * Search using GraphQL API
+ */
+async function searchWithGraphQL(
+  query: string,
+  page: number,
+  perPage: number,
+  sort: string,
+  categories?: string,
+  tags?: string,
+  dateFrom?: string,
+  dateTo?: string,
+) {
+  try {
+    // Create variables for GraphQL query
+    const variables = {
+      query,
+      first: perPage,
+      after: page > 1 ? btoa(`arrayconnection:${(page - 1) * perPage - 1}`) : null,
+      orderBy: {
+        field: sort === "date" ? "DATE" : sort === "title" ? "TITLE" : "RELEVANCE",
+        order: sort === "title" ? "ASC" : "DESC",
+      },
+    }
+
+    // Add category and tag filters if provided
+    if (categories || tags || dateFrom || dateTo) {
+      // @ts-ignore - we're adding this dynamically
+      variables.where = {}
+
+      if (categories) {
+        // @ts-ignore
+        variables.where.categoryIn = categories.split(",")
+      }
+
+      if (tags) {
+        // @ts-ignore
+        variables.where.tagIn = tags.split(",")
+      }
+
+      if (dateFrom) {
+        // @ts-ignore
+        variables.where.dateQuery = variables.where.dateQuery || {}
+        // @ts-ignore
+        variables.where.dateQuery.after = dateFrom
+      }
+
+      if (dateTo) {
+        // @ts-ignore
+        variables.where.dateQuery = variables.where.dateQuery || {}
+        // @ts-ignore
+        variables.where.dateQuery.before = dateTo
+      }
+    }
+
+    // Execute GraphQL query
+    const data = await client.request(queries.searchPosts, variables)
+
+    // Transform response to match our API format
+    const posts = data.posts.nodes
+    const pageInfo = data.posts.pageInfo
+
+    return {
+      items: posts.map((post: any) => ({
+        id: post.id,
+        title: post.title,
+        excerpt: post.excerpt,
+        slug: post.slug,
+        date: post.date,
+        featuredImage: post.featuredImage
+          ? {
+              sourceUrl: post.featuredImage.node.sourceUrl,
+            }
+          : null,
+        categories: post.categories.nodes.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+        })),
+        author: {
+          name: post.author?.node?.name || "Unknown",
+          slug: post.author?.node?.slug || "",
+        },
+      })),
+      pagination: {
+        page,
+        perPage,
+        totalItems: data.posts.pageInfo.total || 0,
+        totalPages: Math.ceil((data.posts.pageInfo.total || 0) / perPage),
+        hasMore: pageInfo.hasNextPage,
+      },
+    }
+  } catch (error) {
+    console.error("GraphQL search error:", error)
+    throw error
+  }
+}
+
+/**
+ * Search using REST API (fallback)
+ */
+async function searchWithREST(
+  query: string,
+  page: number,
+  perPage: number,
+  sort: string,
+  categories?: string,
+  tags?: string,
+  dateFrom?: string,
+  dateTo?: string,
+) {
+  // Get WordPress API URL from environment
+  const wpApiUrl = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+
+  // Build search URL
+  let searchUrl = `${wpApiUrl}/posts?search=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}&_embed=true`
+
+  // Add sorting
+  if (sort === "date") {
+    searchUrl += "&orderby=date&order=desc"
+  } else if (sort === "title") {
+    searchUrl += "&orderby=title&order=asc"
+  }
+
+  // Add filters
+  if (categories) {
+    searchUrl += `&categories=${categories}`
+  }
+
+  if (tags) {
+    searchUrl += `&tags=${tags}`
+  }
+
+  if (dateFrom) {
+    searchUrl += `&after=${dateFrom}T00:00:00Z`
+  }
+
+  if (dateTo) {
+    searchUrl += `&before=${dateTo}T23:59:59Z`
+  }
+
+  // Fetch with timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+  const response = await fetch(searchUrl, {
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "NewsOnAfrica/1.0",
+    },
+    signal: controller.signal,
+    next: { revalidate: 300 }, // Cache for 5 minutes
+  })
+
+  clearTimeout(timeoutId)
+
+  if (!response.ok) {
+    throw new Error(`WordPress API returned ${response.status}: ${response.statusText}`)
+  }
+
+  // Get pagination info from headers
+  const totalItems = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
+  const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "0", 10)
+
+  // Parse response
+  const posts = await response.json()
+
+  // Transform posts to a consistent format
+  return {
+    items: posts.map((post: any) => ({
+      id: post.id.toString(),
+      title: post.title.rendered,
+      excerpt: post.excerpt.rendered,
+      slug: post.slug,
+      date: post.date,
+      featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+        ? {
+            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+          }
+        : null,
+      categories:
+        post._embedded?.["wp:term"]?.[0]?.map((term: any) => ({
+          id: term.id,
+          name: term.name,
+          slug: term.slug,
+        })) || [],
+      author: post._embedded?.["author"]?.[0]
+        ? {
+            name: post._embedded["author"][0].name,
+            slug: post._embedded["author"][0].slug,
+          }
+        : { name: "Unknown", slug: "" },
+    })),
+    pagination: {
+      page,
+      perPage,
+      totalItems,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Apply a more lenient rate limit - 30 requests per minute
-    // This is a global limit, not per-user
-    const rateLimitResponse = await applyRateLimit(request, 30, "SEARCH_API")
-    if (rateLimitResponse) {
-      // Return a more helpful error message for rate limiting
+    // Check rate limit
+    const rateLimitCheck = checkRateLimit(request)
+    if (rateLimitCheck.limited) {
       return NextResponse.json(
         {
-          error: "Search rate limit exceeded",
-          message: "Please wait a moment before trying again",
-          retryAfter: 60, // Suggest retry after 60 seconds
-          hits: [],
-          nbHits: 0,
-          page: 0,
-          nbPages: 0,
+          error: "Too many search requests",
+          message: "Please try again later",
+          retryAfter: rateLimitCheck.retryAfter,
         },
         {
           status: 429,
           headers: {
-            "Retry-After": "60",
+            "Retry-After": rateLimitCheck.retryAfter?.toString() || "60",
           },
         },
       )
@@ -69,137 +330,38 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { query, page, hitsPerPage, sort = "relevance", categories, tags, dateFrom, dateTo } = validationResult.data
+    const { query, page, perPage, sort, categories, tags, dateFrom, dateTo } = validationResult.data
 
-    // Create a cache key from the search parameters
-    const cacheKey = JSON.stringify({ query, page, hitsPerPage, sort, categories, tags, dateFrom, dateTo })
+    // Create cache key
+    const cacheKey = JSON.stringify({ query, page, perPage, sort, categories, tags, dateFrom, dateTo })
 
-    // Check if we have a cached result
+    // Check cache
     if (searchCache.has(cacheKey)) {
-      const { data, timestamp } = searchCache.get(cacheKey)
-      // Only use cache if it's less than 5 minutes old
-      if (Date.now() - timestamp < 5 * 60 * 1000) {
+      const { data, timestamp } = searchCache.get(cacheKey)!
+      if (Date.now() - timestamp < CACHE_TTL) {
         return NextResponse.json(data)
       }
     }
 
-    // Use WordPress REST API for search
-    const wpApiUrl = process.env.WORDPRESS_API_URL || ""
-    if (!wpApiUrl) {
-      throw new Error("WordPress API URL is not configured")
-    }
-
-    // Build the WordPress search URL with all parameters
-    let searchUrl = `${wpApiUrl}/wp/v2/posts?search=${encodeURIComponent(query)}&page=${page}&per_page=${hitsPerPage}&_embed=true`
-
-    // Add sorting
-    if (sort === "date") {
-      searchUrl += "&orderby=date&order=desc"
-    } else if (sort === "title") {
-      searchUrl += "&orderby=title&order=asc"
-    } // relevance is default in WordPress
-
-    // Add category filter if provided
-    if (categories) {
-      searchUrl += `&categories=${categories}`
-    }
-
-    // Add tag filter if provided
-    if (tags) {
-      searchUrl += `&tags=${tags}`
-    }
-
-    // Add date range filters if provided
-    if (dateFrom) {
-      searchUrl += `&after=${dateFrom}T00:00:00Z`
-    }
-    if (dateTo) {
-      searchUrl += `&before=${dateTo}T23:59:59Z`
-    }
-
-    // Fetch search results from WordPress with timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(searchUrl, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      next: { revalidate: 60 }, // Cache for 1 minute
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      // If WordPress API is rate limiting, provide a helpful message
-      if (response.status === 429) {
-        return NextResponse.json(
-          {
-            error: "WordPress API rate limit exceeded",
-            message: "Our search service is experiencing high demand. Please try again shortly.",
-            hits: [],
-            nbHits: 0,
-            page: 0,
-            nbPages: 0,
-          },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": "60",
-            },
-          },
-        )
+    // Try GraphQL first, fall back to REST API
+    let result
+    try {
+      result = await searchWithGraphQL(query, page, perPage, sort, categories, tags, dateFrom, dateTo)
+    } catch (graphqlError) {
+      console.log("GraphQL search failed, falling back to REST API:", graphqlError)
+      try {
+        result = await searchWithREST(query, page, perPage, sort, categories, tags, dateFrom, dateTo)
+      } catch (restError) {
+        throw new Error(`Both GraphQL and REST API search failed: ${restError}`)
       }
-      throw new Error(`WordPress API returned ${response.status}: ${response.statusText}`)
     }
 
-    // Get the total number of results from headers
-    const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
-    const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "0", 10)
-
-    // Parse the response
-    const posts = await response.json()
-
-    // Transform WordPress posts to match the expected format
-    const hits = posts.map((post: any) => ({
-      objectID: post.id.toString(),
-      title: post.title.rendered,
-      excerpt: post.excerpt.rendered,
-      slug: post.slug,
-      date: post.date,
-      modified: post.modified,
-      featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-        ? {
-            node: {
-              sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-            },
-          }
-        : undefined,
-      categories:
-        post._embedded?.["wp:term"]?.[0]?.map((term: any) => ({
-          node: {
-            name: term.name,
-            slug: term.slug,
-          },
-        })) || [],
-      author: post._embedded?.["author"]?.[0]
-        ? {
-            node: {
-              name: post._embedded["author"][0].name,
-            },
-          }
-        : { node: { name: "Unknown" } },
-    }))
-
-    // Prepare the response data
-    const responseData = {
-      hits,
-      nbHits: totalPosts,
-      page: page - 1, // Adjust to 0-based for client compatibility
-      nbPages: totalPages,
+    // Prepare response
+    const response = {
+      items: result.items,
+      pagination: result.pagination,
       query,
-      params: {
+      filters: {
         sort,
         categories,
         tags,
@@ -208,28 +370,24 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    // Cache the result
+    // Cache result
     searchCache.set(cacheKey, {
-      data: responseData,
+      data: response,
       timestamp: Date.now(),
     })
 
-    // Return the search results with metadata
-    return NextResponse.json(responseData)
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Search API error:", error)
 
-    // Return a user-friendly error message
     return NextResponse.json(
       {
-        error: "Failed to perform search",
-        details: error instanceof Error ? error.message : String(error),
-        hits: [],
-        nbHits: 0,
-        page: 0,
-        nbPages: 0,
+        error: "Search failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: error instanceof Error && error.message.includes("aborted") ? 408 : 500 },
+      {
+        status: error instanceof Error && error.name === "AbortError" ? 408 : 500,
+      },
     )
   }
 }

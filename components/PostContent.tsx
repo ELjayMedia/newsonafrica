@@ -188,15 +188,15 @@ export function PostContent({ post, isClient }: PostContentProps) {
 
       {/* Comments Section */}
       {isClient && (
-        <ErrorBoundary
-          fallback={
-            <div className="mt-8 p-4 bg-red-50 rounded">Error loading comments. Please try refreshing the page.</div>
-          }
-        >
-          <div className="mt-8">
+        <div className="mt-12 pt-8 border-t border-gray-200">
+          <ErrorBoundary
+            fallback={
+              <div className="p-4 bg-red-50 rounded">Error loading comments. Please try refreshing the page.</div>
+            }
+          >
             <CommentList postId={post.id} />
-          </div>
-        </ErrorBoundary>
+          </ErrorBoundary>
+        </div>
       )}
     </article>
   )

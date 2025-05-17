@@ -296,7 +296,12 @@ export function CommentItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-semibold text-sm">{comment.profile?.username || "Anonymous"}</h4>
+              <h4 className="font-semibold text-sm flex items-center">
+                {comment.profile?.username || "Anonymous"}
+                {isAuthor && (
+                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-full">You</span>
+                )}
+              </h4>
               <p className="text-xs text-gray-500">{formattedDate}</p>
             </div>
 

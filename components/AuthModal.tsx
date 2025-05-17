@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react"
 import { useUser } from "@/contexts/UserContext"
+import { AuthErrorCategory } from "@/utils/auth-error-utils"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -120,7 +121,11 @@ export function AuthModal({
         throw new Error("No session returned after sign in")
       }
     } catch (error: any) {
-      setError(error.message || "Failed to sign in. Please check your credentials.")
+      let errorMessage = "Failed to sign in. Please check your credentials."
+      if (error.name === AuthErrorCategory.AuthApiError) {
+        errorMessage = error.message
+      }
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -183,11 +188,15 @@ export function AuthModal({
       setPassword("")
       setConfirmPassword("")
     } catch (error: any) {
-      if (error.message.includes("User already registered")) {
-        setError("Email already registered. Please use a different email or try signing in.")
-      } else {
-        setError(error.message || "Failed to create account. Please try again.")
+      let errorMessage = "Failed to create account. Please try again."
+      if (error.name === AuthErrorCategory.AuthApiError) {
+        if (error.message.includes("User already registered")) {
+          errorMessage = "Email already registered. Please use a different email or try signing in."
+        } else {
+          errorMessage = error.message
+        }
       }
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -213,7 +222,11 @@ export function AuthModal({
       setResetSent(true)
       setError(null)
     } catch (error: any) {
-      setError(error.message || "Failed to send password reset email. Please try again.")
+      let errorMessage = "Failed to send password reset email. Please try again."
+      if (error.name === AuthErrorCategory.AuthApiError) {
+        errorMessage = error.message
+      }
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -242,7 +255,11 @@ export function AuthModal({
 
       // The redirect will happen automatically
     } catch (error: any) {
-      setError(error.message || `Failed to sign in with ${provider}. Please try again.`)
+      let errorMessage = `Failed to sign in with ${provider}. Please try again.`
+      if (error.name === AuthErrorCategory.AuthApiError) {
+        errorMessage = error.message
+      }
+      setError(errorMessage)
     }
   }
 

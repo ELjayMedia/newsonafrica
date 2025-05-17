@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
-export function SetupRLS() {
+export default function SetupRLS() {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 

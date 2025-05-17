@@ -1,5 +1,16 @@
 import { supabase } from "@/lib/supabase"
 import type { Notification, NotificationType, NotificationCount } from "@/lib/notification-schema"
+import {
+  fetchPaginated,
+  insertRecords,
+  updateRecord,
+  deleteRecord,
+  countRecords,
+  clearQueryCache,
+} from "@/utils/supabase-query-utils"
+
+// Cache TTLs
+const NOTIFICATION_CACHE_TTL = 60 * 1000 // 1 minute for notifications
 
 /**
  * Create a new notification
@@ -20,9 +31,9 @@ export async function createNotification({
   metadata?: Record<string, any>
 }): Promise<Notification | null> {
   try {
-    const { data, error } = await supabase
-      .from("notifications")
-      .insert({
+    const notifications = await insertRecords<Notification>(
+      "notifications",
+      {
         user_id: userId,
         type,
         title,
@@ -30,16 +41,13 @@ export async function createNotification({
         link,
         is_read: false,
         metadata,
-      })
-      .select()
-      .single()
+      },
+      {
+        clearCache: new RegExp(`^notifications:.*${userId}`),
+      },
+    )
 
-    if (error) {
-      console.error("Error creating notification:", error)
-      return null
-    }
-
-    return data
+    return notifications[0] || null
   } catch (error) {
     console.error("Error in createNotification:", error)
     return null
@@ -106,47 +114,40 @@ export async function getNotifications(
   includeRead = false,
 ): Promise<{ notifications: Notification[]; count: NotificationCount }> {
   try {
-    // Get notifications
-    let query = supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    // Filter by read status if needed
-    if (!includeRead) {
-      query = query.eq("is_read", false)
+    // Use our optimized pagination function
+    const filters = (query: any) => {
+      let q = query.eq("user_id", userId)
+      if (!includeRead) {
+        q = q.eq("is_read", false)
+      }
+      return q
     }
 
-    const { data: notifications, error } = await query
-
-    if (error) {
-      console.error("Error fetching notifications:", error)
-      return { notifications: [], count: { total: 0, unread: 0 } }
-    }
+    const result = await fetchPaginated<Notification>("notifications", {
+      page: Math.floor(offset / limit) + 1,
+      pageSize: limit,
+      orderBy: "created_at",
+      ascending: false,
+      filters,
+      ttl: NOTIFICATION_CACHE_TTL,
+    })
 
     // Get counts
-    const { count: totalCount, error: totalError } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+    const totalCount = await countRecords("notifications", (query) => query.eq("user_id", userId), {
+      ttl: NOTIFICATION_CACHE_TTL,
+    })
 
-    const { count: unreadCount, error: unreadError } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("is_read", false)
-
-    if (totalError || unreadError) {
-      console.error("Error counting notifications:", totalError || unreadError)
-    }
+    const unreadCount = await countRecords(
+      "notifications",
+      (query) => query.eq("user_id", userId).eq("is_read", false),
+      { ttl: NOTIFICATION_CACHE_TTL },
+    )
 
     return {
-      notifications: notifications || [],
+      notifications: result.data,
       count: {
-        total: totalCount || 0,
-        unread: unreadCount || 0,
+        total: totalCount,
+        unread: unreadCount,
       },
     }
   } catch (error) {
@@ -160,14 +161,27 @@ export async function getNotifications(
  */
 export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
   try {
-    const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId)
+    // Get the notification first to get its user_id for cache invalidation
+    const { data: notification } = await supabase
+      .from("notifications")
+      .select("user_id")
+      .eq("id", notificationId)
+      .single()
 
-    if (error) {
-      console.error("Error marking notification as read:", error)
+    if (!notification) {
       return false
     }
 
-    return true
+    const updated = await updateRecord(
+      "notifications",
+      notificationId,
+      { is_read: true },
+      {
+        clearCache: new RegExp(`^notifications:.*${notification.user_id}`),
+      },
+    )
+
+    return !!updated
   } catch (error) {
     console.error("Error in markNotificationAsRead:", error)
     return false
@@ -190,6 +204,9 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
       return false
     }
 
+    // Clear all notification cache for this user
+    clearQueryCache(undefined, new RegExp(`^notifications:.*${userId}`))
+
     return true
   } catch (error) {
     console.error("Error in markAllNotificationsAsRead:", error)
@@ -202,14 +219,20 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
  */
 export async function deleteNotification(notificationId: string): Promise<boolean> {
   try {
-    const { error } = await supabase.from("notifications").delete().eq("id", notificationId)
+    // Get the notification first to get its user_id for cache invalidation
+    const { data: notification } = await supabase
+      .from("notifications")
+      .select("user_id")
+      .eq("id", notificationId)
+      .single()
 
-    if (error) {
-      console.error("Error deleting notification:", error)
+    if (!notification) {
       return false
     }
 
-    return true
+    return await deleteRecord("notifications", notificationId, {
+      clearCache: new RegExp(`^notifications:.*${notification.user_id}`),
+    })
   } catch (error) {
     console.error("Error in deleteNotification:", error)
     return false
@@ -227,6 +250,9 @@ export async function deleteAllNotifications(userId: string): Promise<boolean> {
       console.error("Error deleting all notifications:", error)
       return false
     }
+
+    // Clear all notification cache for this user
+    clearQueryCache(undefined, new RegExp(`^notifications:.*${userId}`))
 
     return true
   } catch (error) {
@@ -250,8 +276,46 @@ export function subscribeToNotifications(userId: string, callback: (notification
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
+        // Clear notification cache when a new notification arrives
+        clearQueryCache(undefined, new RegExp(`^notifications:.*${userId}`))
         callback(payload.new as Notification)
       },
     )
     .subscribe()
+}
+
+/**
+ * Get notification count for a user
+ */
+export async function getNotificationCount(userId: string): Promise<NotificationCount> {
+  try {
+    const totalCount = await countRecords("notifications", (query) => query.eq("user_id", userId), {
+      ttl: NOTIFICATION_CACHE_TTL,
+    })
+
+    const unreadCount = await countRecords(
+      "notifications",
+      (query) => query.eq("user_id", userId).eq("is_read", false),
+      { ttl: NOTIFICATION_CACHE_TTL },
+    )
+
+    return {
+      total: totalCount,
+      unread: unreadCount,
+    }
+  } catch (error) {
+    console.error("Error in getNotificationCount:", error)
+    return { total: 0, unread: 0 }
+  }
+}
+
+/**
+ * Clear notification cache for a user
+ */
+export function clearNotificationCache(userId?: string): void {
+  if (userId) {
+    clearQueryCache(undefined, new RegExp(`^notifications:.*${userId}`))
+  } else {
+    clearQueryCache(undefined, /^notifications:/)
+  }
 }

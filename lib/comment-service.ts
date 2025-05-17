@@ -2,12 +2,17 @@ import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
 import { createCommentReplyNotification } from "@/services/notification-service"
+import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
 
 // Rate limit configuration
 const RATE_LIMIT_SECONDS = 10
+
+// Cache TTLs
+const COMMENTS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+const SCHEMA_CHECK_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
 // Check if a user is rate limited
 export function isRateLimited(userId: string): boolean {
@@ -47,13 +52,75 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
   }
 
   try {
-    // Try to select the status column
-    const { data: statusData, error: statusError } = await supabase.from("comments").select("status").limit(1)
-    hasStatusColumn = !statusError
+    // Check for status column
+    try {
+      const { data: statusData, error: statusError } = await supabase
+        .from("comments")
+        .select("id") // Select a column we know exists
+        .limit(1)
 
-    // Try to select the is_rich_text column
-    const { data: richTextData, error: richTextError } = await supabase.from("comments").select("is_rich_text").limit(1)
-    hasRichTextColumn = !richTextError
+      // Try to access the status column to see if it exists
+      try {
+        const { data: statusCheckData, error: statusCheckError } = await supabase
+          .rpc("column_exists", { table_name: "comments", column_name: "status" })
+          .single()
+
+        hasStatusColumn = statusCheckData?.exists || false
+
+        if (statusCheckError) {
+          // Fallback method if RPC is not available
+          try {
+            await supabase.from("comments").select("status").limit(1)
+            hasStatusColumn = true
+          } catch (e) {
+            hasStatusColumn = false
+          }
+        }
+      } catch (e) {
+        // If RPC fails, try direct query
+        try {
+          await supabase.from("comments").select("status").limit(1)
+          hasStatusColumn = true
+        } catch (e) {
+          hasStatusColumn = false
+        }
+      }
+    } catch (error) {
+      console.error("Error checking status column:", error)
+      hasStatusColumn = false
+    }
+
+    // Check for rich_text column
+    try {
+      try {
+        const { data: richTextCheckData, error: richTextCheckError } = await supabase
+          .rpc("column_exists", { table_name: "comments", column_name: "is_rich_text" })
+          .single()
+
+        hasRichTextColumn = richTextCheckData?.exists || false
+
+        if (richTextCheckError) {
+          // Fallback method if RPC is not available
+          try {
+            await supabase.from("comments").select("is_rich_text").limit(1)
+            hasRichTextColumn = true
+          } catch (e) {
+            hasRichTextColumn = false
+          }
+        }
+      } catch (e) {
+        // If RPC fails, try direct query
+        try {
+          await supabase.from("comments").select("is_rich_text").limit(1)
+          hasRichTextColumn = true
+        } catch (e) {
+          hasRichTextColumn = false
+        }
+      }
+    } catch (error) {
+      console.error("Error checking is_rich_text column:", error)
+      hasRichTextColumn = false
+    }
 
     return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
   } catch (error) {
@@ -75,23 +142,33 @@ export async function fetchComments(
     // Check if columns exist
     const { hasStatus, hasRichText } = await checkColumns()
 
-    // Get total count first
-    let countQuery = supabase
-      .from("comments")
-      .select("*", { count: "exact", head: true })
-      .eq("post_id", postId)
-      .is("parent_id", null) // Only count root comments for pagination
+    // Get total count first - using a more robust approach
+    let count = 0
+    try {
+      // Build the count query
+      let countQuery = supabase
+        .from("comments")
+        .select("id", { count: "exact" }) // Only select ID for counting
+        .eq("post_id", postId)
+        .is("parent_id", null) // Only count root comments for pagination
 
-    // Add status filter only if the column exists
-    if (hasStatus) {
-      countQuery = countQuery.eq("status", "active")
-    }
+      // Add status filter only if the column exists
+      if (hasStatus) {
+        countQuery = countQuery.eq("status", "active")
+      }
 
-    const { count, error: countError } = await countQuery
+      // Execute the count query
+      const { count: commentCount, error: countError } = await countQuery
 
-    if (countError) {
-      console.error("Error counting comments:", countError)
-      throw countError
+      if (countError) {
+        console.error("Error in count query:", countError)
+        // Continue with count = 0 instead of throwing
+      } else {
+        count = commentCount || 0
+      }
+    } catch (countErr) {
+      console.error("Error counting comments:", countErr)
+      // Continue with count = 0 instead of throwing
     }
 
     // Then fetch paginated comments
@@ -134,7 +211,7 @@ export async function fetchComments(
       return { comments: [], hasMore: false, total: 0 }
     }
 
-    // Fetch all replies for these comments
+    // Fetch all replies for these comments in a single query
     const rootCommentIds = comments.map((comment) => comment.id)
 
     let repliesQuery = supabase.from("comments").select("*").eq("post_id", postId).in("parent_id", rootCommentIds)
@@ -154,7 +231,7 @@ export async function fetchComments(
     // Combine all comment IDs (root comments and replies)
     const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
 
-    // Fetch reactions for all comments
+    // Fetch reactions for all comments in a single query
     let reactions = []
     try {
       const { data: reactionData, error: reactionError } = await supabase
@@ -175,20 +252,25 @@ export async function fetchComments(
       ...new Set([...comments.map((comment) => comment.user_id), ...(replies?.map((reply) => reply.user_id) || [])]),
     ]
 
-    // Fetch profiles for these users
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds)
+    // Fetch profiles for these users in a single query
+    let profiles = []
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds)
 
-    if (profilesError) {
-      console.error("Error fetching profiles:", profilesError)
-      throw profilesError
+      if (!profileError && profileData) {
+        profiles = profileData
+      }
+    } catch (error) {
+      console.error("Error fetching profiles:", error)
+      // Continue without profiles if there's an error
     }
 
     // Create a map of user_id to profile data
     const profileMap = new Map()
-    profiles?.forEach((profile) => {
+    profiles.forEach((profile) => {
       profileMap.set(profile.id, profile)
     })
 
@@ -243,10 +325,13 @@ export async function fetchComments(
     // Organize comments into a hierarchical structure
     const organizedComments = organizeComments([...processedComments, ...processedReplies])
 
+    // Calculate if there are more comments based on the count and current page
+    const hasMore = count > (page + 1) * pageSize
+
     return {
       comments: organizedComments,
-      hasMore: (count || 0) > (page + 1) * pageSize,
-      total: count || 0,
+      hasMore,
+      total: count,
     }
   } catch (error) {
     console.error("Error in fetchComments:", error)
@@ -278,25 +363,19 @@ export async function addComment(comment: NewComment): Promise<Comment> {
       commentData.is_rich_text = comment.is_rich_text
     }
 
-    // Insert the comment
-    const { data: newComment, error } = await supabase.from("comments").insert(commentData).select().single()
+    // Insert the comment using our optimized function
+    const [newComment] = await insertRecords("comments", commentData, {
+      clearCache: new RegExp(`^comments:.*${comment.post_id}`),
+    })
 
-    if (error) {
-      console.error("Error adding comment:", error)
-      throw error
+    if (!newComment) {
+      throw new Error("Failed to create comment")
     }
 
     // Fetch the profile for this user
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("username, avatar_url")
-      .eq("id", comment.user_id)
-      .single()
-
-    if (profileError) {
-      console.error("Error fetching profile:", profileError)
-      // Don't throw here, we can still return the comment without profile data
-    }
+    const profile = await fetchById("profiles", comment.user_id, {
+      columns: "username, avatar_url",
+    })
 
     // Record this submission for rate limiting
     recordSubmission(comment.user_id)
@@ -305,35 +384,27 @@ export async function addComment(comment: NewComment): Promise<Comment> {
     if (comment.parent_id) {
       try {
         // Get the parent comment to find its author
-        const { data: parentComment, error: parentError } = await supabase
-          .from("comments")
-          .select("user_id, post_id")
-          .eq("id", comment.parent_id)
-          .single()
+        const parentComment = await fetchById("comments", comment.parent_id)
 
-        if (!parentError && parentComment) {
+        if (parentComment) {
           // Get the post title
-          const { data: post, error: postError } = await supabase
-            .from("posts")
-            .select("title")
-            .eq("id", comment.post_id)
-            .single()
-
-          // If we can't get the post from Supabase, try WordPress
           let postTitle = "a post"
-          if (postError || !post) {
-            try {
+          try {
+            // Try to get the post from Supabase first
+            const { data: post } = await supabase.from("posts").select("title").eq("id", comment.post_id).single()
+
+            if (post) {
+              postTitle = post.title
+            } else {
               // Try to get the post title from WordPress
               const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
               if (response.ok) {
                 const wpPost = await response.json()
                 postTitle = wpPost.title.rendered || "a post"
               }
-            } catch (wpError) {
-              console.error("Error fetching post from WordPress:", wpError)
             }
-          } else {
-            postTitle = post.title
+          } catch (error) {
+            console.error("Error fetching post:", error)
           }
 
           // Create notification
@@ -389,30 +460,25 @@ export async function updateComment(id: string, content: string, isRichText?: bo
       updateData.is_rich_text = isRichText
     }
 
-    // Update the comment
-    const { data: updatedComment, error } = await supabase
-      .from("comments")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single()
+    // Get the comment first to get its post_id for cache invalidation
+    const existingComment = await fetchById("comments", id)
+    if (!existingComment) {
+      throw new Error("Comment not found")
+    }
 
-    if (error) {
-      console.error("Error updating comment:", error)
-      throw error
+    // Update the comment using our optimized function
+    const updatedComment = await updateRecord("comments", id, updateData, {
+      clearCache: new RegExp(`^comments:.*${existingComment.post_id}`),
+    })
+
+    if (!updatedComment) {
+      throw new Error("Failed to update comment")
     }
 
     // Fetch the profile for this user
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("username, avatar_url")
-      .eq("id", updatedComment.user_id)
-      .single()
-
-    if (profileError) {
-      console.error("Error fetching profile:", profileError)
-      // Don't throw here, we can still return the comment without profile data
-    }
+    const profile = await fetchById("profiles", updatedComment.user_id, {
+      columns: "username, avatar_url",
+    })
 
     // Return the updated comment with profile data
     return {
@@ -432,25 +498,35 @@ export async function updateComment(id: string, content: string, isRichText?: bo
 
 // Delete a comment (soft delete by updating status if the column exists, otherwise hard delete)
 export async function deleteComment(id: string): Promise<void> {
-  // Check if status column exists
-  const { hasStatus } = await checkColumns()
+  try {
+    // Check if status column exists
+    const { hasStatus } = await checkColumns()
 
-  if (hasStatus) {
-    // Soft delete
-    const { error } = await supabase.from("comments").update({ status: "deleted" }).eq("id", id)
-
-    if (error) {
-      console.error("Error soft deleting comment:", error)
-      throw error
+    // Get the comment first to get its post_id for cache invalidation
+    const comment = await fetchById("comments", id)
+    if (!comment) {
+      throw new Error("Comment not found")
     }
-  } else {
-    // Hard delete
-    const { error } = await supabase.from("comments").delete().eq("id", id)
 
-    if (error) {
-      console.error("Error hard deleting comment:", error)
-      throw error
+    if (hasStatus) {
+      // Soft delete
+      await updateRecord(
+        "comments",
+        id,
+        { status: "deleted" },
+        {
+          clearCache: new RegExp(`^comments:.*${comment.post_id}`),
+        },
+      )
+    } else {
+      // Hard delete
+      await deleteRecord("comments", id, {
+        clearCache: new RegExp(`^comments:.*${comment.post_id}`),
+      })
     }
+  } catch (error) {
+    console.error("Error in deleteComment:", error)
+    throw error
   }
 }
 
@@ -500,7 +576,7 @@ export async function addReaction(
       }
     }
 
-    // Update the reaction_count on the comment
+    // Update the reaction count on the comment
     await updateReactionCount(commentId)
   } catch (error) {
     console.error("Error in addReaction:", error)
@@ -523,7 +599,7 @@ export async function removeReaction(commentId: string, userId: string): Promise
       throw error
     }
 
-    // Update the reaction_count on the comment
+    // Update the reaction count on the comment
     await updateReactionCount(commentId)
   } catch (error) {
     console.error("Error in removeReaction:", error)
@@ -633,5 +709,14 @@ export function createOptimisticComment(comment: NewComment, username: string, a
     },
     reactions: [],
     replies: [],
+  }
+}
+
+// Clear comment cache for a specific post
+export function clearCommentCache(postId?: string): void {
+  if (postId) {
+    clearQueryCache(undefined, new RegExp(`^comments:.*${postId}`))
+  } else {
+    clearQueryCache(undefined, /^comments:/)
   }
 }

@@ -132,3 +132,14 @@ export function startWebhookTunnel() {
   // For now, we'll just log a message
   console.log("Webhook tunnel simulation: In production, use a real webhook URL")
 }
+
+// Add the missing export for paystackClient
+/**
+ * A simple client for interacting with Paystack API
+ * This is a placeholder implementation that should be replaced with actual Paystack SDK usage
+ */
+export const paystackClient = {
+  verifyTransaction: verifyPaystackTransaction,
+  generateReference: generateTransactionReference,
+  formatAmount: formatCurrency,
+}

@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase"
 import type { Provider, User, Session } from "@supabase/supabase-js"
 import { getFacebookUserData, updateProfileWithFacebookData } from "@/lib/facebook-utils"
 import { getGoogleUserData, updateProfileWithGoogleData } from "@/lib/google-utils"
+import { parseAuthError, logAuthError, AuthErrorCategory } from "@/utils/auth-error-utils"
 
 // Session durations in seconds
 export const SESSION_DURATIONS = {
@@ -36,7 +37,11 @@ export async function signInWithEmail(email: string, password: string, rememberM
       },
     })
 
-    if (error) throw error
+    if (error) {
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
+      throw parsedError
+    }
 
     // Store the "remember me" preference in localStorage
     if (typeof window !== "undefined") {
@@ -45,8 +50,15 @@ export async function signInWithEmail(email: string, password: string, rememberM
 
     return data
   } catch (error) {
-    console.error("Error signing in:", error)
-    throw error
+    // If error is already parsed, rethrow it
+    if (error && (error as any).category) {
+      throw error
+    }
+
+    // Otherwise parse and log it
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+    throw parsedError
   }
 }
 
@@ -68,11 +80,19 @@ export async function signUpWithEmail(email: string, password: string, username:
       .maybeSingle()
 
     if (checkError) {
-      console.error("Error checking existing username:", checkError)
+      const parsedError = parseAuthError(checkError)
+      logAuthError(parsedError)
+      throw parsedError
     }
 
     if (existingUsers) {
-      throw new Error("Username already exists. Please choose another username.")
+      const error = {
+        message: "Username already exists. Please choose another username.",
+        category: AuthErrorCategory.VALIDATION,
+        suggestion: "Try a different username that is unique.",
+      }
+      logAuthError(error)
+      throw error
     }
 
     // First, create the user with Supabase Auth
@@ -87,12 +107,18 @@ export async function signUpWithEmail(email: string, password: string, username:
     })
 
     if (error) {
-      console.error("Supabase auth signup error:", error)
-      throw error
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
+      throw parsedError
     }
 
     if (!data.user) {
-      throw new Error("User creation failed")
+      const error = {
+        message: "User creation failed. Please try again.",
+        category: AuthErrorCategory.UNKNOWN,
+      }
+      logAuthError(error)
+      throw error
     }
 
     // Wait a moment to allow any database triggers to complete
@@ -119,15 +145,26 @@ export async function signUpWithEmail(email: string, password: string, username:
       })
 
       if (profileError) {
-        console.error("Error creating profile:", profileError)
-        // Don't throw here, as the user was created successfully
+        // Log but don't throw as user was created successfully
+        const parsedError = parseAuthError(profileError)
+        logAuthError({
+          ...parsedError,
+          message: "Warning: User created but profile creation failed.",
+        })
       }
     }
 
     return data
   } catch (error) {
-    console.error("Error signing up:", error)
-    throw error
+    // If error is already parsed, rethrow it
+    if (error && (error as any).category) {
+      throw error
+    }
+
+    // Otherwise parse and log it
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+    throw parsedError
   }
 }
 
@@ -137,7 +174,11 @@ export async function signUpWithEmail(email: string, password: string, username:
 export async function signOut() {
   try {
     const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    if (error) {
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
+      throw parsedError
+    }
 
     // Clear remember me preference
     if (typeof window !== "undefined") {
@@ -146,8 +187,15 @@ export async function signOut() {
 
     return { success: true }
   } catch (error) {
-    console.error("Error signing out:", error)
-    throw error
+    // If error is already parsed, rethrow it
+    if (error && (error as any).category) {
+      throw error
+    }
+
+    // Otherwise parse and log it
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+    throw parsedError
   }
 }
 
@@ -161,12 +209,24 @@ export async function resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/auth`,
     })
-    if (error) throw error
+
+    if (error) {
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
+      throw parsedError
+    }
 
     return { success: true }
   } catch (error) {
-    console.error("Error resetting password:", error)
-    throw error
+    // If error is already parsed, rethrow it
+    if (error && (error as any).category) {
+      throw error
+    }
+
+    // Otherwise parse and log it
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+    throw parsedError
   }
 }
 
@@ -209,12 +269,23 @@ export async function signInWithSocialProvider(provider: Provider) {
       options,
     })
 
-    if (error) throw error
+    if (error) {
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
+      throw parsedError
+    }
 
     return data
   } catch (error) {
-    console.error(`Error signing in with ${provider}:`, error)
-    throw error
+    // If error is already parsed, rethrow it
+    if (error && (error as any).category) {
+      throw error
+    }
+
+    // Otherwise parse and log it
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+    throw parsedError
   }
 }
 
@@ -226,7 +297,10 @@ export async function signInWithSocialProvider(provider: Provider) {
 export async function processSocialLoginData(session: Session): Promise<any> {
   try {
     if (!session || !session.user) {
-      throw new Error("No session or user found")
+      throw {
+        message: "No session or user found",
+        category: AuthErrorCategory.CREDENTIALS,
+      }
     }
 
     const { user, provider_token, provider_refresh_token } = session
@@ -247,8 +321,12 @@ export async function processSocialLoginData(session: Session): Promise<any> {
 
     return null
   } catch (error) {
-    console.error("Error processing social login data:", error)
-    // Don't throw, just return null to avoid breaking the auth flow
+    // Log but don't throw to avoid breaking auth flow
+    const parsedError = parseAuthError(error)
+    logAuthError({
+      ...parsedError,
+      message: "Warning: Failed to process social login data.",
+    })
     return null
   }
 }
@@ -268,21 +346,68 @@ export async function refreshSession(): Promise<{ success: boolean; session: Ses
       return { success: false, session: null, user: null }
     }
 
-    // Only try to refresh if we have an existing session
-    const { data, error } = await supabase.auth.refreshSession()
+    // Check if session is close to expiry
+    const expiresAt = sessionData.session.expires_at ? sessionData.session.expires_at * 1000 : 0
+    const now = Date.now()
+    const timeUntilExpiry = expiresAt - now
 
-    if (error) {
-      console.error("Session refresh error:", error)
-      return { success: false, session: null, user: null }
+    // Only refresh if session exists and is valid but will expire soon
+    // or has less than 30 minutes left (to avoid unnecessary refreshes)
+    if (timeUntilExpiry > 0 && timeUntilExpiry < 30 * 60 * 1000) {
+      const { data, error } = await supabase.auth.refreshSession()
+
+      if (error) {
+        const parsedError = parseAuthError(error)
+        logAuthError(parsedError)
+
+        // If the error is network-related, don't invalidate the session yet
+        if (parsedError.category === AuthErrorCategory.NETWORK) {
+          console.log("Network error during refresh, keeping existing session")
+          return {
+            success: true,
+            session: sessionData.session,
+            user: sessionData.session.user,
+          }
+        }
+
+        return { success: false, session: null, user: null }
+      }
+
+      return {
+        success: true,
+        session: data.session,
+        user: data.session?.user ?? null,
+      }
     }
 
+    // Session is still valid and not close to expiry
     return {
       success: true,
-      session: data.session,
-      user: data.session?.user ?? null,
+      session: sessionData.session,
+      user: sessionData.session.user,
     }
   } catch (error) {
-    console.error("Error refreshing session:", error)
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
+
+    // Try to get the current session as a fallback
+    try {
+      const { data } = await supabase.auth.getSession()
+      if (data.session) {
+        return {
+          success: true,
+          session: data.session,
+          user: data.session.user,
+        }
+      }
+    } catch (e) {
+      const fallbackError = parseAuthError(e)
+      logAuthError({
+        ...fallbackError,
+        message: "Fallback session check failed",
+      })
+    }
+
     return { success: false, session: null, user: null }
   }
 }
@@ -297,7 +422,8 @@ export async function getCurrentSession() {
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {
-      console.error("Error getting session:", error)
+      const parsedError = parseAuthError(error)
+      logAuthError(parsedError)
       return { session: null, user: null }
     }
 
@@ -306,7 +432,8 @@ export async function getCurrentSession() {
       user: data.session?.user ?? null,
     }
   } catch (error) {
-    console.error("Error getting current session:", error)
+    const parsedError = parseAuthError(error)
+    logAuthError(parsedError)
     return { session: null, user: null }
   }
 }

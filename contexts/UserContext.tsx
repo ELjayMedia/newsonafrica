@@ -7,6 +7,13 @@ import { supabase } from "@/lib/supabase"
 import * as AuthService from "@/services/auth-service"
 import * as ProfileService from "@/services/profile-service"
 import type { Profile } from "@/services/profile-service"
+import { useInterval } from "@/hooks/useInterval"
+import { isOnline, setupNetworkListeners, isNetworkError } from "@/utils/network-utils"
+
+// Add this constant near the top of the file, after the UserContextType interface
+// Check session 5 minutes before expiration
+const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
+const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
 
 /**
  * User context type definition
@@ -44,6 +51,56 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isOffline, setIsOffline] = useState(!isOnline())
+  const [pendingRefresh, setPendingRefresh] = useState(false)
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      // If offline, mark as pending and return current state
+      if (isOffline) {
+        setPendingRefresh(true)
+        return !!user
+      }
+
+      const result = await AuthService.refreshSession()
+
+      if (!result.success) {
+        // If refresh failed but we still have a user in state,
+        // we'll keep them signed in until they explicitly sign out
+        if (user) {
+          console.log("Session refresh failed, but keeping existing user state")
+          return true
+        }
+
+        // Otherwise clear the session
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+        setIsAuthenticated(false)
+        return false
+      }
+
+      setSession(result.session)
+      setUser(result.user)
+      setIsAuthenticated(!!result.user)
+
+      if (result.user) {
+        await fetchProfile(result.user.id)
+      }
+
+      return true
+    } catch (error) {
+      console.error("Error refreshing session:", error)
+
+      // If it's a network error, mark as pending
+      if (isNetworkError(error)) {
+        setPendingRefresh(true)
+      }
+
+      // Don't clear user state on refresh errors
+      return !!user
+    }
+  }, [isOffline, user])
 
   /**
    * Sync social profile data
@@ -80,43 +137,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   /**
-   * Refresh session helper function
+   * Check if the session needs to be refreshed
    */
-  const refreshSession = async (): Promise<boolean> => {
-    try {
-      const result = await AuthService.refreshSession()
+  const checkSessionExpiry = useCallback(async () => {
+    if (!session) return
 
-      if (!result.success) {
-        // If refresh failed but we still have a user in state,
-        // we'll keep them signed in until they explicitly sign out
-        if (user) {
-          console.log("Session refresh failed, but keeping existing user state")
-          return true
-        }
+    // Calculate time until session expires
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+    const now = Date.now()
+    const timeUntilExpiry = expiresAt - now
 
-        // Otherwise clear the session
-        setUser(null)
-        setSession(null)
-        setProfile(null)
-        setIsAuthenticated(false)
-        return false
-      }
-
-      setSession(result.session)
-      setUser(result.user)
-      setIsAuthenticated(!!result.user)
-
-      if (result.user) {
-        await fetchProfile(result.user.id)
-      }
-
-      return true
-    } catch (error) {
-      console.error("Error refreshing session:", error)
-      // Don't clear user state on refresh errors
-      return !!user
+    // If session will expire within the buffer time, refresh it
+    if (timeUntilExpiry > 0 && timeUntilExpiry < SESSION_REFRESH_BUFFER) {
+      console.log("Session expiring soon, refreshing...")
+      await refreshSession()
     }
-  }
+  }, [session])
 
   // Initialize auth state
   useEffect(() => {
@@ -179,6 +215,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
   }, [fetchProfile])
+
+  // Set up network status listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false)
+
+      // If we have a pending refresh, try it now
+      if (pendingRefresh) {
+        refreshSession().then(() => {
+          setPendingRefresh(false)
+        })
+      }
+    }
+
+    const handleOffline = () => {
+      setIsOffline(true)
+    }
+
+    return setupNetworkListeners(handleOnline, handleOffline)
+  }, [pendingRefresh, refreshSession])
+
+  // Set up interval to check session expiry
+  useInterval(checkSessionExpiry, SESSION_CHECK_INTERVAL)
 
   /**
    * Sign in with email and password

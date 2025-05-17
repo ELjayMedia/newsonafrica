@@ -1,16 +1,18 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle, Info, WifiOff, AlertTriangle, Ban } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { AuthErrorCategory, type AuthError } from "@/utils/auth-error-utils"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AuthFormProps {
   redirectTo?: string
@@ -19,6 +21,7 @@ interface AuthFormProps {
 
 export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   // Form state
@@ -32,7 +35,26 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isResetMode, setIsResetMode] = useState(false)
   const [resetSent, setResetSent] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<AuthError | null>(null)
+
+  const onSuccess = useCallback(() => {
+    const redirectTo = searchParams.get("redirectTo")
+    if (redirectTo === "back") {
+      router.back()
+    } else if (redirectTo) {
+      // Check if the redirect URL has a hash
+      const hasHash = redirectTo.includes("#")
+      if (hasHash) {
+        router.push(redirectTo)
+      } else {
+        // Preserve any hash from the current URL if the redirect doesn't have one
+        const currentHash = window.location.hash
+        router.push(redirectTo + (currentHash || ""))
+      }
+    } else {
+      router.push("/")
+    }
+  }, [router, searchParams])
 
   // Handle sign in with email
   const handleSignIn = async (e: React.FormEvent) => {
@@ -67,7 +89,16 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
       // No redirect - stay on the current page
     } catch (error: any) {
-      setError(error.message || "Failed to sign in. Please check your credentials.")
+      // Handle the error based on its category
+      if (error.category) {
+        setError(error)
+      } else {
+        setError({
+          message: error.message || "Failed to sign in. Please check your credentials.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -80,17 +111,29 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
     // Validation
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError({
+        message: "Passwords do not match",
+        category: AuthErrorCategory.VALIDATION,
+        suggestion: "Please ensure both passwords are identical.",
+      })
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError({
+        message: "Password must be at least 6 characters",
+        category: AuthErrorCategory.VALIDATION,
+        suggestion: "Choose a stronger password with at least 6 characters.",
+      })
       return
     }
 
     if (!username || username.length < 3) {
-      setError("Username must be at least 3 characters")
+      setError({
+        message: "Username must be at least 3 characters",
+        category: AuthErrorCategory.VALIDATION,
+        suggestion: "Please choose a username with at least 3 characters.",
+      })
       return
     }
 
@@ -106,7 +149,11 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
       if (checkError) throw checkError
       if (existingUsers) {
-        setError("Username already exists. Please choose another username.")
+        setError({
+          message: "Username already exists. Please choose another username.",
+          category: AuthErrorCategory.VALIDATION,
+          suggestion: "Try a different username that is unique.",
+        })
         setIsLoading(false)
         return
       }
@@ -137,10 +184,21 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
       // No redirect - stay on the current page
     } catch (error: any) {
-      if (error.message.includes("User already registered")) {
-        setError("Email already registered. Please use a different email or try signing in.")
+      // Handle the error based on its category
+      if (error.category) {
+        setError(error)
+      } else if (error.message.includes("User already registered")) {
+        setError({
+          message: "Email already registered. Please use a different email or try signing in.",
+          category: AuthErrorCategory.VALIDATION,
+          suggestion: "If this is your email, try signing in instead or use the password reset option.",
+        })
       } else {
-        setError(error.message || "Failed to create account. Please try again.")
+        setError({
+          message: error.message || "Failed to create account. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
       }
     } finally {
       setIsLoading(false)
@@ -151,7 +209,11 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) {
-      setError("Please enter your email address to reset your password.")
+      setError({
+        message: "Please enter your email address to reset your password.",
+        category: AuthErrorCategory.VALIDATION,
+        suggestion: "Enter the email address associated with your account.",
+      })
       return
     }
 
@@ -167,7 +229,16 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
       setResetSent(true)
       setError(null)
     } catch (error: any) {
-      setError(error.message || "Failed to send password reset email. Please try again.")
+      // Handle the error based on its category
+      if (error.category) {
+        setError(error)
+      } else {
+        setError({
+          message: error.message || "Failed to send password reset email. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -198,9 +269,53 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
 
       if (error) throw error
     } catch (error: any) {
-      setError(error.message || `Failed to sign in with ${provider}. Please try again.`)
+      // Handle the error based on its category
+      if (error.category) {
+        setError(error)
+      } else {
+        setError({
+          message: error.message || `Failed to sign in with ${provider}. Please try again.`,
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
       setIsLoading(false)
     }
+  }
+
+  // Render error message with appropriate icon based on category
+  const renderErrorAlert = () => {
+    if (!error) return null
+
+    let icon
+    switch (error.category) {
+      case AuthErrorCategory.CREDENTIALS:
+        icon = <Info className="h-4 w-4" />
+        break
+      case AuthErrorCategory.NETWORK:
+        icon = <WifiOff className="h-4 w-4" />
+        break
+      case AuthErrorCategory.VALIDATION:
+        icon = <AlertTriangle className="h-4 w-4" />
+        break
+      case AuthErrorCategory.RATE_LIMIT:
+        icon = <Ban className="h-4 w-4" />
+        break
+      default:
+        icon = <AlertCircle className="h-4 w-4" />
+    }
+
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <div className="flex items-start">
+          {icon}
+          <div className="ml-2">
+            <AlertTitle>{error.message}</AlertTitle>
+            {error.suggestion && <AlertDescription>{error.suggestion}</AlertDescription>}
+          </div>
+        </div>
+      </Alert>
+    )
   }
 
   // Reset password form
@@ -211,12 +326,15 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
           ← Back to sign in
         </Button>
 
-        {error && <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">{error}</div>}
+        {renderErrorAlert()}
 
         {resetSent && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-600 text-sm">
-            Password reset email sent. Please check your inbox.
-          </div>
+          <Alert variant="success" className="bg-green-50 border-green-200 text-green-600">
+            <div className="flex items-center">
+              <Info className="h-4 w-4" />
+              <AlertTitle className="ml-2">Password reset email sent. Please check your inbox.</AlertTitle>
+            </div>
+          </Alert>
         )}
 
         <form onSubmit={handlePasswordReset} className="space-y-4">
@@ -256,7 +374,7 @@ export function AuthForm({ redirectTo, onAuthSuccess }: AuthFormProps) {
         <TabsTrigger value="signup">Sign Up</TabsTrigger>
       </TabsList>
 
-      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">{error}</div>}
+      {renderErrorAlert()}
 
       <TabsContent value="signin">
         <form onSubmit={handleSignIn} className="space-y-4">

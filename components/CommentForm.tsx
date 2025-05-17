@@ -221,14 +221,16 @@ export function CommentForm({
 
   if (!user) {
     return (
-      <div className="bg-gray-50 p-4 rounded-md text-center">
-        <p className="text-gray-600">
-          Please{" "}
-          <Link href="/auth?redirectTo=back" className="text-blue-600 hover:underline font-medium">
-            sign in
-          </Link>{" "}
-          to leave a comment.
-        </p>
+      <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg shadow-sm text-center">
+        <h4 className="font-semibold mb-2">Join the conversation</h4>
+        <p className="text-gray-600 mb-4">Sign in to share your thoughts on this article.</p>
+        <Button asChild>
+          <Link
+            href={`/auth?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}#comments`}
+          >
+            Sign in to comment
+          </Link>
+        </Button>
       </div>
     )
   }

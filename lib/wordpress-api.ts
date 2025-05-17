@@ -759,6 +759,40 @@ export const fetchSingleTag = async (slug: string) =>
 export const fetchSingleCategory = async (slug: string) =>
   fetchWithRetry(queries.singleCategory, { slug }).then((data: any) => data.category)
 
+// Add the missing functions that are causing import errors
+/**
+ * Fetches all posts for the sitemap.
+ * This is an alias for fetchAllPosts with a more descriptive name.
+ *
+ * @param {number} [limit=1000] - The number of posts to fetch.
+ * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ */
+export const fetchPosts = fetchAllPosts
+
+/**
+ * Fetches all categories for the sitemap.
+ * This is an alias for fetchAllCategories with a more descriptive name.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of categories.
+ */
+export const fetchCategories = fetchAllCategories
+
+/**
+ * Fetches all tags for the sitemap.
+ * This is an alias for fetchAllTags with a more descriptive name.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of tags.
+ */
+export const fetchTags = fetchAllTags
+
+/**
+ * Fetches all authors for the sitemap.
+ * This is an alias for fetchAllAuthors with a more descriptive name.
+ *
+ * @returns {Promise<any[]>} - A promise that resolves with an array of authors.
+ */
+export const fetchAuthors = fetchAllAuthors
+
 export interface Post {
   id: string
   title: string

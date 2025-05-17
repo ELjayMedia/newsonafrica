@@ -80,3 +80,10 @@ export function successResponse<T>(data: T, meta?: Record<string, any>): NextRes
     meta,
   } as ApiResponse<T>)
 }
+
+export function setCacheHeaders(res: NextResponse, maxAge = 60) {
+  // Set cache control headers
+  res.headers.set("Cache-Control", `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`)
+
+  return res
+}

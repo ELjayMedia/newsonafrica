@@ -1,8 +1,8 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { SearchResults } from "@/components/SearchResults"
 import { SearchForm } from "@/components/SearchForm"
+import { SearchResults } from "@/components/SearchResults"
 import { Card, CardContent } from "@/components/ui/card"
 
 export function SearchContent() {
@@ -13,11 +13,11 @@ export function SearchContent() {
     <div className="space-y-6">
       <Card>
         <CardContent className="pt-6">
-          <SearchForm initialQuery={query} />
+          <SearchForm initialQuery={query} autoFocus />
         </CardContent>
       </Card>
 
-      <SearchResults />
+      {query && <SearchResults />}
     </div>
   )
 }
