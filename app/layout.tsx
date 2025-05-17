@@ -22,6 +22,7 @@ import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import VercelSpeedInsights from "@/components/SpeedInsights"
 
 import "./globals.css"
 
@@ -101,6 +102,7 @@ export default function RootLayout({
               <NetworkStatus />
               <Toaster />
               <NetworkStatusHandler />
+              <VercelSpeedInsights />
             </ClientWrapper>
           </UserProvider>
         </ThemeProvider>
