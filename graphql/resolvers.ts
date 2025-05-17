@@ -94,17 +94,42 @@ export const resolvers = {
       return tagLoader.load(slug)
     },
 
-    search: async (_, { query, limit = 10, offset = 0 }) => {
-      const searchResults = await searchPosts(query)
-      const posts = searchResults?.nodes || []
+    search: async (_, { query, limit = 10, offset = 0, category }) => {
+      try {
+        // Enhanced search with category filtering
+        const searchResults = await searchPosts(query, category)
+        const posts = searchResults?.nodes || []
 
-      return {
-        edges: posts.slice(offset, offset + limit),
-        pageInfo: {
-          hasNextPage: posts.length > offset + limit,
-          endCursor: offset + limit < posts.length ? String(offset + limit) : null,
-        },
-        totalCount: posts.length,
+        // Log search query for analytics
+        try {
+          await supabase.from("search_queries").insert({
+            query,
+            category: category || null,
+            results_count: posts.length,
+          })
+        } catch (error) {
+          console.error("Failed to log search query:", error)
+          // Don't fail the search if logging fails
+        }
+
+        return {
+          edges: posts.slice(offset, offset + limit),
+          pageInfo: {
+            hasNextPage: posts.length > offset + limit,
+            endCursor: offset + limit < posts.length ? String(offset + limit) : null,
+          },
+          totalCount: posts.length,
+        }
+      } catch (error) {
+        console.error("Search error:", error)
+        return {
+          edges: [],
+          pageInfo: {
+            hasNextPage: false,
+            endCursor: null,
+          },
+          totalCount: 0,
+        }
       }
     },
 

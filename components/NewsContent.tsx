@@ -6,34 +6,37 @@ import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useSkeletonLoader } from "@/hooks/useSkeleton"
 
 export function NewsContent() {
   const [posts, setPosts] = useState([])
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null })
-  const [loading, setLoading] = useState(true)
+  const { isLoading, setLoading } = useSkeletonLoader({ minDisplayTime: 1000 })
 
   useEffect(() => {
     async function loadPosts() {
-      const { posts, pageInfo } = await fetchNewsPosts()
-      setPosts(posts)
-      setPageInfo(pageInfo)
-      setLoading(false)
+      try {
+        setLoading(true)
+        const { posts, pageInfo } = await fetchNewsPosts()
+        setPosts(posts)
+        setPageInfo(pageInfo)
+      } catch (error) {
+        console.error("Error loading news posts:", error)
+      } finally {
+        setLoading(false)
+      }
     }
     loadPosts()
-  }, [])
-
-  if (loading) {
-    return <NewsGridSkeleton />
-  }
+  }, [setLoading])
 
   return (
     <div className="space-y-8">
       <section className="bg-white p-4 rounded-lg shadow-sm">
         <h1 className="text-3xl font-bold mb-6">Latest News</h1>
-        <NewsGrid posts={posts} layout="vertical" />
+        {isLoading ? <NewsGridSkeleton /> : <NewsGrid posts={posts} layout="vertical" />}
       </section>
 
-      {pageInfo.hasNextPage && (
+      {pageInfo.hasNextPage && !isLoading && (
         <div className="flex justify-center">
           <Button asChild>
             <Link href={`/news?after=${pageInfo.endCursor}`}>Load More</Link>

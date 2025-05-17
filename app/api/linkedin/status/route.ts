@@ -1,35 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const accessToken = request.headers.get("x-linkedin-token")
+  // Get the LinkedIn access token from the cookie
+  const linkedInToken = request.cookies.get("linkedin_token")?.value
 
-  if (!accessToken) {
-    return NextResponse.json({ authenticated: false, message: "No access token provided" })
+  if (!linkedInToken) {
+    return NextResponse.json({ authenticated: false })
   }
 
   try {
-    // Verify the token by making a request to LinkedIn API
-    const response = await fetch("https://api.linkedin.com/v2/me", {
+    // Verify the token is still valid
+    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${linkedInToken}`,
       },
     })
 
-    if (!response.ok) {
-      return NextResponse.json({ authenticated: false, message: "Invalid or expired token" })
+    if (!profileResponse.ok) {
+      // Token is invalid or expired
+      return NextResponse.json({ authenticated: false })
     }
 
-    const profileData = await response.json()
+    const profile = await profileResponse.json()
     return NextResponse.json({
       authenticated: true,
       profile: {
-        id: profileData.id,
-        firstName: profileData.localizedFirstName,
-        lastName: profileData.localizedLastName,
+        id: profile.id,
+        firstName: profile.localizedFirstName,
+        lastName: profile.localizedLastName,
       },
     })
   } catch (error) {
     console.error("LinkedIn status check error:", error)
-    return NextResponse.json({ authenticated: false, message: (error as Error).message }, { status: 500 })
+    return NextResponse.json({ authenticated: false })
   }
 }
