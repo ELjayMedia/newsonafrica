@@ -75,8 +75,8 @@ export const queries = {
     }
   `,
   searchPosts: `
-    query SearchPosts($query: String!, $first: Int, $after: String, $orderBy: PostObjectsConnectionOrderbyInput, $where: RootQueryToPostConnectionWhereArgs) {
-      posts(first: $first, after: $after, where: { search: $query, orderby: $orderBy, ...($where || {}) }) {
+    query SearchPosts($query: String!, $after: String) {
+      posts(where: {search: $query}, first: 20, after: $after) {
         nodes {
           id
           title
@@ -97,14 +97,12 @@ export const queries = {
           }
           categories {
             nodes {
-              id
               name
               slug
             }
           }
           tags {
             nodes {
-              id
               name
               slug
             }
@@ -113,7 +111,6 @@ export const queries = {
         pageInfo {
           hasNextPage
           endCursor
-          total
         }
       }
     }
@@ -393,6 +390,47 @@ export const queries = {
           name
           slug
           description
+        }
+      }
+    }
+  `,
+  searchPostsWithCategory: `
+    query SearchPostsWithCategory($query: String!, $category: String!, $after: String) {
+      posts(where: {search: $query, categoryName: $category}, first: 20, after: $after) {
+        nodes {
+          id
+          title
+          excerpt
+          slug
+          date
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          author {
+            node {
+              name
+              slug
+            }
+          }
+          categories {
+            nodes {
+              name
+              slug
+            }
+          }
+          tags {
+            nodes {
+              name
+              slug
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
         }
       }
     }

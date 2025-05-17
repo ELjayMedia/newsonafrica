@@ -1,6 +1,4 @@
-import { gql } from "graphql-tag"
-
-export const typeDefs = gql`
+export const typeDefs = `#graphql
   type Query {
     posts(limit: Int, offset: Int, category: String): PostConnection!
     post(slug: String!): Post
@@ -10,15 +8,15 @@ export const typeDefs = gql`
     author(slug: String!): Author
     tags: [Tag!]!
     tag(slug: String!): Tag
-    search(query: String!, limit: Int, offset: Int): PostConnection!
+    search(query: String!, limit: Int, offset: Int, category: String): PostConnection!
     me: User
   }
 
   type Mutation {
-    createComment(input: CommentInput!): Comment
-    bookmarkPost(postId: ID!): BookmarkResult!
-    removeBookmark(postId: ID!): BookmarkResult!
-    updateProfile(input: ProfileInput!): User
+    createComment(input: CommentInput!): CommentResponse!
+    bookmarkPost(postId: ID!): BookmarkResponse!
+    removeBookmark(postId: ID!): BookmarkResponse!
+    updateProfile(input: ProfileInput!): User!
   }
 
   type PostConnection {
@@ -35,26 +33,37 @@ export const typeDefs = gql`
   type Post {
     id: ID!
     title: String!
-    slug: String!
-    excerpt: String!
     content: String
+    excerpt: String
+    slug: String!
     date: String!
-    modified: String!
-    featuredImage: Image
+    modified: String
+    featuredImage: FeaturedImage
     author: Author!
     categories: [Category!]!
     tags: [Tag!]!
     comments(limit: Int): [Comment!]!
     commentCount: Int!
+    isBookmarked: Boolean!
     seo: SEO
-    isBookmarked: Boolean
   }
 
-  type Image {
+  type FeaturedImage {
     sourceUrl: String!
     altText: String
-    width: Int
-    height: Int
+  }
+
+  type Author {
+    id: ID
+    name: String!
+    slug: String!
+    description: String
+    avatar: Avatar
+    posts(limit: Int, offset: Int): PostConnection!
+  }
+
+  type Avatar {
+    url: String
   }
 
   type Category {
@@ -62,17 +71,8 @@ export const typeDefs = gql`
     name: String!
     slug: String!
     description: String
-    posts(limit: Int, offset: Int): PostConnection!
     parent: Category
     children: [Category!]!
-  }
-
-  type Author {
-    id: ID!
-    name: String!
-    slug: String!
-    description: String
-    avatar: String
     posts(limit: Int, offset: Int): PostConnection!
   }
 
@@ -92,6 +92,7 @@ export const typeDefs = gql`
     post: Post!
     parent: Comment
     replies: [Comment!]!
+    status: String!
   }
 
   type CommentAuthor {
@@ -101,26 +102,35 @@ export const typeDefs = gql`
     isRegistered: Boolean!
   }
 
+  type SEO {
+    title: String
+    metaDesc: String
+    opengraphImage: SEOImage
+  }
+
+  type SEOImage {
+    sourceUrl: String
+  }
+
   type User {
     id: ID!
-    name: String!
     email: String!
+    name: String
     avatar: String
     bookmarks: [Post!]!
     comments: [Comment!]!
   }
 
-  type SEO {
-    title: String
-    description: String
-    canonical: String
-    ogImage: String
+  type BookmarkResponse {
+    success: Boolean!
+    message: String!
+    post: Post
   }
 
-  type BookmarkResult {
+  type CommentResponse {
     success: Boolean!
-    message: String
-    post: Post
+    message: String!
+    comment: Comment
   }
 
   input CommentInput {
@@ -131,8 +141,6 @@ export const typeDefs = gql`
 
   input ProfileInput {
     name: String
-    email: String
     avatar: String
-    bio: String
   }
 `

@@ -607,11 +607,75 @@ export const postComment = async (commentData: any) =>
  * Searches posts.
  *
  * @param {string} query - The search query.
+ * @param {string | null} [category=null] - Optional category to filter by.
  * @param {string | null} [after=null] - The cursor to fetch posts after.
  * @returns {Promise<any>} - A promise that resolves with the search results.
  */
-export const searchPosts = async (query: string, after: string | null = null) =>
-  fetchWithRetry(queries.searchPosts, { query, after }).then((data: any) => data.posts)
+export const searchPosts = async (query: string, category: string | null = null, after: string | null = null) => {
+  try {
+    // Use the appropriate query based on whether a category is provided
+    const queryToUse = category ? queries.searchPostsWithCategory : queries.searchPosts
+    const variables = category ? { query, category, after } : { query, after }
+
+    const data = await fetchWithRetry(queryToUse, variables)
+    return data.posts
+  } catch (error) {
+    console.error("Error searching posts:", error)
+
+    // Try REST API as fallback
+    try {
+      console.log("Falling back to REST API for search")
+      const params: Record<string, any> = {
+        search: query,
+        _embed: 1,
+      }
+
+      if (category) {
+        // First get the category ID from the slug
+        const categories = await fetchFromRestApi("categories", { slug: category })
+        if (categories && categories.length > 0) {
+          params.categories = categories[0].id
+        }
+      }
+
+      const posts = await fetchFromRestApi("posts", params)
+
+      // Transform to match GraphQL structure
+      return {
+        nodes: posts.map((post: any) => ({
+          id: post.id,
+          title: post.title.rendered,
+          excerpt: post.excerpt.rendered,
+          slug: post.slug,
+          date: post.date,
+          featuredImage: post._embedded?.["wp:featuredmedia"]
+            ? {
+                sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+                altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+              }
+            : null,
+          author: {
+            name: post._embedded?.["author"]?.[0]?.name || "Unknown Author",
+            slug: post._embedded?.["author"]?.[0]?.slug || "unknown-author",
+          },
+          categories:
+            post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+              name: cat.name,
+              slug: cat.slug,
+            })) || [],
+          tags:
+            post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+              name: tag.name,
+              slug: tag.slug,
+            })) || [],
+        })),
+      }
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed for search:", restError)
+      return { nodes: [] } // Return empty structure as last resort
+    }
+  }
+}
 
 /**
  * Fetches business posts.

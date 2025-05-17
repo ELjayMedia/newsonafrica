@@ -74,7 +74,7 @@ export function GraphQLSearch() {
         const graphqlQuery = {
           query: `
             query SearchPosts($query: String!, $limit: Int, $offset: Int, $category: String) {
-              search(query: $query, limit: $limit, offset: $offset) {
+              search(query: $query, limit: $limit, offset: $offset, category: $category) {
                 edges {
                   id
                   title
@@ -130,17 +130,23 @@ export function GraphQLSearch() {
           throw new Error(data.errors[0].message || "GraphQL error")
         }
 
-        const searchData = data.data as SearchResponse
+        // Check if the expected data structure exists
+        if (!data.data || !data.data.search) {
+          console.error("Unexpected response structure:", data)
+          throw new Error("Invalid search response structure")
+        }
+
+        const searchData = data.data.search
 
         // If it's the first page, replace results; otherwise append
         if (page === 1) {
-          setResults(searchData.search.edges)
+          setResults(searchData.edges || [])
         } else {
-          setResults((prev) => [...prev, ...searchData.search.edges])
+          setResults((prev) => [...prev, ...(searchData.edges || [])])
         }
 
-        setTotalCount(searchData.search.totalCount)
-        setHasNextPage(searchData.search.pageInfo.hasNextPage)
+        setTotalCount(searchData.totalCount || 0)
+        setHasNextPage(searchData.pageInfo?.hasNextPage || false)
       } catch (err) {
         console.error("Search error:", err)
         setError(err instanceof Error ? err.message : "Search failed")
@@ -153,7 +159,9 @@ export function GraphQLSearch() {
   }, [debouncedQuery, selectedCategory, page])
 
   // Extract unique categories from results for filtering
-  const categories = Array.from(new Set(results.flatMap((result) => result.categories.map((cat) => cat.name))))
+  const categories = Array.from(
+    new Set(results.flatMap((result) => (result.categories ? result.categories.map((cat) => cat.name) : []))),
+  )
 
   const loadMore = () => {
     if (hasNextPage && !loading) {
@@ -260,17 +268,19 @@ export function GraphQLSearch() {
                   )}
                   <div>
                     <h3 className="text-lg font-semibold mb-1">{result.title}</h3>
-                    <p
-                      className="text-sm text-gray-600 mb-2"
-                      dangerouslySetInnerHTML={{
-                        __html: result.excerpt,
-                      }}
-                    />
+                    {result.excerpt && (
+                      <p
+                        className="text-sm text-gray-600 mb-2"
+                        dangerouslySetInnerHTML={{
+                          __html: result.excerpt,
+                        }}
+                      />
+                    )}
                     <div className="flex items-center text-xs text-gray-500">
-                      <span>{result.author.name}</span>
-                      <span className="mx-2">•</span>
+                      {result.author && <span>{result.author.name}</span>}
+                      {result.author && <span className="mx-2">•</span>}
                       <span>{new Date(result.date).toLocaleDateString()}</span>
-                      {result.categories.length > 0 && (
+                      {result.categories && result.categories.length > 0 && (
                         <>
                           <span className="mx-2">•</span>
                           <span>{result.categories[0].name}</span>
