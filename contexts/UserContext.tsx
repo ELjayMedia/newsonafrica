@@ -9,11 +9,15 @@ import * as ProfileService from "@/services/profile-service"
 import type { Profile } from "@/services/profile-service"
 import { useInterval } from "@/hooks/useInterval"
 import { isOnline, setupNetworkListeners, isNetworkError } from "@/utils/network-utils"
+import { useRouter, usePathname } from "next/navigation"
 
 // Add this constant near the top of the file, after the UserContextType interface
 // Check session 5 minutes before expiration
 const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
 const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
+
+// Routes that don't require authentication
+const PUBLIC_ROUTES = ["/", "/auth", "/news", "/business", "/sport", "/entertainment", "/search", "/post"]
 
 /**
  * User context type definition
@@ -26,13 +30,14 @@ interface UserContextType {
   isAuthenticated: boolean
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<void>
-  signOut: () => Promise<void>
+  signOut: (redirectTo?: string) => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   resetPassword: (email: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInWithFacebook: () => Promise<void>
   refreshSession: () => Promise<boolean>
   syncSocialProfile: () => Promise<void>
+  requireAuth: (fallbackUrl?: string) => boolean
 }
 
 /**
@@ -53,6 +58,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [pendingRefresh, setPendingRefresh] = useState(false)
+  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false)
+  const router = useRouter()
+  const pathname = usePathname()
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
@@ -129,11 +137,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
    * Fetch user profile with error handling
    */
   const fetchProfile = useCallback(async (userId: string) => {
-    const profileData = await ProfileService.fetchProfile(userId)
-    if (profileData) {
-      setProfile(profileData)
+    try {
+      const profileData = await ProfileService.fetchProfile(userId)
+      if (profileData) {
+        setProfile(profileData)
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   /**
@@ -152,7 +165,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.log("Session expiring soon, refreshing...")
       await refreshSession()
     }
-  }, [session])
+  }, [session, refreshSession])
+
+  /**
+   * Check if the current route requires authentication
+   * @param fallbackUrl - Optional URL to redirect to if not authenticated
+   * @returns boolean indicating if user is authenticated for protected route
+   */
+  const requireAuth = useCallback(
+    (fallbackUrl = "/auth"): boolean => {
+      // Don't check during initial loading
+      if (loading || !initialAuthCheckComplete) return true
+
+      // If authenticated, allow access
+      if (isAuthenticated) return true
+
+      // If this is a public route, allow access
+      if (pathname && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return true
+
+      // Otherwise redirect to auth page with return URL
+      const returnUrl = encodeURIComponent(pathname || "/")
+      router.push(`${fallbackUrl}?returnTo=${returnUrl}`)
+      return false
+    },
+    [loading, initialAuthCheckComplete, isAuthenticated, pathname, router],
+  )
 
   // Initialize auth state
   useEffect(() => {
@@ -178,6 +215,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         } else {
           setLoading(false)
         }
+
+        // Mark initial auth check as complete
+        setInitialAuthCheckComplete(true)
 
         // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -210,6 +250,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Error initializing auth:", error)
         setLoading(false)
+        setInitialAuthCheckComplete(true)
       }
     }
 
@@ -285,8 +326,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Sign out the current user
+   * @param redirectTo - Optional URL to redirect to after logout
    */
-  const signOut = async () => {
+  const signOut = async (redirectTo = "/auth") => {
     try {
       setLoading(true)
       await AuthService.signOut()
@@ -296,6 +338,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setSession(null)
       setProfile(null)
       setIsAuthenticated(false)
+
+      // Redirect after logout
+      if (redirectTo) {
+        router.push(redirectTo)
+      }
     } catch (error) {
       console.error("Error signing out:", error)
       throw error
@@ -388,6 +435,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         signInWithFacebook,
         refreshSession,
         syncSocialProfile,
+        requireAuth,
       }}
     >
       {children}

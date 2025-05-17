@@ -21,7 +21,6 @@ import WebVitals from "@/components/WebVitals"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/components/AuthProvider"
 import { Toaster } from "@/components/ui/toaster"
 
 import "./globals.css"
@@ -54,57 +53,55 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light">
           <UserProvider>
-            <AuthProvider>
-              <ClientWrapper>
-                <ScrollToTop />
-                <ServiceWorkerRegistration />
-                <WebVitals />
-                <TopBar />
-                <div className="flex-grow">
-                  <div className="mx-auto max-w-full md:max-w-[980px]">
-                    <TopBannerAd />
-                    <Suspense fallback={<HeaderSkeleton />}>
-                      <Header />
-                    </Suspense>
-                    <BelowHeaderAd />
-                    <div className="mt-4 md:mt-6">
-                      <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
-                        <Suspense
-                          fallback={
-                            <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
-                              <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
-                              <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
-                              <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
-                            </div>
-                          }
-                        >
-                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                            <div className="p-4 w-full md:w-auto">{children}</div>
-                          </main>
-                        </Suspense>
-                        <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
-                          <Sidebar />
-                        </aside>
-                      </div>
+            <ClientWrapper>
+              <ScrollToTop />
+              <ServiceWorkerRegistration />
+              <WebVitals />
+              <TopBar />
+              <div className="flex-grow">
+                <div className="mx-auto max-w-full md:max-w-[980px]">
+                  <TopBannerAd />
+                  <Suspense fallback={<HeaderSkeleton />}>
+                    <Header />
+                  </Suspense>
+                  <BelowHeaderAd />
+                  <div className="mt-4 md:mt-6">
+                    <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
+                      <Suspense
+                        fallback={
+                          <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
+                            <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
+                            <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
+                            <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
+                          </div>
+                        }
+                      >
+                        <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                          <div className="p-4 w-full md:w-auto">{children}</div>
+                        </main>
+                      </Suspense>
+                      <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
+                        <Sidebar />
+                      </aside>
                     </div>
-                    <FooterBannerAd />
                   </div>
+                  <FooterBannerAd />
                 </div>
-                <BottomNavigation />
-                <div className="text-center text-sm text-gray-500 mt-4 mb-2">
-                  <Link href="/privacy-policy" className="hover:underline">
-                    Privacy Policy
-                  </Link>
-                  {" | "}
-                  <Link href="/terms-of-service" className="hover:underline">
-                    Terms of Service
-                  </Link>
-                </div>
-                <NetworkStatus />
-              </ClientWrapper>
+              </div>
+              <BottomNavigation />
+              <div className="text-center text-sm text-gray-500 mt-4 mb-2">
+                <Link href="/privacy-policy" className="hover:underline">
+                  Privacy Policy
+                </Link>
+                {" | "}
+                <Link href="/terms-of-service" className="hover:underline">
+                  Terms of Service
+                </Link>
+              </div>
+              <NetworkStatus />
               <Toaster />
               <NetworkStatusHandler />
-            </AuthProvider>
+            </ClientWrapper>
           </UserProvider>
         </ThemeProvider>
       </body>

@@ -2,16 +2,16 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useUser } from "@/contexts/UserContext"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { Bell, BookmarkIcon } from "lucide-react"
 import { NotificationBadge } from "@/components/NotificationBadge"
 import { useAuthModal } from "@/hooks/useAuthModal"
+import { useAuth } from "@/hooks/useAuth"
 
 export function TopBar() {
-  const { user, profile, loading } = useUser()
+  const { user, profile, loading } = useAuth()
   const [showWelcome, setShowWelcome] = useState(false)
   const pathname = usePathname()
   const { open: openAuthModal } = useAuthModal()

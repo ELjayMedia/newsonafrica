@@ -1,111 +1,168 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { fetchUserProfile, updateUserProfile } from "@/lib/wordpress-api"
+import { useCallback, useEffect } from "react"
+import { useUser } from "@/contexts/UserContext"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 
-interface AuthCredentials {
-  username?: string
-  email?: string
-  password?: string
-  accessToken?: string
-  userID?: string
-}
-
+/**
+ * Hook for authentication-related functionality
+ * Provides simplified access to auth state and methods
+ */
 export function useAuth() {
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const {
+    user,
+    profile,
+    loading,
+    isAuthenticated,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle,
+    signInWithFacebook,
+    requireAuth,
+  } = useUser()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
-    const token = localStorage.getItem("authToken")
-    if (token) {
+  /**
+   * Handle login with email and password
+   */
+  const login = useCallback(
+    async (email: string, password: string, rememberMe = false) => {
       try {
-        const userData = await fetchUserProfile(token)
-        setUser(userData)
-        setIsAuthenticated(true)
+        await signIn(email, password, rememberMe)
+
+        // Check for returnTo parameter to redirect after login
+        const returnTo = searchParams?.get("returnTo")
+        if (returnTo) {
+          router.push(decodeURIComponent(returnTo))
+        } else {
+          router.push("/profile")
+        }
+
+        return { success: true }
       } catch (error) {
-        console.error("Error fetching user profile:", error)
-        logout()
+        console.error("Login failed:", error)
+        return { success: false, error }
       }
-    }
-    setIsLoading(false)
-  }
+    },
+    [signIn, router, searchParams],
+  )
 
-  const login = async (provider: string, credentials: AuthCredentials) => {
-    setIsLoading(true)
+  /**
+   * Handle registration with email, password, and username
+   */
+  const register = useCallback(
+    async (email: string, password: string, username: string) => {
+      try {
+        await signUp(email, password, username)
+
+        // Check for returnTo parameter to redirect after registration
+        const returnTo = searchParams?.get("returnTo")
+        if (returnTo) {
+          router.push(decodeURIComponent(returnTo))
+        } else {
+          router.push("/onboarding")
+        }
+
+        return { success: true }
+      } catch (error) {
+        console.error("Registration failed:", error)
+        return { success: false, error }
+      }
+    },
+    [signUp, router, searchParams],
+  )
+
+  /**
+   * Handle logout and redirect
+   */
+  const logout = useCallback(
+    async (redirectTo = "/auth") => {
+      try {
+        await signOut(redirectTo)
+        return { success: true }
+      } catch (error) {
+        console.error("Logout failed:", error)
+        return { success: false, error }
+      }
+    },
+    [signOut],
+  )
+
+  /**
+   * Handle social login with Google
+   */
+  const loginWithGoogle = useCallback(async () => {
     try {
-      let response
-      if (provider === "facebook") {
-        response = await fetch("/api/auth/facebook", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-        })
-      } else {
-        response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-        })
-      }
+      await signInWithGoogle()
+      return { success: true }
+    } catch (error) {
+      console.error("Google login failed:", error)
+      return { success: false, error }
+    }
+  }, [signInWithGoogle])
 
-      if (response.ok) {
-        const data = await response.json()
-        localStorage.setItem("authToken", data.token)
-        const userData = await fetchUserProfile(data.token)
-        setUser(userData)
-        setIsAuthenticated(true)
+  /**
+   * Handle social login with Facebook
+   */
+  const loginWithFacebook = useCallback(async () => {
+    try {
+      await signInWithFacebook()
+      return { success: true }
+    } catch (error) {
+      console.error("Facebook login failed:", error)
+      return { success: false, error }
+    }
+  }, [signInWithFacebook])
+
+  /**
+   * Check if the current route requires authentication
+   * Redirects to login page if not authenticated
+   */
+  const checkAuth = useCallback(() => {
+    return requireAuth(`/auth?returnTo=${encodeURIComponent(pathname || "/")}`)
+  }, [requireAuth, pathname])
+
+  /**
+   * Redirect authenticated users away from auth pages
+   */
+  const redirectIfAuthenticated = useCallback(() => {
+    if (!loading && isAuthenticated && pathname?.startsWith("/auth")) {
+      const returnTo = searchParams?.get("returnTo")
+      if (returnTo) {
+        router.push(decodeURIComponent(returnTo))
+      } else {
         router.push("/profile")
-      } else {
-        throw new Error("Login failed")
       }
-    } catch (error) {
-      console.error("Login error:", error)
-      throw error
-    } finally {
-      setIsLoading(false)
+      return true
     }
-  }
+    return false
+  }, [loading, isAuthenticated, pathname, searchParams, router])
 
-  const logout = () => {
-    localStorage.removeItem("authToken")
-    setUser(null)
-    setIsAuthenticated(false)
-    router.push("/")
-  }
-
-  const updateProfile = async (userData: any) => {
-    setIsLoading(true)
-    try {
-      const token = localStorage.getItem("authToken")
-      if (!token) throw new Error("No auth token found")
-      const updatedUser = await updateUserProfile(token, userData)
-      setUser(updatedUser)
-      return updatedUser
-    } catch (error) {
-      console.error("Error updating profile:", error)
-      throw error
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const getFacebookCredentials = () => {
-    if (user && user.facebookId) {
-      return {
-        id: user.facebookId,
-        username: user.name,
-        email: user.email,
+  // Automatically check auth on mount
+  useEffect(() => {
+    // Only check auth for client-side navigation
+    if (typeof window !== "undefined") {
+      // Don't redirect from auth pages here - that's handled by redirectIfAuthenticated
+      if (!pathname?.startsWith("/auth")) {
+        checkAuth()
       }
     }
-    return null
-  }
+  }, [checkAuth, pathname])
 
-  return { user, isLoading, isAuthenticated, login, logout, updateProfile, getFacebookCredentials }
+  return {
+    user,
+    profile,
+    loading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    loginWithGoogle,
+    loginWithFacebook,
+    checkAuth,
+    redirectIfAuthenticated,
+  }
 }

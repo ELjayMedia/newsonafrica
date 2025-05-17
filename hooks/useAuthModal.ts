@@ -1,47 +1,43 @@
 "use client"
 
-import { create } from "zustand"
+import { useState, useCallback } from "react"
+import { useAuth } from "@/hooks/useAuth"
 
-type AuthModalTab = "signin" | "signup" | "reset"
-
-interface AuthModalStore {
-  isOpen: boolean
-  defaultTab: AuthModalTab
-  redirectAfterAuth: boolean
-  redirectTo: string
-  title: string
-  description: string
-  onSuccess?: () => void
-
-  open: (options?: {
-    defaultTab?: AuthModalTab
-    redirectAfterAuth?: boolean
-    redirectTo?: string
-    title?: string
-    description?: string
-    onSuccess?: () => void
-  }) => void
-  close: () => void
+interface OpenModalOptions {
+  defaultTab?: "signin" | "signup"
+  returnTo?: string
 }
 
-export const useAuthModal = create<AuthModalStore>((set) => ({
-  isOpen: false,
-  defaultTab: "signin",
-  redirectAfterAuth: false,
-  redirectTo: "/",
-  title: "Welcome to News On Africa",
-  description: "Sign in to access personalized news, bookmarks, and more.",
+export function useAuthModal() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [options, setOptions] = useState<OpenModalOptions>({
+    defaultTab: "signin",
+    returnTo: undefined,
+  })
+  const { isAuthenticated } = useAuth()
 
-  open: (options = {}) =>
-    set({
-      isOpen: true,
-      defaultTab: options.defaultTab || "signin",
-      redirectAfterAuth: options.redirectAfterAuth ?? false,
-      redirectTo: options.redirectTo || "/",
-      title: options.title || "Welcome to News On Africa",
-      description: options.description || "Sign in to access personalized news, bookmarks, and more.",
-      onSuccess: options.onSuccess,
-    }),
+  const open = useCallback(
+    (opts: OpenModalOptions = {}) => {
+      // Don't open if already authenticated
+      if (isAuthenticated) return
 
-  close: () => set({ isOpen: false }),
-}))
+      setOptions({
+        defaultTab: opts.defaultTab || "signin",
+        returnTo: opts.returnTo,
+      })
+      setIsOpen(true)
+    },
+    [isAuthenticated],
+  )
+
+  const close = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  return {
+    isOpen,
+    options,
+    open,
+    close,
+  }
+}

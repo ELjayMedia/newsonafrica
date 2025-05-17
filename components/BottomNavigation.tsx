@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Search, Bookmark, User } from "lucide-react"
-import { useUser } from "@/contexts/UserContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/useAuth"
 
 export function BottomNavigation() {
   const pathname = usePathname()
-  const { user, profile, loading } = useUser()
+  const { user, profile, loading } = useAuth()
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {

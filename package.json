@@ -73,7 +73,6 @@
     "imagemin-mozjpeg": "latest",
     "imagemin-pngquant": "latest",
     "imagemin-webp": "latest",
-    "immer": "latest",
     "input-otp": "1.4.1",
     "jsonwebtoken": "latest",
     "lucide-react": "^0.454.0",
@@ -94,15 +93,13 @@
     "swr": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "use-sync-external-store": "latest",
     "util": "latest",
     "uuid": "latest",
     "vaul": "^0.9.6",
     "vue": "latest",
     "vue-router": "latest",
     "web-vitals": "latest",
-    "zod": "latest",
-    "zustand": "latest"
+    "zod": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

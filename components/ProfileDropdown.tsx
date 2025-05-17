@@ -12,10 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, User } from "lucide-react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/hooks/useAuth"
 
 export function ProfileDropdown() {
-  const { user, profile, signOut } = useUser()
+  const { user, profile, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
@@ -34,9 +34,8 @@ export function ProfileDropdown() {
   const displayName = profile?.full_name || profile?.username || user?.email?.split("@")[0] || ""
 
   const handleSignOut = async () => {
-    await signOut()
+    await logout()
     setOpen(false)
-    router.push("/")
   }
 
   return (
