@@ -2,11 +2,19 @@
  * Client-side utility for searching with Algolia
  */
 
-export async function searchAlgolia(query: string, hitsPerPage = 10, page = 0) {
+type SearchParams = {
+  query: string
+  filters?: string
+  page?: number
+  hitsPerPage?: number
+  indexName?: string
+}
+
+export async function searchAlgolia<T = any>(params: SearchParams) {
   try {
     // Make sure we have a valid query
-    if (!query || query.trim() === "") {
-      return { hits: [], nbHits: 0, page, nbPages: 0 }
+    if (!params.query || params.query.trim() === "") {
+      return { hits: [], nbHits: 0, page: params.page || 0, nbPages: 0 }
     }
 
     // Set up request with timeout
@@ -19,7 +27,10 @@ export async function searchAlgolia(query: string, hitsPerPage = 10, page = 0) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query, hitsPerPage, page }),
+      body: JSON.stringify({
+        ...params,
+        indexName: params.indexName || process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME,
+      }),
       signal: controller.signal,
     })
 
@@ -66,3 +77,14 @@ export async function searchAlgolia(query: string, hitsPerPage = 10, page = 0) {
     throw new Error("An unexpected error occurred during search")
   }
 }
+
+/**
+ * Provide Algolia app information for components that need it
+ */
+export const getAlgoliaAppInfo = () => ({
+  appId: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
+  indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "",
+
+  // Check if we have the necessary config
+  isConfigured: !!(process.env.NEXT_PUBLIC_ALGOLIA_APP_ID && process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME),
+})
