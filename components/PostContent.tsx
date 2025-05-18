@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Clock, User } from "lucide-react"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { useEffect, useState, useRef } from "react"
 import { CommentList } from "@/components/CommentList"
 import { formatDate } from "@/utils/date-utils"
@@ -86,16 +85,6 @@ export function PostContent({ post, isClient }: PostContentProps) {
 
   return (
     <article className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4">
-      <Breadcrumbs
-        items={[
-          {
-            label: post.categories?.nodes?.[0]?.name || "Uncategorized",
-            href: `/category/${post.categories?.nodes?.[0]?.slug || "uncategorized"}`,
-          },
-          { label: post.title, href: `/post/${post.slug}` },
-        ]}
-      />
-
       <header className="mb-6 sm:mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between text-gray-600 text-sm space-y-2 md:space-y-0 mb-2 md:mb-4">
           <div className="hidden md:flex items-center">

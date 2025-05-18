@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next"
-import { fetchCategories, fetchPosts, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+
   try {
-    // Fetch data for sitemap
+    // Fetch all necessary data in parallel
     const [posts, categories, tags, authors] = await Promise.all([
       fetchPosts({ perPage: 100 }),
       fetchCategories(),
@@ -15,60 +17,93 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Static pages
     const staticPages = [
       {
-        url: siteConfig.url,
+        url: baseUrl,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 1.0,
       },
       {
-        url: `${siteConfig.url}/news`,
+        url: `${baseUrl}/news`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${siteConfig.url}/business`,
+        url: `${baseUrl}/business`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${siteConfig.url}/special-projects`,
+        url: `${baseUrl}/sport`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.9,
+      },
+      {
+        url: `${baseUrl}/special-projects`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.8,
       },
       {
-        url: `${siteConfig.url}/subscribe`,
+        url: `${baseUrl}/subscribe`,
         lastModified: new Date(),
         changeFrequency: "monthly" as const,
         priority: 0.7,
       },
       {
-        url: `${siteConfig.url}/privacy-policy`,
+        url: `${baseUrl}/privacy-policy`,
         lastModified: new Date(),
         changeFrequency: "yearly" as const,
         priority: 0.3,
       },
       {
-        url: `${siteConfig.url}/terms-of-service`,
+        url: `${baseUrl}/terms-of-service`,
         lastModified: new Date(),
         changeFrequency: "yearly" as const,
         priority: 0.3,
       },
     ]
 
-    // Post pages
-    const postPages = posts.map((post) => ({
-      url: `${siteConfig.url}/post/${post.slug}`,
-      lastModified: new Date(post.modified),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    }))
+    // Post pages - include all metadata needed for news sitemaps
+    const postPages = posts.map((post) => {
+      const postDate = new Date(post.modified || post.date)
+      const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
+
+      return {
+        url: `${baseUrl}/post/${post.slug}`,
+        lastModified: postDate,
+        changeFrequency: isRecent ? "daily" : ("weekly" as const),
+        priority: isRecent ? 0.9 : 0.7,
+        // Additional news sitemap data
+        news: isRecent
+          ? {
+              publication: {
+                name: "News On Africa",
+                language: "en",
+              },
+              publicationDate: postDate,
+              title: post.title,
+              keywords: post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
+            }
+          : undefined,
+        // Image data if available
+        images: post.featuredImage?.node?.sourceUrl
+          ? [
+              {
+                url: post.featuredImage.node.sourceUrl,
+                title: post.title,
+                alt: post.featuredImage.node.altText || post.title,
+              },
+            ]
+          : undefined,
+      }
+    })
 
     // Category pages
     const categoryPages = categories.map((category) => ({
-      url: `${siteConfig.url}/category/${category.slug}`,
+      url: `${baseUrl}/category/${category.slug}`,
       lastModified: new Date(),
       changeFrequency: "daily" as const,
       priority: 0.7,
@@ -76,7 +111,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Tag pages
     const tagPages = tags.map((tag) => ({
-      url: `${siteConfig.url}/tag/${tag.slug}`,
+      url: `${baseUrl}/tag/${tag.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.6,
@@ -84,7 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Author pages
     const authorPages = authors.map((author) => ({
-      url: `${siteConfig.url}/author/${author.slug}`,
+      url: `${baseUrl}/author/${author.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.6,
@@ -100,7 +135,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Return minimal sitemap in case of error
     return [
       {
-        url: siteConfig.url,
+        url: baseUrl,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 1.0,

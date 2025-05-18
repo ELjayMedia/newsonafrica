@@ -1,47 +1,23 @@
 {
   "name": "News On Africa",
-  "short_name": "NOA",
-  "description": "Stay updated with the latest news from Africa",
+  "short_name": "NewsOnAfrica",
+  "description": "Your trusted source for news across Africa",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "orientation": "portrait-primary",
+  "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "play",
-      "id": "com.newsonafrica.app"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Latest News",
-      "short_name": "News",
-      "description": "View the latest news",
-      "url": "/news",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Categories",
-      "short_name": "Categories",
-      "description": "Browse news categories",
-      "url": "/categories",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

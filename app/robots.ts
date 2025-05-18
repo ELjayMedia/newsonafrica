@@ -2,12 +2,15 @@ import type { MetadataRoute } from "next"
 import { siteConfig } from "@/config/site"
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/auth/", "/reset-password/"],
+      disallow: ["/api/", "/admin/", "/_next/", "/server-sitemap.xml"],
     },
-    sitemap: `${siteConfig.url}/sitemap.xml`,
+    sitemap: `${baseUrl}/sitemap-index.xml`,
+    host: baseUrl,
   }
 }

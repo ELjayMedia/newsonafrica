@@ -2,73 +2,75 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  images: {
-    domains: [
-      "images.unsplash.com",
-      "news-on-africa-images.s3.amazonaws.com",
-      "news-on-africa.com",
-      "api.news-on-africa.com",
-      "picsum.photos",
-      "placehold.co",
-      "via.placeholder.com",
-      "lh3.googleusercontent.com", // Google avatars
-      "graph.facebook.com", // Facebook avatars
-      "avatars.githubusercontent.com", // GitHub avatars
-      "images.example.com",
-    ],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    formats: ["image/avif", "image/webp"],
-    unoptimized: true, // Added from updates
-  },
-  env: {
-    NEXT_PUBLIC_APP_ENV: process.env.NODE_ENV || "development",
-  },
   eslint: {
-    ignoreDuringBuilds: true, // Added from updates
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true, // Added from updates
+    ignoreBuildErrors: true,
   },
-  async redirects() {
-    return [
-      {
-        source: "/login",
-        destination: "/auth",
-        permanent: true,
-      },
-      {
-        source: "/signup",
-        destination: "/auth?mode=signup",
-        permanent: true,
-      },
-      {
-        source: "/logout",
-        destination: "/api/auth/logout",
-        permanent: true,
-      },
-    ]
+  images: {
+    domains: [
+      "newsonafrica.com",
+      "secure.gravatar.com",
+      "i0.wp.com",
+      "i1.wp.com",
+      "i2.wp.com",
+      "blob.v0.dev",
+      "cdn-lfdfp.nitrocdn.com",
+    ],
+    formats: ["image/avif", "image/webp"],
+    unoptimized: true,
   },
-  // Add proper CORS headers for API routes
   async headers() {
     return [
       {
-        source: "/api/:path*",
+        source: "/(.*)",
         headers: [
-          { key: "Access-Control-Allow-Credentials", value: "true" },
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
           {
-            key: "Access-Control-Allow-Headers",
-            value:
-              "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+        ],
+      },
+      {
+        source: "/service-worker.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
           },
         ],
       },
     ]
   },
-  // Ensure proper handling of JSON responses
-  experimental: {
-    serverComponentsExternalPackages: ["@tanstack/react-query"],
+  webpack: (config, { isServer }) => {
+    // Fix for the "Unexpected token '<'" error
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      }
+    }
+
+    return config
   },
 }
 

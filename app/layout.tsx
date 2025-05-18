@@ -15,16 +15,21 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration"
+import dynamic from "next/dynamic"
 import NetworkStatus from "@/components/NetworkStatus"
-import WebVitals from "@/components/WebVitals"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-import VercelSpeedInsights from "@/components/SpeedInsights"
 
 import "./globals.css"
+
+// Dynamically import components that might cause hydration issues
+const ServiceWorkerRegistration = dynamic(() => import("@/components/ServiceWorkerRegistration"), { ssr: false })
+
+const WebVitals = dynamic(() => import("@/components/WebVitals"), { ssr: false })
+
+const VercelSpeedInsights = dynamic(() => import("@/components/SpeedInsights"), { ssr: false })
 
 const inter = Inter({ subsets: ["latin"] })
 

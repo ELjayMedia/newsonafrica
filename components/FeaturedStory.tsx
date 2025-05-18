@@ -15,24 +15,40 @@ interface FeaturedStoryProps {
 }
 
 export function FeaturedStory({ post }: FeaturedStoryProps) {
+  if (!post) {
+    return null
+  }
+
   return (
-    <Link href={`/post/${post.slug}`} className="block group">
-      <div className="grid md:grid-cols-2 gap-4 items-center">
-        <div className="relative h-48 md:h-72">
-          <Image
-            src={post.featuredImage?.node?.sourceUrl || "/placeholder.jpg"}
-            alt={post.title}
-            layout="fill"
-            objectFit="cover"
-            className="rounded-lg"
-            priority
-          />
+    <article className="mb-8">
+      <Link href={`/post/${post.slug}`} className="block group">
+        <div className="grid md:grid-cols-2 gap-4 items-center bg-white rounded-lg shadow-md overflow-hidden p-4">
+          <div className="relative h-48 md:h-72 rounded-lg overflow-hidden">
+            <Image
+              src={
+                post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=600&width=800&query=featured news story"
+              }
+              alt={post.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              priority
+            />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-3xl font-bold mb-3 group-hover:text-blue-600 transition-colors">
+              {post.title}
+            </h1>
+            <div
+              className="text-gray-600 text-base line-clamp-3 md:line-clamp-4"
+              dangerouslySetInnerHTML={{ __html: post.excerpt }}
+            />
+            <div className="mt-4">
+              <span className="inline-block text-blue-600 font-medium group-hover:underline">Read full story</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold mb-2 group-hover:text-blue-600">{post.title}</h1>
-          <div className="text-gray-600 text-base line-clamp-3" dangerouslySetInnerHTML={{ __html: post.excerpt }} />
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </article>
   )
 }

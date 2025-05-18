@@ -5,16 +5,14 @@ import { Button } from "@/components/ui/button"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { Bell, BookmarkIcon } from "lucide-react"
+import { Bell, BookmarkIcon, LogIn } from "lucide-react"
 import { NotificationBadge } from "@/components/NotificationBadge"
-import { useAuthModal } from "@/hooks/useAuthModal"
 import { useAuth } from "@/hooks/useAuth"
 
 export function TopBar() {
   const { user, profile, loading } = useAuth()
   const [showWelcome, setShowWelcome] = useState(false)
   const pathname = usePathname()
-  const { open: openAuthModal } = useAuthModal()
 
   // Show welcome message for 5 seconds after login
   useEffect(() => {
@@ -60,7 +58,11 @@ export function TopBar() {
             <div className="h-8 w-24 bg-gray-700 animate-pulse rounded-full"></div>
           ) : (
             <>
-              <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/10 rounded-full">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-green-500 text-black border-green-500 hover:bg-green-600 hover:text-black hover:border-green-600 rounded-full"
+              >
                 <Link href="/subscribe" className="no-underline">
                   Subscribe
                 </Link>
@@ -90,14 +92,18 @@ export function TopBar() {
                   <ProfileDropdown />
                 </div>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/20 rounded-full"
-                  onClick={() => openAuthModal({ defaultTab: "signin" })}
-                >
-                  Sign In
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Link href="/auth?tab=signin" className="no-underline">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      <span>Sign In</span>
+                    </Button>
+                  </Link>
+                </div>
               )}
             </>
           )}
