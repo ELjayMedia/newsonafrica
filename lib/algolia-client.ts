@@ -39,42 +39,83 @@ export async function searchAlgolia<T = any>(params: SearchParams) {
 
     // Check if the response is ok
     if (!response.ok) {
-      // Try to get error details if available
-      let errorDetails = ""
+      // Get the response text first to avoid JSON parsing errors
+      const responseText = await response.text()
+
+      // Try to parse as JSON if possible
+      let errorData = { error: responseText }
       try {
-        const errorData = await response.json()
-        errorDetails = errorData.error || ""
+        errorData = JSON.parse(responseText)
       } catch (e) {
-        // If we can't parse the JSON, use the status text
-        errorDetails = response.statusText
+        // Not JSON, use the text as is
       }
 
-      throw new Error(`Search API error: ${response.status} ${errorDetails}`)
+      return {
+        error: `Search API error: ${response.status} ${errorData.error || responseText.substring(0, 100)}`,
+        statusCode: response.status,
+        hits: [],
+        nbHits: 0,
+      }
     }
 
     // Check if the response is valid JSON
     const contentType = response.headers.get("content-type")
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Search API error: Invalid response format")
+      // Get the response text to provide better error context
+      const responseText = await response.text()
+      return {
+        error: `Search API error: Invalid response format (${contentType}). Response starts with: ${responseText.substring(0, 100)}`,
+        hits: [],
+        nbHits: 0,
+      }
     }
 
-    // Parse the JSON response
+    // Parse the JSON response safely
     try {
-      const data = await response.json()
-      return data
+      const responseText = await response.text()
+
+      // Check if the response is empty
+      if (!responseText.trim()) {
+        return {
+          error: "Search API returned empty response",
+          hits: [],
+          nbHits: 0,
+        }
+      }
+
+      // Try to parse the JSON
+      try {
+        const data = JSON.parse(responseText)
+        return data
+      } catch (parseError) {
+        console.error("JSON parsing error:", parseError, "Response text:", responseText.substring(0, 200))
+        return {
+          error: `Search client error: Failed to parse JSON response. Response starts with: ${responseText.substring(0, 100)}`,
+          hits: [],
+          nbHits: 0,
+        }
+      }
     } catch (error) {
-      console.error("JSON parsing error:", error)
-      throw new Error("Search client error: Failed to parse search results")
+      console.error("Response reading error:", error)
+      return {
+        error: "Search client error: Failed to read search response",
+        hits: [],
+        nbHits: 0,
+      }
     }
   } catch (error) {
     // Re-throw the error with a clear message
-    if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        throw new Error("Search request timed out")
-      }
-      throw error
+    console.error("Search client general error:", error)
+    return {
+      error:
+        error instanceof Error
+          ? error.name === "AbortError"
+            ? "Search request timed out"
+            : error.message
+          : "An unexpected error occurred during search",
+      hits: [],
+      nbHits: 0,
     }
-    throw new Error("An unexpected error occurred during search")
   }
 }
 

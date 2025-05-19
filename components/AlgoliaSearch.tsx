@@ -34,6 +34,7 @@ export function AlgoliaSearch() {
   const [totalHits, setTotalHits] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [serviceAvailable, setServiceAvailable] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
 
   const debouncedQuery = useDebounce(query, 300)
   const algoliaInfo = getAlgoliaAppInfo()
@@ -101,7 +102,7 @@ export function AlgoliaSearch() {
     }
 
     performSearch()
-  }, [debouncedQuery, selectedCategory, serviceAvailable])
+  }, [debouncedQuery, selectedCategory, serviceAvailable, retryCount])
 
   // If the search service is not available, use fallback
   if (!serviceAvailable && query.length > 0) {
@@ -190,13 +191,7 @@ export function AlgoliaSearch() {
               onClick={() => {
                 // Force retry the search
                 setServiceAvailable(true)
-                if (query) {
-                  setLoading(true)
-                  // This will trigger the search effect
-                  const currentQuery = query
-                  setQuery("")
-                  setTimeout(() => setQuery(currentQuery), 100)
-                }
+                setRetryCount((prev) => prev + 1)
               }}
               className="text-sm text-green-600 hover:text-green-800"
             >
