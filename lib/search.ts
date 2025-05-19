@@ -44,6 +44,7 @@ export interface SearchResponse {
   pagination: SearchPagination
   query: string
   filters: SearchFilters
+  searchSource?: "graphql" | "rest"
 }
 
 export interface SearchError {

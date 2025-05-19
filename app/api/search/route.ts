@@ -183,6 +183,7 @@ async function searchWithGraphQL(
         totalPages: Math.ceil((data.posts.pageInfo.total || 0) / perPage),
         hasMore: pageInfo.hasNextPage,
       },
+      searchSource: "graphql",
     }
   } catch (error) {
     console.error("GraphQL search error:", error)
@@ -295,6 +296,7 @@ async function searchWithREST(
       totalPages,
       hasMore: page < totalPages,
     },
+    searchSource: "rest",
   }
 }
 
@@ -319,15 +321,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse and validate search parameters
-    const searchParams = request.nextUrl.searchParams
-    const query = searchParams.get("q")
+    const { searchParams } = new URL(request.url)
+    const query = searchParams.get("query")
 
     if (!query) {
       return NextResponse.json({ error: "Missing search query" }, { status: 400 })
     }
 
-    const { searchParams: params } = new URL(request.url)
-    const parsedParams = Object.fromEntries(params.entries())
+    const parsedParams = Object.fromEntries(searchParams.entries())
 
     const validationResult = searchParamsSchema.safeParse(parsedParams)
     if (!validationResult.success) {
@@ -378,6 +379,7 @@ export async function GET(request: NextRequest) {
         dateFrom,
         dateTo,
       },
+      searchSource: result.searchSource,
     }
 
     // Cache result

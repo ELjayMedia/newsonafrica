@@ -12,6 +12,8 @@ interface BookmarkButtonProps {
   postId: string
   title?: string
   slug?: string
+  excerpt?: string
+  date?: string
   featuredImage?: {
     url: string
     width?: number
@@ -28,6 +30,8 @@ export const BookmarkButton = ({
   postId,
   title,
   slug,
+  excerpt,
+  date,
   featuredImage,
   variant = "outline",
   size = "sm",
@@ -36,9 +40,12 @@ export const BookmarkButton = ({
   onRemoveSuccess,
 }: BookmarkButtonProps) => {
   const { user } = useUser()
-  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks()
+  const { isBookmarked, toggleBookmark } = useBookmarks()
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const isMarked = isBookmarked(postId)
+
+  // Ensure postId is valid
+  const validPostId = postId || `post-${slug}`
+  const isMarked = isBookmarked(validPostId)
 
   const handleBookmarkToggle = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -52,21 +59,37 @@ export const BookmarkButton = ({
       return
     }
 
+    // Validate required data before proceeding
+    if (!validPostId) {
+      toast({
+        title: "Error",
+        description: "Invalid post data. Cannot bookmark this post.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      if (isMarked) {
-        await removeBookmark(postId)
+      await toggleBookmark({
+        post_id: validPostId,
+        title: title || "Untitled Post",
+        slug: slug || "",
+        date: date || new Date().toISOString(),
+        excerpt: excerpt || "",
+        featuredImage: featuredImage
+          ? {
+              node: {
+                sourceUrl: featuredImage.url,
+              },
+            }
+          : undefined,
+      })
+
+      // Call the appropriate callback based on the new bookmark state
+      // Since we're using toggle, we need to check the state after the operation
+      if (isBookmarked(validPostId)) {
         onRemoveSuccess?.()
       } else {
-        await addBookmark({
-          post_id: postId,
-          featuredImage: featuredImage
-            ? {
-                node: {
-                  sourceUrl: featuredImage.url,
-                },
-              }
-            : undefined,
-        })
         onAddSuccess?.()
       }
     } catch (error: any) {

@@ -6,9 +6,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
   try {
-    // Fetch all necessary data in parallel
+    // Fetch all necessary data in parallel with increased limits
     const [posts, categories, tags, authors] = await Promise.all([
-      fetchPosts({ perPage: 100 }),
+      fetchPosts(1000), // Increased limit to ensure we get all posts
       fetchCategories(),
       fetchTags(),
       fetchAuthors(),
@@ -53,6 +53,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       },
       {
+        url: `${baseUrl}/search`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      },
+      {
+        url: `${baseUrl}/auth`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      },
+      {
         url: `${baseUrl}/privacy-policy`,
         lastModified: new Date(),
         changeFrequency: "yearly" as const,
@@ -63,6 +75,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(),
         changeFrequency: "yearly" as const,
         priority: 0.3,
+      },
+      {
+        url: `${baseUrl}/sitemap.html`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
       },
     ]
 

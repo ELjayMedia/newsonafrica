@@ -95,6 +95,10 @@ export default function RootLayout({
                 <Link href="/terms-of-service" className="hover:underline">
                   Terms of Service
                 </Link>
+                {" | "}
+                <Link href="/sitemap.xml" className="hover:underline">
+                  Sitemap
+                </Link>
               </div>
               <NetworkStatus />
               <Toaster />

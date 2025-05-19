@@ -10,7 +10,8 @@ export async function GET() {
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
-    const recentPosts = await fetchRecentPosts(100)
+    // Increase limit to ensure we get all recent news
+    const recentPosts = await fetchRecentPosts(200)
     const filteredPosts = recentPosts.filter((post) => new Date(post.date) > twoDaysAgo)
 
     // Build the news sitemap
@@ -21,6 +22,16 @@ export async function GET() {
   ${filteredPosts
     .map((post) => {
       const postDate = new Date(post.date)
+      const categories = post.categories?.nodes || []
+      const keywords = categories.map((cat) => cat.name).join(", ")
+
+      // Properly escape XML content
+      const escapedTitle = post.title
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;")
 
       return `
   <url>
@@ -31,19 +42,15 @@ export async function GET() {
         <news:language>en</news:language>
       </news:publication>
       <news:publication_date>${postDate.toISOString()}</news:publication_date>
-      <news:title>${post.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</news:title>
-      ${
-        post.categories?.nodes?.length > 0
-          ? `<news:keywords>${post.categories.nodes.map((cat) => cat.name).join(", ")}</news:keywords>`
-          : ""
-      }
+      <news:title>${escapedTitle}</news:title>
+      ${keywords ? `<news:keywords>${keywords}</news:keywords>` : ""}
     </news:news>
     ${
       post.featuredImage?.node?.sourceUrl
         ? `
     <image:image>
       <image:loc>${post.featuredImage.node.sourceUrl}</image:loc>
-      <image:title>${post.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</image:title>
+      <image:title>${escapedTitle}</image:title>
     </image:image>`
         : ""
     }

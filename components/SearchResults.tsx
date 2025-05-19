@@ -11,6 +11,7 @@ import { AlertCircle, ArrowUp, Filter, RefreshCw, Calendar, Tag, Layers } from "
 import { Input } from "@/components/ui/input"
 import { useDebounce } from "@/hooks/useDebounce"
 import { performSearch, createDebouncedSearch, formatExcerpt, type SearchFilters, type SearchItem } from "@/lib/search"
+import { SearchForm } from "@/components/SearchForm"
 
 // Create debounced search function
 const debouncedSearch = createDebouncedSearch(300)
@@ -40,6 +41,7 @@ export function SearchResults() {
   const [hasMore, setHasMore] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [searchSource, setSearchSource] = useState<"graphql" | "rest" | "unknown">("unknown")
+  const [retryCount, setRetryCount] = useState(0)
 
   // Refs
   const resultsContainerRef = useRef<HTMLDivElement>(null)
@@ -153,7 +155,7 @@ export function SearchResults() {
         clearTimeout(retryTimeoutRef.current)
       }
     }
-  }, [fetchResults])
+  }, [fetchResults, retryCount])
 
   // Handle sort change
   const handleSortChange = (newSort: string) => {
@@ -175,7 +177,7 @@ export function SearchResults() {
     }
 
     setIsRateLimited(false)
-    fetchResults(page, false)
+    setRetryCount((prev) => prev + 1)
   }
 
   // Scroll to top
@@ -183,10 +185,20 @@ export function SearchResults() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  // Handle search form submission
+  const handleSearch = (searchQuery: string) => {
+    if (searchQuery.trim()) {
+      updateSearchParams({ query: searchQuery, page: "1" })
+    }
+  }
+
   // Render loading state
   if (loading && results.length === 0) {
     return (
       <div className="space-y-6">
+        <div className="w-full max-w-4xl mx-auto mb-6">
+          <SearchForm initialQuery={query} onSearch={handleSearch} autoFocus />
+        </div>
         {[...Array(3)].map((_, i) => (
           <div key={i} className="flex flex-col space-y-3">
             <Skeleton className="h-5 w-3/4" />
@@ -205,41 +217,56 @@ export function SearchResults() {
   // Render rate limit error
   if (isRateLimited) {
     return (
-      <Alert variant="warning" className="mb-6">
-        <AlertCircle className="h-5 w-5" />
-        <AlertTitle>Search Temporarily Unavailable</AlertTitle>
-        <AlertDescription className="space-y-4">
-          <p>Our search service is experiencing high demand. Please try again shortly.</p>
-          <p className="text-sm">
-            {retryAfter > 0
-              ? `Automatically retrying in ${retryAfter} seconds...`
-              : "We'll retry your search automatically."}
-          </p>
-          <Button onClick={handleRetry} variant="outline" className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Retry Now
-          </Button>
-        </AlertDescription>
-      </Alert>
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="mb-6">
+          <SearchForm initialQuery={query} onSearch={handleSearch} />
+        </div>
+        <Alert variant="warning" className="mb-6">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Search Temporarily Unavailable</AlertTitle>
+          <AlertDescription className="space-y-4">
+            <p>Our search service is experiencing high demand. Please try again shortly.</p>
+            <p className="text-sm">
+              {retryAfter > 0
+                ? `Automatically retrying in ${retryAfter} seconds...`
+                : "We'll retry your search automatically."}
+            </p>
+            <Button onClick={handleRetry} variant="outline" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Retry Now
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   // Render general error
   if (error && results.length === 0) {
     return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertCircle className="h-5 w-5" />
-        <AlertTitle>Search Error</AlertTitle>
-        <AlertDescription className="space-y-4">
-          <p>{error}</p>
-          <Button onClick={() => fetchResults(1, false)}>Try Again</Button>
-        </AlertDescription>
-      </Alert>
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="mb-6">
+          <SearchForm initialQuery={query} onSearch={handleSearch} />
+        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Search Error</AlertTitle>
+          <AlertDescription className="space-y-4">
+            <p>{error}</p>
+            <Button onClick={() => setRetryCount((prev) => prev + 1)}>Try Again</Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   return (
-    <div className="search-results" ref={resultsContainerRef}>
+    <div className="search-results w-full max-w-4xl mx-auto" ref={resultsContainerRef}>
+      {/* Search form */}
+      <div className="mb-6">
+        <SearchForm initialQuery={query} onSearch={handleSearch} autoFocus />
+      </div>
+
       {/* Search metadata and filters */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         {results.length > 0 ? (
@@ -404,7 +431,18 @@ export function SearchResults() {
           <p className="text-gray-500 mb-4">No results found for "{query}".</p>
           <p className="text-sm text-gray-400">Try using different keywords or check your spelling.</p>
         </div>
-      ) : null}
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">Enter a search term to find articles.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {["Politics", "Business", "Sports", "Entertainment", "Health"].map((term) => (
+              <Button key={term} variant="outline" onClick={() => handleSearch(term)} className="px-4 py-2">
+                {term}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Loading indicator for "load more" */}
       {loading && results.length > 0 && (
