@@ -68,6 +68,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [sportPosts, setSportPosts] = useState<any[]>([])
+  const [sportPostsError, setSportPostsError] = useState<boolean>(false)
 
   // Listen for online/offline events
   useEffect(() => {
@@ -86,10 +87,14 @@ export function HomeContent({ initialData }: HomeContentProps) {
   useEffect(() => {
     const getSportPosts = async () => {
       try {
+        setSportPostsError(false)
         const posts = await fetchSportPosts(5)
         setSportPosts(posts)
       } catch (error) {
         console.error("Error fetching sport/sports posts:", error)
+        setSportPostsError(true)
+        // Don't set sport posts to empty array if there was an error
+        // This way we keep any previously fetched posts
       }
     }
 
@@ -223,6 +228,33 @@ export function HomeContent({ initialData }: HomeContentProps) {
     showAdAfter,
     categories,
   }: CategoryConfig & { categories: any[] }) => {
+    // Special case for sports category
+    if (name.toLowerCase() === "sport" || name.toLowerCase() === "sports") {
+      // Use directly fetched sport posts if available
+      if (sportPosts.length > 0) {
+        return (
+          <React.Fragment key={name}>
+            <section className="bg-white p-4 rounded-lg shadow-sm">
+              <h2 className="text-xl font-bold mb-4 capitalize">
+                <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+                  {name}
+                </Link>
+              </h2>
+              <NewsGrid
+                posts={sportPosts.map((post) => ({
+                  ...post,
+                  type: typeOverride,
+                }))}
+                layout={layout}
+                className="compact-grid"
+              />
+            </section>
+            {showAdAfter && <HomeMidContentAd />}
+          </React.Fragment>
+        )
+      }
+    }
+
     // Get posts for this specific category
     const categoryPosts = getPostsForCategoryAndChildren(name, categories)
 

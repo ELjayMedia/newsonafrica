@@ -101,8 +101,9 @@ export const fetchSportPosts = cache(async (limit = 5) => {
   } catch (error) {
     console.error("Error fetching sport/sports posts:", error)
 
-    // Fallback to individual category fetches if the combined query fails
+    // Always fall back to individual category fetches
     try {
+      console.log("Falling back to individual category fetches for sports posts")
       const [sportCategory, sportsCategory] = await Promise.allSettled([
         fetchCategoryPosts("sport", limit),
         fetchCategoryPosts("sports", limit),
@@ -122,7 +123,7 @@ export const fetchSportPosts = cache(async (limit = 5) => {
       return uniquePosts
     } catch (fallbackError) {
       console.error("Both GraphQL and fallback fetches failed:", fallbackError)
-      return []
+      return [] // Return empty array as last resort
     }
   }
 })

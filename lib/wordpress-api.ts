@@ -110,29 +110,8 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-      // Use a simple fetch for the first attempt to check if the endpoint is reachable
-      if (attempt === 0) {
-        try {
-          const testResponse = await fetch(WORDPRESS_API_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              query: "{ __typename }",
-            }),
-            signal: controller.signal,
-          })
-
-          if (!testResponse.ok) {
-            console.warn("GraphQL endpoint not responding correctly, will try REST API fallback")
-            throw new Error("GraphQL endpoint not responding")
-          }
-        } catch (testError) {
-          console.warn("GraphQL endpoint test failed, will try REST API fallback")
-          throw new Error("GraphQL endpoint test failed")
-        }
-      }
+      // Skip the GraphQL endpoint test - it's causing issues
+      // Instead, directly try the GraphQL request and handle any failures
 
       const response = await client.request(query, variables, {
         ...headers,
