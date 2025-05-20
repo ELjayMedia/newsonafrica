@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
+import { useBookmarks } from "@/contexts/BookmarksContext"
 import type { Session } from "@supabase/supabase-js"
-import { createClient } from "@/utils/supabase/client"
 import { BookmarkButton } from "./BookmarkButton"
 import { formatDate } from "@/utils/date-utils"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Bookmark, AlertTriangle } from "lucide-react"
+import { Bookmark, AlertTriangle, Search, SortAsc, SortDesc, Calendar, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import { Input } from "@/components/ui/input"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface BookmarksContentProps {
   initialSession: Session | null
@@ -24,11 +26,18 @@ type BookmarkType = {
   post_id: string
   title?: string
   slug?: string
-  featuredImage?: {
-    url: string
-    width?: number
-    height?: number
-  }
+  featuredImage?:
+    | {
+        url: string
+        width?: number
+        height?: number
+      }
+    | {
+        node: {
+          sourceUrl: string
+        }
+      }
+  excerpt?: string
   created_at: string
 }
 
@@ -56,67 +65,72 @@ function BookmarksSkeleton() {
 
 export function BookmarksContent({ initialSession }: BookmarksContentProps) {
   const router = useRouter()
-  const { user, loading, isAuthenticated } = useUser()
-  const [bookmarks, setBookmarks] = useState<BookmarkType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, loading: userLoading, isAuthenticated } = useUser()
+  const { bookmarks, loading: bookmarksLoading, toggleBookmark } = useBookmarks()
+  const [filteredBookmarks, setFilteredBookmarks] = useState<BookmarkType[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "alphabetical">("newest")
   const [isRLSError, setIsRLSError] = useState(false)
-  const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
 
   // Check authentication and redirect if needed
   useEffect(() => {
-    if (!loading && !isAuthenticated && initialSession === null) {
+    if (!userLoading && !isAuthenticated && initialSession === null) {
       router.push("/auth?redirectTo=/bookmarks")
     }
-  }, [loading, isAuthenticated, initialSession, router])
+  }, [userLoading, isAuthenticated, initialSession, router])
 
-  // Fetch bookmarks
+  // Process bookmarks when they change or when search/sort changes
   useEffect(() => {
-    const fetchBookmarks = async () => {
-      if (!user) return
+    if (!bookmarks) return
 
-      try {
-        setIsLoading(true)
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
+    let result = [...bookmarks] as BookmarkType[]
 
-        if (error) {
-          console.error("Error fetching bookmarks:", error)
-
-          // Check if it's an RLS error
-          if (error.message.includes("row-level security")) {
-            setIsRLSError(true)
-            throw new Error("Permission error: Row-level security policies need to be configured.")
-          }
-
-          throw error
-        }
-
-        setBookmarks(data || [])
-        setIsRLSError(false)
-      } catch (err: any) {
-        console.error("Error fetching bookmarks:", err)
-        setError(err.message || "Failed to load bookmarks")
-      } finally {
-        setIsLoading(false)
-      }
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(
+        (bookmark) => bookmark.title?.toLowerCase().includes(query) || bookmark.excerpt?.toLowerCase().includes(query),
+      )
     }
 
-    if (isAuthenticated && user) {
-      fetchBookmarks()
+    // Apply sorting
+    switch (sortOrder) {
+      case "newest":
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        break
+      case "oldest":
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        break
+      case "alphabetical":
+        result.sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+        break
     }
-  }, [isAuthenticated, user, supabase])
+
+    setFilteredBookmarks(result)
+  }, [bookmarks, searchQuery, sortOrder])
 
   // Handle bookmark removal
   const handleBookmarkRemoved = (postId: string) => {
-    setBookmarks((prevBookmarks) => prevBookmarks.filter((bookmark) => bookmark.post_id !== postId))
+    // The actual removal is handled by the BookmarksContext
+    // This function can be used for any UI-specific updates after removal
+  }
+
+  // Get image URL from bookmark
+  const getImageUrl = (bookmark: BookmarkType) => {
+    if (!bookmark.featuredImage) return "/placeholder.svg"
+
+    if ("url" in bookmark.featuredImage) {
+      return bookmark.featuredImage.url
+    } else if ("node" in bookmark.featuredImage) {
+      return bookmark.featuredImage.node.sourceUrl
+    }
+
+    return "/placeholder.svg"
   }
 
   // Show loading state for initial data fetch
-  if (loading || isLoading) {
+  if (userLoading || bookmarksLoading) {
     return <BookmarksSkeleton />
   }
 
@@ -181,27 +195,123 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
     )
   }
 
+  // Show filtered empty state
+  if (filteredBookmarks.length === 0 && searchQuery) {
+    return (
+      <div>
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Input
+              type="text"
+              placeholder="Search bookmarks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto">
+                {sortOrder === "newest" ? (
+                  <>
+                    <SortDesc className="mr-2 h-4 w-4" /> Newest
+                  </>
+                ) : sortOrder === "oldest" ? (
+                  <>
+                    <SortAsc className="mr-2 h-4 w-4" /> Oldest
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="mr-2 h-4 w-4" /> Alphabetical
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSortOrder("newest")}>
+                <SortDesc className="mr-2 h-4 w-4" /> Newest
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder("oldest")}>
+                <SortAsc className="mr-2 h-4 w-4" /> Oldest
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder("alphabetical")}>
+                <Calendar className="mr-2 h-4 w-4" /> Alphabetical
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="text-center py-12">
+          <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+          <h2 className="text-2xl font-bold mb-2">No matching bookmarks</h2>
+          <p className="text-gray-500 mb-6">No bookmarks match your search criteria.</p>
+          <Button variant="outline" onClick={() => setSearchQuery("")}>
+            Clear Search
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ErrorBoundary>
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            type="text"
+            placeholder="Search bookmarks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto">
+              {sortOrder === "newest" ? (
+                <>
+                  <SortDesc className="mr-2 h-4 w-4" /> Newest
+                </>
+              ) : sortOrder === "oldest" ? (
+                <>
+                  <SortAsc className="mr-2 h-4 w-4" /> Oldest
+                </>
+              ) : (
+                <>
+                  <Calendar className="mr-2 h-4 w-4" /> Alphabetical
+                </>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setSortOrder("newest")}>
+              <SortDesc className="mr-2 h-4 w-4" /> Newest
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOrder("oldest")}>
+              <SortAsc className="mr-2 h-4 w-4" /> Oldest
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOrder("alphabetical")}>
+              <Calendar className="mr-2 h-4 w-4" /> Alphabetical
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {bookmarks.map((bookmark) => (
-          <Card key={bookmark.id} className="overflow-hidden flex flex-col h-full">
+        {filteredBookmarks.map((bookmark) => (
+          <Card key={bookmark.id} className="overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
             <div className="relative">
               <Link href={`/article/${bookmark.slug}`}>
                 <div className="aspect-video relative overflow-hidden">
-                  {bookmark.featuredImage?.url ? (
-                    <Image
-                      src={bookmark.featuredImage.url || "/placeholder.svg"}
-                      alt={bookmark.title || "Bookmarked article"}
-                      className="object-cover transition-transform hover:scale-105"
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400">No image</span>
-                    </div>
-                  )}
+                  <Image
+                    src={getImageUrl(bookmark) || "/placeholder.svg"}
+                    alt={bookmark.title || "Bookmarked article"}
+                    className="object-cover transition-transform hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
                 </div>
               </Link>
               <div className="absolute top-2 right-2">
@@ -209,7 +319,11 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
                   postId={bookmark.post_id}
                   title={bookmark.title}
                   slug={bookmark.slug}
-                  featuredImage={bookmark.featuredImage}
+                  featuredImage={
+                    "url" in (bookmark.featuredImage || {})
+                      ? (bookmark.featuredImage as { url: string })
+                      : { url: (bookmark.featuredImage as any)?.node?.sourceUrl || "" }
+                  }
                   variant="default"
                   size="icon"
                   className="bg-white/90 hover:bg-white text-primary"
@@ -224,10 +338,18 @@ export function BookmarksContent({ initialSession }: BookmarksContentProps) {
                   {bookmark.title || "Untitled Article"}
                 </h2>
               </Link>
+              {bookmark.excerpt && (
+                <p className="text-gray-600 line-clamp-2 text-sm mb-2">{bookmark.excerpt.replace(/<[^>]*>/g, "")}</p>
+              )}
             </CardContent>
 
-            <CardFooter className="pt-0 text-sm text-gray-500">
+            <CardFooter className="pt-0 text-sm text-gray-500 flex justify-between items-center">
               <span>{formatDate(bookmark.created_at)}</span>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={`/article/${bookmark.slug}`}>
+                  <Eye className="h-4 w-4 mr-1" /> Read
+                </Link>
+              </Button>
             </CardFooter>
           </Card>
         ))}

@@ -4,10 +4,18 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/types/supabase"
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/news", "/business", "/sport", "/entertainment", "/search", "/post"]
+const PUBLIC_ROUTES = ["/", "/category", "/search", "/post"]
 
 // Routes that should redirect to profile if already authenticated
 const AUTH_ROUTES = ["/auth", "/login", "/register"]
+
+// Legacy routes that should be redirected to their category equivalents
+const LEGACY_ROUTES_MAP = {
+  "/news": "/category/news",
+  "/business": "/category/business",
+  "/sport": "/category/sport",
+  "/entertainment": "/category/entertainment",
+}
 
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
@@ -31,6 +39,11 @@ export async function middleware(request: NextRequest) {
 
   const url = request.nextUrl.clone()
   const { pathname } = url
+
+  // Handle legacy route redirects
+  if (LEGACY_ROUTES_MAP[pathname]) {
+    return NextResponse.redirect(new URL(LEGACY_ROUTES_MAP[pathname], request.url))
+  }
 
   // Handle API routes separately
   if (pathname.startsWith("/api/")) {

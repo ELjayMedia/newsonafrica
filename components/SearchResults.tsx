@@ -1,25 +1,38 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, memo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { HorizontalCard } from "@/components/HorizontalCard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, ArrowUp, Filter, RefreshCw, Calendar, Tag, Layers } from "lucide-react"
+import { AlertCircle, ArrowUp, Filter, RefreshCw, Calendar, Tag, Layers, Search, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useDebounce } from "@/hooks/useDebounce"
-import { performSearch, createDebouncedSearch, formatExcerpt, type SearchFilters, type SearchItem } from "@/lib/search"
+import {
+  performSearch,
+  createDebouncedSearch,
+  formatExcerpt,
+  highlightSearchTerms,
+  type SearchFilters,
+} from "@/lib/search"
 import { SearchForm } from "@/components/SearchForm"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
+import { search, type SearchResult, type SearchParams } from "@/lib/search"
+
+// Add this near the top of the file, outside the component
+const MemoizedHorizontalCard = memo(HorizontalCard)
 
 // Create debounced search function
 const debouncedSearch = createDebouncedSearch(300)
 
-export function SearchResults() {
+export function SearchResults({ initialQuery }: { initialQuery: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const query = searchParams.get("query") || ""
+  const query = searchParams.get("query") || initialQuery
   const debouncedQuery = useDebounce(query, 300)
 
   // Get filters from URL
@@ -28,9 +41,11 @@ export function SearchResults() {
   const tags = searchParams.get("tags") || ""
   const dateFrom = searchParams.get("dateFrom") || ""
   const dateTo = searchParams.get("dateTo") || ""
+  const fuzzy = searchParams.get("fuzzy") === "true"
+  const fuzzyThreshold = Number.parseFloat(searchParams.get("fuzzyThreshold") || "0.3")
 
   // State
-  const [results, setResults] = useState<SearchItem[]>([])
+  const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isRateLimited, setIsRateLimited] = useState(false)
@@ -40,12 +55,17 @@ export function SearchResults() {
   const [totalPages, setTotalPages] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [searchSource, setSearchSource] = useState<"graphql" | "rest" | "unknown">("unknown")
+  const [searchSource, setSearchSource] = useState<"graphql" | "rest" | "fuzzy" | "unknown">("unknown")
   const [retryCount, setRetryCount] = useState(0)
+  const [showFuzzySettings, setShowFuzzySettings] = useState(false)
+  const [fuzzySearch, setFuzzySearch] = useState(fuzzy)
+  const [fuzzyThresholdState, setFuzzyThresholdState] = useState(fuzzyThreshold)
+  const debouncedFuzzyThreshold = useDebounce(fuzzyThresholdState, 300)
 
   // Refs
   const resultsContainerRef = useRef<HTMLDivElement>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Update URL with search parameters
   const updateSearchParams = useCallback(
@@ -80,12 +100,23 @@ export function SearchResults() {
         return
       }
 
+      // Cancel any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController()
+      const signal = abortControllerRef.current.signal
+
       setLoading(true)
       setError(null)
 
       // Collect filters
       const filters: SearchFilters = {
         sort: sort as "relevance" | "date" | "title",
+        fuzzy,
+        fuzzyThreshold,
       }
 
       if (categories) filters.categories = categories
@@ -94,8 +125,11 @@ export function SearchResults() {
       if (dateTo) filters.dateTo = dateTo
 
       try {
-        // Perform search
-        const response = await performSearch(debouncedQuery, searchPage, filters)
+        // Perform search with abort signal
+        const response = await performSearch(debouncedQuery, searchPage, filters, signal)
+
+        // If aborted, don't update state
+        if (signal.aborted) return
 
         // Check if response is an error
         if ("error" in response) {
@@ -125,7 +159,7 @@ export function SearchResults() {
 
         // Determine search source from response metadata (if available)
         if (response.searchSource) {
-          setSearchSource(response.searchSource as "graphql" | "rest")
+          setSearchSource(response.searchSource as "graphql" | "rest" | "fuzzy" | "unknown")
         }
 
         // Update state with search results
@@ -136,23 +170,74 @@ export function SearchResults() {
         setPage(searchPage)
         setIsRateLimited(false)
       } catch (err) {
+        // Don't update error state if request was aborted
+        if (err instanceof Error && err.name === "AbortError") {
+          console.log("Search request aborted")
+          return
+        }
+
         console.error("Search error:", err)
         setError(err instanceof Error ? err.message : "Failed to perform search")
       } finally {
-        setLoading(false)
+        // Only update loading state if the request wasn't aborted
+        if (!signal.aborted) {
+          setLoading(false)
+        }
       }
     },
-    [debouncedQuery, sort, categories, tags, dateFrom, dateTo],
+    [debouncedQuery, sort, categories, tags, dateFrom, dateTo, fuzzy, fuzzyThreshold],
   )
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!debouncedQuery.trim()) {
+        setResults([])
+        setTotalPages(0)
+        return
+      }
+
+      setLoading(true)
+
+      const searchParams: SearchParams = {
+        query: debouncedQuery,
+        page,
+        perPage: 10,
+        fuzzySearch,
+        fuzzyThreshold: debouncedFuzzyThreshold,
+      }
+
+      try {
+        const { results: searchResults, totalPages: pages } = await search(searchParams)
+        setResults(searchResults)
+        setTotalPages(pages)
+      } catch (error) {
+        console.error("Error fetching search results:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResults()
+  }, [debouncedQuery, page, fuzzySearch, debouncedFuzzyThreshold])
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
 
   // Fetch results when search parameters change
   useEffect(() => {
     fetchResults(1, false)
 
-    // Clean up any pending retry timeouts
+    // Clean up any pending retry timeouts and abort any in-flight requests
     return () => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current)
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
       }
     }
   }, [fetchResults, retryCount])
@@ -160,6 +245,24 @@ export function SearchResults() {
   // Handle sort change
   const handleSortChange = (newSort: string) => {
     updateSearchParams({ sort: newSort })
+  }
+
+  // Handle fuzzy search toggle
+  const handleFuzzyToggle = (enabled: boolean) => {
+    updateSearchParams({
+      fuzzy: enabled ? "true" : "false",
+      page: "1", // Reset to first page
+    })
+    setFuzzySearch(enabled)
+  }
+
+  // Handle fuzzy threshold change
+  const handleFuzzyThresholdChange = (value: number[]) => {
+    updateSearchParams({
+      fuzzyThreshold: value[0].toString(),
+      page: "1", // Reset to first page
+    })
+    setFuzzyThresholdState(value[0])
   }
 
   // Handle load more
@@ -190,6 +293,14 @@ export function SearchResults() {
     if (searchQuery.trim()) {
       updateSearchParams({ query: searchQuery, page: "1" })
     }
+  }
+
+  // Format excerpt with highlighted search terms
+  const formatExcerptWithHighlight = (excerpt: string) => {
+    const plainExcerpt = formatExcerpt(excerpt)
+    return fuzzy
+      ? plainExcerpt // Don't highlight for fuzzy search as matches might be approximate
+      : highlightSearchTerms(plainExcerpt, query)
   }
 
   // Render loading state
@@ -265,38 +376,81 @@ export function SearchResults() {
       {/* Search form */}
       <div className="mb-6">
         <SearchForm initialQuery={query} onSearch={handleSearch} autoFocus />
+
+        {/* Fuzzy search toggle */}
+        <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Switch id="fuzzy-search" checked={fuzzySearch} onCheckedChange={handleFuzzyToggle} />
+            <Label htmlFor="fuzzy-search" className="flex items-center cursor-pointer">
+              <Sparkles className="h-4 w-4 mr-1 text-yellow-500" />
+              <span>Fuzzy Search</span>
+            </Label>
+            {fuzzySearch && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs px-2 h-6"
+                onClick={() => setShowFuzzySettings(!showFuzzySettings)}
+              >
+                {showFuzzySettings ? "Hide Settings" : "Settings"}
+              </Button>
+            )}
+          </div>
+
+          {searchSource === "fuzzy" && <span className="text-xs text-blue-500">Using fuzzy matching</span>}
+        </div>
+
+        {/* Fuzzy search settings */}
+        {fuzzySearch && showFuzzySettings && (
+          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="fuzzy-threshold">Fuzzy match threshold</Label>
+                <span className="text-sm">{fuzzyThreshold.toFixed(1)}</span>
+              </div>
+              <Slider
+                id="fuzzy-threshold"
+                min={0.1}
+                max={0.9}
+                step={0.1}
+                value={[fuzzyThresholdState]}
+                onValueChange={handleFuzzyThresholdChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Exact</span>
+                <span>Flexible</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search metadata and filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         {results.length > 0 ? (
-          <div>
-            <p className="text-sm text-gray-500">
+          <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-full">
+            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
               Found {totalItems.toLocaleString()} {totalItems === 1 ? "result" : "results"} for "{query}"
             </p>
-            {searchSource !== "unknown" && (
-              <p className="text-xs text-gray-400 mt-1">
-                Results from WordPress {searchSource === "graphql" ? "GraphQL" : "REST API"}
-              </p>
-            )}
           </div>
         ) : query ? (
           <p className="text-sm text-gray-500">No results found for "{query}"</p>
         ) : null}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1"
+            className={`flex items-center gap-2 ${showFilters ? "bg-gray-100 dark:bg-gray-700" : ""}`}
           >
             <Filter className="h-4 w-4" />
             <span>Filters</span>
           </Button>
 
           <Select value={sort} onValueChange={handleSortChange}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[140px] border-gray-200 dark:border-gray-700">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -310,9 +464,12 @@ export function SearchResults() {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md mb-6">
-          <h3 className="font-medium mb-3">Filter Results</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg mb-8 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <h3 className="font-medium mb-4 text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <span>Filter Results</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
               <div className="flex items-center gap-2 mb-2 text-sm font-medium">
                 <Calendar className="h-4 w-4" />
@@ -377,6 +534,7 @@ export function SearchResults() {
                   dateTo: "",
                 })
               }}
+              className="hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Clear Filters
             </Button>
@@ -384,31 +542,46 @@ export function SearchResults() {
         </div>
       )}
 
-      {/* Search results */}
       {results.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {results.map((post) => (
-              <HorizontalCard
-                key={post.id}
-                post={{
-                  id: post.id,
-                  title: post.title,
-                  excerpt: formatExcerpt(post.excerpt),
-                  slug: post.slug,
-                  featuredImage: post.featuredImage ? { node: { sourceUrl: post.featuredImage.sourceUrl } } : undefined,
-                  date: post.date,
-                  author: { node: { name: post.author.name } },
-                }}
-              />
+              <div key={post.id} className="group transition-all duration-200 hover:translate-y-[-2px]">
+                <HorizontalCard
+                  post={{
+                    id: post.id,
+                    title: post.title,
+                    excerpt: formatExcerptWithHighlight(post.excerpt),
+                    slug: post.slug,
+                    featuredImage: post.featuredImage
+                      ? { node: { sourceUrl: post.featuredImage.sourceUrl } }
+                      : undefined,
+                    date: post.date,
+                    author: post.author ? { node: { name: post.author.name } } : undefined,
+                  }}
+                  className="border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"
+                  allowHtml={true}
+                />
+              </div>
             ))}
           </div>
 
           {/* Load more button */}
           {hasMore && (
-            <div className="mt-8 text-center">
-              <Button onClick={handleLoadMore} disabled={loading} className="min-w-[200px]">
-                {loading ? "Loading..." : "Load More Results"}
+            <div className="mt-10 text-center">
+              <Button
+                onClick={handleLoadMore}
+                disabled={loading}
+                className="min-w-[200px] bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
+                  "Load More Results"
+                )}
               </Button>
             </div>
           )}
@@ -418,7 +591,7 @@ export function SearchResults() {
             <Button
               variant="outline"
               size="icon"
-              className="fixed bottom-24 right-4 h-10 w-10 rounded-full shadow-md"
+              className="fixed bottom-24 right-4 h-10 w-10 rounded-full shadow-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 z-10"
               onClick={scrollToTop}
               aria-label="Scroll to top"
             >
@@ -427,16 +600,36 @@ export function SearchResults() {
           )}
         </>
       ) : query ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">No results found for "{query}".</p>
-          <p className="text-sm text-gray-400">Try using different keywords or check your spelling.</p>
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <div className="mb-4">
+            <Search className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600" />
+          </div>
+          <p className="text-gray-500 mb-4 font-medium">No results found for "{query}".</p>
+          <p className="text-sm text-gray-400 max-w-md mx-auto">
+            Try using different keywords, check your spelling, or{" "}
+            {!fuzzySearch && (
+              <Button
+                variant="link"
+                className="p-0 h-auto text-sm text-blue-500"
+                onClick={() => handleFuzzyToggle(true)}
+              >
+                enable fuzzy search
+              </Button>
+            )}
+            {fuzzySearch && "try adjusting the fuzzy search settings"}.
+          </p>
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">Enter a search term to find articles.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <p className="text-gray-500 mb-6 font-medium">Enter a search term to find articles.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             {["Politics", "Business", "Sports", "Entertainment", "Health"].map((term) => (
-              <Button key={term} variant="outline" onClick={() => handleSearch(term)} className="px-4 py-2">
+              <Button
+                key={term}
+                variant="outline"
+                onClick={() => handleSearch(term)}
+                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
                 {term}
               </Button>
             ))}
@@ -446,14 +639,39 @@ export function SearchResults() {
 
       {/* Loading indicator for "load more" */}
       {loading && results.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-6 space-y-4 animate-pulse">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex flex-col space-y-3">
-              <Skeleton className="h-4 w-3/4" />
+            <div key={i} className="flex flex-col space-y-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+              <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-1/2" />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-8">
+          <nav className="inline-flex rounded-md shadow">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              className="px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="px-4 py-2 border-t border-b border-gray-300 bg-white text-sm font-medium text-gray-700">
+              {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === totalPages}
+              className="px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </nav>
         </div>
       )}
     </div>

@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Toggle } from "@/components/ui/toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+
 interface CommentFormProps {
   postId: string
   parentId?: string | null
@@ -39,12 +40,6 @@ export function CommentForm({
   const { toast } = useToast()
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Focus the textarea when the component mounts
-  useEffect(() => {
-    if (textareaRef.current && activeTab === "write") {
-      textareaRef.current.focus()
-    }
-  }, [activeTab])
 
   // Cleanup timer on unmount
   useEffect(() => {

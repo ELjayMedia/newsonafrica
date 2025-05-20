@@ -1,67 +1,77 @@
-import Image from "next/image"
 import Link from "next/link"
-import { Calendar } from "lucide-react"
-
-interface Post {
-  id: string
-  title: string
-  slug: string
-  date: string
-  excerpt?: string
-  featuredImage?: {
-    node: {
-      sourceUrl: string
-    }
-  }
-}
+import Image from "next/image"
+import { formatDistanceToNow } from "date-fns"
+import Fuse from "fuse.js"
 
 interface HorizontalCardProps {
-  post: Post
-  showExcerpt?: boolean
+  post: {
+    id: string
+    title: string
+    excerpt: string
+    slug: string
+    featuredImage?: {
+      node: {
+        sourceUrl: string
+      }
+    }
+    date: string
+    author?: {
+      node: {
+        name: string
+      }
+    }
+  }
+  className?: string
+  allowHtml?: boolean
 }
 
-export function HorizontalCard({ post, showExcerpt = false }: HorizontalCardProps) {
-  if (!post) {
-    return null
+export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
+  const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
+
+  // Implementing fuzzy search with Fuse.js
+  const options = {
+    keys: ["title", "excerpt"],
+    threshold: 0.3,
   }
+  const fuse = new Fuse([post], options)
+  const result = fuse.search("")
 
   return (
-    <article className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
-      <Link href={`/post/${post.slug}`} className="flex flex-col sm:flex-row h-full" aria-label={post.title}>
-        <div className="relative w-full sm:w-1/3 h-40 sm:h-auto flex-shrink-0">
-          <Image
-            src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=300&width=400&query=news article"}
-            alt={post.title}
-            fill
-            sizes="(max-width: 640px) 100vw, 33vw"
-            className="object-cover"
-            loading="lazy"
-          />
-        </div>
-        <div className="p-4 flex-1 flex flex-col">
-          <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            {post.title}
-          </h3>
-
-          {showExcerpt && post.excerpt && (
-            <div
-              className="text-gray-600 text-sm mb-3 line-clamp-2"
-              dangerouslySetInnerHTML={{ __html: post.excerpt }}
+    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+      <div className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+        {/* Image container - left side */}
+        <div className="sm:w-1/3 h-40 sm:h-auto relative">
+          {post.featuredImage ? (
+            <Image
+              src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              alt={post.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
+          ) : (
+            <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+              <span className="text-gray-400 dark:text-gray-500 text-sm">No image</span>
+            </div>
           )}
+        </div>
 
-          <div className="flex items-center text-xs text-gray-500 mt-auto">
-            <Calendar className="w-3 h-3 mr-1" />
-            <time dateTime={post.date}>
-              {new Date(post.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })}
-            </time>
+        {/* Content container - right side */}
+        <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{post.title}</h3>
+            <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
+              {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500 dark:text-gray-300">{formattedDate}</span>
+            {post.author && (
+              <span className="text-sm text-gray-500 dark:text-gray-300">by {post.author.node.name}</span>
+            )}
           </div>
         </div>
-      </Link>
-    </article>
+      </div>
+    </Link>
   )
 }

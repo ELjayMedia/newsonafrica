@@ -57,6 +57,16 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // Ensure all JS files are served with the correct MIME type
+        source: "/(.*)\\.js$",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
     ]
   },
   webpack: (config, { isServer }) => {

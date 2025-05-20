@@ -310,7 +310,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
           {categoryConfigs.map((config) => (
             <CategorySection key={config.name} {...config} categories={categories} />
           ))}
-        </div>        
+        </div>
       </div>
     </ErrorBoundary>
   )
