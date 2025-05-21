@@ -1,25 +1,84 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
-export function useInfiniteScroll(callback: () => void) {
+interface UseInfiniteScrollOptions {
+  threshold?: number
+  rootMargin?: string
+  disabled?: boolean
+}
+
+export function useInfiniteScroll(callback: () => Promise<void> | void, options: UseInfiniteScrollOptions = {}) {
+  const { threshold = 0.1, rootMargin = "100px 0px", disabled = false } = options
   const [isFetching, setIsFetching] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const observer = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const handleScroll = useCallback(() => {
-    if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || isFetching)
-      return
-    setIsFetching(true)
-  }, [isFetching])
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries
+      if (entry.isIntersecting && !isFetching && !disabled) {
+        setIsFetching(true)
+      }
+    },
+    [isFetching, disabled],
+  )
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [handleScroll])
+    // Disconnect previous observer if it exists
+    if (observer.current) {
+      observer.current.disconnect()
+    }
+
+    // Create new observer
+    observer.current = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin,
+      threshold,
+    })
+
+    // Observe the load more element if it exists
+    if (loadMoreRef.current) {
+      observer.current.observe(loadMoreRef.current)
+    }
+
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect()
+      }
+    }
+  }, [handleObserver, rootMargin, threshold])
 
   useEffect(() => {
-    if (!isFetching) return
-    callback()
+    async function fetchData() {
+      if (!isFetching) return
+
+      setError(null)
+      try {
+        await callback()
+      } catch (err) {
+        console.error("Error in infinite scroll:", err)
+        setError(err instanceof Error ? err : new Error(String(err)))
+      } finally {
+        setIsFetching(false)
+      }
+    }
+
+    fetchData()
   }, [isFetching, callback])
 
-  return { isFetching, setIsFetching }
+  const manualFetch = useCallback(() => {
+    if (!isFetching && !disabled) {
+      setIsFetching(true)
+    }
+  }, [isFetching, disabled])
+
+  return {
+    isFetching,
+    setIsFetching,
+    loadMoreRef,
+    error,
+    manualFetch,
+  }
 }

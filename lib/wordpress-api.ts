@@ -18,7 +18,7 @@ if (!WORDPRESS_API_URL) {
 
 // Create a client with a timeout
 export const client = new GraphQLClient(WORDPRESS_API_URL, {
-  timeout: 15000, // 15 second timeout
+  timeout: 30000, // Increased timeout to 30 seconds
   errorPolicy: "all",
 })
 
@@ -52,7 +52,7 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // Increased timeout to 30 seconds
 
       const response = await fetch(url, {
         headers: {
@@ -108,11 +108,10 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // Increased timeout to 30 seconds
 
       // Skip the GraphQL endpoint test - it's causing issues
       // Instead, directly try the GraphQL request and handle any failures
-
       const response = await client.request(query, variables, {
         ...headers,
         signal: controller.signal,
@@ -152,10 +151,10 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
  * Fetches posts with a specific tag.
  *
  * @param {string} tag - The tag slug to fetch posts for.
- * @param {number} [limit=5] - The number of posts to fetch.
+ * @param {number} [limit=100] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
-export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
+export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
   try {
     const data = await fetchWithRetry(queries.taggedPosts, { tag, limit })
     return data.posts.nodes
@@ -166,7 +165,7 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
         // Fallback to REST API
         const posts = await fetchFromRestApi("posts", {
           tags: tag,
-          per_page: limit,
+          per_page: 100, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -221,12 +220,12 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
 /**
  * Fetches featured posts.
  *
- * @param {number} [limit=5] - The number of posts to fetch.
+ * @param {number} [limit=100] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
-export const fetchFeaturedPosts = cache(async (limit = 5) => {
+export const fetchFeaturedPosts = cache(async (limit = 100) => {
   try {
-    const data = await fetchWithRetry(queries.featuredPosts)
+    const data = await fetchWithRetry(queries.featuredPosts, { limit })
     return data.posts.nodes
   } catch (error) {
     if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
@@ -235,7 +234,7 @@ export const fetchFeaturedPosts = cache(async (limit = 5) => {
         // Fallback to REST API - using sticky posts as featured
         const posts = await fetchFromRestApi("posts", {
           sticky: true,
-          per_page: limit,
+          per_page: 100, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -296,7 +295,8 @@ export const fetchFeaturedPosts = cache(async (limit = 5) => {
  */
 export const fetchCategoryPosts = cache(async (slug: string, after: string | null = null) => {
   try {
-    const data = await fetchWithRetry(queries.categoryPosts, { slug, after })
+    // Modify the GraphQL query to request more posts (first: 100)
+    const data = await fetchWithRetry(queries.categoryPosts, { slug, after, first: 100 })
     return data.category
   } catch (error) {
     if (
@@ -316,7 +316,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
         // Then get posts from that category
         const posts = await fetchFromRestApi("posts", {
           categories: categoryId,
-          per_page: 10, // Reasonable default
+          per_page: 100, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -326,7 +326,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
           description: categories[0].description || "",
           posts: {
             pageInfo: {
-              hasNextPage: posts.length >= 10, // Assume there are more if we got a full page
+              hasNextPage: posts.length >= 100, // Assume there are more if we got a full page
               endCursor: null, // REST API doesn't use cursors
             },
             nodes: posts.map((post: any) => ({
@@ -402,6 +402,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
  */
 export const fetchCategorizedPosts = cache(async () => {
   try {
+    // Modify the GraphQL query to request more posts per category (first: 100)
     const data = await fetchWithRetry(queries.categorizedPosts)
 
     // Ensure we have valid category data
@@ -428,7 +429,7 @@ export const fetchCategorizedPosts = cache(async () => {
           categories.map(async (category: any) => {
             const posts = await fetchFromRestApi("posts", {
               categories: category.id,
-              per_page: 5,
+              per_page: 100, // Increased to maximum allowed by WordPress REST API
               _embed: 1,
             })
 
@@ -501,10 +502,10 @@ export const fetchCategorizedPosts = cache(async () => {
 /**
  * Fetches recent posts.
  *
- * @param {number} [limit=10] - The number of posts to fetch.
+ * @param {number} [limit=100] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
-export const fetchRecentPosts = cache(async (limit = 10) => {
+export const fetchRecentPosts = cache(async (limit = 100) => {
   try {
     const data = await fetchWithRetry(queries.recentPosts, { limit })
     return data.posts.nodes
@@ -513,7 +514,7 @@ export const fetchRecentPosts = cache(async (limit = 10) => {
       console.log("Falling back to REST API for recent posts")
       try {
         const posts = await fetchFromRestApi("posts", {
-          per_page: limit,
+          per_page: 100, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -632,38 +633,69 @@ export const fetchAllAuthors = async () => {
 /**
  * Fetches all posts.
  *
- * @param {number} [limit=1000] - The number of posts to fetch.
+ * @param {number} [limit=10000] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
-export const fetchAllPosts = cache(async (limit = 1000) => {
+export const fetchAllPosts = cache(async (limit = 10000) => {
   try {
-    const data = await fetchWithRetry(queries.allPosts, { limit })
-    return data.posts.nodes
+    // For GraphQL, we'll use pagination to fetch all posts
+    let allPosts: any[] = []
+    let hasNextPage = true
+    let endCursor: string | null = null
+
+    while (hasNextPage && allPosts.length < limit) {
+      const data = await fetchWithRetry(queries.allPosts, {
+        first: 100, // Fetch 100 posts at a time (GraphQL maximum)
+        after: endCursor,
+      })
+
+      if (data?.posts?.nodes) {
+        allPosts = [...allPosts, ...data.posts.nodes]
+        hasNextPage = data.posts.pageInfo?.hasNextPage || false
+        endCursor = data.posts.pageInfo?.endCursor || null
+      } else {
+        hasNextPage = false
+      }
+
+      // Break if we've reached the limit
+      if (allPosts.length >= limit) {
+        break
+      }
+    }
+
+    return allPosts
   } catch (error) {
     if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
       console.log("Falling back to REST API for all posts")
       try {
         // REST API has pagination limits, so we'll need to make multiple requests
-        const MAX_PER_PAGE = 100
-        const pages = Math.ceil(limit / MAX_PER_PAGE)
+        const MAX_PER_PAGE = 100 // WordPress REST API maximum
         let allPosts: any[] = []
+        let page = 1
+        let shouldContinue = true
 
-        for (let page = 1; page <= pages; page++) {
-          const postsPerPage = page === pages ? limit % MAX_PER_PAGE || MAX_PER_PAGE : MAX_PER_PAGE
+        while (shouldContinue && allPosts.length < limit) {
           const posts = await fetchFromRestApi("posts", {
-            per_page: postsPerPage,
+            per_page: MAX_PER_PAGE,
             page,
             _embed: 1,
           })
 
-          if (posts.length === 0) break
+          if (posts.length === 0) {
+            shouldContinue = false
+          } else {
+            allPosts = [...allPosts, ...posts]
+            page++
 
-          allPosts = allPosts.concat(posts)
-          if (posts.length < postsPerPage) break
+            // Break if we've reached the limit or if we got fewer posts than requested (last page)
+            if (allPosts.length >= limit || posts.length < MAX_PER_PAGE) {
+              shouldContinue = false
+            }
+          }
         }
 
         // Transform REST API response to match GraphQL structure
-        return allPosts.map((post: any) => ({
+        return allPosts.slice(0, limit).map((post: any) => ({
           id: post.id,
           title: post.title.rendered,
           excerpt: post.excerpt.rendered,
@@ -723,8 +755,32 @@ export const fetchAllTags = cache(async () => {
     if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
       console.log("Falling back to REST API for all tags")
       try {
-        const tags = await fetchFromRestApi("tags", { per_page: 100 })
-        return tags.map((tag: any) => ({
+        // Fetch all tags with pagination
+        const MAX_PER_PAGE = 100 // WordPress REST API maximum
+        let allTags: any[] = []
+        let page = 1
+        let shouldContinue = true
+
+        while (shouldContinue) {
+          const tags = await fetchFromRestApi("tags", {
+            per_page: MAX_PER_PAGE,
+            page,
+          })
+
+          if (tags.length === 0) {
+            shouldContinue = false
+          } else {
+            allTags = [...allTags, ...tags]
+            page++
+
+            // Break if we got fewer tags than requested (last page)
+            if (tags.length < MAX_PER_PAGE) {
+              shouldContinue = false
+            }
+          }
+        }
+
+        return allTags.map((tag: any) => ({
           id: tag.id,
           name: tag.name,
           slug: tag.slug,
@@ -792,7 +848,7 @@ export const postComment = async (commentData: any) =>
  * @returns {Promise<any>} - A promise that resolves with the search results.
  */
 export const searchPosts = async (query: string, after: string | null = null) =>
-  fetchWithRetry(queries.searchPosts, { query, after }).then((data: any) => data.posts)
+  fetchWithRetry(queries.searchPosts, { query, after, first: 100 }).then((data: any) => data.posts)
 
 /**
  * Fetches business posts.
@@ -815,8 +871,112 @@ export const fetchNewsPosts = async () => fetchCategoryPosts("news")
  * @param {string | null} [after=null] - The cursor to fetch posts after.
  * @returns {Promise<any>} - A promise that resolves with the author data.
  */
-export const fetchAuthorData = async (slug: string, after: string | null = null) =>
-  fetchWithRetry(queries.authorData, { slug, after }).then((data: any) => data.user)
+export const fetchAuthorData = async (slug: string, after: string | null = null) => {
+  try {
+    const data = await fetchWithRetry(queries.authorData, { slug, after, first: 100 })
+    return data.user
+  } catch (error) {
+    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
+      console.log(`Falling back to REST API for author: ${slug}`)
+      try {
+        // First get the author data
+        const authors = await fetchFromRestApi(`users?slug=${slug}`)
+        if (!authors || authors.length === 0) {
+          throw new Error(`Author not found: ${slug}`)
+        }
+
+        const author = authors[0]
+
+        // Then get posts by this author with pagination
+        const MAX_PER_PAGE = 100 // WordPress REST API maximum
+        let allPosts: any[] = []
+        let page = 1
+        let shouldContinue = true
+
+        while (shouldContinue) {
+          const posts = await fetchFromRestApi("posts", {
+            author: author.id,
+            per_page: MAX_PER_PAGE,
+            page,
+            _embed: 1,
+          })
+
+          if (posts.length === 0) {
+            shouldContinue = false
+          } else {
+            allPosts = [...allPosts, ...posts]
+            page++
+
+            // Break if we got fewer posts than requested (last page)
+            if (posts.length < MAX_PER_PAGE) {
+              shouldContinue = false
+            }
+          }
+        }
+
+        // Transform REST API response to match GraphQL structure
+        return {
+          id: author.id,
+          name: author.name,
+          slug: author.slug,
+          description: author.description || "",
+          avatar: {
+            url: author.avatar_urls["96"] || "",
+          },
+          posts: {
+            pageInfo: {
+              hasNextPage: false, // We've fetched all posts
+              endCursor: null,
+            },
+            nodes: allPosts.map((post: any) => ({
+              id: post.id,
+              title: post.title.rendered,
+              excerpt: post.excerpt.rendered,
+              slug: post.slug,
+              date: post.date,
+              featuredImage: post._embedded?.["wp:featuredmedia"]
+                ? {
+                    node: {
+                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                    },
+                  }
+                : null,
+              author: {
+                node: {
+                  name: author.name,
+                  slug: author.slug,
+                },
+              },
+              categories: {
+                nodes:
+                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+                    name: cat.name,
+                    slug: cat.slug,
+                  })) || [],
+              },
+              tags: {
+                nodes:
+                  post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+                    name: tag.name,
+                    slug: tag.slug,
+                  })) || [],
+              },
+            })),
+          },
+        }
+      } catch (restError) {
+        console.error(`Both GraphQL and REST API failed for author ${slug}:`, restError)
+        throw new Error(
+          `Failed to fetch author data: ${restError instanceof Error ? restError.message : "Unknown error"}`,
+        )
+      }
+    } else {
+      console.error(`GraphQL API failed for author ${slug} with non-network error:`, error)
+      throw error
+    }
+  }
+}
 
 /**
  * Fetches a single post.
@@ -921,25 +1081,54 @@ export const updateUserProfile = async (token: string, userData: any) =>
  */
 export const fetchPostsByTag = async (tag: string, after: string | null = null) => {
   try {
-    const data = await fetchWithRetry(queries.postsByTag, { tag, after })
+    const data = await fetchWithRetry(queries.postsByTag, { tag, after, first: 100 })
     return data.posts
   } catch (error) {
     if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
       console.log("Falling back to REST API for posts by tag")
       try {
-        const posts = await fetchFromRestApi("posts", {
-          tags: tag,
-          per_page: 10, // Reasonable default
-          _embed: 1,
-        })
+        // Get tag ID first
+        const tags = await fetchFromRestApi("tags", { slug: tag })
+        if (!tags || tags.length === 0) {
+          throw new Error(`Tag not found: ${tag}`)
+        }
+
+        const tagId = tags[0].id
+
+        // Fetch all posts with this tag using pagination
+        const MAX_PER_PAGE = 100 // WordPress REST API maximum
+        let allPosts: any[] = []
+        let page = 1
+        let shouldContinue = true
+
+        while (shouldContinue) {
+          const posts = await fetchFromRestApi("posts", {
+            tags: tagId,
+            per_page: MAX_PER_PAGE,
+            page,
+            _embed: 1,
+          })
+
+          if (posts.length === 0) {
+            shouldContinue = false
+          } else {
+            allPosts = [...allPosts, ...posts]
+            page++
+
+            // Break if we got fewer posts than requested (last page)
+            if (posts.length < MAX_PER_PAGE) {
+              shouldContinue = false
+            }
+          }
+        }
 
         // Transform REST API response to match GraphQL structure
         return {
           pageInfo: {
-            hasNextPage: posts.length >= 10, // Assume there are more if we got a full page
-            endCursor: null, // REST API doesn't use cursors
+            hasNextPage: false, // We've fetched all posts
+            endCursor: null,
           },
-          nodes: posts.map((post: any) => ({
+          nodes: allPosts.map((post: any) => ({
             id: post.id,
             title: post.title.rendered,
             excerpt: post.excerpt.rendered,
@@ -1073,7 +1262,7 @@ export const fetchSingleCategory = async (slug: string) => {
  * Fetches all posts for the sitemap.
  * This is an alias for fetchAllPosts with a more descriptive name.
  *
- * @param {number} [limit=1000] - The number of posts to fetch.
+ * @param {number} [limit=10000] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
 export const fetchPosts = fetchAllPosts

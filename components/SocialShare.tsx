@@ -63,7 +63,12 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     icon,
     label,
   }) => (
-    <Button variant="outline" size="icon" onClick={onClick} className="rounded-full p-2" aria-label={label}>
+    <Button
+      variant="outline"
+      onClick={onClick}
+      className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
+      aria-label={label}
+    >
       {icon}
     </Button>
   )
@@ -72,13 +77,13 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     <>
       <ShareButton
         onClick={() => window.open(shareLinks.facebook, "_blank")}
-        icon={<Facebook className="h-4 w-4" />}
+        icon={<Facebook className="h-5 w-5" />}
         label="Share on Facebook"
       />
-      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-4 w-4" />} label="Share on X (Twitter)" />
+      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-5 w-5" />} label="Share on X (Twitter)" />
       <LinkedInShare url={url} title={title} summary={description} iconOnly />
-      <ShareButton onClick={shareByEmail} icon={<Mail className="h-4 w-4" />} label="Share by Email" />
-      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-4 w-4" />} label="Copy link" />
+      <ShareButton onClick={shareByEmail} icon={<Mail className="h-5 w-5" />} label="Share by Email" />
+      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-5 w-5" />} label="Copy link" />
     </>
   )
 
@@ -107,9 +112,8 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
         <>
           <Button
             variant="outline"
-            size="icon"
             onClick={handleNativeShare}
-            className="rounded-full p-2"
+            className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
             aria-label="Share"
           >
             <Share2 className="h-4 w-4" />

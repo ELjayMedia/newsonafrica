@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import algoliasearch from "algoliasearch"
-import type { SearchResult } from "@/lib/search"
+import { client } from "@/lib/wordpress-api"
+import { FALLBACK_POSTS } from "@/lib/mock-data"
 
 // Input validation schema
 const searchParamsSchema = z.object({
@@ -24,39 +24,41 @@ const searchParamsSchema = z.object({
 type CacheEntry = {
   data: any
   timestamp: number
-  hits: number // Track popularity for potential cache eviction strategies
+  hits: number
 }
 
-const CACHE_TTL = 30 * 60 * 1000 // 30 minutes (up from 15)
-const MAX_CACHE_SIZE = 500 // Limit cache size to prevent memory issues
+const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+const MAX_CACHE_SIZE = 500 // Limit cache size
 const searchCache = new Map<string, CacheEntry>()
 
-// Clean cache more efficiently
-setInterval(
-  () => {
-    const now = Date.now()
-    let entriesRemoved = 0
+// Clean cache periodically
+if (typeof setInterval !== "undefined") {
+  setInterval(
+    () => {
+      const now = Date.now()
+      let entriesRemoved = 0
 
-    // First pass: remove expired entries
-    for (const [key, entry] of searchCache.entries()) {
-      if (now - entry.timestamp > CACHE_TTL) {
-        searchCache.delete(key)
-        entriesRemoved++
+      // First pass: remove expired entries
+      for (const [key, entry] of searchCache.entries()) {
+        if (now - entry.timestamp > CACHE_TTL) {
+          searchCache.delete(key)
+          entriesRemoved++
+        }
       }
-    }
 
-    // Second pass: if still too large, remove least popular entries
-    if (searchCache.size > MAX_CACHE_SIZE - entriesRemoved) {
-      const entries = Array.from(searchCache.entries()).sort((a, b) => a[1].hits - b[1].hits)
+      // Second pass: if still too large, remove least popular entries
+      if (searchCache.size > MAX_CACHE_SIZE - entriesRemoved) {
+        const entries = Array.from(searchCache.entries()).sort((a, b) => a[1].hits - b[1].hits)
 
-      const toRemove = searchCache.size - (MAX_CACHE_SIZE - entriesRemoved)
-      entries.slice(0, toRemove).forEach(([key]) => {
-        searchCache.delete(key)
-      })
-    }
-  },
-  5 * 60 * 1000,
-) // Check every 5 minutes
+        const toRemove = searchCache.size - (MAX_CACHE_SIZE - entriesRemoved)
+        entries.slice(0, toRemove).forEach(([key]) => {
+          searchCache.delete(key)
+        })
+      }
+    },
+    5 * 60 * 1000,
+  ) // Check every 5 minutes
+}
 
 // Rate limiting
 type RateLimitEntry = {
@@ -69,14 +71,16 @@ const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
 const rateLimitMap = new Map<string, RateLimitEntry>()
 
 // Clean rate limit entries periodically
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitMap.entries()) {
-    if (now > entry.resetAt) {
-      rateLimitMap.delete(key)
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of rateLimitMap.entries()) {
+      if (now > entry.resetAt) {
+        rateLimitMap.delete(key)
+      }
     }
-  }
-}, 60 * 1000) // Check every minute
+  }, 60 * 1000) // Check every minute
+}
 
 function getRateLimitKey(request: NextRequest): string {
   // Use IP address as rate limit key
@@ -116,12 +120,50 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-// Initialize Algolia client
-const algoliaClient = algoliasearch(
-  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
-  process.env.ALGOLIA_SEARCH_API_KEY || "",
-)
-const algoliaIndex = algoliaClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "")
+// WordPress GraphQL search query
+const SEARCH_QUERY = `
+  query SearchPosts($query: String!, $first: Int!, $after: String) {
+    posts(where: {search: $query}, first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        title
+        excerpt
+        slug
+        date
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        author {
+          node {
+            name
+            slug
+          }
+        }
+        categories {
+          nodes {
+            id
+            name
+            slug
+          }
+        }
+        tags {
+          nodes {
+            id
+            name
+            slug
+          }
+        }
+      }
+    }
+  }
+`
 
 export async function GET(request: NextRequest) {
   try {
@@ -195,58 +237,125 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Configure search options
-    const searchOptions = {
-      page: page - 1, // Algolia uses 0-based indexing
-      hitsPerPage: perPage,
-    }
+    try {
+      // Calculate pagination for GraphQL
+      const first = perPage
+      const after = page > 1 ? btoa(`arrayconnection:${(page - 1) * perPage - 1}`) : null
 
-    // Add fuzzy search options if enabled
-    if (fuzzy) {
-      Object.assign(searchOptions, {
-        // Algolia's typo tolerance settings
-        typoTolerance: true,
-        minWordSizefor1Typo: 3,
-        minWordSizefor2Typos: 7,
+      // Execute WordPress GraphQL search query
+      const data = await client.request(SEARCH_QUERY, {
+        query,
+        first,
+        after,
       })
-    } else {
-      Object.assign(searchOptions, {
-        typoTolerance: false,
+
+      // Transform WordPress response to our standard format
+      const items = data.posts.nodes.map((post: any) => ({
+        id: post.id,
+        title: post.title || "",
+        excerpt: post.excerpt || "",
+        slug: post.slug || "",
+        date: post.date || "",
+        featuredImage: post.featuredImage?.node || null,
+        categories: post.categories?.nodes || [],
+        author: {
+          name: post.author?.node?.name || "Unknown",
+          slug: post.author?.node?.slug || "",
+        },
+      }))
+
+      // Apply additional filters if needed
+      let filteredItems = items
+
+      // Apply category filter if specified
+      if (categories) {
+        const categoryIds = categories.split(",").map((id) => Number.parseInt(id.trim()))
+        filteredItems = filteredItems.filter((item) => item.categories.some((cat: any) => categoryIds.includes(cat.id)))
+      }
+
+      // Apply date filters if specified
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom)
+        filteredItems = filteredItems.filter((item) => new Date(item.date) >= fromDate)
+      }
+
+      if (dateTo) {
+        const toDate = new Date(dateTo)
+        filteredItems = filteredItems.filter((item) => new Date(item.date) <= toDate)
+      }
+
+      // Apply sorting if needed
+      if (sort === "date") {
+        filteredItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      } else if (sort === "title") {
+        filteredItems.sort((a, b) => a.title.localeCompare(b.title))
+      }
+
+      const response = {
+        items: filteredItems,
+        pagination: {
+          page,
+          perPage,
+          totalItems: filteredItems.length * (data.posts.pageInfo.hasNextPage ? 2 : 1), // Estimate total
+          totalPages: data.posts.pageInfo.hasNextPage ? page + 1 : page,
+          hasMore: data.posts.pageInfo.hasNextPage,
+        },
+        query,
+        filters: { sort, categories, tags, dateFrom, dateTo, fuzzy, fuzzyThreshold },
+        searchSource: "wordpress",
+      }
+
+      // Cache result
+      searchCache.set(cacheKey, {
+        data: response,
+        timestamp: Date.now(),
+        hits: 1,
+      })
+
+      return NextResponse.json(response, {
+        headers: {
+          "Content-Encoding": "gzip",
+          "Cache-Control": "public, max-age=300",
+        },
+      })
+    } catch (wpError) {
+      console.error("WordPress search error:", wpError)
+
+      // Use fallback data
+      const filteredResults = FALLBACK_POSTS.filter(
+        (item) =>
+          item.title.toLowerCase().includes(query.toLowerCase()) ||
+          item.excerpt.toLowerCase().includes(query.toLowerCase()),
+      )
+
+      const response = {
+        items: filteredResults,
+        pagination: {
+          page,
+          perPage,
+          totalItems: filteredResults.length,
+          totalPages: Math.ceil(filteredResults.length / perPage),
+          hasMore: page < Math.ceil(filteredResults.length / perPage),
+        },
+        query,
+        filters: { sort, categories, tags, dateFrom, dateTo, fuzzy, fuzzyThreshold },
+        searchSource: "fallback",
+      }
+
+      // Cache result
+      searchCache.set(cacheKey, {
+        data: response,
+        timestamp: Date.now(),
+        hits: 1,
+      })
+
+      return NextResponse.json(response, {
+        headers: {
+          "Content-Encoding": "gzip",
+          "Cache-Control": "public, max-age=300",
+        },
       })
     }
-
-    // Perform search
-    const { hits, nbPages } = await algoliaIndex.search(query, searchOptions)
-
-    // Transform Algolia hits to our SearchResult format
-    const results: SearchResult[] = hits.map((hit: any) => ({
-      id: hit.objectID,
-      title: hit.title || "",
-      excerpt: hit.excerpt || "",
-      slug: hit.slug || "",
-      date: hit.date || "",
-      featuredImage: hit.featuredImage || null,
-      categories: hit.categories || { nodes: [] },
-    }))
-
-    const response = {
-      results,
-      totalPages: nbPages,
-    }
-
-    // Cache result
-    searchCache.set(cacheKey, {
-      data: response,
-      timestamp: Date.now(),
-      hits: 1,
-    })
-
-    return NextResponse.json(response, {
-      headers: {
-        "Content-Encoding": "gzip",
-        "Cache-Control": "public, max-age=300", // Allow browser caching for 5 minutes
-      },
-    })
   } catch (error) {
     console.error("Search API error:", error)
 
@@ -254,6 +363,14 @@ export async function GET(request: NextRequest) {
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",
+        items: [],
+        pagination: {
+          page: 1,
+          perPage: 10,
+          totalItems: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
       },
       {
         status: error instanceof Error && error.name === "AbortError" ? 408 : 500,

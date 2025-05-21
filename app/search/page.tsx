@@ -1,19 +1,20 @@
-import { SearchResults } from "@/components/SearchResults"
-import { Suspense } from "react"
+import type { Metadata } from "next"
+import { SearchContent } from "@/components/SearchContent"
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Search - News on Africa",
-  description: "Search for news articles across Africa",
+  description: "Search for articles on News on Africa",
 }
 
-export default function SearchPage() {
+export default function SearchPage({
+  searchParams,
+}: {
+  searchParams: { query?: string }
+}) {
   return (
-    <main className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6 text-center">Search</h1>
-
-      <Suspense fallback={<div className="text-center p-8">Loading search...</div>}>
-        <SearchResults />
-      </Suspense>
-    </main>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Search</h1>
+      <SearchContent />
+    </div>
   )
 }

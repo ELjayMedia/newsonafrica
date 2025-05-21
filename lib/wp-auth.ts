@@ -1,10 +1,10 @@
+import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
-import crypto from "crypto"
 
 // Function to generate a WordPress authentication token
 export function generateWPAuthToken(userId: string, expiration: number): string {
   const key = WP_AUTH_CONFIG.AUTH_KEY + WP_AUTH_CONFIG.AUTH_SALT
-  const hash = crypto.createHmac("sha256", key).update(`${userId}|${expiration}`).digest("hex")
+  const hash = createHmac("sha256", key).update(`${userId}|${expiration}`).digest("hex")
 
   return `${userId}|${expiration}|${hash}`
 }

@@ -1,3 +1,6 @@
+/**
+ * Sport utilities for fetching sport-related posts
+ */
 import { cache } from "react"
 import { fetchCategoryPosts } from "./wordpress-api"
 import { client } from "./wordpress-api"
@@ -101,29 +104,30 @@ export const fetchSportPosts = cache(async (limit = 5) => {
   } catch (error) {
     console.error("Error fetching sport/sports posts:", error)
 
-    // Always fall back to individual category fetches
+    // Fallback to individual category fetches if the combined query fails
     try {
-      console.log("Falling back to individual category fetches for sports posts")
-      const [sportCategory, sportsCategory] = await Promise.allSettled([
-        fetchCategoryPosts("sport", limit),
-        fetchCategoryPosts("sports", limit),
-      ])
+      // Try "sport" category first
+      const sportCategory = await fetchCategoryPosts("sport", limit)
+      if (sportCategory && sportCategory.posts && sportCategory.posts.nodes && sportCategory.posts.nodes.length > 0) {
+        return sportCategory.posts.nodes.slice(0, limit)
+      }
 
-      const sportPosts = sportCategory.status === "fulfilled" ? sportCategory.value?.posts?.nodes || [] : []
-      const sportsPosts = sportsCategory.status === "fulfilled" ? sportsCategory.value?.posts?.nodes || [] : []
+      // If "sport" doesn't work, try "sports"
+      const sportsCategory = await fetchCategoryPosts("sports", limit)
+      if (
+        sportsCategory &&
+        sportsCategory.posts &&
+        sportsCategory.posts.nodes &&
+        sportsCategory.posts.nodes.length > 0
+      ) {
+        return sportsCategory.posts.nodes.slice(0, limit)
+      }
 
-      // Combine and deduplicate posts
-      const allPosts = [...sportPosts, ...sportsPosts]
-      const uniquePosts = Array.from(new Set(allPosts.map((post) => post?.id)))
-        .map((id) => allPosts.find((post) => post?.id === id))
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, limit)
-
-      return uniquePosts
+      // If neither works, return empty array
+      return []
     } catch (fallbackError) {
       console.error("Both GraphQL and fallback fetches failed:", fallbackError)
-      return [] // Return empty array as last resort
+      return []
     }
   }
 })

@@ -17,9 +17,10 @@ const nextConfig = {
       "i2.wp.com",
       "blob.v0.dev",
       "cdn-lfdfp.nitrocdn.com",
+      "via.placeholder.com",
     ],
     formats: ["image/avif", "image/webp"],
-    unoptimized: true,
+    unoptimized: process.env.NODE_ENV === "production",
   },
   async headers() {
     return [
@@ -58,7 +59,6 @@ const nextConfig = {
         ],
       },
       {
-        // Ensure all JS files are served with the correct MIME type
         source: "/(.*)\\.js$",
         headers: [
           {
@@ -77,10 +77,70 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
+        crypto: require.resolve("crypto-browserify"),
+        stream: require.resolve("stream-browserify"),
+        path: require.resolve("path-browserify"),
+        zlib: require.resolve("browserify-zlib"),
+        http: require.resolve("stream-http"),
+        https: require.resolve("https-browserify"),
+        os: require.resolve("os-browserify"),
       }
     }
 
+    // Handle React Native Web properly
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "react-native$": "react-native-web",
+    }
+
+    // Exclude problematic dependencies from server build
+    if (isServer) {
+      config.externals = [
+        ...(config.externals || []),
+        "react-native-web",
+        "@react-native-firebase/app",
+        "@react-native-firebase/analytics",
+      ]
+    }
+
+    // Optimize production builds
+    if (!process.env.NODE_ENV === "development") {
+      config.optimization = {
+        ...config.optimization,
+        minimize: true,
+        splitChunks: {
+          chunks: "all",
+          cacheGroups: {
+            defaultVendors: {
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      }
+    }
+
+    // Add source-map-loader for better debugging
+    config.module.rules.push({
+      test: /\.js$/,
+      enforce: "pre",
+      use: ["source-map-loader"],
+    })
+
     return config
+  },
+  experimental: {
+    largePageDataBytes: 128 * 100000, // Increase the limit for large page data
+    optimizeCss: true,
+    scrollRestoration: true,
+    serverActions: true,
+    serverComponentsExternalPackages: ["sharp", "react-dom/server", "react-server-dom-webpack/server"],
   },
 }
 

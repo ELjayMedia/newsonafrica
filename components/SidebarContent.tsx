@@ -10,12 +10,20 @@ import { useState, useEffect } from "react"
 import { AdSense } from "@/components/AdSense"
 import { AdErrorBoundary } from "./AdErrorBoundary"
 
-// Simulated function to get view counts (replace with actual API call in production)
+// Function to get view counts and filter for posts within the last 20 days
 const getViewCounts = (posts) => {
-  return posts.map((post) => ({
-    ...post,
-    viewCount: Math.floor(Math.random() * 1000), // Simulated view count
-  }))
+  const twentyDaysAgo = new Date()
+  twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20)
+
+  return posts
+    .filter((post) => {
+      const postDate = new Date(post.date)
+      return postDate >= twentyDaysAgo
+    })
+    .map((post) => ({
+      ...post,
+      viewCount: Math.floor(Math.random() * 1000), // Simulated view count
+    }))
 }
 
 export function SidebarContent() {
@@ -43,7 +51,7 @@ export function SidebarContent() {
       <div className="space-y-6">
         {/* Most Read Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
+          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read (Last 20 Days)</h2>
           <div className="space-y-4">
             {mostReadPosts.map((post, index) => (
               <Link key={post.id} href={`/post/${post.slug}`} className="flex items-start gap-3 group">

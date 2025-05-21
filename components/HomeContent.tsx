@@ -68,7 +68,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [sportPosts, setSportPosts] = useState<any[]>([])
-  const [sportPostsError, setSportPostsError] = useState<boolean>(false)
+  const [sportPostsError, setSportPostsError] = useState(false)
 
   // Listen for online/offline events
   useEffect(() => {
@@ -93,8 +93,6 @@ export function HomeContent({ initialData }: HomeContentProps) {
       } catch (error) {
         console.error("Error fetching sport/sports posts:", error)
         setSportPostsError(true)
-        // Don't set sport posts to empty array if there was an error
-        // This way we keep any previously fetched posts
       }
     }
 
@@ -176,7 +174,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
         <p>We're experiencing technical difficulties. Please try again later.</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="mt-4 px-4 py-2 bg-green-500 text-black rounded hover:bg-green-600"
         >
           Refresh Page
         </button>

@@ -2,6 +2,7 @@
  * Search utilities for WordPress GraphQL/REST API
  */
 import Fuse from "fuse.js"
+import { FALLBACK_POSTS } from "./mock-data"
 
 // Types for search
 export interface SearchFilters {
@@ -48,7 +49,7 @@ export interface SearchResponse {
   pagination: SearchPagination
   query: string
   filters: SearchFilters
-  searchSource?: "graphql" | "rest" | "fuzzy"
+  searchSource?: "wordpress" | "rest" | "fuzzy" | "fallback"
 }
 
 export interface SearchError {
@@ -67,6 +68,16 @@ const allItemsCache = new Map<
 >()
 
 const ALL_ITEMS_CACHE_TTL = 30 * 60 * 1000 // 30 minutes cache TTL for all items
+
+// Cache for search results to avoid unnecessary API calls
+const searchCache = new Map<
+  string,
+  {
+    timestamp: number
+    data: SearchResponse
+  }
+>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Types for search parameters
 interface SearchParams {
@@ -187,6 +198,23 @@ export async function performSearch(
   signal?: AbortSignal,
 ): Promise<SearchResponse | SearchError> {
   try {
+    // Don't search if query is empty or too short
+    if (!query || query.trim().length < 2) {
+      return {
+        items: [],
+        pagination: {
+          page,
+          perPage: 10,
+          totalItems: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+        query,
+        filters,
+        searchSource: "fallback",
+      }
+    }
+
     // If fuzzy search is enabled, try to use client-side fuzzy search first
     if (filters.fuzzy && query.length >= 2) {
       const fuzzyResults = await performFuzzySearch(query, page, filters, signal)
@@ -244,6 +272,12 @@ export async function performSearch(
 
     // Handle other errors
     if (!response.ok) {
+      // If API fails, try to use fallback fuzzy search
+      const fallbackResults = await performFallbackSearch(query, page, filters)
+      if (fallbackResults) {
+        return fallbackResults
+      }
+
       throw new Error(`Search failed with status: ${response.status}`)
     }
 
@@ -275,6 +309,17 @@ export async function performSearch(
     }
 
     console.error("Search error:", error)
+
+    // Try fallback search as last resort
+    try {
+      const fallbackResults = await performFallbackSearch(query, page, filters)
+      if (fallbackResults) {
+        return fallbackResults
+      }
+    } catch (fallbackError) {
+      console.error("Fallback search failed:", fallbackError)
+    }
+
     return {
       error: "Search failed",
       message: error instanceof Error ? error.message : "An unknown error occurred",
@@ -377,6 +422,116 @@ async function performFuzzySearch(
   }
 }
 
+/**
+ * Fallback search function that uses mock data or previously cached results
+ * This is used when both the API and fuzzy search fail
+ */
+async function performFallbackSearch(
+  query: string,
+  page = 1,
+  filters: SearchFilters = {},
+): Promise<SearchResponse | null> {
+  // First try to use any cached search results
+  for (const [key, entry] of searchCache.entries()) {
+    try {
+      const cachedParams = JSON.parse(key)
+      // If we have any cached results for a similar query, use them
+      if (cachedParams.query && cachedParams.query.includes(query.substring(0, 3))) {
+        console.log("Using cached search results as fallback")
+        return entry.data
+      }
+    } catch (e) {
+      continue
+    }
+  }
+
+  // If no cached results, use any cached items for fuzzy search
+  for (const [key, entry] of allItemsCache.entries()) {
+    if (entry.items && entry.items.length > 0) {
+      // Configure Fuse.js options
+      const fuseOptions = {
+        includeScore: true,
+        threshold: 0.5, // More lenient threshold for fallback
+        keys: [
+          { name: "title", weight: 0.7 },
+          { name: "excerpt", weight: 0.3 },
+        ],
+      }
+
+      // Create a new Fuse instance with our cached items
+      const fuse = new Fuse(entry.items, fuseOptions)
+
+      // Perform the fuzzy search
+      const fuseResults = fuse.search(query)
+      const filteredResults = fuseResults.map((result) => result.item)
+
+      // Calculate pagination
+      const perPage = 10
+      const totalItems = filteredResults.length
+      const totalPages = Math.ceil(totalItems / perPage)
+      const startIndex = (page - 1) * perPage
+      const endIndex = startIndex + perPage
+      const paginatedResults = filteredResults.slice(startIndex, endIndex)
+
+      console.log("Using fuzzy fallback search with cached items")
+
+      // Return the search response
+      return {
+        items: paginatedResults,
+        pagination: {
+          page,
+          perPage,
+          totalItems,
+          totalPages,
+          hasMore: page < totalPages,
+        },
+        query,
+        filters,
+        searchSource: "fallback",
+      }
+    }
+  }
+
+  // If all else fails, use the mock data
+  const fuseOptions = {
+    includeScore: true,
+    threshold: 0.5, // More lenient threshold for fallback
+    keys: [
+      { name: "title", weight: 0.7 },
+      { name: "excerpt", weight: 0.3 },
+    ],
+  }
+
+  const fuse = new Fuse(FALLBACK_POSTS, fuseOptions)
+  const fuseResults = fuse.search(query)
+  const filteredResults = fuseResults.map((result) => result.item)
+
+  // Calculate pagination
+  const perPage = 10
+  const totalItems = filteredResults.length
+  const totalPages = Math.ceil(totalItems / perPage)
+  const startIndex = (page - 1) * perPage
+  const endIndex = startIndex + perPage
+  const paginatedResults = filteredResults.slice(startIndex, endIndex)
+
+  console.log("Using mock data fallback search")
+
+  // Return the search response
+  return {
+    items: paginatedResults,
+    pagination: {
+      page,
+      perPage,
+      totalItems,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+    query,
+    filters,
+    searchSource: "fallback",
+  }
+}
+
 // Add a function to clear the cache when needed
 export function clearSearchCache() {
   searchCache.clear()
@@ -454,6 +609,8 @@ export function createDebouncedSearch(delay = 300) {
 
 // Function to format search excerpt by removing HTML tags
 export function formatExcerpt(excerpt: string): string {
+  if (!excerpt) return ""
+
   // Remove HTML tags
   const text = excerpt.replace(/<\/?[^>]+(>|$)/g, "")
 
@@ -487,86 +644,4 @@ export function highlightSearchTerms(text: string, query: string): string {
 
   // Replace matches with highlighted version
   return text.replace(pattern, "<mark>$1</mark>")
-}
-
-// Cache for search results to avoid unnecessary API calls
-const searchCache = new Map<string, { results: SearchItem[]; timestamp: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
-// Function to generate a cache key based on search parameters
-const getCacheKey = (params: SearchParams): string => {
-  return `${params.query}_${params.page || 1}_${params.perPage || 10}_${params.fuzzySearch ? "fuzzy" : "exact"}_${params.fuzzyThreshold || 0.3}`
-}
-
-// Function to check if cached results are still valid
-const isCacheValid = (timestamp: number): boolean => {
-  return Date.now() - timestamp < CACHE_TTL
-}
-
-// Function to perform client-side fuzzy search
-const performFuzzySearchClientSide = (data: SearchItem[], query: string, threshold = 0.3): SearchItem[] => {
-  const options = {
-    keys: ["title", "excerpt"],
-    includeScore: true,
-    threshold: threshold,
-  }
-
-  const fuse = new Fuse(data, options)
-  const results = fuse.search(query)
-
-  return results.map((result) => result.item)
-}
-
-// Main search function
-export const searchMain = async (params: SearchParams): Promise<{ results: SearchItem[]; totalPages: number }> => {
-  const { query, page = 1, perPage = 10, fuzzySearch = false, fuzzyThreshold = 0.3 } = params
-
-  // Return empty results for empty queries
-  if (!query.trim()) {
-    return { results: [], totalPages: 0 }
-  }
-
-  const cacheKey = getCacheKey(params)
-  const cachedData = searchCache.get(cacheKey)
-
-  if (cachedData && isCacheValid(cachedData.timestamp)) {
-    return { results: cachedData.results, totalPages: Math.ceil(cachedData.results.length / perPage) }
-  }
-
-  try {
-    // If fuzzy search is enabled, we need to fetch more results to filter client-side
-    const fetchPerPage = fuzzySearch ? perPage * 3 : perPage
-
-    const response = await fetch(
-      `/api/search?query=${encodeURIComponent(query)}&page=${page}&perPage=${fetchPerPage}&fuzzy=${fuzzySearch}`,
-    )
-
-    if (!response.ok) {
-      throw new Error("Search request failed")
-    }
-
-    const data = await response.json()
-    let results = data.results
-
-    // Apply client-side fuzzy search if enabled
-    if (fuzzySearch && results.length > 0) {
-      results = performFuzzySearchClientSide(results, query, fuzzyThreshold)
-    }
-
-    // Cache the results
-    searchCache.set(cacheKey, { results, timestamp: Date.now() })
-
-    return {
-      results: results.slice(0, perPage),
-      totalPages: Math.ceil(results.length / perPage),
-    }
-  } catch (error) {
-    console.error("Search error:", error)
-    return { results: [], totalPages: 0 }
-  }
-}
-
-// Function to clear search cache
-export const clearSearchCacheMain = (): void => {
-  searchCache.clear()
 }
