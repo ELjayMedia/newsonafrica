@@ -12,6 +12,10 @@
     {
       "path": "/api/revalidate-sitemaps",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/algolia/reindex",
+      "schedule": "0 */6 * * *"
     }
   ],
   "headers": [

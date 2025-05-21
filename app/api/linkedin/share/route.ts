@@ -12,38 +12,61 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, url, summary, imageUrl } = body
 
-    // Create the share content
+    // First, verify the token is still valid
+    const profileResponse = await fetch("https://api.linkedin.com/v2/me", {
+      headers: {
+        Authorization: `Bearer ${linkedInToken}`,
+      },
+    })
+
+    if (!profileResponse.ok) {
+      // Token is invalid or expired
+      return NextResponse.json({ error: "LinkedIn token expired or invalid" }, { status: 401 })
+    }
+
+    // Create the share content using the UGC API (newer API)
     const shareContent = {
-      owner: "urn:li:person:me",
-      subject: title,
-      text: {
-        text: summary,
-      },
-      content: {
-        contentEntities: [
-          {
-            entityLocation: url,
-            thumbnails: imageUrl ? [{ resolvedUrl: imageUrl }] : undefined,
+      author: `urn:li:person:${(await profileResponse.json()).id}`,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: summary || title,
           },
-        ],
-        title,
+          shareMediaCategory: "ARTICLE",
+          media: [
+            {
+              status: "READY",
+              description: {
+                text: summary || title,
+              },
+              originalUrl: url,
+              title: {
+                text: title,
+              },
+              thumbnails: imageUrl ? [{ url: imageUrl }] : undefined,
+            },
+          ],
+        },
       },
-      distribution: {
-        linkedInDistributionTarget: {},
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
       },
     }
 
-    // Post to LinkedIn API
-    const shareResponse = await fetch("https://api.linkedin.com/v2/shares", {
+    // Post to LinkedIn UGC API
+    const shareResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${linkedInToken}`,
         "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
       },
       body: JSON.stringify(shareContent),
     })
 
     if (!shareResponse.ok) {
+      console.error("LinkedIn API error:", await shareResponse.text())
       throw new Error("Failed to share content on LinkedIn")
     }
 

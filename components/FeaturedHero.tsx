@@ -37,40 +37,48 @@ const getTimeAgo = (date: string) => {
 }
 
 export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroProps) {
-  const timeAgo = useMemo(() => (post ? getTimeAgo(post.date) : ""), [post?.date])
+  const timeAgo = useMemo(() => (post ? getTimeAgo(post.date) : ""), [post?.date ?? ""])
   const blurDataURL = useMemo(() => generateBlurDataURL(700, 475), [])
 
   if (!post) return null
 
+  // Ensure title is a string (handle potential HTML entities)
+  const title = typeof post.title === "string" ? post.title : post.title?.rendered || "Untitled"
+
+  // Ensure excerpt is a string
+  const excerpt = typeof post.excerpt === "string" ? post.excerpt : post.excerpt?.rendered || ""
+
+  // Get featured image URL
+  const imageUrl =
+    post.featuredImage?.node?.sourceUrl || post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/placeholder.svg"
+
   return (
     <Link href={`/post/${post.slug}`} className="block group">
       <div className="flex flex-col md:flex-row gap-4 items-start">
-        {post.featuredImage && (
-          <div className="w-full md:w-3/5 aspect-[16/9] relative overflow-hidden rounded-md">
-            <Image
-              src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-              alt={post.title}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-md transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              priority={true}
-              placeholder="blur"
-              blurDataURL={blurDataURL}
-            />
-          </div>
-        )}
+        <div className="w-full md:w-3/5 aspect-[16/9] relative overflow-hidden rounded-md">
+          <Image
+            src={imageUrl || "/placeholder.svg"}
+            alt={title}
+            layout="fill"
+            objectFit="cover"
+            className="rounded-md transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={true}
+            placeholder="blur"
+            blurDataURL={blurDataURL}
+          />
+        </div>
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="h-3 w-3" />
             <span>{timeAgo}</span>
           </div>
           <h1 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-blue-600 transition-colors duration-200">
-            {post.title}
+            {title}
           </h1>
           <div
             className="text-gray-600 line-clamp-3 text-sm font-light"
-            dangerouslySetInnerHTML={{ __html: post.excerpt || "" }}
+            dangerouslySetInnerHTML={{ __html: excerpt }}
           />
         </div>
       </div>

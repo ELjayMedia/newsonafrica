@@ -48,6 +48,14 @@ export async function POST(request: Request) {
       revalidatePath("/api/sitemap.xml")
       revalidatePath("/api/news-sitemap.xml")
 
+      try {
+        // Revalidate sitemaps
+        await fetch(`${process.env.SITE_URL}/api/revalidate-sitemaps?secret=${process.env.REVALIDATION_SECRET}`)
+        console.log("Sitemaps revalidation triggered")
+      } catch (error) {
+        console.error("Failed to trigger sitemap revalidation:", error)
+      }
+
       return NextResponse.json({
         revalidated: true,
         message: `Revalidated post: ${post.slug}`,

@@ -1,10 +1,10 @@
-"\"use client"
+"use client"
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-export default function ClientRedirect() {
+export function ClientRedirect() {
   const router = useRouter()
 
   useEffect(() => {
@@ -24,3 +24,6 @@ export default function ClientRedirect() {
     </div>
   )
 }
+
+// Add default export that points to the named export
+export default ClientRedirect

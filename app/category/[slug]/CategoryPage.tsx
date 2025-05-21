@@ -4,17 +4,20 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
-import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { CategoryAd } from "@/components/CategoryAd"
-import { HorizontalCard } from "@/components/HorizontalCard"
 import { useEffect } from "react"
 import { useInView } from "react-intersection-observer"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getBreadcrumbSchema, getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
+import Link from "next/link"
+import Image from "next/image"
+import { Clock } from "lucide-react"
+import { formatDate } from "@/lib/utils"
+import { generateBlurDataURL } from "@/utils/lazyLoad"
 
-export default function CategoryPage({ slug, initialData }: { slug: string; initialData: any }) {
+export function CategoryPage({ slug, initialData }: { slug: string; initialData: any }) {
   const { ref, inView } = useInView()
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
@@ -75,21 +78,55 @@ export default function CategoryPage({ slug, initialData }: { slug: string; init
         <h2 className="text-xl font-bold mt-12 mb-6">More from {category.name}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {morePosts.map((post) => (
-            <HorizontalCard key={post.id} post={post} />
+            <Link
+              key={post.id}
+              href={`/post/${post.slug}`}
+              className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
+            >
+              <div className="flex-grow py-3 px-4 flex flex-col justify-center">
+                <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200">
+                  {post.title}
+                </h3>
+                <div className="flex items-center text-gray-500 text-xs mt-2">
+                  <Clock className="h-3 w-3 mr-1" />
+                  <time dateTime={post.date}>{formatDate(post.date)}</time>
+                </div>
+              </div>
+              {post.featuredImage && (
+                <div className="relative w-[84px] h-[84px] flex-shrink-0 overflow-hidden rounded-lg self-center my-2 mr-3">
+                  <Image
+                    src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                    alt={post.title}
+                    fill
+                    sizes="84px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    placeholder="blur"
+                    blurDataURL={generateBlurDataURL(84, 84)}
+                  />
+                </div>
+              )}
+            </Link>
           ))}
         </div>
 
-        <div ref={ref} className="flex justify-center mt-8">
-          {isFetchingNextPage ? (
-            <p className="text-gray-600">Loading more posts...</p>
-          ) : hasNextPage ? (
-            <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-              Load More
-            </Button>
-          ) : (
-            <p className="text-gray-600">No more posts to load</p>
-          )}
-        </div>
+        {/* Infinite scroll loading indicator */}
+        {isFetchingNextPage && (
+          <div className="col-span-full flex justify-center py-4">
+            <div className="animate-pulse flex space-x-4">
+              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+            </div>
+          </div>
+        )}
+
+        {/* Invisible sentinel element for infinite scroll */}
+        {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
+
+        {/* End of content message */}
+        {!hasNextPage && !isFetchingNextPage && morePosts.length > 0 && (
+          <p className="text-center text-gray-600 mt-8">You've reached the end of the content</p>
+        )}
       </div>
     </ErrorBoundary>
   )

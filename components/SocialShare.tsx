@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { Facebook, Twitter, Mail, LinkIcon, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LinkedInShare } from "./LinkedInShare"
+import { useToast } from "@/hooks/use-toast"
 
 interface SocialShareProps {
   url: string
@@ -17,6 +18,7 @@ interface SocialShareProps {
 export function SocialShare({ url, title, description, className = "" }: SocialShareProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -35,7 +37,11 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(url).then(() => {
-      alert("Link copied to clipboard!")
+      toast({
+        title: "Link copied",
+        description: "Link copied to clipboard",
+        variant: "default",
+      })
     })
   }
 
@@ -57,7 +63,12 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     icon,
     label,
   }) => (
-    <Button variant="outline" size="icon" onClick={onClick} className="rounded-full p-2" aria-label={label}>
+    <Button
+      variant="outline"
+      onClick={onClick}
+      className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
+      aria-label={label}
+    >
       {icon}
     </Button>
   )
@@ -66,15 +77,34 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     <>
       <ShareButton
         onClick={() => window.open(shareLinks.facebook, "_blank")}
-        icon={<Facebook className="h-4 w-4" />}
+        icon={<Facebook className="h-5 w-5" />}
         label="Share on Facebook"
       />
-      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-4 w-4" />} label="Share on X (Twitter)" />
-      <LinkedInShare url={url} title={title} />
-      <ShareButton onClick={shareByEmail} icon={<Mail className="h-4 w-4" />} label="Share by Email" />
-      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-4 w-4" />} label="Copy link" />
+      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-5 w-5" />} label="Share on X (Twitter)" />
+      <LinkedInShare url={url} title={title} summary={description} iconOnly />
+      <ShareButton onClick={shareByEmail} icon={<Mail className="h-5 w-5" />} label="Share by Email" />
+      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-5 w-5" />} label="Copy link" />
     </>
   )
+
+  // Try to use native share API on mobile if available
+  const handleNativeShare = async () => {
+    if (navigator.share && !navigator.userAgent.includes("Firefox")) {
+      try {
+        await navigator.share({
+          title,
+          text: description,
+          url,
+        })
+      } catch (err) {
+        // If native share fails or is cancelled, show our custom share options
+        setShowOptions(true)
+      }
+    } else {
+      // If native share is not available, show our custom share options
+      setShowOptions(true)
+    }
+  }
 
   return (
     <div className={`relative ${className}`}>
@@ -82,15 +112,14 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
         <>
           <Button
             variant="outline"
-            size="icon"
-            onClick={toggleShareOptions}
-            className="rounded-full p-2"
+            onClick={handleNativeShare}
+            className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
             aria-label="Share"
           >
             <Share2 className="h-4 w-4" />
           </Button>
           {showOptions && (
-            <div className="absolute top-full left-0 mt-2 bg-white shadow-md rounded-md p-2 flex flex-col gap-2 z-50">
+            <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 shadow-md rounded-md p-2 flex flex-col gap-2 z-50">
               <ShareOptions />
             </div>
           )}

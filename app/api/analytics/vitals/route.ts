@@ -27,34 +27,35 @@ export async function POST(request: Request) {
     }
 
     // Validate the data
-    if (!body.name || typeof body.value !== "number") {
+    if (!body.event_name || !body.value) {
       console.warn("Invalid metric data:", body)
       return NextResponse.json({ error: "Invalid metric data" }, { status: 400 })
     }
 
-    // In a real implementation, you would store this data in a database
-    // For now, we'll just log it in development
-    if (process.env.NODE_ENV === "development") {
-      console.log("Received web vital:", body)
-    }
+    // Send to Vercel Analytics
+    const analyticsEndpoint = "https://vitals.vercel-analytics.com/v1/vitals"
 
-    // Simulate storing data (replace with actual database logic)
     try {
-      // Simulate a database operation that might fail
-      // await new Promise((_, reject) => setTimeout(() => reject(new Error("Simulated database error")), 500));
+      const analyticsResponse = await fetch(analyticsEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
 
-      // If the above line is commented out, this will always succeed
-      console.log("Successfully processed web vital:", body)
-    } catch (dbError: any) {
-      console.error("Database error:", dbError)
-      return NextResponse.json({ error: "Failed to store metric data", details: dbError.message }, { status: 500 })
+      if (!analyticsResponse.ok) {
+        throw new Error(`Analytics API responded with ${analyticsResponse.status}`)
+      }
+    } catch (error: any) {
+      console.error("Failed to send to Vercel Analytics:", error)
+      // Don't fail the request if analytics fails
     }
 
     // Return success
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("Error processing analytics:", error)
-
     return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 })
   }
 }

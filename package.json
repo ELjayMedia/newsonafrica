@@ -10,7 +10,12 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@ai-sdk/openai": "latest",
+=======
+    "@apollo/server": "latest",
+    "@as-integrations/next": "latest",
+>>>>>>> refs/remotes/origin/main
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -20,9 +25,9 @@
     "@radix-ui/react-collapsible": "1.1.2",
     "@radix-ui/react-context-menu": "2.2.4",
     "@radix-ui/react-dialog": "1.1.4",
-    "@radix-ui/react-dropdown-menu": "2.1.4",
+    "@radix-ui/react-dropdown-menu": "latest",
     "@radix-ui/react-hover-card": "1.1.4",
-    "@radix-ui/react-label": "2.1.1",
+    "@radix-ui/react-label": "latest",
     "@radix-ui/react-menubar": "1.1.4",
     "@radix-ui/react-navigation-menu": "1.2.3",
     "@radix-ui/react-popover": "1.1.4",
@@ -31,9 +36,9 @@
     "@radix-ui/react-scroll-area": "1.2.2",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "1.1.1",
-    "@radix-ui/react-slider": "1.2.2",
+    "@radix-ui/react-slider": "latest",
     "@radix-ui/react-slot": "latest",
-    "@radix-ui/react-switch": "1.1.2",
+    "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "1.2.4",
     "@radix-ui/react-toggle": "1.1.1",
@@ -43,6 +48,10 @@
     "@react-native-firebase/app": "latest",
     "@remix-run/react": "latest",
     "@supabase/auth-helpers-nextjs": "latest",
+<<<<<<< HEAD
+=======
+    "@supabase/postgrest-js": "latest",
+>>>>>>> refs/remotes/origin/main
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@sveltejs/kit": "latest",
@@ -50,12 +59,17 @@
     "@tanstack/react-query": "latest",
     "@vercel/analytics": "latest",
     "@vercel/speed-insights": "latest",
+<<<<<<< HEAD
     "ai": "latest",
+=======
+    "algoliasearch": "latest",
+>>>>>>> refs/remotes/origin/main
     "autoprefixer": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "crypto": "latest",
+<<<<<<< HEAD
     "crypto-browserify": "^3.12.1",
     "csrf": "latest",
     "cssnano": "latest",
@@ -90,6 +104,20 @@
     "fs": "latest",
     "graphql": "latest",
     "graphql-request": "latest",
+=======
+    "csrf": "latest",
+    "cssnano": "latest",
+    "dataloader": "latest",
+    "date-fns": "latest",
+    "embla-carousel-react": "8.5.1",
+    "expo": "latest",
+    "firebase": "latest",
+    "fs": "latest",
+    "fuse.js": "latest",
+    "graphql": "latest",
+    "graphql-request": "latest",
+    "graphql-tag": "latest",
+>>>>>>> refs/remotes/origin/main
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",
     "imagemin-pngquant": "latest",
@@ -100,7 +128,10 @@
     "next": "15.2.4",
     "next-themes": "^0.4.4",
     "path": "latest",
+<<<<<<< HEAD
     "postcss": "latest",
+=======
+>>>>>>> refs/remotes/origin/main
     "react": "^19",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",
@@ -111,6 +142,10 @@
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
     "svelte": "latest",
+<<<<<<< HEAD
+=======
+    "swr": "latest",
+>>>>>>> refs/remotes/origin/main
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "util": "latest",
@@ -119,7 +154,11 @@
     "vue": "latest",
     "vue-router": "latest",
     "web-vitals": "latest",
+<<<<<<< HEAD
     "zod": "^3.24.1"
+=======
+    "zod": "latest"
+>>>>>>> refs/remotes/origin/main
   },
   "devDependencies": {
     "@types/node": "^22",

@@ -1,14 +1,14 @@
 import AuthPageClient from "./AuthPageClient"
 
 export const metadata = {
-  title: "Authentication - News On Africa",
-  description: "Sign in or create an account on News On Africa",
+  title: "Sign In - News on Africa",
+  description: "Sign in or create an account to access personalized features on News on Africa",
 }
 
 export default function AuthPage({
   searchParams,
 }: {
-  searchParams: { redirectTo?: string }
+  searchParams: { redirectTo?: string; error?: string }
 }) {
   return <AuthPageClient searchParams={searchParams} />
 }

@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle, Bold, Italic, LinkIcon, Code } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Toggle } from "@/components/ui/toggle"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 interface CommentFormProps {
   postId: string
@@ -30,17 +33,13 @@ export function CommentForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [remainingTime, setRemainingTime] = useState(0)
+  const [isRichText, setIsRichText] = useState(false)
+  const [activeTab, setActiveTab] = useState<"write" | "preview">("write")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { user, profile } = useUser()
   const { toast } = useToast()
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Focus the textarea when the component mounts
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus()
-    }
-  }, [])
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -110,6 +109,7 @@ export function CommentForm({
         user_id: user.id,
         content: content.trim(),
         parent_id: parentId,
+        is_rich_text: isRichText,
       }
 
       // Create an optimistic version of the comment for immediate UI update
@@ -127,6 +127,7 @@ export function CommentForm({
 
       // Reset form
       setContent("")
+      setActiveTab("write")
 
       // Actually submit to the server
       await addComment(commentData)
@@ -161,16 +162,70 @@ export function CommentForm({
     }
   }
 
+  const insertMarkdown = (prefix: string, suffix = "") => {
+    if (!textareaRef.current) return
+
+    const textarea = textareaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+
+    // If text is selected, wrap it with markdown
+    // If no text is selected, insert markdown with cursor in the middle
+    const newText = selectedText
+      ? content.substring(0, start) + prefix + selectedText + suffix + content.substring(end)
+      : content.substring(0, start) + prefix + suffix + content.substring(end)
+
+    setContent(newText)
+
+    // Set cursor position
+    setTimeout(() => {
+      textarea.focus()
+      if (selectedText) {
+        textarea.setSelectionRange(start + prefix.length, end + prefix.length)
+      } else {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length)
+      }
+    }, 0)
+  }
+
+  const renderPreview = () => {
+    if (!content.trim()) {
+      return <p className="text-gray-400 italic">Nothing to preview</p>
+    }
+
+    if (!isRichText) {
+      return <div className="whitespace-pre-wrap">{content}</div>
+    }
+
+    // Simple markdown rendering for preview
+    const html = content
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      // Links
+      .replace(/\[([^\]]+)\]$$([^)]+)$$/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>')
+      // Code
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
+      // Line breaks
+      .replace(/\n/g, "<br />")
+
+    return <div dangerouslySetInnerHTML={{ __html: html }} />
+  }
+
   if (!user) {
     return (
-      <div className="bg-gray-50 p-4 rounded-md text-center">
-        <p className="text-gray-600">
-          Please{" "}
-          <Link href="/auth?redirectTo=back" className="text-blue-600 hover:underline font-medium">
-            sign in
-          </Link>{" "}
-          to leave a comment.
-        </p>
+      <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg shadow-sm text-center">
+        <h4 className="font-semibold mb-2">Join the conversation</h4>
+        <p className="text-gray-600 mb-4">Sign in to share your thoughts on this article.</p>
+        <Button asChild>
+          <Link
+            href={`/auth?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}#comments`}
+          >
+            Sign in to comment
+          </Link>
+        </Button>
       </div>
     )
   }
@@ -184,20 +239,92 @@ export function CommentForm({
         </Alert>
       )}
 
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={placeholder}
-          required
-          disabled={isSubmitting || remainingTime > 0}
-          className="min-h-[100px] resize-y pr-16"
-          aria-label="Comment text"
-          maxLength={2000}
-        />
-        <div className="absolute bottom-2 right-2 text-xs text-gray-400">{content.length}/2000</div>
-      </div>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "write" | "preview")} className="w-full">
+        <div className="flex items-center justify-between mb-2">
+          <TabsList>
+            <TabsTrigger value="write">Write</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center space-x-1">
+            <Toggle
+              size="sm"
+              pressed={isRichText}
+              onPressedChange={setIsRichText}
+              aria-label="Toggle rich text"
+              className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600"
+            >
+              Rich Text
+            </Toggle>
+          </div>
+        </div>
+
+        <TabsContent value="write" className="mt-0">
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={placeholder}
+              required
+              disabled={isSubmitting || remainingTime > 0}
+              className="min-h-[100px] resize-y pr-16"
+              aria-label="Comment text"
+              maxLength={2000}
+            />
+            <div className="absolute bottom-2 right-2 text-xs text-gray-400">{content.length}/2000</div>
+          </div>
+
+          {isRichText && (
+            <div className="flex items-center space-x-1 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => insertMarkdown("**", "**")}
+                title="Bold"
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => insertMarkdown("*", "*")}
+                title="Italic"
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => insertMarkdown("[", "](https://)")}
+                title="Link"
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => insertMarkdown("`", "`")}
+                title="Code"
+              >
+                <Code className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="preview" className="mt-0">
+          <div className="min-h-[100px] p-3 border rounded-md bg-gray-50">{renderPreview()}</div>
+        </TabsContent>
+      </Tabs>
 
       <div className="flex justify-end space-x-2">
         {onCancel && (

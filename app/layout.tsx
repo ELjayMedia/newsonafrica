@@ -5,9 +5,8 @@ import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
 import { HeaderSkeleton } from "@/components/HeaderSkeleton"
-import { ClientBottomNavigation } from "@/components/client-bottom-navigation"
+import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
-import { Footer } from "@/components/Footer"
 import { TopBannerAd } from "@/components/TopBannerAd"
 import { BelowHeaderAd } from "@/components/BelowHeaderAd"
 import { FooterBannerAd } from "@/components/FooterBannerAd"
@@ -16,9 +15,12 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration"
 import NetworkStatus from "@/components/NetworkStatus"
-import WebVitals from "@/components/WebVitals"
+import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
+import { UserProvider } from "@/contexts/UserContext"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
+import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 
 import "./globals.css"
 
@@ -26,15 +28,15 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "News On Africa",
-  description: "Where the Continent Connects",
+  description: "Your trusted source for news across Africa",
     generator: 'v0.dev'
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
@@ -47,59 +49,63 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/placeholder.svg" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className="flex flex-col min-h-screen bg-gray-100">
-        <ClientWrapper>
-          <ScrollToTop />
-          <ServiceWorkerRegistration />
-          <WebVitals />
-          <TopBar />
-          <div className="flex-grow">
-            <div className="mx-auto max-w-full md:max-w-[980px]">
-              <TopBannerAd />
-              <Suspense fallback={<HeaderSkeleton />}>
-                <Header />
-              </Suspense>
-              <BelowHeaderAd />
-              <div className="mt-4 md:mt-6">
-                <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
-                  <Suspense
-                    fallback={
-                      <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
-                        <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
-                        <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
-                        <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
-                      </div>
-                    }
-                  >
-                    <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                      <div className="p-4 w-full md:w-auto">{children}</div>
-                    </main>
+      <body className={inter.className}>
+        <ThemeProvider attribute="class" defaultTheme="light">
+          <UserProvider>
+            <ClientWrapper>
+              <ScrollToTop />
+              <ClientDynamicComponents />
+              <TopBar />
+              <div className="flex-grow">
+                <div className="mx-auto max-w-full md:max-w-[980px]">
+                  <TopBannerAd />
+                  <Suspense fallback={<HeaderSkeleton />}>
+                    <Header />
                   </Suspense>
-                  <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
-                    <Sidebar />
-                  </aside>
+                  <BelowHeaderAd />
+                  <div className="mt-4 md:mt-6">
+                    <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
+                      <Suspense
+                        fallback={
+                          <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
+                            <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
+                            <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
+                            <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
+                          </div>
+                        }
+                      >
+                        <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                          <div className="p-4 w-full md:w-auto">{children}</div>
+                        </main>
+                      </Suspense>
+                      <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
+                        <Sidebar />
+                      </aside>
+                    </div>
+                  </div>
+                  <FooterBannerAd />
                 </div>
               </div>
-              <FooterBannerAd />
-            </div>
-          </div>
-          <ClientBottomNavigation />
-          <Footer />
-          <div className="text-center text-sm text-gray-500 mt-4">
-            <Link href="/privacy-policy" className="hover:underline">
-              Privacy Policy
-            </Link>
-            {" | "}
-            <Link href="/terms-of-service" className="hover:underline">
-              Terms of Service
-            </Link>
-            {" | "}
-            <Link href="/sitemap.xml" className="hover:underline">
-              Sitemap
-            </Link>
-          </div>
-          <NetworkStatus />
-        </ClientWrapper>
+              <BottomNavigation />
+              <div className="text-center text-sm text-gray-500 mt-4 mb-2">
+                <Link href="/privacy-policy" className="hover:underline">
+                  Privacy Policy
+                </Link>
+                {" | "}
+                <Link href="/terms-of-service" className="hover:underline">
+                  Terms of Service
+                </Link>
+                {" | "}
+                <Link href="/sitemap.xml" className="hover:underline">
+                  Sitemap
+                </Link>
+              </div>
+              <NetworkStatus />
+              <Toaster />
+              <NetworkStatusHandler />
+            </ClientWrapper>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

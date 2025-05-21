@@ -1,13 +1,27 @@
-import { InteractiveLink } from "@/components/InteractiveLink"
+import { Suspense } from "react"
+import Link from "next/link"
+import ReturnLink from "./ReturnLink"
 
 export function NotFoundContent() {
   return (
-    <div className="container mx-auto px-4 py-16 text-center">
-      <h2 className="text-3xl font-bold mb-4">404 - Page Not Found</h2>
-      <p className="mb-8">Sorry, we couldn't find the page you're looking for.</p>
-      <InteractiveLink href="/" className="text-blue-600 hover:underline">
-        Return to Homepage
-      </InteractiveLink>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 py-16 text-center">
+      <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
+      <h2 className="text-2xl font-semibold text-gray-700 mb-6">Page Not Found</h2>
+      <p className="text-gray-600 mb-8 max-w-md">
+        The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+      </p>
+      <Suspense
+        fallback={
+          <Link
+            href="/"
+            className="px-6 py-3 bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-colors"
+          >
+            Return to Homepage
+          </Link>
+        }
+      >
+        <ReturnLink />
+      </Suspense>
     </div>
   )
 }

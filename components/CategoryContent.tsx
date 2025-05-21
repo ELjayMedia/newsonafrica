@@ -3,12 +3,12 @@
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
-import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import { useEffect } from "react"
 import { HorizontalCard } from "./HorizontalCard"
 import { CategoryAd } from "@/components/CategoryAd"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
+import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
 
 export function CategoryContent({ slug }: { slug: string }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useInfiniteQuery({
@@ -18,11 +18,13 @@ export function CategoryContent({ slug }: { slug: string }) {
     onError: (error) => {
       console.error("Error fetching category posts:", error)
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
   const { ref, inView } = useInView({
     threshold: 0,
-    triggerOnce: true,
+    triggerOnce: false,
+    rootMargin: "200px 0px",
   })
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function CategoryContent({ slug }: { slug: string }) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  if (isLoading) return <NewsGridSkeleton />
+  if (isLoading) return <CategoryPageSkeleton />
   if (isError) return <div>Error loading category: {(error as Error).message}</div>
   if (!data || !data.pages || data.pages.length === 0) return <div>No posts found for this category.</div>
 
@@ -61,7 +63,17 @@ export function CategoryContent({ slug }: { slug: string }) {
         </div>
         <div ref={ref} className="mt-12 text-center">
           {isFetchingNextPage ? (
-            <p className="text-gray-600 animate-pulse">Loading more articles...</p>
+            <div className="flex justify-center items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+              <div
+                className="w-2 h-2 rounded-full bg-blue-600 animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 rounded-full bg-blue-600 animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></div>
+            </div>
           ) : hasNextPage ? (
             <p className="text-gray-600">Scroll for more articles</p>
           ) : null}

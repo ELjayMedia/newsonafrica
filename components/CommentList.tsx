@@ -4,13 +4,14 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { fetchComments } from "@/lib/comment-service"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
-import type { Comment } from "@/lib/supabase-schema"
-import { MessageSquare, AlertCircle } from "lucide-react"
+import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
+import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useInView } from "react-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface CommentListProps {
   postId: string
@@ -25,7 +26,10 @@ export function CommentList({ postId }: CommentListProps) {
   const [totalComments, setTotalComments] = useState(0)
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
+  const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
   const { user } = useUser()
+  const [retryCount, setRetryCount] = useState(0)
+  const maxRetries = 3
 
   // For infinite scroll
   const { ref, inView } = useInView({
@@ -44,7 +48,17 @@ export function CommentList({ postId }: CommentListProps) {
     async (pageNum = 0, append = false) => {
       try {
         setLoading(true)
-        const { comments: fetchedComments, hasMore: moreAvailable, total } = await fetchComments(postId, pageNum)
+
+        // Add a small delay to prevent rapid retries
+        if (retryCount > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
+        }
+
+        const {
+          comments: fetchedComments,
+          hasMore: moreAvailable,
+          total,
+        } = await fetchComments(postId, pageNum, 10, sortOption)
 
         if (append) {
           setComments((prevComments) => [...prevComments, ...fetchedComments])
@@ -55,13 +69,24 @@ export function CommentList({ postId }: CommentListProps) {
         setHasMore(moreAvailable)
         setTotalComments(total)
         setError(null)
+        setRetryCount(0) // Reset retry count on success
       } catch (err: any) {
         console.error("Error loading comments:", err)
+
+        // Check if we should retry
+        if (retryCount < maxRetries) {
+          setRetryCount((prev) => prev + 1)
+          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
+          return loadComments(pageNum, append)
+        }
 
         // Check if this is a schema-related error
         if (
           err.message &&
-          (err.message.includes("status") || err.message.includes("column") || err.message.includes("schema"))
+          (err.message.includes("status") ||
+            err.message.includes("column") ||
+            err.message.includes("schema") ||
+            err.message.includes("execute is not a function"))
         ) {
           setShowMigrationInfo(true)
           setError("The comment system needs a database update. Please contact the administrator.")
@@ -72,13 +97,15 @@ export function CommentList({ postId }: CommentListProps) {
         setLoading(false)
       }
     },
-    [postId],
+    [postId, sortOption, retryCount, maxRetries],
   )
 
   // Load initial comments
   useEffect(() => {
+    setPage(0)
+    setRetryCount(0) // Reset retry count when sort option changes
     loadComments()
-  }, [loadComments])
+  }, [loadComments, sortOption])
 
   // Handle infinite scroll
   useEffect(() => {
@@ -97,6 +124,7 @@ export function CommentList({ postId }: CommentListProps) {
         setOptimisticComments((prev) => [optimisticComment, ...prev])
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
+        setRetryCount(0) // Reset retry count
         loadComments()
         setOptimisticComments([])
       }
@@ -131,15 +159,57 @@ export function CommentList({ postId }: CommentListProps) {
     return Math.max(0, Math.ceil((RATE_LIMIT_MS - timeSinceLastComment) / 1000))
   }, [])
 
+  // Handle sort change
+  const handleSortChange = (option: CommentSortOption) => {
+    setSortOption(option)
+  }
+
+  // Get sort option display text
+  const getSortOptionText = (option: CommentSortOption) => {
+    switch (option) {
+      case "newest":
+        return "Newest First"
+      case "oldest":
+        return "Oldest First"
+      case "popular":
+        return "Most Popular"
+      default:
+        return "Sort"
+    }
+  }
+
+  // Handle retry
+  const handleRetry = () => {
+    setRetryCount(0)
+    setError(null)
+    loadComments()
+  }
+
   // Combine real and optimistic comments for display
   const displayComments = [...optimisticComments, ...comments]
 
   return (
-    <div className="mt-8 space-y-6">
-      <h3 className="text-xl font-semibold flex items-center">
-        <MessageSquare className="mr-2 h-5 w-5" />
-        Comments {totalComments > 0 && `(${totalComments})`}
-      </h3>
+    <div id="comments" className="mt-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold flex items-center">
+          <MessageSquare className="mr-2 h-5 w-5" />
+          Comments {totalComments > 0 && `(${totalComments})`}
+        </h3>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="ml-auto">
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              {getSortOptionText(sortOption)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleSortChange("newest")}>Newest First</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSortChange("oldest")}>Oldest First</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSortChange("popular")}>Most Popular</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <CommentForm
         postId={postId}
@@ -179,7 +249,12 @@ export function CommentList({ postId }: CommentListProps) {
           ))}
         </div>
       ) : error ? (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md">{error}</div>
+        <div className="p-4 bg-red-50 text-red-700 rounded-md">
+          <p>{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={handleRetry}>
+            Try Again
+          </Button>
+        </div>
       ) : displayComments.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>No comments yet. Be the first to comment!</p>

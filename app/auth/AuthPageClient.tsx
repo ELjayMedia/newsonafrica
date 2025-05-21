@@ -1,97 +1,107 @@
 "use client"
 
-import { createClient } from "@/utils/supabase/client"
-import { useRouter } from "next/navigation"
-import { AuthForm } from "@/components/AuthForm"
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Loader2, CheckCircle } from "lucide-react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { MobileProfileMenu } from "@/components/MobileProfileMenu"
+import { useSearchParams } from "next/navigation"
 
-// Update the redirectTo handling to support "back" navigation
-export default function AuthPageClient({
-  searchParams,
-}: {
-  searchParams: { redirectTo?: string }
-}) {
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useUser } from "@/contexts/UserContext"
+import { AuthForm } from "@/components/AuthForm"
+import { createClient } from "@/utils/supabase/client"
+
+export default function AuthPageClient() {
+  const searchParams = useSearchParams()
+  const [defaultTab, setDefaultTab] = useState<"signin" | "signup">("signin")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [username, setUsername] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const { signIn, signUp, signInWithGoogle, signInWithFacebook, isAuthenticated } = useUser()
   const router = useRouter()
   const supabase = createClient()
-  const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const isMobile = useMediaQuery("(max-width: 768px)")
 
   useEffect(() => {
-    const getSession = async () => {
-      setLoading(true)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    const tab = searchParams.get("tab")
+    if (tab === "signin" || tab === "signup") {
+      setDefaultTab(tab)
+    }
+  }, [searchParams])
 
-      if (session) {
-        setIsAuthenticated(true)
-        setUserEmail(session.user.email)
-
-        // Handle special "back" redirection
-        if (searchParams.redirectTo === "back") {
-          // We can't access browser history on the server, so we'll use client-side redirection
-          router.back()
-          return
-        }
-
-        // On mobile, if redirecting to profile, don't auto-redirect
-        // This allows the MobileProfileMenu to be shown
-        if (!(isMobile && searchParams.redirectTo === "/profile")) {
-          // Set a short delay before redirecting to show the success message
-          setTimeout(() => {
-            // Redirect to the original URL or profile page
-            const redirectTo = searchParams.redirectTo || "/profile"
-            router.replace(redirectTo)
-          }, 1500)
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (data?.session) {
+        // User is already logged in, redirect
+        if (searchParams.get("redirectTo")) {
+          router.push(searchParams.get("redirectTo")!)
+        } else {
+          router.push("/")
         }
       }
-
-      setLoading(false)
     }
 
-    getSession()
-  }, [router, searchParams.redirectTo, supabase.auth, isMobile])
+    checkUser()
+  }, [router, searchParams, supabase.auth])
 
-  if (loading) {
-    return (
-      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md flex flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-        <p className="text-gray-600">Checking authentication status...</p>
-      </div>
-    )
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/")
+    }
+
+    // Check for errors from OAuth redirects
+    const errorParam = searchParams.get("error")
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+  }, [isAuthenticated, router, searchParams])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      if (defaultTab === "signin") {
+        await signIn(email, password)
+        // Router automatically redirects on successful login due to useEffect
+      } else {
+        await signUp(email, password, username)
+        setSuccessMessage("Account created successfully! You can now sign in.")
+        setDefaultTab("signin")
+      }
+    } catch (error) {
+      console.error("Auth error:", error)
+      setError(error instanceof Error ? error.message : "Authentication failed")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  // If authenticated and on mobile with profile redirect, show the mobile profile menu
-  if (isAuthenticated && isMobile && searchParams.redirectTo === "/profile") {
-    return <MobileProfileMenu />
-  }
-
-  if (isAuthenticated) {
-    return (
-      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md flex flex-col items-center justify-center">
-        <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-        <h1 className="text-2xl font-bold mb-2 text-center">You're already logged in</h1>
-        <p className="text-gray-600 mb-6 text-center">You're currently logged in as {userEmail}</p>
-        <div className="flex gap-4">
-          <Button onClick={() => router.push("/profile")}>Go to Profile</Button>
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Go to Homepage
-          </Button>
-        </div>
-      </div>
-    )
+  const handleSocialSignIn = async (provider: "google" | "facebook") => {
+    setError(null)
+    try {
+      if (provider === "google") {
+        await signInWithGoogle()
+      } else {
+        await signInWithFacebook()
+      }
+    } catch (error) {
+      console.error(`${provider} sign in error:`, error)
+      setError(error instanceof Error ? error.message : `${provider} sign in failed`)
+    }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6 text-center">Welcome to News On Africa</h1>
-      <AuthForm redirectTo={searchParams.redirectTo} />
+    <div className="container max-w-md mx-auto py-8 px-4">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold text-center mb-6">
+          {defaultTab === "signin" ? "Sign In" : "Create Account"}
+        </h1>
+        <AuthForm defaultTab={defaultTab} />
+      </div>
     </div>
   )
 }

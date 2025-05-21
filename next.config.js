@@ -1,34 +1,146 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  images: {
-    domains: [
-      "news-on-africa.vercel.app",
-      "localhost",
-      "via.placeholder.com",
-      "images.unsplash.com",
-      "plus.unsplash.com",
-      "news24.com",
-      "cdn.24.co.za",
-      "media.licdn.com",
-    ],
-    formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60,
-    unoptimized: true,
-  },
+  swcMinify: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  swcMinify: true,
-  compress: true,
-  poweredByHeader: false,
-  productionBrowserSourceMaps: false,
+  images: {
+    domains: [
+      "newsonafrica.com",
+      "secure.gravatar.com",
+      "i0.wp.com",
+      "i1.wp.com",
+      "i2.wp.com",
+      "blob.v0.dev",
+      "cdn-lfdfp.nitrocdn.com",
+      "via.placeholder.com",
+    ],
+    formats: ["image/avif", "image/webp"],
+    unoptimized: process.env.NODE_ENV === "production",
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+        ],
+      },
+      {
+        source: "/service-worker.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
+      {
+        source: "/(.*)\\.js$",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
+    ]
+  },
+  webpack: (config, { isServer }) => {
+    // Fix for the "Unexpected token '<'" error
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: require.resolve("crypto-browserify"),
+        stream: require.resolve("stream-browserify"),
+        path: require.resolve("path-browserify"),
+        zlib: require.resolve("browserify-zlib"),
+        http: require.resolve("stream-http"),
+        https: require.resolve("https-browserify"),
+        os: require.resolve("os-browserify"),
+      }
+    }
+
+    // Handle React Native Web properly
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "react-native$": "react-native-web",
+    }
+
+    // Exclude problematic dependencies from server build
+    if (isServer) {
+      config.externals = [
+        ...(config.externals || []),
+        "react-native-web",
+        "@react-native-firebase/app",
+        "@react-native-firebase/analytics",
+      ]
+    }
+
+    // Optimize production builds
+    if (!process.env.NODE_ENV === "development") {
+      config.optimization = {
+        ...config.optimization,
+        minimize: true,
+        splitChunks: {
+          chunks: "all",
+          cacheGroups: {
+            defaultVendors: {
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      }
+    }
+
+    // Add source-map-loader for better debugging
+    config.module.rules.push({
+      test: /\.js$/,
+      enforce: "pre",
+      use: ["source-map-loader"],
+    })
+
+    return config
+  },
   experimental: {
-    // optimizeCss: true,  // Comment out or remove this line
-    optimizeServerReact: true,
+    largePageDataBytes: 128 * 100000, // Increase the limit for large page data
+    optimizeCss: true,
+    scrollRestoration: true,
+    serverActions: true,
+    serverComponentsExternalPackages: ["sharp", "react-dom/server", "react-server-dom-webpack/server"],
   },
 }
 

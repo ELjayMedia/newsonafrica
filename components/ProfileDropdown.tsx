@@ -1,138 +1,71 @@
 "use client"
 
-import { useUser } from "@/contexts/UserContext"
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { LogOut, User } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export function ProfileDropdown() {
-  const { user, signOut } = useUser()
+  const { user, profile, logout } = useAuth()
+  const [open, setOpen] = useState(false)
+  const router = useRouter()
 
   if (!user) return null
 
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part?.[0] || "")
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
+  }
+
+  const displayName = profile?.full_name || profile?.username || user?.email?.split("@")[0] || ""
+
+  const handleSignOut = async () => {
+    await logout()
+    setOpen(false)
+  }
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 rounded-full">
-          My Profile
-        </Button>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger className="focus:outline-none">
+        <Avatar className="h-8 w-8 cursor-pointer">
+          <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
+          <AvatarFallback className="text-xs bg-blue-600 text-white">
+            {displayName ? getInitials(displayName) : "U"}
+          </AvatarFallback>
+        </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 max-h-[80vh] overflow-y-auto" align="end">
-        <DropdownMenuLabel className="text-xs text-gray-500">Signed in as: {user.email}</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="flex items-center justify-start gap-2 p-2">
+          <div className="flex flex-col space-y-1 leading-none">
+            {displayName && <p className="font-medium">{displayName}</p>}
+            {user.email && <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>}
+          </div>
+        </div>
         <DropdownMenuSeparator />
-
-        <DropdownMenuLabel className="text-xs font-medium text-gray-500">MY PROFILE SETTINGS</DropdownMenuLabel>
         <DropdownMenuItem asChild>
-          <Link href="/profile">My Profile Details</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/subscribe" className="cursor-pointer">
-            Subscribe to News On Africa
+          <Link href="/profile" className="flex items-center cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
           </Link>
         </DropdownMenuItem>
-
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-medium text-gray-500">MY PERSONALISED SETTINGS</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <Link href="/newsletters" className="cursor-pointer">
-            My Newsletters
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/bookmarks" className="cursor-pointer">
-            My Bookmarks
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/games" className="cursor-pointer">
-            My Games
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/shared" className="cursor-pointer">
-            My Shared Subscriber Articles
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/comments" className="cursor-pointer">
-            My Comments
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/listen" className="cursor-pointer">
-            Listen to Articles
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/editions" className="cursor-pointer">
-            My e-Editions
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/weather" className="cursor-pointer">
-            My Weather
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-medium text-gray-500">SUPPORT</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <Link href="/about" className="cursor-pointer">
-            About us
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/faq" className="cursor-pointer">
-            FAQ
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/report-bug" className="cursor-pointer">
-            Report a Bug
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/complaints" className="cursor-pointer">
-            Editorial Complaints
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/contact" className="cursor-pointer">
-            Contact us
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/subscription-help" className="cursor-pointer">
-            Help with my Subscription
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/terms" className="cursor-pointer">
-            Terms and Conditions
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/privacy" className="cursor-pointer">
-            Privacy Policy
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/vulnerability" className="cursor-pointer">
-            Vulnerability Disclosure
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-sm text-gray-500">083 394 2793</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => signOut()} className="text-red-600 cursor-pointer">
-          Sign Out
+        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

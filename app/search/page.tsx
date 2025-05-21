@@ -1,21 +1,20 @@
-import { Suspense } from "react"
+import type { Metadata } from "next"
 import { SearchContent } from "@/components/SearchContent"
-import { SearchAd } from "@/components/SearchAd"
-import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
 
-export const metadata = {
-  title: "Search - News On Africa",
-  description: "Search for articles on News On Africa",
+export const metadata: Metadata = {
+  title: "Search - News on Africa",
+  description: "Search for articles on News on Africa",
 }
 
-export default function SearchPage() {
+export default function SearchPage({
+  searchParams,
+}: {
+  searchParams: { query?: string }
+}) {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Search Results</h1>
-      <SearchAd />
-      <Suspense fallback={<SearchPageSkeleton />}>
-        <SearchContent />
-      </Suspense>
+      <h1 className="text-3xl font-bold mb-6">Search</h1>
+      <SearchContent />
     </div>
   )
 }

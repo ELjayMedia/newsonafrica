@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Supabase CLI
 
 [![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
@@ -181,3 +182,145 @@ To run from source:
 # Go >= 1.22
 go run . help
 ```
+=======
+# News On Africa PWA
+
+A Progressive Web App for delivering news content across Africa with a focus on performance, offline capabilities, and user engagement.
+
+## 🌟 Features
+
+- **Mobile-first, responsive design**: Optimized for all devices with a focus on mobile experience
+- **Offline reading capabilities**: Service worker implementation for offline content access
+- **Push notifications**: Real-time alerts for breaking news
+- **Fast loading times**: Optimized assets and code splitting for performance
+- **Authentication**: Multi-provider auth with email, Google, and Facebook
+- **Personalization**: User profiles, bookmarks, and preferences
+- **Ad integration**: Flexible ad placement system for monetization
+- **Search functionality**: Fast, relevant content discovery
+- **Multi-site architecture**: Support for country-specific editions
+
+## 🏗️ Architecture
+
+### Frontend Architecture
+
+The application follows a feature-based architecture with the following structure:
+
+\`\`\`
+news-on-africa/
+├── app/                  # Next.js App Router pages and layouts
+│   ├── api/              # API routes
+│   ├── auth/             # Authentication pages
+│   ├── category/         # Category pages
+│   ├── post/             # Post pages
+│   └── ...               # Other page routes
+├── components/           # Shared React components
+│   ├── ui/               # UI components (buttons, inputs, etc.)
+│   ├── layout/           # Layout components
+│   └── features/         # Feature-specific components
+├── contexts/             # React context providers
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility libraries
+├── services/             # API service modules
+├── types/                # TypeScript type definitions
+└── utils/                # Utility functions
+\`\`\`
+
+### Data Flow
+
+1. **Content Source**: WordPress CMS with REST API
+2. **Authentication**: Supabase Auth with JWT tokens
+3. **Data Storage**: Supabase PostgreSQL for user data
+4. **Caching**: Next.js ISR (Incremental Static Regeneration)
+5. **CDN**: Vercel Edge Network
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
+- Supabase account
+- WordPress instance with REST API
+
+### Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+\`\`\`
+# WordPress
+WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+WP_APP_USERNAME=your_app_username
+WP_APP_PASSWORD=your_app_password
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Authentication
+NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
+FACEBOOK_APP_SECRET=your_facebook_app_secret
+
+# Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
+
+# Site
+NEXT_PUBLIC_SITE_URL=https://your-site-url.com
+\`\`\`
+
+### Installation
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-org/news-on-africa.git
+cd news-on-africa
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
+\`\`\`
+
+## 📦 Deployment
+
+The application is deployed on Vercel with the following configuration:
+
+1. **Build Command**: `npm run build`
+2. **Output Directory**: `.next`
+3. **Environment Variables**: Set all required variables in Vercel dashboard
+
+## 🧪 Testing
+
+\`\`\`bash
+# Run unit tests
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run linting
+npm run lint
+\`\`\`
+
+## 📚 Documentation
+
+Additional documentation:
+
+- [Component Documentation](./docs/components.md)
+- [API Documentation](./docs/api.md)
+- [Authentication Flow](./docs/auth.md)
+- [Deployment Guide](./docs/deployment.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add some amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+>>>>>>> refs/remotes/origin/main

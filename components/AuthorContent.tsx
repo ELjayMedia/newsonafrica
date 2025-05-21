@@ -20,6 +20,11 @@ export function AuthorContent({ slug }: AuthorContentProps) {
     queryKey: ["author", slug],
     queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
     getNextPageParam: (lastPage) => lastPage?.posts.pageInfo.endCursor ?? undefined,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onError: (error) => {
+      console.error(`Error fetching author data for ${slug}:`, error)
+    },
   })
 
   useEffect(() => {
@@ -29,8 +34,33 @@ export function AuthorContent({ slug }: AuthorContentProps) {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   if (isLoading) return <AuthorSkeleton />
-  if (error) return <div>Error loading author data: {(error as Error).message}</div>
-  if (!data || !data.pages[0]) return <div>Author not found</div>
+
+  // Improved error handling
+  if (error) {
+    console.error("Author content error:", error)
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Unable to load author data</h2>
+        <p className="text-gray-600 mb-6">
+          We're having trouble connecting to our content server. Please try again later.
+        </p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
+  if (!data || !data.pages[0]) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Author not found</h2>
+        <p className="text-gray-600">
+          We couldn't find an author with this name. They may have been removed or renamed.
+        </p>
+      </div>
+    )
+  }
 
   const author = data.pages[0]
   const posts = data.pages.flatMap((page) => page?.posts.nodes ?? [])
@@ -40,7 +70,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
       <div className="flex items-center mb-8">
         <div className="mr-6">
           <Image
-            src={author.avatar.url || "/placeholder-avatar.png"}
+            src={author.avatar.url || "/placeholder.svg?height=100&width=100&query=avatar"}
             alt={author.name}
             width={100}
             height={100}

@@ -75,21 +75,18 @@ export const queries = {
     }
   `,
   searchPosts: `
-    query SearchPosts($query: String!, $after: String) {
-      posts(first: 10, after: $after, where: { search: $query }) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
+    query SearchPosts($query: String!, $first: Int, $after: String, $orderBy: PostObjectsConnectionOrderbyInput, $where: RootQueryToPostConnectionWhereArgs) {
+      posts(first: $first, after: $after, where: { search: $query, orderby: $orderBy, ...($where || {}) }) {
         nodes {
           id
           title
+          excerpt
           slug
           date
-          excerpt
           featuredImage {
             node {
               sourceUrl
+              altText
             }
           }
           author {
@@ -98,6 +95,25 @@ export const queries = {
               slug
             }
           }
+          categories {
+            nodes {
+              id
+              name
+              slug
+            }
+          }
+          tags {
+            nodes {
+              id
+              name
+              slug
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+          total
         }
       }
     }
@@ -187,21 +203,44 @@ export const queries = {
   `,
   categorizedPosts: `
     query CategorizedPosts {
-      categories {
+      categories(first: 100) {
         nodes {
           id
           name
           slug
-          posts {
+          parent {
+            node {
+              name
+            }
+          }
+          posts(first: 5) {
             nodes {
               id
               title
+              excerpt
               slug
               date
-              excerpt
               featuredImage {
                 node {
                   sourceUrl
+                }
+              }
+              author {
+                node {
+                  name
+                  slug
+                }
+              }
+              categories {
+                nodes {
+                  name
+                  slug
+                }
+              }
+              tags {
+                nodes {
+                  name
+                  slug
                 }
               }
             }

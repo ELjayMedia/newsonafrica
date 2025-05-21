@@ -1,13 +1,15 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
-import { updateComment, deleteComment } from "@/lib/comment-service"
+import { updateComment, deleteComment, addReaction, removeReaction } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
-import { Reply, Edit, Trash2, MoreVertical, Flag } from "lucide-react"
+import { Reply, Edit, Trash2, MoreVertical, Flag, ThumbsUp, Heart, Smile, Frown, Angry } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { Comment } from "@/lib/supabase-schema"
 import {
@@ -20,14 +22,30 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface CommentItemProps {
   comment: Comment
   postId: string
   onCommentUpdated: () => void
+  onReplyAdded?: (optimisticComment?: Comment) => void
+  onReplyFailed?: (commentId: string) => void
+  isRateLimited?: () => boolean
+  rateLimitTimeRemaining?: () => number
+  isFailed?: boolean
 }
 
-export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemProps) {
+export function CommentItem({
+  comment,
+  postId,
+  onCommentUpdated,
+  onReplyAdded,
+  onReplyFailed,
+  isRateLimited,
+  rateLimitTimeRemaining,
+  isFailed = false,
+}: CommentItemProps) {
   const { user } = useUser()
   const { toast } = useToast()
   const [isReplying, setIsReplying] = useState(false)
@@ -36,10 +54,24 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState("")
   const [isReporting, setIsReporting] = useState(false)
+  const [isAddingReaction, setIsAddingReaction] = useState(false)
 
   const isAuthor = user && user.id === comment.user_id
   const isOptimistic = comment.isOptimistic === true
   const formattedDate = new Date(comment.created_at).toLocaleString()
+
+  // Get user's reaction to this comment
+  const userReaction = comment.reactions?.find((reaction) => reaction.user_id === user?.id)?.reaction_type
+
+  // Count reactions by type
+  const reactionCounts =
+    comment.reactions?.reduce(
+      (counts, reaction) => {
+        counts[reaction.reaction_type] = (counts[reaction.reaction_type] || 0) + 1
+        return counts
+      },
+      {} as Record<string, number>,
+    ) || {}
 
   const handleReply = () => {
     setIsReplying(!isReplying)
@@ -83,7 +115,7 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
     }
 
     try {
-      await updateComment(comment.id, editContent)
+      await updateComment(comment.id, editContent, comment.is_rich_text)
       setIsEditing(false)
       toast({
         title: "Comment updated",
@@ -139,6 +171,49 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
     }
   }
 
+  const handleReaction = async (reactionType: "like" | "love" | "laugh" | "sad" | "angry") => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to react to comments",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isAddingReaction) return
+
+    setIsAddingReaction(true)
+
+    try {
+      // If user already has this reaction, remove it (toggle off)
+      if (userReaction === reactionType) {
+        await removeReaction(comment.id, user.id)
+        toast({
+          title: "Reaction removed",
+          description: "Your reaction has been removed",
+        })
+      } else {
+        // Otherwise add the new reaction (replacing any existing one)
+        await addReaction(comment.id, user.id, reactionType)
+        toast({
+          title: "Reaction added",
+          description: `You reacted with ${reactionType}`,
+        })
+      }
+      onCommentUpdated()
+    } catch (error) {
+      console.error("Failed to update reaction:", error)
+      toast({
+        title: "Reaction failed",
+        description: "Failed to update your reaction. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAddingReaction(false)
+    }
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -148,9 +223,68 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
       .substring(0, 2)
   }
 
+  const renderContent = () => {
+    if (!comment.is_rich_text) {
+      return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.content}</div>
+    }
+
+    // Simple markdown rendering
+    const html = comment.content
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      // Links
+      .replace(
+        /\[([^\]]+)\]$$([^)]+)$$/g,
+        '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
+      )
+      // Code
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
+      // Line breaks
+      .replace(/\n/g, "<br />")
+
+    return <div className="mt-1 text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+  }
+
+  const renderReactionButton = (
+    type: "like" | "love" | "laugh" | "sad" | "angry",
+    icon: React.ReactNode,
+    label: string,
+  ) => {
+    const count = reactionCounts[type] || 0
+    const isActive = userReaction === type
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("h-8 px-2 text-xs", isActive && "bg-blue-50 text-blue-600")}
+              onClick={() => handleReaction(type)}
+              disabled={isAddingReaction || isOptimistic}
+            >
+              {icon}
+              {count > 0 && <span className="ml-1">{count}</span>}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{label}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm p-4 border border-gray-100 ${isOptimistic ? "opacity-70" : ""}`}
+      className={cn(
+        "bg-white rounded-lg shadow-sm p-4 border border-gray-100",
+        isOptimistic && "opacity-70",
+        isFailed && "border-red-300 bg-red-50",
+      )}
       id={`comment-${comment.id}`}
     >
       <div className="flex items-start space-x-3">
@@ -162,7 +296,12 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-semibold text-sm">{comment.profile?.username || "Anonymous"}</h4>
+              <h4 className="font-semibold text-sm flex items-center">
+                {comment.profile?.username || "Anonymous"}
+                {isAuthor && (
+                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-full">You</span>
+                )}
+              </h4>
               <p className="text-xs text-gray-500">{formattedDate}</p>
             </div>
 
@@ -217,26 +356,36 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
               </div>
             </div>
           ) : (
-            <div className="mt-1 text-sm whitespace-pre-wrap">{comment.content}</div>
+            renderContent()
           )}
 
           {!isEditing && !isOptimistic && (
-            <div className="mt-2">
-              <Button variant="ghost" size="sm" onClick={handleReply} className="text-xs">
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              {renderReactionButton("like", <ThumbsUp className="mr-1 h-3 w-3" />, "Like")}
+
+              {renderReactionButton("love", <Heart className="mr-1 h-3 w-3" />, "Love")}
+
+              {renderReactionButton("laugh", <Smile className="mr-1 h-3 w-3" />, "Laugh")}
+
+              {renderReactionButton("sad", <Frown className="mr-1 h-3 w-3" />, "Sad")}
+
+              {renderReactionButton("angry", <Angry className="mr-1 h-3 w-3" />, "Angry")}
+
+              <Button variant="ghost" size="sm" onClick={handleReply} className="text-xs ml-auto">
                 <Reply className="mr-1 h-3 w-3" />
                 Reply
               </Button>
             </div>
           )}
 
-          {isReplying && (
+          {isReplying && onReplyAdded && (
             <div className="mt-3">
               <CommentForm
                 postId={postId}
                 parentId={comment.id}
-                onCommentAdded={() => {
+                onCommentAdded={(optimisticReply) => {
                   setIsReplying(false)
-                  onCommentUpdated()
+                  onReplyAdded(optimisticReply)
                 }}
                 onCancel={() => setIsReplying(false)}
                 placeholder="Write your reply..."
@@ -247,7 +396,16 @@ export function CommentItem({ comment, postId, onCommentUpdated }: CommentItemPr
           {comment.replies && comment.replies.length > 0 && (
             <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-100">
               {comment.replies.map((reply) => (
-                <CommentItem key={reply.id} comment={reply} postId={postId} onCommentUpdated={onCommentUpdated} />
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  postId={postId}
+                  onCommentUpdated={onCommentUpdated}
+                  onReplyAdded={onReplyAdded}
+                  onReplyFailed={onReplyFailed}
+                  isRateLimited={isRateLimited}
+                  rateLimitTimeRemaining={rateLimitTimeRemaining}
+                />
               ))}
             </div>
           )}

@@ -16,6 +16,7 @@ export interface Database {
           interests: string[] | null
           updated_at: string | null
           created_at: string
+          is_admin: boolean | null
         }
         Insert: {
           id: string
@@ -29,6 +30,7 @@ export interface Database {
           interests?: string[] | null
           updated_at?: string | null
           created_at?: string
+          is_admin?: boolean | null
         }
         Update: {
           id?: string
@@ -42,6 +44,7 @@ export interface Database {
           interests?: string[] | null
           updated_at?: string | null
           created_at?: string
+          is_admin?: boolean | null
         }
       }
       bookmarks: {
@@ -112,6 +115,105 @@ export interface Database {
           report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          content: string
+          related_id: string | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          content: string
+          related_id?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          content?: string
+          related_id?: string | null
+          read?: boolean
+          created_at?: string
+        }
+      }
+      schema_versions: {
+        Row: {
+          id: number
+          version: string
+          applied_at: string
+          applied_by: string
+          description: string
+          status: string
+          script: string | null
+        }
+        Insert: {
+          id?: number
+          version: string
+          applied_at?: string
+          applied_by: string
+          description: string
+          status: string
+          script?: string | null
+        }
+        Update: {
+          id?: number
+          version?: string
+          applied_at?: string
+          applied_by?: string
+          description?: string
+          status?: string
+          script?: string | null
+        }
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan: string
+          status: string
+          start_date: string
+          end_date: string | null
+          payment_provider: string
+          payment_id: string
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan: string
+          status: string
+          start_date: string
+          end_date?: string | null
+          payment_provider: string
+          payment_id: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan?: string
+          status?: string
+          start_date?: string
+          end_date?: string | null
+          payment_provider?: string
+          payment_id?: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
         }
       }
     }

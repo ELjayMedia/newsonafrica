@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { updateUserProfile } from "@/lib/wordpress-api"
-import { writeFile } from "fs/promises"
+import { writeFile, mkdir } from "fs/promises"
 import path from "path"
+import { existsSync } from "fs"
 
 export async function POST(request: Request) {
   const token = getAuthTokenFromCookies()
@@ -21,9 +22,15 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), "public", "uploads")
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true })
+    }
+
     // Save the file
     const filename = `${Date.now()}-${file.name}`
-    const filepath = path.join(process.cwd(), "public", "uploads", filename)
+    const filepath = path.join(uploadsDir, filename)
     await writeFile(filepath, buffer)
 
     // Update user profile with new avatar URL

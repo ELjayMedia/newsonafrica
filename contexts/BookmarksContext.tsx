@@ -24,7 +24,7 @@ interface Bookmark {
 interface BookmarksContextType {
   bookmarks: Bookmark[]
   loading: boolean
-  addBookmark: (post: Omit<Bookmark, "id">) => Promise<void>
+  toggleBookmark: (post: Omit<Bookmark, "id">) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
   isBookmarked: (postId: string) => boolean
 }
@@ -84,65 +84,77 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const addBookmark = useCallback(
+  // New function that uses the handle_bookmark RPC
+  const toggleBookmark = useCallback(
     async (post: Omit<Bookmark, "id">) => {
       if (!user) return
 
       try {
-        // Check if already bookmarked
-        if (isBookmarked(post.post_id)) {
-          return
+        // Validate required fields
+        if (!post.post_id) {
+          throw new Error("Post ID is required for bookmarking")
         }
 
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .insert({
-            user_id: user.id, // Explicitly pass the user_id
-            post_id: post.post_id,
-            title: post.title,
-            slug: post.slug,
-            date: post.date,
-            excerpt: post.excerpt,
-            featuredImage: post.featuredImage,
-          })
-          .select()
-          .single()
+        // Call the handle_bookmark RPC function
+        const { data, error } = await supabase.rpc("handle_bookmark", {
+          p_user_id: user.id,
+          p_post_id: post.post_id,
+          p_title: post.title || "Untitled Post",
+          p_slug: post.slug || "",
+          p_date: post.date || new Date().toISOString(),
+          p_excerpt: post.excerpt || "",
+          p_featured_image: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
+          p_action: "toggle", // Toggle the bookmark status
+        })
 
         if (error) {
-          console.error("Error adding bookmark:", error)
+          console.error("Error toggling bookmark:", error)
           toast({
             title: "Error",
-            description: "Failed to bookmark article",
+            description: `Failed to update bookmark: ${error.message}`,
             variant: "destructive",
           })
           return
         }
 
-        // Add the new bookmark to the state
-        setBookmarks((prev) => [data as Bookmark, ...prev])
+        // Refresh bookmarks to get the updated state
+        await fetchBookmarks()
 
+        // Show success message based on the action performed
+        const wasAdded = data?.action === "added"
         toast({
-          title: "Bookmarked",
-          description: "Article added to your bookmarks",
+          title: wasAdded ? "Bookmarked" : "Bookmark Removed",
+          description: wasAdded ? "Article added to your bookmarks" : "Article removed from your bookmarks",
         })
-      } catch (error) {
-        console.error("Failed to add bookmark:", error)
+      } catch (error: any) {
+        console.error("Failed to toggle bookmark:", error)
         toast({
           title: "Error",
-          description: "Failed to bookmark article",
+          description: `Failed to update bookmark: ${error.message}`,
           variant: "destructive",
         })
       }
     },
-    [user, toast],
+    [user, toast, supabase],
   )
 
+  // Keep the removeBookmark function for backward compatibility
   const removeBookmark = useCallback(
     async (postId: string) => {
-      if (!user) return
+      if (!user || !postId) return
 
       try {
-        const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
+        // Call the handle_bookmark RPC function with 'remove' action
+        const { error } = await supabase.rpc("handle_bookmark", {
+          p_user_id: user.id,
+          p_post_id: postId,
+          p_title: "",
+          p_slug: "",
+          p_date: new Date().toISOString(),
+          p_excerpt: "",
+          p_featured_image: null,
+          p_action: "remove",
+        })
 
         if (error) {
           console.error("Error removing bookmark:", error)
@@ -170,20 +182,26 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         })
       }
     },
-    [user, toast],
+    [user, toast, supabase],
   )
 
-  const isBookmarked = useCallback((postId: string) => bookmarks.some((b) => b.post_id === postId), [bookmarks])
+  const isBookmarked = useCallback(
+    (postId: string) => {
+      if (!postId) return false
+      return bookmarks.some((b) => b.post_id === postId)
+    },
+    [bookmarks],
+  )
 
   const contextValue = useMemo(
     () => ({
       bookmarks,
       loading,
-      addBookmark,
+      toggleBookmark, // Replace addBookmark with toggleBookmark
       removeBookmark,
       isBookmarked,
     }),
-    [bookmarks, loading, addBookmark, removeBookmark, isBookmarked],
+    [bookmarks, loading, toggleBookmark, removeBookmark, isBookmarked],
   )
 
   return <BookmarksContext.Provider value={contextValue}>{children}</BookmarksContext.Provider>

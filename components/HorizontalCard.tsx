@@ -1,106 +1,77 @@
-"use client"
-
-import type React from "react"
-
+import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { Clock, Bookmark } from "lucide-react"
-import { memo, useMemo, useCallback } from "react"
-import ErrorBoundary from "@/components/ErrorBoundary"
-import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
-import { useBookmarks } from "@/contexts/BookmarksContext"
+import { formatDistanceToNow } from "date-fns"
+import Fuse from "fuse.js"
 
 interface HorizontalCardProps {
   post: {
     id: string
     title: string
-    slug: string
-    date: string
     excerpt: string
+    slug: string
     featuredImage?: {
-      node?: {
+      node: {
         sourceUrl: string
       }
     }
+    date: string
     author?: {
-      node?: {
+      node: {
         name: string
-        slug: string
       }
     }
   }
-  showBookmarkButton?: boolean
+  className?: string
+  allowHtml?: boolean
 }
 
-export const HorizontalCard = memo(function HorizontalCard({ post, showBookmarkButton }: HorizontalCardProps) {
-  const router = useRouter()
-  const blurDataURL = useMemo(() => generateBlurDataURL(80, 80), [])
-  const formattedDate = useMemo(() => formatDate(post.date), [post.date])
-  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks()
-  const isMarked = isBookmarked(post.id)
+export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
+  const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
 
-  const handleClick = useCallback(() => {
-    router.push(`/post/${post.slug}`)
-  }, [router, post.slug])
-
-  const handleBookmarkToggle = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      e.preventDefault()
-
-      if (isMarked) {
-        removeBookmark(post.id)
-      } else {
-        addBookmark(post)
-      }
-    },
-    [isMarked, post, addBookmark, removeBookmark],
-  )
+  // Implementing fuzzy search with Fuse.js
+  const options = {
+    keys: ["title", "excerpt"],
+    threshold: 0.3,
+  }
+  const fuse = new Fuse([post], options)
+  const result = fuse.search("")
 
   return (
-    <ErrorBoundary>
-      <article
-        onClick={handleClick}
-        className="flex flex-row items-center justify-between py-2 md:py-3 space-x-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-3 w-full mb-3 cursor-pointer relative"
-      >
-        <div className="flex flex-col justify-center flex-1 space-y-1 mr-2">
-          <div>
-            <h3 className="font-semibold text-sm leading-tight group-hover:text-blue-600 line-clamp-2">{post.title}</h3>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center">
-              <div className="flex items-center gap-1 text-gray-500">
-                <Clock className="h-3 w-3" />
-                <time>{formattedDate}</time>
-              </div>
-            </div>
-          </div>
-        </div>
-        {post.featuredImage?.node?.sourceUrl && (
-          <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
+    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+      <div className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+        {/* Image container - left side */}
+        <div className="sm:w-1/3 h-40 sm:h-auto relative">
+          {post.featuredImage ? (
             <Image
               src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
               alt={post.title}
-              layout="fill"
-              objectFit="cover"
-              className="transition-transform duration-300 group-hover:scale-105"
-              placeholder="blur"
-              blurDataURL={blurDataURL}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
-          </div>
-        )}
+          ) : (
+            <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+              <span className="text-gray-400 dark:text-gray-500 text-sm">No image</span>
+            </div>
+          )}
+        </div>
 
-        {showBookmarkButton && (
-          <button
-            onClick={handleBookmarkToggle}
-            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100"
-            aria-label={isMarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            <Bookmark className={`h-4 w-4 ${isMarked ? "fill-current text-blue-600" : "text-gray-400"}`} />
-          </button>
-        )}
-      </article>
-    </ErrorBoundary>
+        {/* Content container - right side */}
+        <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{post.title}</h3>
+            <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
+              {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500 dark:text-gray-300">{formattedDate}</span>
+            {post.author && (
+              <span className="text-sm text-gray-500 dark:text-gray-300">by {post.author.node.name}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
   )
-})
+}
