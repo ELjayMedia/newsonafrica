@@ -5,6 +5,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react"
 interface Props {
   children: ReactNode
   fallback: ReactNode
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
 interface State {
@@ -19,11 +20,21 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI
     return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Log the error to an error reporting service
     console.error("Error caught by ErrorBoundary:", error, errorInfo)
+
+    // Call the onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo)
+    }
+
+    // You can also log the error to an error reporting service like Sentry
+    // logErrorToService(error, errorInfo);
   }
 
   render(): ReactNode {

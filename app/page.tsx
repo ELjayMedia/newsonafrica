@@ -1,50 +1,37 @@
-import { Suspense } from "react"
-import { HomeContent } from "@/components/HomeContent"
-import { HomePageSkeleton } from "@/components/HomePageSkeleton"
-import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
-import ErrorBoundary from "@/components/ErrorBoundary"
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
+import ClientPage from "./ClientPage"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
+  openGraph: {
+    title: siteConfig.name,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: `${siteConfig.url}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [`${siteConfig.url}/og-image.jpg`],
+  },
 }
 
-export const revalidate = 60 // Revalidate every 60 seconds
+// Increase revalidation time for better performance
+export const revalidate = 300 // Revalidate every 5 minutes
 
 export default function Home() {
-  return (
-    <Suspense fallback={<HomePageSkeleton />}>
-      <ErrorBoundary>
-        <HomeContentWrapper />
-      </ErrorBoundary>
-    </Suspense>
-  )
-}
-
-// Update the HomeContentWrapper function to better handle errors and preserve data
-async function HomeContentWrapper() {
-  try {
-    // Use Promise.allSettled to handle partial failures
-    const results = await Promise.allSettled([
-      fetchTaggedPosts("fp", 4),
-      fetchFeaturedPosts(4),
-      fetchCategorizedPosts(),
-      fetchRecentPosts(10),
-    ])
-
-    // Extract successful results or use empty arrays as fallbacks
-    const taggedPosts = results[0].status === "fulfilled" ? results[0].value : []
-    const featuredPosts = results[1].status === "fulfilled" ? results[1].value : []
-    const categories = results[2].status === "fulfilled" ? results[2].value : []
-    const recentPosts = results[3].status === "fulfilled" ? results[3].value : []
-
-    // Always return the HomeContent component with whatever data we have
-    return <HomeContent initialData={{ taggedPosts, featuredPosts, categories, recentPosts }} />
-  } catch (error) {
-    console.error("Error fetching initial data:", error)
-    // Return HomeContent with empty arrays instead of an error message
-    return <HomeContent initialData={{ taggedPosts: [], featuredPosts: [], categories: [], recentPosts: [] }} />
-  }
+  return <ClientPage />
 }
