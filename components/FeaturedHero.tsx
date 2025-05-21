@@ -8,8 +8,8 @@ import { generateBlurDataURL } from "@/utils/lazyLoad"
 
 interface FeaturedHeroProps {
   post: {
-    title: string
-    excerpt: string
+    title: string | { rendered: string }
+    excerpt: string | { rendered: string }
     slug: string
     date: string
     featuredImage?: {
@@ -17,7 +17,12 @@ interface FeaturedHeroProps {
         sourceUrl: string
       }
     }
-  }
+    _embedded?: {
+      "wp:featuredmedia"?: Array<{
+        source_url: string
+      }>
+    }
+  } | null
 }
 
 const getTimeAgo = (date: string) => {
@@ -37,18 +42,20 @@ const getTimeAgo = (date: string) => {
 }
 
 export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroProps) {
-  const timeAgo = useMemo(() => (post ? getTimeAgo(post.date) : ""), [post?.date ?? ""])
+  // Use useMemo for expensive calculations
+  const timeAgo = useMemo(() => (post ? getTimeAgo(post.date) : ""), [post])
   const blurDataURL = useMemo(() => generateBlurDataURL(700, 475), [])
 
+  // Early return with null if post is null or undefined
   if (!post) return null
 
-  // Ensure title is a string (handle potential HTML entities)
+  // Extract and normalize title
   const title = typeof post.title === "string" ? post.title : post.title?.rendered || "Untitled"
 
-  // Ensure excerpt is a string
+  // Extract and normalize excerpt
   const excerpt = typeof post.excerpt === "string" ? post.excerpt : post.excerpt?.rendered || ""
 
-  // Get featured image URL
+  // Get featured image URL with fallback
   const imageUrl =
     post.featuredImage?.node?.sourceUrl || post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/placeholder.svg"
 
@@ -59,10 +66,9 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
           <Image
             src={imageUrl || "/placeholder.svg"}
             alt={title}
-            layout="fill"
-            objectFit="cover"
-            className="rounded-md transition-transform duration-300 group-hover:scale-105"
+            fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="rounded-md transition-transform duration-300 group-hover:scale-105 object-cover"
             priority={true}
             placeholder="blur"
             blurDataURL={blurDataURL}
@@ -70,12 +76,12 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
         </div>
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
+            <Clock className="h-3 w-3" aria-hidden="true" />
             <span>{timeAgo}</span>
           </div>
-          <h1 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-blue-600 transition-colors duration-200">
+          <h2 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-blue-600 transition-colors duration-200">
             {title}
-          </h1>
+          </h2>
           <div
             className="text-gray-600 line-clamp-3 text-sm font-light"
             dangerouslySetInnerHTML={{ __html: excerpt }}
