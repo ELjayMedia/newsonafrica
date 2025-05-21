@@ -51,7 +51,7 @@ export function SidebarContent() {
       <div className="space-y-6">
         {/* Most Read Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read (Last 20 Days)</h2>
+          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
           <div className="space-y-4">
             {mostReadPosts.map((post, index) => (
               <Link key={post.id} href={`/post/${post.slug}`} className="flex items-start gap-3 group">
