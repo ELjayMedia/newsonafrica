@@ -41,6 +41,11 @@ const nextConfig = {
   },
   // Remove the unstable_excludeFiles option since we're deleting the /404 directory
   // unstable_excludeFiles: ['**/app/404/**/*'],
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // any other public vars
+  },
 }
 
 export default nextConfig

@@ -39,8 +39,8 @@ export function SidebarContent() {
   if (error) return <div>Error loading sidebar content</div>
 
   return (
-    <ErrorBoundary>
-      <div className="space-y-6">
+    <ErrorBoundary fallback={<SidebarSkeleton />}>
+      <div className="space-y-6 w-full max-w-xs mx-auto lg:mx-0">
         {/* Most Read Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
@@ -49,7 +49,9 @@ export function SidebarContent() {
               <Link key={post.id} href={`/post/${post.slug}`} className="flex items-start gap-3 group">
                 <span className="text-2xl font-light text-gray-300 leading-tight">{index + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
+                  <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600 line-clamp-2">
+                    {post.title}
+                  </h3>
                 </div>
               </Link>
             ))}
@@ -72,14 +74,16 @@ export function SidebarContent() {
                     <Image
                       src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                       alt={post.title}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-sm"
+                      width={64}
+                      height={64}
+                      className="rounded-sm object-cover"
                     />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
+                  <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600 line-clamp-2">
+                    {post.title}
+                  </h3>
                   <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
                     <Clock className="h-3 w-3" />
                     <time dateTime={post.date}>
@@ -92,6 +96,20 @@ export function SidebarContent() {
                 </div>
               </Link>
             ))}
+          </div>
+          <div className="mt-4 pt-2 border-t border-gray-100 text-center">
+            <Link href="/news" className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center">
+              View all news
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-3 w-3 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </section>
       </div>
