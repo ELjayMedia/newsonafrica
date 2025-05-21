@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -20,7 +19,7 @@ const nextConfig = {
       "via.placeholder.com",
     ],
     formats: ["image/avif", "image/webp"],
-    unoptimized: process.env.NODE_ENV === "production",
+    unoptimized: true,
   },
   async headers() {
     return [
@@ -77,13 +76,6 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
-        crypto: require.resolve("crypto-browserify"),
-        stream: require.resolve("stream-browserify"),
-        path: require.resolve("path-browserify"),
-        zlib: require.resolve("browserify-zlib"),
-        http: require.resolve("stream-http"),
-        https: require.resolve("https-browserify"),
-        os: require.resolve("os-browserify"),
       }
     }
 
@@ -103,45 +95,14 @@ const nextConfig = {
       ]
     }
 
-    // Optimize production builds
-    if (!process.env.NODE_ENV === "development") {
-      config.optimization = {
-        ...config.optimization,
-        minimize: true,
-        splitChunks: {
-          chunks: "all",
-          cacheGroups: {
-            defaultVendors: {
-              test: /[\\/]node_modules[\\/]/,
-              priority: -10,
-              reuseExistingChunk: true,
-            },
-            default: {
-              minChunks: 2,
-              priority: -20,
-              reuseExistingChunk: true,
-            },
-          },
-        },
-      }
-    }
-
-    // Add source-map-loader for better debugging
-    config.module.rules.push({
-      test: /\.js$/,
-      enforce: "pre",
-      use: ["source-map-loader"],
-    })
-
     return config
   },
   experimental: {
-    largePageDataBytes: 128 * 100000, // Increase the limit for large page data
     optimizeCss: true,
     scrollRestoration: true,
-    serverActions: true,
-    serverComponentsExternalPackages: ["sharp", "react-dom/server", "react-server-dom-webpack/server"],
+    largePageDataBytes: 12800000, // Increase the limit for large page data
   },
+  serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
 module.exports = nextConfig
