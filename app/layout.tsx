@@ -56,7 +56,7 @@ export default function RootLayout({
               <ScrollToTop />
               <ClientDynamicComponents />
               <TopBar />
-              <div className="flex-grow">
+              <div className="flex-grow bg-transparent">
                 <div className="mx-auto max-w-full md:max-w-[980px]">
                   <TopBannerAd />
                   <Suspense fallback={<HeaderSkeleton />}>
