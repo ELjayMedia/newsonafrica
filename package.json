@@ -59,42 +59,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "crypto": "latest",
-<<<<<<< HEAD
     "crypto-browserify": "^3.12.1",
-    "csrf": "latest",
-    "cssnano": "latest",
-    "date-fns": "latest",
-    "embla-carousel-react": "8.5.1",
-<<<<<<< HEAD
-    "input-otp": "1.4.1",
-    "lucide-react": "^0.454.0",
-    "next": "15.2.4",
-    "next-themes": "^0.4.4",
-<<<<<<< HEAD
-=======
-    "patch-package": "^8.0.0",
-    "path": "^0.12.7",
-    "postinstall-postinstall": "^2.1.0",
->>>>>>> 3ac597a (v)
-    "react": "^19",
-    "react-day-picker": "8.10.1",
-    "react-dom": "^19",
-    "react-hook-form": "^7.54.1",
-    "react-resizable-panels": "^2.1.7",
-    "recharts": "2.15.0",
-    "sonner": "^1.7.1",
-    "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7",
-    "vaul": "^0.9.6",
-    "zod": "^3.24.1",
-=======
->>>>>>> be4f830
-    "expo": "latest",
-    "firebase": "latest",
-    "fs": "latest",
-    "graphql": "latest",
-    "graphql-request": "latest",
-=======
     "csrf": "latest",
     "cssnano": "latest",
     "dataloader": "latest",
@@ -107,7 +72,6 @@
     "graphql": "latest",
     "graphql-request": "latest",
     "graphql-tag": "latest",
->>>>>>> refs/remotes/origin/main
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",
     "imagemin-pngquant": "latest",
@@ -117,11 +81,10 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "^0.4.4",
-    "path": "latest",
-<<<<<<< HEAD
+    "patch-package": "^8.0.0",
+    "path": "^0.12.7",
     "postcss": "latest",
-=======
->>>>>>> refs/remotes/origin/main
+    "postinstall-postinstall": "^2.1.0",
     "react": "^19",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",
@@ -132,10 +95,7 @@
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
     "svelte": "latest",
-<<<<<<< HEAD
-=======
     "swr": "latest",
->>>>>>> refs/remotes/origin/main
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "util": "latest",
@@ -144,21 +104,14 @@
     "vue": "latest",
     "vue-router": "latest",
     "web-vitals": "latest",
-<<<<<<< HEAD
     "zod": "^3.24.1"
-=======
-    "zod": "latest"
->>>>>>> refs/remotes/origin/main
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-<<<<<<< HEAD
-=======
     "eslint": "^9.26.0",
     "postcss": "^8",
->>>>>>> be4f830
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
