@@ -1,3 +1,67 @@
+const withPWA = require("@ducanh2912/next-pwa").default({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "api-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "image-cache",
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "google-fonts",
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:js)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "js-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:css)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "css-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+  ],
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -19,7 +83,7 @@ const nextConfig = {
       "via.placeholder.com",
     ],
     formats: ["image/avif", "image/webp"],
-    unoptimized: true,
+    // Remove unoptimized: true to use Vercel's image optimization
   },
   async headers() {
     return [
@@ -69,30 +133,37 @@ const nextConfig = {
     ]
   },
   webpack: (config, { isServer }) => {
-    // Fix for the "Unexpected token '<'" error
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: require.resolve("crypto-browserify"),
-        stream: require.resolve("stream-browserify"),
-        path: require.resolve("path-browserify"),
-        zlib: require.resolve("browserify-zlib"),
-        http: require.resolve("stream-http"),
-        https: require.resolve("https-browserify"),
-        os: require.resolve("os-browserify"),
+    // Only apply React Native Web config when specifically needed
+    if (process.env.INCLUDE_RN_WEB === "true") {
+      // Handle React Native Web properly
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        "react-native$": "react-native-web",
+      }
+
+      // Add fallbacks only when using RN Web
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          // Keep only the essential fallbacks
+          crypto: require.resolve("crypto-browserify"),
+          stream: require.resolve("stream-browserify"),
+          path: require.resolve("path-browserify"),
+        }
+      }
+    } else {
+      // Default fallbacks for non-RN Web builds
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+          net: false,
+          tls: false,
+        }
       }
     }
 
-    // Handle React Native Web properly
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "react-native$": "react-native-web",
-    }
-
-    // Exclude problematic dependencies from server build
+    // Always exclude problematic dependencies from server build
     if (isServer) {
       config.externals = [
         ...(config.externals || []),
@@ -112,4 +183,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = nextConfig
+module.exports = withPWA(nextConfig)

@@ -53,6 +53,7 @@ export const OptimizedImage = memo(function OptimizedImage({
         blurDataURL={blur}
         priority={priority}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        quality={80} // Add quality parameter for better optimization
         {...props}
       />
     </div>
