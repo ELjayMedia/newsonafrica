@@ -1,7 +1,6 @@
 import { cache } from "react"
 import { client } from "./wordpress-api"
 import { queries } from "./wordpress-queries"
-import { mockHomepageData } from "./mock-data"
 
 // Cache time constants
 const CACHE_TIMES = {
@@ -72,8 +71,8 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
 export const fetchHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using mock data")
-      return mockHomepageData
+      console.log("Device is offline, returning empty data structure")
+      return { featuredPosts: [], categories: [], taggedPosts: [] }
     }
 
     try {
@@ -90,12 +89,12 @@ export const fetchHomepageData = cache(async () => {
         taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : [],
       }
     } catch (error) {
-      console.error("Error fetching homepage data, using mock data:", error)
-      return mockHomepageData
+      console.error("Error fetching homepage data, returning empty data:", error)
+      return { featuredPosts: [], categories: [], taggedPosts: [] }
     }
   } catch (error) {
-    console.error("Error in fetchHomepageData, using mock data:", error)
-    return mockHomepageData
+    console.error("Error in fetchHomepageData, returning empty data:", error)
+    return { featuredPosts: [], categories: [], taggedPosts: [] }
   }
 })
 
@@ -103,8 +102,8 @@ export const fetchHomepageData = cache(async () => {
 export const fetchCompleteHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using mock data")
-      return mockHomepageData
+      console.log("Device is offline, returning empty data structure")
+      return { featuredPosts: [], categories: [], taggedPosts: [], recentPosts: [] }
     }
 
     const baseData = await fetchHomepageData()
@@ -118,7 +117,7 @@ export const fetchCompleteHomepageData = cache(async () => {
       recentPosts,
     }
   } catch (error) {
-    console.error("Error fetching complete homepage data, using mock data:", error)
-    return mockHomepageData
+    console.error("Error fetching complete homepage data, returning empty data:", error)
+    return { featuredPosts: [], categories: [], taggedPosts: [], recentPosts: [] }
   }
 })
