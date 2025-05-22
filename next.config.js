@@ -3,6 +3,13 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  dynamicStartUrl: true, // Enable dynamic start URL
+  dynamicStartUrlRedirect: "/", // Redirect to home if start URL is not available
+  fallbacks: {
+    // Define fallback routes for offline mode
+    document: "/offline", // Fallback for document (HTML) requests
+    image: "/placeholder.png", // Fallback for image requests
+  },
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
