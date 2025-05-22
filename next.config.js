@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig = {  experimental: {
+    serverActions: { enable: true }, // Correct structure for Next.js 15+
+  },
+  serverExternalPackages: ['your-package'], // Move out of experimental
   reactStrictMode: true,
-  swcMinify: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -134,13 +136,6 @@ const nextConfig = {
     })
 
     return config
-  },
-  experimental: {
-    largePageDataBytes: 128 * 100000, // Increase the limit for large page data
-    optimizeCss: true,
-    scrollRestoration: true,
-    serverActions: true,
-    serverComponentsExternalPackages: ["sharp", "react-dom/server", "react-server-dom-webpack/server"],
   },
 }
 
