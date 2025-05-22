@@ -1,7 +1,6 @@
 import { cache } from "react"
 import { client } from "./wordpress-api"
 import { queries } from "./wordpress-queries"
-import { FALLBACK_POSTS, mockHomepageData } from "./mock-data"
 
 // Cache time constants
 const CACHE_TIMES = {
@@ -72,8 +71,8 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
 export const fetchHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using fallback data")
-      return mockHomepageData
+      console.log("Device is offline, returning empty data structure")
+      return { featuredPosts: [], categories: [], taggedPosts: [] }
     }
 
     try {
@@ -85,17 +84,17 @@ export const fetchHomepageData = cache(async () => {
 
       // Process results, handling any individual promise rejections
       return {
-        featuredPosts: featured.status === "fulfilled" ? featured.value.posts.nodes : FALLBACK_POSTS,
-        categories: categories.status === "fulfilled" ? categories.value.categories.nodes : mockHomepageData.categories,
-        taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : FALLBACK_POSTS,
+        featuredPosts: featured.status === "fulfilled" ? featured.value.posts.nodes : [],
+        categories: categories.status === "fulfilled" ? categories.value.categories.nodes : [],
+        taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : [],
       }
     } catch (error) {
-      console.error("Error fetching homepage data, using fallback data:", error)
-      return mockHomepageData
+      console.error("Error fetching homepage data, returning empty data:", error)
+      return { featuredPosts: [], categories: [], taggedPosts: [] }
     }
   } catch (error) {
-    console.error("Error in fetchHomepageData, using fallback data:", error)
-    return mockHomepageData
+    console.error("Error in fetchHomepageData, returning empty data:", error)
+    return { featuredPosts: [], categories: [], taggedPosts: [] }
   }
 })
 
@@ -103,30 +102,22 @@ export const fetchHomepageData = cache(async () => {
 export const fetchCompleteHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using fallback data")
-      return mockHomepageData
+      console.log("Device is offline, returning empty data structure")
+      return { featuredPosts: [], categories: [], taggedPosts: [], recentPosts: [] }
     }
 
     const baseData = await fetchHomepageData()
 
     // Get recent posts as a fallback for any category that might be missing
-    try {
-      const recentPostsResponse = await fetchAPI(queries.recentPosts, { limit: 10 })
-      const recentPosts = recentPostsResponse.posts.nodes || FALLBACK_POSTS
+    const recentPostsResponse = await fetchAPI(queries.recentPosts, { limit: 10 })
+    const recentPosts = recentPostsResponse.posts.nodes || []
 
-      return {
-        ...baseData,
-        recentPosts,
-      }
-    } catch (error) {
-      console.error("Error fetching recent posts, using fallback data:", error)
-      return {
-        ...baseData,
-        recentPosts: FALLBACK_POSTS,
-      }
+    return {
+      ...baseData,
+      recentPosts,
     }
   } catch (error) {
-    console.error("Error fetching complete homepage data, using fallback data:", error)
-    return mockHomepageData
+    console.error("Error fetching complete homepage data, returning empty data:", error)
+    return { featuredPosts: [], categories: [], taggedPosts: [], recentPosts: [] }
   }
 })
