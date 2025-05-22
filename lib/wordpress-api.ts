@@ -8,6 +8,7 @@
 import { GraphQLClient } from "graphql-request"
 import { queries, mutations } from "./wordpress-queries"
 import { cache } from "react"
+import { FALLBACK_POSTS } from "./mock-data"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -151,10 +152,10 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
  * Fetches posts with a specific tag.
  *
  * @param {string} tag - The tag slug to fetch posts for.
- * @param {number} [limit=100] - The number of posts to fetch.
+ * @param {number} [limit=5] - The number of posts to fetch.
  * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
  */
-export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
+export const fetchTaggedPosts = cache(async (tag: string, limit = 5) => {
   try {
     // If we're offline, return empty array
     if (!isServer() && !isOnline()) {
@@ -171,7 +172,7 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
         // Fallback to REST API
         const posts = await fetchFromRestApi("posts", {
           tags: tag,
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
+          per_page: limit, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -214,11 +215,11 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
         }))
       } catch (restError) {
         console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
+        return FALLBACK_POSTS // Return fallback posts as last resort
       }
     } else {
       console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
+      return FALLBACK_POSTS // Return fallback posts for other errors
     }
   }
 })
@@ -246,7 +247,7 @@ export const fetchFeaturedPosts = cache(async (limit = 100) => {
         // Fallback to REST API - using sticky posts as featured
         const posts = await fetchFromRestApi("posts", {
           sticky: true,
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
+          per_page: limit, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -526,7 +527,7 @@ export const fetchRecentPosts = cache(async (limit = 100) => {
       console.log("Falling back to REST API for recent posts")
       try {
         const posts = await fetchFromRestApi("posts", {
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
+          per_page: limit, // Increased to maximum allowed by WordPress REST API
           _embed: 1,
         })
 
@@ -569,11 +570,11 @@ export const fetchRecentPosts = cache(async (limit = 100) => {
         }))
       } catch (restError) {
         console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
+        return FALLBACK_POSTS // Return fallback posts as last resort
       }
     } else {
       console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
+      return FALLBACK_POSTS // Return fallback posts for other errors
     }
   }
 })
