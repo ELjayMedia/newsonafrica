@@ -1,53 +1,43 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { useBookmarks } from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
 import { Bookmark } from "lucide-react"
-import { toast } from "@/hooks/use-toast"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { useToast } from "@/hooks/use-toast"
 
 interface BookmarkButtonProps {
   postId: string
   title?: string
   slug?: string
   excerpt?: string
-  date?: string
-  featuredImage?: {
-    url: string
-    width?: number
-    height?: number
-  }
+  featuredImage?: any
   variant?: "default" | "outline" | "ghost"
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
-  onAddSuccess?: () => void
-  onRemoveSuccess?: () => void
 }
 
-export const BookmarkButton = ({
+export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
   postId,
-  title,
-  slug,
-  excerpt,
-  date,
+  title = "Untitled Post",
+  slug = "",
+  excerpt = "",
   featuredImage,
   variant = "outline",
   size = "sm",
   className = "",
-  onAddSuccess,
-  onRemoveSuccess,
-}: BookmarkButtonProps) => {
+}) => {
   const { user } = useUser()
-  const { isBookmarked, toggleBookmark } = useBookmarks()
-  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const { toast } = useToast()
 
-  // Ensure postId is valid
-  const validPostId = postId || `post-${slug}`
-  const isMarked = isBookmarked(validPostId)
+  const isMarked = isBookmarked(postId)
 
   const handleBookmarkToggle = async (e: React.MouseEvent) => {
+    e.preventDefault()
     e.stopPropagation()
 
     if (!user) {
@@ -59,46 +49,24 @@ export const BookmarkButton = ({
       return
     }
 
-    // Validate required data before proceeding
-    if (!validPostId) {
-      toast({
-        title: "Error",
-        description: "Invalid post data. Cannot bookmark this post.",
-        variant: "destructive",
-      })
-      return
-    }
-
     try {
-      await toggleBookmark({
-        post_id: validPostId,
-        title: title || "Untitled Post",
-        slug: slug || "",
-        date: date || new Date().toISOString(),
-        excerpt: excerpt || "",
-        featuredImage: featuredImage
-          ? {
-              node: {
-                sourceUrl: featuredImage.url,
-              },
-            }
-          : undefined,
-      })
+      setIsProcessing(true)
 
-      // Call the appropriate callback based on the new bookmark state
-      // Since we're using toggle, we need to check the state after the operation
-      if (isBookmarked(validPostId)) {
-        onRemoveSuccess?.()
+      if (isMarked) {
+        await removeBookmark(postId)
       } else {
-        onAddSuccess?.()
+        await addBookmark({
+          post_id: postId,
+          title,
+          slug,
+          excerpt,
+          featured_image: featuredImage,
+        })
       }
-    } catch (error: any) {
-      console.error("Failed to toggle bookmark:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to toggle bookmark",
-        variant: "destructive",
-      })
+    } catch (error) {
+      console.error("Error toggling bookmark:", error)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -107,11 +75,17 @@ export const BookmarkButton = ({
       variant={variant}
       size={size}
       onClick={handleBookmarkToggle}
+      disabled={isProcessing}
       className={className}
       aria-label={isMarked ? "Remove bookmark" : "Add bookmark"}
     >
-      <Bookmark className={`h-4 w-4 mr-2 ${isMarked ? "fill-current text-blue-600" : "text-gray-400"}`} />
-      {isDesktop && (isMarked ? "Remove Bookmark" : "Add Bookmark")}
+      <Bookmark className={`h-4 w-4 ${isMarked ? "fill-current text-blue-600" : "text-gray-400"}`} />
+      <span className="ml-2">{isMarked ? "Saved" : "Save"}</span>
+      {isProcessing && (
+        <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></span>
+      )}
     </Button>
   )
 }
+
+export default BookmarkButton

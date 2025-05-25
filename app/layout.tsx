@@ -21,6 +21,7 @@ import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
+import { BookmarksProvider } from "@/contexts/BookmarksContext"
 
 import "./globals.css"
 
@@ -68,66 +69,68 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light">
           <UserProvider>
-            <ClientWrapper>
-              <ScrollToTop />
-              <ClientDynamicComponents />
-              <TopBar />
-              <div className="flex-grow">
-                <div className="mx-auto max-w-full md:max-w-[980px]">
-                  <Suspense fallback={null}>
-                    <TopBannerAd />
-                  </Suspense>
-                  <Suspense fallback={<HeaderSkeleton />}>
-                    <Header />
-                  </Suspense>
-                  <Suspense fallback={null}>
-                    <BelowHeaderAd />
-                  </Suspense>
-                  <div className="mt-4 md:mt-6">
-                    <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
-                      <Suspense
-                        fallback={
-                          <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
-                            <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
-                            <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
-                            <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
-                          </div>
-                        }
-                      >
-                        <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                          <div className="p-4 w-full md:w-auto">{children}</div>
-                        </main>
-                      </Suspense>
-                      <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
-                        <Suspense fallback={null}>
-                          <Sidebar />
+            <BookmarksProvider>
+              <ClientWrapper>
+                <ScrollToTop />
+                <ClientDynamicComponents />
+                <TopBar />
+                <div className="flex-grow">
+                  <div className="mx-auto max-w-full md:max-w-[980px]">
+                    <Suspense fallback={null}>
+                      <TopBannerAd />
+                    </Suspense>
+                    <Suspense fallback={<HeaderSkeleton />}>
+                      <Header />
+                    </Suspense>
+                    <Suspense fallback={null}>
+                      <BelowHeaderAd />
+                    </Suspense>
+                    <div className="mt-4 md:mt-6">
+                      <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
+                        <Suspense
+                          fallback={
+                            <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4 animate-pulse">
+                              <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
+                              <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
+                              <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
+                            </div>
+                          }
+                        >
+                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                            <div className="p-4 w-full md:w-auto">{children}</div>
+                          </main>
                         </Suspense>
-                      </aside>
+                        <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
+                          <Suspense fallback={null}>
+                            <Sidebar />
+                          </Suspense>
+                        </aside>
+                      </div>
                     </div>
+                    <Suspense fallback={null}>
+                      <FooterBannerAd />
+                    </Suspense>
                   </div>
-                  <Suspense fallback={null}>
-                    <FooterBannerAd />
-                  </Suspense>
                 </div>
-              </div>
-              <BottomNavigation />
-              <footer className="text-center text-sm text-gray-500 mt-4 mb-2">
-                <Link href="/privacy-policy" className="hover:underline">
-                  Privacy Policy
-                </Link>
-                {" | "}
-                <Link href="/terms-of-service" className="hover:underline">
-                  Terms of Service
-                </Link>
-                {" | "}
-                <Link href="/sitemap.xml" className="hover:underline">
-                  Sitemap
-                </Link>
-              </footer>
-              <NetworkStatus />
-              <Toaster />
-              <NetworkStatusHandler />
-            </ClientWrapper>
+                <BottomNavigation />
+                <footer className="text-center text-sm text-gray-500 mt-4 mb-2">
+                  <Link href="/privacy-policy" className="hover:underline">
+                    Privacy Policy
+                  </Link>
+                  {" | "}
+                  <Link href="/terms-of-service" className="hover:underline">
+                    Terms of Service
+                  </Link>
+                  {" | "}
+                  <Link href="/sitemap.xml" className="hover:underline">
+                    Sitemap
+                  </Link>
+                </footer>
+                <NetworkStatus />
+                <Toaster />
+                <NetworkStatusHandler />
+              </ClientWrapper>
+            </BookmarksProvider>
           </UserProvider>
         </ThemeProvider>
       </body>

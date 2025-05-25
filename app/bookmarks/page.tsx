@@ -1,12 +1,13 @@
 import { Suspense } from "react"
 import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
-import { BookmarksContent } from "@/components/BookmarksContent"
+import BookmarksContent from "@/components/BookmarksContent"
 import BookmarksSkeleton from "@/components/BookmarksSkeleton"
+import { BookmarkDebugger } from "@/components/BookmarkDebugger"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "My Bookmarks - News On Africa",
+  title: "Your Bookmarks | News on Africa",
   description: "View and manage your saved articles",
 }
 
@@ -21,12 +22,15 @@ export default async function BookmarksPage() {
   } = await supabase.auth.getSession()
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">My Bookmarks</h1>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Your Bookmarks</h1>
+
+      {/* Add the debugger in development mode */}
+      {process.env.NODE_ENV === "development" && <BookmarkDebugger />}
 
       <Suspense fallback={<BookmarksSkeleton />}>
         <BookmarksContent initialSession={session} />
       </Suspense>
-    </main>
+    </div>
   )
 }
