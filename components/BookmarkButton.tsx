@@ -19,7 +19,7 @@ interface BookmarkButtonProps {
   className?: string
 }
 
-export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
+export const BookmarkButton = ({
   postId,
   title = "Untitled Post",
   slug = "",
@@ -28,7 +28,7 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
   variant = "outline",
   size = "sm",
   className = "",
-}) => {
+}: BookmarkButtonProps) => {
   const { user } = useUser()
   const { isBookmarked, addBookmark, removeBookmark } = useBookmarks()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -51,6 +51,7 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
 
     try {
       setIsProcessing(true)
+      console.log("Toggle bookmark for post:", postId)
 
       if (isMarked) {
         await removeBookmark(postId)
@@ -60,7 +61,7 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
           title,
           slug,
           excerpt,
-          featured_image: featuredImage,
+          featured_image: featuredImage, // Using snake_case property name
         })
       }
     } catch (error) {

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@apollo/client": "latest",
     "@apollo/server": "latest",
     "@as-integrations/next": "latest",
     "@ducanh2912/next-pwa": "latest",
@@ -70,6 +71,7 @@
     "graphql": "latest",
     "graphql-request": "latest",
     "graphql-tag": "latest",
+    "graphql-ws": "latest",
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",
     "imagemin-pngquant": "latest",
@@ -90,6 +92,7 @@
     "recharts": "2.15.0",
     "sharp": "latest",
     "sonner": "^1.7.1",
+    "subscriptions-transport-ws": "latest",
     "svelte": "latest",
     "swr": "latest",
     "tailwind-merge": "^2.5.5",

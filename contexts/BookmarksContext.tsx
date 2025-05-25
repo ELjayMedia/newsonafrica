@@ -37,11 +37,7 @@ export function useBookmarks() {
   return context
 }
 
-interface BookmarksProviderProps {
-  children: React.ReactNode
-}
-
-export function BookmarksProvider({ children }: BookmarksProviderProps) {
+export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,6 +52,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
     [bookmarks],
   )
 
+  // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
       fetchBookmarks()
@@ -74,6 +71,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
         return
       }
 
+      console.log("Fetching bookmarks for user:", user.id)
       const { data, error } = await supabase
         .from("bookmarks")
         .select("*")
@@ -90,6 +88,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
         return
       }
 
+      console.log("Fetched bookmarks:", data?.length || 0)
       setBookmarks(data || [])
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
@@ -115,7 +114,11 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
       }
 
       try {
+        console.log("Adding bookmark:", post)
+
+        // Check if bookmark already exists
         if (isBookmarked(post.post_id)) {
+          console.log("Bookmark already exists")
           toast({
             title: "Already bookmarked",
             description: "This article is already in your bookmarks",
@@ -123,6 +126,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
           return
         }
 
+        // Prepare featured image data
         let processedFeaturedImage = null
         if (post.featured_image) {
           try {
@@ -143,9 +147,10 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featured_image: processedFeaturedImage,
+          featured_image: processedFeaturedImage, // Using snake_case column name
         }
 
+        console.log("Inserting bookmark data:", bookmarkData)
         const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
 
         if (error) {
@@ -158,6 +163,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
           return
         }
 
+        console.log("Bookmark added successfully:", data)
         setBookmarks((prev) => [data, ...prev])
 
         toast({
@@ -181,6 +187,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
       if (!user || !postId) return
 
       try {
+        console.log("Removing bookmark:", postId)
         const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
 
         if (error) {
@@ -193,6 +200,7 @@ export function BookmarksProvider({ children }: BookmarksProviderProps) {
           return
         }
 
+        console.log("Bookmark removed successfully")
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
 
         toast({
