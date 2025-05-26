@@ -59,3 +59,5 @@ export const OptimizedImage = memo(function OptimizedImage({
     </div>
   )
 })
+
+export default OptimizedImage
