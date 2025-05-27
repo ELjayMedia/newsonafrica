@@ -8,6 +8,7 @@ const revalidateSchema = z.object({
   secret: z.string().min(1),
   path: z.string().optional(),
   tag: z.string().optional(),
+  type: z.enum(["content", "sitemaps", "all"]).optional().default("all"),
 })
 
 export async function GET(request: NextRequest) {
@@ -20,30 +21,72 @@ export async function GET(request: NextRequest) {
     const params = Object.fromEntries(searchParams.entries())
 
     // Validate query parameters
-    const { secret, path, tag } = revalidateSchema.parse(params)
+    const { secret, path, tag, type } = revalidateSchema.parse(params)
 
     if (secret !== process.env.REVALIDATION_SECRET) {
       throw new Error("Invalid revalidation secret")
     }
 
-    if (!path && !tag) {
-      throw new Error("Either path or tag must be provided")
-    }
-
-    if (path) {
-      revalidatePath(path)
-    }
-
-    if (tag) {
-      revalidateTag(tag)
-    }
-
-    return successResponse({
+    const results: any = {
       revalidated: true,
       now: Date.now(),
-      path,
-      tag,
-    })
+      actions: [],
+    }
+
+    // Handle specific path or tag revalidation
+    if (path || tag) {
+      if (path) {
+        revalidatePath(path)
+        results.actions.push(`Revalidated path: ${path}`)
+      }
+      if (tag) {
+        revalidateTag(tag)
+        results.actions.push(`Revalidated tag: ${tag}`)
+      }
+      return successResponse(results)
+    }
+
+    // Handle bulk revalidation based on type
+    if (type === "content" || type === "all") {
+      // Revalidate main content paths
+      const contentPaths = [
+        "/",
+        "/news",
+        "/business",
+        "/sport",
+        "/entertainment",
+        "/life",
+        "/health",
+        "/politics",
+        "/food",
+        "/opinion",
+      ]
+
+      contentPaths.forEach((path) => {
+        revalidatePath(path)
+      })
+
+      // Revalidate content tags
+      const contentTags = ["posts", "categories", "featured", "trending"]
+      contentTags.forEach((tag) => {
+        revalidateTag(tag)
+      })
+
+      results.actions.push("Revalidated all content paths and tags")
+    }
+
+    if (type === "sitemaps" || type === "all") {
+      // Revalidate all sitemap paths
+      const sitemapPaths = ["/sitemap.xml", "/news-sitemap.xml", "/sitemap-index.xml", "/server-sitemap.xml"]
+
+      sitemapPaths.forEach((path) => {
+        revalidatePath(path)
+      })
+
+      results.actions.push("Revalidated all sitemap files")
+    }
+
+    return successResponse(results)
   } catch (error) {
     return handleApiError(error)
   }

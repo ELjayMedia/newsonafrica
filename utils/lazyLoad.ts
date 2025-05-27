@@ -1,4 +1,3 @@
-// Optimized blur data URL generation
 export function generateBlurDataURL(width: number, height: number): string {
   // Use a smaller, more efficient SVG
   const svg = `

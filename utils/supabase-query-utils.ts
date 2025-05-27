@@ -1,9 +1,3 @@
-/**
- * Supabase Query Optimization Utilities
- *
- * This module provides utilities for optimizing Supabase database queries.
- */
-
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
 import { createClient } from "./supabase/client"
 

@@ -1,4 +1,3 @@
-// Ad exclusion zones - areas where auto ads should not appear
 export const adExclusionSelectors = [
   ".site-header", // Don't place ads in the header
   ".site-footer", // Don't place ads in the footer

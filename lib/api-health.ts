@@ -1,10 +1,3 @@
-/**
- * API Health Check Utility
- *
- * This module provides functions to check the health of the WordPress API endpoints.
- */
-
-// Cache the health check results for 5 minutes
 const CACHE_DURATION = 5 * 60 * 1000
 let lastCheck = 0
 const cachedHealth = {

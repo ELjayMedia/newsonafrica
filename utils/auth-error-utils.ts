@@ -1,10 +1,3 @@
-/**
- * Authentication Error Utilities
- *
- * Provides functions for handling and formatting authentication errors
- */
-
-// Define error categories for better handling
 export enum AuthErrorCategory {
   CREDENTIALS = "credentials",
   NETWORK = "network",

@@ -1,5 +1,3 @@
-// This file defines the Supabase schema for our application
-
 export type Comment = {
   id: string
   post_id: string

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import type { cookies } from "next/headers"
-import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/lib/migrations"
+import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/data/migrations"
 
 export interface MigrationResult {
   version: string

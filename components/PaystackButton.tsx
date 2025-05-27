@@ -6,7 +6,7 @@ import { Loader2, Lock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
 import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
-import type { PaystackOptions, SubscriptionPlan } from "@/types/paystack"
+import type { PaystackOptions, SubscriptionPlan } from "@/config/paystack"
 
 interface PaystackButtonProps {
   email: string

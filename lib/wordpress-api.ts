@@ -1,10 +1,3 @@
-/**
- * WordPress API Utilities
- *
- * This module provides functions for interacting with the WordPress REST API.
- * It handles fetching posts, categories, tags, and other content from WordPress.
- */
-
 import { GraphQLClient } from "graphql-request"
 import { queries, mutations } from "./wordpress-queries"
 import { cache } from "react"
@@ -156,6 +149,12 @@ const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, hea
  */
 export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
   try {
+    // If we're offline, return empty array
+    if (!isServer() && !isOnline()) {
+      console.log("Device is offline, returning empty array for tagged posts")
+      return []
+    }
+
     const data = await fetchWithRetry(queries.taggedPosts, { tag, limit })
     return data.posts.nodes
   } catch (error) {
@@ -225,6 +224,12 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
  */
 export const fetchFeaturedPosts = cache(async (limit = 100) => {
   try {
+    // If we're offline, return empty array
+    if (!isServer() && !isOnline()) {
+      console.log("Device is offline, returning empty array for featured posts")
+      return []
+    }
+
     const data = await fetchWithRetry(queries.featuredPosts, { limit })
     return data.posts.nodes
   } catch (error) {

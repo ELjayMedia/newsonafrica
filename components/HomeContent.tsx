@@ -40,7 +40,7 @@ const isOnline = () => {
 const fetchHomeData = async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using cached or mock data")
+      console.log("Device is offline, using cached data")
       throw new Error("Device is offline")
     }
 
@@ -182,6 +182,22 @@ export function HomeContent({ initialData }: HomeContentProps) {
     )
   }
 
+  // Show empty state if no content is available
+  if (!taggedPosts.length && !featuredPosts.length && !categories.length) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-bold mb-2">No Content Available</h2>
+        <p>Please check back later for the latest news and updates.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-green-500 text-black rounded hover:bg-green-600"
+        >
+          Refresh Page
+        </button>
+      </div>
+    )
+  }
+
   // Extract main content posts
   const mainStory = taggedPosts?.[0] || featuredPosts?.[0] || null
   const secondaryStories = featuredPosts?.slice(0, 4) || []
@@ -311,9 +327,11 @@ export function HomeContent({ initialData }: HomeContentProps) {
         {renderOfflineNotification()}
 
         {/* Hero Section - Show the latest post tagged 'fp' */}
-        <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
-          {mainStory && <FeaturedHero post={mainStory} />}
-        </section>
+        {mainStory && (
+          <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
+            <FeaturedHero post={mainStory} />
+          </section>
+        )}
 
         {/* Vertical Cards - Show the next 3 posts tagged 'fp' */}
         {verticalCardPosts.length > 0 && (

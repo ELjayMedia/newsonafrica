@@ -1,8 +1,3 @@
-/**
- * Utility functions for browser navigation
- */
-
-// Check if the current navigation is a result of using the browser's back/forward buttons
 export function isUsingBrowserNavigation(): boolean {
   if (typeof window === "undefined") return false
 

@@ -1,8 +1,3 @@
-/**
- * Utility functions for handling rate limiting
- */
-
-// Store rate limit information
 interface RateLimitInfo {
   count: number
   resetTime: number

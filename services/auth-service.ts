@@ -1,9 +1,3 @@
-/**
- * Authentication Service
- *
- * Handles all authentication-related API calls and operations
- */
-
 import { supabase } from "@/lib/supabase"
 import type { Provider, User, Session } from "@supabase/supabase-js"
 import { getFacebookUserData, updateProfileWithFacebookData } from "@/lib/facebook-utils"

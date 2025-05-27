@@ -1,7 +1,6 @@
-"use client";
 import { AdErrorBoundary } from "./AdErrorBoundary"
 import { AdSense } from "./AdSense"
-import { useMediaQuery } from 'some-library'
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 export function TopBannerAd() {
   const isDesktop = useMediaQuery("(min-width: 768px)")

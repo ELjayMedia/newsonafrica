@@ -1,6 +1,3 @@
-/**
- * WordPress Post interface
- */
 export interface Post {
   /**
    * Unique identifier for the post

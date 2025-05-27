@@ -1,4 +1,3 @@
-// lib/performance-monitoring.ts
 import { isBrowser } from "@/lib/adUtils"
 import type { Metric } from "web-vitals"
 

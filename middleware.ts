@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
-import type { Database } from "@/types/supabase"
+import type { Database } from "@/lib/supabase"
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/category", "/search", "/post"]
+const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
 
 // Routes that should redirect to profile if already authenticated
 const AUTH_ROUTES = ["/auth", "/login", "/register"]

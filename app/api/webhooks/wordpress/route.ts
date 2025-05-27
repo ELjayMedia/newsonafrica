@@ -1,71 +1,39 @@
-import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const json = await request.json()
+  const topic = request.headers.get("x-wp-webhook-topic")
+
+  if (!topic) {
+    return new NextResponse("Missing topic", { status: 400 })
+  }
+
   try {
-    const body = await request.json()
-    const { type, action, post } = body
-
-    // Verify webhook using the API key from WP Webhooks Pro
-    // This assumes the API key is passed in the request body or as a query parameter
-    const url = new URL(request.url)
-    const apiKey = url.searchParams.get("wpwhpro_api_key")
-
-    if (apiKey !== process.env.WORDPRESS_WEBHOOK_SECRET) {
-      console.log("Invalid webhook API key")
-      return NextResponse.json({ error: "Invalid webhook API key" }, { status: 401 })
+    switch (topic) {
+      case "core.post.updated":
+      case "core.post.created":
+      case "core.post.deleted":
+        // Assuming the JSON payload contains a 'permalink' field
+        if (json?.permalink) {
+          const path = new URL(json.permalink).pathname
+          revalidatePath(path)
+          console.log(`Revalidated path: ${path}`)
+        } else {
+          console.warn("Permalink not found in payload, cannot revalidate.")
+        }
+        revalidatePath("/") // Revalidate the homepage as well
+        break
+      default:
+        console.log(`Unhandled topic: ${topic}`)
+        break
     }
 
-    console.log("Webhook received:", { type, action })
-
-    if (type === "post" && (action === "publish" || action === "update")) {
-      // Revalidate the specific post
-      revalidatePath(`/post/${post.slug}`)
-
-      // Revalidate category pages if needed
-      if (post.categories) {
-        post.categories.forEach((category: any) => {
-          revalidatePath(`/category/${category.slug}`)
-        })
-      }
-
-      // Revalidate tag pages if needed
-      if (post.tags) {
-        post.tags.forEach((tag: any) => {
-          revalidatePath(`/tag/${tag.slug}`)
-        })
-      }
-
-      // Revalidate author page
-      if (post.author) {
-        revalidatePath(`/author/${post.author.slug}`)
-      }
-
-      // Revalidate homepage
-      revalidatePath("/")
-
-      // Revalidate sitemaps
-      revalidatePath("/api/sitemap.xml")
-      revalidatePath("/api/news-sitemap.xml")
-
-      try {
-        // Revalidate sitemaps
-        await fetch(`${process.env.SITE_URL}/api/revalidate-sitemaps?secret=${process.env.REVALIDATION_SECRET}`)
-        console.log("Sitemaps revalidation triggered")
-      } catch (error) {
-        console.error("Failed to trigger sitemap revalidation:", error)
-      }
-
-      return NextResponse.json({
-        revalidated: true,
-        message: `Revalidated post: ${post.slug}`,
-        timestamp: new Date().toISOString(),
-      })
-    }
-
-    return NextResponse.json({ message: "No action taken" })
-  } catch (error) {
-    console.error("Webhook error:", error)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    return new NextResponse(null, { status: 204 })
+  } catch (error: any) {
+    console.error("Error processing webhook:", error)
+    return new NextResponse(`Webhook processing failed: ${error.message}`, {
+      status: 500,
+    })
   }
 }

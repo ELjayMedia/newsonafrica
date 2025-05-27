@@ -1,6 +1,3 @@
-/**
- * Search utilities for WordPress GraphQL/REST API
- */
 import Fuse from "fuse.js"
 import { FALLBACK_POSTS } from "./mock-data"
 

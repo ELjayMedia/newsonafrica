@@ -1,101 +1,126 @@
-import type { NextRequest } from "next/server"
-import { z } from "zod"
-import { getAuthTokenFromRequest } from "@/lib/cookies"
-import { fetchUserProfile, updateUserProfile } from "@/lib/wordpress-api"
-import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
-
-// Input validation schemas
-const addBookmarkSchema = z.object({
-  postId: z.string().min(1, "Post ID is required"),
-})
-
-const removeBookmarkSchema = z.object({
-  postId: z.string().min(1, "Post ID is required"),
-})
+import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 20, "BOOKMARKS_GET_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-    const token = getAuthTokenFromRequest(request)
-    if (!token) {
-      throw new Error("Unauthorized")
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await fetchUserProfile(token)
-    return successResponse(user.bookmarks || [])
+    const { data: bookmarks, error } = await supabase
+      .from("bookmarks")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching bookmarks:", error)
+      return NextResponse.json({ error: "Failed to fetch bookmarks" }, { status: 500 })
+    }
+
+    return NextResponse.json({ bookmarks })
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error in bookmarks API:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 10, "BOOKMARKS_POST_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-    const token = getAuthTokenFromRequest(request)
-    if (!token) {
-      throw new Error("Unauthorized")
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
+    const { postId, title, slug, excerpt, featuredImage } = body
 
-    // Validate request body
-    const { postId } = addBookmarkSchema.parse(body)
-
-    const user = await fetchUserProfile(token)
-
-    // Check if bookmark already exists
-    if (user.bookmarks && user.bookmarks.includes(postId)) {
-      return successResponse({ success: true, message: "Bookmark already exists" })
+    if (!postId) {
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 })
     }
 
-    const updatedBookmarks = [...(user.bookmarks || []), postId]
-    await updateUserProfile(token, { bookmarks: updatedBookmarks })
+    // Check if bookmark already exists
+    const { data: existingBookmark } = await supabase
+      .from("bookmarks")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("post_id", postId)
+      .single()
 
-    return successResponse({
-      success: true,
-      bookmarks: updatedBookmarks,
-    })
+    if (existingBookmark) {
+      return NextResponse.json({ error: "Bookmark already exists" }, { status: 409 })
+    }
+
+    const bookmarkData = {
+      user_id: user.id,
+      post_id: postId,
+      title: title || "Untitled Post",
+      slug: slug || "",
+      excerpt: excerpt || "",
+      featured_image: featuredImage ? JSON.stringify(featuredImage) : null, // Using snake_case
+    }
+
+    const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
+
+    if (error) {
+      console.error("Error adding bookmark:", error)
+      return NextResponse.json({ error: "Failed to add bookmark" }, { status: 500 })
+    }
+
+    return NextResponse.json({ bookmark: data })
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error in bookmarks API:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 10, "BOOKMARKS_DELETE_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
 
-    const token = getAuthTokenFromRequest(request)
-    if (!token) {
-      throw new Error("Unauthorized")
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
+    const { searchParams } = new URL(request.url)
+    const postId = searchParams.get("postId")
 
-    // Validate request body
-    const { postId } = removeBookmarkSchema.parse(body)
-
-    const user = await fetchUserProfile(token)
-
-    if (!user.bookmarks || !user.bookmarks.includes(postId)) {
-      return successResponse({ success: true, message: "Bookmark does not exist" })
+    if (!postId) {
+      return NextResponse.json({ error: "Post ID is required" }, { status: 400 })
     }
 
-    const updatedBookmarks = (user.bookmarks || []).filter((id: string) => id !== postId)
-    await updateUserProfile(token, { bookmarks: updatedBookmarks })
+    const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
 
-    return successResponse({
-      success: true,
-      bookmarks: updatedBookmarks,
-    })
+    if (error) {
+      console.error("Error removing bookmark:", error)
+      return NextResponse.json({ error: "Failed to remove bookmark" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error in bookmarks API:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

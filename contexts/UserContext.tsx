@@ -6,7 +6,7 @@ import type { User, Session } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { useInterval } from "@/hooks/useInterval"
-import type { Database } from "@/types/supabase"
+import type { Database } from "@/lib/supabase"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 

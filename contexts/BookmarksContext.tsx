@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
@@ -9,24 +8,23 @@ import { useToast } from "@/hooks/use-toast"
 
 interface Bookmark {
   id: string
+  user_id: string
   post_id: string
   title: string
-  slug: string
-  date: string
-  excerpt: string
-  featuredImage: {
-    node: {
-      sourceUrl: string
-    }
-  }
+  slug?: string
+  excerpt?: string
+  created_at: string
+  featured_image?: any
 }
 
 interface BookmarksContextType {
   bookmarks: Bookmark[]
   loading: boolean
-  toggleBookmark: (post: Omit<Bookmark, "id">) => Promise<void>
+  addBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
+  toggleBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
   isBookmarked: (postId: string) => boolean
+  refreshBookmarks: () => Promise<void>
 }
 
 const BookmarksContext = createContext<BookmarksContextType | undefined>(undefined)
@@ -45,6 +43,14 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const supabase = createClient()
+
+  const isBookmarked = useCallback(
+    (postId: string) => {
+      if (!postId) return false
+      return bookmarks.some((b) => b.post_id === postId)
+    },
+    [bookmarks],
+  )
 
   // Fetch bookmarks when user changes
   useEffect(() => {
@@ -65,6 +71,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      console.log("Fetching bookmarks for user:", user.id)
       const { data, error } = await supabase
         .from("bookmarks")
         .select("*")
@@ -73,111 +80,138 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Error fetching bookmarks:", error)
+        toast({
+          title: "Error",
+          description: `Failed to load bookmarks: ${error.message}`,
+          variant: "destructive",
+        })
         return
       }
 
-      setBookmarks(data as Bookmark[])
-    } catch (error) {
+      console.log("Fetched bookmarks:", data?.length || 0)
+      setBookmarks(data || [])
+    } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
+      toast({
+        title: "Error",
+        description: `Failed to load bookmarks: ${error.message || "Unknown error"}`,
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // New function that uses the handle_bookmark RPC
-  const toggleBookmark = useCallback(
-    async (post: Omit<Bookmark, "id">) => {
-      if (!user) return
+  const addBookmark = useCallback(
+    async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "You must be logged in to save bookmarks",
+          variant: "destructive",
+        })
+        return
+      }
 
       try {
-        // Validate required fields
-        if (!post.post_id) {
-          throw new Error("Post ID is required for bookmarking")
+        console.log("Adding bookmark:", post)
+
+        // Check if bookmark already exists
+        if (isBookmarked(post.post_id)) {
+          console.log("Bookmark already exists")
+          toast({
+            title: "Already bookmarked",
+            description: "This article is already in your bookmarks",
+          })
+          return
         }
 
-        // Call the handle_bookmark RPC function
-        const { data, error } = await supabase.rpc("handle_bookmark", {
-          p_user_id: user.id,
-          p_post_id: post.post_id,
-          p_title: post.title || "Untitled Post",
-          p_slug: post.slug || "",
-          p_date: post.date || new Date().toISOString(),
-          p_excerpt: post.excerpt || "",
-          p_featured_image: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
-          p_action: "toggle", // Toggle the bookmark status
-        })
+        // Prepare featured image data
+        let processedFeaturedImage = null
+        if (post.featured_image) {
+          try {
+            if (typeof post.featured_image === "string") {
+              processedFeaturedImage = post.featured_image
+            } else {
+              processedFeaturedImage = JSON.stringify(post.featured_image)
+            }
+          } catch (e) {
+            console.error("Error processing featured image:", e)
+            processedFeaturedImage = null
+          }
+        }
+
+        const bookmarkData = {
+          user_id: user.id,
+          post_id: post.post_id,
+          title: post.title || "Untitled Post",
+          slug: post.slug || "",
+          excerpt: post.excerpt || "",
+          featured_image: processedFeaturedImage, // Using snake_case column name
+        }
+
+        console.log("Inserting bookmark data:", bookmarkData)
+        const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
 
         if (error) {
-          console.error("Error toggling bookmark:", error)
+          console.error("Error adding bookmark:", error)
           toast({
             title: "Error",
-            description: `Failed to update bookmark: ${error.message}`,
+            description: `Failed to add bookmark: ${error.message}`,
             variant: "destructive",
           })
           return
         }
 
-        // Refresh bookmarks to get the updated state
-        await fetchBookmarks()
+        console.log("Bookmark added successfully:", data)
+        setBookmarks((prev) => [data, ...prev])
 
-        // Show success message based on the action performed
-        const wasAdded = data?.action === "added"
         toast({
-          title: wasAdded ? "Bookmarked" : "Bookmark Removed",
-          description: wasAdded ? "Article added to your bookmarks" : "Article removed from your bookmarks",
+          title: "Bookmarked",
+          description: "Article added to your bookmarks",
         })
       } catch (error: any) {
-        console.error("Failed to toggle bookmark:", error)
+        console.error("Failed to add bookmark:", error)
         toast({
           title: "Error",
-          description: `Failed to update bookmark: ${error.message}`,
+          description: `Failed to add bookmark: ${error.message || "Unknown error"}`,
           variant: "destructive",
         })
       }
     },
-    [user, toast, supabase],
+    [user, toast, supabase, isBookmarked],
   )
 
-  // Keep the removeBookmark function for backward compatibility
   const removeBookmark = useCallback(
     async (postId: string) => {
       if (!user || !postId) return
 
       try {
-        // Call the handle_bookmark RPC function with 'remove' action
-        const { error } = await supabase.rpc("handle_bookmark", {
-          p_user_id: user.id,
-          p_post_id: postId,
-          p_title: "",
-          p_slug: "",
-          p_date: new Date().toISOString(),
-          p_excerpt: "",
-          p_featured_image: null,
-          p_action: "remove",
-        })
+        console.log("Removing bookmark:", postId)
+        const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
 
         if (error) {
           console.error("Error removing bookmark:", error)
           toast({
             title: "Error",
-            description: "Failed to remove bookmark",
+            description: `Failed to remove bookmark: ${error.message}`,
             variant: "destructive",
           })
           return
         }
 
-        // Remove the bookmark from state
+        console.log("Bookmark removed successfully")
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
 
         toast({
           title: "Bookmark removed",
           description: "Article removed from your bookmarks",
         })
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to remove bookmark:", error)
         toast({
           title: "Error",
-          description: "Failed to remove bookmark",
+          description: `Failed to remove bookmark: ${error.message || "Unknown error"}`,
           variant: "destructive",
         })
       }
@@ -185,23 +219,32 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     [user, toast, supabase],
   )
 
-  const isBookmarked = useCallback(
-    (postId: string) => {
-      if (!postId) return false
-      return bookmarks.some((b) => b.post_id === postId)
+  const toggleBookmark = useCallback(
+    async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
+      if (isBookmarked(post.post_id)) {
+        await removeBookmark(post.post_id)
+      } else {
+        await addBookmark(post)
+      }
     },
-    [bookmarks],
+    [addBookmark, removeBookmark, isBookmarked],
   )
+
+  const refreshBookmarks = useCallback(async () => {
+    await fetchBookmarks()
+  }, [user])
 
   const contextValue = useMemo(
     () => ({
       bookmarks,
       loading,
-      toggleBookmark, // Replace addBookmark with toggleBookmark
+      addBookmark,
       removeBookmark,
+      toggleBookmark,
       isBookmarked,
+      refreshBookmarks,
     }),
-    [bookmarks, loading, toggleBookmark, removeBookmark, isBookmarked],
+    [bookmarks, loading, addBookmark, removeBookmark, toggleBookmark, isBookmarked, refreshBookmarks],
   )
 
   return <BookmarksContext.Provider value={contextValue}>{children}</BookmarksContext.Provider>

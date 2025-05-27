@@ -1,9 +1,3 @@
-/**
- * Network utility functions for handling online/offline status
- * and network-related operations
- */
-
-// Check if the browser is currently online
 export function isOnline(): boolean {
   return typeof navigator !== "undefined" && typeof navigator.onLine === "boolean" ? navigator.onLine : true // Assume online if we can't detect
 }

@@ -1,4 +1,3 @@
-// WordPress Authentication Keys
 export const WP_AUTH_CONFIG = {
   AUTH_KEY: "@Yh*-0|3%1;kyE;79u%ZnfKO47g(X;P7hNW2IO2[:*5gTe@9Go%Z;JRj]C25~I_f",
   SECURE_AUTH_KEY: "x:b;h~-&OZMH5yhG]53JBH4f19j/Z6rxZ|2rWqT8e)J63a5p#54R0/x@xraczGLA",

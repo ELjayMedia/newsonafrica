@@ -1,10 +1,3 @@
-/**
- * Generates a base64 blur data URL for image placeholders
- * @param width Width of the placeholder
- * @param height Height of the placeholder
- * @param color Optional background color (defaults to light gray)
- * @returns A base64 encoded SVG that can be used as a placeholder
- */
 export function generateBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
   // Create a simple SVG with the specified dimensions
   const svg = `

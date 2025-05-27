@@ -1,10 +1,3 @@
-/**
- * Formats a date string into a human-readable format
- *
- * @param dateString The date string to format
- * @param includeTime Whether to include the time in the formatted date
- * @returns Formatted date string
- */
 export function formatDate(dateString: string, includeTime = false): string {
   try {
     const date = new Date(dateString)

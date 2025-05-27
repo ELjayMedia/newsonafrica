@@ -1,7 +1,7 @@
 import { cache } from "react"
 import { client } from "./wordpress-api"
 import { queries } from "./wordpress-queries"
-import { mockHomepageData } from "./mock-data"
+import { FALLBACK_POSTS, MOCK_HOMEPAGE_DATA } from "./mock-data"
 
 // Cache time constants
 const CACHE_TIMES = {
@@ -68,12 +68,19 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
   throw lastError
 }
 
-// Update the fetchHomepageData function to better handle offline scenarios
+// Update the fetchHomepageData function to use the new mock data structure
 export const fetchHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
       console.log("Device is offline, using mock data")
-      return mockHomepageData
+      return {
+        featuredPosts: MOCK_HOMEPAGE_DATA.secondaryPosts,
+        categories: MOCK_HOMEPAGE_DATA.categories.map((cat) => ({
+          ...cat,
+          posts: { nodes: MOCK_HOMEPAGE_DATA.categoryPosts[cat.slug] || [] },
+        })),
+        taggedPosts: [MOCK_HOMEPAGE_DATA.featuredPost, ...MOCK_HOMEPAGE_DATA.secondaryPosts],
+      }
     }
 
     try {
@@ -85,40 +92,70 @@ export const fetchHomepageData = cache(async () => {
 
       // Process results, handling any individual promise rejections
       return {
-        featuredPosts: featured.status === "fulfilled" ? featured.value.posts.nodes : [],
-        categories: categories.status === "fulfilled" ? categories.value.categories.nodes : [],
-        taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : [],
+        featuredPosts: featured.status === "fulfilled" ? featured.value.posts.nodes : FALLBACK_POSTS,
+        categories:
+          categories.status === "fulfilled" ? categories.value.categories.nodes : MOCK_HOMEPAGE_DATA.categories,
+        taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : FALLBACK_POSTS,
       }
     } catch (error) {
-      console.error("Error fetching homepage data, using mock data:", error)
-      return mockHomepageData
+      console.error("Error fetching homepage data, using fallback data:", error)
+      return {
+        featuredPosts: FALLBACK_POSTS,
+        categories: MOCK_HOMEPAGE_DATA.categories,
+        taggedPosts: FALLBACK_POSTS,
+      }
     }
   } catch (error) {
-    console.error("Error in fetchHomepageData, using mock data:", error)
-    return mockHomepageData
+    console.error("Error in fetchHomepageData, using fallback data:", error)
+    return {
+      featuredPosts: FALLBACK_POSTS,
+      categories: MOCK_HOMEPAGE_DATA.categories,
+      taggedPosts: FALLBACK_POSTS,
+    }
   }
 })
 
-// Function to fetch homepage data with category posts
+// Update the fetchCompleteHomepageData function similarly
 export const fetchCompleteHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
       console.log("Device is offline, using mock data")
-      return mockHomepageData
+      return {
+        featuredPosts: MOCK_HOMEPAGE_DATA.secondaryPosts,
+        categories: MOCK_HOMEPAGE_DATA.categories.map((cat) => ({
+          ...cat,
+          posts: { nodes: MOCK_HOMEPAGE_DATA.categoryPosts[cat.slug] || [] },
+        })),
+        taggedPosts: [MOCK_HOMEPAGE_DATA.featuredPost, ...MOCK_HOMEPAGE_DATA.secondaryPosts],
+        recentPosts: FALLBACK_POSTS,
+      }
     }
 
     const baseData = await fetchHomepageData()
 
     // Get recent posts as a fallback for any category that might be missing
-    const recentPostsResponse = await fetchAPI(queries.recentPosts, { limit: 10 })
-    const recentPosts = recentPostsResponse.posts.nodes || []
+    try {
+      const recentPostsResponse = await fetchAPI(queries.recentPosts, { limit: 10 })
+      const recentPosts = recentPostsResponse.posts.nodes || FALLBACK_POSTS
 
-    return {
-      ...baseData,
-      recentPosts,
+      return {
+        ...baseData,
+        recentPosts,
+      }
+    } catch (error) {
+      console.error("Error fetching recent posts, using fallback data:", error)
+      return {
+        ...baseData,
+        recentPosts: FALLBACK_POSTS,
+      }
     }
   } catch (error) {
-    console.error("Error fetching complete homepage data, using mock data:", error)
-    return mockHomepageData
+    console.error("Error fetching complete homepage data, using fallback data:", error)
+    return {
+      featuredPosts: FALLBACK_POSTS,
+      categories: MOCK_HOMEPAGE_DATA.categories,
+      taggedPosts: FALLBACK_POSTS,
+      recentPosts: FALLBACK_POSTS,
+    }
   }
 })

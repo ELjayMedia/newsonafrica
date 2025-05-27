@@ -1,4 +1,4 @@
-import type { PaystackVerifyResponse } from "@/types/paystack"
+import type { PaystackVerifyResponse } from "@/config/paystack"
 
 /**
  * Verifies a Paystack transaction using the transaction reference

@@ -1,9 +1,3 @@
-/**
- * Profile Service
- *
- * Handles all profile-related API calls and operations
- */
-
 import { supabase } from "@/lib/supabase"
 import {
   fetchById,
