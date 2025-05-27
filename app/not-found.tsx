@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import ReturnLink from "@/components/ReturnLink"
+import ServerSafeReturnButton from "@/components/ServerSafeReturnButton"
 
 export default function NotFound() {
   return (
@@ -20,7 +20,7 @@ export default function NotFound() {
           </Link>
         }
       >
-        <ReturnLink />
+        <ServerSafeReturnButton />
       </Suspense>
     </div>
   )
