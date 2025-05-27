@@ -9,6 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+<<<<<<< HEAD
+=======
+    "@apollo/client": "latest",
+    "@apollo/server": "latest",
+    "@as-integrations/next": "latest",
+    "@ducanh2912/next-pwa": "latest",
+>>>>>>> refs/remotes/origin/main
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -43,6 +50,21 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+<<<<<<< HEAD
+=======
+    "expo": "latest",
+    "firebase": "latest",
+    "fs": "latest",
+    "fuse.js": "latest",
+    "graphql": "latest",
+    "graphql-request": "latest",
+    "graphql-tag": "latest",
+    "graphql-ws": "latest",
+    "imagemin": "latest",
+    "imagemin-mozjpeg": "latest",
+    "imagemin-pngquant": "latest",
+    "imagemin-webp": "latest",
+>>>>>>> refs/remotes/origin/main
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "14.2.25",
@@ -53,11 +75,26 @@
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
+    "sharp": "latest",
     "sonner": "^1.7.1",
+<<<<<<< HEAD
+=======
+    "subscriptions-transport-ws": "latest",
+    "svelte": "latest",
+    "swr": "latest",
+>>>>>>> refs/remotes/origin/main
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
+<<<<<<< HEAD
     "zod": "^3.24.1"
+=======
+    "vue": "latest",
+    "vue-router": "latest",
+    "web-vitals": "latest",
+    "webpack": "latest",
+    "zod": "latest"
+>>>>>>> refs/remotes/origin/main
   },
   "devDependencies": {
     "@types/node": "^22",
