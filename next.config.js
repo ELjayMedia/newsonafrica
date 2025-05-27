@@ -171,7 +171,6 @@ const nextConfig = {
     return config
   },
   experimental: {
-    optimizeCss: true,
     scrollRestoration: true,
     largePageDataBytes: 12800000,
   },
