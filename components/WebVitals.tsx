@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { inject } from "@vercel/analytics"
-import { sendWebVitalToVercel } from "@/lib/performance-monitoring"
 
 export default function WebVitals() {
   useEffect(() => {
@@ -16,24 +15,69 @@ export default function WebVitals() {
         .then((webVitals) => {
           try {
             // Check which functions are available and use them
-            if (typeof webVitals.onCLS === "function") webVitals.onCLS(sendWebVitalToVercel)
-            if (typeof webVitals.onFID === "function") webVitals.onFID(sendWebVitalToVercel)
-            if (typeof webVitals.onLCP === "function") webVitals.onLCP(sendWebVitalToVercel)
-            if (typeof webVitals.onFCP === "function") webVitals.onFCP(sendWebVitalToVercel)
-            if (typeof webVitals.onTTFB === "function") webVitals.onTTFB(sendWebVitalToVercel)
+            if (typeof webVitals.onCLS === "function")
+              webVitals.onCLS((metric) => {
+                // Send to Vercel Analytics
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
+            if (typeof webVitals.onFID === "function")
+              webVitals.onFID((metric) => {
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
+            if (typeof webVitals.onLCP === "function")
+              webVitals.onLCP((metric) => {
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
+            if (typeof webVitals.onFCP === "function")
+              webVitals.onFCP((metric) => {
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
+            if (typeof webVitals.onTTFB === "function")
+              webVitals.onTTFB((metric) => {
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
 
             // Handle INP which might not be available in older versions
             if (typeof webVitals.onINP === "function") {
-              webVitals.onINP(sendWebVitalToVercel)
-            }
-
-            // Fallback for older versions that use getCLS, getFID, etc.
-            if (typeof webVitals.getCLS === "function") {
-              webVitals.getCLS(sendWebVitalToVercel)
-              webVitals.getFID(sendWebVitalToVercel)
-              webVitals.getLCP(sendWebVitalToVercel)
-              webVitals.getFCP(sendWebVitalToVercel)
-              webVitals.getTTFB(sendWebVitalToVercel)
+              webVitals.onINP((metric) => {
+                if (window.va) {
+                  window.va("track", "Web Vital", {
+                    name: metric.name,
+                    value: metric.value,
+                    rating: metric.rating,
+                  })
+                }
+              })
             }
 
             console.log("Web Vitals monitoring initialized")

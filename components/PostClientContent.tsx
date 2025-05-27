@@ -1,52 +1,95 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { fetchSinglePost } from "@/lib/wordpress-api"
+import { useRouter } from "next/navigation"
+import { getPostBySlug } from "@/lib/api/wordpress"
+import type { WordPressPost } from "@/lib/api/wordpress"
 import { PostContent } from "@/components/PostContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
-import { ErrorMessage } from "@/components/ErrorMessage"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, ArrowLeft } from "lucide-react"
 
 interface PostClientContentProps {
   slug: string
-  initialData?: any
+  initialData?: WordPressPost | null
 }
 
 export function PostClientContent({ slug, initialData }: PostClientContentProps) {
-  const [isClient, setIsClient] = useState(false)
+  const [post, setPost] = useState<WordPressPost | null>(initialData || null)
+  const [loading, setLoading] = useState(!initialData)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    // If we have initial data, don't fetch again
+    if (initialData) {
+      setPost(initialData)
+      setLoading(false)
+      return
+    }
 
-  const {
-    data: post,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["post", slug],
-    queryFn: () => fetchSinglePost(slug),
-    initialData,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 2,
-  })
+    // Fetch post data if not provided server-side
+    async function fetchPost() {
+      try {
+        setLoading(true)
+        setError(null)
 
-  // Handle loading state
-  if (isLoading && !initialData) {
+        const fetchedPost = await getPostBySlug(slug)
+
+        if (!fetchedPost) {
+          setError("Article not found")
+          return
+        }
+
+        setPost(fetchedPost)
+      } catch (err) {
+        console.error("Error fetching post:", err)
+        setError("Failed to load article. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPost()
+  }, [slug, initialData])
+
+  // Loading state
+  if (loading) {
     return <PostSkeleton />
   }
 
-  // Handle error state
-  if (error) {
-    console.error("Error fetching post:", error)
-    return <ErrorMessage message="Failed to load the article. Please try again later." />
+  // Error state
+  if (error || !post) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <AlertCircle className="mx-auto h-16 w-16 text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {error === "Article not found" ? "Article Not Found" : "Error Loading Article"}
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {error === "Article not found"
+              ? "The article you're looking for doesn't exist or has been moved."
+              : "We encountered an error while loading this article. Please try again."}
+          </p>
+
+          <div className="space-y-3">
+            {error !== "Article not found" && (
+              <Button onClick={() => window.location.reload()} className="w-full" variant="default">
+                Try again
+              </Button>
+            )}
+
+            <Button onClick={() => router.push("/")} variant="outline" className="w-full">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Return to homepage
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  // Handle not found
-  if (!post) {
-    return <ErrorMessage message="Article not found" />
-  }
-
-  // Render the post content
-  return <PostContent post={post} isClient={isClient} />
+  // Render post content
+  return <PostContent post={post} />
 }

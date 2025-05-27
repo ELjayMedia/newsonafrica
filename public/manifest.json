@@ -1,24 +1,148 @@
 {
-  "name": "News on Africa",
+  "name": "News On Africa",
   "short_name": "NewsAfrica",
   "description": "Pan-African news platform covering all African countries with a continental perspective",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "orientation": "portrait",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["news", "magazines", "lifestyle"],
   "icons": [
     {
-      "src": "/api/icon?size=192",
-      "sizes": "192x192",
+      "src": "/icons/icon-72x72.png",
       "type": "image/png",
+      "sizes": "72x72",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "type": "image/png",
+      "sizes": "128x128",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/api/icon?size=512",
-      "sizes": "512x512",
+      "src": "/icons/icon-384x384.png",
       "type": "image/png",
+      "sizes": "384x384",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Latest News",
+      "short_name": "News",
+      "description": "View the latest African news",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/icons/shortcut-news.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Business",
+      "short_name": "Business",
+      "description": "African business news and updates",
+      "url": "/category/business",
+      "icons": [
+        {
+          "src": "/icons/shortcut-business.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Sports",
+      "short_name": "Sports",
+      "description": "African sports news and coverage",
+      "url": "/category/sport",
+      "icons": [
+        {
+          "src": "/icons/shortcut-sports.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Entertainment",
+      "short_name": "Entertainment",
+      "description": "African entertainment and culture",
+      "url": "/category/entertainment",
+      "icons": [
+        {
+          "src": "/icons/shortcut-entertainment.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-home.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "form_factor": "wide",
+      "label": "News On Africa Homepage"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "type": "image/png",
+      "sizes": "390x844",
+      "form_factor": "narrow",
+      "label": "News On Africa Mobile View"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.newsonafrica.app",
+      "id": "com.newsonafrica.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/news-on-africa/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

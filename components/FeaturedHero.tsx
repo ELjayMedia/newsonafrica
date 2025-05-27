@@ -8,20 +8,19 @@ import { generateBlurDataURL } from "@/utils/lazyLoad"
 
 interface FeaturedHeroProps {
   post: {
-    title: string | { rendered: string }
-    excerpt: string | { rendered: string }
+    title: string
+    excerpt?: string
     slug: string
     date: string
-    featuredImage?: {
-      node: {
-        sourceUrl: string
-      }
-    }
-    _embedded?: {
-      "wp:featuredmedia"?: Array<{
-        source_url: string
-      }>
-    }
+    featuredImage?:
+      | {
+          sourceUrl: string
+        }
+      | {
+          node: {
+            sourceUrl: string
+          }
+        }
   } | null
 }
 
@@ -49,15 +48,28 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
   // Early return with null if post is null or undefined
   if (!post) return null
 
-  // Extract and normalize title
-  const title = typeof post.title === "string" ? post.title : post.title?.rendered || "Untitled"
+  // Extract title
+  const title = post.title || "Untitled"
 
-  // Extract and normalize excerpt
-  const excerpt = typeof post.excerpt === "string" ? post.excerpt : post.excerpt?.rendered || ""
+  // Extract excerpt
+  const excerpt = post.excerpt || ""
 
-  // Get featured image URL with fallback
-  const imageUrl =
-    post.featuredImage?.node?.sourceUrl || post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/placeholder.svg"
+  // Get featured image URL with fallback - handle both new and old API formats
+  const imageUrl = (() => {
+    if (!post.featuredImage) return "/placeholder.svg"
+
+    // New API format
+    if ("sourceUrl" in post.featuredImage) {
+      return post.featuredImage.sourceUrl
+    }
+
+    // Old API format
+    if ("node" in post.featuredImage) {
+      return post.featuredImage.node.sourceUrl
+    }
+
+    return "/placeholder.svg"
+  })()
 
   return (
     <Link href={`/post/${post.slug}`} className="block group">
@@ -82,10 +94,12 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
           <h2 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-blue-600 transition-colors duration-200">
             {title}
           </h2>
-          <div
-            className="text-gray-600 line-clamp-3 text-sm font-light"
-            dangerouslySetInnerHTML={{ __html: excerpt }}
-          />
+          {excerpt && (
+            <div
+              className="text-gray-600 line-clamp-3 text-sm font-light"
+              dangerouslySetInnerHTML={{ __html: excerpt }}
+            />
+          )}
         </div>
       </div>
     </Link>

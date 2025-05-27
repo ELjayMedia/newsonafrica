@@ -1,37 +1,92 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
-import ClientPage from "./ClientPage"
+import { HomeContent } from "@/components/HomeContent"
+import { getLatestPosts } from "@/lib/api/wordpress"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
+  keywords: "African News, News On Africa, Latest News, Breaking News, African Politics, Business News",
+
+  // Canonical URL and robots for homepage
+  alternates: {
+    canonical: "https://newsonafrica.com",
+    languages: {
+      "en-US": "https://newsonafrica.com",
+      en: "https://newsonafrica.com",
+    },
+  },
+
+  // Enhanced robots directives
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+    bingBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+    },
+  },
+
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,
-    url: siteConfig.url,
+    url: "https://newsonafrica.com",
     siteName: siteConfig.name,
+    locale: "en_US",
+    type: "website",
     images: [
       {
-        url: `${siteConfig.url}/og-image.jpg`,
+        url: "https://newsonafrica.com/og-image.jpg",
         width: 1200,
         height: 630,
         alt: siteConfig.name,
       },
     ],
-    locale: "en_US",
-    type: "website",
   },
   twitter: {
     card: "summary_large_image",
+    site: "@newsonafrica",
     title: siteConfig.name,
     description: siteConfig.description,
-    images: [`${siteConfig.url}/og-image.jpg`],
+    images: ["https://newsonafrica.com/og-image.jpg"],
+  },
+
+  // Additional SEO metadata
+  other: {
+    "og:site_name": "News On Africa",
+    "og:locale": "en_US",
   },
 }
 
-// Increase revalidation time for better performance
-export const revalidate = 300 // Revalidate every 5 minutes
+export const revalidate = 600 // Revalidate every 10 minutes
 
-export default function Home() {
-  return <ClientPage />
+async function getHomePageData() {
+  try {
+    const { posts } = await getLatestPosts(20)
+    return { posts: posts || [] }
+  } catch (error) {
+    console.error("Failed to fetch posts for homepage:", error)
+    return { posts: [] }
+  }
+}
+
+export default async function Home() {
+  try {
+    const { posts } = await getHomePageData()
+    return <HomeContent initialPosts={posts} />
+  } catch (error) {
+    console.error("Homepage data fetch failed:", error)
+    return <HomeContent initialPosts={[]} />
+  }
 }

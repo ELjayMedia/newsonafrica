@@ -12,11 +12,15 @@ interface VerticalCardProps {
     slug: string
     date: string
     type?: string
-    featuredImage?: {
-      node: {
-        sourceUrl: string
-      }
-    }
+    featuredImage?:
+      | {
+          sourceUrl: string
+        }
+      | {
+          node: {
+            sourceUrl: string
+          }
+        }
   }
   className?: string
 }
@@ -31,17 +35,33 @@ export const VerticalCard = memo(function VerticalCard({ post, className = "" }:
 
   const blurDataURL = useMemo(() => generateBlurDataURL(300, 200), [])
 
+  // Get featured image URL with fallback - handle both new and old API formats
+  const imageUrl = (() => {
+    if (!post.featuredImage) return "/placeholder.svg"
+
+    // New API format
+    if ("sourceUrl" in post.featuredImage) {
+      return post.featuredImage.sourceUrl
+    }
+
+    // Old API format
+    if ("node" in post.featuredImage) {
+      return post.featuredImage.node.sourceUrl
+    }
+
+    return "/placeholder.svg"
+  })()
+
   return (
     <Link href={`/post/${post.slug}`} className={`group block h-full ${className}`}>
       <article className="flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
         {post.featuredImage && (
           <div className="relative h-32 overflow-hidden">
             <Image
-              src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={imageUrl || "/placeholder.svg"}
               alt={post.title}
-              layout="fill"
-              objectFit="cover"
-              className="transition-transform duration-300 group-hover:scale-105"
+              fill
+              className="transition-transform duration-300 group-hover:scale-105 object-cover"
               placeholder="blur"
               blurDataURL={blurDataURL}
             />

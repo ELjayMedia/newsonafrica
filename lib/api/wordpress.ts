@@ -1,0 +1,624 @@
+import {
+  LATEST_POSTS_QUERY,
+  POST_BY_SLUG_QUERY,
+  CATEGORIES_QUERY,
+  POSTS_BY_CATEGORY_QUERY,
+  SEARCH_POSTS_QUERY,
+  FEATURED_POSTS_QUERY,
+} from "@/lib/graphql/queries"
+
+const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+
+// TypeScript interfaces for WordPress data
+export interface WordPressImage {
+  sourceUrl: string
+  altText?: string
+  title?: string
+}
+
+export interface WordPressAuthor {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  avatar?: {
+    url: string
+  }
+}
+
+export interface WordPressCategory {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  count?: number
+  parent?: {
+    node: {
+      name: string
+      slug: string
+    }
+  }
+}
+
+export interface WordPressTag {
+  id: string
+  name: string
+  slug: string
+  description?: string
+}
+
+export interface WordPressPost {
+  id: string
+  title: string
+  content?: string
+  excerpt: string
+  slug: string
+  date: string
+  modified?: string
+  status?: string
+  featuredImage?: {
+    node: WordPressImage
+  }
+  author: {
+    node: WordPressAuthor
+  }
+  categories: {
+    nodes: WordPressCategory[]
+  }
+  tags: {
+    nodes: WordPressTag[]
+  }
+  seo?: {
+    title: string
+    metaDesc: string
+    opengraphImage?: {
+      sourceUrl: string
+    }
+  }
+}
+
+export interface WordPressPostsResponse {
+  posts: {
+    nodes: WordPressPost[]
+    pageInfo: {
+      hasNextPage: boolean
+      endCursor: string | null
+    }
+  }
+}
+
+export interface WordPressCategoriesResponse {
+  categories: {
+    nodes: WordPressCategory[]
+  }
+}
+
+export interface WordPressSinglePostResponse {
+  post: WordPressPost | null
+}
+
+// Country configuration
+export interface CountryConfig {
+  code: string
+  name: string
+  flag: string
+  currency: string
+  timezone: string
+  languages: string[]
+  apiEndpoint: string
+  restEndpoint: string
+}
+
+export const COUNTRIES: Record<string, CountryConfig> = {
+  sz: {
+    code: "sz",
+    name: "Eswatini",
+    flag: "🇸🇿",
+    currency: "SZL",
+    timezone: "Africa/Mbabane",
+    languages: ["en", "ss"],
+    apiEndpoint: "https://newsonafrica.com/sz/graphql",
+    restEndpoint: "https://newsonafrica.com/sz/wp-json/wp/v2",
+  },
+  ng: {
+    code: "ng",
+    name: "Nigeria",
+    flag: "🇳🇬",
+    currency: "NGN",
+    timezone: "Africa/Lagos",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/ng/graphql",
+    restEndpoint: "https://newsonafrica.com/ng/wp-json/wp/v2",
+  },
+  ke: {
+    code: "ke",
+    name: "Kenya",
+    flag: "🇰🇪",
+    currency: "KES",
+    timezone: "Africa/Nairobi",
+    languages: ["en", "sw"],
+    apiEndpoint: "https://newsonafrica.com/ke/graphql",
+    restEndpoint: "https://newsonafrica.com/ke/wp-json/wp/v2",
+  },
+  za: {
+    code: "za",
+    name: "South Africa",
+    flag: "🇿🇦",
+    currency: "ZAR",
+    timezone: "Africa/Johannesburg",
+    languages: ["en", "af", "zu", "xh"],
+    apiEndpoint: "https://newsonafrica.com/za/graphql",
+    restEndpoint: "https://newsonafrica.com/za/wp-json/wp/v2",
+  },
+  gh: {
+    code: "gh",
+    name: "Ghana",
+    flag: "🇬🇭",
+    currency: "GHS",
+    timezone: "Africa/Accra",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/gh/graphql",
+    restEndpoint: "https://newsonafrica.com/gh/wp-json/wp/v2",
+  },
+  ug: {
+    code: "ug",
+    name: "Uganda",
+    flag: "🇺🇬",
+    currency: "UGX",
+    timezone: "Africa/Kampala",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/ug/graphql",
+    restEndpoint: "https://newsonafrica.com/ug/wp-json/wp/v2",
+  },
+  tz: {
+    code: "tz",
+    name: "Tanzania",
+    flag: "🇹🇿",
+    currency: "TZS",
+    timezone: "Africa/Dar_es_Salaam",
+    languages: ["en", "sw"],
+    apiEndpoint: "https://newsonafrica.com/tz/graphql",
+    restEndpoint: "https://newsonafrica.com/tz/wp-json/wp/v2",
+  },
+  rw: {
+    code: "rw",
+    name: "Rwanda",
+    flag: "🇷🇼",
+    currency: "RWF",
+    timezone: "Africa/Kigali",
+    languages: ["en", "rw", "fr"],
+    apiEndpoint: "https://newsonafrica.com/rw/graphql",
+    restEndpoint: "https://newsonafrica.com/rw/wp-json/wp/v2",
+  },
+}
+
+// Utility function to get country-specific endpoints
+function getCountryEndpoints(countryCode: string) {
+  const country = COUNTRIES[countryCode]
+  if (!country) {
+    // Fallback to default (sz)
+    return {
+      graphql: COUNTRIES.sz.apiEndpoint,
+      rest: COUNTRIES.sz.restEndpoint,
+    }
+  }
+  return {
+    graphql: country.apiEndpoint,
+    rest: country.restEndpoint,
+  }
+}
+
+// Utility function to make GraphQL requests
+async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, any> = {},
+  countryCode?: string,
+  retries = 3,
+): Promise<T> {
+  const endpoints = getCountryEndpoints(countryCode || "sz")
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  try {
+    const response = await fetch(endpoints.graphql, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        variables,
+      }),
+      signal: controller.signal,
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
+
+    if (result.errors) {
+      console.error("GraphQL errors:", result.errors)
+      throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(", ")}`)
+    }
+
+    return result.data
+  } catch (error) {
+    clearTimeout(timeoutId)
+
+    if (retries > 0 && error instanceof Error) {
+      console.warn(`GraphQL request failed, retrying... (${retries} attempts left)`)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return graphqlRequest<T>(query, variables, countryCode, retries - 1)
+    }
+
+    throw error
+  }
+}
+
+// REST API fallback function
+async function restApiFallback<T>(
+  endpoint: string,
+  params: Record<string, any> = {},
+  transform: (data: any) => T,
+  countryCode?: string,
+): Promise<T> {
+  const endpoints = getCountryEndpoints(countryCode || "sz")
+  const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
+
+  const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      next: { revalidate: 300 },
+    })
+
+    if (!response.ok) {
+      throw new Error(`REST API request failed: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return transform(data)
+  } catch (error) {
+    console.error("REST API fallback failed:", error)
+    throw error
+  }
+}
+
+/**
+ * Get the latest posts from WordPress for a specific country
+ */
+export async function getLatestPostsForCountry(
+  countryCode: string,
+  limit = 20,
+  after?: string,
+): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
+  try {
+    const data = await graphqlRequest<WordPressPostsResponse>(
+      LATEST_POSTS_QUERY,
+      {
+        first: limit,
+        after,
+      },
+      countryCode,
+    )
+
+    return {
+      posts: data.posts.nodes,
+      hasNextPage: data.posts.pageInfo.hasNextPage,
+      endCursor: data.posts.pageInfo.endCursor,
+    }
+  } catch (error) {
+    console.error(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API:`, error)
+
+    try {
+      return await restApiFallback(
+        "posts",
+        { per_page: limit, _embed: 1 },
+        (posts: any[]) => ({
+          posts: posts.map(transformRestPostToGraphQL),
+          hasNextPage: posts.length === limit,
+          endCursor: null,
+        }),
+        countryCode,
+      )
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return { posts: [], hasNextPage: false, endCursor: null }
+    }
+  }
+}
+
+/**
+ * Get posts by category for a specific country
+ */
+export async function getPostsByCategoryForCountry(
+  countryCode: string,
+  categorySlug: string,
+  limit = 20,
+  after?: string,
+): Promise<{
+  category: WordPressCategory | null
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}> {
+  try {
+    const data = await graphqlRequest<{ category: any }>(
+      POSTS_BY_CATEGORY_QUERY,
+      {
+        slug: categorySlug,
+        first: limit,
+        after,
+      },
+      countryCode,
+    )
+
+    if (!data.category) {
+      return { category: null, posts: [], hasNextPage: false, endCursor: null }
+    }
+
+    return {
+      category: {
+        id: data.category.id,
+        name: data.category.name,
+        slug: data.category.slug,
+        description: data.category.description,
+      },
+      posts: data.category.posts.nodes,
+      hasNextPage: data.category.posts.pageInfo.hasNextPage,
+      endCursor: data.category.posts.pageInfo.endCursor,
+    }
+  } catch (error) {
+    console.error(`Failed to fetch category "${categorySlug}" for ${countryCode} via GraphQL, trying REST API:`, error)
+
+    try {
+      // First get category info
+      const categories = await restApiFallback(
+        `categories?slug=${categorySlug}`,
+        {},
+        (cats: any[]) => cats,
+        countryCode,
+      )
+
+      if (!categories || categories.length === 0) {
+        return { category: null, posts: [], hasNextPage: false, endCursor: null }
+      }
+
+      const category = categories[0]
+
+      // Then get posts for this category
+      const posts = await restApiFallback(
+        "posts",
+        { categories: category.id, per_page: limit, _embed: 1 },
+        (posts: any[]) => posts.map(transformRestPostToGraphQL),
+        countryCode,
+      )
+
+      return {
+        category: transformRestCategoryToGraphQL(category),
+        posts,
+        hasNextPage: posts.length === limit,
+        endCursor: null,
+      }
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return { category: null, posts: [], hasNextPage: false, endCursor: null }
+    }
+  }
+}
+
+/**
+ * Get categories for a specific country
+ */
+export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+  try {
+    const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
+    return data.categories.nodes
+  } catch (error) {
+    console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
+
+    try {
+      return await restApiFallback(
+        "categories",
+        { per_page: 100 },
+        (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
+        countryCode,
+      )
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return []
+    }
+  }
+}
+
+/**
+ * Get the latest posts from WordPress
+ */
+export async function getLatestPosts(
+  limit = 20,
+  after?: string,
+): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
+  return getLatestPostsForCountry("sz", limit, after)
+}
+
+/**
+ * Get a single post by slug
+ */
+export async function getPostBySlug(slug: string): Promise<WordPressPost | null> {
+  try {
+    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, {
+      slug,
+    })
+
+    return data.post
+  } catch (error) {
+    console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
+
+    try {
+      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
+        if (!posts || posts.length === 0) return null
+        return transformRestPostToGraphQL(posts[0])
+      })
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return null
+    }
+  }
+}
+
+/**
+ * Get all categories
+ */
+export async function getCategories(): Promise<WordPressCategory[]> {
+  return getCategoriesForCountry("sz")
+}
+
+/**
+ * Get posts by category
+ */
+export async function getPostsByCategory(
+  categorySlug: string,
+  limit = 20,
+  after?: string,
+): Promise<{
+  category: WordPressCategory | null
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}> {
+  return getPostsByCategoryForCountry("sz", categorySlug, limit, after)
+}
+
+/**
+ * Search posts
+ */
+export async function searchPosts(
+  searchTerm: string,
+  limit = 20,
+  after?: string,
+): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
+  try {
+    const data = await graphqlRequest<WordPressPostsResponse>(SEARCH_POSTS_QUERY, {
+      search: searchTerm,
+      first: limit,
+      after,
+    })
+
+    return {
+      posts: data.posts.nodes,
+      hasNextPage: data.posts.pageInfo.hasNextPage,
+      endCursor: data.posts.pageInfo.endCursor,
+    }
+  } catch (error) {
+    console.error("Failed to search posts via GraphQL, trying REST API:", error)
+
+    try {
+      return await restApiFallback("posts", { search: searchTerm, per_page: limit, _embed: 1 }, (posts: any[]) => ({
+        posts: posts.map(transformRestPostToGraphQL),
+        hasNextPage: posts.length === limit,
+        endCursor: null,
+      }))
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return { posts: [], hasNextPage: false, endCursor: null }
+    }
+  }
+}
+
+/**
+ * Get featured posts (sticky posts)
+ */
+export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
+  try {
+    const data = await graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
+      first: limit,
+    })
+
+    return data.posts.nodes
+  } catch (error) {
+    console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
+
+    try {
+      return await restApiFallback("posts", { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
+        posts.map(transformRestPostToGraphQL),
+      )
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return []
+    }
+  }
+}
+
+// Transform functions for REST API data
+function transformRestPostToGraphQL(post: any): WordPressPost {
+  return {
+    id: post.id.toString(),
+    title: post.title.rendered,
+    content: post.content?.rendered,
+    excerpt: post.excerpt.rendered,
+    slug: post.slug,
+    date: post.date,
+    modified: post.modified,
+    featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+      ? {
+          node: {
+            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+            altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+          },
+        }
+      : undefined,
+    author: {
+      node: {
+        id: post._embedded?.author?.[0]?.id?.toString() || "0",
+        name: post._embedded?.author?.[0]?.name || "Unknown Author",
+        slug: post._embedded?.author?.[0]?.slug || "unknown-author",
+        description: post._embedded?.author?.[0]?.description || "",
+        avatar: {
+          url: post._embedded?.author?.[0]?.avatar_urls?.["96"] || "",
+        },
+      },
+    },
+    categories: {
+      nodes:
+        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+          id: cat.id.toString(),
+          name: cat.name,
+          slug: cat.slug,
+        })) || [],
+    },
+    tags: {
+      nodes:
+        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+          id: tag.id.toString(),
+          name: tag.name,
+          slug: tag.slug,
+        })) || [],
+    },
+    seo: {
+      title: post.yoast_title || post.title.rendered,
+      metaDesc: post.yoast_meta?.description || post.excerpt.rendered.replace(/<[^>]*>/g, ""),
+    },
+  }
+}
+
+function transformRestCategoryToGraphQL(category: any): WordPressCategory {
+  return {
+    id: category.id.toString(),
+    name: category.name,
+    slug: category.slug,
+    description: category.description || "",
+    count: category.count,
+  }
+}
+
+// Export types for use in other files
+export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { fetchCategoryPosts } from "@/lib/wordpress-api"
+import { getPostsByCategory } from "@/lib/api/wordpress"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -16,17 +16,34 @@ import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
 
-export function CategoryPage({ slug, initialData }: { slug: string; initialData: any }) {
+interface CategoryData {
+  category: WordPressCategory | null
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}
+
+interface CategoryPageProps {
+  slug: string
+  initialData: CategoryData
+}
+
+export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["category", slug],
-    queryFn: ({ pageParam = null }) => fetchCategoryPosts(slug, pageParam),
-    getNextPageParam: (lastPage) =>
-      lastPage?.posts.pageInfo.hasNextPage ? lastPage.posts.pageInfo.endCursor : undefined,
+    queryFn: ({ pageParam = null }) => getPostsByCategory(slug, 20, pageParam),
+    getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
     initialPageParam: null,
-    initialData: initialData ? { pages: [initialData], pageParams: [null] } : undefined,
+    initialData: initialData
+      ? {
+          pages: [initialData],
+          pageParams: [null],
+        }
+      : undefined,
   })
 
   useEffect(() => {
@@ -35,12 +52,42 @@ export function CategoryPage({ slug, initialData }: { slug: string; initialData:
     }
   }, [inView, hasNextPage, fetchNextPage])
 
-  if (isLoading) return <NewsGridSkeleton />
-  if (error) return <div>Error loading category: {(error as Error).message}</div>
-  if (!data || data.pages.length === 0) return <div>No posts found for this category.</div>
+  if (isLoading && !initialData) {
+    return <NewsGridSkeleton />
+  }
 
-  const category = data.pages[0]
-  const allPosts = data.pages.flatMap((page) => page.posts.nodes)
+  if (error) {
+    return (
+      <div className="p-6 bg-white rounded-lg shadow-sm max-w-2xl mx-auto mt-8">
+        <h1 className="text-2xl font-bold mb-4 text-red-600">Error Loading Category</h1>
+        <p className="text-gray-700 mb-4">We encountered a problem loading this category: {(error as Error).message}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  if (!data || data.pages.length === 0 || !data.pages[0]?.category) {
+    return (
+      <div className="p-6 bg-white rounded-lg shadow-sm max-w-2xl mx-auto mt-8">
+        <h1 className="text-2xl font-bold mb-4">Category Not Found</h1>
+        <p className="text-gray-700 mb-4">The category "{slug}" could not be found or has no posts.</p>
+        <Link
+          href="/"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block"
+        >
+          Return Home
+        </Link>
+      </div>
+    )
+  }
+
+  const category = data.pages[0].category
+  const allPosts = data.pages.flatMap((page) => page.posts)
 
   const featuredPosts = allPosts.slice(0, 5)
   const morePosts = allPosts.slice(5)
@@ -68,54 +115,69 @@ export function CategoryPage({ slug, initialData }: { slug: string; initialData:
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
       <div className="space-y-8 px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">{category.name}</h1>
-        {category.description && <p className="text-lg text-gray-600 mb-8">{category.description}</p>}
+        {/* Category Header */}
+        <div className="text-center">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">{category.name}</h1>
+          {category.description && <p className="text-lg text-gray-600 max-w-3xl mx-auto">{category.description}</p>}
+        </div>
 
-        <NewsGrid posts={featuredPosts} layout="vertical" />
+        {/* Featured Posts Grid */}
+        {featuredPosts.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold mb-6">Featured Stories</h2>
+            <NewsGrid posts={featuredPosts} layout="vertical" />
+          </section>
+        )}
 
+        {/* Advertisement */}
         <CategoryAd />
 
-        <h2 className="text-xl font-bold mt-12 mb-6">More from {category.name}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {morePosts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/post/${post.slug}`}
-              className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
-            >
-              <div className="flex-grow py-3 px-4 flex flex-col justify-center">
-                <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200">
-                  {post.title}
-                </h3>
-                <div className="flex items-center text-gray-500 text-xs mt-2">
-                  <Clock className="h-3 w-3 mr-1" />
-                  <time dateTime={post.date}>{formatDate(post.date)}</time>
-                </div>
-              </div>
-              {post.featuredImage && (
-                <div className="relative w-[84px] h-[84px] flex-shrink-0 overflow-hidden rounded-lg self-center my-2 mr-3">
-                  <Image
-                    src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                    alt={post.title}
-                    fill
-                    sizes="84px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    placeholder="blur"
-                    blurDataURL={generateBlurDataURL(84, 84)}
-                  />
-                </div>
-              )}
-            </Link>
-          ))}
-        </div>
+        {/* More Posts */}
+        {morePosts.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold mb-6">More from {category.name}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {morePosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/post/${post.slug}`}
+                  className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
+                >
+                  <div className="flex-grow py-3 px-4 flex flex-col justify-center">
+                    <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <div className="flex items-center text-gray-500 text-xs mt-2">
+                      <Clock className="h-3 w-3 mr-1" />
+                      <time dateTime={post.date}>{formatDate(post.date)}</time>
+                    </div>
+                  </div>
+                  {post.featuredImage && (
+                    <div className="relative w-[84px] h-[84px] flex-shrink-0 overflow-hidden rounded-lg self-center my-2 mr-3">
+                      <Image
+                        src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                        alt={post.title}
+                        fill
+                        sizes="84px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        placeholder="blur"
+                        blurDataURL={generateBlurDataURL(84, 84)}
+                      />
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Infinite scroll loading indicator */}
         {isFetchingNextPage && (
-          <div className="col-span-full flex justify-center py-4">
+          <div className="flex justify-center py-8">
             <div className="animate-pulse flex space-x-4">
-              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
-              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
-              <div className="h-3 w-3 bg-gray-400 rounded-full"></div>
+              <div className="h-3 w-3 bg-gray-400 rounded-full animate-bounce"></div>
+              <div className="h-3 w-3 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+              <div className="h-3 w-3 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
             </div>
           </div>
         )}
@@ -124,8 +186,22 @@ export function CategoryPage({ slug, initialData }: { slug: string; initialData:
         {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
 
         {/* End of content message */}
-        {!hasNextPage && !isFetchingNextPage && morePosts.length > 0 && (
-          <p className="text-center text-gray-600 mt-8">You've reached the end of the content</p>
+        {!hasNextPage && !isFetchingNextPage && allPosts.length > 0 && (
+          <p className="text-center text-gray-600 mt-8 py-4">You've reached the end of the {category.name} category</p>
+        )}
+
+        {/* No posts message */}
+        {allPosts.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-semibold mb-2">No Posts Found</h3>
+            <p className="text-gray-600 mb-4">There are currently no posts in the {category.name} category.</p>
+            <Link
+              href="/"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block"
+            >
+              Browse All Posts
+            </Link>
+          </div>
         )}
       </div>
     </ErrorBoundary>

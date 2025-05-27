@@ -84,7 +84,7 @@ export function PostContent({ post, isClient }: PostContentProps) {
   }
 
   return (
-    <article className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4">
+    <article className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4 bg-white">
       <header className="mb-6 sm:mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between text-gray-600 text-sm space-y-2 md:space-y-0 mb-2 md:mb-4">
           <div className="hidden md:flex items-center">

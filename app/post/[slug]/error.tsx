@@ -1,36 +1,54 @@
 "use client"
 
 import { useEffect } from "react"
-import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, Home, RefreshCw } from "lucide-react"
 
-export default function Error({
-  error,
-  reset,
-}: {
+interface PostErrorProps {
   error: Error & { digest?: string }
   reset: () => void
-}) {
+}
+
+export default function PostError({ error, reset }: PostErrorProps) {
   useEffect(() => {
     // Log the error to an error reporting service
     console.error("Post page error:", error)
   }, [error])
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-        <h2 className="text-xl font-semibold text-red-700 mb-2">Something went wrong</h2>
-        <p className="text-gray-700 mb-4">We couldn't load this article. Please try again later.</p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button
-            onClick={() => reset()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Try again
-          </button>
-          <Link href="/" className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors">
-            Return to homepage
-          </Link>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="max-w-md w-full text-center">
+        <div className="mb-6">
+          <AlertCircle className="mx-auto h-16 w-16 text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+          <p className="text-gray-600 mb-6">
+            We encountered an error while loading this article. This might be a temporary issue.
+          </p>
         </div>
+
+        <div className="space-y-3">
+          <Button onClick={reset} className="w-full" variant="default">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try again
+          </Button>
+
+          <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full">
+            <Home className="mr-2 h-4 w-4" />
+            Return to homepage
+          </Button>
+        </div>
+
+        {process.env.NODE_ENV === "development" && (
+          <details className="mt-6 text-left">
+            <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+              Error details (development only)
+            </summary>
+            <pre className="mt-2 text-xs bg-gray-100 p-3 rounded overflow-auto text-red-600">
+              {error.message}
+              {error.stack && `\n\n${error.stack}`}
+            </pre>
+          </details>
+        )}
       </div>
     </div>
   )

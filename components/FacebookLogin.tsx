@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Facebook } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
 
 declare global {
   interface Window {
@@ -12,7 +13,8 @@ declare global {
 }
 
 export function FacebookLogin() {
-  const { login } = useUser()
+  const { signInWithFacebook } = useUser()
+  const supabase = createClient()
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.FB) {
@@ -20,23 +22,11 @@ export function FacebookLogin() {
     }
   }, [])
 
-  const handleFacebookLogin = () => {
-    if (typeof window !== "undefined" && window.FB) {
-      window.FB.login(
-        async (response: any) => {
-          if (response.authResponse) {
-            const { accessToken, userID } = response.authResponse
-            try {
-              await login("facebook", { accessToken, userID })
-            } catch (error) {
-              console.error("Error during Facebook login:", error)
-            }
-          } else {
-            console.log("User cancelled login or did not fully authorize.")
-          }
-        },
-        { scope: "email,public_profile" },
-      )
+  const handleFacebookLogin = async () => {
+    try {
+      await signInWithFacebook()
+    } catch (error) {
+      console.error("Error during Facebook login:", error)
     }
   }
 

@@ -15,12 +15,12 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
-import { fetchTaggedPosts, fetchFeaturedPosts, fetchCategorizedPosts, fetchRecentPosts } from "@/lib/wordpress-api"
-import { fetchSportPosts } from "@/lib/sport-utils"
+import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 
 interface HomeContentProps {
-  initialData: {
+  initialPosts?: any[]
+  initialData?: {
     taggedPosts: any[]
     featuredPosts: any[]
     categories: any[]
@@ -36,7 +36,7 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
-// Update the fetchHomeData function to better handle errors
+// Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async () => {
   try {
     if (!isOnline()) {
@@ -46,17 +46,28 @@ const fetchHomeData = async () => {
 
     // Use Promise.allSettled to handle partial failures
     const results = await Promise.allSettled([
-      fetchTaggedPosts("fp", 4),
-      fetchFeaturedPosts(4),
-      fetchCategorizedPosts(),
-      fetchRecentPosts(10),
+      getLatestPosts(50), // Get more posts to ensure we have enough fp-tagged ones
+      getCategories(), // Get all categories
     ])
 
+    const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
+    const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
+
+    const posts = latestPostsResult.posts || []
+    const categories = categoriesResult.categories || []
+
+    // Filter posts that are tagged with 'fp'
+    const fpTaggedPosts = posts.filter((post) =>
+      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
+    )
+
+    console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
+
     return {
-      taggedPosts: results[0].status === "fulfilled" ? results[0].value : [],
-      featuredPosts: results[1].status === "fulfilled" ? results[1].value : [],
-      categories: results[2].status === "fulfilled" ? results[2].value : [],
-      recentPosts: results[3].status === "fulfilled" ? results[3].value : [],
+      taggedPosts: fpTaggedPosts, // Use all fp tagged posts
+      featuredPosts: posts.slice(0, 6), // Use first 6 as featured
+      categories: categories,
+      recentPosts: posts.slice(0, 10), // Use first 10 as recent
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -64,11 +75,10 @@ const fetchHomeData = async () => {
   }
 }
 
-export function HomeContent({ initialData }: HomeContentProps) {
+export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [sportPosts, setSportPosts] = useState<any[]>([])
-  const [sportPostsError, setSportPostsError] = useState(false)
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
   // Listen for online/offline events
   useEffect(() => {
@@ -84,49 +94,71 @@ export function HomeContent({ initialData }: HomeContentProps) {
     }
   }, [])
 
-  useEffect(() => {
-    const getSportPosts = async () => {
-      try {
-        setSportPostsError(false)
-        const posts = await fetchSportPosts(5)
-        setSportPosts(posts)
-      } catch (error) {
-        console.error("Error fetching sport/sports posts:", error)
-        setSportPostsError(true)
-      }
-    }
-
-    if (!isOffline) {
-      getSportPosts()
-    }
-  }, [isOffline])
+  // Create fallback data from initialPosts if provided
+  const fallbackData =
+    initialPosts.length > 0
+      ? {
+          taggedPosts: initialPosts.filter((post) =>
+            post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
+          ),
+          featuredPosts: initialPosts.slice(0, 6),
+          categories: [],
+          recentPosts: initialPosts.slice(0, 10),
+        }
+      : {
+          taggedPosts: [],
+          featuredPosts: [],
+          categories: [],
+          recentPosts: [],
+        }
 
   // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
-    initialData,
-    revalidateOnMount: false, // Changed from !isOffline to false to prevent losing initial data
-    revalidateOnFocus: false, // Changed to false to prevent losing data on focus
+    fallbackData: initialData || fallbackData,
+    revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
+    revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
-    dedupingInterval: 60000, // Increased to 1 minute
+    dedupingInterval: 60000,
     errorRetryCount: 3,
     errorRetryInterval: 5000,
     onError: (err) => {
       console.error("SWR Error:", err)
-      // Don't show error UI if we have initial data
-      if (!initialData) {
-        setIsOffline(true) // Treat any error as offline for UI purposes
+      if (!initialData && !initialPosts.length) {
+        setIsOffline(true)
       }
     },
-    shouldRetryOnError: !isOffline, // Don't retry if offline
-    fallbackData: initialData, // Ensure we always have fallback data
+    shouldRetryOnError: !isOffline,
   })
 
-  // Log errors but don't crash the UI
+  // Fetch category-specific posts
   useEffect(() => {
-    if (error) {
-      console.error("Error in HomeContent:", error)
+    const fetchCategoryPosts = async () => {
+      if (isOffline) return
+
+      const categoryPromises = categoryConfigs.map(async (config) => {
+        try {
+          const result = await getPostsByCategory(config.name.toLowerCase(), 5)
+          return { name: config.name, posts: result.posts || [] }
+        } catch (error) {
+          console.error(`Error fetching ${config.name} posts:`, error)
+          return { name: config.name, posts: [] }
+        }
+      })
+
+      const results = await Promise.allSettled(categoryPromises)
+      const newCategoryPosts: Record<string, any[]> = {}
+
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          newCategoryPosts[result.value.name] = result.value.posts
+        }
+      })
+
+      setCategoryPosts(newCategoryPosts)
     }
-  }, [error])
+
+    fetchCategoryPosts()
+  }, [isOffline])
 
   // Show offline notification if needed
   const renderOfflineNotification = () => {
@@ -159,15 +191,15 @@ export function HomeContent({ initialData }: HomeContentProps) {
     featuredPosts = [],
     categories = [],
     recentPosts = [],
-  } = data || initialData || { taggedPosts: [], featuredPosts: [], categories: [], recentPosts: [] }
+  } = data || initialData || fallbackData
 
   // Show skeleton during initial loading
-  if (isLoading && !initialData) {
+  if (isLoading && !initialData && !initialPosts.length) {
     return <HomePageSkeleton />
   }
 
   // Show error message if data fetch failed and we have no initial data
-  if (error && !initialData?.featuredPosts?.length && !isOffline) {
+  if (error && !featuredPosts.length && !isOffline) {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold mb-2">Unable to load content</h2>
@@ -183,7 +215,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
   }
 
   // Show empty state if no content is available
-  if (!taggedPosts.length && !featuredPosts.length && !categories.length) {
+  if (!taggedPosts.length && !featuredPosts.length && !recentPosts.length) {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold mb-2">No Content Available</h2>
@@ -198,82 +230,22 @@ export function HomeContent({ initialData }: HomeContentProps) {
     )
   }
 
-  // Extract main content posts
-  const mainStory = taggedPosts?.[0] || featuredPosts?.[0] || null
-  const secondaryStories = featuredPosts?.slice(0, 4) || []
-  const verticalCardPosts = taggedPosts?.slice(1, 4) || [] // Use the next 3 tagged posts for vertical cards
+  // Extract main content posts - ensure we have enough fp posts
+  const mainStory = taggedPosts[0] || null // Show latest fp-tagged post only
+  const secondaryStories = taggedPosts.slice(1, 5) || [] // Show next 4 fp-tagged posts
+  const verticalCardPosts = taggedPosts.slice(5, 8) || [] // Show next 3 fp-tagged posts after secondary stories
 
-  // Helper function to safely get posts for a category
-  const getPostsForCategoryAndChildren = (categoryName: string, allCategories: any[]) => {
-    if (!allCategories || !Array.isArray(allCategories) || allCategories.length === 0) {
-      // Return empty array if categories are missing
-      console.log(`No categories found for ${categoryName}`)
-      return []
-    }
-
-    // Find the exact category by name (case insensitive)
-    const category = allCategories.find((cat) => cat?.name?.toLowerCase() === categoryName.toLowerCase())
-
-    if (!category) {
-      console.log(`Category not found: ${categoryName}`)
-      return []
-    }
-
-    // Find child categories
-    const childCategories = allCategories.filter(
-      (cat) => cat?.parent?.node?.name?.toLowerCase() === categoryName.toLowerCase(),
-    )
-
-    // Collect posts from the main category and its children
-    const allPosts = [...(category.posts?.nodes || []), ...childCategories.flatMap((child) => child.posts?.nodes || [])]
-
-    // Remove duplicates by ID and filter out posts without IDs
-    return Array.from(new Set(allPosts.map((post) => post?.id)))
-      .map((id) => allPosts.find((post) => post?.id === id))
-      .filter((post) => post && post.id) // Ensure post exists and has an ID
-      .slice(0, 5)
+  // If we don't have enough fp posts, show a message or fallback
+  if (taggedPosts.length === 0) {
+    console.warn("No fp-tagged posts found, using fallback content")
   }
 
   // Reusable CategorySection component
-  const CategorySection = ({
-    name,
-    layout,
-    typeOverride,
-    showAdAfter,
-    categories,
-  }: CategoryConfig & { categories: any[] }) => {
-    // Special case for sports category
-    if (name.toLowerCase() === "sport" || name.toLowerCase() === "sports") {
-      // Use directly fetched sport posts if available
-      if (sportPosts.length > 0) {
-        return (
-          <React.Fragment key={name}>
-            <section className="bg-white p-4 rounded-lg shadow-sm">
-              <h2 className="text-xl font-bold mb-4 capitalize">
-                <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
-                  {name}
-                </Link>
-              </h2>
-              <NewsGrid
-                posts={sportPosts.map((post) => ({
-                  ...post,
-                  type: typeOverride,
-                }))}
-                layout={layout}
-                className="compact-grid"
-              />
-            </section>
-            {showAdAfter && <HomeMidContentAd />}
-          </React.Fragment>
-        )
-      }
-    }
-
-    // Get posts for this specific category
-    const categoryPosts = getPostsForCategoryAndChildren(name, categories)
+  const CategorySection = ({ name, layout, typeOverride, showAdAfter }: CategoryConfig) => {
+    const posts = categoryPosts[name] || []
 
     // Only render the section if there are posts
-    if (categoryPosts.length === 0) return null
+    if (posts.length === 0) return null
 
     return (
       <React.Fragment key={name}>
@@ -284,7 +256,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
             </Link>
           </h2>
           <NewsGrid
-            posts={categoryPosts.map((post) => ({
+            posts={posts.map((post) => ({
               ...post,
               type: typeOverride,
             }))}
@@ -311,7 +283,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
       "@context": "https://schema.org",
       "@type": "ItemList",
       itemListElement:
-        taggedPosts?.map((post, index) => ({
+        featuredPosts?.map((post, index) => ({
           "@type": "ListItem",
           position: index + 1,
           url: `${siteConfig.url}/post/${post.slug}`,
@@ -320,20 +292,36 @@ export function HomeContent({ initialData }: HomeContentProps) {
     },
   ]
 
+  // Show empty state if no fp-tagged content is available
+  if (!taggedPosts.length && !isLoading) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-bold mb-2">Featured Content Coming Soon</h2>
+        <p>We're preparing featured stories for you. Please check back later.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-green-500 text-black rounded hover:bg-green-600"
+        >
+          Refresh Page
+        </button>
+      </div>
+    )
+  }
+
   return (
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
       <div className="space-y-4">
         {renderOfflineNotification()}
 
-        {/* Hero Section - Show the latest post tagged 'fp' */}
+        {/* Hero Section - Show the latest post */}
         {mainStory && (
           <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
             <FeaturedHero post={mainStory} />
           </section>
         )}
 
-        {/* Vertical Cards - Show the next 3 posts tagged 'fp' */}
+        {/* Vertical Cards - Show the next 3 posts */}
         {verticalCardPosts.length > 0 && (
           <section className="grid grid-cols-2 md:grid-cols-3 gap-2 px-2">
             {verticalCardPosts.map((post) => (
@@ -356,7 +344,7 @@ export function HomeContent({ initialData }: HomeContentProps) {
         {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-4">
           {categoryConfigs.map((config) => (
-            <CategorySection key={config.name} {...config} categories={categories} />
+            <CategorySection key={config.name} {...config} />
           ))}
         </div>
       </div>

@@ -47,10 +47,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-<<<<<<< HEAD
-=======
-    generator: 'v0.dev'
->>>>>>> refs/remotes/origin/main
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
