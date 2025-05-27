@@ -77,29 +77,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  i18n: {
-    locales: ["en", "fr", "pt", "ar"],
-    defaultLocale: "en",
-    localeDetection: true,
-    domains: [
-      {
-        domain: "newsonafrica.com",
-        defaultLocale: "en",
-      },
-      {
-        domain: "fr.newsonafrica.com",
-        defaultLocale: "fr",
-      },
-      {
-        domain: "pt.newsonafrica.com",
-        defaultLocale: "pt",
-      },
-      {
-        domain: "ar.newsonafrica.com",
-        defaultLocale: "ar",
-      },
-    ],
-  },
   images: {
     unoptimized: true,
     domains: [
