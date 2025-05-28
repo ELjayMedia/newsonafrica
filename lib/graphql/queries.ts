@@ -122,7 +122,7 @@ export const CATEGORIES_QUERY = `
 `
 
 export const POSTS_BY_CATEGORY_QUERY = `
-  query GetPostsByCategory($slug: String!, $first: Int = 20, $after: String) {
+  query GetPostsByCategory($slug: ID!, $first: Int = 20, $after: String) {
     category(id: $slug, idType: SLUG) {
       id
       name

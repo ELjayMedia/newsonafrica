@@ -93,10 +93,10 @@ export function ShareButtons({
   if (isMobile && navigator.share) {
     return (
       <Button
-        variant={variant}
+        variant="outline"
         size={size}
         onClick={handleNativeShare}
-        className={className}
+        className={`${className} bg-blue-600 hover:bg-blue-700 text-white border-none transition-all duration-200`}
         aria-label="Share article"
       >
         <Share2 className="h-4 w-4 mr-2" />
@@ -122,7 +122,7 @@ export function ShareButtons({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white border-none"
+              className="rounded-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white border-none transition-all duration-200"
               onClick={() => handleShare("facebook")}
               aria-label="Share on Facebook"
             >
@@ -132,7 +132,7 @@ export function ShareButtons({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full bg-black hover:bg-black/90 text-white border-none"
+              className="rounded-full bg-black hover:bg-black/90 text-white border-none transition-all duration-200"
               onClick={() => handleShare("twitter")}
               aria-label="Share on Twitter/X"
             >
@@ -142,7 +142,7 @@ export function ShareButtons({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full bg-[#0077B5] hover:bg-[#0077B5]/90 text-white border-none"
+              className="rounded-full bg-[#0077B5] hover:bg-[#0077B5]/90 text-white border-none transition-all duration-200"
               onClick={() => handleShare("linkedin")}
               aria-label="Share on LinkedIn"
             >
@@ -152,7 +152,7 @@ export function ShareButtons({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full bg-[#25D366] hover:bg-[#25D366]/90 text-white border-none"
+              className="rounded-full bg-[#25D366] hover:bg-[#25D366]/90 text-white border-none transition-all duration-200"
               onClick={() => handleShare("whatsapp")}
               aria-label="Share on WhatsApp"
             >
@@ -164,7 +164,7 @@ export function ShareButtons({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full"
+              className="rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 border-none transition-all duration-200"
               onClick={() => handleShare("email")}
               aria-label="Share via Email"
             >

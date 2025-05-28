@@ -58,15 +58,16 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     window.open(shareLinks.twitter, "_blank", "width=550,height=420")
   }
 
-  const ShareButton: React.FC<{ onClick: () => void; icon: React.ReactNode; label: string }> = ({
+  const ShareButton: React.FC<{ onClick: () => void; icon: React.ReactNode; label: string; bgColor?: string }> = ({
     onClick,
     icon,
     label,
+    bgColor = "bg-gray-100 hover:bg-gray-200",
   }) => (
     <Button
       variant="outline"
       onClick={onClick}
-      className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
+      className={`rounded-full h-10 w-10 p-0 flex items-center justify-center border-none ${bgColor} transition-all duration-200`}
       aria-label={label}
     >
       {icon}
@@ -77,13 +78,29 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     <>
       <ShareButton
         onClick={() => window.open(shareLinks.facebook, "_blank")}
-        icon={<Facebook className="h-5 w-5" />}
+        icon={<Facebook className="h-4 w-4 text-white" />}
         label="Share on Facebook"
+        bgColor="bg-[#1877F2] hover:bg-[#1877F2]/90"
       />
-      <ShareButton onClick={handleTwitterShare} icon={<Twitter className="h-5 w-5" />} label="Share on X (Twitter)" />
+      <ShareButton
+        onClick={handleTwitterShare}
+        icon={<Twitter className="h-4 w-4 text-white" />}
+        label="Share on X (Twitter)"
+        bgColor="bg-black hover:bg-black/90"
+      />
       <LinkedInShare url={url} title={title} summary={description} iconOnly />
-      <ShareButton onClick={shareByEmail} icon={<Mail className="h-5 w-5" />} label="Share by Email" />
-      <ShareButton onClick={handleCopyLink} icon={<LinkIcon className="h-5 w-5" />} label="Copy link" />
+      <ShareButton
+        onClick={shareByEmail}
+        icon={<Mail className="h-4 w-4 text-gray-600" />}
+        label="Share by Email"
+        bgColor="bg-gray-100 hover:bg-gray-200"
+      />
+      <ShareButton
+        onClick={handleCopyLink}
+        icon={<LinkIcon className="h-4 w-4 text-gray-600" />}
+        label="Copy link"
+        bgColor="bg-gray-100 hover:bg-gray-200"
+      />
     </>
   )
 
@@ -113,7 +130,7 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
           <Button
             variant="outline"
             onClick={handleNativeShare}
-            className="rounded-full h-10 w-10 p-0 flex items-center justify-center"
+            className="rounded-full h-10 w-10 p-0 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white border-none transition-all duration-200"
             aria-label="Share"
           >
             <Share2 className="h-4 w-4" />

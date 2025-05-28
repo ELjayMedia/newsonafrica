@@ -144,7 +144,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
                   className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
                 >
                   <div className="flex-grow py-3 px-4 flex flex-col justify-center">
-                    <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                    <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200">
                       {post.title}
                     </h3>
                     <div className="flex items-center text-gray-500 text-xs mt-2">

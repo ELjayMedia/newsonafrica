@@ -3,7 +3,6 @@
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
-import { VerticalCard } from "@/components/VerticalCard"
 import Link from "next/link"
 import React, { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
@@ -318,17 +317,6 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         {mainStory && (
           <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
             <FeaturedHero post={mainStory} />
-          </section>
-        )}
-
-        {/* Vertical Cards - Show the next 3 posts */}
-        {verticalCardPosts.length > 0 && (
-          <section className="grid grid-cols-2 md:grid-cols-3 gap-2 px-2">
-            {verticalCardPosts.map((post) => (
-              <div key={post.id} className="flex">
-                <VerticalCard post={post} className="w-full" />
-              </div>
-            ))}
           </section>
         )}
 

@@ -209,7 +209,7 @@ const SportCategorySection = memo(function SportCategorySection({
             className="flex gap-2 items-start bg-white p-1 px-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 group"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1 line-clamp-2">
+              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1">
                 {post.title}
               </h3>
               <div className="flex items-center text-gray-500 text-xs">
@@ -292,7 +292,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
             className="flex gap-2 items-start bg-white p-1 px-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 group"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1 line-clamp-2">
+              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1">
                 {post.title}
               </h3>
               <div className="flex items-center text-gray-500 text-xs">

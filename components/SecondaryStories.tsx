@@ -71,7 +71,7 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
             </div>
           )}
           <div className={`p-2 flex-1 flex flex-col ${layout === "horizontal" ? "ml-4 md:ml-0" : ""}`}>
-            <h3 className="text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+            <h3 className="text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200">
               {post.title}
             </h3>
             <div className="flex items-center gap-1 text-xs text-gray-500 mt-auto">
