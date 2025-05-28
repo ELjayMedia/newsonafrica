@@ -1,19 +1,42 @@
-import Link from "next/link"
-
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 py-16 text-center">
-      <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-      <h2 className="text-2xl font-semibold text-gray-700 mb-6">Page Not Found</h2>
-      <p className="text-gray-600 mb-8 max-w-md">
-        The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
-      </p>
-      <Link
-        href="/"
-        className="px-6 py-3 bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-colors"
-      >
-        Return to Homepage
-      </Link>
-    </div>
+    <html>
+      <body>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            padding: "16px",
+            textAlign: "center",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <h1 style={{ fontSize: "4rem", fontWeight: "bold", color: "#111", marginBottom: "16px" }}>404</h1>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#374151", marginBottom: "24px" }}>
+            Page Not Found
+          </h2>
+          <p style={{ color: "#6B7280", marginBottom: "32px", maxWidth: "400px" }}>
+            The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+          </p>
+          <a
+            href="/"
+            style={{
+              padding: "12px 24px",
+              backgroundColor: "#000",
+              color: "#fff",
+              fontWeight: "500",
+              borderRadius: "6px",
+              textDecoration: "none",
+              transition: "background-color 0.2s",
+            }}
+          >
+            Return to Homepage
+          </a>
+        </div>
+      </body>
+    </html>
   )
 }
