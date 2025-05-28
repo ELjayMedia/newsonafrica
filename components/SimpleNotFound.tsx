@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-export default function NotFound() {
+export default function SimpleNotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 py-16 text-center">
       <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>

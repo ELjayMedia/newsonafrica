@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react"
 
 export function useMediaQuery(query: string): boolean {
-  // Default to false on server
+  // Always return false during SSR to prevent hydration mismatches
   const [matches, setMatches] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Only run on client
+    setMounted(true)
+
+    // Only run on client after mount
     if (typeof window === "undefined") return
 
     // Create media query list
@@ -30,5 +33,6 @@ export function useMediaQuery(query: string): boolean {
     }
   }, [query])
 
-  return matches
+  // Return false until mounted to prevent SSR issues
+  return mounted ? matches : false
 }
