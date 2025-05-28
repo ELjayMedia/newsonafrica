@@ -3,14 +3,15 @@
 import { useState, useEffect } from "react"
 
 export function useMediaQuery(query: string): boolean {
-  // Always return false during SSR to prevent hydration mismatches
+  // Always return false during SSR and initial render to prevent hydration mismatches
   const [matches, setMatches] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    // Mark as client-side
+    setIsClient(true)
 
-    // Only run on client after mount
+    // Only run on client
     if (typeof window === "undefined") return
 
     // Create media query list
@@ -24,15 +25,25 @@ export function useMediaQuery(query: string): boolean {
       setMatches(e.matches)
     }
 
-    // Add listener
-    media.addEventListener("change", listener)
+    // Add listener with older browser support
+    if (media.addEventListener) {
+      media.addEventListener("change", listener)
+    } else {
+      // Fallback for older browsers
+      media.addListener(listener)
+    }
 
     // Clean up
     return () => {
-      media.removeEventListener("change", listener)
+      if (media.removeEventListener) {
+        media.removeEventListener("change", listener)
+      } else {
+        // Fallback for older browsers
+        media.removeListener(listener)
+      }
     }
   }, [query])
 
-  // Return false until mounted to prevent SSR issues
-  return mounted ? matches : false
+  // Only return actual value after client-side hydration
+  return isClient && matches
 }
