@@ -26,7 +26,8 @@ type RateLimitEntry = {
   userId?: string
 }
 
-const RATE_LIMIT = 30 // Increased to 30 requests per minute
+// Update the rate limiting logic to be more forgiving
+const RATE_LIMIT = 50 // Increased from 30 to 50 requests per minute
 const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
 const rateLimitMap = new Map<string, RateLimitEntry>()
 
@@ -44,9 +45,19 @@ function getRateLimitKey(request: NextRequest): string {
   return `search:${ip}:${userAgent.slice(0, 50)}`
 }
 
+// Update the checkRateLimit function to be more lenient for authenticated users
 function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: number } {
+  // Skip rate limiting for development environment
+  if (process.env.NODE_ENV === "development") {
+    return { limited: false }
+  }
+
   const key = getRateLimitKey(request)
   const now = Date.now()
+
+  // Check for auth token to potentially increase limits for authenticated users
+  const hasAuthToken = request.headers.get("authorization") !== null
+  const effectiveRateLimit = hasAuthToken ? RATE_LIMIT * 2 : RATE_LIMIT
 
   if (!rateLimitMap.has(key)) {
     rateLimitMap.set(key, {
@@ -64,7 +75,7 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
     return { limited: false }
   }
 
-  if (entry.count >= RATE_LIMIT) {
+  if (entry.count >= effectiveRateLimit) {
     const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
     return { limited: true, retryAfter }
   }
@@ -161,15 +172,17 @@ export async function GET(request: NextRequest) {
         includeParallel: page === 1, // Only include parallel searches on first page
       }
 
-      // Execute optimized WordPress search
-      const searchResults = await optimizedWordPressSearch(query, searchOptions)
-
-      // Apply sorting if needed
-      if (sort === "date") {
-        searchResults.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      } else if (sort === "title") {
-        searchResults.items.sort((a: any, b: any) => a.title.localeCompare(b.title))
-      }
+      // Execute optimized WordPress search with enhanced options
+      const searchResults = await optimizedWordPressSearch(query, {
+        page,
+        perPage,
+        categories: categories ? categories.split(",") : [],
+        tags: tags ? tags.split(",") : [],
+        dateFrom,
+        dateTo,
+        includeParallel: page === 1, // Use parallel search only on first page
+        sortBy: sort as "relevance" | "date" | "title",
+      })
 
       const responseTime = Date.now() - startTime
 

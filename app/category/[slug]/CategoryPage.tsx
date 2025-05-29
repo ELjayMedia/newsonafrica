@@ -87,15 +87,18 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     ]
   }, [slug, initialData])
 
-  // Memoize computed values
+  // Memoize computed values with chronological sorting
   const category = initialData?.category || null
-  const allPosts = initialData?.posts || []
-  const featuredPosts = allPosts.slice(0, 5)
-  const morePosts = allPosts.slice(5)
+  const allPostsSorted = useMemo(
+    () => (initialData?.posts || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [initialData?.posts],
+  )
+  const featuredPosts = allPostsSorted.slice(0, 5)
+  const morePosts = allPostsSorted.slice(5)
 
   // Find related categories from posts
   const relatedCategories = new Set<string>()
-  allPosts.forEach((post) => {
+  allPostsSorted.forEach((post) => {
     post.categories.nodes.forEach((cat) => {
       if (cat.slug !== slug) {
         relatedCategories.add(cat.slug)
@@ -179,10 +182,13 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         </div>
 
         {/* Featured Posts Grid */}
-        {featuredPosts.length > 0 && (
+        {featuredPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).length > 0 && (
           <section>
             <h2 className="text-2xl font-bold mb-6">Featured Stories</h2>
-            <NewsGrid posts={featuredPosts} layout="vertical" />
+            <NewsGrid
+              posts={featuredPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
+              layout="vertical"
+            />
           </section>
         )}
 
@@ -194,36 +200,38 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
           <section>
             <h2 className="text-xl font-bold mb-6">More from {category.name}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {morePosts.map((post) => (
-                <Link
-                  key={post.id}
-                  href={`/post/${post.slug}`}
-                  className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
-                >
-                  <div className="flex-grow py-3 px-4 flex flex-col justify-center">
-                    <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200">
-                      {post.title}
-                    </h3>
-                    <div className="flex items-center text-gray-500 text-xs mt-2">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <time dateTime={post.date}>{formatDate(post.date)}</time>
+              {morePosts
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/post/${post.slug}`}
+                    className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
+                  >
+                    <div className="flex-grow py-3 px-4 flex flex-col justify-center">
+                      <h3 className="text-sm font-bold group-hover:text-blue-600 transition-colors duration-200">
+                        {post.title}
+                      </h3>
+                      <div className="flex items-center text-gray-500 text-xs mt-2">
+                        <Clock className="h-3 w-3 mr-1" />
+                        <time dateTime={post.date}>{formatDate(post.date)}</time>
+                      </div>
                     </div>
-                  </div>
-                  {post.featuredImage && (
-                    <div className="relative w-[84px] h-[84px] flex-shrink-0 overflow-hidden rounded-lg self-center my-2 mr-3">
-                      <Image
-                        src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                        alt={post.title}
-                        fill
-                        sizes="84px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        placeholder="blur"
-                        blurDataURL={generateBlurDataURL(84, 84)}
-                      />
-                    </div>
-                  )}
-                </Link>
-              ))}
+                    {post.featuredImage && (
+                      <div className="relative w-[84px] h-[84px] flex-shrink-0 overflow-hidden rounded-lg self-center my-2 mr-3">
+                        <Image
+                          src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                          alt={post.title}
+                          fill
+                          sizes="84px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          placeholder="blur"
+                          blurDataURL={generateBlurDataURL(84, 84)}
+                        />
+                      </div>
+                    )}
+                  </Link>
+                ))}
             </div>
           </section>
         )}
@@ -243,12 +251,12 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         {hasNextPage && <div ref={ref} className="h-10 w-full" aria-hidden="true" />}
 
         {/* End of content message */}
-        {!hasNextPage && !isFetchingNextPage && allPosts.length > 0 && (
+        {!hasNextPage && !isFetchingNextPage && allPostsSorted.length > 0 && (
           <p className="text-center text-gray-600 mt-8 py-4">You've reached the end of the {category.name} category</p>
         )}
 
         {/* No posts message */}
-        {allPosts.length === 0 && (
+        {allPostsSorted.length === 0 && (
           <div className="text-center py-12">
             <h3 className="text-xl font-semibold mb-2">No Posts Found</h3>
             <p className="text-gray-600 mb-4">There are currently no posts in the {category.name} category.</p>
