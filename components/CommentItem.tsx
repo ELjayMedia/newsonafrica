@@ -1,15 +1,12 @@
 "use client"
-
-import type React from "react"
-
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
-import { updateComment, deleteComment, addReaction, removeReaction } from "@/lib/comment-service"
+import { updateComment, deleteComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
-import { Reply, Edit, Trash2, MoreVertical, Flag, ThumbsUp, Heart, Smile, Frown, Angry } from "lucide-react"
+import { Reply, Edit, Trash2, MoreVertical, Flag } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { Comment } from "@/lib/supabase-schema"
 import {
@@ -22,7 +19,6 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface CommentItemProps {
@@ -54,24 +50,43 @@ export function CommentItem({
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState("")
   const [isReporting, setIsReporting] = useState(false)
-  const [isAddingReaction, setIsAddingReaction] = useState(false)
 
   const isAuthor = user && user.id === comment.user_id
   const isOptimistic = comment.isOptimistic === true
   const formattedDate = new Date(comment.created_at).toLocaleString()
 
-  // Get user's reaction to this comment
-  const userReaction = comment.reactions?.find((reaction) => reaction.user_id === user?.id)?.reaction_type
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
+  }
 
-  // Count reactions by type
-  const reactionCounts =
-    comment.reactions?.reduce(
-      (counts, reaction) => {
-        counts[reaction.reaction_type] = (counts[reaction.reaction_type] || 0) + 1
-        return counts
-      },
-      {} as Record<string, number>,
-    ) || {}
+  const renderContent = () => {
+    if (!comment.is_rich_text) {
+      return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.content}</div>
+    }
+
+    // Simple markdown rendering
+    const html = comment.content
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      // Links
+      .replace(
+        /\[([^\]]+)\]$$([^)]+)$$/g,
+        '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
+      )
+      // Code
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
+      // Line breaks
+      .replace(/\n/g, "<br />")
+
+    return <div className="mt-1 text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+  }
 
   const handleReply = () => {
     setIsReplying(!isReplying)
@@ -171,113 +186,6 @@ export function CommentItem({
     }
   }
 
-  const handleReaction = async (reactionType: "like" | "love" | "laugh" | "sad" | "angry") => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "You must be logged in to react to comments",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (isAddingReaction) return
-
-    setIsAddingReaction(true)
-
-    try {
-      // If user already has this reaction, remove it (toggle off)
-      if (userReaction === reactionType) {
-        await removeReaction(comment.id, user.id)
-        toast({
-          title: "Reaction removed",
-          description: "Your reaction has been removed",
-        })
-      } else {
-        // Otherwise add the new reaction (replacing any existing one)
-        await addReaction(comment.id, user.id, reactionType)
-        toast({
-          title: "Reaction added",
-          description: `You reacted with ${reactionType}`,
-        })
-      }
-      onCommentUpdated()
-    } catch (error) {
-      console.error("Failed to update reaction:", error)
-      toast({
-        title: "Reaction failed",
-        description: "Failed to update your reaction. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsAddingReaction(false)
-    }
-  }
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2)
-  }
-
-  const renderContent = () => {
-    if (!comment.is_rich_text) {
-      return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.content}</div>
-    }
-
-    // Simple markdown rendering
-    const html = comment.content
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      // Italic
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      // Links
-      .replace(
-        /\[([^\]]+)\]$$([^)]+)$$/g,
-        '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
-      )
-      // Code
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
-      // Line breaks
-      .replace(/\n/g, "<br />")
-
-    return <div className="mt-1 text-sm" dangerouslySetInnerHTML={{ __html: html }} />
-  }
-
-  const renderReactionButton = (
-    type: "like" | "love" | "laugh" | "sad" | "angry",
-    icon: React.ReactNode,
-    label: string,
-  ) => {
-    const count = reactionCounts[type] || 0
-    const isActive = userReaction === type
-
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn("h-8 px-2 text-xs", isActive && "bg-blue-50 text-blue-600")}
-              onClick={() => handleReaction(type)}
-              disabled={isAddingReaction || isOptimistic}
-            >
-              {icon}
-              {count > 0 && <span className="ml-1">{count}</span>}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{label}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  }
-
   return (
     <div
       className={cn(
@@ -360,18 +268,8 @@ export function CommentItem({
           )}
 
           {!isEditing && !isOptimistic && (
-            <div className="mt-2 flex flex-wrap items-center gap-1">
-              {renderReactionButton("like", <ThumbsUp className="mr-1 h-3 w-3" />, "Like")}
-
-              {renderReactionButton("love", <Heart className="mr-1 h-3 w-3" />, "Love")}
-
-              {renderReactionButton("laugh", <Smile className="mr-1 h-3 w-3" />, "Laugh")}
-
-              {renderReactionButton("sad", <Frown className="mr-1 h-3 w-3" />, "Sad")}
-
-              {renderReactionButton("angry", <Angry className="mr-1 h-3 w-3" />, "Angry")}
-
-              <Button variant="ghost" size="sm" onClick={handleReply} className="text-xs ml-auto">
+            <div className="mt-2 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={handleReply} className="text-xs">
                 <Reply className="mr-1 h-3 w-3" />
                 Reply
               </Button>

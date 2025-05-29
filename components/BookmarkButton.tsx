@@ -1,12 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { useBookmarks } from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
-import { Bookmark } from "lucide-react"
+import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 interface BookmarkButtonProps {
   postId: string
@@ -14,9 +15,12 @@ interface BookmarkButtonProps {
   slug?: string
   excerpt?: string
   featuredImage?: any
-  variant?: "default" | "outline" | "ghost"
+  variant?: "default" | "outline" | "ghost" | "secondary"
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
+  showText?: boolean
+  compact?: boolean
+  onBookmarkChange?: (isBookmarked: boolean) => void
 }
 
 export const BookmarkButton = ({
@@ -28,63 +32,132 @@ export const BookmarkButton = ({
   variant = "outline",
   size = "sm",
   className = "",
+  showText = true,
+  compact = false,
+  onBookmarkChange,
 }: BookmarkButtonProps) => {
   const { user } = useUser()
-  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks()
+  const { isBookmarked, addBookmark, removeBookmark, isLoading } = useBookmarks()
   const [isProcessing, setIsProcessing] = useState(false)
   const { toast } = useToast()
 
   const isMarked = isBookmarked(postId)
+  const isDisabled = isProcessing || isLoading
 
-  const handleBookmarkToggle = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleBookmarkToggle = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
 
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "You must be logged in to save bookmarks",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setIsProcessing(true)
-      console.log("Toggle bookmark for post:", postId)
-
-      if (isMarked) {
-        await removeBookmark(postId)
-      } else {
-        await addBookmark({
-          post_id: postId,
-          title,
-          slug,
-          excerpt,
-          featured_image: featuredImage, // Using snake_case property name
+      if (!user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to bookmark articles",
+          variant: "destructive",
         })
+        return
       }
-    } catch (error) {
-      console.error("Error toggling bookmark:", error)
-    } finally {
-      setIsProcessing(false)
+
+      if (isDisabled) return
+
+      try {
+        setIsProcessing(true)
+
+        const wasBookmarked = isMarked
+
+        if (wasBookmarked) {
+          await removeBookmark(postId)
+          toast({
+            title: "Bookmark removed",
+            description: "Article removed from your bookmarks",
+          })
+        } else {
+          await addBookmark({
+            post_id: postId,
+            title,
+            slug,
+            excerpt,
+            featured_image: featuredImage,
+          })
+          toast({
+            title: "Bookmarked!",
+            description: "Article saved to your bookmarks",
+          })
+        }
+
+        // Notify parent component of change
+        onBookmarkChange?.(!wasBookmarked)
+      } catch (error) {
+        console.error("Error toggling bookmark:", error)
+        toast({
+          title: "Error",
+          description: "Failed to update bookmark. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsProcessing(false)
+      }
+    },
+    [
+      user,
+      isMarked,
+      isDisabled,
+      postId,
+      title,
+      slug,
+      excerpt,
+      featuredImage,
+      addBookmark,
+      removeBookmark,
+      toast,
+      onBookmarkChange,
+    ],
+  )
+
+  const getButtonContent = () => {
+    if (isProcessing) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {showText && !compact && <span className="ml-2">Saving...</span>}
+        </>
+      )
     }
+
+    if (isMarked) {
+      return (
+        <>
+          <BookmarkCheck className="h-4 w-4 text-blue-600 fill-current" />
+          {showText && !compact && <span className="ml-2">Saved</span>}
+        </>
+      )
+    }
+
+    return (
+      <>
+        <Bookmark className="h-4 w-4" />
+        {showText && !compact && <span className="ml-2">Save</span>}
+      </>
+    )
   }
 
   return (
     <Button
-      variant={variant}
-      size={size}
+      variant={isMarked ? "secondary" : variant}
+      size={compact ? "icon" : size}
       onClick={handleBookmarkToggle}
-      disabled={isProcessing}
-      className={className}
-      aria-label={isMarked ? "Remove bookmark" : "Add bookmark"}
-    >
-      <Bookmark className={`h-4 w-4 ${isMarked ? "fill-current text-blue-600" : "text-gray-400"}`} />
-      <span className="ml-2">{isMarked ? "Saved" : "Save"}</span>
-      {isProcessing && (
-        <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></span>
+      disabled={isDisabled}
+      className={cn(
+        "transition-all duration-200",
+        isMarked && "bg-blue-50 border-blue-200 hover:bg-blue-100",
+        isDisabled && "opacity-50 cursor-not-allowed",
+        compact && "h-8 w-8",
+        className,
       )}
+      aria-label={isMarked ? "Remove bookmark" : "Add bookmark"}
+      title={isMarked ? "Remove from bookmarks" : "Save to bookmarks"}
+    >
+      {getButtonContent()}
     </Button>
   )
 }

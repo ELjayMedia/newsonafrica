@@ -1,12 +1,12 @@
 "use client"
 
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { getPostsByCategory } from "@/lib/api/wordpress"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { CategoryAd } from "@/components/CategoryAd"
-import { useEffect } from "react"
+import { useEffect, useMemo, useCallback } from "react"
 import { useInView } from "react-intersection-observer"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getBreadcrumbSchema, getWebPageSchema } from "@/lib/schema"
@@ -32,9 +32,13 @@ interface CategoryPageProps {
 
 export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
+  const queryClient = useQueryClient()
+
+  // Memoize query key to prevent unnecessary re-renders
+  const queryKey = useMemo(() => ["category", slug], [slug])
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["category", slug],
+    queryKey,
     queryFn: ({ pageParam = null }) => getPostsByCategory(slug, 20, pageParam),
     getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
     initialPageParam: null,
@@ -44,7 +48,69 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
           pageParams: [null],
         }
       : undefined,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   })
+
+  // Prefetch related categories
+  const prefetchRelatedCategories = useCallback(
+    async (relatedSlugs: string[]) => {
+      const prefetchPromises = relatedSlugs.slice(0, 3).map((relatedSlug) =>
+        queryClient.prefetchInfiniteQuery({
+          queryKey: ["category", relatedSlug],
+          queryFn: ({ pageParam = null }) => getPostsByCategory(relatedSlug, 20, pageParam),
+          initialPageParam: null,
+          staleTime: 5 * 60 * 1000,
+        }),
+      )
+      await Promise.allSettled(prefetchPromises)
+    },
+    [queryClient],
+  )
+
+  // Generate schema.org structured data (memoized)
+  const schemas = useMemo(() => {
+    if (!slug) return []
+
+    const categoryUrl = `${siteConfig.url}/category/${slug}`
+
+    return [
+      getBreadcrumbSchema([
+        { name: "Home", url: siteConfig.url },
+        { name: slug.charAt(0).toUpperCase() + slug.slice(1), url: categoryUrl },
+      ]),
+      getWebPageSchema(
+        categoryUrl,
+        `${slug.charAt(0).toUpperCase() + slug.slice(1)} - News On Africa`,
+        initialData?.category?.description || `Latest articles in the ${slug} category`,
+      ),
+    ]
+  }, [slug, initialData])
+
+  // Memoize computed values
+  const category = initialData?.category || null
+  const allPosts = initialData?.posts || []
+  const featuredPosts = allPosts.slice(0, 5)
+  const morePosts = allPosts.slice(5)
+
+  // Find related categories from posts
+  const relatedCategories = new Set<string>()
+  allPosts.forEach((post) => {
+    post.categories.nodes.forEach((cat) => {
+      if (cat.slug !== slug) {
+        relatedCategories.add(cat.slug)
+      }
+    })
+  })
+
+  const relatedCategoriesArray = Array.from(relatedCategories).slice(0, 5)
+
+  // Prefetch related categories when they're available
+  useEffect(() => {
+    if (relatedCategoriesArray.length > 0) {
+      prefetchRelatedCategories(relatedCategoriesArray)
+    }
+  }, [relatedCategoriesArray, prefetchRelatedCategories])
 
   useEffect(() => {
     if (inView && hasNextPage) {
@@ -71,7 +137,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     )
   }
 
-  if (!data || data.pages.length === 0 || !data.pages[0]?.category) {
+  if (!initialData || !initialData.category) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm max-w-2xl mx-auto mt-8">
         <h1 className="text-2xl font-bold mb-4">Category Not Found</h1>
@@ -86,31 +152,6 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     )
   }
 
-  const category = data.pages[0].category
-  const allPosts = data.pages.flatMap((page) => page.posts)
-
-  const featuredPosts = allPosts.slice(0, 5)
-  const morePosts = allPosts.slice(5)
-
-  // Create the full URL for the category
-  const categoryUrl = `${siteConfig.url}/category/${slug}`
-
-  // Generate schema.org structured data
-  const schemas = [
-    // BreadcrumbList schema
-    getBreadcrumbSchema([
-      { name: "Home", url: siteConfig.url },
-      { name: category.name, url: categoryUrl },
-    ]),
-
-    // WebPage schema
-    getWebPageSchema(
-      categoryUrl,
-      `${category.name} - News On Africa`,
-      category.description || `Latest articles in the ${category.name} category`,
-    ),
-  ]
-
   return (
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
@@ -119,6 +160,22 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         <div className="text-center">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">{category.name}</h1>
           {category.description && <p className="text-lg text-gray-600 max-w-3xl mx-auto">{category.description}</p>}
+
+          {/* Related Categories */}
+          {relatedCategoriesArray.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
+              <span className="text-sm text-gray-500">Related:</span>
+              {relatedCategoriesArray.map((relatedSlug) => (
+                <Link
+                  key={relatedSlug}
+                  href={`/category/${relatedSlug}`}
+                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  {relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1)}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Featured Posts Grid */}

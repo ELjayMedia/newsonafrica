@@ -220,12 +220,12 @@ const SportCategorySection = memo(function SportCategorySection({
               </div>
             </div>
             {post.featuredImage && (
-              <div className="relative w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-md">
+              <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
                   src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
-                  sizes="70px"
+                  sizes="(max-width: 640px) 70px, 84px"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   placeholder="blur"
                   blurDataURL={blurURLs.secondary[index]}
@@ -303,12 +303,12 @@ const RegularCategorySection = memo(function RegularCategorySection({
               </div>
             </div>
             {post.featuredImage && (
-              <div className="relative w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-md">
+              <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
                   src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
-                  sizes="70px"
+                  sizes="(max-width: 640px) 70px, 84px"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   placeholder="blur"
                   blurDataURL={blurURLs.secondary[index]}

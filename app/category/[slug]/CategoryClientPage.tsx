@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { getPostsByCategory } from "@/lib/api/wordpress"
 import { CategoryPage } from "./CategoryPage"
 import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
@@ -24,8 +25,49 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
   const [categoryData, setCategoryData] = useState<CategoryData | null>(initialData)
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<Error | null>(null)
+  const queryClient = useQueryClient()
+
+  // Memoize the load function to prevent unnecessary re-renders
+  const loadCategory = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const data = await getPostsByCategory(params.slug, 20)
+
+      if (!data.category) {
+        notFound()
+      }
+
+      setCategoryData(data)
+
+      // Cache the data in React Query for future use
+      queryClient.setQueryData(["category", params.slug], {
+        pages: [data],
+        pageParams: [null],
+      })
+    } catch (err) {
+      console.error(`Error loading category ${params.slug}:`, err)
+      setError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [params.slug, queryClient])
 
   useEffect(() => {
+    // Check if we have cached data first
+    const cachedData = queryClient.getQueryData(["category", params.slug])
+
+    if (cachedData && !initialData) {
+      // Use cached data if available
+      const firstPage = (cachedData as any)?.pages?.[0]
+      if (firstPage) {
+        setCategoryData(firstPage)
+        setIsLoading(false)
+        return
+      }
+    }
+
     // If we have initial data, no need to fetch again
     if (initialData) {
       setCategoryData(initialData)
@@ -34,28 +76,8 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
     }
 
     // Fetch data client-side if not provided (fallback case)
-    async function loadCategory() {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        const data = await getPostsByCategory(params.slug, 20)
-
-        if (!data.category) {
-          notFound()
-        }
-
-        setCategoryData(data)
-      } catch (err) {
-        console.error(`Error loading category ${params.slug}:`, err)
-        setError(err instanceof Error ? err : new Error(String(err)))
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     loadCategory()
-  }, [params.slug, initialData])
+  }, [params.slug, initialData, loadCategory, queryClient])
 
   // Loading state
   if (isLoading) {

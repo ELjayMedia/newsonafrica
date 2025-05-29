@@ -7,8 +7,9 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatExcerpt, performSearch, type SearchFilters, type SearchItem } from "@/lib/search"
+import { formatExcerpt, performSearch, type SearchFilters, type SearchItem, highlightSearchTerms } from "@/lib/search"
 import { FALLBACK_POSTS } from "@/lib/mock-data"
+import { Filter, SortAsc, Calendar, User, ChevronDown } from "lucide-react"
 
 // Add more categories for better filtering
 const CATEGORIES = [
@@ -41,6 +42,10 @@ export function SearchResults() {
   const [totalItems, setTotalItems] = useState(0)
   const [searchSource, setSearchSource] = useState<string | undefined>(undefined)
   const resultsPerPage = 10
+
+  const [showFilters, setShowFilters] = useState(false)
+  const [sortBy, setSortBy] = useState<"relevance" | "date" | "title">("relevance")
+  const [dateFilter, setDateFilter] = useState<string>("")
 
   // Function to fetch search results
   const fetchSearchResults = useCallback(
@@ -134,6 +139,23 @@ export function SearchResults() {
   const handleCategoryClear = () => {
     const params = new URLSearchParams(searchParams.toString())
     params.delete("category")
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleSortChange = (newSort: "relevance" | "date" | "title") => {
+    setSortBy(newSort)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("sort", newSort)
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleDateFilter = (days: number) => {
+    const date = new Date()
+    date.setDate(date.getDate() - days)
+    const dateString = date.toISOString().split("T")[0]
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("dateFrom", dateString)
     router.push(`/search?${params.toString()}`)
   }
 
@@ -233,6 +255,48 @@ export function SearchResults() {
         </div>
       )}
 
+      {query && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <SortAsc className="w-4 h-4 text-gray-500" />
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value as any)}
+              className="text-sm border border-gray-300 rounded px-2 py-1"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="date">Date</option>
+              <option value="title">Title</option>
+            </select>
+          </div>
+
+          {showFilters && (
+            <div className="w-full mt-2 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleDateFilter(7)} className="text-xs">
+                Last 7 days
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilter(30)} className="text-xs">
+                Last 30 days
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleDateFilter(90)} className="text-xs">
+                Last 3 months
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
@@ -240,7 +304,7 @@ export function SearchResults() {
               <Link
                 key={result.id}
                 href={`/post/${result.slug}`}
-                className="flex gap-4 group hover:bg-muted p-2 rounded-lg transition-colors"
+                className="flex gap-4 group hover:bg-muted p-3 rounded-lg transition-colors border border-transparent hover:border-gray-200"
               >
                 <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
                   <Image
@@ -252,16 +316,28 @@ export function SearchResults() {
                   />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold group-hover:text-primary transition-colors">{result.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{formatExcerpt(result.excerpt)}</p>
+                  <h3
+                    className="font-semibold group-hover:text-primary transition-colors"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightSearchTerms(result.title, query),
+                    }}
+                  />
+                  <p
+                    className="text-sm text-muted-foreground line-clamp-2 mt-1"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightSearchTerms(formatExcerpt(result.excerpt), query),
+                    }}
+                  />
                   <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                    <Calendar className="w-3 h-3" />
                     <span>{new Date(result.date).toLocaleDateString()}</span>
                     <span>•</span>
+                    <User className="w-3 h-3" />
                     <span>{result.author.name}</span>
                     {result.categories && result.categories.length > 0 && (
                       <>
                         <span>•</span>
-                        <span>{result.categories[0].name}</span>
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">{result.categories[0].name}</span>
                       </>
                     )}
                   </div>

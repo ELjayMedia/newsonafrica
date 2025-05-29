@@ -1,5 +1,4 @@
-import Link from "next/link"
-import Image from "next/image"
+import { HorizontalCard } from "./HorizontalCard"
 
 interface Post {
   id: string
@@ -27,29 +26,14 @@ export function PostList({ posts }: PostListProps) {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
       {posts.map((post) => (
-        <article key={post.id} className="h-full">
-          <Link href={`/post/${post.slug}`} className="group h-full flex flex-col" aria-label={post.title}>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-200 ease-in-out group-hover:shadow-lg flex-1 flex flex-col">
-              <div className="relative h-48">
-                <Image
-                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=400&width=600&query=news"}
-                  alt={post.title || "Post image"}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover"
-                  priority={false}
-                  loading="lazy"
-                />
-              </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <h2 className="text-xl font-semibold mb-2 group-hover:text-blue-600 transition-colors">{post.title}</h2>
-                <div className="text-gray-600 flex-1" dangerouslySetInnerHTML={{ __html: post.excerpt }} />
-              </div>
-            </div>
-          </Link>
-        </article>
+        <HorizontalCard
+          key={post.id}
+          post={post}
+          className="border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+          allowHtml={true}
+        />
       ))}
     </div>
   )

@@ -3,9 +3,9 @@ import {
   POST_BY_SLUG_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
-  SEARCH_POSTS_QUERY,
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 
 const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -209,6 +209,29 @@ function getCountryEndpoints(countryCode: string) {
   }
 }
 
+// Enhanced cache with LRU-like behavior
+const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const MAX_CACHE_SIZE = 50
+
+// Cache cleanup function
+function cleanupCache() {
+  if (categoryCache.size <= MAX_CACHE_SIZE) return
+
+  // Sort by hits and timestamp, remove least used entries
+  const entries = Array.from(categoryCache.entries()).sort((a, b) => {
+    const aScore = a[1].hits + (Date.now() - a[1].timestamp) / 1000
+    const bScore = b[1].hits + (Date.now() - b[1].timestamp) / 1000
+    return aScore - bScore
+  })
+
+  // Remove oldest 25% of entries
+  const toRemove = Math.floor(entries.length * 0.25)
+  for (let i = 0; i < toRemove; i++) {
+    categoryCache.delete(entries[i][0])
+  }
+}
+
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
   query: string,
@@ -225,6 +248,7 @@ async function graphqlRequest<T>(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Connection: "keep-alive",
       },
       body: JSON.stringify({
         query,
@@ -443,11 +467,20 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
 /**
  * Get the latest posts from WordPress
  */
-export async function getLatestPosts(
-  limit = 20,
-  after?: string,
-): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
-  return getLatestPostsForCountry("sz", limit, after)
+export async function getLatestPosts(limit = 20, after?: string) {
+  try {
+    const posts = await fetchRecentPosts(limit)
+    return {
+      posts: posts || [],
+      error: null,
+    }
+  } catch (error) {
+    console.error("Failed to fetch latest posts:", error)
+    return {
+      posts: [],
+      error: error instanceof Error ? error.message : "Failed to fetch posts",
+    }
+  }
 }
 
 /**
@@ -483,54 +516,51 @@ export async function getCategories(): Promise<WordPressCategory[]> {
 }
 
 /**
- * Get posts by category
+ * Get posts by category with caching
  */
 export async function getPostsByCategory(
   categorySlug: string,
   limit = 20,
-  after?: string,
+  after?: string | null,
 ): Promise<{
   category: WordPressCategory | null
   posts: WordPressPost[]
   hasNextPage: boolean
   endCursor: string | null
 }> {
-  return getPostsByCategoryForCountry("sz", categorySlug, limit, after)
-}
+  // Create cache key
+  const cacheKey = `category:${categorySlug}:${limit}:${after || "null"}`
 
-/**
- * Search posts
- */
-export async function searchPosts(
-  searchTerm: string,
-  limit = 20,
-  after?: string,
-): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
+  // Check cache first
+  const cached = categoryCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    // Increment hit counter
+    cached.hits++
+    return cached.data
+  }
+
   try {
-    const data = await graphqlRequest<WordPressPostsResponse>(SEARCH_POSTS_QUERY, {
-      search: searchTerm,
-      first: limit,
-      after,
+    // If not in cache, fetch from API
+    const result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
+
+    // Cache the result
+    categoryCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+      hits: 1,
     })
 
-    return {
-      posts: data.posts.nodes,
-      hasNextPage: data.posts.pageInfo.hasNextPage,
-      endCursor: data.posts.pageInfo.endCursor,
-    }
-  } catch (error) {
-    console.error("Failed to search posts via GraphQL, trying REST API:", error)
+    // Cleanup cache if needed
+    cleanupCache()
 
-    try {
-      return await restApiFallback("posts", { search: searchTerm, per_page: limit, _embed: 1 }, (posts: any[]) => ({
-        posts: posts.map(transformRestPostToGraphQL),
-        hasNextPage: posts.length === limit,
-        endCursor: null,
-      }))
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return { posts: [], hasNextPage: false, endCursor: null }
+    return result
+  } catch (error) {
+    // If we have stale cached data, return it as fallback
+    if (cached) {
+      console.warn("Using stale cache data due to API error:", error)
+      return cached.data
     }
+    throw error
   }
 }
 
@@ -554,6 +584,52 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return []
+    }
+  }
+}
+
+/**
+ * Get posts by category with error handling
+ */
+export async function getCategoryPosts(slug: string, after?: string) {
+  try {
+    const category = await fetchCategoryPosts(slug, after)
+    return {
+      category,
+      error: null,
+    }
+  } catch (error) {
+    console.error(`Failed to fetch category posts for ${slug}:`, error)
+    return {
+      category: {
+        id: "",
+        name: slug,
+        description: "",
+        posts: {
+          pageInfo: { hasNextPage: false, endCursor: null },
+          nodes: [],
+        },
+      },
+      error: error instanceof Error ? error.message : "Failed to fetch category posts",
+    }
+  }
+}
+
+/**
+ * Get single post with error handling
+ */
+export async function getPost(slug: string) {
+  try {
+    const post = await fetchSinglePost(slug)
+    return {
+      post,
+      error: null,
+    }
+  } catch (error) {
+    console.error(`Failed to fetch post ${slug}:`, error)
+    return {
+      post: null,
+      error: error instanceof Error ? error.message : "Failed to fetch post",
     }
   }
 }

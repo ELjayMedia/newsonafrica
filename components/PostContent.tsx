@@ -23,17 +23,17 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 bg-white">
+    <div className="container mx-auto px-4 pb-6 bg-white">
       <article className="mb-8">
         {/* Top date and share section */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center text-gray-600">
-            <Clock className="w-4 h-4 mr-2" />
+        <div className="flex justify-between items-center mb-4 text-sm">
+          <div className="flex items-center text-gray-500">
+            <Clock className="w-3 h-3 mr-1" />
             <time dateTime={post.date}>{post.date ? formatDate(post.date, false) : "Unknown date"}</time>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600 mr-2">Share</span>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-500 text-xs">Share</span>
             <SocialShare
               url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}/post/${post.slug}`}
               title={post.title}
@@ -44,28 +44,37 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         </div>
 
         {/* Headline */}
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{post.title}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{post.title}</h1>
 
         {/* Author and publication */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-3">
           <div className="flex flex-col">
             {post.author && (
-              <Link href={`/author/${post.author.node.slug}`} className="font-medium hover:underline">
+              <Link
+                href={`/author/${post.author.node.slug}`}
+                className="font-medium hover:underline text-sm md:text-base"
+              >
                 {post.author.node.name}
               </Link>
             )}
           </div>
 
           {/* Interactive buttons */}
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="rounded-full flex items-center gap-2 bg-white">
-              <MessageSquare className="w-4 h-4" />
-              <span>Comments</span>
+          <div className="flex flex-wrap gap-1 md:gap-2">
+            <Button
+              variant="outline"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              <MessageSquare className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Comments</span>
             </Button>
 
-            <Button variant="outline" className="rounded-full flex items-center gap-2 bg-white">
-              <Gift className="w-4 h-4" />
-              <span>Gift article</span>
+            <Button
+              variant="outline"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              <Gift className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Gift article</span>
             </Button>
 
             <BookmarkButton post={post} />

@@ -1,5 +1,3 @@
-import { GraphQLClient } from "graphql-request"
-import { queries, mutations } from "./wordpress-queries"
 import { cache } from "react"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
@@ -9,11 +7,9 @@ if (!WORDPRESS_API_URL) {
   console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
 }
 
-// Create a client with a timeout
-export const client = new GraphQLClient(WORDPRESS_API_URL, {
-  timeout: 30000, // Increased timeout to 30 seconds
-  errorPolicy: "all",
-})
+// Simple cache implementation
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Check if we're in a browser environment and if we're online
 const isOnline = () => {
@@ -27,32 +23,59 @@ const isOnline = () => {
 const isServer = () => typeof window === "undefined"
 
 /**
+ * Simple GraphQL request function with proper headers
+ */
+async function graphqlRequest(query: string, variables: Record<string, any> = {}) {
+  const response = await fetch(WORDPRESS_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "NewsOnAfrica/1.0",
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const result = await response.json()
+
+  if (result.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`)
+  }
+
+  return result.data
+}
+
+/**
  * Fetches data from the WordPress REST API with retry logic.
- *
- * @param {string} endpoint - The REST API endpoint to fetch from.
- * @param {Record<string, any>} [params={}] - Optional parameters to include in the request.
- * @returns {Promise<any>} - A promise that resolves with the JSON response from the API.
  */
 const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = {}) => {
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
   const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
-  // Implement retry logic with exponential backoff
   const MAX_RETRIES = 3
   let lastError
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // Increased timeout to 30 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
 
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "NewsOnAfrica/1.0",
         },
         signal: controller.signal,
-        next: { revalidate: 60 }, // Revalidate every 60 seconds
+        next: { revalidate: 300 }, // 5 minutes
       })
 
       clearTimeout(timeoutId)
@@ -66,13 +89,12 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
       console.error(`REST API request attempt ${attempt + 1} failed:`, error)
       lastError = error
 
-      // If it's the last attempt, throw the error
       if (attempt === MAX_RETRIES - 1) {
         throw error
       }
 
-      // Exponential backoff before retrying
-      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000)
+      // Exponential backoff
+      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000)
       await new Promise((resolve) => setTimeout(resolve, backoffTime))
     }
   }
@@ -81,115 +103,134 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
 }
 
 /**
- * Fetches data from the GraphQL API with retry logic and REST API fallback.
- *
- * @param {string} query - The GraphQL query to execute.
- * @param {Record<string, any>} [variables={}] - Optional variables to include in the query.
- * @param {number} [maxRetries=3] - The maximum number of retries.
- * @param {Record<string, string>} [headers={}] - Optional headers to include in the request.
- * @returns {Promise<any>} - A promise that resolves with the JSON response from the API.
+ * Fetches data with caching and fallback to REST API
  */
-const fetchWithRetry = async (query: string, variables = {}, maxRetries = 3, headers: Record<string, string> = {}) => {
-  // If we're offline, don't even try to fetch
-  if (!isServer() && !isOnline()) {
-    console.log("Device is offline, skipping API request")
-    throw new Error("Device is offline")
+const fetchWithFallback = async (
+  query: string,
+  variables: Record<string, any> = {},
+  cacheKey: string,
+  restFallback: () => Promise<any>,
+) => {
+  // Check cache first
+  const cached = apiCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data
   }
 
-  let lastError
+  // If offline, try cache or return empty
+  if (!isServer() && !isOnline()) {
+    console.log("Device is offline, using cache or returning empty data")
+    return cached?.data || []
+  }
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  try {
+    // Try GraphQL first
+    const data = await graphqlRequest(query, variables)
+
+    // Cache the result
+    apiCache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      ttl: CACHE_TTL,
+    })
+
+    return data
+  } catch (error) {
+    console.error("GraphQL request failed, falling back to REST API:", error)
+
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // Increased timeout to 30 seconds
+      // Fallback to REST API
+      const restData = await restFallback()
 
-      // Skip the GraphQL endpoint test - it's causing issues
-      // Instead, directly try the GraphQL request and handle any failures
-      const response = await client.request(query, variables, {
-        ...headers,
-        signal: controller.signal,
+      // Cache the REST result
+      apiCache.set(cacheKey, {
+        data: restData,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL,
       })
 
-      clearTimeout(timeoutId)
-      return response
-    } catch (error) {
-      console.error(`GraphQL API request attempt ${attempt + 1} failed:`, error)
-      lastError = error
+      return restData
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
 
-      // Check if it's a network error or timeout
-      const isNetworkError =
-        error instanceof Error &&
-        (error.message.includes("Failed to fetch") ||
-          error.message.includes("Network request failed") ||
-          error.message.includes("aborted") ||
-          error.message.includes("GraphQL endpoint"))
-
-      if (isNetworkError) {
-        console.log("Network error detected, trying REST API fallback...")
-        // Signal that we should use the REST API fallback
-        throw new Error("USE_REST_FALLBACK")
-      }
-
-      if (attempt === maxRetries - 1) throw error
-
-      // Exponential backoff before retrying
-      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000)
-      await new Promise((resolve) => setTimeout(resolve, backoffTime))
+      // Return cached data if available, otherwise empty
+      return cached?.data || []
     }
   }
-  throw lastError
 }
 
 /**
- * Fetches posts with a specific tag.
- *
- * @param {string} tag - The tag slug to fetch posts for.
- * @param {number} [limit=100] - The number of posts to fetch.
- * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
+ * Fetches recent posts
  */
-export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
-  try {
-    // If we're offline, return empty array
-    if (!isServer() && !isOnline()) {
-      console.log("Device is offline, returning empty array for tagged posts")
-      return []
+export const fetchRecentPosts = cache(async (limit = 20) => {
+  const query = `
+    query RecentPosts($limit: Int!) {
+      posts(first: $limit, where: { orderby: { field: DATE, order: DESC }, status: PUBLISH }) {
+        nodes {
+          id
+          title
+          slug
+          date
+          excerpt
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          author {
+            node {
+              name
+              slug
+            }
+          }
+          categories {
+            nodes {
+              name
+              slug
+            }
+          }
+          tags {
+            nodes {
+              name
+              slug
+            }
+          }
+        }
+      }
     }
+  `
 
-    const data = await fetchWithRetry(queries.taggedPosts, { tag, limit })
-    return data.posts.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for tagged posts")
-      try {
-        // Fallback to REST API
-        const posts = await fetchFromRestApi("posts", {
-          tags: tag,
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
-          _embed: 1,
-        })
+  const restFallback = async () => {
+    const posts = await fetchFromRestApi("posts", {
+      per_page: limit,
+      _embed: 1,
+      orderby: "date",
+      order: "desc",
+    })
 
-        // Transform REST API response to match GraphQL structure
-        return posts.map((post: any) => ({
-          id: post.id,
-          title: post.title.rendered,
-          excerpt: post.excerpt.rendered,
-          slug: post.slug,
-          date: post.date,
-          featuredImage: post._embedded?.["wp:featuredmedia"]
+    return {
+      posts: {
+        nodes: posts.map((post: any) => ({
+          id: post.id.toString(),
+          title: post.title?.rendered || "",
+          slug: post.slug || "",
+          date: post.date || "",
+          excerpt: post.excerpt?.rendered || "",
+          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
             ? {
                 node: {
                   sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
                 },
               }
             : null,
-          author: post._embedded?.["author"]
-            ? {
-                node: {
-                  name: post._embedded["author"][0].name,
-                  slug: post._embedded["author"][0].slug,
-                },
-              }
-            : null,
+          author: {
+            node: {
+              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
+              slug: post._embedded?.["author"]?.[0]?.slug || "",
+            },
+          },
           categories: {
             nodes:
               post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
@@ -204,742 +245,101 @@ export const fetchTaggedPosts = cache(async (tag: string, limit = 100) => {
                 slug: tag.slug,
               })) || [],
           },
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
+        })),
+      },
     }
   }
+
+  const data = await fetchWithFallback(query, { limit }, `recent-posts-${limit}`, restFallback)
+  return data.posts?.nodes || []
 })
 
 /**
- * Fetches featured posts.
- *
- * @param {number} [limit=100] - The number of posts to fetch.
- * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
- */
-export const fetchFeaturedPosts = cache(async (limit = 100) => {
-  try {
-    // If we're offline, return empty array
-    if (!isServer() && !isOnline()) {
-      console.log("Device is offline, returning empty array for featured posts")
-      return []
-    }
-
-    const data = await fetchWithRetry(queries.featuredPosts, { limit })
-    return data.posts.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for featured posts")
-      try {
-        // Fallback to REST API - using sticky posts as featured
-        const posts = await fetchFromRestApi("posts", {
-          sticky: true,
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
-          _embed: 1,
-        })
-
-        // Transform REST API response to match GraphQL structure
-        return posts.map((post: any) => ({
-          id: post.id,
-          title: post.title.rendered,
-          excerpt: post.excerpt.rendered,
-          slug: post.slug,
-          date: post.date,
-          featuredImage: post._embedded?.["wp:featuredmedia"]
-            ? {
-                node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                },
-              }
-            : null,
-          author: post._embedded?.["author"]
-            ? {
-                node: {
-                  name: post._embedded["author"][0].name,
-                  slug: post._embedded["author"][0].slug,
-                },
-              }
-            : null,
-          categories: {
-            nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-          tags: {
-            nodes:
-              post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                name: tag.name,
-                slug: tag.slug,
-              })) || [],
-          },
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-})
-
-/**
- * Fetches posts by category.
- *
- * @param {string} slug - The category slug to fetch posts for.
- * @param {string | null} [after=null] - The cursor to fetch posts after.
- * @returns {Promise<any>} - A promise that resolves with the category data.
+ * Fetches posts by category
  */
 export const fetchCategoryPosts = cache(async (slug: string, after: string | null = null) => {
-  try {
-    // Modify the GraphQL query to request more posts (first: 100)
-    const data = await fetchWithRetry(queries.categoryPosts, { slug, after, first: 100 })
-    return data.category
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === "USE_REST_FALLBACK" || error.message.includes("Failed to fetch"))
-    ) {
-      console.log(`Falling back to REST API for category: ${slug}`)
-      try {
-        // First get the category ID from the slug
-        const categories = await fetchFromRestApi("categories", { slug })
-        if (!categories || categories.length === 0) {
-          throw new Error(`Category not found: ${slug}`)
-        }
-
-        const categoryId = categories[0].id
-
-        // Then get posts from that category
-        const posts = await fetchFromRestApi("posts", {
-          categories: categoryId,
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
-          _embed: 1,
-        })
-
-        // Transform REST API response to match GraphQL structure
-        return {
-          name: categories[0].name,
-          description: categories[0].description || "",
-          posts: {
-            pageInfo: {
-              hasNextPage: posts.length >= 100, // Assume there are more if we got a full page
-              endCursor: null, // REST API doesn't use cursors
-            },
-            nodes: posts.map((post: any) => ({
-              id: post.id,
-              title: post.title.rendered,
-              excerpt: post.excerpt.rendered,
-              slug: post.slug,
-              date: post.date,
-              featuredImage: post._embedded?.["wp:featuredmedia"]
-                ? {
-                    node: {
-                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                    },
-                  }
-                : null,
-              author: post._embedded?.["author"]
-                ? {
-                    node: {
-                      name: post._embedded["author"][0].name,
-                      slug: post._embedded["author"][0].slug,
-                    },
-                  }
-                : null,
-              categories: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                    name: cat.name,
-                    slug: cat.slug,
-                  })) || [],
-              },
-              tags: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                    name: tag.name,
-                    slug: tag.slug,
-                  })) || [],
-              },
-            })),
-          },
-        }
-      } catch (restError) {
-        console.error(`Both GraphQL and REST API failed for category ${slug}:`, restError)
-        // Return a minimal valid structure to prevent UI crashes
-        return {
-          name: slug,
-          description: "",
-          posts: {
-            pageInfo: { hasNextPage: false, endCursor: null },
-            nodes: [],
-          },
-        }
-      }
-    } else {
-      console.error(`GraphQL API failed for category ${slug} with non-network error:`, error)
-      // Return a minimal valid structure to prevent UI crashes
-      return {
-        name: slug,
-        description: "",
-        posts: {
-          pageInfo: { hasNextPage: false, endCursor: null },
-          nodes: [],
-        },
-      }
-    }
-  }
-})
-
-/**
- * Fetches all categories with their posts.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of categories with posts.
- */
-export const fetchCategorizedPosts = cache(async () => {
-  try {
-    // Modify the GraphQL query to request more posts per category (first: 100)
-    const data = await fetchWithRetry(queries.categorizedPosts)
-
-    // Ensure we have valid category data
-    if (!data?.categories?.nodes || !Array.isArray(data.categories.nodes)) {
-      console.error("Invalid category data structure:", data)
-      return []
-    }
-
-    // Filter out categories with no posts
-    const categoriesWithPosts = data.categories.nodes.filter(
-      (category) => category?.posts?.nodes && category.posts.nodes.length > 0,
-    )
-
-    return categoriesWithPosts
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for categorized posts")
-      try {
-        // Get all categories
-        const categories = await fetchFromRestApi("categories", { per_page: 100 })
-
-        // For each category, get its posts
-        const categoriesWithPosts = await Promise.all(
-          categories.map(async (category: any) => {
-            const posts = await fetchFromRestApi("posts", {
-              categories: category.id,
-              per_page: 100, // Increased to maximum allowed by WordPress REST API
-              _embed: 1,
-            })
-
-            return {
-              id: category.id,
-              name: category.name,
-              slug: category.slug,
-              parent: category.parent
-                ? {
-                    node: {
-                      name: categories.find((c: any) => c.id === category.parent)?.name || "",
-                    },
-                  }
-                : null,
-              posts: {
-                nodes: posts.map((post: any) => ({
-                  id: post.id,
-                  title: post.title.rendered,
-                  excerpt: post.excerpt.rendered,
-                  slug: post.slug,
-                  date: post.date,
-                  featuredImage: post._embedded?.["wp:featuredmedia"]
-                    ? {
-                        node: {
-                          sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                        },
-                      }
-                    : null,
-                  author: post._embedded?.["author"]
-                    ? {
-                        node: {
-                          name: post._embedded["author"][0].name,
-                          slug: post._embedded["author"][0].slug,
-                        },
-                      }
-                    : null,
-                  categories: {
-                    nodes:
-                      post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                        name: cat.name,
-                        slug: cat.slug,
-                      })) || [],
-                  },
-                  tags: {
-                    nodes:
-                      post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                        name: tag.name,
-                        slug: tag.slug,
-                      })) || [],
-                  },
-                })),
-              },
+  const query = `
+    query CategoryPosts($slug: ID!, $after: String) {
+      category(id: $slug, idType: SLUG) {
+        id
+        name
+        description
+        posts(first: 20, after: $after, where: { status: PUBLISH }) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            id
+            title
+            slug
+            date
+            excerpt
+            featuredImage {
+              node {
+                sourceUrl
+                altText
+              }
             }
-          }),
-        )
-
-        // Filter out categories with no posts
-        return categoriesWithPosts.filter((category) => category?.posts?.nodes && category.posts.nodes.length > 0)
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-})
-
-/**
- * Fetches recent posts.
- *
- * @param {number} [limit=100] - The number of posts to fetch.
- * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
- */
-export const fetchRecentPosts = cache(async (limit = 100) => {
-  try {
-    const data = await fetchWithRetry(queries.recentPosts, { limit })
-    return data.posts.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for recent posts")
-      try {
-        const posts = await fetchFromRestApi("posts", {
-          per_page: 100, // Increased to maximum allowed by WordPress REST API
-          _embed: 1,
-        })
-
-        // Transform REST API response to match GraphQL structure
-        return posts.map((post: any) => ({
-          id: post.id,
-          title: post.title.rendered,
-          excerpt: post.excerpt.rendered,
-          slug: post.slug,
-          date: post.date,
-          featuredImage: post._embedded?.["wp:featuredmedia"]
-            ? {
-                node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                },
+            author {
+              node {
+                name
+                slug
               }
-            : null,
-          author: post._embedded?.["author"]
-            ? {
-                node: {
-                  name: post._embedded["author"][0].name,
-                  slug: post._embedded["author"][0].slug,
-                },
+            }
+            categories {
+              nodes {
+                name
+                slug
               }
-            : null,
-          categories: {
-            nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-          tags: {
-            nodes:
-              post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                name: tag.name,
-                slug: tag.slug,
-              })) || [],
-          },
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
+            }
+            tags {
+              nodes {
+                name
+                slug
+              }
+            }
+          }
+        }
       }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
     }
-  }
-})
+  `
 
-/**
- * Fetches all categories.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of categories.
- */
-export const fetchAllCategories = cache(async () => {
-  try {
-    const data = await fetchWithRetry(queries.allCategories)
-    return data.categories.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for all categories")
-      try {
-        const categories = await fetchFromRestApi("categories", { per_page: 100 })
-        return categories.map((cat: any) => ({
-          id: cat.id,
-          name: cat.name,
-          slug: cat.slug,
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
+  const restFallback = async () => {
+    try {
+      // Get category ID from slug
+      const categories = await fetchFromRestApi("categories", { slug })
+      if (!categories || categories.length === 0) {
+        throw new Error(`Category not found: ${slug}`)
       }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-})
 
-/**
- * Fetches all authors.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of authors.
- */
-export const fetchAllAuthors = async () => {
-  try {
-    const data = await fetchWithRetry(queries.allAuthors)
-    return data.users.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for all authors")
-      try {
-        const authors = await fetchFromRestApi("users", { per_page: 100 })
-        return authors.map((author: any) => ({
-          id: author.id,
-          name: author.name,
-          slug: author.slug,
-          description: author.description || "",
-          avatar: {
-            url: author.avatar_urls["96"] || "",
-          },
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-}
+      const categoryId = categories[0].id
+      const categoryData = categories[0]
 
-/**
- * Fetches all posts.
- *
- * @param {number} [limit=10000] - The number of posts to fetch.
- * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
- */
-export const fetchAllPosts = cache(async (limit = 10000) => {
-  try {
-    // For GraphQL, we'll use pagination to fetch all posts
-    let allPosts: any[] = []
-    let hasNextPage = true
-    let endCursor: string | null = null
-
-    while (hasNextPage && allPosts.length < limit) {
-      const data = await fetchWithRetry(queries.allPosts, {
-        first: 100, // Fetch 100 posts at a time (GraphQL maximum)
-        after: endCursor,
+      // Get posts for this category
+      const posts = await fetchFromRestApi("posts", {
+        categories: categoryId,
+        per_page: 20,
+        _embed: 1,
       })
 
-      if (data?.posts?.nodes) {
-        allPosts = [...allPosts, ...data.posts.nodes]
-        hasNextPage = data.posts.pageInfo?.hasNextPage || false
-        endCursor = data.posts.pageInfo?.endCursor || null
-      } else {
-        hasNextPage = false
-      }
-
-      // Break if we've reached the limit
-      if (allPosts.length >= limit) {
-        break
-      }
-    }
-
-    return allPosts
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for all posts")
-      try {
-        // REST API has pagination limits, so we'll need to make multiple requests
-        const MAX_PER_PAGE = 100 // WordPress REST API maximum
-        let allPosts: any[] = []
-        let page = 1
-        let shouldContinue = true
-
-        while (shouldContinue && allPosts.length < limit) {
-          const posts = await fetchFromRestApi("posts", {
-            per_page: MAX_PER_PAGE,
-            page,
-            _embed: 1,
-          })
-
-          if (posts.length === 0) {
-            shouldContinue = false
-          } else {
-            allPosts = [...allPosts, ...posts]
-            page++
-
-            // Break if we've reached the limit or if we got fewer posts than requested (last page)
-            if (allPosts.length >= limit || posts.length < MAX_PER_PAGE) {
-              shouldContinue = false
-            }
-          }
-        }
-
-        // Transform REST API response to match GraphQL structure
-        return allPosts.slice(0, limit).map((post: any) => ({
-          id: post.id,
-          title: post.title.rendered,
-          excerpt: post.excerpt.rendered,
-          slug: post.slug,
-          date: post.date,
-          featuredImage: post._embedded?.["wp:featuredmedia"]
-            ? {
-                node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                },
-              }
-            : null,
-          author: post._embedded?.["author"]
-            ? {
-                node: {
-                  name: post._embedded["author"][0].name,
-                  slug: post._embedded["author"][0].slug,
-                },
-              }
-            : null,
-          categories: {
-            nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-          tags: {
-            nodes:
-              post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                name: tag.name,
-                slug: tag.slug,
-              })) || [],
-          },
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-})
-
-/**
- * Fetches all tags.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of tags.
- */
-export const fetchAllTags = cache(async () => {
-  try {
-    const data = await fetchWithRetry(queries.allTags)
-    return data.tags.nodes
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for all tags")
-      try {
-        // Fetch all tags with pagination
-        const MAX_PER_PAGE = 100 // WordPress REST API maximum
-        let allTags: any[] = []
-        let page = 1
-        let shouldContinue = true
-
-        while (shouldContinue) {
-          const tags = await fetchFromRestApi("tags", {
-            per_page: MAX_PER_PAGE,
-            page,
-          })
-
-          if (tags.length === 0) {
-            shouldContinue = false
-          } else {
-            allTags = [...allTags, ...tags]
-            page++
-
-            // Break if we got fewer tags than requested (last page)
-            if (tags.length < MAX_PER_PAGE) {
-              shouldContinue = false
-            }
-          }
-        }
-
-        return allTags.map((tag: any) => ({
-          id: tag.id,
-          name: tag.name,
-          slug: tag.slug,
-        }))
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return [] // Return empty array as last resort
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return [] // Return empty array for other errors
-    }
-  }
-})
-
-/**
- * Fetches pending comments.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of pending comments.
- */
-export const fetchPendingComments = async () =>
-  fetchWithRetry(queries.pendingComments).then((data: any) => data.comments.nodes)
-
-/**
- * Approves a comment.
- *
- * @param {string} id - The ID of the comment to approve.
- * @returns {Promise<boolean>} - A promise that resolves with a boolean indicating success.
- */
-export const approveComment = async (id: string) =>
-  fetchWithRetry(mutations.approveComment, { id }).then((data: any) => data.updateComment.success)
-
-/**
- * Deletes a comment.
- *
- * @param {string} id - The ID of the comment to delete.
- * @returns {Promise<boolean>} - A promise that resolves with a boolean indicating success.
- */
-export const deleteComment = async (id: string) =>
-  fetchWithRetry(mutations.deleteComment, { id }).then((data: any) => data.deleteComment.success)
-
-/**
- * Fetches comments for a post.
- *
- * @param {number} postId - The ID of the post to fetch comments for.
- * @returns {Promise<any[]>} - A promise that resolves with an array of comments.
- */
-export const fetchComments = async (postId: number) =>
-  fetchWithRetry(queries.postComments, { postId }).then((data: any) => data.comments.nodes)
-
-/**
- * Posts a comment.
- *
- * @param {any} commentData - The comment data.
- * @returns {Promise<any>} - A promise that resolves with the created comment data.
- */
-export const postComment = async (commentData: any) =>
-  fetchWithRetry(mutations.createComment, { input: commentData }).then((data: any) => data.createComment)
-
-/**
- * Searches posts.
- *
- * @param {string} query - The search query.
- * @param {string | null} [after=null] - The cursor to fetch posts after.
- * @returns {Promise<any>} - A promise that resolves with the search results.
- */
-export const searchPosts = async (query: string, after: string | null = null) =>
-  fetchWithRetry(queries.searchPosts, { query, after, first: 100 }).then((data: any) => data.posts)
-
-/**
- * Fetches business posts.
- *
- * @returns {Promise<any>} - A promise that resolves with the business posts.
- */
-export const fetchBusinessPosts = async () => fetchCategoryPosts("business")
-
-/**
- * Fetches news posts.
- *
- * @returns {Promise<any>} - A promise that resolves with the news posts.
- */
-export const fetchNewsPosts = async () => fetchCategoryPosts("news")
-
-/**
- * Fetches author data.
- *
- * @param {string} slug - The author slug.
- * @param {string | null} [after=null] - The cursor to fetch posts after.
- * @returns {Promise<any>} - A promise that resolves with the author data.
- */
-export const fetchAuthorData = async (slug: string, after: string | null = null) => {
-  try {
-    const data = await fetchWithRetry(queries.authorData, { slug, after, first: 100 })
-    return data.user
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log(`Falling back to REST API for author: ${slug}`)
-      try {
-        // First get the author data
-        const authors = await fetchFromRestApi(`users?slug=${slug}`)
-        if (!authors || authors.length === 0) {
-          throw new Error(`Author not found: ${slug}`)
-        }
-
-        const author = authors[0]
-
-        // Then get posts by this author with pagination
-        const MAX_PER_PAGE = 100 // WordPress REST API maximum
-        let allPosts: any[] = []
-        let page = 1
-        let shouldContinue = true
-
-        while (shouldContinue) {
-          const posts = await fetchFromRestApi("posts", {
-            author: author.id,
-            per_page: MAX_PER_PAGE,
-            page,
-            _embed: 1,
-          })
-
-          if (posts.length === 0) {
-            shouldContinue = false
-          } else {
-            allPosts = [...allPosts, ...posts]
-            page++
-
-            // Break if we got fewer posts than requested (last page)
-            if (posts.length < MAX_PER_PAGE) {
-              shouldContinue = false
-            }
-          }
-        }
-
-        // Transform REST API response to match GraphQL structure
-        return {
-          id: author.id,
-          name: author.name,
-          slug: author.slug,
-          description: author.description || "",
-          avatar: {
-            url: author.avatar_urls["96"] || "",
-          },
+      return {
+        category: {
+          id: categoryData.id.toString(),
+          name: categoryData.name,
+          description: categoryData.description || "",
           posts: {
             pageInfo: {
-              hasNextPage: false, // We've fetched all posts
+              hasNextPage: posts.length >= 20,
               endCursor: null,
             },
-            nodes: allPosts.map((post: any) => ({
-              id: post.id,
-              title: post.title.rendered,
-              excerpt: post.excerpt.rendered,
-              slug: post.slug,
-              date: post.date,
-              featuredImage: post._embedded?.["wp:featuredmedia"]
+            nodes: posts.map((post: any) => ({
+              id: post.id.toString(),
+              title: post.title?.rendered || "",
+              slug: post.slug || "",
+              date: post.date || "",
+              excerpt: post.excerpt?.rendered || "",
+              featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
                 ? {
                     node: {
                       sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
@@ -949,8 +349,8 @@ export const fetchAuthorData = async (slug: string, after: string | null = null)
                 : null,
               author: {
                 node: {
-                  name: author.name,
-                  slug: author.slug,
+                  name: post._embedded?.["author"]?.[0]?.name || "Unknown",
+                  slug: post._embedded?.["author"]?.[0]?.slug || "",
                 },
               },
               categories: {
@@ -969,54 +369,133 @@ export const fetchAuthorData = async (slug: string, after: string | null = null)
               },
             })),
           },
-        }
-      } catch (restError) {
-        console.error(`Both GraphQL and REST API failed for author ${slug}:`, restError)
-        throw new Error(
-          `Failed to fetch author data: ${restError instanceof Error ? restError.message : "Unknown error"}`,
-        )
+        },
       }
-    } else {
-      console.error(`GraphQL API failed for author ${slug} with non-network error:`, error)
-      throw error
+    } catch (error) {
+      console.error(`Failed to fetch category ${slug}:`, error)
+      return {
+        category: {
+          id: "",
+          name: slug,
+          description: "",
+          posts: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [],
+          },
+        },
+      }
     }
   }
-}
+
+  const data = await fetchWithFallback(query, { slug, after }, `category-${slug}-${after || "first"}`, restFallback)
+  return data.category
+})
 
 /**
- * Fetches a single post.
- *
- * @param {string} slug - The post slug.
- * @returns {Promise<any>} - A promise that resolves with the post data.
+ * Fetches all categories
+ */
+export const fetchAllCategories = cache(async () => {
+  const query = `
+    query AllCategories {
+      categories(first: 100, where: { hideEmpty: true }) {
+        nodes {
+          id
+          name
+          slug
+          description
+          count
+        }
+      }
+    }
+  `
+
+  const restFallback = async () => {
+    const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
+    return {
+      categories: {
+        nodes: categories.map((cat: any) => ({
+          id: cat.id.toString(),
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description || "",
+          count: cat.count || 0,
+        })),
+      },
+    }
+  }
+
+  const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
+  return data.categories?.nodes || []
+})
+
+/**
+ * Fetches a single post
  */
 export const fetchSinglePost = async (slug: string) => {
-  try {
-    const data = await fetchWithRetry(queries.singlePost, { slug })
-    return data.post
-  } catch (error) {
-    console.error(`Error fetching post with slug ${slug}:`, error)
-
-    // Try REST API as fallback
-    try {
-      console.log(`Falling back to REST API for post with slug ${slug}`)
-      const posts = await fetchFromRestApi(`posts?slug=${slug}&_embed=1`)
-
-      if (!posts || posts.length === 0) {
-        return null
+  const query = `
+    query SinglePost($slug: ID!) {
+      post(id: $slug, idType: SLUG) {
+        id
+        title
+        content
+        excerpt
+        slug
+        date
+        modified
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        author {
+          node {
+            name
+            slug
+            description
+            avatar {
+              url
+            }
+          }
+        }
+        categories {
+          nodes {
+            name
+            slug
+          }
+        }
+        tags {
+          nodes {
+            name
+            slug
+          }
+        }
+        seo {
+          title
+          metaDesc
+        }
       }
+    }
+  `
 
-      const post = posts[0]
+  const restFallback = async () => {
+    const posts = await fetchFromRestApi(`posts?slug=${slug}&_embed=1`)
 
-      // Transform REST API response to match GraphQL structure
-      return {
-        id: post.id,
-        title: post.title.rendered,
-        content: post.content.rendered,
-        excerpt: post.excerpt.rendered,
-        slug: post.slug,
-        date: post.date,
-        modified: post.modified,
-        featuredImage: post._embedded?.["wp:featuredmedia"]
+    if (!posts || posts.length === 0) {
+      return { post: null }
+    }
+
+    const post = posts[0]
+    return {
+      post: {
+        id: post.id.toString(),
+        title: post.title?.rendered || "",
+        content: post.content?.rendered || "",
+        excerpt: post.excerpt?.rendered || "",
+        slug: post.slug || "",
+        date: post.date || "",
+        modified: post.modified || "",
+        featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
           ? {
               node: {
                 sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
@@ -1026,8 +505,12 @@ export const fetchSinglePost = async (slug: string) => {
           : null,
         author: {
           node: {
-            name: post._embedded?.["author"]?.[0]?.name || "Unknown Author",
-            slug: post._embedded?.["author"]?.[0]?.slug || "unknown-author",
+            name: post._embedded?.["author"]?.[0]?.name || "Unknown",
+            slug: post._embedded?.["author"]?.[0]?.slug || "",
+            description: post._embedded?.["author"]?.[0]?.description || "",
+            avatar: {
+              url: post._embedded?.["author"]?.[0]?.avatar_urls?.["96"] || "",
+            },
           },
         },
         categories: {
@@ -1045,256 +528,145 @@ export const fetchSinglePost = async (slug: string) => {
             })) || [],
         },
         seo: {
-          title: post.yoast_title || post.title.rendered,
-          metaDesc: post.yoast_meta?.description || post.excerpt.rendered.replace(/<[^>]*>/g, ""),
+          title: post.title?.rendered || "",
+          metaDesc: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "",
         },
-      }
-    } catch (restError) {
-      console.error(`Both GraphQL and REST API failed for post ${slug}:`, restError)
-      return null
+      },
     }
   }
+
+  const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback)
+  return data.post
 }
 
 /**
- * Fetches the user profile.
- *
- * @param {string} token - The user token.
- * @returns {Promise<any>} - A promise that resolves with the user profile data.
+ * Search posts
  */
-export const fetchUserProfile = async (token: string) =>
-  fetchWithRetry(queries.currentUser, {}, 1, { Authorization: `Bearer ${token}` }).then((data: any) => data.viewer)
-
-/**
- * Updates the user profile.
- *
- * @param {string} token - The user token.
- * @param {any} userData - The user data to update.
- * @returns {Promise<any>} - A promise that resolves with the updated user data.
- */
-export const updateUserProfile = async (token: string, userData: any) =>
-  fetchWithRetry(mutations.updateUser, { input: userData }, 1, { Authorization: `Bearer ${token}` }).then(
-    (data: any) => data.updateUser.user,
-  )
-
-/**
- * Fetches posts by tag.
- *
- * @param {string} tag - The tag slug.
- * @param {string | null} [after=null] - The cursor to fetch posts after.
- * @returns {Promise<any>} - A promise that resolves with the posts data.
- */
-export const fetchPostsByTag = async (tag: string, after: string | null = null) => {
-  try {
-    const data = await fetchWithRetry(queries.postsByTag, { tag, after, first: 100 })
-    return data.posts
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for posts by tag")
-      try {
-        // Get tag ID first
-        const tags = await fetchFromRestApi("tags", { slug: tag })
-        if (!tags || tags.length === 0) {
-          throw new Error(`Tag not found: ${tag}`)
+export const searchPosts = async (query: string, page = 1, perPage = 20) => {
+  const graphqlQuery = `
+    query SearchPosts($search: String!, $first: Int!, $after: String) {
+      posts(
+        where: { search: $search, status: PUBLISH }
+        first: $first
+        after: $after
+      ) {
+        pageInfo {
+          hasNextPage
+          endCursor
         }
-
-        const tagId = tags[0].id
-
-        // Fetch all posts with this tag using pagination
-        const MAX_PER_PAGE = 100 // WordPress REST API maximum
-        let allPosts: any[] = []
-        let page = 1
-        let shouldContinue = true
-
-        while (shouldContinue) {
-          const posts = await fetchFromRestApi("posts", {
-            tags: tagId,
-            per_page: MAX_PER_PAGE,
-            page,
-            _embed: 1,
-          })
-
-          if (posts.length === 0) {
-            shouldContinue = false
-          } else {
-            allPosts = [...allPosts, ...posts]
-            page++
-
-            // Break if we got fewer posts than requested (last page)
-            if (posts.length < MAX_PER_PAGE) {
-              shouldContinue = false
+        nodes {
+          id
+          title
+          slug
+          date
+          excerpt
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          author {
+            node {
+              name
+              slug
+            }
+          }
+          categories {
+            nodes {
+              name
+              slug
             }
           }
         }
+      }
+    }
+  `
 
-        // Transform REST API response to match GraphQL structure
-        return {
-          pageInfo: {
-            hasNextPage: false, // We've fetched all posts
-            endCursor: null,
+  const restFallback = async () => {
+    const posts = await fetchFromRestApi("posts", {
+      search: query,
+      per_page: perPage,
+      page,
+      _embed: 1,
+    })
+
+    return {
+      posts: {
+        pageInfo: {
+          hasNextPage: posts.length >= perPage,
+          endCursor: null,
+        },
+        nodes: posts.map((post: any) => ({
+          id: post.id.toString(),
+          title: post.title?.rendered || "",
+          slug: post.slug || "",
+          date: post.date || "",
+          excerpt: post.excerpt?.rendered || "",
+          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+            ? {
+                node: {
+                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                },
+              }
+            : null,
+          author: {
+            node: {
+              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
+              slug: post._embedded?.["author"]?.[0]?.slug || "",
+            },
           },
-          nodes: allPosts.map((post: any) => ({
-            id: post.id,
-            title: post.title.rendered,
-            excerpt: post.excerpt.rendered,
-            slug: post.slug,
-            date: post.date,
-            featuredImage: post._embedded?.["wp:featuredmedia"]
-              ? {
-                  node: {
-                    sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                    altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                  },
-                }
-              : null,
-            author: post._embedded?.["author"]
-              ? {
-                  node: {
-                    name: post._embedded["author"][0].name,
-                    slug: post._embedded["author"][0].slug,
-                  },
-                }
-              : null,
-            categories: {
-              nodes:
-                post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                  name: cat.name,
-                  slug: cat.slug,
-                })) || [],
-            },
-            tags: {
-              nodes:
-                post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                  name: tag.name,
-                  slug: tag.slug,
-                })) || [],
-            },
-          })),
-        }
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        // Return a minimal valid structure to prevent UI crashes
-        return {
-          pageInfo: { hasNextPage: false, endCursor: null },
-          nodes: [],
-        }
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      // Return a minimal valid structure to prevent UI crashes
-      return {
-        pageInfo: { hasNextPage: false, endCursor: null },
-        nodes: [],
-      }
+          categories: {
+            nodes:
+              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+                name: cat.name,
+                slug: cat.slug,
+              })) || [],
+          },
+        })),
+      },
     }
   }
+
+  const after = page > 1 ? btoa(`arrayconnection:${(page - 1) * perPage - 1}`) : null
+  const data = await fetchWithFallback(
+    graphqlQuery,
+    { search: query, first: perPage, after },
+    `search-${query}-${page}`,
+    restFallback,
+  )
+
+  return data.posts
 }
 
-/**
- * Fetches a single tag.
- *
- * @param {string} slug - The tag slug.
- * @returns {Promise<any>} - A promise that resolves with the tag data.
- */
-export const fetchSingleTag = async (slug: string) => {
-  try {
-    const data = await fetchWithRetry(queries.singleTag, { slug })
-    return data.tag
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for single tag")
-      try {
-        const tags = await fetchFromRestApi("tags", { slug })
-        if (!tags || tags.length === 0) {
-          return null
-        }
-        const tag = tags[0]
-        return {
-          id: tag.id,
-          name: tag.name,
-          slug: tag.slug,
-          description: tag.description || "",
-        }
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return null
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return null
-    }
-  }
+// Keep existing function names for backward compatibility
+export const fetchFeaturedPosts = fetchRecentPosts
+export const fetchCategorizedPosts = async () => {
+  const categories = await fetchAllCategories()
+  return categories.slice(0, 10) // Return top 10 categories
 }
 
-/**
- * Fetches a single category.
- *
- * @param {string} slug - The category slug.
- * @returns {Promise<any>} - A promise that resolves with the category data.
- */
-export const fetchSingleCategory = async (slug: string) => {
-  try {
-    const data = await fetchWithRetry(queries.singleCategory, { slug })
-    return data.category
-  } catch (error) {
-    if (error instanceof Error && error.message === "USE_REST_FALLBACK") {
-      console.log("Falling back to REST API for single category")
-      try {
-        const categories = await fetchFromRestApi("categories", { slug })
-        if (!categories || categories.length === 0) {
-          return null
-        }
-        const category = categories[0]
-        return {
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-          description: category.description || "",
-        }
-      } catch (restError) {
-        console.error("Both GraphQL and REST API failed:", restError)
-        return null
-      }
-    } else {
-      console.error("GraphQL API failed with non-network error:", error)
-      return null
-    }
-  }
-}
-
-// Add the missing functions that are causing import errors
-/**
- * Fetches all posts for the sitemap.
- * This is an alias for fetchAllPosts with a more descriptive name.
- *
- * @param {number} [limit=10000] - The number of posts to fetch.
- * @returns {Promise<any[]>} - A promise that resolves with an array of posts.
- */
-export const fetchPosts = fetchAllPosts
-
-/**
- * Fetches all categories for the sitemap.
- * This is an alias for fetchAllCategories with a more descriptive name.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of categories.
- */
+export const fetchAllPosts = fetchRecentPosts
+export const fetchAllTags = async () => []
+export const fetchAllAuthors = async () => []
+export const fetchPosts = fetchRecentPosts
 export const fetchCategories = fetchAllCategories
-
-/**
- * Fetches all tags for the sitemap.
- * This is an alias for fetchAllTags with a more descriptive name.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of tags.
- */
 export const fetchTags = fetchAllTags
-
-/**
- * Fetches all authors for the sitemap.
- * This is an alias for fetchAllAuthors with a more descriptive name.
- *
- * @returns {Promise<any[]>} - A promise that resolves with an array of authors.
- */
 export const fetchAuthors = fetchAllAuthors
+
+// Clear cache function
+export const clearApiCache = () => {
+  apiCache.clear()
+}
+
+// Get cache stats
+export const getCacheStats = () => {
+  return {
+    size: apiCache.size,
+    keys: Array.from(apiCache.keys()),
+  }
+}
 
 export interface Post {
   id: string
@@ -1302,7 +674,7 @@ export interface Post {
   excerpt: string
   slug: string
   date: string
-  modified: string
+  modified?: string
   featuredImage?: {
     node: {
       sourceUrl: string
@@ -1313,8 +685,8 @@ export interface Post {
     node: {
       name: string
       slug: string
-      description: string
-      avatar: {
+      description?: string
+      avatar?: {
         url: string
       }
     }
@@ -1325,7 +697,7 @@ export interface Post {
       slug: string
     }[]
   }
-  tags: {
+  tags?: {
     nodes: {
       name: string
       slug: string
@@ -1334,9 +706,6 @@ export interface Post {
   seo?: {
     title: string
     metaDesc: string
-    opengraphImage?: {
-      sourceUrl: string
-    }
   }
   content?: string
 }

@@ -642,3 +642,96 @@ export function highlightSearchTerms(text: string, query: string): string {
   // Replace matches with highlighted version
   return text.replace(pattern, "<mark>$1</mark>")
 }
+
+// Search analytics tracking
+export function trackSearchQuery(query: string, resultsCount: number, userId?: string) {
+  if (typeof window !== "undefined") {
+    // Track search analytics
+    const searchEvent = {
+      query: query.toLowerCase(),
+      resultsCount,
+      timestamp: Date.now(),
+      userId: userId || "anonymous",
+    }
+
+    // Store in localStorage for analytics
+    const searches = JSON.parse(localStorage.getItem("searchHistory") || "[]")
+    searches.push(searchEvent)
+
+    // Keep only last 100 searches
+    if (searches.length > 100) {
+      searches.splice(0, searches.length - 100)
+    }
+
+    localStorage.setItem("searchHistory", JSON.stringify(searches))
+  }
+}
+
+// Get search suggestions based on history
+export function getSearchSuggestions(query: string): string[] {
+  if (typeof window === "undefined" || !query || query.length < 2) return []
+
+  const searches = JSON.parse(localStorage.getItem("searchHistory") || "[]")
+  const suggestions = new Set<string>()
+
+  // Get suggestions from search history
+  searches.forEach((search: any) => {
+    if (search.query.includes(query.toLowerCase()) && search.resultsCount > 0) {
+      suggestions.add(search.query)
+    }
+  })
+
+  // Add common search terms
+  const commonTerms = [
+    "business",
+    "politics",
+    "sports",
+    "entertainment",
+    "health",
+    "technology",
+    "africa",
+    "economy",
+    "education",
+    "environment",
+    "culture",
+  ]
+
+  commonTerms.forEach((term) => {
+    if (term.includes(query.toLowerCase())) {
+      suggestions.add(term)
+    }
+  })
+
+  return Array.from(suggestions).slice(0, 5)
+}
+
+// Enhanced search with better scoring
+export async function enhancedSearch(
+  query: string,
+  options: {
+    page?: number
+    perPage?: number
+    filters?: SearchFilters
+    includeAnalytics?: boolean
+  } = {},
+): Promise<SearchResponse | SearchError> {
+  const { page = 1, perPage = 10, filters = {}, includeAnalytics = true } = options
+
+  try {
+    // Perform the search
+    const result = await performSearch(query, page, filters)
+
+    // Track analytics if enabled
+    if (includeAnalytics && !("error" in result)) {
+      trackSearchQuery(query, result.pagination.totalItems)
+    }
+
+    return result
+  } catch (error) {
+    console.error("Enhanced search error:", error)
+    return {
+      error: "Search failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
