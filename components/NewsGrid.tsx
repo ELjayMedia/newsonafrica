@@ -272,7 +272,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
           </div>
         )}
         <div className="p-2">
-          <h2 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+          <h2 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition-colors duration-200">
             {mainPost?.title}
           </h2>
           <div className="text-gray-600 text-xs font-light mb-1 line-clamp-2">{mainPost?.excerpt}</div>

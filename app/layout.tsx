@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
+import Script from "next/script"
 
 import "./globals.css"
 
@@ -57,9 +58,33 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
+        <link rel="preconnect" href="https://securepubads.g.doubleclick.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://googletagservices.com" crossOrigin="anonymous" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className={inter.className}>
+        {/* Google Ad Manager GPT Script */}
+        <Script
+          id="gpt-setup"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.googletag = window.googletag || {cmd: []};
+              googletag.cmd.push(function() {
+                googletag.pubads().enableSingleRequest();
+                googletag.pubads().collapseEmptyDivs();
+                googletag.pubads().enableLazyLoad({
+                  fetchMarginPercent: 500,
+                  renderMarginPercent: 200,
+                  mobileScaling: 2.0
+                });
+                googletag.enableServices();
+              });
+            `,
+          }}
+        />
+        <Script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" strategy="afterInteractive" async />
+
         <ThemeProvider attribute="class" defaultTheme="light">
           <UserProvider>
             <BookmarksProvider>
