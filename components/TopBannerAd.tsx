@@ -1,5 +1,7 @@
-import { AdErrorBoundary } from "./AdErrorBoundary"
-import { AdSense } from "./AdSense"
+"use client"
+
+import { AdComponent } from "./AdComponent"
+import { AD_CONFIG } from "@/config/adConfig"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 export function TopBannerAd() {
@@ -7,25 +9,18 @@ export function TopBannerAd() {
 
   return (
     <div className="w-full my-2 flex justify-center">
-      <AdErrorBoundary collapse={true}>
-        {isDesktop ? (
-          // Desktop banner (728x90)
-          <AdSense
-            slot="1234567890"
-            format="horizontal"
-            className="max-w-full overflow-hidden hidden md:block"
-            minWidth={728}
-          />
-        ) : (
-          // Mobile banner (320x50)
-          <AdSense
-            slot="1234567890"
-            format="rectangle"
-            className="max-w-full overflow-hidden md:hidden"
-            minWidth={300}
-          />
-        )}
-      </AdErrorBoundary>
+      <AdComponent
+        adUnit={isDesktop ? AD_CONFIG.gam.adUnits.desktopTopBanner : AD_CONFIG.gam.adUnits.mobileTopBanner}
+        width={isDesktop ? 728 : 320}
+        height={isDesktop ? 90 : 50}
+        slotId={`top-banner-${isDesktop ? "desktop" : "mobile"}`}
+        responsiveSizes={AD_CONFIG.gam.responsiveSizes.topBanner}
+        className="max-w-full overflow-hidden"
+        targeting={{
+          position: "top-banner",
+          device: isDesktop ? "desktop" : "mobile",
+        }}
+      />
     </div>
   )
 }

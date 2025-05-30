@@ -1,18 +1,72 @@
 {
   "cli": {
-    "version": ">= 5.9.1"
+    "version": ">= 5.9.0"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview",
+      "ios": {
+        "enterpriseProvisioning": "universal",
+        "bundleIdentifier": "com.newsonafrica.app.preview"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     },
-    "production": {}
+    "production": {
+      "channel": "production",
+      "ios": {
+        "bundleIdentifier": "com.newsonafrica.app"
+      },
+      "android": {
+        "buildType": "aab"
+      }
+    }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "6736284937",
+        "appleTeamId": "$APPLE_TEAM_ID",
+        "sku": "news-on-africa-ios",
+        "language": "en-US",
+        "companyName": "News On Africa",
+        "appName": "News On Africa"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": false
+      }
+    },
+    "preview": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "6736284937",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
+  },
+  "update": {
+    "production": {
+      "channel": "production"
+    },
+    "preview": {
+      "channel": "preview"
+    }
   }
 }

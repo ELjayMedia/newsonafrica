@@ -1,41 +1,90 @@
 {
   "expo": {
     "name": "News On Africa",
-    "slug": "news-on-africa-pwa",
+    "slug": "news-on-africa",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./public/news-on-africa-logo.png",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./public/news-on-africa-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.newsonafrica.app"
+      "bundleIdentifier": "com.newsonafrica.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to allow users to upload profile pictures and share content.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to allow you to select images for your profile and content sharing.",
+        "NSLocationWhenInUseUsageDescription": "This app uses location to provide location-based news and weather information."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./public/news-on-africa-logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.newsonafrica.app",
       "versionCode": 1,
-      "permissions": [],
-      "softwareKeyboardLayoutMode": "pan",
-      "allowBackup": false,
-      "googleServicesFile": "./google-services.json"
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./public/favicon.ico",
+      "bundler": "metro"
     },
-    "plugins": ["@react-native-firebase/app", "@react-native-firebase/analytics"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./public/news-on-africa-logo.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow News On Africa to use your location to provide local news and weather updates."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow News On Africa to access your camera to upload profile pictures and share content."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow News On Africa to access your photos to select images for your profile and content sharing."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "3695ce73-c873-4906-9e05-6f302ce20c68"
+        "projectId": "your-expo-project-id"
       }
-    }
+    },
+    "owner": "your-expo-username"
   }
 }
