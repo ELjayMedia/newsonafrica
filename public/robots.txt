@@ -1,0 +1,42 @@
+# robots.txt for News On Africa
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://newsonafrica.com/api/sitemap-index.xml
+Sitemap: https://newsonafrica.com/api/sitemap.xml
+Sitemap: https://newsonafrica.com/api/news-sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /wp-admin/
+Disallow: /wp-login.php
+Disallow: /wp-includes/
+Disallow: /search?*
+Disallow: /*?s=*
+Disallow: /*?p=*
+
+# Allow Google to access everything
+User-agent: Googlebot
+Allow: /
+
+# Allow Google News to access everything
+User-agent: Googlebot-News
+Allow: /
+
+# Allow Google Images to access everything
+User-agent: Googlebot-Image
+Allow: /
+
+# Slow down bots that might overload the server
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+User-agent: MJ12bot
+Crawl-delay: 10
+
+User-agent: Baiduspider
+Crawl-delay: 10
