@@ -1,26 +1,21 @@
-"use client"
-
-import { AdComponent } from "./AdComponent"
-import { AD_CONFIG } from "@/config/adConfig"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { AdErrorBoundary } from "./AdErrorBoundary"
+import { AdSense } from "./AdSense"
 
 export function FooterBannerAd() {
-  const isDesktop = useMediaQuery("(min-width: 768px)")
-
   return (
     <div className="w-full my-4 flex justify-center">
-      <AdComponent
-        adUnit={isDesktop ? AD_CONFIG.gam.adUnits.desktopFooterBanner : AD_CONFIG.gam.adUnits.mobileFooterBanner}
-        width={isDesktop ? 728 : 320}
-        height={isDesktop ? 90 : 50}
-        slotId={`footer-banner-${isDesktop ? "desktop" : "mobile"}`}
-        responsiveSizes={AD_CONFIG.gam.responsiveSizes.topBanner}
-        className="max-w-full overflow-hidden"
-        targeting={{
-          position: "footer-banner",
-          device: isDesktop ? "desktop" : "mobile",
-        }}
-      />
+      <AdErrorBoundary collapse={true}>
+        {/* Desktop ad */}
+        <AdSense
+          slot="1357924680"
+          format="horizontal"
+          className="max-w-full overflow-hidden hidden md:block"
+          minWidth={728}
+        />
+
+        {/* Mobile ad */}
+        <AdSense slot="1357924680" format="rectangle" className="max-w-full overflow-hidden md:hidden" minWidth={300} />
+      </AdErrorBoundary>
     </div>
   )
 }

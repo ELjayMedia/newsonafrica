@@ -102,11 +102,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         )}
 
         {/* Article content */}
-        <div
-          className="prose prose-lg max-w-none mb-8"
-          style={{ fontSize: "1vw" }}
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        <div className="prose prose-lg max-w-none mb-8" dangerouslySetInnerHTML={{ __html: post.content }} />
 
         {/* Categories and tags */}
         <div className="flex flex-wrap gap-2 mb-6">
