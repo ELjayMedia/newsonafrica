@@ -2,85 +2,171 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { Search, X } from "lucide-react"
+import { useState, useCallback, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Search, X, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface SearchBoxProps {
-  onSearch: (query: string) => void
   placeholder?: string
-  initialValue?: string
   className?: string
-  disabled?: boolean
+  onSearch?: (query: string) => void
+  initialValue?: string
+  showSuggestions?: boolean
+  autoFocus?: boolean
 }
 
 export function SearchBox({
-  onSearch,
-  placeholder = "Search...",
-  initialValue = "",
+  placeholder = "Search articles, news, and more...",
   className = "",
-  disabled = false,
+  onSearch,
+  initialValue = "",
+  showSuggestions = true,
+  autoFocus = false,
 }: SearchBoxProps) {
   const [query, setQuery] = useState(initialValue)
+  const [isLoading, setIsLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
-  // Handle input change with debounce
+  // Fetch suggestions with debouncing
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      onSearch(query)
+    if (!showSuggestions || query.length < 2) {
+      setSuggestions([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        console.log("Fetching suggestions for:", query)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log("Suggestions response:", data)
+          setSuggestions(data.suggestions || [])
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error)
+      }
     }, 300)
 
-    return () => clearTimeout(timeoutId)
-  }, [query, onSearch])
+    return () => clearTimeout(timer)
+  }, [query, showSuggestions])
 
-  // Set initial value
-  useEffect(() => {
-    if (initialValue !== query) {
-      setQuery(initialValue)
-    }
-  }, [initialValue])
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
 
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch(query)
-  }
+      if (!query.trim()) return
 
-  // Clear search
-  const handleClear = () => {
-    setQuery("")
-    onSearch("")
-    if (inputRef.current) {
-      inputRef.current.focus()
+      console.log("SearchBox submitting query:", query)
+      setIsLoading(true)
+      setShowSuggestionsList(false)
+
+      try {
+        if (onSearch) {
+          onSearch(query.trim())
+        } else {
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+        }
+      } catch (error) {
+        console.error("Search error:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [query, onSearch, router],
+  )
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setQuery(suggestion)
+    setShowSuggestionsList(false)
+
+    if (onSearch) {
+      onSearch(suggestion)
+    } else {
+      router.push(`/search?q=${encodeURIComponent(suggestion)}`)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="w-5 h-5 text-gray-400" aria-hidden="true" />
+    <div className={`relative ${className}`}>
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setShowSuggestionsList(e.target.value.length > 0 && showSuggestions)
+            }}
+            onFocus={() => setShowSuggestionsList(query.length > 0 && showSuggestions)}
+            onBlur={() => {
+              // Delay hiding to allow suggestion clicks
+              setTimeout(() => setShowSuggestionsList(false), 150)
+            }}
+            placeholder={placeholder}
+            className="pl-10 pr-24 h-12 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={isLoading}
+            autoFocus={autoFocus}
+            autoComplete="off"
+            spellCheck="false"
+          />
+
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+
+            {query && !isLoading && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setQuery("")
+                  inputRef.current?.focus()
+                }}
+                className="hover:bg-gray-100 p-1"
+                tabIndex={-1}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </Button>
+            )}
+
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isLoading || !query.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+            </Button>
+          </div>
         </div>
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="block w-full py-3 pl-10 pr-10 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
-          placeholder={placeholder}
-          disabled={disabled}
-          aria-label="Search"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute inset-y-0 right-0 flex items-center pr-3"
-            aria-label="Clear search"
-          >
-            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-          </button>
-        )}
-      </div>
-    </form>
+      </form>
+
+      {/* Suggestions dropdown */}
+      {showSuggestionsList && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1 max-h-60 overflow-y-auto">
+          <div className="py-2">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="w-full text-left px-4 py-2 hover:bg-gray-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

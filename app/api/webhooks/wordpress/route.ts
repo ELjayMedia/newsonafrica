@@ -1,39 +1,106 @@
-import { revalidatePath } from "next/cache"
 import { type NextRequest, NextResponse } from "next/server"
+import { revalidateTag, revalidatePath } from "next/cache"
+import crypto from "crypto"
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const json = await request.json()
-  const topic = request.headers.get("x-wp-webhook-topic")
+const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
-  if (!topic) {
-    return new NextResponse("Missing topic", { status: 400 })
+function verifyWebhookSignature(body: string, signature: string): boolean {
+  if (!WEBHOOK_SECRET) {
+    console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
+    return false
   }
 
+  const expectedSignature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
+
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
+}
+
+export async function POST(request: NextRequest) {
   try {
-    switch (topic) {
-      case "core.post.updated":
-      case "core.post.created":
-      case "core.post.deleted":
-        // Assuming the JSON payload contains a 'permalink' field
-        if (json?.permalink) {
-          const path = new URL(json.permalink).pathname
-          revalidatePath(path)
-          console.log(`Revalidated path: ${path}`)
-        } else {
-          console.warn("Permalink not found in payload, cannot revalidate.")
-        }
-        revalidatePath("/") // Revalidate the homepage as well
-        break
-      default:
-        console.log(`Unhandled topic: ${topic}`)
-        break
+    const body = await request.text()
+    const signature = request.headers.get("x-wp-signature")
+
+    // Verify webhook signature if secret is configured
+    if (WEBHOOK_SECRET && signature) {
+      const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
+      if (!isValid) {
+        console.error("Invalid webhook signature")
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      }
     }
 
-    return new NextResponse(null, { status: 204 })
-  } catch (error: any) {
-    console.error("Error processing webhook:", error)
-    return new NextResponse(`Webhook processing failed: ${error.message}`, {
-      status: 500,
+    const data = JSON.parse(body)
+    const { action, post } = data
+
+    console.log(`WordPress webhook received: ${action}`, {
+      postId: post?.id,
+      postTitle: post?.title?.rendered,
+      postSlug: post?.slug,
     })
+
+    // Handle different webhook actions
+    switch (action) {
+      case "post_published":
+      case "post_updated":
+        if (post?.slug) {
+          // Revalidate the specific post page
+          revalidatePath(`/post/${post.slug}`)
+          revalidateTag(`post-${post.id}`)
+
+          // Revalidate category pages if categories are present
+          if (post.categories?.length > 0) {
+            for (const categoryId of post.categories) {
+              revalidateTag(`category-${categoryId}`)
+            }
+          }
+
+          // Revalidate home page to show latest posts
+          revalidatePath("/")
+          revalidateTag("posts")
+
+          console.log(`Revalidated post: ${post.slug}`)
+        }
+        break
+
+      case "post_deleted":
+        if (post?.slug) {
+          // Revalidate pages that might have referenced this post
+          revalidatePath(`/post/${post.slug}`)
+          revalidatePath("/")
+          revalidateTag("posts")
+
+          console.log(`Revalidated after deletion: ${post.slug}`)
+        }
+        break
+
+      case "category_updated":
+        if (post?.slug) {
+          revalidatePath(`/category/${post.slug}`)
+          revalidateTag(`category-${post.id}`)
+
+          console.log(`Revalidated category: ${post.slug}`)
+        }
+        break
+
+      default:
+        console.log(`Unhandled webhook action: ${action}`)
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Webhook processed successfully",
+      action,
+      postId: post?.id,
+    })
+  } catch (error) {
+    console.error("Webhook processing error:", error)
+    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    message: "WordPress webhook endpoint is active",
+    timestamp: new Date().toISOString(),
+  })
 }

@@ -1,6 +1,9 @@
-import Fuse from "fuse.js"
+/**
+ * WordPress-based post search utility
+ */
 
-// Define the post interface
+import { siteConfig } from "@/config/site"
+
 export interface Post {
   id: string
   title: {
@@ -9,39 +12,133 @@ export interface Post {
   excerpt: {
     rendered: string
   }
-  content?: {
+  content: {
     rendered: string
   }
   slug: string
   date: string
-  [key: string]: any // Allow for additional properties
+  featured_media?: number
+  categories?: number[]
+  tags?: number[]
+  author?: number
+  _embedded?: {
+    "wp:featuredmedia"?: Array<{
+      source_url: string
+      alt_text?: string
+    }>
+    "wp:term"?: Array<
+      Array<{
+        id: number
+        name: string
+        slug: string
+      }>
+    >
+    author?: Array<{
+      id: number
+      name: string
+      slug: string
+    }>
+  }
 }
 
 /**
- * Search posts using Fuse.js
- * @param posts Array of posts to search through
- * @param query Search query string
- * @returns Array of matched posts
+ * Search posts using WordPress REST API
  */
-export function searchPosts(posts: Post[], query: string): Post[] {
-  // Return empty array for empty inputs
-  if (!query || query.trim().length === 0 || !posts || posts.length === 0) {
+export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
+  if (!query || query.trim().length < 2) {
     return []
   }
 
-  // Configure Fuse.js options
-  const options = {
-    includeScore: true,
-    threshold: 0.3,
-    keys: ["title.rendered", "excerpt.rendered", "content.rendered"],
+  try {
+    const searchParams = new URLSearchParams({
+      search: query.trim(),
+      per_page: limit.toString(),
+      _embed: "1",
+      orderby: "relevance",
+      order: "desc",
+    })
+
+    const response = await fetch(`${siteConfig.wordpress.apiUrl}/posts?${searchParams}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    })
+
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status}`)
+    }
+
+    const posts = await response.json()
+    return posts || []
+  } catch (error) {
+    console.error("WordPress search error:", error)
+    return []
+  }
+}
+
+/**
+ * Filter posts by category
+ */
+export function filterPostsByCategory(posts: Post[], categoryName: string): Post[] {
+  return posts.filter((post) => {
+    const categories = post._embedded?.["wp:term"]?.[0] || []
+    return categories.some((cat) => cat.name.toLowerCase().includes(categoryName.toLowerCase()))
+  })
+}
+
+/**
+ * Filter posts by tag
+ */
+export function filterPostsByTag(posts: Post[], tagName: string): Post[] {
+  return posts.filter((post) => {
+    const tags = post._embedded?.["wp:term"]?.[1] || []
+    return tags.some((tag) => tag.name.toLowerCase().includes(tagName.toLowerCase()))
+  })
+}
+
+/**
+ * Sort posts by date
+ */
+export function sortPostsByDate(posts: Post[], order: "asc" | "desc" = "desc"): Post[] {
+  return [...posts].sort((a, b) => {
+    const dateA = new Date(a.date).getTime()
+    const dateB = new Date(b.date).getTime()
+    return order === "desc" ? dateB - dateA : dateA - dateB
+  })
+}
+
+/**
+ * Get post excerpt without HTML
+ */
+export function getCleanExcerpt(post: Post, maxLength = 150): string {
+  const excerpt = post.excerpt.rendered
+  const cleanExcerpt = excerpt.replace(/<[^>]*>/g, "").trim()
+
+  if (cleanExcerpt.length <= maxLength) {
+    return cleanExcerpt
   }
 
-  // Create Fuse instance
-  const fuse = new Fuse(posts, options)
+  const truncated = cleanExcerpt.substring(0, maxLength)
+  const lastSpace = truncated.lastIndexOf(" ")
 
-  // Perform search
-  const results = fuse.search(query)
+  return lastSpace > 0 ? truncated.substring(0, lastSpace) + "..." : truncated + "..."
+}
 
-  // Return only the matched items
-  return results.map((result) => result.item)
+/**
+ * Highlight search terms in text
+ */
+export function highlightSearchTerms(text: string, searchQuery: string): string {
+  if (!searchQuery) return text
+
+  const terms = searchQuery.split(/\s+/).filter((term) => term.length > 1)
+  let highlightedText = text
+
+  terms.forEach((term) => {
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
+    highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>')
+  })
+
+  return highlightedText
 }

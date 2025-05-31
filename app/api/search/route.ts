@@ -1,53 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { optimizedWordPressSearch, getWordPressSearchSuggestions } from "@/lib/wordpress-api"
-import { FALLBACK_POSTS } from "@/lib/mock-data"
 
 // Input validation schema
 const searchParamsSchema = z.object({
-  query: z.string().min(1, "Search query must be at least 1 character").max(100),
+  q: z.string().min(1, "Search query must be at least 1 character").max(100),
+  query: z.string().min(1, "Search query must be at least 1 character").max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
-  perPage: z.coerce.number().int().min(1).max(50).default(20),
-  sort: z.enum(["relevance", "date", "title"]).default("relevance"),
-  categories: z.string().optional(),
-  tags: z.string().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
+  per_page: z.coerce.number().int().min(1).max(50).default(20),
   suggestions: z
     .enum(["true", "false"])
     .optional()
     .transform((val) => val === "true"),
 })
 
-// Enhanced rate limiting with user-based tracking
-type RateLimitEntry = {
-  count: number
-  resetAt: number
-  userId?: string
-}
+// WordPress API configuration
+const WORDPRESS_API_URL =
+  process.env.WORDPRESS_REST_API_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  "https://newsonafrica.com/sz/wp-json/wp/v2"
 
-// Update the rate limiting logic to be more forgiving
-const RATE_LIMIT = 50 // Increased from 30 to 50 requests per minute
-const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
-const rateLimitMap = new Map<string, RateLimitEntry>()
-
-// Performance monitoring
-const performanceMetrics = {
-  totalRequests: 0,
-  averageResponseTime: 0,
-  cacheHitRate: 0,
-  errorRate: 0,
-}
+// Rate limiting
+const RATE_LIMIT = 50
+const RATE_LIMIT_WINDOW = 60 * 1000
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
 function getRateLimitKey(request: NextRequest): string {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
-  const userAgent = request.headers.get("user-agent") || "unknown"
-  return `search:${ip}:${userAgent.slice(0, 50)}`
+  return `search:${ip}`
 }
 
-// Update the checkRateLimit function to be more lenient for authenticated users
 function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: number } {
-  // Skip rate limiting for development environment
   if (process.env.NODE_ENV === "development") {
     return { limited: false }
   }
@@ -55,15 +37,8 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
   const key = getRateLimitKey(request)
   const now = Date.now()
 
-  // Check for auth token to potentially increase limits for authenticated users
-  const hasAuthToken = request.headers.get("authorization") !== null
-  const effectiveRateLimit = hasAuthToken ? RATE_LIMIT * 2 : RATE_LIMIT
-
   if (!rateLimitMap.has(key)) {
-    rateLimitMap.set(key, {
-      count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW,
-    })
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
     return { limited: false }
   }
 
@@ -75,7 +50,7 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
     return { limited: false }
   }
 
-  if (entry.count >= effectiveRateLimit) {
+  if (entry.count >= RATE_LIMIT) {
     const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
     return { limited: true, retryAfter }
   }
@@ -84,42 +59,133 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
+// Search WordPress posts
+async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
+  try {
+    const searchParams = new URLSearchParams({
+      search: query,
+      page: page.toString(),
+      per_page: perPage.toString(),
+      _embed: "1",
+      orderby: "relevance",
+      order: "desc",
+    })
+
+    const response = await fetch(`${WORDPRESS_API_URL}/posts?${searchParams}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status}`)
+    }
+
+    const posts = await response.json()
+    const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
+    const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "1", 10)
+
+    return {
+      results: posts,
+      total: totalPosts,
+      totalPages,
+      currentPage: page,
+      hasMore: page < totalPages,
+    }
+  } catch (error) {
+    console.error("WordPress search error:", error)
+    throw error
+  }
+}
+
+// Get search suggestions
+async function getSearchSuggestions(query: string): Promise<string[]> {
+  try {
+    const response = await fetch(
+      `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
+    )
+
+    if (!response.ok) return []
+
+    const posts = await response.json()
+    const suggestions = new Set<string>()
+
+    posts.forEach((post: any) => {
+      const words = post.title.rendered
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .filter((word: string) => word.length > 2 && word.includes(query.toLowerCase()))
+
+      words.forEach((word: string) => {
+        if (suggestions.size < 8) {
+          suggestions.add(word)
+        }
+      })
+    })
+
+    return Array.from(suggestions)
+  } catch (error) {
+    console.error("Error getting suggestions:", error)
+    return []
+  }
+}
+
+// Fallback search data
+const FALLBACK_POSTS = [
+  {
+    id: 1,
+    title: { rendered: "Sample News Article" },
+    excerpt: { rendered: "This is a sample news article for fallback search results." },
+    slug: "sample-news-article",
+    date: new Date().toISOString(),
+    link: "/post/sample-news-article",
+    featured_media: 0,
+    categories: [],
+    tags: [],
+    author: 1,
+  },
+]
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  performanceMetrics.totalRequests++
+  console.log("Search API called:", request.url)
 
   try {
     // Check rate limit
     const rateLimitCheck = checkRateLimit(request)
     if (rateLimitCheck.limited) {
-      performanceMetrics.errorRate++
+      console.log("Rate limit exceeded")
       return NextResponse.json(
         {
           error: "Too many search requests",
           message: "Please try again later",
-          retryAfter: rateLimitCheck.retryAfter,
         },
         {
           status: 429,
           headers: {
             "Retry-After": rateLimitCheck.retryAfter?.toString() || "60",
-            "X-RateLimit-Limit": RATE_LIMIT.toString(),
-            "X-RateLimit-Remaining": "0",
           },
         },
       )
     }
 
-    // Parse and validate search parameters
+    // Parse search parameters
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get("query")
+    const queryParam = searchParams.get("q") || searchParams.get("query")
+    console.log("Search query:", queryParam)
 
-    if (!query) {
+    if (!queryParam) {
+      console.log("Missing search query")
       return NextResponse.json({ error: "Missing search query" }, { status: 400 })
     }
 
-    const parsedParams = Object.fromEntries(searchParams.entries())
-    const validationResult = searchParamsSchema.safeParse(parsedParams)
+    // Validate parameters
+    const params = Object.fromEntries(searchParams.entries())
+    params.q = queryParam // Ensure we have the query parameter
+
+    const validationResult = searchParamsSchema.safeParse(params)
 
     if (!validationResult.success) {
       return NextResponse.json(
@@ -131,165 +197,84 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { page, perPage, sort, categories, tags, dateFrom, dateTo, suggestions } = validationResult.data
+    const { q: query, page, per_page: perPage, suggestions } = validationResult.data
 
-    // Handle search suggestions request
+    // Handle suggestions request
     if (suggestions) {
       try {
-        const suggestionResults = await getWordPressSearchSuggestions(query, 8)
-        const responseTime = Date.now() - startTime
-
-        return NextResponse.json(
-          {
-            suggestions: suggestionResults,
-            performance: {
-              responseTime,
-              source: "wordpress-suggestions",
-            },
+        const suggestionResults = await getSearchSuggestions(query)
+        return NextResponse.json({
+          suggestions: suggestionResults,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "wordpress-suggestions",
           },
-          {
-            headers: {
-              "Cache-Control": "public, max-age=300",
-              "X-Response-Time": responseTime.toString(),
-            },
-          },
-        )
+        })
       } catch (error) {
-        console.error("Suggestions error:", error)
         return NextResponse.json({ suggestions: [] })
       }
     }
 
+    // Perform search
     try {
-      // Prepare search options
-      const searchOptions = {
-        page,
-        perPage,
-        categories: categories ? categories.split(",") : [],
-        tags: tags ? tags.split(",") : [],
-        dateFrom,
-        dateTo,
-        includeParallel: page === 1, // Only include parallel searches on first page
-      }
-
-      // Execute optimized WordPress search with enhanced options
-      const searchResults = await optimizedWordPressSearch(query, {
-        page,
-        perPage,
-        categories: categories ? categories.split(",") : [],
-        tags: tags ? tags.split(",") : [],
-        dateFrom,
-        dateTo,
-        includeParallel: page === 1, // Use parallel search only on first page
-        sortBy: sort as "relevance" | "date" | "title",
-      })
-
+      const searchResults = await searchWordPressPosts(query, page, perPage)
       const responseTime = Date.now() - startTime
 
-      // Update performance metrics
-      performanceMetrics.averageResponseTime = (performanceMetrics.averageResponseTime + responseTime) / 2
-
-      const response = {
+      return NextResponse.json({
         ...searchResults,
         query,
-        filters: { sort, categories, tags, dateFrom, dateTo },
         performance: {
-          ...searchResults.performance,
           responseTime,
-          totalRequests: performanceMetrics.totalRequests,
-        },
-      }
-
-      return NextResponse.json(response, {
-        headers: {
-          "Cache-Control": "public, max-age=300",
-          "X-Response-Time": responseTime.toString(),
-          "X-Search-Source": searchResults.searchSource || "wordpress",
+          source: "wordpress",
         },
       })
     } catch (wpError) {
-      console.error("WordPress search error:", wpError)
-      performanceMetrics.errorRate++
+      console.error("WordPress search failed, using fallback:", wpError)
 
-      // Fallback to mock data with basic filtering
+      // Fallback to mock data
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.excerpt.toLowerCase().includes(query.toLowerCase()),
+          item.title.rendered.toLowerCase().includes(query.toLowerCase()) ||
+          item.excerpt.rendered.toLowerCase().includes(query.toLowerCase()),
       )
 
-      // Apply pagination to fallback results
       const startIndex = (page - 1) * perPage
       const endIndex = startIndex + perPage
       const paginatedResults = filteredResults.slice(startIndex, endIndex)
 
-      const responseTime = Date.now() - startTime
-
-      const response = {
-        items: paginatedResults,
-        pagination: {
-          page,
-          perPage,
-          totalItems: filteredResults.length,
-          totalPages: Math.ceil(filteredResults.length / perPage),
-          hasMore: page < Math.ceil(filteredResults.length / perPage),
-        },
+      return NextResponse.json({
+        results: paginatedResults,
+        total: filteredResults.length,
+        totalPages: Math.ceil(filteredResults.length / perPage),
+        currentPage: page,
+        hasMore: page < Math.ceil(filteredResults.length / perPage),
         query,
-        filters: { sort, categories, tags, dateFrom, dateTo },
-        searchSource: "fallback",
         performance: {
-          responseTime,
-          cached: false,
+          responseTime: Date.now() - startTime,
+          source: "fallback",
           error: true,
-        },
-      }
-
-      return NextResponse.json(response, {
-        headers: {
-          "Cache-Control": "public, max-age=60", // Shorter cache for fallback
-          "X-Response-Time": responseTime.toString(),
-          "X-Search-Source": "fallback",
         },
       })
     }
   } catch (error) {
     console.error("Search API error:", error)
-    performanceMetrics.errorRate++
-
-    const responseTime = Date.now() - startTime
 
     return NextResponse.json(
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",
-        items: [],
-        pagination: {
-          page: 1,
-          perPage: 20,
-          totalItems: 0,
-          totalPages: 0,
-          hasMore: false,
-        },
+        results: [],
+        total: 0,
+        totalPages: 0,
+        currentPage: 1,
+        hasMore: false,
+        query: "",
         performance: {
-          responseTime,
+          responseTime: Date.now() - startTime,
           error: true,
         },
       },
-      {
-        status: error instanceof Error && error.name === "AbortError" ? 408 : 500,
-        headers: {
-          "X-Response-Time": responseTime.toString(),
-        },
-      },
+      { status: 500 },
     )
   }
-}
-
-// Health check endpoint for search performance
-export async function HEAD(request: NextRequest) {
-  return NextResponse.json({
-    status: "healthy",
-    metrics: performanceMetrics,
-    timestamp: Date.now(),
-  })
 }
