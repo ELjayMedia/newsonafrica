@@ -82,12 +82,12 @@ export const NewsGrid = memo(function NewsGrid({
   // If using for author page, render horizontal cards with infinite scroll
   if (isAuthorPage) {
     return (
-      <div className={`space-y-4 ${className}`}>
+      <div className={`space-y-3 ${className}`}>
         {posts.map((post) => (
           <Link
             key={post.id}
             href={`/post/${post.slug}`}
-            className="flex flex-col sm:flex-row gap-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+            className="flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden"
           >
             {post.featuredImage && (
               <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
@@ -96,16 +96,18 @@ export const NewsGrid = memo(function NewsGrid({
                   alt={post.title}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                   placeholder="blur"
                   blurDataURL={mainPostBlurURL}
                 />
               </div>
             )}
-            <div className="p-4 sm:w-2/3 flex flex-col justify-between">
+            <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
               <div>
-                <h2 className="text-lg font-bold mb-2 line-clamp-2">{post.title}</h2>
-                <div className="text-gray-600 text-sm mb-4 line-clamp-3">{post.excerpt}</div>
+                <h2 className="text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                  {post.title}
+                </h2>
+                <div className="text-gray-600 text-sm mb-3 line-clamp-3">{post.excerpt}</div>
               </div>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
@@ -116,9 +118,9 @@ export const NewsGrid = memo(function NewsGrid({
         ))}
 
         {isFetching && (
-          <div className="py-4 text-center" aria-live="polite" aria-busy="true">
+          <div className="py-3 text-center" aria-live="polite" aria-busy="true">
             <div
-              className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+              className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
               role="status"
             >
               <span className="sr-only">Loading...</span>
@@ -127,7 +129,7 @@ export const NewsGrid = memo(function NewsGrid({
         )}
 
         {!isFetching && !hasMorePosts && posts.length > 0 && (
-          <div className="py-4 text-center text-gray-500">No more articles to load</div>
+          <div className="py-3 text-center text-gray-500">No more articles to load</div>
         )}
       </div>
     )
@@ -135,7 +137,7 @@ export const NewsGrid = memo(function NewsGrid({
 
   // Original grid layout for non-author pages
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${className}`}>
+    <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 ${className}`}>
       {showSportCategory && hasSportCategoryPosts ? (
         <SportCategorySection
           sportCategoryPosts={sportCategoryPosts}
@@ -163,9 +165,9 @@ const SportCategorySection = memo(function SportCategorySection({
   return (
     <>
       {/* Sport Category Header */}
-      <div className="md:col-span-2 flex items-center mb-2">
-        <h2 className="text-lg font-bold text-blue-600">Sports News</h2>
-        <Link href="/category/sport" className="ml-auto text-sm text-blue-500 hover:underline">
+      <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
+        <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
+        <Link href="/category/sport" className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
           View all
         </Link>
       </div>
@@ -173,7 +175,7 @@ const SportCategorySection = memo(function SportCategorySection({
       {/* Main Sport Article */}
       <Link
         href={`/post/${sportCategoryPosts[0]?.slug}`}
-        className="md:col-span-1 group block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+        className="md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200"
       >
         {sportCategoryPosts[0]?.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
@@ -188,11 +190,13 @@ const SportCategorySection = memo(function SportCategorySection({
             />
           </div>
         )}
-        <div className="p-2">
-          <h2 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+        <div className="p-2 md:p-3">
+          <h2 className="text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
             {sportCategoryPosts[0]?.title}
           </h2>
-          <div className="text-gray-600 text-xs font-light mb-1 line-clamp-2">{sportCategoryPosts[0]?.excerpt}</div>
+          <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
+            {sportCategoryPosts[0]?.excerpt}
+          </div>
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={sportCategoryPosts[0]?.date}>{formatDate(sportCategoryPosts[0]?.date)}</time>
@@ -201,15 +205,15 @@ const SportCategorySection = memo(function SportCategorySection({
       </Link>
 
       {/* Secondary Sport Articles Column */}
-      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-1 md:gap-2">
+      <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
         {sportCategoryPosts.slice(1, 4).map((post, index) => (
           <Link
             key={post.id}
             href={`/post/${post.slug}`}
-            className="flex gap-2 items-start bg-white p-1 px-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 group"
+            className="flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1">
+              <h3 className="text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
                 {post.title}
               </h3>
               <div className="flex items-center text-gray-500 text-xs">
@@ -256,7 +260,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
       {/* Main Featured Article */}
       <Link
         href={`/post/${mainPost?.slug}`}
-        className="md:col-span-1 group block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+        className="md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200"
       >
         {mainPost?.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
@@ -271,11 +275,13 @@ const RegularCategorySection = memo(function RegularCategorySection({
             />
           </div>
         )}
-        <div className="p-2">
-          <h2 className="text-sm font-bold mb-1 group-hover:text-blue-600 transition-colors duration-200">
+        <div className="p-2 md:p-3">
+          <h2 className="text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
             {mainPost?.title}
           </h2>
-          <div className="text-gray-600 text-xs font-light mb-1 line-clamp-2">{mainPost?.excerpt}</div>
+          <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
+            {mainPost?.excerpt}
+          </div>
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={mainPost?.date}>{formatDate(mainPost?.date)}</time>
@@ -284,17 +290,19 @@ const RegularCategorySection = memo(function RegularCategorySection({
       </Link>
 
       {/* Secondary Articles Column */}
-      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-1 md:gap-2">
+      <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
         {secondaryPosts.map((post, index) => (
           <Link
             key={post.id}
             href={`/post/${post.slug}`}
-            className="flex gap-2 items-start bg-white p-1 px-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 group"
+            className="flex gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px]"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3 className="font-semibold text-sm group-hover:text-blue-600 transition-colors duration-200 mb-1">
-                {post.title}
-              </h3>
+              <div>
+                <h3 className="text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                  {post.title}
+                </h3>
+              </div>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
                 <time dateTime={post.date} title={formatDate(post.date)}>
@@ -303,12 +311,12 @@ const RegularCategorySection = memo(function RegularCategorySection({
               </div>
             </div>
             {post.featuredImage && (
-              <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
+              <div className="relative w-24 h-20 md:w-[100px] md:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
                   src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
-                  sizes="(max-width: 640px) 70px, 84px"
+                  sizes="(max-width: 640px) 96px, 100px"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   placeholder="blur"
                   blurDataURL={blurURLs.secondary[index]}

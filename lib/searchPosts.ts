@@ -3,6 +3,7 @@
  */
 
 import { siteConfig } from "@/config/site"
+import type { SearchPost } from "./search"
 
 export interface Post {
   id: string
@@ -74,7 +75,9 @@ export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
     return posts || []
   } catch (error) {
     console.error("WordPress search error:", error)
-    return []
+    // Fallback to local search if API is unavailable
+    const localPosts: SearchPost[] = [] // This should be populated with local posts data
+    return searchPosts(localPosts, query)
   }
 }
 
@@ -141,4 +144,29 @@ export function highlightSearchTerms(text: string, searchQuery: string): string 
   })
 
   return highlightedText
+}
+
+/**
+ * Simple utility function to search posts when the API is unavailable
+ */
+function searchPostsLocal(posts: SearchPost[], query: string): SearchPost[] {
+  if (!query || !posts || posts.length === 0) {
+    return []
+  }
+
+  const normalizedQuery = query.toLowerCase().trim()
+  const terms = normalizedQuery.split(/\s+/).filter((term) => term.length > 1)
+
+  if (terms.length === 0) {
+    return []
+  }
+
+  return posts.filter((post) => {
+    const title = (post.title?.rendered || "").toLowerCase()
+    const excerpt = (post.excerpt?.rendered || "").toLowerCase()
+    const content = (post.content?.rendered || "").toLowerCase()
+
+    // Check if any term is in the title, excerpt, or content
+    return terms.some((term) => title.includes(term) || excerpt.includes(term) || content.includes(term))
+  })
 }

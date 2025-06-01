@@ -69,18 +69,18 @@ export default function RootLayout({
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.googletag = window.googletag || {cmd: []};
-              googletag.cmd.push(function() {
-                googletag.pubads().enableSingleRequest();
-                googletag.pubads().collapseEmptyDivs();
-                googletag.pubads().enableLazyLoad({
-                  fetchMarginPercent: 500,
-                  renderMarginPercent: 200,
-                  mobileScaling: 2.0
-                });
-                googletag.enableServices();
-              });
-            `,
+        window.googletag = window.googletag || {cmd: []};
+        googletag.cmd.push(function() {
+          googletag.pubads().enableSingleRequest();
+          googletag.pubads().collapseEmptyDivs();
+          googletag.pubads().enableLazyLoad({
+            fetchMarginPercent: 500,
+            renderMarginPercent: 200,
+            mobileScaling: 2.0
+          });
+          googletag.enableServices();
+        });
+      `,
           }}
         />
         <Script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" strategy="afterInteractive" async />
@@ -96,12 +96,12 @@ export default function RootLayout({
                   <div className="mx-auto max-w-full md:max-w-[980px]">
                     <ClientLayoutComponents>
                       <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                        <div className="p-4 w-full md:w-auto">{children}</div>
+                        <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
                       </main>
                     </ClientLayoutComponents>
                   </div>
                 </div>
-                <footer className="text-center text-sm text-gray-500 mt-4 mb-2">
+                <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
                   <Link href="/privacy-policy" className="hover:underline">
                     Privacy Policy
                   </Link>

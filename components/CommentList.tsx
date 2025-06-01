@@ -189,9 +189,9 @@ export function CommentList({ postId }: CommentListProps) {
   const displayComments = [...optimisticComments, ...comments]
 
   return (
-    <div id="comments" className="mt-8 space-y-6">
+    <div id="comments" className="mt-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold flex items-center">
+        <h3 className="text-lg font-semibold flex items-center">
           <MessageSquare className="mr-2 h-5 w-5" />
           Comments {totalComments > 0 && `(${totalComments})`}
         </h3>
@@ -234,7 +234,7 @@ export function CommentList({ postId }: CommentListProps) {
       )}
 
       {loading && page === 0 ? (
-        <div className="space-y-4 mt-6">
+        <div className="space-y-3 mt-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="animate-pulse flex space-x-4">
               <div className="rounded-full bg-gray-200 h-10 w-10"></div>
@@ -261,7 +261,7 @@ export function CommentList({ postId }: CommentListProps) {
         </div>
       ) : (
         <>
-          <div className="space-y-6 mt-6">
+          <div className="space-y-4 mt-4">
             {displayComments.map((comment) => (
               <CommentItem
                 key={comment.id}

@@ -15,6 +15,7 @@ interface SearchBoxProps {
   initialValue?: string
   showSuggestions?: boolean
   autoFocus?: boolean
+  size?: "default" | "compact"
 }
 
 export function SearchBox({
@@ -24,6 +25,7 @@ export function SearchBox({
   initialValue = "",
   showSuggestions = true,
   autoFocus = false,
+  size = "default",
 }: SearchBoxProps) {
   const [query, setQuery] = useState(initialValue)
   const [isLoading, setIsLoading] = useState(false)
@@ -41,11 +43,9 @@ export function SearchBox({
 
     const timer = setTimeout(async () => {
       try {
-        console.log("Fetching suggestions for:", query)
         const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
         if (response.ok) {
           const data = await response.json()
-          console.log("Suggestions response:", data)
           setSuggestions(data.suggestions || [])
         }
       } catch (error) {
@@ -62,7 +62,6 @@ export function SearchBox({
 
       if (!query.trim()) return
 
-      console.log("SearchBox submitting query:", query)
       setIsLoading(true)
       setShowSuggestionsList(false)
 
@@ -92,11 +91,15 @@ export function SearchBox({
     }
   }
 
+  const isCompact = size === "compact"
+
   return (
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search
+            className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+          />
           <Input
             ref={inputRef}
             type="text"
@@ -111,42 +114,47 @@ export function SearchBox({
               setTimeout(() => setShowSuggestionsList(false), 150)
             }}
             placeholder={placeholder}
-            className="pl-10 pr-24 h-12 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={`
+              ${isCompact ? "pl-9 h-8 text-sm bg-gray-100 border-none rounded-full" : "pl-10 pr-24 h-12"}
+              transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+            `}
             disabled={isLoading}
             autoFocus={autoFocus}
             autoComplete="off"
             spellCheck="false"
           />
 
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+          {!isCompact && (
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
 
-            {query && !isLoading && (
+              {query && !isLoading && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setQuery("")
+                    inputRef.current?.focus()
+                  }}
+                  className="hover:bg-gray-100 p-1"
+                  tabIndex={-1}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Clear search</span>
+                </Button>
+              )}
+
               <Button
-                type="button"
-                variant="ghost"
+                type="submit"
                 size="sm"
-                onClick={() => {
-                  setQuery("")
-                  inputRef.current?.focus()
-                }}
-                className="hover:bg-gray-100 p-1"
-                tabIndex={-1}
+                disabled={isLoading || !query.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Clear search</span>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
               </Button>
-            )}
-
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isLoading || !query.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       </form>
 

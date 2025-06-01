@@ -135,7 +135,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         </div>
 
         {/* Comments Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm mb-6">
           <CommentList postId={post.id} />
         </div>
 

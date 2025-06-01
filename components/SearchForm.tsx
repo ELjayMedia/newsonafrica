@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useCallback, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Search, X, Loader2, Clock, TrendingUp } from "lucide-react"
+import { Search, X, Loader2, Clock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -37,15 +38,16 @@ export function SearchForm({
   const [recentSearches, setRecentSearches] = useState<string[]>([])
 
   const inputRef = useRef<HTMLInputElement>(null)
-  const suggestionsRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   // Load recent searches from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("newsOnAfrica_recentSearches")
-    if (saved) {
+    if (typeof window !== "undefined") {
       try {
-        setRecentSearches(JSON.parse(saved).slice(0, 5))
+        const saved = localStorage.getItem("newsOnAfrica_recentSearches")
+        if (saved) {
+          setRecentSearches(JSON.parse(saved).slice(0, 5))
+        }
       } catch (e) {
         console.error("Error loading recent searches:", e)
       }
@@ -55,6 +57,8 @@ export function SearchForm({
   // Save search to recent searches
   const saveToRecentSearches = useCallback(
     (searchQuery: string) => {
+      if (typeof window === "undefined") return
+
       const trimmed = searchQuery.trim()
       if (!trimmed || trimmed.length < 2) return
 
@@ -100,7 +104,6 @@ export function SearchForm({
 
       if (!query.trim()) return
 
-      console.log(`SearchForm submitting query: "${query.trim()}"`)
       setIsLoading(true)
       setShowSuggestionsList(false)
 
@@ -108,10 +111,8 @@ export function SearchForm({
         saveToRecentSearches(query.trim())
 
         if (onSearch) {
-          console.log("Using onSearch callback")
           onSearch(query.trim())
         } else {
-          console.log("Navigating to search page")
           router.push(`/search?q=${encodeURIComponent(query.trim())}`)
         }
       } catch (error) {
@@ -177,7 +178,9 @@ export function SearchForm({
 
   const clearRecentSearches = () => {
     setRecentSearches([])
-    localStorage.removeItem("newsOnAfrica_recentSearches")
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("newsOnAfrica_recentSearches")
+    }
   }
 
   // Size configurations
@@ -256,10 +259,7 @@ export function SearchForm({
 
       {/* Enhanced suggestions dropdown */}
       {showSuggestionsList && (suggestions.length > 0 || recentSearches.length > 0) && (
-        <div
-          ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1 max-h-80 overflow-y-auto"
-        >
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1 max-h-80 overflow-y-auto">
           {suggestions.length > 0 ? (
             <div className="py-2">
               {suggestions.map((suggestion, index) => (
@@ -273,8 +273,6 @@ export function SearchForm({
                 >
                   {suggestion.type === "recent" ? (
                     <Clock className="h-3 w-3 text-gray-400" />
-                  ) : suggestion.type === "trending" ? (
-                    <TrendingUp className="h-3 w-3 text-gray-400" />
                   ) : (
                     <Search className="h-3 w-3 text-gray-400" />
                   )}

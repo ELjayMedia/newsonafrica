@@ -1,17 +1,12 @@
 "use client"
 
-import type React from "react"
-
 import Link from "next/link"
-import { Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useDebounce } from "@/hooks/useDebounce"
+import { SearchBox } from "@/components/SearchBox"
 
 const categories = [
   { name: "NEWS", href: "/category/news" },
@@ -27,27 +22,15 @@ const categories = [
 
 export function Header() {
   const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState("")
   const { user, signOut } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
-  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "2-digit",
     month: "long",
   })
-
-  const handleSearch = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (debouncedSearchTerm.trim()) {
-        router.push(`/search?query=${encodeURIComponent(debouncedSearchTerm.trim())}`)
-      }
-    },
-    [debouncedSearchTerm, router],
-  )
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
@@ -71,20 +54,15 @@ export function Header() {
             </Link>
 
             <div className="flex items-center gap-4 ml-auto">
-              <form onSubmit={handleSearch} className="relative hidden sm:block">
-                <Input
-                  type="search"
+              <div className="hidden sm:block">
+                <SearchBox
                   placeholder="Search"
-                  className="w-[200px] bg-gray-100 border-none pl-9 rounded-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  aria-label="Search articles"
+                  className="w-[200px]"
+                  onSearch={(query) => router.push(`/search?q=${encodeURIComponent(query)}&source=wp`)}
+                  showSuggestions={false}
+                  size="compact"
                 />
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500"
-                  aria-label="Submit search"
-                />
-              </form>
+              </div>
 
               <div className="flex items-center space-x-2">
                 <div className="flex items-center space-x-2">

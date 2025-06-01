@@ -1,17 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
-
-// Input validation schema
-const searchParamsSchema = z.object({
-  q: z.string().min(1, "Search query must be at least 1 character").max(100),
-  query: z.string().min(1, "Search query must be at least 1 character").max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  per_page: z.coerce.number().int().min(1).max(50).default(20),
-  suggestions: z
-    .enum(["true", "false"])
-    .optional()
-    .transform((val) => val === "true"),
-})
 
 // WordPress API configuration
 const WORDPRESS_API_URL =
@@ -69,17 +56,22 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       _embed: "1",
       orderby: "relevance",
       order: "desc",
+      status: "publish",
     })
 
-    const response = await fetch(`${WORDPRESS_API_URL}/posts?${searchParams}`, {
+    const url = `${WORDPRESS_API_URL}/posts?${searchParams}`
+
+    const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        "User-Agent": "NewsOnAfrica/1.0",
       },
+      next: { revalidate: 300 }, // Cache for 5 minutes
     })
 
     if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status}`)
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`)
     }
 
     const posts = await response.json()
@@ -99,26 +91,35 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
   }
 }
 
-// Get search suggestions
+// Get search suggestions from WordPress
 async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
     const response = await fetch(
       `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "NewsOnAfrica/1.0",
+        },
+      },
     )
 
-    if (!response.ok) return []
+    if (!response.ok) {
+      return []
+    }
 
     const posts = await response.json()
     const suggestions = new Set<string>()
 
     posts.forEach((post: any) => {
-      const words = post.title.rendered
+      // Extract words from titles
+      const titleWords = post.title.rendered
         .toLowerCase()
         .replace(/[^\w\s]/g, " ")
         .split(/\s+/)
         .filter((word: string) => word.length > 2 && word.includes(query.toLowerCase()))
 
-      words.forEach((word: string) => {
+      titleWords.forEach((word: string) => {
         if (suggestions.size < 8) {
           suggestions.add(word)
         }
@@ -136,27 +137,43 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
 const FALLBACK_POSTS = [
   {
     id: 1,
-    title: { rendered: "Sample News Article" },
-    excerpt: { rendered: "This is a sample news article for fallback search results." },
-    slug: "sample-news-article",
+    title: { rendered: "Welcome to News On Africa" },
+    excerpt: { rendered: "Your premier source for African news, politics, business, and culture." },
+    slug: "welcome-to-news-on-africa",
     date: new Date().toISOString(),
-    link: "/post/sample-news-article",
+    link: "/post/welcome-to-news-on-africa",
     featured_media: 0,
     categories: [],
     tags: [],
     author: 1,
+    _embedded: {
+      author: [{ name: "News On Africa Team" }],
+    },
+  },
+  {
+    id: 2,
+    title: { rendered: "Search Service Information" },
+    excerpt: { rendered: "Our search is powered by WordPress and provides comprehensive coverage of African news." },
+    slug: "search-service-info",
+    date: new Date().toISOString(),
+    link: "/post/search-service-info",
+    featured_media: 0,
+    categories: [],
+    tags: [],
+    author: 1,
+    _embedded: {
+      author: [{ name: "News On Africa Team" }],
+    },
   },
 ]
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  console.log("Search API called:", request.url)
 
   try {
     // Check rate limit
     const rateLimitCheck = checkRateLimit(request)
     if (rateLimitCheck.limited) {
-      console.log("Rate limit exceeded")
       return NextResponse.json(
         {
           error: "Too many search requests",
@@ -174,35 +191,19 @@ export async function GET(request: NextRequest) {
     // Parse search parameters
     const { searchParams } = new URL(request.url)
     const queryParam = searchParams.get("q") || searchParams.get("query")
-    console.log("Search query:", queryParam)
 
     if (!queryParam) {
-      console.log("Missing search query")
       return NextResponse.json({ error: "Missing search query" }, { status: 400 })
     }
 
-    // Validate parameters
-    const params = Object.fromEntries(searchParams.entries())
-    params.q = queryParam // Ensure we have the query parameter
-
-    const validationResult = searchParamsSchema.safeParse(params)
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid search parameters",
-          details: validationResult.error.format(),
-        },
-        { status: 400 },
-      )
-    }
-
-    const { q: query, page, per_page: perPage, suggestions } = validationResult.data
+    const page = Number.parseInt(searchParams.get("page") || "1", 10)
+    const perPage = Number.parseInt(searchParams.get("per_page") || "20", 10)
+    const suggestions = searchParams.get("suggestions") === "true"
 
     // Handle suggestions request
     if (suggestions) {
       try {
-        const suggestionResults = await getSearchSuggestions(query)
+        const suggestionResults = await getSearchSuggestions(queryParam)
         return NextResponse.json({
           suggestions: suggestionResults,
           performance: {
@@ -217,25 +218,23 @@ export async function GET(request: NextRequest) {
 
     // Perform search
     try {
-      const searchResults = await searchWordPressPosts(query, page, perPage)
+      const searchResults = await searchWordPressPosts(queryParam, page, perPage)
       const responseTime = Date.now() - startTime
 
       return NextResponse.json({
         ...searchResults,
-        query,
+        query: queryParam,
         performance: {
           responseTime,
           source: "wordpress",
         },
       })
     } catch (wpError) {
-      console.error("WordPress search failed, using fallback:", wpError)
-
       // Fallback to mock data
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
-          item.title.rendered.toLowerCase().includes(query.toLowerCase()) ||
-          item.excerpt.rendered.toLowerCase().includes(query.toLowerCase()),
+          item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
+          item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
       )
 
       const startIndex = (page - 1) * perPage
@@ -248,7 +247,7 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(filteredResults.length / perPage),
         currentPage: page,
         hasMore: page < Math.ceil(filteredResults.length / perPage),
-        query,
+        query: queryParam,
         performance: {
           responseTime: Date.now() - startTime,
           source: "fallback",
@@ -257,8 +256,6 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error("Search API error:", error)
-
     return NextResponse.json(
       {
         error: "Search failed",

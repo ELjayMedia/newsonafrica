@@ -163,7 +163,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   const renderOfflineNotification = () => {
     if (isOffline) {
       return (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -248,8 +248,8 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
 
     return (
       <React.Fragment key={name}>
-        <section className="bg-white p-4 rounded-lg shadow-sm">
-          <h2 className="text-xl font-bold mb-4 capitalize">
+        <section className="bg-white rounded-lg">
+          <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
             <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
               {name}
             </Link>
@@ -310,12 +310,12 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   return (
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
         {renderOfflineNotification()}
 
         {/* Hero Section - Show the latest post */}
         {mainStory && (
-          <section className="bg-gray-50 px-2 py-1 rounded-lg shadow-sm">
+          <section className="bg-gray-50 px-2 py-2 rounded-lg">
             <FeaturedHero post={mainStory} />
           </section>
         )}
@@ -324,13 +324,13 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
 
         {/* Secondary Stories - Show featured posts */}
         {secondaryStories.length > 0 && (
-          <section className="bg-white p-4 rounded-lg shadow-sm md:flex md:flex-col">
+          <section className="bg-white p-2 md:p-3 rounded-lg md:flex md:flex-col">
             <SecondaryStories posts={secondaryStories} layout="horizontal" />
           </section>
         )}
 
         {/* Category Sections - Show posts from each category */}
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => (
             <CategorySection key={config.name} {...config} />
           ))}
