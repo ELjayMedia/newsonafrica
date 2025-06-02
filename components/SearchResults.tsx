@@ -60,11 +60,11 @@ export function SearchResults({
         Found {total} {total === 1 ? "result" : "results"} for "{query}"
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {results.map((result) => (
-          <div key={result.id} className="border-b border-gray-200 pb-6 last:border-0">
+          <div key={result.id} className="border-b border-gray-200 pb-4 last:border-0">
             <Link href={`/post/${result.slug}`} className="block group">
-              <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{
@@ -81,7 +81,7 @@ export function SearchResults({
                 </span>
                 {result._embedded?.author && <span>• {result._embedded.author[0]?.name}</span>}
               </div>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-1 text-gray-600">
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{

@@ -62,7 +62,6 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
               <Clock className="h-4 w-4 mr-1" />
               <span>{formattedDate}</span>
             </div>
-            {post.author && <span className="font-medium">{post.author.node.name}</span>}
           </div>
         </div>
       </div>
