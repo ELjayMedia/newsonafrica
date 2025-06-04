@@ -52,11 +52,9 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
           <h1 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-blue-600 transition-colors duration-200">
             {post.title}
           </h1>
-          <div
-            className="text-gray-600 text-xs md:text-sm line-clamp-3"
-            style={{ marginBottom: "1vw" }}
-            dangerouslySetInnerHTML={{ __html: post.excerpt }}
-          />
+          <div className="text-gray-600 text-xs md:text-sm line-clamp-3" style={{ marginBottom: "1vw" }}>
+            {post.excerpt.replace(/<[^>]*>/g, "")}
+          </div>
           <div className="flex items-center justify-between text-sm text-gray-500">
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-1" />

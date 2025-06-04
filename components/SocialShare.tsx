@@ -142,7 +142,7 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
           )}
         </>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <ShareOptions />
         </div>
       )}
