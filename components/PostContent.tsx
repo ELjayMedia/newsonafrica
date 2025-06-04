@@ -103,7 +103,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
         {/* Article content */}
         <div
-          className="prose prose-lg max-w-none mb-8 text-sm text-gray-600"
+          className="prose prose-lg max-w-none mb-8 text-sm text-black"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
