@@ -64,7 +64,7 @@ export function SearchResults({
         {results.map((result) => (
           <div key={result.id} className="border-b border-gray-200 pb-4 last:border-0">
             <Link href={`/post/${result.slug}`} className="block group">
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{
