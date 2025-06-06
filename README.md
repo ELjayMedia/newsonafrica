@@ -1,4 +1,4 @@
-git pulgit pull# News On Africa PWA
+# News On Africa PWA
 
 A Progressive Web App for delivering news content across Africa with a focus on performance, offline capabilities, and user engagement.
 

@@ -266,9 +266,6 @@ export function AuthForm({
     setIsLoading(true)
 
     try {
-      // Get the current URL to return to after login
-      const returnUrl = window.location.href.split("?")[0] // Remove any query params
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -646,3 +643,5 @@ export function AuthForm({
     </Tabs>
   )
 }
+
+// Export as named export

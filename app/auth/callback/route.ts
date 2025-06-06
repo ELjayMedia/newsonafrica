@@ -2,54 +2,70 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { handleSocialLoginProfile } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
-  try {
-    const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get("code")
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get("code")
+  const next = requestUrl.searchParams.get("next") ?? "/"
 
-    // Get the referrer URL or default to current URL without the callback path
-    const origin = request.headers.get("referer") || requestUrl.origin
-    const returnUrl = new URL(origin)
+  if (code) {
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
-    // Remove the callback path if present
-    if (returnUrl.pathname.includes("/auth/callback")) {
-      returnUrl.pathname = "/"
-    }
-
-    if (code) {
-      const cookieStore = cookies()
-      const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-      // Exchange the code for a session
+    try {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
       if (error) {
-        console.error("Error exchanging code for session:", error)
-        // Add error parameter but don't redirect
-        returnUrl.searchParams.set("auth_error", encodeURIComponent("Authentication failed. Please try again."))
-        return NextResponse.redirect(returnUrl)
+        console.error("Auth callback error:", error)
+        return NextResponse.redirect(`${requestUrl.origin}/auth?error=callback_error`)
       }
 
-      // If we have a user, ensure their profile is created/updated
-      if (data?.user) {
-        try {
-          await handleSocialLoginProfile(data.user)
-        } catch (profileError) {
-          console.error("Error handling social login profile:", profileError)
-          // Continue anyway since the auth was successful
+      if (data.session) {
+        // Check if user profile exists, create if not
+        const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.session.user.id).single()
+
+        if (!profile) {
+          // Create profile for new user
+          const email = data.session.user.email
+          const name =
+            data.session.user.user_metadata?.full_name ||
+            data.session.user.user_metadata?.name ||
+            email?.split("@")[0] ||
+            "User"
+
+          let username = email ? email.split("@")[0] : name.toLowerCase().replace(/\s+/g, "")
+
+          // Check if username exists and append random number if needed
+          const { data: existingUser } = await supabase
+            .from("profiles")
+            .select("username")
+            .eq("username", username)
+            .single()
+
+          if (existingUser) {
+            username = `${username}_${Math.floor(Math.random() * 10000)}`
+          }
+
+          await supabase.from("profiles").insert({
+            id: data.session.user.id,
+            username,
+            email: data.session.user.email,
+            full_name: name,
+            avatar_url: data.session.user.user_metadata?.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
         }
-      }
-    }
 
-    // Return to the same page without redirecting to a specific destination
-    return NextResponse.redirect(returnUrl)
-  } catch (error) {
-    console.error("Error in auth callback:", error)
-    // Return to homepage with error
-    return NextResponse.redirect(
-      new URL(`/?auth_error=${encodeURIComponent("An unexpected error occurred. Please try again.")}`, request.url),
-    )
+        // Successful login - redirect to intended page or home
+        return NextResponse.redirect(`${requestUrl.origin}${next}`)
+      }
+    } catch (error) {
+      console.error("Session exchange error:", error)
+      return NextResponse.redirect(`${requestUrl.origin}/auth?error=session_error`)
+    }
   }
+
+  // No code parameter - redirect to auth page
+  return NextResponse.redirect(`${requestUrl.origin}/auth?error=no_code`)
 }
