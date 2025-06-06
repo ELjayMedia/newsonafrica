@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,6 +72,31 @@ export function AuthForm({
     }
   }, [router, searchParams, redirectTo, onComplete])
 
+  // Add this useEffect after the existing state declarations
+  useEffect(() => {
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        toast({
+          title: "Welcome!",
+          description: "You've successfully signed in.",
+        })
+
+        // Call success callback if provided
+        if (onAuthSuccess) {
+          onAuthSuccess()
+        }
+
+        // Redirect after successful auth
+        onSuccess()
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [supabase, onAuthSuccess, onSuccess])
+
   // Handle sign in with email
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,28 +107,11 @@ export function AuthForm({
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          // Set session expiry based on "Remember me" option
-          expiresIn: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60, // 30 days or 1 hour
-        },
       })
 
       if (error) throw error
 
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      })
-
-      // Refresh the router to update auth state
-      router.refresh()
-
-      // Call the success callback if provided
-      if (onAuthSuccess) {
-        onAuthSuccess()
-      }
-
-      onSuccess()
+      // Success handling is now done in onAuthStateChange listener
     } catch (error: any) {
       // Handle the error based on its category
       if (error.category) {
@@ -115,8 +123,7 @@ export function AuthForm({
           originalError: error,
         })
       }
-    } finally {
-      setIsLoading(false)
+      setIsLoading(false) // Only set loading false on error
     }
   }
 
@@ -125,7 +132,7 @@ export function AuthForm({
     e.preventDefault()
     setError(null)
 
-    // Validation
+    // Validation (keep existing validation code)
     if (password !== confirmPassword) {
       setError({
         message: "Passwords do not match",
@@ -174,12 +181,14 @@ export function AuthForm({
         return
       }
 
-      // Create the user
+      // Create the user with username in metadata
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username },
+          data: {
+            username: username.trim(),
+          },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
@@ -191,14 +200,7 @@ export function AuthForm({
         description: "Please check your email to confirm your account.",
       })
 
-      router.refresh()
-
-      // Call the success callback if provided
-      if (onAuthSuccess) {
-        onAuthSuccess()
-      }
-
-      onSuccess()
+      // Success handling is now done in onAuthStateChange listener
     } catch (error: any) {
       // Handle the error based on its category
       if (error.category) {
@@ -216,8 +218,7 @@ export function AuthForm({
           originalError: error,
         })
       }
-    } finally {
-      setIsLoading(false)
+      setIsLoading(false) // Only set loading false on error
     }
   }
 
