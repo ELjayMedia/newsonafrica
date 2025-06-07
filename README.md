@@ -91,7 +91,7 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
 npm run dev
