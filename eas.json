@@ -11,20 +11,25 @@
       "distribution": "internal",
       "channel": "preview"
     },
-    "production": {
+    "android.production": {
+      "channel": "production"
+    },
+    "ios.production": {
       "channel": "production"
     }
   },
   "submit": {
-    "production": {
+    "android.production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
+      }
+    },
+    "ios.production": {
       "ios": {
         "appleId": "$APPLE_ID",
         "ascAppId": "6736284937",
         "appleTeamId": "$APPLE_TEAM_ID"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account.json",
-        "track": "production"
       }
     }
   },

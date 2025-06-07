@@ -1,0 +1,67 @@
+name: Android Release
+
+on:
+  repository_dispatch:
+    types: [vercel-production]
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Optional version number to bump with expo-version'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Expo CLI
+        run: pnpm add -g expo-cli eas-cli
+
+      - name: Configure Expo credentials
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_ACCESS_TOKEN }}
+
+      - name: Set up service account
+        run: |
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > google-service-account.json
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Bump version (optional)
+        if: ${{ github.event.inputs.release_version != '' }}
+        run: npx expo-version apply --non-interactive --version ${{ github.event.inputs.release_version }}
+
+      - name: Build Android app
+        run: eas build --platform android --profile android.production --non-interactive
+        env:
+          EAS_ACCESS_TOKEN: ${{ secrets.EAS_ACCESS_TOKEN }}
+
+      - name: Submit to Play Store
+        run: eas submit --platform android --profile android.production --latest --non-interactive
+        env:
+          EAS_ACCESS_TOKEN: ${{ secrets.EAS_ACCESS_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-build
+          path: dist
+
