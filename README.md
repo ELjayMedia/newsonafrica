@@ -130,6 +130,33 @@ with `eas build --platform ios` or the Huawei CLI. Provide the required secrets
 (`APPLE_CONNECT_API_KEY`, `HUAWEI_CREDENTIALS_JSON`, etc.) and mirror the Android
 steps in the workflow to submit to those stores.
 
+## 📱 Android TWA
+
+This repository contains a Trusted Web Activity wrapper for the PWA using
+[Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap). To build the
+Android project and generate signed artifacts run:
+
+```bash
+chmod +x setup-twa.sh build-twa.sh
+./setup-twa.sh     # one time project generation
+./build-twa.sh     # builds release APK and AAB
+```
+
+The `app-release.aab` file can be uploaded to Google Play Console. Ensure your
+site hosts the `/.well-known/assetlinks.json` file so Chrome can verify the
+association.
+
+## 🍎 iOS Expo App
+
+An example Expo project is available in the `expo-app` directory. It fetches
+content from the same API and can be run with:
+
+```bash
+cd expo-app
+npm install
+npm run ios
+```
+
 ## 🧪 Testing
 
 \`\`\`bash
