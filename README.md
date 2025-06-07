@@ -105,6 +105,31 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
+## 📱 Mobile CI/CD
+
+Android builds are created automatically when the web app is deployed. Vercel
+can trigger the `android-release` workflow via a webhook or the workflow can be
+run manually from the Actions tab.
+
+The workflow performs the following steps:
+
+1. Installs dependencies and Expo tooling
+2. Builds the Android app using **EAS** with the `android.production` profile
+3. Submits the resulting build to the Google Play Store
+
+To enable this automation set the following secrets in your repository:
+
+- `EAS_ACCESS_TOKEN` – Expo access token
+- `GOOGLE_SERVICE_ACCOUNT_JSON` – JSON string for the Play Console service account
+
+### Extending to iOS and Huawei
+
+The workflow and `.eas.json` are prepared for future expansion. Additional
+profiles such as `ios.production` or a Huawei profile can be added and invoked
+with `eas build --platform ios` or the Huawei CLI. Provide the required secrets
+(`APPLE_CONNECT_API_KEY`, `HUAWEI_CREDENTIALS_JSON`, etc.) and mirror the Android
+steps in the workflow to submit to those stores.
+
 ## 🧪 Testing
 
 \`\`\`bash
