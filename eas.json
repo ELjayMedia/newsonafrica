@@ -24,5 +24,13 @@
         "serviceAccountKeyPath": "./google-service-account.json",
         "track": "production"
       }
-
+    },
+    "ios.production": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "6736284937",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      }
+    }
+  }
 }
