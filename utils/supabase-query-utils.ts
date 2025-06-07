@@ -328,8 +328,8 @@ export async function countRecords(
   const { cache = true, ttl = DEFAULT_CACHE_TTL } = options
   const supabase = createClient()
 
-  // Create a unique cache key based on the table and filters
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
+  // Create a stable cache key based on the filter function
+  const filterKey = filters ? filters.toString() : "none"
   const cacheKey = `${table}:count:${filterKey}`
 
   if (cache) {
@@ -401,8 +401,8 @@ export async function fetchPaginated<T>(
 
   const supabase = createClient()
 
-  // Create a unique cache key
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
+  // Create a stable cache key based on the filter function
+  const filterKey = filters ? filters.toString() : "none"
   const cacheKey = `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${filterKey}`
 
   if (cache) {
