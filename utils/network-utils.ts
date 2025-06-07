@@ -15,8 +15,12 @@ export function setupNetworkListeners(onOnline: () => void, onOffline: () => voi
   }
 }
 
-// Retry a function with exponential backoff
-export async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3, initialDelay = 1000): Promise<T> {
+// Retry a function with exponential backoff. The initial delay is 1 second (1000 ms).
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelay = 1000,
+): Promise<T> {
   let retries = 0
   let delay = initialDelay
 
