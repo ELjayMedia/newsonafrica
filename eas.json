@@ -32,13 +32,6 @@
         "appleTeamId": "$APPLE_TEAM_ID"
       }
     }
-  },
-  "update": {
-    "production": {
-      "channel": "production"
-    },
-    "preview": {
-      "channel": "preview"
-    }
   }
+
 }
