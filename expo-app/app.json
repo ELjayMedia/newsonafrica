@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "News On Africa",
+    "slug": "news-on-africa-ios",
+    "version": "1.0.0",
+    "platforms": ["ios"],
+    "ios": {
+      "bundleIdentifier": "com.newsonafrica.ios",
+      "supportsTablet": true
+    }
+  }
+}
