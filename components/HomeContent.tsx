@@ -35,11 +35,15 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
+const LOCAL_STORAGE_KEY = "newsOnAfrica_homeContent"
+
 // Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async () => {
   try {
     if (!isOnline()) {
       console.log("Device is offline, using cached data")
+      const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (cached) return JSON.parse(cached)
       throw new Error("Device is offline")
     }
 
@@ -62,12 +66,15 @@ const fetchHomeData = async () => {
 
     console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
 
-    return {
+    const result = {
       taggedPosts: fpTaggedPosts, // Use all fp tagged posts
       featuredPosts: posts.slice(0, 6), // Use first 6 as featured
       categories: categories,
       recentPosts: posts.slice(0, 10), // Use first 10 as recent
     }
+
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result))
+    return result
   } catch (error) {
     console.error("Error fetching home data:", error)
     throw error
@@ -77,6 +84,7 @@ const fetchHomeData = async () => {
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
+  const [localCache, setLocalCache] = useState<any | null>(null)
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
   // Listen for online/offline events
@@ -87,9 +95,21 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
 
+    // Load cached data
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (cached) setLocalCache(JSON.parse(cached))
+    } catch (e) {
+      console.error("Failed to load home cache", e)
+    }
+
+    const refreshOnOnline = () => mutate()
+    window.addEventListener("online", refreshOnOnline)
+
     return () => {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
+      window.removeEventListener("online", refreshOnOnline)
     }
   }, [])
 
@@ -112,8 +132,8 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         }
 
   // Update the useSWR configuration for better error handling
-  const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
-    fallbackData: initialData || fallbackData,
+  const { data, error, isLoading, mutate } = useSWR("homepage-data", fetchHomeData, {
+    fallbackData: initialData || localCache || fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
     revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
@@ -190,7 +210,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     featuredPosts = [],
     categories = [],
     recentPosts = [],
-  } = data || initialData || fallbackData
+  } = data || initialData || localCache || fallbackData
 
   // Show skeleton during initial loading
   if (isLoading && !initialData && !initialPosts.length) {
