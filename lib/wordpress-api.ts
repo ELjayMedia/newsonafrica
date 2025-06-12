@@ -153,8 +153,11 @@ const fetchWithFallback = async (
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
 
-      // Return cached data if available, otherwise empty
-      return cached?.data || []
+      // Use cached data if available, otherwise propagate the error
+      if (cached?.data) {
+        return cached.data
+      }
+      throw restError
     }
   }
 }
