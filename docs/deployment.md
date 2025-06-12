@@ -33,6 +33,8 @@ Add these secrets to your GitHub repository settings:
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
 
+Run `scripts/set-github-secrets-from-env.sh` to import these values from a local env file for Android and iOS builds.
+
 ### Workflow Overview
 
 1. **Web Deploy**: Builds and deploys the Next.js application to Vercel
