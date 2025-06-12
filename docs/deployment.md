@@ -14,11 +14,12 @@ Add these secrets to your GitHub repository settings:
 - `VERCEL_PROJECT_ID` - Your Vercel project ID
 
 #### Expo/Mobile Deployment
-- `EXPO_TOKEN` - Your Expo access token
+- `EXPO_TOKEN` - Expo access token for preview builds
+- `EAS_ACCESS_TOKEN` - Token used by release workflows
 - `APPLE_ID` - Apple ID for iOS submissions
 - `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password for Apple ID
 - `APPLE_TEAM_ID` - Apple Developer Team ID
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
+- `GOOGLE_SERVICE_ACCOUNT_JSON` - Google Play Console service account JSON key
 
 #### Environment Variables
 - `NEXT_PUBLIC_WORDPRESS_API_URL`
