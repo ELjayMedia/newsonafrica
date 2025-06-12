@@ -11,6 +11,9 @@
       "distribution": "internal",
       "channel": "preview"
     },
+    "production": {
+      "channel": "production"
+    },
     "android.production": {
       "channel": "production"
     },
@@ -19,6 +22,17 @@
     }
   },
   "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
+      },
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "6736284937",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      }
+    },
     "android.production": {
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",
