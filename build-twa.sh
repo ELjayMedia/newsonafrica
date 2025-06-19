@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 echo "Building News On Africa TWA..."
 
 # Validate the TWA manifest
@@ -12,16 +10,11 @@ bubblewrap validate --manifest=./twa-manifest.json
 echo "Building Android project..."
 bubblewrap build
 
-
-# Generate signed AAB and APK for Play Store
-echo "Generating signed AAB and APK..."
+# Generate signed AAB for Play Store
+echo "Generating signed AAB..."
 cd app
-./gradlew bundleRelease assembleRelease
-
-# go back to repo root
-cd ..
+./gradlew bundleRelease
 
 echo "Build complete!"
-echo "Signed APK: app/build/outputs/apk/release/app-release.apk"
-echo "Signed AAB: app/build/outputs/bundle/release/app-release.aab"
-echo "Upload the AAB file to Google Play Console."
+echo "Your signed AAB is located at: app/build/outputs/bundle/release/app-release.aab"
+echo "This file is ready for upload to Google Play Console."

@@ -77,7 +77,7 @@ NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-S55PVESFS2
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
@@ -91,7 +91,7 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-pnpm install
+npm install
 
 # Run the development server
 npm run dev
@@ -104,58 +104,6 @@ The application is deployed on Vercel with the following configuration:
 1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
-
-## 📱 Mobile CI/CD
-
-Android builds are created automatically when the web app is deployed. Vercel
-can trigger the `android-release` workflow via a webhook or the workflow can be
-run manually from the Actions tab.
-
-The workflow performs the following steps:
-
-1. Installs dependencies and Expo tooling
-2. Builds the Android app using **EAS** with the `android.production` profile
-3. Submits the resulting build to the Google Play Store
-
-To enable this automation set the following secrets in your repository:
-
-- `EAS_ACCESS_TOKEN` – Expo access token
-- `GOOGLE_SERVICE_ACCOUNT_JSON` – JSON string for the Play Console service account
-
-### Extending to iOS and Huawei
-
-The workflow and `.eas.json` are prepared for future expansion. Additional
-profiles such as `ios.production` or a Huawei profile can be added and invoked
-with `eas build --platform ios` or the Huawei CLI. Provide the required secrets
-(`APPLE_CONNECT_API_KEY`, `HUAWEI_CREDENTIALS_JSON`, etc.) and mirror the Android
-steps in the workflow to submit to those stores.
-
-## 📱 Android TWA
-
-This repository contains a Trusted Web Activity wrapper for the PWA using
-[Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap). To build the
-Android project and generate signed artifacts run:
-
-```bash
-chmod +x setup-twa.sh build-twa.sh
-./setup-twa.sh     # one time project generation
-./build-twa.sh     # builds release APK and AAB
-```
-
-The `app-release.aab` file can be uploaded to Google Play Console. Ensure your
-site hosts the `/.well-known/assetlinks.json` file so Chrome can verify the
-association.
-
-## 🍎 iOS Expo App
-
-An example Expo project is available in the `expo-app` directory. It fetches
-content from the same API and can be run with:
-
-```bash
-cd expo-app
-npm install
-npm run ios
-```
 
 ## 🧪 Testing
 

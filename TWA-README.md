@@ -123,18 +123,16 @@ The app uses Custom Tabs as a fallback if the PWA is not available.
 
 Add this to your PWA's `/.well-known/assetlinks.json`:
 
-```json
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.newsonafrica.twa",
-      "sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
-    }
+\`\`\`json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.newsonafrica.twa",
+    "sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
   }
-]
-```
+}]
+\`\`\`
 
 Get your SHA256 fingerprint with:
 \`\`\`bash

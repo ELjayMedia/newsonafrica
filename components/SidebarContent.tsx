@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { fetchRecentPosts } from "@/lib/wordpress-api"
 import Link from "next/link"
 import Image from "next/image"
@@ -30,29 +30,13 @@ const getViewCounts = (posts) => {
     }))
 }
 
-const LOCAL_STORAGE_KEY = "newsOnAfrica_recentPosts"
-
 export function SidebarContent() {
   const [mostReadPosts, setMostReadPosts] = useState([])
-  const queryClient = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["recentPosts"],
     queryFn: () => fetchRecentPosts(10),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    initialData: () => {
-      if (typeof window !== "undefined") {
-        const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
-        if (cached) {
-          try {
-            return JSON.parse(cached)
-          } catch {
-            return undefined
-          }
-        }
-      }
-      return undefined
-    },
   })
 
   useEffect(() => {
@@ -60,21 +44,8 @@ export function SidebarContent() {
       const postsWithViews = getViewCounts(data)
       const sortedPosts = postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
       setMostReadPosts(sortedPosts)
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data))
-      } catch (e) {
-        console.error("Failed to cache sidebar posts", e)
-      }
     }
   }, [data])
-
-  useEffect(() => {
-    const handleOnline = () => queryClient.invalidateQueries(["recentPosts"])
-    window.addEventListener("online", handleOnline)
-    return () => {
-      window.removeEventListener("online", handleOnline)
-    }
-  }, [queryClient])
 
   if (isLoading) return <SidebarSkeleton />
 

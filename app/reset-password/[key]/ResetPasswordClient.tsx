@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input"
 import { supabase } from "@/lib/supabase"
 
 interface ResetPasswordClientProps {
-  resetKey: string
+  key: string
   onSuccess?: () => void
 }
 
-export default function ResetPasswordClient({ resetKey, onSuccess }: ResetPasswordClientProps) {
+export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordClientProps) {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
@@ -26,7 +26,7 @@ export default function ResetPasswordClient({ resetKey, onSuccess }: ResetPasswo
         // Verify the key is valid by checking the hash in the URL
         const { data, error } = await supabase.auth.verifyOtp({
           type: "recovery",
-          token_hash: resetKey,
+          token_hash: key,
         })
 
         if (error) {
@@ -38,7 +38,7 @@ export default function ResetPasswordClient({ resetKey, onSuccess }: ResetPasswo
     }
 
     checkResetKey()
-  }, [resetKey])
+  }, [key])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
