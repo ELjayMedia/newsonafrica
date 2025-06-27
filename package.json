@@ -42,7 +42,6 @@
     "@radix-ui/react-toggle": "^1.1.1",
     "@radix-ui/react-toggle-group": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.6",
-    "@remix-run/react": "^2.16.7",
     "@supabase/auth-helpers-nextjs": "latest",
     "@supabase/postgrest-js": "latest",
     "@supabase/ssr": "latest",
@@ -79,7 +78,6 @@
     "next-themes": "^0.4.4",
     "path": "latest",
     "react": "^19",
-    "react-day-picker": "^8.10.1",
     "react-dom": "^19",
     "react-hook-form": "^7.54.1",
     "react-intersection-observer": "latest",
@@ -93,7 +91,6 @@
     "tailwindcss-animate": "^1.0.7",
     "util": "latest",
     "uuid": "latest",
-    "vaul": "^0.9.6",
     "web-vitals": "latest",
     "webpack": "^5.99.9",
     "zod": "latest"
