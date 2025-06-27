@@ -1,4 +1,4 @@
-name: Deploy to Vercel and Expo
+name: Deploy to Vercel
 on:
   push:
     branches:
@@ -24,21 +24,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli eas-cli
-        
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          
-      - name: Build and Deploy to Expo
-        run: |
-          eas build --platform all --non-interactive
-          eas submit --platform all --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
