@@ -5,15 +5,7 @@ import jwt from "jsonwebtoken"
 const WORDPRESS_API_URL =
   process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/graphql"
-const JWT_SECRET = process.env.JWT_SECRET
-const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
 
-if (!JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-  throw new Error("Missing required environment variables")
-}
-
-const client = new GraphQLClient(WORDPRESS_API_URL)
 
 const FACEBOOK_LOGIN_MUTATION = `
   mutation FacebookLogin($input: FacebookLoginInput!) {
@@ -28,9 +20,14 @@ const FACEBOOK_LOGIN_MUTATION = `
   }
 `
 
-async function verifyFacebookToken(accessToken: string, userID: string) {
+async function verifyFacebookToken(
+  accessToken: string,
+  userID: string,
+  appId: string,
+  appSecret: string,
+) {
   const response = await fetch(
-    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`,
+    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`,
   )
   const data = await response.json()
 
@@ -42,9 +39,25 @@ async function verifyFacebookToken(accessToken: string, userID: string) {
 
 export async function POST(request: Request) {
   try {
+    const JWT_SECRET = process.env.JWT_SECRET
+    const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
+    const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
+
+    if (!JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+      console.error("Missing required environment variables for Facebook auth")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    const client = new GraphQLClient(WORDPRESS_API_URL)
+
     const { accessToken, userID } = await request.json()
 
-    const isValidToken = await verifyFacebookToken(accessToken, userID)
+    const isValidToken = await verifyFacebookToken(
+      accessToken,
+      userID,
+      FACEBOOK_APP_ID,
+      FACEBOOK_APP_SECRET,
+    )
     if (!isValidToken) {
       return NextResponse.json({ error: "Invalid Facebook token" }, { status: 401 })
     }
