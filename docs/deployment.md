@@ -49,7 +49,7 @@ vercel --prod
 ### Monitoring
 
 - Web deployments are monitored via Vercel dashboard
-- Mobile builds are generated using Capacitor or TWA scripts
+- Mobile builds are generated using Capacitor
 - GitHub Actions provide build status and logs
 
 ## Ionic Appflow Cloud Builds
