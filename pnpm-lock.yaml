@@ -17,6 +17,9 @@ importers:
       '@as-integrations/next':
         specifier: latest
         version: 3.2.0(@apollo/server@4.12.2(graphql@16.11.0))(next@15.2.4(@babel/core@7.27.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
+      '@capacitor/core':
+        specifier: latest
+        version: 7.4.0
       '@ducanh2912/next-pwa':
         specifier: latest
         version: 10.2.9(next@15.2.4(@babel/core@7.27.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(webpack@5.99.9)
@@ -961,6 +964,9 @@ packages:
   '@babel/types@7.27.6':
     resolution: {integrity: sha512-ETyHEk2VHHvl9b9jZP5IHPavHYk57EhanlRRuae9XCpb/j5bDCbPPMOBfCWhnl/7EDJz0jEMCi/RhccCE8r1+Q==}
     engines: {node: '>=6.9.0'}
+
+  '@capacitor/core@7.4.0':
+    resolution: {integrity: sha512-P6NnjoHyobZgTjynlZSn27d0SUj6j38inlNxFnKZr9qwU7/r6+0Sg2nWkGkIH/pMmXHsvGD8zVe6KUq1UncIjA==}
 
   '@ducanh2912/next-pwa@10.2.9':
     resolution: {integrity: sha512-Wtu823+0Ga1owqSu1I4HqKgeRYarduCCKwsh1EJmJiJqgbt+gvVf5cFwFH8NigxYyyEvriAro4hzm0pMSrXdRQ==}
@@ -7131,6 +7137,10 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+
+  '@capacitor/core@7.4.0':
+    dependencies:
+      tslib: 2.8.1
 
   '@ducanh2912/next-pwa@10.2.9(next@15.2.4(@babel/core@7.27.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(webpack@5.99.9)':
     dependencies:
