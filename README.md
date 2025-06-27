@@ -118,7 +118,9 @@ output into Capacitor's `webDir`:
 
 Use [Ionic Appflow](https://ionic.io/appflow) for building Android and iOS apps
 from this PWA. See the [Deployment Guide](./docs/deployment.md#ionic-appflow-cloud-builds)
-for detailed steps on linking the project and triggering cloud builds.
+for detailed steps on linking the project and triggering cloud builds. The
+repository includes an `appflow.yml` workflow that triggers Android builds on
+push to `main`.
 
 ## 🧪 Testing
 
