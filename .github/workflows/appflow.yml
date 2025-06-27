@@ -1,0 +1,19 @@
+name: Build with Ionic Appflow
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  appflow-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Trigger Android build on Appflow
+        uses: ionic-team/appflow-build@v1
+        with:
+          token: ${{ secrets.APPFLOW_TOKEN }}
+          app-id: ${{ secrets.APPFLOW_APP_ID }}
+          platform: Android
+          build-type: debug
+

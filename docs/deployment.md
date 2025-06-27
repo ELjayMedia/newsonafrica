@@ -26,9 +26,14 @@ Add these secrets to your GitHub repository settings:
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
 
+#### Appflow Builds
+- `APPFLOW_TOKEN` - Authentication token for the Appflow CLI
+- `APPFLOW_APP_ID` - The App ID of your project in Appflow
+
 ### Workflow Overview
 
 1. **Web Deploy**: Builds and deploys the Next.js application to Vercel
+2. **Appflow Build**: Triggers Android builds using the `appflow.yml` workflow
 
 ### Manual Deployment
 
