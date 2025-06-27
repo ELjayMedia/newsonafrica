@@ -105,6 +105,15 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
+### Export for Capacitor
+
+Use the `export-capacitor.sh` script to build the Next.js site and copy the
+output into Capacitor's `webDir`:
+
+```bash
+./export-capacitor.sh
+```
+
 ## 🧪 Testing
 
 \`\`\`bash
