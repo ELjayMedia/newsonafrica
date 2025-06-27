@@ -114,6 +114,12 @@ output into Capacitor's `webDir`:
 ./export-capacitor.sh
 ```
 
+### Native Packaging with Ionic Appflow
+
+Use [Ionic Appflow](https://ionic.io/appflow) for building Android and iOS apps
+from this PWA. See the [Deployment Guide](./docs/deployment.md#ionic-appflow-cloud-builds)
+for detailed steps on linking the project and triggering cloud builds.
+
 ## 🧪 Testing
 
 \`\`\`bash

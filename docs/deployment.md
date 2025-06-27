@@ -51,3 +51,31 @@ vercel --prod
 - Web deployments are monitored via Vercel dashboard
 - Mobile builds are generated using Capacitor or TWA scripts
 - GitHub Actions provide build status and logs
+
+## Ionic Appflow Cloud Builds
+
+Use Ionic Appflow for packaging the PWA into native Android and iOS apps. The
+web assets are generated via `next export` into the `out` directory which is
+configured as the `webDir` in `capacitor.config.ts`.
+
+### Setup Steps
+
+1. Install the Ionic CLI globally:
+
+   ```bash
+   npm install -g @ionic/cli
+   ```
+
+2. Initialize and link the project with Appflow:
+
+   ```bash
+   ionic init "News On Africa" --type=react
+   ionic login # or set IONIC_TOKEN
+   ionic link
+   ```
+
+3. Push your changes to GitHub and configure the Appflow dashboard to build
+   from your chosen branch (`main` or `build`).
+
+4. Trigger Android and iOS cloud builds from Appflow. Optionally set environment
+   variables such as `NEXT_PUBLIC_API_URL` in the Appflow build settings.
