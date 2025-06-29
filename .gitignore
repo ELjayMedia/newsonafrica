@@ -9,6 +9,7 @@
 
 # production
 /build
+/dist
 
 # debug
 npm-debug.log*
@@ -26,3 +27,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor
+/android/
+/ios/Pods/
+/releases/
+
+# Android binaries
+*.apk
+*.aab
