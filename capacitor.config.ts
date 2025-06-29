@@ -5,6 +5,11 @@ const config: CapacitorConfig = {
   appName: 'NewsOnAfrica',
   webDir: 'dist',
   bundledWebRuntime: false,
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 0,
+    },
+  },
 }
 
 export default config

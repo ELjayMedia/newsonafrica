@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Configuration
-PROJECT_NAME="news-on-africa-twa"
+PROJECT_NAME="news-on-africa-app"
 SERVICE_ACCOUNT_NAME="play-store-deployment"
 SERVICE_ACCOUNT_DISPLAY_NAME="Play Store Deployment"
 SERVICE_ACCOUNT_DESCRIPTION="Service account for automated Play Store deployments"
@@ -34,7 +34,7 @@ gcloud auth login
 
 # Create project
 echo -e "${YELLOW}🏗️  Creating Google Cloud project...${NC}"
-gcloud projects create $PROJECT_NAME --name="News On Africa TWA"
+gcloud projects create $PROJECT_NAME --name="News On Africa App"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Project created successfully${NC}"
