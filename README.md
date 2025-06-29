@@ -127,6 +127,7 @@ Additional documentation:
 - [API Documentation](./docs/api.md)
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
+- [Capacitor Setup](./docs/capacitor-setup.md)
 
 ## 🤝 Contributing
 
