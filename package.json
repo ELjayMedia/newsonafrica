@@ -62,7 +62,6 @@
     "dataloader": "latest",
     "date-fns": "latest",
     "embla-carousel-react": "^8.5.1",
-    "fs": "latest",
     "fuse.js": "latest",
     "graphql": "^16.11.0",
     "graphql-request": "latest",
