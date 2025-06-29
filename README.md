@@ -122,6 +122,11 @@ for detailed steps on linking the project and triggering cloud builds. The
 repository includes an `appflow.yml` workflow that triggers Android builds on
 push to `main`.
 
+**Important:** Appflow builds require the Supabase environment variables
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Configure these
+in the Appflow dashboard or the build will fail with a "supabaseUrl is required"
+error.
+
 ## 🧪 Testing
 
 \`\`\`bash
