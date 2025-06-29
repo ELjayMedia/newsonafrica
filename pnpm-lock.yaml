@@ -20,6 +20,9 @@ importers:
       '@capacitor/core':
         specifier: latest
         version: 7.4.0
+      '@capacitor/live-updates':
+        specifier: ^0.4.0
+        version: 0.4.0(@capacitor/core@7.4.0)
       '@ducanh2912/next-pwa':
         specifier: latest
         version: 10.2.9(next@15.2.4(@babel/core@7.27.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(webpack@5.99.9)
@@ -946,6 +949,11 @@ packages:
 
   '@capacitor/core@7.4.0':
     resolution: {integrity: sha512-P6NnjoHyobZgTjynlZSn27d0SUj6j38inlNxFnKZr9qwU7/r6+0Sg2nWkGkIH/pMmXHsvGD8zVe6KUq1UncIjA==}
+
+  '@capacitor/live-updates@0.4.0':
+    resolution: {integrity: sha512-UwrA72yKgui17x+qBZGs8qI8Z98zTj1GeCqFZ/A9q06SIeeaN97yfMcxlA5yL7awRysSEM9Wu31eH33j2UKbIw==}
+    peerDependencies:
+      '@capacitor/core': ^7.0.0
 
   '@ducanh2912/next-pwa@10.2.9':
     resolution: {integrity: sha512-Wtu823+0Ga1owqSu1I4HqKgeRYarduCCKwsh1EJmJiJqgbt+gvVf5cFwFH8NigxYyyEvriAro4hzm0pMSrXdRQ==}
@@ -7108,6 +7116,10 @@ snapshots:
   '@capacitor/core@7.4.0':
     dependencies:
       tslib: 2.8.1
+
+  '@capacitor/live-updates@0.4.0(@capacitor/core@7.4.0)':
+    dependencies:
+      '@capacitor/core': 7.4.0
 
   '@ducanh2912/next-pwa@10.2.9(next@15.2.4(@babel/core@7.27.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(webpack@5.99.9)':
     dependencies:
