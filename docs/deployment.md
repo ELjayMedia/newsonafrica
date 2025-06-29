@@ -6,12 +6,16 @@ This project uses GitHub Actions for automated deployment of both web and mobile
 
 ### Required Secrets
 
-Add these secrets to your GitHub repository settings:
+Add these secrets to your GitHub repository settings. Without them the deployment step will fail with an error similar to `Input required and not supplied: vercel-token`:
 
 #### Web Deployment (Vercel)
 - `VERCEL_TOKEN` - Your Vercel deployment token
 - `VERCEL_ORG_ID` - Your Vercel organization ID
 - `VERCEL_PROJECT_ID` - Your Vercel project ID
+
+To generate `VERCEL_TOKEN`, visit the Vercel dashboard under **Settings > Tokens**
+and create a new token. Add this token as a secret named `VERCEL_TOKEN` in your
+GitHub repository settings.
 
 
 #### Environment Variables

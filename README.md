@@ -104,6 +104,9 @@ The application is deployed on Vercel with the following configuration:
 1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
+4. **GitHub Secrets**: Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
+   `VERCEL_PROJECT_ID` to your repository secrets to enable the deployment
+   workflow.
 
 ### Export for Capacitor
 
