@@ -4,10 +4,10 @@ import jwt from "jsonwebtoken"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
 const JWT_SECRET = process.env.JWT_SECRET
-const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
+const FACEBOOK_CLIENT_ID = process.env.FACEBOOK_CLIENT_ID
+const FACEBOOK_CLIENT_SECRET = process.env.FACEBOOK_CLIENT_SECRET
 
-if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_CLIENT_ID || !FACEBOOK_CLIENT_SECRET) {
   throw new Error("Missing required environment variables")
 }
 
@@ -28,7 +28,7 @@ const FACEBOOK_LOGIN_MUTATION = `
 
 async function verifyFacebookToken(accessToken: string, userID: string) {
   const response = await fetch(
-    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`,
+    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${FACEBOOK_CLIENT_ID}|${FACEBOOK_CLIENT_SECRET}`,
   )
   const data = await response.json()
 
