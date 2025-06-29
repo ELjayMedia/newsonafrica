@@ -32,8 +32,14 @@ Add these secrets to your GitHub repository settings:
 
 ### Workflow Overview
 
-1. **Web Deploy**: Builds and deploys the Next.js application to Vercel
-2. **Appflow Build**: Triggers Android builds using the `appflow.yml` workflow
+1. **Web Deploy**: Builds and deploys the Next.js application to Vercel via
+   [`deploy.yml`](../.github/workflows/deploy.yml). This workflow installs
+   dependencies with pnpm using a frozen lockfile, runs lint checks, and then
+   deploys the project.
+2. **Appflow Build**: Triggers Android builds using the
+   [`appflow.yml`](../.github/workflows/appflow.yml) workflow. It installs
+   dependencies, lints the code, exports the web assets for Capacitor, syncs the
+   native platforms, and then triggers the cloud build.
 
 ### Manual Deployment
 
