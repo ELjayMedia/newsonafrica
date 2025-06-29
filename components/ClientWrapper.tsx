@@ -3,7 +3,6 @@
 import type React from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useRef, useState, useEffect } from "react"
-import { Capacitor } from "@capacitor/core"
 import { UserProvider } from "@/contexts/UserContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 
@@ -36,13 +35,6 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
   // Ensure hydration is complete before rendering
   useEffect(() => {
     setMounted(true)
-
-    const isNative = Capacitor.isNativePlatform()
-    if (isNative) {
-      console.log("Running in mobile app!")
-    } else {
-      console.log("Running in browser!")
-    }
 
     // Add performance monitoring in development
     if (process.env.NODE_ENV === "development") {

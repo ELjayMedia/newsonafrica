@@ -1,13 +1,3 @@
-console.log("NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
-console.log(
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY:",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
-console.log(
-  "NEXT_PUBLIC_WORDPRESS_API_URL:",
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL
-)
-
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -80,11 +70,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    NEXT_PUBLIC_WORDPRESS_API_URL: process.env.NEXT_PUBLIC_WORDPRESS_API_URL,
-  },
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -154,13 +139,33 @@ const nextConfig = {
     ]
   },
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
+    if (process.env.INCLUDE_RN_WEB === "true") {
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        "react-native$": "react-native-web",
       }
+
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          crypto: require.resolve("crypto-browserify"),
+          stream: require.resolve("stream-browserify"),
+          path: require.resolve("path-browserify"),
+        }
+      }
+    } else {
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+          net: false,
+          tls: false,
+        }
+      }
+    }
+
+    if (isServer) {
+      config.externals = [...(config.externals || []), "react-native-web"]
     }
 
     return config

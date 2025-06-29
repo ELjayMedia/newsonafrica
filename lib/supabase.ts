@@ -1,17 +1,12 @@
 import { createClient } from "@supabase/supabase-js"
-import { keepAliveFetch } from "@/utils/keepAliveFetch"
 import type { Database } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321"
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "public-anon-key"
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  console.warn(
-    "Missing Supabase environment variables. Using fallback localhost configuration."
-  )
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Missing Supabase environment variables. Please check your .env file.")
 }
 
 // Create a single instance of the Supabase client to be reused
@@ -27,7 +22,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     providers: ["facebook", "google"],
   },
   global: {
-    fetch: keepAliveFetch,
     headers: {
       "x-application-name": "news-on-africa",
     },
@@ -57,7 +51,6 @@ export const createAdminClient = () => {
       persistSession: false,
     },
     global: {
-      fetch: keepAliveFetch,
       headers: {
         "x-application-name": "news-on-africa-admin",
       },

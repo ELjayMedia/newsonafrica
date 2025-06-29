@@ -50,7 +50,9 @@ news-on-africa/
 
 ## 🚀 Getting Started
 
-- Node.js 18+ and pnpm
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
 - Supabase account
 - WordPress instance with REST API
 
@@ -75,7 +77,7 @@ NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=308931756
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
@@ -89,59 +91,31 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-pnpm install --frozen-lockfile
+npm install
 
 # Run the development server
-pnpm run dev
+npm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `pnpm run build`
+1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
-4. **GitHub Secrets**: Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
-   `VERCEL_PROJECT_ID` to your repository secrets to enable the deployment
-   workflow.
-
-Automated deployments are handled via the [`deploy.yml`](.github/workflows/deploy.yml) GitHub Action. It installs dependencies with pnpm, runs lint checks, and then deploys to Vercel.
-
-### Export for Capacitor
-
-Use the `export-capacitor.sh` script to build the Next.js site and copy the
-output into Capacitor's `webDir`:
-
-```bash
-./export-capacitor.sh
-```
-
-### Native Packaging with Ionic Appflow
-
-Use [Ionic Appflow](https://ionic.io/appflow) for building Android and iOS apps
-from this PWA. See the [Deployment Guide](./docs/deployment.md#ionic-appflow-cloud-builds)
-for detailed steps on linking the project and triggering cloud builds. The
-[`appflow.yml`](.github/workflows/appflow.yml) workflow installs dependencies using pnpm,
-runs linting, exports the Next.js site for Capacitor, syncs platforms, and then
-triggers Android builds on push to `main`.
-
-**Important:** Appflow builds require the Supabase environment variables
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Configure these
-in the Appflow dashboard or the build will fail with a "supabaseUrl is required"
-error.
 
 ## 🧪 Testing
 
 \`\`\`bash
 # Run unit tests
-pnpm test
+npm test
 
 # Run end-to-end tests
-pnpm run test:e2e
+npm run test:e2e
 
 # Run linting
-pnpm run lint
+npm run lint
 \`\`\`
 
 ## 📚 Documentation

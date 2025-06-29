@@ -6,17 +6,19 @@ This project uses GitHub Actions for automated deployment of both web and mobile
 
 ### Required Secrets
 
-Add these secrets to your GitHub repository settings. Without them the deployment step will fail with an error similar to `Input required and not supplied: vercel-token`:
+Add these secrets to your GitHub repository settings:
 
 #### Web Deployment (Vercel)
 - `VERCEL_TOKEN` - Your Vercel deployment token
 - `VERCEL_ORG_ID` - Your Vercel organization ID
 - `VERCEL_PROJECT_ID` - Your Vercel project ID
 
-To generate `VERCEL_TOKEN`, visit the Vercel dashboard under **Settings > Tokens**
-and create a new token. Add this token as a secret named `VERCEL_TOKEN` in your
-GitHub repository settings.
-
+#### Expo/Mobile Deployment
+- `EXPO_TOKEN` - Your Expo access token
+- `APPLE_ID` - Apple ID for iOS submissions
+- `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password for Apple ID
+- `APPLE_TEAM_ID` - Apple Developer Team ID
+- `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
 
 #### Environment Variables
 - `NEXT_PUBLIC_WORDPRESS_API_URL`
@@ -30,20 +32,13 @@ GitHub repository settings.
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
 
-#### Appflow Builds
-- `APPFLOW_TOKEN` - Authentication token for the Appflow CLI
-- `APPFLOW_APP_ID` - The App ID of your project in Appflow
-
 ### Workflow Overview
 
-1. **Web Deploy**: Builds and deploys the Next.js application to Vercel via
-   [`deploy.yml`](../.github/workflows/deploy.yml). This workflow installs
-   dependencies with pnpm using a frozen lockfile, runs lint checks, and then
-   deploys the project.
-2. **Appflow Build**: Triggers Android builds using the
-   [`appflow.yml`](../.github/workflows/appflow.yml) workflow. It installs
-   dependencies, lints the code, exports the web assets for Capacitor, syncs the
-   native platforms, and then triggers the cloud build.
+1. **Web Deploy**: Builds and deploys the Next.js application to Vercel
+2. **Expo Build**: Creates iOS and Android builds using EAS Build
+3. **Expo Preview**: Creates preview builds for pull requests
+4. **Expo Submit**: Submits builds to App Store and Google Play (production only)
+5. **Expo Update**: Publishes OTA updates for existing app installations
 
 ### Manual Deployment
 
@@ -53,44 +48,41 @@ npm run build
 vercel --prod
 \`\`\`
 
+#### Mobile
+\`\`\`bash
+# Install EAS CLI
+npm install -g @expo/eas-cli
+
+# Build for iOS
+eas build --platform ios
+
+# Build for Android
+eas build --platform android
+
+# Submit to stores
+eas submit --platform ios
+eas submit --platform android
+
+# Publish OTA update
+eas update --branch production
+\`\`\`
+
+### Build Profiles
+
+- **Development**: For local development with Expo Dev Client
+- **Preview**: Internal distribution for testing
+- **Production**: App store releases
 
 ### Troubleshooting
 
 1. **Build Failures**: Check the GitHub Actions logs for detailed error messages
 2. **Missing Secrets**: Ensure all required secrets are configured in repository settings
-3. **Apple Certificates**: Ensure your Apple Developer account has valid certificates
-4. **Google Play**: Verify your Google Play Console service account has proper permissions
+3. **Expo Token**: Generate a new token from https://expo.dev/accounts/[account]/settings/access-tokens
+4. **Apple Certificates**: Ensure your Apple Developer account has valid certificates
+5. **Google Play**: Verify your Google Play Console service account has proper permissions
 
 ### Monitoring
 
 - Web deployments are monitored via Vercel dashboard
-- Mobile builds are generated using Capacitor
+- Mobile builds are tracked in Expo dashboard
 - GitHub Actions provide build status and logs
-
-## Ionic Appflow Cloud Builds
-
-Use Ionic Appflow for packaging the PWA into native Android and iOS apps. The
-web assets are generated via `next export` into the `out` directory which is
-configured as the `webDir` in `capacitor.config.ts`.
-
-### Setup Steps
-
-1. Install the Ionic CLI globally:
-
-   ```bash
-   npm install -g @ionic/cli
-   ```
-
-2. Initialize and link the project with Appflow:
-
-   ```bash
-   ionic init "News On Africa" --type=react
-   ionic login # or set IONIC_TOKEN
-   ionic link
-   ```
-
-3. Push your changes to GitHub and configure the Appflow dashboard to build
-   from your chosen branch (`main` or `build`).
-
-4. Trigger Android and iOS cloud builds from Appflow. Optionally set environment
-   variables such as `NEXT_PUBLIC_API_URL` in the Appflow build settings.

@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr"
 import type { cookies } from "next/headers"
 import type { CookieOptions } from "@supabase/ssr"
 import type { Database } from "@/lib/supabase"
-import { keepAliveFetch } from "@/utils/keepAliveFetch"
 
 export function createClient(cookieStore: ReturnType<typeof cookies>) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -10,7 +9,6 @@ export function createClient(cookieStore: ReturnType<typeof cookies>) {
   }
 
   return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-    global: { fetch: keepAliveFetch },
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value
@@ -43,7 +41,6 @@ export function createAdminClient(cookieStore: ReturnType<typeof cookies>) {
   }
 
   return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    global: { fetch: keepAliveFetch },
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value

@@ -16,9 +16,7 @@ export const useGoogleAnalytics = () => {
   useEffect(() => {
     const handleRouteChange = (url: string) => {
       if (typeof window.gtag === "function") {
-        const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
-        if (!gaId) return
-        window.gtag("config", gaId, {
+        window.gtag("config", "G-DQVSXQ97WQ", {
           page_path: url,
         })
       }
