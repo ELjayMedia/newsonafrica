@@ -1,4 +1,9 @@
-const requiredEnv = ["FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"]
+const requiredEnv = [
+  "FACEBOOK_CLIENT_ID",
+  "FACEBOOK_CLIENT_SECRET",
+  "JWT_SECRET",
+  "NEXT_PUBLIC_WORDPRESS_API_URL",
+]
 requiredEnv.forEach((name) => {
   if (!process.env[name]) {
     console.warn(`Warning: ${name} environment variable is not set.`)
