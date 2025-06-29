@@ -71,6 +71,26 @@ The service account should now appear in your Play Console with the granted perm
 - Never commit it to version control
 - Use environment variables or secure secret management
 - Rotate keys periodically for security
-\`\`\`
 
 Now let's create a verification script:
+
+Create `scripts/verify-play-api.sh` with the following contents:
+```bash
+#!/bin/bash
+set -e
+
+if [ ! -f google-play-service-account.json ]; then
+  echo "Service account JSON not found"
+  exit 1
+fi
+
+gcloud auth activate-service-account --key-file=google-play-service-account.json
+
+gcloud services list --enabled | grep androidpublisher.googleapis.com && \
+  echo "\u2705 Play Developer API enabled"
+```
+
+Run it with:
+```bash
+bash scripts/verify-play-api.sh
+```
