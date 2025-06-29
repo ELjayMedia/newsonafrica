@@ -16,12 +16,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - name: Install pnpm
-        run: npm install -g pnpm
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci || npm install --legacy-peer-deps
       - name: Lint
-        run: pnpm run lint
+        run: npm run lint
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
         with:
