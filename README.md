@@ -112,16 +112,12 @@ The application is deployed on Vercel with the following configuration:
 
 ## 🧪 Testing
 
-\`\`\`bash
-# Run unit tests
-pnpm test
+Automated tests are not yet included.
 
-# Run end-to-end tests
-pnpm run test:e2e
-
+```bash
 # Run linting
 pnpm run lint
-\`\`\`
+```
 
 ## 📚 Documentation
 
