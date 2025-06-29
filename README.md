@@ -80,9 +80,17 @@ FACEBOOK_CLIENT_SECRET=your_facebook_app_secret
 # Analytics
 NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
+# Firebase (Android)
+GOOGLE_SERVICES_JSON_BASE64=base64_encoded_google_services_json
+
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 \`\`\`
+
+When running in CI, store your Firebase configuration as a Base64 string in the
+`GOOGLE_SERVICES_JSON_BASE64` variable (or similar secret). During the build
+step, decode this value back into `google-services.json` so the real keys remain
+private.
 
 ### Installation
 
