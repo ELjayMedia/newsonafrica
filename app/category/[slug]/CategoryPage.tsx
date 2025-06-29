@@ -15,7 +15,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
 
 interface CategoryData {

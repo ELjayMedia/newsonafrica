@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo, useEffect, useCallback } from "react"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 
 interface Post {

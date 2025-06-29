@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 
 interface FeaturedHeroProps {
   post: {
