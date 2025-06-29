@@ -3,11 +3,15 @@ import { keepAliveFetch } from "@/utils/keepAliveFetch"
 import type { Database } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321"
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "public-anon-key"
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Missing Supabase environment variables. Please check your .env file.")
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.warn(
+    "Missing Supabase environment variables. Using fallback localhost configuration."
+  )
 }
 
 // Create a single instance of the Supabase client to be reused
