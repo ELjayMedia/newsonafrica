@@ -9,6 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+      - name: Build web assets for Capacitor
+        run: ./export-capacitor.sh
+      - name: Sync Capacitor platforms
+        run: npx cap sync
       - name: Trigger Android build on Appflow
         uses: ionic-team/appflow-build@v1
         with:
@@ -16,4 +30,3 @@ jobs:
           app-id: ${{ secrets.APPFLOW_APP_ID }}
           platform: Android
           build-type: debug
-
