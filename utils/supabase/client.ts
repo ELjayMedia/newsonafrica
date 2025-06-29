@@ -2,6 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/lib/supabase"
+import { keepAliveFetch } from "@/utils/keepAliveFetch"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = null
@@ -23,6 +24,7 @@ export const createClient = () => {
         storageKey: "news-on-africa-auth",
       },
       global: {
+        fetch: keepAliveFetch,
         headers: {
           "x-application-name": "news-on-africa",
         },
