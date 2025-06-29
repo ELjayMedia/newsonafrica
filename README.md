@@ -52,7 +52,8 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
+- Node.js 18+
+- pnpm (package manager)
 - Supabase account
 - WordPress instance with REST API
 
@@ -91,18 +92,21 @@ NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
+# Install pnpm globally if you don't have it
+npm install -g pnpm
+
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
-npm run dev
+pnpm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `npm run build`
+1. **Build Command**: `pnpm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
@@ -110,13 +114,13 @@ The application is deployed on Vercel with the following configuration:
 
 \`\`\`bash
 # Run unit tests
-npm test
+pnpm test
 
 # Run end-to-end tests
-npm run test:e2e
+pnpm run test:e2e
 
 # Run linting
-npm run lint
+pnpm run lint
 \`\`\`
 
 ## 📚 Documentation
