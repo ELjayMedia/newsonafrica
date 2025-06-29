@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { keepAliveFetch } from "@/utils/keepAliveFetch"
 import type { Database } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
@@ -22,6 +23,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     providers: ["facebook", "google"],
   },
   global: {
+    fetch: keepAliveFetch,
     headers: {
       "x-application-name": "news-on-africa",
     },
@@ -51,6 +53,7 @@ export const createAdminClient = () => {
       persistSession: false,
     },
     global: {
+      fetch: keepAliveFetch,
       headers: {
         "x-application-name": "news-on-africa-admin",
       },
