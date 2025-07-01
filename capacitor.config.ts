@@ -19,6 +19,15 @@ const config: CapacitorConfig = {
     Geolocation: {
       // Optional: Configure web-specific geolocation behavior if needed
     },
+    App: {
+      // No specific configuration needed for @capacitor/app for basic usage
+    },
+    Browser: {
+      // No specific configuration needed for @capacitor/browser for basic usage
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"], // iOS notification presentation options
+    },
   },
   server: {
     androidScheme: "https",
