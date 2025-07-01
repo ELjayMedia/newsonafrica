@@ -75,7 +75,7 @@ The service account should now appear in your Play Console with the granted perm
 Now let's create a verification script:
 
 Create `scripts/verify-play-api.sh` with the following contents:
-```bash
+\`\`\`bash
 #!/bin/bash
 set -e
 
@@ -88,9 +88,9 @@ gcloud auth activate-service-account --key-file=google-play-service-account.json
 
 gcloud services list --enabled | grep androidpublisher.googleapis.com && \
   echo "\u2705 Play Developer API enabled"
-```
+\`\`\`
 
 Run it with:
-```bash
+\`\`\`bash
 bash scripts/verify-play-api.sh
-```
+\`\`\`

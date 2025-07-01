@@ -114,10 +114,10 @@ The application is deployed on Vercel with the following configuration:
 
 Automated tests are not yet included.
 
-```bash
+\`\`\`bash
 # Run linting
 pnpm run lint
-```
+\`\`\`
 
 ## 📚 Documentation
 
