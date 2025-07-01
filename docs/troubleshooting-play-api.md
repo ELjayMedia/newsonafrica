@@ -54,7 +54,17 @@ gcloud auth list
 gcloud config set project YOUR_PROJECT_ID
 \`\`\`
 
-### 6. GitHub Actions Failures
+### 6. Fastlane Upload Errors
+
+**Problem**: Fastlane can't upload to Play Store
+
+**Solutions**:
+- Check AAB file exists and is valid
+- Verify service account has correct permissions
+- Ensure app exists in Play Console
+- Check track name is correct (internal, alpha, beta, production)
+
+### 7. GitHub Actions Failures
 
 **Problem**: Automated deployment fails
 
@@ -76,10 +86,13 @@ gcloud auth activate-service-account --key-file=google-play-service-account.json
 # Verify API is enabled
 gcloud services list --enabled | grep androidpublisher
 
+# Test fastlane
+fastlane android internal --verbose
 \`\`\`
 
 ## Getting Help
 
 1. **Google Play Console Help**: https://support.google.com/googleplay/android-developer
 2. **Google Cloud Support**: https://cloud.google.com/support
-3. **GitHub Actions Docs**: https://docs.github.com/en/actions
+3. **Fastlane Documentation**: https://docs.fastlane.tools/
+4. **GitHub Actions Docs**: https://docs.github.com/en/actions

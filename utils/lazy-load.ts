@@ -1,29 +1,13 @@
-export function generateBlurDataURL(
-  width = 700,
-  height = 475,
-  color = "#f3f4f6",
-): string {
+export function generateBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
+  // Create a simple SVG with the specified dimensions
   const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <filter id="b" color-interpolation-filters="sRGB">
-        <feGaussianBlur stdDeviation="20" />
-      </filter>
-      <rect width="100%" height="100%" fill="${color}" />
-      <rect width="100%" height="100%" fill="${color}" filter="url(#b)" />
+    <svg width="${width}" height="${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${width}" height="${height}" fill="${color}"/>
       <text x="${width / 2}" y="${height / 2}" font-size="16" text-anchor="middle" alignment-baseline="middle" fill="#9ca3af">Loading...</text>
-    </svg>`
-
+    </svg>
+  `
+  // Convert the SVG to a base64 data URL
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
-}
-
-// Optimized image loading utility
-export function getImageProps(src: string, width: number, height: number) {
-  return {
-    src,
-    blurDataURL: generateBlurDataURL(width, height),
-    placeholder: "blur",
-    loading: "lazy",
-  }
 }
 
 /**

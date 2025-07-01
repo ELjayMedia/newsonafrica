@@ -52,8 +52,7 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 18+
-- pnpm (package manager)
+- Node.js 18+ and npm/yarn
 - Supabase account
 - WordPress instance with REST API
 
@@ -75,8 +74,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Authentication
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
-FACEBOOK_CLIENT_ID=your_facebook_app_id
-FACEBOOK_CLIENT_SECRET=your_facebook_app_secret
+FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Analytics
 NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
@@ -92,31 +90,32 @@ NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
-# Install pnpm globally if you don't have it
-npm install -g pnpm
-
 # Install dependencies
-pnpm install
+npm install
 
 # Run the development server
-pnpm run dev
+npm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `pnpm run build`
+1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
 ## 🧪 Testing
 
-Automated tests are not yet included.
-
 \`\`\`bash
+# Run unit tests
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
+
 # Run linting
-pnpm run lint
+npm run lint
 \`\`\`
 
 ## 📚 Documentation
@@ -127,7 +126,6 @@ Additional documentation:
 - [API Documentation](./docs/api.md)
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
-- [Capacitor Setup](./docs/capacitor-setup.md)
 
 ## 🤝 Contributing
 

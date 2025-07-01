@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/utils/lazyLoad"
 
 interface VerticalCardProps {
   post: {

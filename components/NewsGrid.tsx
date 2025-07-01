@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo, useEffect, useCallback } from "react"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 
 interface Post {
@@ -299,7 +299,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
-                <h3 className="text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                <h3 className="text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-4 leading-4 leading-4">
                   {post.title}
                 </h3>
               </div>
@@ -311,12 +311,12 @@ const RegularCategorySection = memo(function RegularCategorySection({
               </div>
             </div>
             {post.featuredImage && (
-              <div className="relative w-24 h-20 md:w-[100px] md:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
+              <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
                   src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
-                  sizes="(max-width: 640px) 96px, 100px"
+                  sizes="(max-width: 640px) 80px, 85px"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   placeholder="blur"
                   blurDataURL={blurURLs.secondary[index]}

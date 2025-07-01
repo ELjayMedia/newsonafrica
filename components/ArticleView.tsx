@@ -10,6 +10,8 @@ import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
+import { RelatedPostsCarousel } from "./RelatedPostsCarousel"
+import { useRelatedPosts } from "@/hooks/useRelatedPosts"
 
 interface ArticleViewProps {
   post: {
@@ -62,6 +64,36 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const lastScrollPosition = useRef(0)
   const isManualScrolling = useRef(false)
   const forceScrollToTop = useRef(false)
+
+  // Extract categories for related posts
+  const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
+
+  // Debug logging
+  console.log("ArticleView Debug:", {
+    postId: id,
+    categories: categoryIds,
+    categoriesLength: categoryIds.length,
+  })
+
+  // Use the custom hook for related posts
+  const {
+    relatedPosts,
+    loading: loadingRelated,
+    error: relatedError,
+  } = useRelatedPosts({
+    postId: id,
+    categories: categoryIds,
+    tags: [], // Add tags if available in your post data structure
+    limit: 8, // Increased limit for carousel
+  })
+
+  // Debug related posts
+  console.log("Related Posts Debug:", {
+    relatedPosts,
+    loading: loadingRelated,
+    error: relatedError,
+    postsCount: relatedPosts?.length || 0,
+  })
 
   // Use our custom hook to manage scroll position
   const { scrollPosition, hasRestoredPosition, restoreScrollPosition, clearScrollPosition, saveScrollPosition } =
@@ -349,7 +381,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       <div className="prose prose-lg max-w-none mb-8" dangerouslySetInnerHTML={{ __html: content }} />
 
       {/* Article Footer with Sharing and Bookmarking */}
-      <footer className="border-t border-gray-200 pt-6 mt-8">
+      <footer className="border-t border-gray-200 pt-6 mt-8 mb-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <ShareButtons
@@ -381,6 +413,38 @@ export default function ArticleView({ post }: ArticleViewProps) {
           </div>
         </div>
       </footer>
+
+      {/* Related Articles Carousel - Always show this section */}
+      <div className="border-t border-gray-200 pt-8 mb-8">
+        <RelatedPostsCarousel
+          posts={relatedPosts || []}
+          loading={loadingRelated}
+          title="You might also like"
+          className="px-0"
+        />
+
+        {/* Debug information - remove this in production */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mt-4 p-4 bg-gray-100 rounded text-sm">
+            <p>
+              <strong>Debug Info:</strong>
+            </p>
+            <p>Post ID: {id}</p>
+            <p>Categories: {categoryIds.join(", ") || "None"}</p>
+            <p>Related Posts Count: {relatedPosts?.length || 0}</p>
+            <p>Loading: {loadingRelated ? "Yes" : "No"}</p>
+            {relatedError && <p className="text-red-600">Error: {relatedError}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Comments Section would go here */}
+      <div id="comments-section" className="border-t border-gray-200 pt-8">
+        {/* Comments component will be rendered here */}
+        <div className="text-center text-gray-500 py-8">
+          <p>Comments section will appear here</p>
+        </div>
+      </div>
 
       {/* Scroll to top button */}
       {showScrollTop && (

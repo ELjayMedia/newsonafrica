@@ -2,7 +2,7 @@
 
 import { useState, useEffect, memo } from "react"
 import Image, { type ImageProps } from "next/image"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/utils/lazyLoad"
 
 interface OptimizedImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string

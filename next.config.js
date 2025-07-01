@@ -1,15 +1,3 @@
-const requiredEnv = [
-  "FACEBOOK_CLIENT_ID",
-  "FACEBOOK_CLIENT_SECRET",
-  "JWT_SECRET",
-  "NEXT_PUBLIC_WORDPRESS_API_URL",
-]
-requiredEnv.forEach((name) => {
-  if (!process.env[name]) {
-    console.warn(`Warning: ${name} environment variable is not set.`)
-  }
-})
-
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -83,10 +71,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  env: {
-    FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
-    FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },

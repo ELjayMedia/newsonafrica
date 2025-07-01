@@ -2,16 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -22,12 +12,12 @@ body {
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
@@ -44,7 +34,7 @@ body {
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-foreground: 222.2 84% 4.9%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -55,7 +45,7 @@ body {
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 224.3 76.3% 94.1%;
   }
 }
 
@@ -65,207 +55,101 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    text-rendering: optimizeLegibility;
-  }
-
-  /* Optimize typography */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply tracking-tight;
-    text-wrap: balance;
-  }
-
-  p {
-    text-wrap: pretty;
   }
 }
 
-.prose {
-  @apply max-w-none;
+/* Custom scrollbar styles for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.prose img {
-  @apply rounded-lg;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-.prose a {
-  @apply text-blue-600 hover:underline;
-}
-
-.prose h1,
-.prose h2,
-.prose h3,
-.prose h4,
-.prose h5,
-.prose h6 {
-  @apply font-bold text-gray-900 mb-3;
-}
-
-.prose p {
-  @apply mb-3;
-}
-
-.prose ul,
-.prose ol {
-  @apply mb-3 pl-5;
-}
-
-.prose li {
-  @apply mb-1;
-}
-
-.prose blockquote {
-  @apply border-l-4 border-gray-300 pl-4 italic my-3;
-}
-
-.prose code {
-  @apply bg-gray-100 rounded px-1 py-0.5;
-}
-
-.prose pre {
-  @apply bg-gray-100 rounded p-3 overflow-x-auto;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-/* Android-specific styles */
-@media screen and (-webkit-min-device-pixel-ratio: 0) {
-  select,
-  textarea,
-  input {
-    font-size: 16px;
-  }
-}
-
-.android-ripple {
-  position: relative;
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.android-ripple::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.5);
-  opacity: 0;
-  border-radius: 100%;
-  transform: scale(1, 1) translate(-50%);
-  transform-origin: 50% 50%;
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-@keyframes ripple {
-  0% {
-    transform: scale(0, 0);
-    opacity: 1;
+/* Smooth transitions for carousel cards */
+.carousel-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carousel-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Focus styles for accessibility */
+.carousel-nav-button:focus {
+  @apply ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Responsive carousel adjustments */
+@media (max-width: 640px) {
+  .related-posts-carousel .carousel-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
-  20% {
-    transform: scale(25, 25);
-    opacity: 1;
-  }
+}
+
+/* Animation for loading skeleton */
+@keyframes pulse {
+  0%,
   100% {
-    opacity: 0;
-    transform: scale(40, 40);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
-.android-ripple:focus:not(:active)::after {
-  animation: ripple 1s ease-out;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Responsive typography */
-.text-responsive-xs {
-  font-size: clamp(0.75rem, 1vw, 0.875rem);
-  line-height: 1.4;
+/* Gradient overlay for images */
+.image-overlay {
+  background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.1) 100%);
 }
 
-.text-responsive-sm {
-  font-size: clamp(0.875rem, 1.5vw, 1rem);
-  line-height: 1.5;
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.text-responsive-base {
-  font-size: clamp(1rem, 2vw, 1.125rem);
-  line-height: 1.5;
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-.text-responsive-lg {
-  font-size: clamp(1.125rem, 2.5vw, 1.25rem);
-  line-height: 1.4;
+/* Custom focus styles */
+.focus-ring:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
 }
 
-.text-responsive-xl {
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
-  line-height: 1.3;
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
 }
 
-.text-responsive-2xl {
-  font-size: clamp(1.5rem, 4vw, 1.875rem);
-  line-height: 1.2;
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  /* Hide scrollbars but keep functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Optimize text rendering for small screens */
-  body {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-
-  /* Improve touch targets */
-  button,
-  a.btn,
-  .interactive-element {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Improve spacing on mobile */
-  .compact-spacing > * + *,
-  .mobile-compact > * + * {
-    margin-top: 0.5rem;
-  }
-
-  /* Optimize line heights for readability */
-  p,
-  li,
-  blockquote {
-    line-height: 1.6;
-  }
-
-  h1,
-  h2,
-  h3 {
-    line-height: 1.3;
+/* Print styles */
+@media print {
+  .related-posts-carousel,
+  .carousel-nav-button,
+  .scroll-to-top {
+    display: none !important;
   }
 }

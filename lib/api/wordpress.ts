@@ -6,6 +6,7 @@ import {
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
+import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
 const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -632,6 +633,208 @@ export async function getPost(slug: string) {
       error: error instanceof Error ? error.message : "Failed to fetch post",
     }
   }
+}
+
+/**
+ * Get related posts based on categories and tags with caching
+ */
+export async function getRelatedPosts(
+  postId: string,
+  categories: string[] = [],
+  tags: string[] = [],
+  limit = 6,
+  countryCode?: string,
+): Promise<WordPressPost[]> {
+  // Check cache first
+  const cached = relatedPostsCache.get(postId, categories, tags, limit, countryCode)
+  if (cached) {
+    return cached
+  }
+
+  try {
+    // Create GraphQL query for related posts
+    const RELATED_POSTS_QUERY = `
+      query GetRelatedPosts($categoryIn: [ID], $tagIn: [ID], $notIn: [ID], $first: Int) {
+        posts(
+          where: {
+            categoryIn: $categoryIn
+            tagIn: $tagIn
+            notIn: $notIn
+            orderby: { field: DATE, order: DESC }
+          }
+          first: $first
+        ) {
+          nodes {
+            id
+            title
+            excerpt
+            slug
+            date
+            modified
+            featuredImage {
+              node {
+                sourceUrl
+                altText
+                mediaDetails {
+                  width
+                  height
+                }
+              }
+            }
+            author {
+              node {
+                id
+                name
+                slug
+                firstName
+                lastName
+                avatar {
+                  url
+                }
+              }
+            }
+            categories {
+              nodes {
+                id
+                name
+                slug
+              }
+            }
+            tags {
+              nodes {
+                id
+                name
+                slug
+              }
+            }
+            seo {
+              title
+              metaDesc
+            }
+          }
+        }
+      }
+    `
+
+    // Try categories first, then tags if not enough results
+    let relatedPosts: WordPressPost[] = []
+
+    if (categories.length > 0) {
+      const categoryData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
+        RELATED_POSTS_QUERY,
+        {
+          categoryIn: categories,
+          notIn: [postId],
+          first: limit,
+        },
+        countryCode,
+      )
+      relatedPosts = categoryData.posts.nodes
+    }
+
+    // If we don't have enough posts from categories, try tags
+    if (relatedPosts.length < limit && tags.length > 0) {
+      const remainingLimit = limit - relatedPosts.length
+      const tagData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
+        RELATED_POSTS_QUERY,
+        {
+          tagIn: tags,
+          notIn: [postId, ...relatedPosts.map((p) => p.id)],
+          first: remainingLimit,
+        },
+        countryCode,
+      )
+      relatedPosts = [...relatedPosts, ...tagData.posts.nodes]
+    }
+
+    // If still not enough, get latest posts from same categories
+    if (relatedPosts.length < 3 && categories.length > 0) {
+      const remainingLimit = Math.max(3 - relatedPosts.length, 0)
+      const latestData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
+        RELATED_POSTS_QUERY,
+        {
+          categoryIn: categories,
+          notIn: [postId, ...relatedPosts.map((p) => p.id)],
+          first: remainingLimit,
+        },
+        countryCode,
+      )
+      relatedPosts = [...relatedPosts, ...latestData.posts.nodes]
+    }
+
+    const finalPosts = relatedPosts.slice(0, limit)
+
+    // Cache the result
+    relatedPostsCache.set(postId, categories, tags, limit, finalPosts, countryCode)
+
+    return finalPosts
+  } catch (error) {
+    console.error("Failed to fetch related posts via GraphQL, trying REST API:", error)
+
+    try {
+      // REST API fallback
+      const endpoints = getCountryEndpoints(countryCode || "sz")
+
+      // Build query parameters for REST API
+      const params = new URLSearchParams({
+        per_page: limit.toString(),
+        exclude: postId,
+        _embed: "1",
+      })
+
+      if (categories.length > 0) {
+        params.append("categories", categories.join(","))
+      }
+
+      const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
+        headers: { "Content-Type": "application/json" },
+        next: { revalidate: 300 },
+      })
+
+      if (!response.ok) {
+        throw new Error(`REST API request failed: ${response.status}`)
+      }
+
+      const posts = await response.json()
+      const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit)
+
+      // Cache the REST API result too
+      relatedPostsCache.set(postId, categories, tags, limit, transformedPosts, countryCode)
+
+      return transformedPosts
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed for related posts:", restError)
+      return []
+    }
+  }
+}
+
+/**
+ * Invalidate related posts cache for a specific post
+ */
+export function invalidateRelatedPostsCache(postId: string): void {
+  relatedPostsCache.invalidatePost(postId)
+}
+
+/**
+ * Invalidate related posts cache for a specific category
+ */
+export function invalidateRelatedPostsCacheByCategory(categorySlug: string): void {
+  relatedPostsCache.invalidateCategory(categorySlug)
+}
+
+/**
+ * Get related posts cache statistics
+ */
+export function getRelatedPostsCacheStats() {
+  return relatedPostsCache.getStats()
+}
+
+/**
+ * Clear all related posts cache
+ */
+export function clearRelatedPostsCache(): void {
+  relatedPostsCache.clear()
 }
 
 // Transform functions for REST API data
