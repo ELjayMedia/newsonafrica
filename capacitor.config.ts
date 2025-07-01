@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 0,
     },
+    LocalNotifications: {
+      sound: 'beep.wav',
+    },
   },
 }
 

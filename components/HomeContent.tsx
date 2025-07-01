@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import { HomeMidContentAd } from "@/components/HomeMidContentAd"
+import { NativeFeatures } from "@/components/NativeFeatures"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -335,6 +336,8 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
             <CategorySection key={config.name} {...config} />
           ))}
         </div>
+
+        <NativeFeatures />
       </div>
     </ErrorBoundary>
   )

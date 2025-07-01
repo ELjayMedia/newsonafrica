@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
+import { NativeFeatures } from "@/components/NativeFeatures"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
@@ -246,6 +247,8 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
             )
           })}
         </div>
+
+        <NativeFeatures />
       </div>
     </ErrorBoundary>
   )
