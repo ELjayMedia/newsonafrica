@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -20,12 +19,6 @@ import Script from "next/script"
 import "./globals.css"
 
 // Optimize font loading
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["system-ui", "sans-serif"],
-})
 
 export const metadata: Metadata = {
   title: "News On Africa",
@@ -53,7 +46,7 @@ export default function RootLayout({
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
@@ -62,7 +55,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://googletagservices.com" crossOrigin="anonymous" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className={inter.className}>
+      <body>
         {/* Google Ad Manager GPT Script */}
         <Script
           id="gpt-setup"

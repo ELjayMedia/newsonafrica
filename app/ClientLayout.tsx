@@ -1,7 +1,6 @@
 "use client"
 
 import "./globals.css"
-import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
@@ -26,7 +25,6 @@ import { CameraFeature } from "@/components/CameraFeature" // New import
 import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
 import { NotificationFeature } from "@/components/NotificationFeature" // New import
 
-const inter = Inter({ subsets: ["latin"] })
 
 export function ClientLayout({
   children,
@@ -54,7 +52,7 @@ export function ClientLayout({
   }, [])
 
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
