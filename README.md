@@ -107,14 +107,10 @@ The application is deployed on Vercel with the following configuration:
 
 ## 🧪 Testing
 
+Automated unit or end-to-end tests are not yet included in this project.
+Run linting with:
+
 \`\`\`bash
-# Run unit tests
-npm test
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run linting
 npm run lint
 \`\`\`
 
