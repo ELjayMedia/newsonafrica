@@ -431,7 +431,7 @@ export const fetchAllCategories = cache(async () => {
 /**
  * Fetches a single post
  */
-export const fetchSinglePost = async (slug: string) => {
+export const fetchSinglePost = cache(async (slug: string) => {
   const query = `
     query SinglePost($slug: ID!) {
       post(id: $slug, idType: SLUG) {
@@ -537,7 +537,7 @@ export const fetchSinglePost = async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback)
   return data.post
-}
+})
 
 /**
  * Search posts
