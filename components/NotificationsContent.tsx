@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDistanceToNow } from "date-fns"
 import { Trash2, CheckCircle, Bell, BellOff } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { ClientRedirect } from "@/components/ClientRedirect"
 
 export function NotificationsContent() {
@@ -121,9 +122,11 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
     >
       <div className="flex items-start gap-4">
         {notification.metadata?.sender_avatar ? (
-          <img
+          <Image
             src={notification.metadata.sender_avatar || "/placeholder.svg"}
             alt={notification.metadata.sender_name || "User"}
+            width={40}
+            height={40}
             className="h-10 w-10 rounded-full"
           />
         ) : (
