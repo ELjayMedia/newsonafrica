@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { useBookmarks } from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
 
 export function BookmarkDebugger() {
-  const { user } = useAuth()
+  const { user } = useUser()
   const { bookmarks, refreshBookmarks } = useBookmarks()
   const [dbStatus, setDbStatus] = useState<string>("Not checked")
   const [tableInfo, setTableInfo] = useState<any>(null)

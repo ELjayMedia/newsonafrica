@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Trash2, Reply, ThumbsUp } from "lucide-react"
-import { deleteComment } from "@/lib/wordpress-api/fetch"
+import { deleteComment } from "@/lib/wordpress-api"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Comment {
@@ -26,7 +26,7 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
   const [isDeleting, setIsDeleting] = useState<number | null>(null)
   const [showReplyForm, setShowReplyForm] = useState<number | null>(null)
   const [replyText, setReplyText] = useState("")
-  const { user } = useAuth()
+  const { user } = useUser()
 
   const handleDeleteComment = async (commentId: number) => {
     try {

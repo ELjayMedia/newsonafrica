@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useInView } from "react-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface CommentListProps {
@@ -27,7 +27,7 @@ export function CommentList({ postId }: CommentListProps) {
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
   const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
-  const { user } = useAuth()
+  const { user } = useUser()
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
 

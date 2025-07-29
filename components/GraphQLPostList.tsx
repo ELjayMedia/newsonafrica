@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { fetchGraphQLClient } from "@/lib/graphql-client"
 import { useAuth } from "@/hooks/useAuth"
-import Image from "next/image"
 
 const GET_POSTS = `
   query GetPosts($limit: Int, $offset: Int, $category: String) {
@@ -94,15 +93,11 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
         {posts.map((post) => (
           <div key={post.id} className="border rounded-lg overflow-hidden shadow-sm">
             {post.featuredImage && (
-              <div className="relative w-full h-48 overflow-hidden">
-                <Image
-                  src={post.featuredImage.sourceUrl || "/placeholder.svg"}
-                  alt={post.featuredImage.altText || post.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                />
-              </div>
+              <img
+                src={post.featuredImage.sourceUrl || "/placeholder.svg"}
+                alt={post.featuredImage.altText || post.title}
+                className="w-full h-48 object-cover"
+              />
             )}
             <div className="p-4">
               <h3 className="text-lg font-semibold">{post.title}</h3>

@@ -99,12 +99,16 @@ ON public.comments
 FOR DELETE
 USING (auth.uid() = user_id);
 
-CREATE POLICY "Moderators can manage all comments"
-ON public.comments
-FOR ALL
-USING (
-  (auth.jwt() -> 'app_metadata' -> 'roles') ?| ARRAY['admin', 'moderator']
-);
+-- Optional: Policy for moderators (adjust based on your user roles)
+-- CREATE POLICY "Moderators can manage all comments"
+-- ON public.comments
+-- FOR ALL
+-- USING (
+--   EXISTS (
+--     SELECT 1 FROM public.profiles 
+--     WHERE id = auth.uid() AND role = 'moderator'
+--   )
+-- );
 
 -- =============================================================================
 -- COMMENT_REACTIONS TABLE
@@ -259,12 +263,15 @@ WITH CHECK (
 -- =============================================================================
 
 -- Function to check if user is admin/moderator
-CREATE OR REPLACE FUNCTION public.is_admin()
+CREATE OR REPLACE FUNCTION public.is_admin(user_id uuid)
 RETURNS boolean AS $$
 BEGIN
-  RETURN (auth.jwt() -> 'app_metadata' -> 'roles') ?| ARRAY['admin', 'moderator'];
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = user_id AND role IN ('admin', 'moderator')
+  );
 END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to check if user owns a resource
 CREATE OR REPLACE FUNCTION public.is_owner(user_id uuid, resource_user_id uuid)

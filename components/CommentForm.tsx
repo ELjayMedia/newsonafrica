@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { addComment, isRateLimited, createOptimisticComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,7 +36,7 @@ export function CommentForm({
   const [isRichText, setIsRichText] = useState(false)
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { user, profile } = useAuth()
+  const { user, profile } = useUser()
   const { toast } = useToast()
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 

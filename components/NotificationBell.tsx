@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
-import Image from "next/image"
 import { formatDistanceToNow } from "date-fns"
 
 export function NotificationBell() {
@@ -141,11 +140,9 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
       >
         <div className="flex items-start gap-3">
           {notification.metadata?.sender_avatar ? (
-            <Image
+            <img
               src={notification.metadata.sender_avatar || "/placeholder.svg"}
               alt={notification.metadata.sender_name || "User"}
-              width={32}
-              height={32}
               className="h-8 w-8 rounded-full"
             />
           ) : (

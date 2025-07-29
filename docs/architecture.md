@@ -60,27 +60,6 @@ Vercel serves as the hosting and CDN platform:
 - **Automatic Deployments**: CI/CD pipeline
 - **Preview Environments**: For testing changes
 
-## API Strategy
-
-The application uses WordPress GraphQL as the primary data source. Each data
-fetch first queries the GraphQL endpoint. If a query fails or the endpoint is
-unhealthy, the request falls back to the WordPress REST API. This behaviour is
-implemented in the `lib/wordpress-api/fetch` module via the `fetchWithFallback` helper.
-
-### Health Checks and Caching
-
-Utility functions in `lib/api-health.ts` (`checkGraphQLHealth`,
-`checkRESTHealth` and `isAnyAPIHealthy`) periodically verify that the endpoints
-are reachable. Results are cached for five minutes to limit network overhead.
-API responses retrieved through `fetchWithFallback` are also cached in memory
-for five minutes to speed up subsequent requests.
-
-#### Environment Variables
-
-- `WORDPRESS_API_URL` and `NEXT_PUBLIC_WORDPRESS_API_URL` – GraphQL endpoint
-- `WORDPRESS_REST_API_URL` and `NEXT_PUBLIC_WORDPRESS_REST_API_URL` – REST
-  fallback endpoint
-
 ## Data Flow
 
 ### Content Retrieval Flow

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
@@ -59,38 +59,13 @@ export function useBookmarks() {
 }
 
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
-
-  if (!supabase) {
-    const noop = async () => {}
-    const stubContext: BookmarksContextType = {
-      bookmarks: [],
-      loading: false,
-      stats: { total: 0, unread: 0, categories: {} },
-      addBookmark: noop,
-      removeBookmark: noop,
-      toggleBookmark: noop,
-      updateBookmark: noop,
-      bulkRemoveBookmarks: noop,
-      markAsRead: noop,
-      markAsUnread: noop,
-      addNote: noop,
-      isBookmarked: () => false,
-      getBookmark: () => undefined,
-      searchBookmarks: () => [],
-      filterByCategory: () => [],
-      refreshBookmarks: noop,
-      exportBookmarks: async () => JSON.stringify({ bookmarks: [] }),
-      isLoading: false,
-    }
-    return <BookmarksContext.Provider value={stubContext}>{children}</BookmarksContext.Provider>
-  }
 
   // Calculate stats
   const stats = useMemo((): BookmarkStats => {

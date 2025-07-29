@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -8,7 +9,7 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import NetworkStatus from "@/components/NetworkStatus"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
-import { AuthProvider } from "@/contexts/AuthProvider"
+import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
@@ -19,6 +20,12 @@ import Script from "next/script"
 import "./globals.css"
 
 // Optimize font loading
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
+})
 
 export const metadata: Metadata = {
   title: "News On Africa",
@@ -46,7 +53,7 @@ export default function RootLayout({
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
@@ -55,7 +62,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://googletagservices.com" crossOrigin="anonymous" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body>
+      <body className={inter.className}>
         {/* Google Ad Manager GPT Script */}
         <Script
           id="gpt-setup"
@@ -79,7 +86,7 @@ export default function RootLayout({
         <Script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" strategy="afterInteractive" async />
 
         <ThemeProvider attribute="class" defaultTheme="light">
-          <AuthProvider>
+          <UserProvider>
             <BookmarksProvider>
               <ClientWrapper>
                 <ScrollToTop />
@@ -112,7 +119,7 @@ export default function RootLayout({
                 <NetworkStatusHandler />
               </ClientWrapper>
             </BookmarksProvider>
-          </AuthProvider>
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>

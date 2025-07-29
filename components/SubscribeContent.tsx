@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from "lucide-react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -24,7 +24,7 @@ export function SubscribeContent() {
   const [isRedirecting, setIsRedirecting] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { user } = useUser()
 
   // Pre-fill email if user is logged in
   useEffect(() => {

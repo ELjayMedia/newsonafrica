@@ -5,7 +5,7 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
-import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api/fetch"
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
 const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
@@ -209,10 +209,6 @@ function getCountryEndpoints(countryCode: string) {
     rest: country.restEndpoint,
   }
 }
-
-// Cache of category lists by country code
-const categoriesByCountryCache = new Map<string, { data: WordPressCategory[]; timestamp: number }>()
-const CATEGORIES_CACHE_TTL = parseInt(process.env.CATEGORIES_CACHE_TTL || "", 10) || 5 * 60 * 1000
 
 // Enhanced cache with LRU-like behavior
 const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
@@ -449,28 +445,19 @@ export async function getPostsByCategoryForCountry(
  * Get categories for a specific country
  */
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  const key = countryCode.toLowerCase()
-  const cached = categoriesByCountryCache.get(key)
-  if (cached && Date.now() - cached.timestamp < CATEGORIES_CACHE_TTL) {
-    return cached.data
-  }
-
   try {
     const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
-    categoriesByCountryCache.set(key, { data: data.categories.nodes, timestamp: Date.now() })
     return data.categories.nodes
   } catch (error) {
     console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
-      const restData = await restApiFallback(
+      return await restApiFallback(
         "categories",
         { per_page: 100 },
         (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
         countryCode,
       )
-      categoriesByCountryCache.set(key, { data: restData, timestamp: Date.now() })
-      return restData
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return []
@@ -848,17 +835,6 @@ export function getRelatedPostsCacheStats() {
  */
 export function clearRelatedPostsCache(): void {
   relatedPostsCache.clear()
-}
-
-/**
- * Invalidate categories cache for a country or all countries
- */
-export function invalidateCategoriesCache(countryCode?: string): void {
-  if (countryCode) {
-    categoriesByCountryCache.delete(countryCode.toLowerCase())
-  } else {
-    categoriesByCountryCache.clear()
-  }
 }
 
 // Transform functions for REST API data

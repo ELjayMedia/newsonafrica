@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
@@ -22,7 +22,7 @@ const categories = [
 
 export function Header() {
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
 

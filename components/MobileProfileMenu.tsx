@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, UserCircle, Settings, BookmarkIcon, Bell, MessageSquare, LogOut } from "lucide-react"
 import Link from "next/link"
@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator"
 
 export function MobileProfileMenu() {
   const router = useRouter()
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut } = useUser()
   const { toast } = useToast()
 
   if (!user) return null
