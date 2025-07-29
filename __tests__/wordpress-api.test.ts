@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchWithFallback } from '../lib/wordpress-api'
+import { fetchWithFallback } from '../lib/wordpress-api/fetch'
 import * as apiHealth from '../lib/api-health'
 
 let originalFetch: typeof fetch

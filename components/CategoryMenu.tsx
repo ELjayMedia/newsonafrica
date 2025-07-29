@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { fetchAllCategories } from "@/lib/wordpress-api"
+import { fetchAllCategories } from "@/lib/wordpress-api/fetch"
 import { Button } from "@/components/ui/button"
 
 export default async function CategoryMenu() {

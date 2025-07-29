@@ -8,9 +8,9 @@ import {
   fetchAllAuthors,
   fetchSingleTag,
   fetchAllTags,
-  searchPosts,
   fetchComments,
-} from "../lib/wordpress-api"
+} from "../lib/wordpress-api/fetch"
+import { searchPosts } from "../lib/wordpress-api/search"
 import { createClient } from "@supabase/supabase-js"
 import DataLoader from "dataloader"
 

@@ -1,5 +1,5 @@
 import { cache } from "react"
-import { client } from "./wordpress-api"
+import { client } from "./wordpress-api/fetch"
 import { queries } from "./wordpress-queries"
 import { FALLBACK_POSTS, MOCK_HOMEPAGE_DATA } from "./mock-data"
 
