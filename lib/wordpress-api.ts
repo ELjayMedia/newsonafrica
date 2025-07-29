@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { checkGraphQLHealth } from "./api-health"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -10,6 +11,19 @@ if (!WORDPRESS_API_URL) {
 // Simple cache implementation
 const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+let graphqlHealthLastCheck = 0
+let graphqlHealthStatus = true
+
+const isGraphQLHealthyCached = async () => {
+  if (Date.now() - graphqlHealthLastCheck < CACHE_TTL) {
+    return graphqlHealthStatus
+  }
+
+  graphqlHealthStatus = await checkGraphQLHealth()
+  graphqlHealthLastCheck = Date.now()
+  return graphqlHealthStatus
+}
 
 // Check if we're in a browser environment and if we're online
 const isOnline = () => {
@@ -121,6 +135,23 @@ const fetchWithFallback = async (
   if (!isServer() && !isOnline()) {
     console.log("Device is offline, using cache or returning empty data")
     return cached?.data || []
+  }
+
+  const graphqlHealthy = await isGraphQLHealthyCached()
+  if (!graphqlHealthy) {
+    console.warn("GraphQL API unhealthy, using REST fallback")
+    try {
+      const restData = await restFallback()
+      apiCache.set(cacheKey, {
+        data: restData,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL,
+      })
+      return restData
+    } catch (restError) {
+      console.error("REST API failed after unhealthy GraphQL:", restError)
+      return cached?.data || []
+    }
   }
 
   try {
@@ -1691,3 +1722,5 @@ export interface Post {
   }
   content?: string
 }
+
+export { fetchWithFallback }
