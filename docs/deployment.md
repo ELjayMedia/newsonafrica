@@ -89,3 +89,35 @@ eas update --branch production
 - Web deployments are monitored via Vercel dashboard
 - Mobile builds are tracked in Expo dashboard
 - GitHub Actions provide build status and logs
+
+## Supabase Database Management
+
+Database migrations and SQL utilities are handled with the Supabase CLI.
+
+### Pushing migrations
+
+Run `supabase db push` to apply the SQL files in `supabase/migrations` to your
+project:
+
+```bash
+supabase db push --project-ref <your-project-ref>
+```
+
+### Creating a diff
+
+Use `supabase db diff` to generate a migration from differences between your
+local schema and the remote database:
+
+```bash
+supabase db diff --file supabase/migrations/$(date +%s)_update.sql
+```
+
+### Applying SQL files
+
+Individual SQL files in `utils/supabase/` can be executed directly with the
+CLI. This is useful for setting up RLS policies or database triggers.
+
+```bash
+supabase db execute --file utils/supabase/enable-rls-policies.sql
+supabase db execute --file utils/supabase/bookmark-functions.sql
+```
