@@ -1,5 +1,7 @@
 export const PAYSTACK_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export const GIFT_ARTICLE_AMOUNT =
+  parseInt(process.env.NEXT_PUBLIC_GIFT_ARTICLE_AMOUNT || "1000", 10)
 
 export const SUBSCRIPTION_PLANS = [
   {
