@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { AuthForm } from "@/components/AuthForm"
-import { useEnhancedAuth } from "@/contexts/EnhancedAuthContext"
+import { useUser } from "@/contexts/UserContext"
 import { toast } from "@/hooks/use-toast"
 
 interface AuthPageClientProps {
@@ -16,7 +16,7 @@ interface AuthPageClientProps {
 function AuthPageContent({ searchParams }: AuthPageClientProps) {
   const router = useRouter()
   const urlSearchParams = useSearchParams()
-  const { user, loading: authLoading } = useEnhancedAuth()
+  const { user, loading: authLoading } = useUser()
 
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
