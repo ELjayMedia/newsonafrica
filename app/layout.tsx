@@ -8,7 +8,7 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import NetworkStatus from "@/components/NetworkStatus"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
-import { UserProvider } from "@/contexts/UserContext"
+import { AuthProvider } from "@/contexts/AuthProvider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
@@ -79,7 +79,7 @@ export default function RootLayout({
         <Script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" strategy="afterInteractive" async />
 
         <ThemeProvider attribute="class" defaultTheme="light">
-          <UserProvider>
+          <AuthProvider>
             <BookmarksProvider>
               <ClientWrapper>
                 <ScrollToTop />
@@ -112,7 +112,7 @@ export default function RootLayout({
                 <NetworkStatusHandler />
               </ClientWrapper>
             </BookmarksProvider>
-          </UserProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

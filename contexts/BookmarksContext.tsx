@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
@@ -59,7 +59,7 @@ export function useBookmarks() {
 }
 
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUser()
+  const { user } = useAuth()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)

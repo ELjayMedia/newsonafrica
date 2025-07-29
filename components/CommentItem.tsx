@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { CommentForm } from "@/components/CommentForm"
 import { updateComment, deleteComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
@@ -42,7 +42,7 @@ export function CommentItem({
   rateLimitTimeRemaining,
   isFailed = false,
 }: CommentItemProps) {
-  const { user } = useUser()
+  const { user } = useAuth()
   const { toast } = useToast()
   const [isReplying, setIsReplying] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
