@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
-      featured_image: featuredImage ? JSON.stringify(featuredImage) : null,
+      featuredImage: featuredImage ? JSON.stringify(featuredImage) : null,
       category: category || null,
       tags: tags || null,
       read_status: "unread" as const,

@@ -77,7 +77,7 @@ export const BookmarkButton = ({
             title,
             slug,
             excerpt,
-            featured_image: featuredImage,
+            featuredImage,
           })
           toast({
             title: "Bookmarked!",
