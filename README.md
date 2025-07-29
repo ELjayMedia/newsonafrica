@@ -122,6 +122,7 @@ Additional documentation:
 - [API Documentation](./docs/api.md)
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
+- Obsolete search API backups (`app/api/search/route.ts.bak` and `app/api/search/route.ts.fallback`) have been removed.
 
 ## 🤝 Contributing
 
