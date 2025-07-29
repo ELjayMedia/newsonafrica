@@ -14,7 +14,7 @@ interface Bookmark {
   slug?: string
   excerpt?: string
   created_at: string
-  featured_image?: any
+  featuredImage?: any
   category?: string
   tags?: string[]
   read_status?: "unread" | "read"
@@ -171,7 +171,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featured_image: post.featured_image ? JSON.stringify(post.featured_image) : null,
+          featuredImage: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
