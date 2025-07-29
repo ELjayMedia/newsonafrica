@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { fetchRecentPosts } from "@/lib/wordpress-api"
+import { fetchRecentPosts } from "@/lib/wordpress"
 import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"

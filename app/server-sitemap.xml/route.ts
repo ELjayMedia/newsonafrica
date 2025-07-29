@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress"
 import { siteConfig } from "@/config/site"
 
 export async function GET() {

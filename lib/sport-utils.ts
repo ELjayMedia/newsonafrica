@@ -1,5 +1,5 @@
 import { cache } from "react"
-import { fetchCategoryPosts } from "./wordpress-api"
+import { fetchCategoryPosts } from "./wordpress"
 
 // GraphQL query to fetch posts from both 'sport' and 'sports' categories
 const SPORTS_QUERY = `

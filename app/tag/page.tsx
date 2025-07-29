@@ -1,4 +1,4 @@
-import { fetchAllTags } from "@/lib/wordpress-api"
+import { fetchAllTags } from "@/lib/wordpress"
 import Link from "next/link"
 import type { Metadata } from "next"
 
