@@ -61,9 +61,14 @@ news-on-africa/
 Create a `.env.local` file with the following variables:
 
 \`\`\`
-# WordPress
-WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
-NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+# WordPress GraphQL
+WORDPRESS_API_URL=https://your-wordpress-site.com/graphql
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-site.com/graphql
+
+# WordPress REST fallback
+WORDPRESS_REST_API_URL=https://your-wordpress-site.com/wp-json/wp/v2
+NEXT_PUBLIC_WORDPRESS_REST_API_URL=https://your-wordpress-site.com/wp-json/wp/v2
+
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
 
