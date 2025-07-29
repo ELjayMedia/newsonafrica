@@ -429,7 +429,11 @@ export const fetchAllCategories = cache(async () => {
   `
 
   const restFallback = async () => {
-    const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
+    const categories = await fetchFromRestApi("categories", {
+      per_page: 100,
+      hide_empty: true,
+      _fields: "id,name,slug,description,count",
+    })
     return {
       categories: {
         nodes: categories.map((cat: any) => ({
