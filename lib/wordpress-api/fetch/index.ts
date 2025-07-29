@@ -559,6 +559,7 @@ export const fetchSinglePost = cache(async (slug: string) => {
 })
 
 /**
+ */
 // Keep existing function names for backward compatibility
 export const fetchFeaturedPosts = fetchRecentPosts
 export const fetchCategorizedPosts = async () => {
