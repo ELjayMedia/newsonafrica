@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import CategoryClientPage from "./CategoryClientPage"
 
@@ -35,6 +35,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   try {
     const { category, posts } = await getPostsByCategory(params.slug, 10)
 
+    // Use the resolved slug for canonical URLs
+    const canonicalSlug = category?.slug || params.slug
+
     if (!category) {
       console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
       return {
@@ -63,7 +66,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
     // Create canonical URL
-    const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
+    const canonicalUrl = `https://newsonafrica.com/category/${canonicalSlug}`
 
     // Generate keywords
     const keywords = [
@@ -180,6 +183,11 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
   try {
     // Fetch category data and initial posts
     const categoryData = await getPostsByCategory(params.slug, 20)
+
+    // Redirect to the canonical slug if it differs from the requested one
+    if (categoryData.category && categoryData.category.slug !== params.slug) {
+      redirect(`/category/${categoryData.category.slug}`)
+    }
 
     // If category doesn't exist, show 404
     if (!categoryData.category) {

@@ -532,6 +532,14 @@ export async function getPostsByCategory(
   // Create cache key
   const cacheKey = `category:${categorySlug}:${limit}:${after || "null"}`
 
+  // Handle common slug variations (e.g. "sport" vs "sports")
+  const slugAlternates: Record<string, string> = {
+    sport: "sports",
+    sports: "sport",
+  }
+
+  const fallbackSlug = slugAlternates[categorySlug]
+
   // Check cache first
   const cached = categoryCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -542,7 +550,12 @@ export async function getPostsByCategory(
 
   try {
     // If not in cache, fetch from API
-    const result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
+    let result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
+
+    // Retry with fallback slug if no category returned
+    if (!result.category && fallbackSlug) {
+      result = await getPostsByCategoryForCountry("sz", fallbackSlug, limit, after || null)
+    }
 
     // Cache the result
     categoryCache.set(cacheKey, {
