@@ -1047,33 +1047,33 @@ async function searchViaREST(query: string, options: SearchOptions): Promise<Pos
 }
 
 /**
- * Search by categories with enhanced filtering
+ * Search by categories with enhanced filtering. Fetches each category in
+ * parallel to reduce overall latency compared to sequential requests.
  */
 async function searchByCategories(query: string, options: SearchOptions): Promise<Post[]> {
   const { categories = [] } = options
 
   if (categories.length === 0) return []
 
-  const results: Post[] = []
-
-  // Search within each category
-  for (const categorySlug of categories) {
-    try {
-      const categoryPosts = await fetchCategoryPosts(categorySlug)
-
-      // Filter posts that match the search query
-      const matchingPosts = categoryPosts.posts.nodes.filter(
-        (post: Post) =>
-          post.title.toLowerCase().includes(query.toLowerCase()) ||
-          post.excerpt.toLowerCase().includes(query.toLowerCase()),
+  // Fetch posts for all categories concurrently. Running these requests in
+  // parallel cuts down the overall search time compared to awaiting each
+  // category sequentially.
+  const fetchPromises = categories.map((categorySlug) =>
+    fetchCategoryPosts(categorySlug)
+      .then((categoryPosts) =>
+        categoryPosts.posts.nodes.filter(
+          (post: Post) =>
+            post.title.toLowerCase().includes(query.toLowerCase()) ||
+            post.excerpt.toLowerCase().includes(query.toLowerCase()),
+        ),
       )
+      .catch((error) => {
+        console.error(`Failed to search in category ${categorySlug}:`, error)
+        return []
+      }),
+  )
 
-      results.push(...matchingPosts)
-    } catch (error) {
-      console.error(`Failed to search in category ${categorySlug}:`, error)
-    }
-  }
-
+  const results = (await Promise.all(fetchPromises)).flat()
   return results
 }
 
