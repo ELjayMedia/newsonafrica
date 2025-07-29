@@ -65,7 +65,7 @@ Vercel serves as the hosting and CDN platform:
 The application uses WordPress GraphQL as the primary data source. Each data
 fetch first queries the GraphQL endpoint. If a query fails or the endpoint is
 unhealthy, the request falls back to the WordPress REST API. This behaviour is
-implemented in `lib/wordpress-api.ts` via the `fetchWithFallback` helper.
+implemented in the `lib/wordpress-api/fetch` module via the `fetchWithFallback` helper.
 
 ### Health Checks and Caching
 

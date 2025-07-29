@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api/fetch"
 import { siteConfig } from "@/config/site"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { fetchAuthorData } from "@/lib/wordpress-api"
+import { fetchAuthorData } from "@/lib/wordpress-api/fetch"
 import Image from "next/image"
 import { NewsGrid } from "@/components/NewsGrid"
 import { Skeleton } from "@/components/ui/skeleton"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
-import { updateUserProfile } from "@/lib/wordpress-api"
+import { updateUserProfile } from "@/lib/wordpress-api/fetch"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"

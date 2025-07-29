@@ -5,7 +5,7 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
-import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api/fetch"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
 const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
