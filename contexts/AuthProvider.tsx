@@ -26,6 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth state and listen for changes
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
     const initAuth = async () => {
       const { data } = await supabase.auth.getSession()
       setSession(data.session)
@@ -47,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
+      if (!supabase) return
       setLoading(true)
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       setLoading(false)
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string, username: string) => {
+      if (!supabase) return
       setLoading(true)
       const { error } = await supabase.auth.signUp({
         email,
@@ -70,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const signOut = useCallback(async () => {
+    if (!supabase) return
     setLoading(true)
     const { error } = await supabase.auth.signOut()
     setLoading(false)
@@ -78,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOAuth = useCallback(
     async (provider: "google" | "facebook") => {
+      if (!supabase) return
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -88,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const refreshSession = useCallback(async () => {
+    if (!supabase) return false
     const { data, error } = await supabase.auth.refreshSession()
     if (error) return false
     setSession(data.session)

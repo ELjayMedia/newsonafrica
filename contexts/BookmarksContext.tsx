@@ -67,6 +67,31 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
+  if (!supabase) {
+    const noop = async () => {}
+    const stubContext: BookmarksContextType = {
+      bookmarks: [],
+      loading: false,
+      stats: { total: 0, unread: 0, categories: {} },
+      addBookmark: noop,
+      removeBookmark: noop,
+      toggleBookmark: noop,
+      updateBookmark: noop,
+      bulkRemoveBookmarks: noop,
+      markAsRead: noop,
+      markAsUnread: noop,
+      addNote: noop,
+      isBookmarked: () => false,
+      getBookmark: () => undefined,
+      searchBookmarks: () => [],
+      filterByCategory: () => [],
+      refreshBookmarks: noop,
+      exportBookmarks: async () => JSON.stringify({ bookmarks: [] }),
+      isLoading: false,
+    }
+    return <BookmarksContext.Provider value={stubContext}>{children}</BookmarksContext.Provider>
+  }
+
   // Calculate stats
   const stats = useMemo((): BookmarkStats => {
     const total = bookmarks.length
