@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { optimizedWordPressSearch } from "@/lib/wordpress-api"
+import { setCacheHeaders } from "@/lib/api-utils"
 
 // WordPress API configuration
 const WORDPRESS_API_URL =
@@ -46,7 +48,7 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-// Search WordPress posts
+// Search WordPress posts via REST (fallback)
 async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
   try {
     const searchParams = new URLSearchParams({
@@ -204,59 +206,86 @@ export async function GET(request: NextRequest) {
     if (suggestions) {
       try {
         const suggestionResults = await getSearchSuggestions(queryParam)
-        return NextResponse.json({
+        const res = NextResponse.json({
           suggestions: suggestionResults,
           performance: {
             responseTime: Date.now() - startTime,
             source: "wordpress-suggestions",
           },
         })
+        return setCacheHeaders(res, 300)
       } catch (error) {
-        return NextResponse.json({ suggestions: [] })
+        return setCacheHeaders(NextResponse.json({ suggestions: [] }), 300)
       }
     }
 
-    // Perform search
+    // Perform search using optimized search first
     try {
-      const searchResults = await searchWordPressPosts(queryParam, page, perPage)
-      const responseTime = Date.now() - startTime
-
-      return NextResponse.json({
-        ...searchResults,
-        query: queryParam,
-        performance: {
-          responseTime,
-          source: "wordpress",
-        },
+      const optimizedResults = await optimizedWordPressSearch(queryParam, {
+        page,
+        perPage,
       })
-    } catch (wpError) {
-      // Fallback to mock data
-      const filteredResults = FALLBACK_POSTS.filter(
-        (item) =>
-          item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
-          item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
-      )
 
-      const startIndex = (page - 1) * perPage
-      const endIndex = startIndex + perPage
-      const paginatedResults = filteredResults.slice(startIndex, endIndex)
-
-      return NextResponse.json({
-        results: paginatedResults,
-        total: filteredResults.length,
-        totalPages: Math.ceil(filteredResults.length / perPage),
-        currentPage: page,
-        hasMore: page < Math.ceil(filteredResults.length / perPage),
+      const res = NextResponse.json({
+        results: optimizedResults.items,
+        total: optimizedResults.pagination.totalItems,
+        totalPages: optimizedResults.pagination.totalPages,
+        currentPage: optimizedResults.pagination.page,
+        hasMore: optimizedResults.pagination.hasMore,
         query: queryParam,
         performance: {
           responseTime: Date.now() - startTime,
-          source: "fallback",
-          error: true,
+          source: optimizedResults.searchSource,
+          cached: optimizedResults.performance.cached,
+          ...(optimizedResults.performance.parallel
+            ? { parallel: optimizedResults.performance.parallel }
+            : {}),
         },
       })
+      return setCacheHeaders(res, 300)
+    } catch (wpError) {
+      // Fallback to REST search
+      try {
+        const searchResults = await searchWordPressPosts(queryParam, page, perPage)
+        const res = NextResponse.json({
+          ...searchResults,
+          query: queryParam,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "wordpress-rest",
+          },
+        })
+        return setCacheHeaders(res, 300)
+      } catch (restError) {
+        // Fallback to mock data
+        const filteredResults = FALLBACK_POSTS.filter(
+          (item) =>
+            item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
+            item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
+        )
+
+        const startIndex = (page - 1) * perPage
+        const endIndex = startIndex + perPage
+        const paginatedResults = filteredResults.slice(startIndex, endIndex)
+
+        const res = NextResponse.json({
+          results: paginatedResults,
+          total: filteredResults.length,
+          totalPages: Math.ceil(filteredResults.length / perPage),
+          currentPage: page,
+          hasMore: page < Math.ceil(filteredResults.length / perPage),
+          query: queryParam,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "fallback",
+            error: true,
+          },
+        })
+        return setCacheHeaders(res, 300)
+      }
     }
   } catch (error) {
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",
@@ -273,5 +302,6 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 },
     )
+    return setCacheHeaders(res, 60)
   }
 }
