@@ -6,11 +6,13 @@ import { Loader2, Lock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
 import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
-import type { PaystackOptions, SubscriptionPlan } from "@/config/paystack"
+import type { PaystackOptions, SubscriptionPlan } from "@/types/paystack"
 
 interface PaystackButtonProps {
   email: string
-  plan: SubscriptionPlan
+  plan?: SubscriptionPlan
+  amount?: number
+  currency?: string
   onSuccess?: (reference: string, response: any) => void
   onError?: (error: string) => void
   className?: string
@@ -25,6 +27,8 @@ interface PaystackButtonProps {
 export function PaystackButton({
   email,
   plan,
+  amount,
+  currency,
   onSuccess,
   onError,
   className = "",
@@ -98,28 +102,32 @@ export function PaystackButton({
       const paystackOptions: PaystackOptions = {
         key: PAYSTACK_PUBLIC_KEY,
         email,
-        amount: plan.amount,
-        currency: plan.currency || "ZAR",
+        amount: plan ? plan.amount : (amount || 0),
+        currency: plan?.currency || currency || "ZAR",
         ref: reference,
-        plan: plan.paystackPlanId, // Use the Paystack plan ID
-        label: plan.name,
+        label: plan ? plan.name : label,
+        ...(plan ? { plan: plan.paystackPlanId } : {}),
         metadata: {
-          plan_id: plan.id,
-          plan_name: plan.name,
-          paystack_plan_id: plan.paystackPlanId,
           ...metadata,
-          custom_fields: [
-            {
-              display_name: "Plan",
-              variable_name: "plan",
-              value: plan.name,
-            },
-            {
-              display_name: "Interval",
-              variable_name: "interval",
-              value: plan.interval,
-            },
-          ],
+          ...(plan
+            ? {
+                plan_id: plan.id,
+                plan_name: plan.name,
+                paystack_plan_id: plan.paystackPlanId,
+                custom_fields: [
+                  {
+                    display_name: "Plan",
+                    variable_name: "plan",
+                    value: plan.name,
+                  },
+                  {
+                    display_name: "Interval",
+                    variable_name: "interval",
+                    value: plan.interval,
+                  },
+                ],
+              }
+            : {}),
         },
         onSuccess: async (response) => {
           try {
@@ -130,7 +138,9 @@ export function PaystackButton({
             if (verificationResult.status) {
               toast({
                 title: "Payment Successful",
-                description: `Your ${plan.name} subscription has been activated.`,
+                description: plan
+                  ? `Your ${plan.name} subscription has been activated.`
+                  : "Gift purchase confirmed. Thank you!",
               })
 
               if (onSuccess) {

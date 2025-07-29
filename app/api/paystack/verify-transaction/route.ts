@@ -40,26 +40,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Store subscription information in database
+    // Store purchase information in database
     if (data.status && data.data.status === "success") {
       try {
-        // Here you would typically store the subscription in your database
-        // For example:
-        // await storeSubscription({
-        //   userId: data.data.metadata.user_id,
-        //   planId: data.data.metadata.plan_id,
-        //   reference: data.data.reference,
-        //   amount: data.data.amount,
-        //   status: data.data.status,
-        //   startDate: new Date(),
-        //   endDate: calculateEndDate(data.data.metadata.interval),
-        // })
-
-        console.log("Subscription verified and stored:", data.data.reference)
+        if (data.data.metadata?.type === "gift") {
+          // Gift article purchase
+          console.log("Gift purchase recorded:", data.data.reference)
+        } else {
+          // Subscription purchase
+          console.log("Subscription verified and stored:", data.data.reference)
+        }
       } catch (dbError) {
-        console.error("Error storing subscription:", dbError)
-        // We still return success to the client since the payment was successful
-        // But log the error for server-side investigation
+        console.error("Error storing payment record:", dbError)
+        // Payment succeeded but database operation failed
       }
     }
 
