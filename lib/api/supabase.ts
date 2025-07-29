@@ -262,21 +262,6 @@ export async function signUpWithEmail(email: string, password: string, username:
       }
     }
 
-    // Create user profile
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-
-      if (profileError) {
-        console.error("Error creating user profile:", profileError)
-        // Don't fail the signup if profile creation fails
-      }
-    }
 
     return {
       user: data.user,

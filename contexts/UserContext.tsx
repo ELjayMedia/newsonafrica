@@ -272,23 +272,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      // Create profile after successful sign-up
+      // Fetch profile after successful sign-up
       if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            username,
-            email,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError)
-        } else {
-          await fetchProfile(data.user.id)
-        }
+        await fetchProfile(data.user.id)
       }
 
       return data

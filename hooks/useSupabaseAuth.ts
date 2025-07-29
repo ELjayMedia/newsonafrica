@@ -143,22 +143,6 @@ export function useSupabaseAuth() {
         }
 
         if (data.user) {
-          // Create user profile
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              username: username.trim(),
-              email: email.trim().toLowerCase(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-            // Don't fail signup if profile creation fails
-          }
-
           toast({
             title: 'Account created!',
             description: 'Please check your email to confirm your account.',
