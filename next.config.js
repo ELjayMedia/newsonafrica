@@ -78,7 +78,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
     domains: [
       "newsonafrica.com",
       "secure.gravatar.com",
