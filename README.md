@@ -124,7 +124,7 @@ npm run lint
 Additional documentation:
 
 - [Component Documentation](./docs/components.md)
-- [API Documentation](./docs/api.md)
+- [Admin API Documentation](./docs/admin-api.md)
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
 - Obsolete search API backups (`app/api/search/route.ts.bak` and `app/api/search/route.ts.fallback`) have been removed.
