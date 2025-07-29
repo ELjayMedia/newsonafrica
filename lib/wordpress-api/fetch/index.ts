@@ -566,10 +566,47 @@ export const fetchSinglePost = cache(async (slug: string) => {
  */
 // Keep existing function names for backward compatibility
 export const fetchFeaturedPosts = fetchRecentPosts
-export const fetchCategorizedPosts = async () => {
-  const categories = await fetchAllCategories()
-  return categories.slice(0, 10) // Return top 10 categories
-}
+export const fetchCategorizedPosts = cache(async (limit = 10) => {
+  const query = `
+    query CategorizedPosts($limit: Int!) {
+      categories(first: $limit, where: { hideEmpty: true }) {
+        nodes {
+          id
+          name
+          slug
+          description
+          count
+        }
+      }
+    }
+  `
+
+  const restFallback = async () => {
+    const categories = await fetchFromRestApi("categories", {
+      per_page: limit,
+      hide_empty: true,
+    })
+    return {
+      categories: {
+        nodes: categories.map((cat: any) => ({
+          id: cat.id.toString(),
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description || "",
+          count: cat.count || 0,
+        })),
+      },
+    }
+  }
+
+  const data = await fetchWithFallback(
+    query,
+    { limit },
+    `categorized-posts-${limit}`,
+    restFallback,
+  )
+  return data.categories?.nodes || []
+})
 
 export const fetchAllPosts = fetchRecentPosts
 export const fetchAllTags = async () => []
