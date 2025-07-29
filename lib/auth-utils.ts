@@ -1,4 +1,4 @@
-import { client } from "@/lib/wordpress-api"
+import { client } from "@/lib/wordpress"
 import { gql } from "graphql-request"
 
 interface User {
