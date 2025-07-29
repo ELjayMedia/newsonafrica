@@ -18,11 +18,11 @@ importers:
         specifier: latest
         version: 4.0.0(@apollo/server@5.0.0(graphql@16.11.0))(next@15.2.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       '@capacitor/app':
-        specifier: ^6.0.0
-        version: 6.0.2(@capacitor/core@7.4.2)
+        specifier: ^7.0.0
+        version: 7.0.1(@capacitor/core@7.4.2)
       '@capacitor/browser':
-        specifier: ^6.0.0
-        version: 6.0.5(@capacitor/core@7.4.2)
+        specifier: ^7.0.0
+        version: 7.0.1(@capacitor/core@7.4.2)
       '@capacitor/camera':
         specifier: latest
         version: 7.0.1(@capacitor/core@7.4.2)
@@ -39,8 +39,8 @@ importers:
         specifier: latest
         version: 7.0.1(@capacitor/core@7.4.2)
       '@capacitor/push-notifications':
-        specifier: ^6.0.0
-        version: 6.0.4(@capacitor/core@7.4.2)
+        specifier: ^7.0.0
+        version: 7.0.1(@capacitor/core@7.4.2)
       '@ducanh2912/next-pwa':
         specifier: latest
         version: 10.2.9(next@15.2.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(webpack@5.101.0)
@@ -938,15 +938,15 @@ packages:
     resolution: {integrity: sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==}
     engines: {node: '>=6.9.0'}
 
-  '@capacitor/app@6.0.2':
-    resolution: {integrity: sha512-SiGTGgslK4TbWJVImCUL1odul7/YFkVfkYtAYS9AAEzQpxBECBeRnuN3FFBcfZ9eiN1XxFBFchhiwpxtx/c7yQ==}
+  '@capacitor/app@7.0.1':
+    resolution: {integrity: sha512-ArlVZAAla4MwQoKh26x2AaTDOBh5Vhp1VhMKR3RwqZSsZnazKTFGNrPbr9Ez5r1knnEDfApyjwp1uZnXK1WTYQ==}
     peerDependencies:
-      '@capacitor/core': ^6.0.0
+      '@capacitor/core': '>=7.0.0'
 
-  '@capacitor/browser@6.0.5':
-    resolution: {integrity: sha512-TjA1YCiYT7wb7CLmI6zLLoS09vm7d+h4oAKXAVWDwjOyKdbAPKh75ZtzlN+lum8+sOtO9YJ+1Zdi6rdw6dxYYw==}
+  '@capacitor/browser@7.0.1':
+    resolution: {integrity: sha512-N6KEVLw2enTnourQzYJLvAkSds2Ed21zqsvHnSImrVDenzX8fUj032kMt4EdewmxfxiEwRa911BT1VOPBi0fEA==}
     peerDependencies:
-      '@capacitor/core': ^6.0.0
+      '@capacitor/core': '>=7.0.0'
 
   '@capacitor/camera@7.0.1':
     resolution: {integrity: sha512-gDUFsYlhMra5VVOa4iJV6+MQRhp3VXpTLQY4JDATj7UvoZ8Hv4DG8qplPL9ufUFNoR3QbDDnf8+gbQOsKdkDjg==}
@@ -971,10 +971,10 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capacitor/push-notifications@6.0.4':
-    resolution: {integrity: sha512-ZUxrHG17NztdcRMvual7b2GY45hcEWTLCjV01BjhyooDOUpvUGneFd95g+sJ6WhQTc90uVuaLuWl1xhXsBvBbg==}
+  '@capacitor/push-notifications@7.0.1':
+    resolution: {integrity: sha512-nSHsMSrTHX5pOkX1Khse75/uvSx/JTcXG+9aT6a66CvzalH6MCs0ha8Jv+xu0k9xW8caO+qSUMjfj5Oy82Uxmw==}
     peerDependencies:
-      '@capacitor/core': ^6.0.0
+      '@capacitor/core': '>=7.0.0'
 
   '@capacitor/synapse@1.0.4':
     resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
@@ -7564,11 +7564,11 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
 
-  '@capacitor/app@6.0.2(@capacitor/core@7.4.2)':
+  '@capacitor/app@7.0.1(@capacitor/core@7.4.2)':
     dependencies:
       '@capacitor/core': 7.4.2
 
-  '@capacitor/browser@6.0.5(@capacitor/core@7.4.2)':
+  '@capacitor/browser@7.0.1(@capacitor/core@7.4.2)':
     dependencies:
       '@capacitor/core': 7.4.2
 
@@ -7611,7 +7611,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.2
 
-  '@capacitor/push-notifications@6.0.4(@capacitor/core@7.4.2)':
+  '@capacitor/push-notifications@7.0.1(@capacitor/core@7.4.2)':
     dependencies:
       '@capacitor/core': 7.4.2
 
