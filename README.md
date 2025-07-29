@@ -76,6 +76,7 @@ WP_APP_PASSWORD=your_app_password
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+ADMIN_ACTION_SECRET=your_admin_action_secret
 
 # Authentication
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
