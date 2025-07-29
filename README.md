@@ -89,6 +89,10 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 \`\`\`
 
+If `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not defined,
+features that rely on Supabase (authentication, bookmarks, etc.) will be
+automatically disabled.
+
 ### Installation
 
 \`\`\`bash
