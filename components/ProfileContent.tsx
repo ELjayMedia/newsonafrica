@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import type { Session } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,7 +22,7 @@ interface ProfileContentProps {
 
 export default function ProfileContent({ initialSession }: ProfileContentProps) {
   const router = useRouter()
-  const { user, profile, loading, isAuthenticated, signOut } = useUser()
+  const { user, profile, loading, isAuthenticated, signOut } = useAuth()
   const isMobile = useMediaQuery("(max-width: 768px)")
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("profile")

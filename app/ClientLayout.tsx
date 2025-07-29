@@ -10,7 +10,7 @@ import { Header } from "@/components/Header"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import { Footer } from "@/components/Footer"
-import { UserProvider } from "@/contexts/UserContext"
+import { AuthProvider } from "@/contexts/AuthProvider"
 import { TopBannerAd } from "@/components/TopBannerAd"
 import { BelowHeaderAd } from "@/components/BelowHeaderAd"
 import { FooterBannerAd } from "@/components/FooterBannerAd"
@@ -67,7 +67,7 @@ export function ClientLayout({
             />
           }
         >
-          <UserProvider>
+          <AuthProvider>
             <ClientWrapper>
               <ScrollToTop />
               <TopBar />
@@ -112,7 +112,7 @@ export function ClientLayout({
                 </Link>
               </div>
             </ClientWrapper>
-          </UserProvider>
+          </AuthProvider>
         </ErrorBoundary>
         <GoogleAnalyticsScript />
         <Analytics />

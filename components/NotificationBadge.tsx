@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 
 export function NotificationBadge() {
-  const { user } = useUser()
+  const { user } = useAuth()
   const [count, setCount] = useState(0)
 
   useEffect(() => {

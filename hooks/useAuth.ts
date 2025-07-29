@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect } from "react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth as useAuthContext } from "@/contexts/AuthProvider"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 
 /**
@@ -20,7 +20,7 @@ export function useAuth() {
     signInWithGoogle,
     signInWithFacebook,
     requireAuth,
-  } = useUser()
+  } = useAuthContext()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()

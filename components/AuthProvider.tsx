@@ -5,12 +5,12 @@ import type React from "react"
 import { useEffect } from "react"
 import { AuthModal } from "@/components/AuthModal"
 import { useAuthModal } from "@/hooks/useAuthModal"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { isOpen, defaultTab, redirectAfterAuth, redirectTo, title, description, onSuccess, close } = useAuthModal()
-  const { user, loading } = useUser()
+  const { user, loading } = useAuth()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()

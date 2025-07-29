@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNotifications } from "@/contexts/NotificationContext"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDistanceToNow } from "date-fns"
@@ -12,7 +12,7 @@ import Image from "next/image"
 import { ClientRedirect } from "@/components/ClientRedirect"
 
 export function NotificationsContent() {
-  const { user, isAuthenticated, loading: userLoading } = useUser()
+  const { user, isAuthenticated, loading: userLoading } = useAuth()
   const {
     notifications,
     notificationCount,

@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import { Loader2, Upload, ChevronRight, CheckCircle } from "lucide-react"
 import Image from "next/image"
 
 export function OnboardingClient() {
-  const { user, profile, updateProfile, loading } = useUser()
+  const { user, profile, updateProfile, loading } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)

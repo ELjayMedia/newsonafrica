@@ -7,7 +7,7 @@ import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
 import AudioPlayer from "./AudioPlayer"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthProvider"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 import { RelatedPostsCarousel } from "./RelatedPostsCarousel"
@@ -53,7 +53,7 @@ interface ArticleViewProps {
 }
 
 export default function ArticleView({ post }: ArticleViewProps) {
-  const { isAuthenticated } = useUser()
+  const { isAuthenticated } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
