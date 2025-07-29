@@ -18,13 +18,23 @@ import { FooterBannerAd } from "@/components/FooterBannerAd"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Script from "next/script"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { ErrorFallback } from "@/components/ErrorFallback"
 import Link from "next/link"
-import { CameraFeature } from "@/components/CameraFeature" // New import
-import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
-import { NotificationFeature } from "@/components/NotificationFeature" // New import
+import dynamic from "next/dynamic"
+
+const CameraFeature = dynamic(() => import("@/components/CameraFeature"), {
+  ssr: false,
+})
+const GeolocationFeature = dynamic(
+  () => import("@/components/GeolocationFeature"),
+  { ssr: false }
+)
+const NotificationFeature = dynamic(
+  () => import("@/components/NotificationFeature"),
+  { ssr: false }
+)
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,6 +43,7 @@ export function ClientLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [showNativeFeatures, setShowNativeFeatures] = useState(false)
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       console.error("Unhandled error:", event.error)
@@ -83,12 +94,26 @@ export function ClientLayout({
                       <div className="p-1 md:p-2">{children}</div>
                       {/* New section for Capacitor features */}
                       <div className="p-4 md:p-6 mt-8 border-t border-gray-200">
-                        <h2 className="text-2xl font-bold mb-6 text-center">Capacitor Native Features</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <CameraFeature />
-                          <GeolocationFeature />
-                          <NotificationFeature />
-                        </div>
+                        <button
+                          onClick={() => setShowNativeFeatures((prev) => !prev)}
+                          className="mb-4 rounded-md bg-blue-600 px-4 py-2 text-white"
+                        >
+                          {showNativeFeatures
+                            ? "Hide Native Features"
+                            : "Show Native Features"}
+                        </button>
+                        {showNativeFeatures && (
+                          <>
+                            <h2 className="text-2xl font-bold mb-6 text-center">
+                              Capacitor Native Features
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              <CameraFeature />
+                              <GeolocationFeature />
+                              <NotificationFeature />
+                            </div>
+                          </>
+                        )}
                       </div>
                     </main>
                     <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
