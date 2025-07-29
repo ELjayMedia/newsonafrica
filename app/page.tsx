@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import { getLatestPosts } from "@/lib/api/wordpress"
+import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -73,18 +73,46 @@ export const revalidate = 600 // Revalidate every 10 minutes
 
 async function getHomePageData() {
   try {
-    const { posts } = await getLatestPosts(20)
-    return { posts: posts || [] }
+    const results = await Promise.allSettled([
+      getLatestPosts(50),
+      getCategories(),
+    ])
+
+    const latestPostsResult =
+      results[0].status === "fulfilled" ? results[0].value : { posts: [] }
+    const categoriesResult =
+      results[1].status === "fulfilled" ? results[1].value : { categories: [] }
+
+    const posts = latestPostsResult.posts || []
+    const categories = categoriesResult.categories || []
+
+    const taggedPosts = posts.filter((post) =>
+      post.tags?.nodes?.some(
+        (tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp",
+      ),
+    )
+
+    const initialData = {
+      taggedPosts,
+      featuredPosts: posts.slice(0, 6),
+      categories,
+      recentPosts: posts.slice(0, 10),
+    }
+
+    return { posts, initialData }
   } catch (error) {
     console.error("Failed to fetch posts for homepage:", error)
-    return { posts: [] }
+    return {
+      posts: [],
+      initialData: { taggedPosts: [], featuredPosts: [], categories: [], recentPosts: [] },
+    }
   }
 }
 
 export default async function Home() {
   try {
-    const { posts } = await getHomePageData()
-    return <HomeContent initialPosts={posts} />
+    const { posts, initialData } = await getHomePageData()
+    return <HomeContent initialPosts={posts} initialData={initialData} />
   } catch (error) {
     console.error("Homepage data fetch failed:", error)
     return <HomeContent initialPosts={[]} />

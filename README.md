@@ -105,6 +105,10 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
+## ⚡ Performance
+
+The homepage now prefetches posts and categories on the server and passes them to the client via `initialData`. This avoids an extra fetch on page load and speeds up the first render.
+
 ## 🧪 Testing
 
 \`\`\`bash
