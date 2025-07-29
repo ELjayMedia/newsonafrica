@@ -2,6 +2,17 @@ import { NextResponse } from "next/server"
 import { GraphQLClient } from "graphql-request"
 import jwt from "jsonwebtoken"
 
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+const JWT_SECRET = process.env.JWT_SECRET
+const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
+
+if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+  throw new Error("Missing required environment variables")
+}
+
+const client = new GraphQLClient(WORDPRESS_API_URL)
+
 const FACEBOOK_LOGIN_MUTATION = `
   mutation FacebookLogin($input: FacebookLoginInput!) {
     facebookLogin(input: $input) {
@@ -15,14 +26,9 @@ const FACEBOOK_LOGIN_MUTATION = `
   }
 `
 
-async function verifyFacebookToken(
-  accessToken: string,
-  userID: string,
-  appId: string,
-  appSecret: string,
-) {
+async function verifyFacebookToken(accessToken: string, userID: string) {
   const response = await fetch(
-    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`,
+    `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`,
   )
   const data = await response.json()
 
@@ -34,27 +40,9 @@ async function verifyFacebookToken(
 
 export async function POST(request: Request) {
   try {
-    const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
-    const JWT_SECRET = process.env.JWT_SECRET
-    const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
-    const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
-
-    if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-      console.error("Missing required environment variables")
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 },
-      )
-    }
-
     const { accessToken, userID } = await request.json()
 
-    const isValidToken = await verifyFacebookToken(
-      accessToken,
-      userID,
-      FACEBOOK_APP_ID,
-      FACEBOOK_APP_SECRET,
-    )
+    const isValidToken = await verifyFacebookToken(accessToken, userID)
     if (!isValidToken) {
       return NextResponse.json({ error: "Invalid Facebook token" }, { status: 401 })
     }
@@ -66,15 +54,10 @@ export async function POST(request: Request) {
       },
     }
 
-    const client = new GraphQLClient(WORDPRESS_API_URL)
     const data = await client.request(FACEBOOK_LOGIN_MUTATION, variables)
 
     if (data.facebookLogin && data.facebookLogin.authToken) {
-      const token = jwt.sign(
-        { userId: data.facebookLogin.user.id },
-        JWT_SECRET,
-        { expiresIn: "1d" },
-      )
+      const token = jwt.sign({ userId: data.facebookLogin.user.id }, JWT_SECRET, { expiresIn: "1d" })
 
       return NextResponse.json({ token, user: data.facebookLogin.user })
     } else {

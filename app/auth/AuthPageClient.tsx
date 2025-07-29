@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { AuthForm } from "@/components/AuthForm"
-import { useAuth } from "@/hooks/useAuth"
+import { useEnhancedAuth } from "@/contexts/EnhancedAuthContext"
 import { toast } from "@/hooks/use-toast"
 
 interface AuthPageClientProps {
@@ -16,7 +16,7 @@ interface AuthPageClientProps {
 function AuthPageContent({ searchParams }: AuthPageClientProps) {
   const router = useRouter()
   const urlSearchParams = useSearchParams()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useEnhancedAuth()
 
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -86,7 +86,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
 
       toast({
         title: "Welcome back!",
-        description: "You\'re now signed in.",
+        description: "You're now signed in.",
       })
 
       // Small delay to show the toast
@@ -106,7 +106,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
 
     toast({
       title: "Welcome!",
-      description: "You\'ve successfully signed in.",
+      description: "You've successfully signed in.",
     })
 
     setTimeout(() => {
@@ -140,7 +140,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
           <CardContent className="flex flex-col items-center justify-center p-8">
             <CheckCircle className="h-8 w-8 text-green-600 mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome back!</h2>
-            <p className="text-gray-600 text-center mb-4">You&apos;re signed in as {user.email}</p>
+            <p className="text-gray-600 text-center mb-4">You're signed in as {user.email}</p>
             <p className="text-sm text-gray-500">Redirecting...</p>
           </CardContent>
         </Card>

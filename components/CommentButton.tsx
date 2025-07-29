@@ -2,7 +2,7 @@
 
 import { MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { useToast } from "@/hooks/use-toast"
 
 interface CommentButtonProps {
@@ -11,7 +11,7 @@ interface CommentButtonProps {
 }
 
 export function CommentButton({ commentCount, className }: CommentButtonProps) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated } = useUser()
   const { toast } = useToast()
 
   const handleClick = () => {

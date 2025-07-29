@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
-import { invalidateCategoriesCache } from "@/lib/api/wordpress"
 import crypto from "crypto"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
@@ -78,7 +77,6 @@ export async function POST(request: NextRequest) {
         if (post?.slug) {
           revalidatePath(`/category/${post.slug}`)
           revalidateTag(`category-${post.id}`)
-          invalidateCategoriesCache()
 
           console.log(`Revalidated category: ${post.slug}`)
         }

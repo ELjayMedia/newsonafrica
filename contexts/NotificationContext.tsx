@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import * as NotificationService from "@/services/notification-service"
 import type { Notification, NotificationCount } from "@/lib/notification-schema"
 import { useToast } from "@/hooks/use-toast"
@@ -21,7 +21,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useUser()
   const { toast } = useToast()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationCount, setNotificationCount] = useState<NotificationCount>({ total: 0, unread: 0 })

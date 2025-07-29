@@ -66,3 +66,6 @@ In your Supabase project:
 - **"Invalid redirect URI" error**: Verify OAuth app settings match Supabase callback URL
 - **Session not persisting**: Check that callback handler is working correctly
 - **Profile not created**: Verify database permissions and RLS policies
+\`\`\`
+
+Let's also create a client-side auth state manager:

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useCallback } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { useBookmarks } from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react"
@@ -36,7 +36,7 @@ export const BookmarkButton = ({
   compact = false,
   onBookmarkChange,
 }: BookmarkButtonProps) => {
-  const { user } = useAuth()
+  const { user } = useUser()
   const { isBookmarked, addBookmark, removeBookmark, isLoading } = useBookmarks()
   const [isProcessing, setIsProcessing] = useState(false)
   const { toast } = useToast()

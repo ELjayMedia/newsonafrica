@@ -2,12 +2,12 @@
 
 import { useEffect, useRef } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 
 export function ScrollToTop() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated } = useUser()
   const prevPathRef = useRef<string | null>(null)
   const prevSearchParamsRef = useRef<URLSearchParams | null>(null)
   const isArticlePageRef = useRef<boolean>(false)

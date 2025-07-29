@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchPostsByTag } from "@/lib/wordpress-api/fetch"
+import { fetchPostsByTag } from "@/lib/wordpress-api"
 
 interface TagContentProps {
   slug: string

@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -87,7 +87,7 @@ const INTEREST_CATEGORIES = [
 ]
 
 export function ProfileEditor() {
-  const { user, profile, updateProfile } = useAuth()
+  const { user, profile, updateProfile } = useUser()
   const { toast } = useToast()
   const supabase = createClient()
 

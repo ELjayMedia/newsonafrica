@@ -1,11 +1,11 @@
 "use client"
 
-import { useAuth } from "@/contexts/AuthProvider"
+import { useUser } from "@/contexts/UserContext"
 import { getSessionExpiryTime } from "@/lib/supabase"
 import { useState, useEffect } from "react"
 
 export function SessionStatus() {
-  const { session, refreshSession } = useAuth()
+  const { session, refreshSession } = useUser()
   const [expiryTime, setExpiryTime] = useState<string>("Unknown")
   const [timeLeft, setTimeLeft] = useState<string>("Unknown")
 

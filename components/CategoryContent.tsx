@@ -1,7 +1,7 @@
 "use client"
 
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { fetchCategoryPosts } from "@/lib/wordpress-api/fetch"
+import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { useEffect } from "react"
 import { HorizontalCard } from "./HorizontalCard"

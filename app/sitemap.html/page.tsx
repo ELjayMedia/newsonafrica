@@ -1,4 +1,4 @@
-import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress-api/fetch"
+import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress-api"
 import Link from "next/link"
 import type { Metadata } from "next"
 

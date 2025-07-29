@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { fetchPendingComments, approveComment, deleteComment } from "@/lib/wordpress-api/fetch"
+import { fetchPendingComments, approveComment, deleteComment } from "@/lib/wordpress-api"
 import { Button } from "@/components/ui/button"
 
 interface Comment {

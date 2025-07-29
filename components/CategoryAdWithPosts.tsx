@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { ReviveAd } from "./ReviveAd"
-import { fetchCategoryPosts } from "@/lib/wordpress-api/fetch"
+import { fetchCategoryPosts } from "@/lib/wordpress-api"
 
 interface CategoryAdWithPostsProps {
   categorySlug: string
