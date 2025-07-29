@@ -872,7 +872,7 @@ async function executeOptimizedSearch(query: string, options: SearchOptions): Pr
  * Search via GraphQL with optimized query
  */
 async function searchViaGraphQL(query: string, options: SearchOptions): Promise<Post[]> {
-  const { categories = [], tags = [], dateFrom, dateTo } = options
+  const { categories = [], tags = [], dateFrom, dateTo, perPage = 20 } = options
 
   // Build optimized GraphQL query
   const searchQuery = `
@@ -934,7 +934,7 @@ async function searchViaGraphQL(query: string, options: SearchOptions): Promise<
 
   const variables = {
     search: query,
-    first: 100, // Get more results for better sorting
+    first: Math.min(perPage * 5, 100), // Get more results for better sorting
     categoryIn: categories.length > 0 ? categories : undefined,
     tagIn: tags.length > 0 ? tags : undefined,
     dateQuery,
