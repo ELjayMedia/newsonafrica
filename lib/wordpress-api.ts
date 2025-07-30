@@ -1,10 +1,17 @@
 import { cache } from "react"
 
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_API_URL =
+  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_API_URL =
+  process.env.WORDPRESS_REST_API_URL ||
+  "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 if (!WORDPRESS_API_URL) {
-  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+  console.error(
+    "NEXT_PUBLIC_WORDPRESS_API_URL or NEXT_PUBLIC_WORDPRESS_REST_API_URL is not set in the environment variables."
+  )
 }
 
 // Simple cache implementation

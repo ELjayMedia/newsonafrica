@@ -8,7 +8,10 @@ import {
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
-const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_GRAPHQL_URL =
+  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // TypeScript interfaces for WordPress data

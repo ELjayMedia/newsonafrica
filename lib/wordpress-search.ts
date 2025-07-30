@@ -1,4 +1,7 @@
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_REST_API_URL =
+  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
+  process.env.WORDPRESS_REST_API_URL ||
+  "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Search result interface
 export interface WordPressSearchResult {
