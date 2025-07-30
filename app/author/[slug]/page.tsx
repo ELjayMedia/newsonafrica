@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getLatestPosts } from "@/lib/api/wordpress"
-import AuthorContent from "./AuthorContent"
+import { AuthorContent } from "@/components/AuthorContent"
 
 interface AuthorPageProps {
   params: { slug: string }
@@ -143,19 +143,15 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
 // Server component that fetches data and renders the page
 export default async function AuthorPage({ params }: AuthorPageProps) {
   try {
-    // Get latest posts to find author and their articles
-    const { posts } = await getLatestPosts(200)
+    // Check if the author exists by attempting to fetch latest posts
+    const { posts } = await getLatestPosts(50)
+    const hasAuthor = posts.some((post) => post.author.node.slug === params.slug)
 
-    // Find posts by this author
-    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
-
-    if (authorPosts.length === 0) {
+    if (!hasAuthor) {
       notFound()
     }
 
-    const author = authorPosts[0].author.node
-
-    return <AuthorContent author={author} posts={authorPosts} />
+    return <AuthorContent slug={params.slug} />
   } catch (error) {
     console.error(`Error loading author page for ${params.slug}:`, error)
     throw error
