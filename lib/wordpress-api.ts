@@ -39,6 +39,8 @@ async function graphqlRequest(query: string, variables: Record<string, any> = {}
       "Content-Type": "application/json",
       Accept: "application/json",
       "User-Agent": "NewsOnAfrica/1.0",
+      Connection: "keep-alive",
+      "Accept-Encoding": "gzip",
     },
     body: JSON.stringify({
       query,
@@ -80,6 +82,8 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
           "Content-Type": "application/json",
           Accept: "application/json",
           "User-Agent": "NewsOnAfrica/1.0",
+          Connection: "keep-alive",
+          "Accept-Encoding": "gzip",
         },
         signal: controller.signal,
         next: { revalidate: 300 }, // 5 minutes

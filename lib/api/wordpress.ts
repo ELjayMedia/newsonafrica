@@ -154,6 +154,7 @@ async function graphqlRequest<T>(
       headers: {
         "Content-Type": "application/json",
         Connection: "keep-alive",
+        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify({
         query,
@@ -206,6 +207,8 @@ async function restApiFallback<T>(
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
+        Connection: "keep-alive",
+        "Accept-Encoding": "gzip",
       },
       next: { revalidate: 300 },
     })
