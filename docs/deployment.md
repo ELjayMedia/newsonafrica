@@ -20,6 +20,7 @@ Add these secrets to your GitHub repository settings:
 - `APPLE_TEAM_ID` - Apple Developer Team ID
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
 
+- `GOOGLE_SERVICES_JSON` - Firebase config for Android (base64 or raw JSON)
 #### Environment Variables
 - `NEXT_PUBLIC_WORDPRESS_API_URL`
 - `WORDPRESS_REST_API_URL`
