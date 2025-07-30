@@ -15,7 +15,7 @@ const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
 const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/auth", "/news", "/business", "/sport", "/entertainment", "/search", "/post"]
+const PUBLIC_ROUTES = ["/", "/auth", "/category", "/search", "/post"]
 
 /**
  * User context type definition
