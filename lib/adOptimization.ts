@@ -28,8 +28,8 @@ export function shouldReduceAds(path: string): boolean {
   const reducedAdPages = [
     "/about",
     "/contact",
-    "/privacy-policy",
-    "/terms-of-service",
+    "/privacy",
+    "/terms",
     "/subscription",
     "/login",
     "/register",
