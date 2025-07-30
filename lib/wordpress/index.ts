@@ -3,4 +3,9 @@ export * from "./categories"
 export * from "./search"
 export * from "./comments"
 export { client, clearApiCache, getCacheStats } from "./client"
-export * from "./users"
+export {
+  fetchAuthorData,
+  fetchAllAuthors,
+  fetchAuthors,
+  updateUserProfile,
+} from "./users"
