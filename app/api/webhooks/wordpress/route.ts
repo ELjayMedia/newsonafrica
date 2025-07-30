@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 import crypto from "crypto"
+import { fetchSinglePost } from "@/lib/wordpress"
+import { createAdminClient } from "@/lib/supabase"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -32,6 +35,8 @@ export async function POST(request: NextRequest) {
     const data = JSON.parse(body)
     const { action, post } = data
 
+    const supabase = createAdminClient(cookies())
+
     console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
       postTitle: post?.title?.rendered,
@@ -43,6 +48,33 @@ export async function POST(request: NextRequest) {
       case "post_published":
       case "post_updated":
         if (post?.slug) {
+          // Update bookmark records with fresh data
+          if (post.id) {
+            const postId = String(post.id)
+            const { data: existing } = await supabase
+              .from("bookmarks")
+              .select("id")
+              .eq("post_id", postId)
+
+            if (existing && existing.length > 0) {
+              const latest = await fetchSinglePost(post.slug)
+
+              if (latest) {
+                await supabase
+                  .from("bookmarks")
+                  .update({
+                    title: latest.title || "",
+                    slug: latest.slug || "",
+                    excerpt: latest.excerpt || "",
+                    featuredImage: latest.featuredImage
+                      ? JSON.stringify(latest.featuredImage)
+                      : null,
+                  })
+                  .eq("post_id", postId)
+              }
+            }
+          }
+
           // Revalidate the specific post page
           revalidatePath(`/post/${post.slug}`)
           revalidateTag(`post-${post.id}`)
@@ -63,6 +95,9 @@ export async function POST(request: NextRequest) {
         break
 
       case "post_deleted":
+        if (post?.id) {
+          await supabase.from("bookmarks").delete().eq("post_id", String(post.id))
+        }
         if (post?.slug) {
           // Revalidate pages that might have referenced this post
           revalidatePath(`/post/${post.slug}`)

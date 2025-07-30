@@ -1,7 +1,10 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react"
+
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { fetchSinglePost } from "@/lib/wordpress"
+
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
@@ -41,6 +44,7 @@ interface BookmarksContextType {
   searchBookmarks: (query: string) => Bookmark[]
   filterByCategory: (category: string) => Bookmark[]
   refreshBookmarks: () => Promise<void>
+  refreshBookmark: (postId: string) => Promise<void>
   exportBookmarks: () => Promise<string>
   isLoading: boolean
 }
@@ -381,6 +385,59 @@ export function BookmarksProvider({
     await refreshStats()
   }, [user, refreshStats])
 
+  const refreshBookmark = useCallback(
+    async (postId: string) => {
+      if (!user) return
+
+      const existing = getBookmark(postId)
+      if (!existing) return
+
+      setIsLoading(true)
+      try {
+        const post = await fetchSinglePost(existing.slug || postId)
+
+        if (!post) return
+
+        const updates = {
+          title: post.title || existing.title,
+          slug: post.slug || existing.slug,
+          excerpt: post.excerpt || existing.excerpt,
+          featuredImage: post.featuredImage
+            ? JSON.stringify(post.featuredImage)
+            : null,
+        }
+
+        const { data, error } = await supabase
+          .from("bookmarks")
+          .update(updates)
+          .eq("user_id", user.id)
+          .eq("post_id", postId)
+          .select()
+          .single()
+
+        if (error) {
+          throw error
+        }
+
+        if (data) {
+          setBookmarks((prev) =>
+            prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)),
+          )
+        }
+      } catch (error: any) {
+        console.error("Error refreshing bookmark:", error)
+        toast({
+          title: "Error",
+          description: `Failed to refresh bookmark: ${error.message}`,
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user, supabase, getBookmark, toast],
+  )
+
   const contextValue = useMemo(
     () => ({
       bookmarks,
@@ -399,6 +456,7 @@ export function BookmarksProvider({
       searchBookmarks,
       filterByCategory,
       refreshBookmarks,
+      refreshBookmark,
       exportBookmarks,
       isLoading,
     }),
@@ -419,6 +477,7 @@ export function BookmarksProvider({
       searchBookmarks,
       filterByCategory,
       refreshBookmarks,
+      refreshBookmark,
       exportBookmarks,
       isLoading,
     ],
