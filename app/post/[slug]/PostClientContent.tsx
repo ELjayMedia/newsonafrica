@@ -7,7 +7,14 @@ import { Clock, User } from "lucide-react"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { useEffect, useState, useRef } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { fetchSinglePost } from "@/lib/wordpress"
@@ -106,15 +113,23 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
       <article className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4">
         <ArticleJsonLd post={post} url={`https://newsonafrica.com/post/${slug}`} />
 
-        <Breadcrumbs
-          items={[
-            {
-              label: post.categories?.nodes?.[0]?.name || "Uncategorized",
-              href: `/category/${post.categories?.nodes?.[0]?.slug || "uncategorized"}`,
-            },
-            { label: post.title, href: `/post/${post.slug}` },
-          ]}
-        />
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link
+                  href={`/category/${post.categories?.nodes?.[0]?.slug || "uncategorized"}`}
+                >
+                  {post.categories?.nodes?.[0]?.name || "Uncategorized"}
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{post.title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         <header className="mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between text-gray-600 text-sm space-y-2 md:space-y-0 mb-2 md:mb-4">
