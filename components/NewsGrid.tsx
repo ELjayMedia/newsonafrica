@@ -72,8 +72,12 @@ export const NewsGrid = memo(function NewsGrid({
     }
   }, [hasMorePosts, setIsFetching])
 
-  // Early return if no posts and not showing sport category
-  if (!hasPosts && !showSportCategory) return null
+  // Show a placeholder when there are no posts and no sport category to display
+  if (!hasPosts && !showSportCategory) {
+    return (
+      <div className={`py-8 text-center ${className}`}>No posts found</div>
+    )
+  }
 
   // Extract main and secondary posts
   const mainPost = posts?.[0]
