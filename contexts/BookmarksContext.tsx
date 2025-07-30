@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
+import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
 import { useToast } from "@/hooks/use-toast"
 
 
@@ -22,12 +23,6 @@ export interface Bookmark {
   notes?: string
 }
 
-export interface BookmarkStats {
-  total: number
-  unread: number
-  categories: Record<string, number>
-
-}
 
 interface BookmarksContextType {
   bookmarks: Bookmark[]
@@ -85,28 +80,20 @@ export function BookmarksProvider({
   const initialDataLoadedRef = useRef(false)
 
 
-  const computeStats = (items: Bookmark[]): BookmarkStats => {
-    const total = items.length
-    const unread = items.filter((b) => b.read_status !== "read").length
-    const categories: Record<string, number> = {}
 
-    items.forEach((bookmark) => {
-      if (bookmark.category) {
-        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
-      }
-    })
+  // Stats returned from Supabase RPC
+  const [stats, setStats] = useState<BookmarkStats>({ total: 0, unread: 0, categories: {} })
 
-    return { total, unread, categories }
-  }
+  const fetchBookmarkStats = useCallback(async () => {
+    if (!user) return
+    try {
+      const data = await getBookmarkStats(user.id)
+      setStats(data)
+    } catch (error) {
+      console.error('Error fetching bookmark stats:', error)
+    }
+  }, [user])
 
-  const [stats, setStats] = useState<BookmarkStats>(
-    initialStats ?? computeStats(initialBookmarks),
-  )
-
-  // Recalculate stats when bookmarks change
-  useEffect(() => {
-    setStats(computeStats(bookmarks))
-  }, [bookmarks])
 
 
   // Update cache when bookmarks change
@@ -132,23 +119,19 @@ export function BookmarksProvider({
     [bookmarks], // Keep dependency for reactivity
   )
 
-  // Fetch bookmarks when user changes
+  // Fetch bookmarks and stats when user changes
   useEffect(() => {
     if (user) {
 
-      if (initialBookmarks && !initialDataLoadedRef.current) {
-        setBookmarks(initialBookmarks)
-        setLoading(false)
-        initialDataLoadedRef.current = true
+      fetchBookmarks()
+      fetchBookmarkStats()
 
-      } else {
-        fetchBookmarks()
-      }
     } else {
       setBookmarks([])
+      setStats({ total: 0, unread: 0, categories: {} })
       setLoading(false)
     }
-  }, [user])
+  }, [user, fetchBookmarkStats])
 
   const fetchBookmarks = async () => {
     try {
@@ -176,8 +159,8 @@ export function BookmarksProvider({
       }
 
 
-      const normalized = (data || []).map((b) => normalizeBookmark({ ...b }))
-      setBookmarks(normalized)
+      setBookmarks(data || [])
+      await fetchBookmarkStats()
 
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
@@ -223,7 +206,9 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => [data, ...prev])
-        refreshStats()
+
+        await fetchBookmarkStats()
+
       } finally {
         setIsLoading(false)
       }
@@ -244,7 +229,9 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
-        refreshStats()
+
+        await fetchBookmarkStats()
+
       } finally {
         setIsLoading(false)
       }
@@ -270,8 +257,10 @@ export function BookmarksProvider({
           throw error
         }
 
-        setBookmarks((prev) => (prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b))))
-        refreshStats()
+
+        setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
+        await fetchBookmarkStats()
+
       } finally {
         setIsLoading(false)
       }
@@ -292,7 +281,9 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
-        refreshStats()
+
+        await fetchBookmarkStats()
+
 
         toast({
           title: "Bookmarks removed",
