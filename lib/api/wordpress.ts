@@ -97,121 +97,18 @@ export interface WordPressCategoriesResponse {
 
 export interface WordPressSinglePostResponse {
   post: WordPressPost | null
-}
 
-// Country configuration
-export interface CountryConfig {
-  code: string
-  name: string
-  flag: string
-  currency: string
-  timezone: string
-  languages: string[]
-  apiEndpoint: string
-  restEndpoint: string
-}
-
-export const COUNTRIES: Record<string, CountryConfig> = {
-  sz: {
-    code: "sz",
-    name: "Eswatini",
-    flag: "🇸🇿",
-    currency: "SZL",
-    timezone: "Africa/Mbabane",
-    languages: ["en", "ss"],
-    apiEndpoint: "https://newsonafrica.com/sz/graphql",
-    restEndpoint: "https://newsonafrica.com/sz/wp-json/wp/v2",
-  },
-  ng: {
-    code: "ng",
-    name: "Nigeria",
-    flag: "🇳🇬",
-    currency: "NGN",
-    timezone: "Africa/Lagos",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ng/graphql",
-    restEndpoint: "https://newsonafrica.com/ng/wp-json/wp/v2",
-  },
-  ke: {
-    code: "ke",
-    name: "Kenya",
-    flag: "🇰🇪",
-    currency: "KES",
-    timezone: "Africa/Nairobi",
-    languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/ke/graphql",
-    restEndpoint: "https://newsonafrica.com/ke/wp-json/wp/v2",
-  },
-  za: {
-    code: "za",
-    name: "South Africa",
-    flag: "🇿🇦",
-    currency: "ZAR",
-    timezone: "Africa/Johannesburg",
-    languages: ["en", "af", "zu", "xh"],
-    apiEndpoint: "https://newsonafrica.com/za/graphql",
-    restEndpoint: "https://newsonafrica.com/za/wp-json/wp/v2",
-  },
-  gh: {
-    code: "gh",
-    name: "Ghana",
-    flag: "🇬🇭",
-    currency: "GHS",
-    timezone: "Africa/Accra",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/gh/graphql",
-    restEndpoint: "https://newsonafrica.com/gh/wp-json/wp/v2",
-  },
-  ug: {
-    code: "ug",
-    name: "Uganda",
-    flag: "🇺🇬",
-    currency: "UGX",
-    timezone: "Africa/Kampala",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ug/graphql",
-    restEndpoint: "https://newsonafrica.com/ug/wp-json/wp/v2",
-  },
-  tz: {
-    code: "tz",
-    name: "Tanzania",
-    flag: "🇹🇿",
-    currency: "TZS",
-    timezone: "Africa/Dar_es_Salaam",
-    languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/tz/graphql",
-    restEndpoint: "https://newsonafrica.com/tz/wp-json/wp/v2",
-  },
-  rw: {
-    code: "rw",
-    name: "Rwanda",
-    flag: "🇷🇼",
-    currency: "RWF",
-    timezone: "Africa/Kigali",
-    languages: ["en", "rw", "fr"],
-    apiEndpoint: "https://newsonafrica.com/rw/graphql",
-    restEndpoint: "https://newsonafrica.com/rw/wp-json/wp/v2",
-  },
-}
 
 // Default country to use when none is specified
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
-// Utility function to get country-specific endpoints
-function getCountryEndpoints(countryCode: string) {
-  const country = COUNTRIES[countryCode]
-  if (!country) {
-    // Fallback to default (sz)
-    return {
-      graphql: COUNTRIES.sz.apiEndpoint,
-      rest: COUNTRIES.sz.restEndpoint,
-    }
-  }
+function getCountryEndpoints() {
   return {
-    graphql: country.apiEndpoint,
-    rest: country.restEndpoint,
+    graphql: WORDPRESS_GRAPHQL_URL,
+    rest: WORDPRESS_REST_URL,
   }
 }
+
 
 // Enhanced cache with LRU-like behavior
 const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
@@ -243,7 +140,7 @@ async function graphqlRequest<T>(
   countryCode?: string,
   retries = 3,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
+  const endpoints = getCountryEndpoints()
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -296,7 +193,7 @@ async function restApiFallback<T>(
   transform: (data: any) => T,
   countryCode?: string,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
+  const endpoints = getCountryEndpoints()
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
   const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
@@ -506,34 +403,30 @@ export async function getPostBySlug(
   slug: string,
   countryCode?: string,
 ): Promise<WordPressPost | null> {
-  const countriesToTry = countryCode ? [countryCode] : Object.keys(COUNTRIES)
+  const code = countryCode || DEFAULT_COUNTRY
 
-  for (const code of countriesToTry) {
-    try {
-      const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, { slug }, code)
-      if (data.post) {
-        return data.post
-      }
-    } catch (error) {
-      console.error(`Failed to fetch post "${slug}" for ${code} via GraphQL:`, error)
+  try {
+    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, { slug }, code)
+    if (data.post) {
+      return data.post
     }
+  } catch (error) {
+    console.error(`Failed to fetch post "${slug}" via GraphQL:`, error)
+  }
 
-    try {
-      const post = await restApiFallback(
-        `posts?slug=${slug}&_embed=1`,
-        {},
-        (posts: any[]) => {
-          if (!posts || posts.length === 0) return null
-          return transformRestPostToGraphQL(posts[0])
-        },
-        code,
-      )
-      if (post) {
-        return post
-      }
-    } catch (restError) {
-      console.error(`REST fallback failed for ${code}:`, restError)
-    }
+  try {
+    return await restApiFallback(
+      `posts?slug=${slug}&_embed=1`,
+      {},
+      (posts: any[]) => {
+        if (!posts || posts.length === 0) return null
+        return transformRestPostToGraphQL(posts[0])
+      },
+      code,
+    )
+  } catch (restError) {
+    console.error("Both GraphQL and REST API failed:", restError)
+    return null
   }
 
   return null
@@ -543,7 +436,7 @@ export async function getPostBySlug(
  * Get all categories
  */
 export async function getCategories(): Promise<WordPressCategory[]> {
-  return getCategoriesForCountry(DEFAULT_COUNTRY)
+  return getCategoriesForCountry()
 }
 
 /**
@@ -817,7 +710,7 @@ export async function getRelatedPosts(
 
     try {
       // REST API fallback
-      const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
+      const endpoints = getCountryEndpoints()
 
       // Build query parameters for REST API
       const params = new URLSearchParams({
@@ -944,4 +837,4 @@ function transformRestCategoryToGraphQL(category: any): WordPressCategory {
 }
 
 // Export types for use in other files
-export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }
+export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage }
