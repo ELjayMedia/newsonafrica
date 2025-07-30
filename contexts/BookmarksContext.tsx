@@ -437,59 +437,6 @@ export function BookmarksProvider({
     [user, supabase, getBookmark, toast],
   )
 
-  const refreshBookmark = useCallback(
-    async (postId: string) => {
-      if (!user) return
-
-      const existing = getBookmark(postId)
-      if (!existing) return
-
-      setIsLoading(true)
-      try {
-        const post = await fetchSinglePost(existing.slug || postId)
-
-        if (!post) return
-
-        const updates = {
-          title: post.title || existing.title,
-          slug: post.slug || existing.slug,
-          excerpt: post.excerpt || existing.excerpt,
-          featuredImage: post.featuredImage
-            ? JSON.stringify(post.featuredImage)
-            : null,
-        }
-
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .update(updates)
-          .eq("user_id", user.id)
-          .eq("post_id", postId)
-          .select()
-          .single()
-
-        if (error) {
-          throw error
-        }
-
-        if (data) {
-          setBookmarks((prev) =>
-            prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)),
-          )
-        }
-      } catch (error: any) {
-        console.error("Error refreshing bookmark:", error)
-        toast({
-          title: "Error",
-          description: `Failed to refresh bookmark: ${error.message}`,
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [user, supabase, getBookmark, toast],
-  )
-
   const contextValue = useMemo(
     () => ({
       bookmarks,
