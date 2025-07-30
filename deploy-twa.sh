@@ -73,19 +73,10 @@ echo "📱 For testing: Install $RELEASE_DIR/app-release.apk"
 echo "🏪 For Play Store: Upload $RELEASE_DIR/app-release.aab"
 echo ""
 
-# Step 7: Optional - Deploy to Play Store
-read -p "🚀 Deploy to Play Store now? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if command -v fastlane &> /dev/null; then
-        echo "🚀 Deploying to Play Store..."
-        fastlane android internal
-        echo "✅ Deployed to internal testing track"
-    else
-        echo "❌ Fastlane not installed. Install with: gem install fastlane"
-        echo "💡 Or upload manually: $AAB_PATH"
-    fi
-fi
+
+# Step 7: Manual Play Store Deployment
+echo "🚀 Manual Play Store deployment required."
+echo "Upload the AAB file in $RELEASE_DIR to the Play Console."
 
 echo ""
 echo "📋 Next steps:"
