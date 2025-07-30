@@ -10,8 +10,8 @@ jobs:
     env:
       FACEBOOK_CLIENT_ID: ${{ secrets.FACEBOOK_CLIENT_ID }}
       FACEBOOK_CLIENT_SECRET: ${{ secrets.FACEBOOK_CLIENT_SECRET }}
-      NEXT_PUBLIC_WORDPRESS_API_URL: ${{ secrets.NEXT_PUBLIC_WORDPRESS_API_URL }}
-      NEXT_PUBLIC_WORDPRESS_REST_API_URL: ${{ secrets.NEXT_PUBLIC_WORDPRESS_REST_API_URL }}
+      WORDPRESS_GRAPHQL_URL: ${{ secrets.WORDPRESS_GRAPHQL_URL }}
+      WORDPRESS_REST_URL: ${{ secrets.WORDPRESS_REST_URL }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
       - uses: actions/checkout@v3

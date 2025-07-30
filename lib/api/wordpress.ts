@@ -9,10 +9,11 @@ import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpr
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
 const WORDPRESS_GRAPHQL_URL =
-  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  process.env.WORDPRESS_GRAPHQL_URL ||
   "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_REST_URL =
+  process.env.WORDPRESS_REST_URL ||
+  "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -119,8 +120,19 @@ const categoryCache = new Map<string, { data: any; timestamp: number; hits: numb
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const MAX_CACHE_SIZE = 50
 
+// Remove expired entries
+function cleanupExpiredEntries() {
+  const now = Date.now()
+  for (const [key, entry] of categoryCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      categoryCache.delete(key)
+    }
+  }
+}
+
 // Cache cleanup function
 function cleanupCache() {
+  cleanupExpiredEntries()
   if (categoryCache.size <= MAX_CACHE_SIZE) return
 
   // Sort by hits and timestamp, remove least used entries
@@ -136,6 +148,8 @@ function cleanupCache() {
     categoryCache.delete(entries[i][0])
   }
 }
+
+setInterval(cleanupCache, 60000)
 
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
@@ -488,15 +502,15 @@ export async function getPostsByCategory(
       result = await getPostsByCategoryForCountry(countryCode, fallbackSlug, limit, after || null)
     }
 
+    // Cleanup before caching new data
+    cleanupCache()
+
     // Cache the result
     categoryCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
       hits: 1,
     })
-
-    // Cleanup cache if needed
-    cleanupCache()
 
     return result
   } catch (error) {
@@ -779,6 +793,16 @@ export function getRelatedPostsCacheStats() {
  */
 export function clearRelatedPostsCache(): void {
   relatedPostsCache.clear()
+}
+
+// Category cache utilities
+export function getCategoryCacheSize(): number {
+  cleanupExpiredEntries()
+  return categoryCache.size
+}
+
+export function clearCategoryCache(): void {
+  categoryCache.clear()
 }
 
 // Transform functions for REST API data

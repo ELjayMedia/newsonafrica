@@ -1,4 +1,11 @@
 import { cache } from "react"
+import {
+  WORDPRESS_API_URL,
+  WORDPRESS_REST_API_URL,
+  graphqlRequest,
+  fetchFromRestApi,
+  fetchWithFallback
+} from "./wordpress/client"
 
 const WORDPRESS_API_URL =
   process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
@@ -169,6 +176,7 @@ const fetchWithFallback = async (
     }
   }
 }
+
 
 /**
  * Fetches recent posts
@@ -1220,19 +1228,6 @@ export const fetchCategories = fetchAllCategories
 export const fetchTags = fetchAllTags
 export const fetchAuthors = fetchAllAuthors
 
-// Clear cache function
-export const clearApiCache = () => {
-  apiCache.clear()
-}
-
-// Get cache stats
-export const getCacheStats = () => {
-  return {
-    size: apiCache.size,
-    keys: Array.from(apiCache.keys()),
-  }
-}
-
 /**
  * Fetch author data by slug
  */
@@ -1332,7 +1327,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
  */
 export const deleteComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -1385,7 +1380,7 @@ export const fetchPendingComments = async () => {
  */
 export const approveComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1627,21 +1622,14 @@ export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
   }
 }
 
-/**
- * WordPress GraphQL client instance
- */
-export const client = {
-  query: graphqlRequest,
-  endpoint: WORDPRESS_API_URL,
-  restEndpoint: WORDPRESS_REST_API_URL,
-}
+
 
 /**
  * Update user profile
  */
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/users/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1702,3 +1690,5 @@ export interface Post {
   }
   content?: string
 }
+
+export { client, clearApiCache, getCacheStats } from "./wordpress/client"
