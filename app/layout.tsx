@@ -102,11 +102,11 @@ export default function RootLayout({
                   </div>
                 </div>
                 <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-                  <Link href="/privacy-policy" className="hover:underline">
+                  <Link href="/privacy" className="hover:underline">
                     Privacy Policy
                   </Link>
                   {" | "}
-                  <Link href="/terms-of-service" className="hover:underline">
+                  <Link href="/terms" className="hover:underline">
                     Terms of Service
                   </Link>
                   {" | "}

@@ -126,11 +126,11 @@ export function ClientLayout({
               <BottomNavigation />
               <Footer />
               <div className="text-center text-sm text-gray-500 mt-4">
-                <Link href="/privacy-policy" className="hover:underline">
+                <Link href="/privacy" className="hover:underline">
                   Privacy Policy
                 </Link>
                 {" | "}
-                <Link href="/terms-of-service" className="hover:underline">
+                <Link href="/terms" className="hover:underline">
                   Terms of Service
                 </Link>
                 {" | "}
