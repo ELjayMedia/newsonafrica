@@ -5,7 +5,9 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/getBookmarkStats"
+
+import { normalizeBookmark } from "@/utils/normalizeBookmark"
+
 
 export interface Bookmark {
   id: string
@@ -169,9 +171,8 @@ export function BookmarksProvider({
       }
 
 
-      const items = data || []
-      setBookmarks(items)
-      setStats(computeStats(items))
+      const normalized = (data || []).map((b) => normalizeBookmark({ ...b }))
+      setBookmarks(normalized)
 
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
