@@ -5,7 +5,6 @@ import { setCacheHeaders } from "@/lib/api-utils"
 // WordPress API configuration
 const WORDPRESS_API_URL =
   process.env.WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Rate limiting
