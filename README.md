@@ -10,6 +10,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 - **Fast loading times**: Optimized assets and code splitting for performance
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
 - **Personalization**: User profiles, bookmarks, and preferences
+- **Server-side bookmark stats**: Bookmark statistics are computed via a Supabase RPC
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
@@ -114,9 +115,6 @@ The homepage now prefetches posts and categories on the server and passes them t
 \`\`\`bash
 # Run unit tests
 npm test
-
-# Run end-to-end tests
-npm run test:e2e
 
 # Run linting
 npm run lint

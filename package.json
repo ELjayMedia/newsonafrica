@@ -6,7 +6,10 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+
+    "test": "node tests/bookmarks.test.js"
+
   },
   "dependencies": {
     "@apollo/client": "latest",

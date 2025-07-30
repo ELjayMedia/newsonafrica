@@ -1,7 +1,12 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { useBookmarks } from "@/contexts/BookmarksContext"
+import {
+  useBookmarks,
+  BookmarksProvider,
+  type Bookmark,
+  type BookmarkStats,
+} from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -32,10 +37,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+interface BookmarksContentProps {
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
 
-export default function BookmarksContent() {
+function BookmarksContentInner() {
   const {
     bookmarks,
     loading,
@@ -430,4 +440,22 @@ export default function BookmarksContent() {
       </Dialog>
     </div>
   )
+}
+
+export default function BookmarksContent({
+  initialBookmarks,
+  initialStats,
+}: BookmarksContentProps) {
+  if (initialBookmarks || initialStats) {
+    return (
+      <BookmarksProvider
+        initialBookmarks={initialBookmarks}
+        initialStats={initialStats}
+      >
+        <BookmarksContentInner />
+      </BookmarksProvider>
+    )
+  }
+
+  return <BookmarksContentInner />
 }

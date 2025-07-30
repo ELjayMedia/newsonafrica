@@ -1,13 +1,15 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+
 import { normalizeBookmark } from "@/utils/normalizeBookmark"
 
-interface Bookmark {
+
+export interface Bookmark {
   id: string
   user_id: string
   post_id: string
@@ -22,10 +24,12 @@ interface Bookmark {
   notes?: string
 }
 
-interface BookmarkStats {
+
+export interface BookmarkStats {
   total: number
   unread: number
   categories: Record<string, number>
+
 }
 
 interface BookmarksContextType {
@@ -59,29 +63,49 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: React.ReactNode }) {
+export interface BookmarksProviderProps {
+  children: React.ReactNode
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
+export function BookmarksProvider({
+  children,
+  initialBookmarks = [],
+  initialStats,
+}: BookmarksProviderProps) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  const [loading, setLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
+  const [loading, setLoading] = useState(initialBookmarks.length === 0)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
-  // Calculate stats
-  const stats = useMemo((): BookmarkStats => {
-    const total = bookmarks.length
-    const unread = bookmarks.filter((b) => b.read_status !== "read").length
+
+  const computeStats = (items: Bookmark[]): BookmarkStats => {
+    const total = items.length
+    const unread = items.filter((b) => b.read_status !== "read").length
     const categories: Record<string, number> = {}
 
-    bookmarks.forEach((bookmark) => {
+    items.forEach((bookmark) => {
       if (bookmark.category) {
         categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
       }
     })
 
     return { total, unread, categories }
+  }
+
+  const [stats, setStats] = useState<BookmarkStats>(
+    initialStats ?? computeStats(initialBookmarks),
+  )
+
+  // Recalculate stats when bookmarks change
+  useEffect(() => {
+    setStats(computeStats(bookmarks))
   }, [bookmarks])
+
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -109,7 +133,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-      fetchBookmarks()
+      if (initialBookmarks.length > 0) {
+        // We already have initial data; skip fetch
+        setLoading(false)
+      } else {
+        fetchBookmarks()
+      }
     } else {
       setBookmarks([])
       setLoading(false)
@@ -141,8 +170,10 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+
       const normalized = (data || []).map((b) => normalizeBookmark({ ...b }))
       setBookmarks(normalized)
+
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -187,11 +218,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => [data, ...prev])
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase, isBookmarked],
+    [user, supabase, isBookmarked, refreshStats],
   )
 
   const removeBookmark = useCallback(
@@ -207,11 +239,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase],
+    [user, supabase, refreshStats],
   )
 
   const updateBookmark = useCallback(
@@ -232,12 +265,13 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           throw error
         }
 
-        setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
+        setBookmarks((prev) => (prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b))))
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase],
+    [user, supabase, refreshStats],
   )
 
   const bulkRemoveBookmarks = useCallback(
@@ -253,6 +287,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
+        refreshStats()
 
         toast({
           title: "Bookmarks removed",
@@ -268,7 +303,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [user, supabase, toast],
+    [user, supabase, toast, refreshStats],
   )
 
   const markAsRead = useCallback(
@@ -347,7 +382,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-  }, [user])
+    await refreshStats()
+  }, [user, refreshStats])
 
   const contextValue = useMemo(
     () => ({
