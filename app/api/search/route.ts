@@ -3,9 +3,8 @@ import { optimizedWordPressSearch } from "@/lib/wordpress"
 import { setCacheHeaders } from "@/lib/api-utils"
 
 // WordPress API configuration
-const WORDPRESS_API_URL =
-  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-  process.env.WORDPRESS_REST_API_URL ||
+const WORDPRESS_REST_URL =
+  process.env.WORDPRESS_REST_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Rate limiting
@@ -61,7 +60,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       status: "publish",
     })
 
-    const url = `${WORDPRESS_API_URL}/posts?${searchParams}`
+    const url = `${WORDPRESS_REST_URL}/posts?${searchParams}`
 
     const response = await fetch(url, {
       headers: {
@@ -97,7 +96,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
 async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
+      `${WORDPRESS_REST_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
       {
         headers: {
           "Content-Type": "application/json",

@@ -8,7 +8,6 @@ import {
 } from "./wordpress/client"
 
 
-
 /**
  * Fetches recent posts
  */
@@ -1158,7 +1157,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
  */
 export const deleteComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -1211,7 +1210,7 @@ export const fetchPendingComments = async () => {
  */
 export const approveComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1454,12 +1453,13 @@ export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
 }
 
 
+
 /**
  * Update user profile
  */
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/users/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

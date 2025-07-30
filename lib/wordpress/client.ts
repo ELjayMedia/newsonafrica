@@ -1,16 +1,15 @@
 import { cache } from "react"
 
-export const WORDPRESS_API_URL =
-  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+export const WORDPRESS_GRAPHQL_URL =
+  process.env.WORDPRESS_GRAPHQL_URL ||
   "https://newsonafrica.com/sz/graphql"
-export const WORDPRESS_REST_API_URL =
-  process.env.WORDPRESS_REST_API_URL ||
+export const WORDPRESS_REST_URL =
+  process.env.WORDPRESS_REST_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
-if (!WORDPRESS_API_URL) {
+if (!WORDPRESS_GRAPHQL_URL) {
   console.error(
-    "NEXT_PUBLIC_WORDPRESS_API_URL or NEXT_PUBLIC_WORDPRESS_REST_API_URL is not set in the environment variables."
+    "WORDPRESS_GRAPHQL_URL is not set in the environment variables."
   )
 }
 
@@ -31,7 +30,7 @@ const isServer = () => typeof window === "undefined"
 
 /** Simple GraphQL request function with proper headers */
 export async function graphqlRequest(query: string, variables: Record<string, any> = {}) {
-  const response = await fetch(WORDPRESS_API_URL, {
+  const response = await fetch(WORDPRESS_GRAPHQL_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -63,7 +62,7 @@ export async function fetchFromRestApi(endpoint: string, params: Record<string, 
     Object.entries(params).map(([key, value]) => [key, String(value)])
   ).toString()
 
-  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${WORDPRESS_REST_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   const MAX_RETRIES = 3
   let lastError
@@ -143,8 +142,8 @@ export async function fetchWithFallback(
 
 export const client = {
   query: graphqlRequest,
-  endpoint: WORDPRESS_API_URL,
-  restEndpoint: WORDPRESS_REST_API_URL,
+  endpoint: WORDPRESS_GRAPHQL_URL,
+  restEndpoint: WORDPRESS_REST_URL,
 }
 
 export const clearApiCache = () => {
