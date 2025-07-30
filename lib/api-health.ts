@@ -19,7 +19,10 @@ export async function checkGraphQLHealth(): Promise<boolean> {
   }
 
   try {
-    const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+    const WORDPRESS_API_URL =
+      process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
+      process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+      "https://newsonafrica.com/sz/graphql"
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout

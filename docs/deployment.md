@@ -23,6 +23,7 @@ Add these secrets to your GitHub repository settings:
 - `GOOGLE_SERVICES_JSON` - Firebase config for Android (base64 or raw JSON)
 #### Environment Variables
 - `NEXT_PUBLIC_WORDPRESS_API_URL`
+- `NEXT_PUBLIC_WORDPRESS_REST_API_URL`
 - `WORDPRESS_REST_API_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
