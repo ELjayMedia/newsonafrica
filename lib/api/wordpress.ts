@@ -97,6 +97,7 @@ export interface WordPressCategoriesResponse {
 
 export interface WordPressSinglePostResponse {
   post: WordPressPost | null
+}
 
 
 // Default country to use when none is specified
