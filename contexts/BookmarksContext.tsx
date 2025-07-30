@@ -6,7 +6,7 @@ import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
-interface Bookmark {
+export interface Bookmark {
   id: string
   user_id: string
   post_id: string
@@ -21,7 +21,7 @@ interface Bookmark {
   notes?: string
 }
 
-interface BookmarkStats {
+export interface BookmarkStats {
   total: number
   unread: number
   categories: Record<string, number>
@@ -58,28 +58,46 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: React.ReactNode }) {
+export interface BookmarksProviderProps {
+  children: React.ReactNode
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
+export function BookmarksProvider({
+  children,
+  initialBookmarks = [],
+  initialStats,
+}: BookmarksProviderProps) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  const [loading, setLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
+  const [loading, setLoading] = useState(initialBookmarks.length === 0)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
-  // Calculate stats
-  const stats = useMemo((): BookmarkStats => {
-    const total = bookmarks.length
-    const unread = bookmarks.filter((b) => b.read_status !== "read").length
+  const computeStats = (items: Bookmark[]): BookmarkStats => {
+    const total = items.length
+    const unread = items.filter((b) => b.read_status !== "read").length
     const categories: Record<string, number> = {}
 
-    bookmarks.forEach((bookmark) => {
+    items.forEach((bookmark) => {
       if (bookmark.category) {
         categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
       }
     })
 
     return { total, unread, categories }
+  }
+
+  const [stats, setStats] = useState<BookmarkStats>(
+    initialStats ?? computeStats(initialBookmarks),
+  )
+
+  // Recalculate stats when bookmarks change
+  useEffect(() => {
+    setStats(computeStats(bookmarks))
   }, [bookmarks])
 
   // Update cache when bookmarks change
@@ -108,7 +126,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-      fetchBookmarks()
+      if (initialBookmarks.length > 0) {
+        // We already have initial data; skip fetch
+        setLoading(false)
+      } else {
+        fetchBookmarks()
+      }
     } else {
       setBookmarks([])
       setLoading(false)
@@ -140,7 +163,9 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setBookmarks(data || [])
+      const items = data || []
+      setBookmarks(items)
+      setStats(computeStats(items))
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
