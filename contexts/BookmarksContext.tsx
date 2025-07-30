@@ -23,6 +23,16 @@ interface Bookmark {
 }
 
 
+export function normalizeBookmarks(data: any[] = []): Bookmark[] {
+  return data.map((bookmark) => ({
+    ...bookmark,
+    featuredImage:
+      typeof bookmark.featuredImage === "string"
+        ? JSON.parse(bookmark.featuredImage)
+        : bookmark.featuredImage,
+  })) as Bookmark[]
+}
+
 interface BookmarksContextType {
   bookmarks: Bookmark[]
   loading: boolean
@@ -138,14 +148,11 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setBookmarks(data || [])
 
-      try {
-        const statsData = await getBookmarkStats(user.id, supabase)
-        setStats(statsData)
-      } catch (statsError) {
-        console.error("Error fetching bookmark stats:", statsError)
-      }
+      // Normalize featuredImage to always be an object
+      const normalized = normalizeBookmarks(data || [])
+      setBookmarks(normalized)
+
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -176,7 +183,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featuredImage: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
+          featuredImage: post.featuredImage || null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
