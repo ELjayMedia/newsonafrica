@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { optimizedWordPressSearch } from "@/lib/wordpress-api"
+import { optimizedWordPressSearch } from "@/lib/wordpress"
 import { setCacheHeaders } from "@/lib/api-utils"
 
 // WordPress API configuration

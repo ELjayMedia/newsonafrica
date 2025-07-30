@@ -10,7 +10,7 @@ import {
   fetchAllTags,
   searchPosts,
   fetchComments,
-} from "../lib/wordpress-api"
+} from "../lib/wordpress"
 import { createClient } from "@supabase/supabase-js"
 import DataLoader from "dataloader"
 
