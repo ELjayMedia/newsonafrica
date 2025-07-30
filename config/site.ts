@@ -37,7 +37,6 @@ export const siteConfig = {
   wordpress: {
     apiUrl:
       process.env.WORDPRESS_REST_API_URL ||
-      process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
       "https://newsonafrica.com/sz/wp-json/wp/v2",
     authToken: process.env.WORDPRESS_AUTH_TOKEN,
     username: process.env.WP_APP_USERNAME,
