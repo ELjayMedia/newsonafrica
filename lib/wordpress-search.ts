@@ -1,6 +1,5 @@
-const WORDPRESS_REST_API_URL =
-  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-  process.env.WORDPRESS_REST_API_URL ||
+const WORDPRESS_REST_URL =
+  process.env.WORDPRESS_REST_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Search result interface
@@ -114,7 +113,7 @@ export async function searchWordPressPosts(
       searchParams.append("author", author.toString())
     }
 
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -174,7 +173,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
   try {
     // Search for posts to extract suggestions
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${WORDPRESS_REST_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -224,7 +223,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 export async function searchCategories(query: string): Promise<any[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${WORDPRESS_REST_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -245,7 +244,7 @@ export async function searchCategories(query: string): Promise<any[]> {
  */
 export async function searchTags(query: string): Promise<any[]> {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
       headers: {
         "Content-Type": "application/json",
       },
