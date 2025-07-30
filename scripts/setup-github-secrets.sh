@@ -39,18 +39,27 @@ if [ ! -f "android.keystore" ]; then
     exit 1
 fi
 
+# Check if google-services.json exists
+if [ ! -f "google-services.json" ]; then
+    echo -e "${RED}❌ google-services.json not found${NC}"
+    echo -e "${YELLOW}💡 Copy google-services.json.example and add your Firebase config${NC}"
+    exit 1
+fi
+
 # Encode keystore to base64
 echo -e "${YELLOW}🔄 Encoding keystore to base64...${NC}"
 KEYSTORE_BASE64=$(base64 -w 0 android.keystore)
 
 # Read service account JSON
 SERVICE_ACCOUNT_JSON=$(cat google-play-service-account.json)
+GOOGLE_SERVICES_JSON=$(cat google-services.json)
 
 # Set GitHub secrets
 echo -e "${YELLOW}🔐 Setting GitHub repository secrets...${NC}"
 
 gh secret set KEYSTORE_BASE64 --body "$KEYSTORE_BASE64"
 gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON --body "$SERVICE_ACCOUNT_JSON"
+gh secret set GOOGLE_SERVICES_JSON --body "$GOOGLE_SERVICES_JSON"
 
 # Prompt for other secrets
 echo -e "${YELLOW}🔑 Please enter your keystore details:${NC}"
@@ -73,5 +82,6 @@ echo "- KEYSTORE_PASSWORD"
 echo "- KEY_ALIAS"
 echo "- KEY_PASSWORD"
 echo "- GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+echo "- GOOGLE_SERVICES_JSON"
 echo ""
 echo -e "${GREEN}🚀 Your repository is now ready for automated deployments!${NC}"
