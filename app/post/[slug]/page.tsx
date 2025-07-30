@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
-import { PostClientContent } from "@/components/PostClientContent"
+import { PostClientContent } from "./PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
 export const revalidate = 300 // Revalidate every 5 minutes
