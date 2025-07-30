@@ -1,1 +1,6 @@
-export { fetchAuthorData, updateUserProfile } from "../wordpress-api";
+export {
+  fetchAuthorData,
+  fetchAllAuthors,
+  fetchAuthors,
+  updateUserProfile,
+} from "../wordpress-api";
