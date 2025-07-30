@@ -48,6 +48,7 @@ Supabase provides authentication and database services:
 
 - **Auth Providers**: Email/password, Google, Facebook
 - **PostgreSQL Database**: Stores user profiles, bookmarks, comments
+- **RPC Functions**: Server-side routines like `get_bookmark_stats` provide aggregate data
 - **Row-Level Security**: For data protection
 - **Real-time Subscriptions**: For live updates
 

@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/getBookmarkStats"
 
 export interface Bookmark {
   id: string
@@ -21,10 +22,12 @@ export interface Bookmark {
   notes?: string
 }
 
+
 export interface BookmarkStats {
   total: number
   unread: number
   categories: Record<string, number>
+
 }
 
 interface BookmarksContextType {
@@ -77,6 +80,7 @@ export function BookmarksProvider({
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
+
   const computeStats = (items: Bookmark[]): BookmarkStats => {
     const total = items.length
     const unread = items.filter((b) => b.read_status !== "read").length
@@ -99,6 +103,7 @@ export function BookmarksProvider({
   useEffect(() => {
     setStats(computeStats(bookmarks))
   }, [bookmarks])
+
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -163,9 +168,11 @@ export function BookmarksProvider({
         return
       }
 
+
       const items = data || []
       setBookmarks(items)
       setStats(computeStats(items))
+
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -196,7 +203,7 @@ export function BookmarksProvider({
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featuredImage: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
+          featuredImage: post.featuredImage || null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
@@ -210,11 +217,12 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => [data, ...prev])
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase, isBookmarked],
+    [user, supabase, isBookmarked, refreshStats],
   )
 
   const removeBookmark = useCallback(
@@ -230,11 +238,12 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase],
+    [user, supabase, refreshStats],
   )
 
   const updateBookmark = useCallback(
@@ -255,12 +264,13 @@ export function BookmarksProvider({
           throw error
         }
 
-        setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
+        setBookmarks((prev) => (prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b))))
+        refreshStats()
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase],
+    [user, supabase, refreshStats],
   )
 
   const bulkRemoveBookmarks = useCallback(
@@ -276,6 +286,7 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
+        refreshStats()
 
         toast({
           title: "Bookmarks removed",
@@ -291,7 +302,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, toast],
+    [user, supabase, toast, refreshStats],
   )
 
   const markAsRead = useCallback(
@@ -370,7 +381,8 @@ export function BookmarksProvider({
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-  }, [user])
+    await refreshStats()
+  }, [user, refreshStats])
 
   const contextValue = useMemo(
     () => ({
