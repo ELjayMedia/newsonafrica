@@ -216,7 +216,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, isBookmarked, refreshStats],
+    [user, supabase, isBookmarked, fetchBookmarkStats],
   )
 
   const removeBookmark = useCallback(
@@ -239,7 +239,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, refreshStats],
+    [user, supabase, fetchBookmarkStats],
   )
 
   const updateBookmark = useCallback(
@@ -268,7 +268,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, refreshStats],
+    [user, supabase, fetchBookmarkStats],
   )
 
   const bulkRemoveBookmarks = useCallback(
@@ -302,7 +302,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, toast, refreshStats],
+    [user, supabase, toast, fetchBookmarkStats],
   )
 
   const markAsRead = useCallback(
@@ -381,8 +381,8 @@ export function BookmarksProvider({
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-    await refreshStats()
-  }, [user, refreshStats])
+    await fetchBookmarkStats()
+  }, [user, fetchBookmarkStats])
 
   const refreshBookmark = useCallback(
     async (postId: string) => {
