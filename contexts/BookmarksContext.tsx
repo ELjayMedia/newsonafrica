@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/getBookmarkStats"
 
-interface Bookmark {
+export interface Bookmark {
   id: string
   user_id: string
   post_id: string
@@ -23,14 +23,11 @@ interface Bookmark {
 }
 
 
-export function normalizeBookmarks(data: any[] = []): Bookmark[] {
-  return data.map((bookmark) => ({
-    ...bookmark,
-    featuredImage:
-      typeof bookmark.featuredImage === "string"
-        ? JSON.parse(bookmark.featuredImage)
-        : bookmark.featuredImage,
-  })) as Bookmark[]
+export interface BookmarkStats {
+  total: number
+  unread: number
+  categories: Record<string, number>
+
 }
 
 interface BookmarksContextType {
@@ -64,31 +61,49 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: React.ReactNode }) {
+export interface BookmarksProviderProps {
+  children: React.ReactNode
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
+export function BookmarksProvider({
+  children,
+  initialBookmarks = [],
+  initialStats,
+}: BookmarksProviderProps) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  const [loading, setLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
+  const [loading, setLoading] = useState(initialBookmarks.length === 0)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
-  // Bookmark statistics returned from the server
-  const [stats, setStats] = useState<BookmarkStats>({
-    total: 0,
-    unread: 0,
-    categories: {},
-  })
 
-  const refreshStats = useCallback(async () => {
-    if (!user) return
-    try {
-      const statsData = await getBookmarkStats(user.id, supabase)
-      setStats(statsData)
-    } catch (error) {
-      console.error("Error fetching bookmark stats:", error)
-    }
-  }, [user, supabase])
+  const computeStats = (items: Bookmark[]): BookmarkStats => {
+    const total = items.length
+    const unread = items.filter((b) => b.read_status !== "read").length
+    const categories: Record<string, number> = {}
+
+    items.forEach((bookmark) => {
+      if (bookmark.category) {
+        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
+      }
+    })
+
+    return { total, unread, categories }
+  }
+
+  const [stats, setStats] = useState<BookmarkStats>(
+    initialStats ?? computeStats(initialBookmarks),
+  )
+
+  // Recalculate stats when bookmarks change
+  useEffect(() => {
+    setStats(computeStats(bookmarks))
+  }, [bookmarks])
+
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -116,7 +131,12 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-      fetchBookmarks()
+      if (initialBookmarks.length > 0) {
+        // We already have initial data; skip fetch
+        setLoading(false)
+      } else {
+        fetchBookmarks()
+      }
     } else {
       setBookmarks([])
       setLoading(false)
@@ -149,9 +169,9 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       }
 
 
-      // Normalize featuredImage to always be an object
-      const normalized = normalizeBookmarks(data || [])
-      setBookmarks(normalized)
+      const items = data || []
+      setBookmarks(items)
+      setStats(computeStats(items))
 
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
