@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect, u
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { normalizeBookmark } from "@/utils/normalizeBookmark"
 
 interface Bookmark {
   id: string
@@ -140,7 +141,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setBookmarks(data || [])
+      const normalized = (data || []).map((b) => normalizeBookmark({ ...b }))
+      setBookmarks(normalized)
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -171,7 +173,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featuredImage: post.featuredImage ? JSON.stringify(post.featuredImage) : null,
+          featuredImage: post.featuredImage || null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
