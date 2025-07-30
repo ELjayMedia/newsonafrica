@@ -194,6 +194,9 @@ export const COUNTRIES: Record<string, CountryConfig> = {
   },
 }
 
+// Default country to use when none is specified
+const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+
 // Utility function to get country-specific endpoints
 function getCountryEndpoints(countryCode: string) {
   const country = COUNTRIES[countryCode]
@@ -240,7 +243,7 @@ async function graphqlRequest<T>(
   countryCode?: string,
   retries = 3,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || "sz")
+  const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -293,7 +296,7 @@ async function restApiFallback<T>(
   transform: (data: any) => T,
   countryCode?: string,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || "sz")
+  const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
   const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
@@ -468,17 +471,29 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
 /**
  * Get the latest posts from WordPress
  */
-export async function getLatestPosts(limit = 20, after?: string) {
+export async function getLatestPosts(
+  limit = 20,
+  after?: string,
+  countryCode: string = DEFAULT_COUNTRY,
+) {
   try {
-    const posts = await fetchRecentPosts(limit)
+    const { posts, hasNextPage, endCursor } = await getLatestPostsForCountry(
+      countryCode,
+      limit,
+      after,
+    )
     return {
-      posts: posts || [],
+      posts,
+      hasNextPage,
+      endCursor,
       error: null,
     }
   } catch (error) {
     console.error("Failed to fetch latest posts:", error)
     return {
       posts: [],
+      hasNextPage: false,
+      endCursor: null,
       error: error instanceof Error ? error.message : "Failed to fetch posts",
     }
   }
@@ -487,33 +502,48 @@ export async function getLatestPosts(limit = 20, after?: string) {
 /**
  * Get a single post by slug
  */
-export async function getPostBySlug(slug: string): Promise<WordPressPost | null> {
-  try {
-    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, {
-      slug,
-    })
+export async function getPostBySlug(
+  slug: string,
+  countryCode?: string,
+): Promise<WordPressPost | null> {
+  const countriesToTry = countryCode ? [countryCode] : Object.keys(COUNTRIES)
 
-    return data.post
-  } catch (error) {
-    console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
+  for (const code of countriesToTry) {
+    try {
+      const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, { slug }, code)
+      if (data.post) {
+        return data.post
+      }
+    } catch (error) {
+      console.error(`Failed to fetch post "${slug}" for ${code} via GraphQL:`, error)
+    }
 
     try {
-      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
-        if (!posts || posts.length === 0) return null
-        return transformRestPostToGraphQL(posts[0])
-      })
+      const post = await restApiFallback(
+        `posts?slug=${slug}&_embed=1`,
+        {},
+        (posts: any[]) => {
+          if (!posts || posts.length === 0) return null
+          return transformRestPostToGraphQL(posts[0])
+        },
+        code,
+      )
+      if (post) {
+        return post
+      }
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return null
+      console.error(`REST fallback failed for ${code}:`, restError)
     }
   }
+
+  return null
 }
 
 /**
  * Get all categories
  */
 export async function getCategories(): Promise<WordPressCategory[]> {
-  return getCategoriesForCountry("sz")
+  return getCategoriesForCountry(DEFAULT_COUNTRY)
 }
 
 /**
@@ -523,6 +553,7 @@ export async function getPostsByCategory(
   categorySlug: string,
   limit = 20,
   after?: string | null,
+  countryCode: string = DEFAULT_COUNTRY,
 ): Promise<{
   category: WordPressCategory | null
   posts: WordPressPost[]
@@ -550,11 +581,11 @@ export async function getPostsByCategory(
 
   try {
     // If not in cache, fetch from API
-    let result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
+    let result = await getPostsByCategoryForCountry(countryCode, categorySlug, limit, after || null)
 
     // Retry with fallback slug if no category returned
     if (!result.category && fallbackSlug) {
-      result = await getPostsByCategoryForCountry("sz", fallbackSlug, limit, after || null)
+      result = await getPostsByCategoryForCountry(countryCode, fallbackSlug, limit, after || null)
     }
 
     // Cache the result
@@ -786,7 +817,7 @@ export async function getRelatedPosts(
 
     try {
       // REST API fallback
-      const endpoints = getCountryEndpoints(countryCode || "sz")
+      const endpoints = getCountryEndpoints(countryCode || DEFAULT_COUNTRY)
 
       // Build query parameters for REST API
       const params = new URLSearchParams({
