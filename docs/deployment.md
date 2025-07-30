@@ -35,6 +35,10 @@ Add these secrets to your GitHub repository settings:
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
 
+The project generates `robots.txt` using the route
+`app/robots.txt/route.ts`. Set `NEXT_PUBLIC_SITE_URL` so sitemap links in this
+file use your production domain.
+
 ### Workflow Overview
 
 1. **Web Deploy**: Builds and deploys the Next.js application to Vercel

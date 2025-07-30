@@ -86,6 +86,9 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 GOOGLE_SERVICES_JSON=your_firebase_config_json
 \`\`\`
+The application serves `robots.txt` from a Next.js route at
+`app/robots.txt/route.ts`. Ensure `NEXT_PUBLIC_SITE_URL` is configured so the
+generated sitemap URLs use the correct domain.
 Copy `google-services.json.example` to `google-services.json` and fill in your Firebase credentials. Keep this file out of version control. During automated deployments, decode the `GOOGLE_SERVICES_JSON` secret and write it to `google-services.json`.
 
 ### Installation
