@@ -6,7 +6,7 @@ import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
-interface Bookmark {
+export interface Bookmark {
   id: string
   user_id: string
   post_id: string
@@ -21,7 +21,7 @@ interface Bookmark {
   notes?: string
 }
 
-interface BookmarkStats {
+export interface BookmarkStats {
   total: number
   unread: number
   categories: Record<string, number>
@@ -58,14 +58,25 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: React.ReactNode }) {
+interface BookmarksProviderProps {
+  children: React.ReactNode
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
+export function BookmarksProvider({
+  children,
+  initialBookmarks,
+  initialStats, // currently unused but accepted for future flexibility
+}: BookmarksProviderProps) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  const [loading, setLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks ?? [])
+  const [loading, setLoading] = useState(initialBookmarks ? false : true)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
+  const initialDataLoadedRef = useRef(false)
 
   // Calculate stats
   const stats = useMemo((): BookmarkStats => {
@@ -108,7 +119,13 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-      fetchBookmarks()
+      if (initialBookmarks && !initialDataLoadedRef.current) {
+        setBookmarks(initialBookmarks)
+        setLoading(false)
+        initialDataLoadedRef.current = true
+      } else {
+        fetchBookmarks()
+      }
     } else {
       setBookmarks([])
       setLoading(false)
