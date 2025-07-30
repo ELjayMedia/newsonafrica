@@ -59,23 +59,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch bookmarks" }, { status: 500 })
     }
 
-    // Calculate stats
-    const { data: statsData } = await supabase.from("bookmarks").select("read_status, category").eq("user_id", user.id)
+    // Calculate stats using RPC
+    const { data: statsData, error: statsError } = await supabase
+      .rpc("get_bookmark_stats", { user_uuid: user.id })
+      .single()
 
-    const stats = {
-      total: count || 0,
-      unread: statsData?.filter((b) => b.read_status !== "read").length || 0,
-      categories:
-        statsData?.reduce(
-          (acc, b) => {
-            if (b.category) {
-              acc[b.category] = (acc[b.category] || 0) + 1
-            }
-            return acc
-          },
-          {} as Record<string, number>,
-        ) || {},
+    if (statsError) {
+      console.error("Error fetching bookmark stats:", statsError)
     }
+
+    const stats =
+      statsData || ({ total: count || 0, unread: 0, categories: {} } as any)
 
     return NextResponse.json({
       bookmarks: bookmarks || [],

@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
+
 import { BookmarksProvider, useBookmarks } from "@/contexts/BookmarksContext"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -34,14 +36,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Session } from "@supabase/supabase-js"
 import type { Bookmark, BookmarkStats } from "@/contexts/BookmarksContext"
 
+interface BookmarksContentProps {
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+}
+
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
+
 
 interface BookmarksContentProps {
   initialBookmarks?: Bookmark[]
   initialStats?: BookmarkStats
   initialSession?: Session | null
 }
+
 
 function BookmarksContentInner() {
   const {
@@ -443,6 +452,7 @@ function BookmarksContentInner() {
 export default function BookmarksContent({
   initialBookmarks,
   initialStats,
+
   initialSession,
 }: BookmarksContentProps) {
   return (
@@ -453,4 +463,5 @@ export default function BookmarksContent({
       <BookmarksContentInner />
     </BookmarksProvider>
   )
+
 }
