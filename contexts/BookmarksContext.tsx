@@ -97,6 +97,9 @@ export function BookmarksProvider({
     }
   }, [user])
 
+  // Alias for backward compatibility
+  const refreshStats = fetchBookmarkStats
+
 
 
   // Update cache when bookmarks change
