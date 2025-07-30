@@ -188,6 +188,9 @@ class RelatedPostsCache {
     posts: WordPressPost[],
     countryCode?: string,
   ): void {
+    // Clean up before caching new data
+    this.cleanupExpired()
+
     const key = this.generateKey(postId, categories, tags, limit, countryCode)
     const size = this.estimateSize(posts)
     const now = Date.now()
