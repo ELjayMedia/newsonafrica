@@ -1,20 +1,20 @@
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_URL
 
-if (!WORDPRESS_API_URL) {
-  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+if (!WORDPRESS_REST_URL) {
+  console.error("WORDPRESS_REST_URL is not set in the environment variables.")
 }
 
 export async function signIn(username: string, password: string) {
   try {
     // Check if API URL is defined
-    if (!WORDPRESS_API_URL) {
-      console.error("WORDPRESS_API_URL is not defined in environment variables")
+    if (!WORDPRESS_REST_URL) {
+      console.error("WORDPRESS_REST_URL is not defined in environment variables")
       throw new Error("API configuration error")
     }
 
-    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_API_URL)
+    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_REST_URL)
 
-    const response = await fetch(`${WORDPRESS_API_URL}/jwt-auth/v1/token`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/jwt-auth/v1/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +57,7 @@ export async function signIn(username: string, password: string) {
 
 export async function getCurrentUser(token: string) {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/me`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/wp-json/wp/v2/users/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -81,7 +81,7 @@ export async function getCurrentUser(token: string) {
 
 export async function signUp(username: string, email: string, password: string) {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/wp-json/wp/v2/users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -114,7 +114,7 @@ export async function signUp(username: string, email: string, password: string) 
 
 export async function resetPassword(email: string) {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp-json/wp/v2/users/lost-password`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/wp-json/wp/v2/users/lost-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

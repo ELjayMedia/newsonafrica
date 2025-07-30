@@ -381,7 +381,7 @@ export async function addComment(comment: NewComment): Promise<Comment> {
               postTitle = post.title
             } else {
               // Try to get the post title from WordPress
-              const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
+              const response = await fetch(`${process.env.WORDPRESS_REST_URL}/wp/v2/posts/${comment.post_id}`)
               if (response.ok) {
                 const wpPost = await response.json()
                 postTitle = wpPost.title.rendered || "a post"
