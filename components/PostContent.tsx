@@ -9,8 +9,8 @@ import Link from "next/link"
 import { RelatedPosts } from "@/components/RelatedPosts"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { Clock, MessageSquare } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Clock } from "lucide-react"
+import { CommentButton } from "@/components/CommentButton"
 import { GiftArticleButton } from "@/components/GiftArticleButton"
 import { formatDate } from "@/utils/date-utils"
 
@@ -62,13 +62,9 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
           {/* Interactive buttons */}
           <div className="flex flex-wrap gap-1 md:gap-2">
-            <Button
-              variant="outline"
-              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
-            >
-              <MessageSquare className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Comments</span>
-            </Button>
+            <CommentButton
+              className="border border-input bg-background rounded-full flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            />
 
             <GiftArticleButton postSlug={post.slug} postTitle={post.title} />
 
