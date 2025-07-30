@@ -1,12 +1,9 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import {
-  useBookmarks,
-  BookmarksProvider,
-  type Bookmark,
-  type BookmarkStats,
-} from "@/contexts/BookmarksContext"
+
+import { BookmarksProvider, useBookmarks } from "@/contexts/BookmarksContext"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -36,6 +33,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import type { Session } from "@supabase/supabase-js"
+import type { Bookmark, BookmarkStats } from "@/contexts/BookmarksContext"
 
 interface BookmarksContentProps {
   initialBookmarks?: Bookmark[]
@@ -44,6 +43,14 @@ interface BookmarksContentProps {
 
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
+
+
+interface BookmarksContentProps {
+  initialBookmarks?: Bookmark[]
+  initialStats?: BookmarkStats
+  initialSession?: Session | null
+}
+
 
 function BookmarksContentInner() {
   const {
@@ -445,17 +452,16 @@ function BookmarksContentInner() {
 export default function BookmarksContent({
   initialBookmarks,
   initialStats,
-}: BookmarksContentProps) {
-  if (initialBookmarks || initialStats) {
-    return (
-      <BookmarksProvider
-        initialBookmarks={initialBookmarks}
-        initialStats={initialStats}
-      >
-        <BookmarksContentInner />
-      </BookmarksProvider>
-    )
-  }
 
-  return <BookmarksContentInner />
+  initialSession,
+}: BookmarksContentProps) {
+  return (
+    <BookmarksProvider
+      initialBookmarks={initialBookmarks}
+      initialStats={initialStats}
+    >
+      <BookmarksContentInner />
+    </BookmarksProvider>
+  )
+
 }

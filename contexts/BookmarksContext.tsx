@@ -6,8 +6,6 @@ import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
-import { normalizeBookmark } from "@/utils/normalizeBookmark"
-
 
 export interface Bookmark {
   id: string
@@ -23,7 +21,6 @@ export interface Bookmark {
   read_status?: "unread" | "read"
   notes?: string
 }
-
 
 export interface BookmarkStats {
   total: number
@@ -63,7 +60,9 @@ export function useBookmarks() {
   return context
 }
 
-export interface BookmarksProviderProps {
+
+interface BookmarksProviderProps {
+
   children: React.ReactNode
   initialBookmarks?: Bookmark[]
   initialStats?: BookmarkStats
@@ -71,16 +70,19 @@ export interface BookmarksProviderProps {
 
 export function BookmarksProvider({
   children,
-  initialBookmarks = [],
-  initialStats,
+
+  initialBookmarks,
+  initialStats, // currently unused but accepted for future flexibility
 }: BookmarksProviderProps) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
-  const [loading, setLoading] = useState(initialBookmarks.length === 0)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks ?? [])
+  const [loading, setLoading] = useState(initialBookmarks ? false : true)
+
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
+  const initialDataLoadedRef = useRef(false)
 
 
   const computeStats = (items: Bookmark[]): BookmarkStats => {
@@ -133,9 +135,12 @@ export function BookmarksProvider({
   // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-      if (initialBookmarks.length > 0) {
-        // We already have initial data; skip fetch
+
+      if (initialBookmarks && !initialDataLoadedRef.current) {
+        setBookmarks(initialBookmarks)
         setLoading(false)
+        initialDataLoadedRef.current = true
+
       } else {
         fetchBookmarks()
       }

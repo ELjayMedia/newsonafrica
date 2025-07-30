@@ -22,27 +22,32 @@ export default async function BookmarksPage() {
     data: { session },
   } = await supabase.auth.getSession()
 
-  let initialBookmarks: Bookmark[] = []
-  let initialStats: BookmarkStats = { total: 0, unread: 0, categories: {} }
+
+  let initialBookmarks: Bookmark[] | undefined = undefined
+  let initialStats: BookmarkStats | undefined = undefined
 
   if (session?.user) {
-    const { data } = await supabase
+    const { data: bookmarksData } = await supabase
+
       .from("bookmarks")
       .select("*")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
 
-    initialBookmarks = data || []
 
+    initialBookmarks = bookmarksData || []
+
+    // Calculate stats server-side
+    const total = initialBookmarks.length
+    const unread = initialBookmarks.filter((b) => b.read_status !== "read").length
     const categories: Record<string, number> = {}
-    let unread = 0
-    for (const b of initialBookmarks) {
-      if (b.read_status !== "read") unread++
-      if (b.category) {
-        categories[b.category] = (categories[b.category] || 0) + 1
+    initialBookmarks.forEach((bookmark) => {
+      if (bookmark.category) {
+        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
       }
-    }
-    initialStats = { total: initialBookmarks.length, unread, categories }
+    })
+    initialStats = { total, unread, categories }
+
   }
 
   return (
@@ -54,6 +59,9 @@ export default async function BookmarksPage() {
 
       <Suspense fallback={<BookmarksSkeleton />}>
         <BookmarksContent
+
+          initialSession={session}
+
           initialBookmarks={initialBookmarks}
           initialStats={initialStats}
         />
