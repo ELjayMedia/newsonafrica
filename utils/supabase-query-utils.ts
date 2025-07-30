@@ -11,6 +11,15 @@ interface QueryCacheEntry<T> {
 // Global query cache with configurable TTL
 const queryCache = new Map<string, QueryCacheEntry<any>>()
 
+function cleanupQueryCache() {
+  const now = Date.now()
+  for (const [key, entry] of queryCache.entries()) {
+    if (now > entry.expiresAt) {
+      queryCache.delete(key)
+    }
+  }
+}
+
 // Default cache TTL in milliseconds (5 minutes)
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000
 
@@ -32,6 +41,11 @@ export function clearQueryCache(key?: string, pattern?: RegExp): void {
   } else {
     queryCache.clear()
   }
+}
+
+export function getQueryCacheSize(): number {
+  cleanupQueryCache()
+  return queryCache.size
 }
 
 /**
@@ -63,6 +77,9 @@ export async function executeWithCache<T>(
       console.error("Supabase query error:", error)
       throw error
     }
+
+    // Clean up before caching new data
+    cleanupQueryCache()
 
     // Cache the result
     queryCache.set(cacheKey, {
@@ -140,6 +157,7 @@ export async function fetchById<T>(
   }
 
   if (cache) {
+    cleanupQueryCache()
     queryCache.set(cacheKey, {
       data,
       timestamp: Date.now(),
@@ -189,6 +207,7 @@ export async function fetchByIds<T>(
   }
 
   if (cache && data) {
+    cleanupQueryCache()
     queryCache.set(cacheKey, {
       data,
       timestamp: Date.now(),
@@ -353,6 +372,7 @@ export async function countRecords(
   }
 
   if (cache) {
+    cleanupQueryCache()
     queryCache.set(cacheKey, {
       data: count,
       timestamp: Date.now(),
@@ -440,6 +460,7 @@ export async function fetchPaginated<T>(
   }
 
   if (cache) {
+    cleanupQueryCache()
     queryCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
@@ -526,10 +547,5 @@ export async function columnExists(table: string, column: string): Promise<boole
 
 // Clean up expired cache entries periodically
 setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of queryCache.entries()) {
-    if (now > entry.expiresAt) {
-      queryCache.delete(key)
-    }
-  }
+  cleanupQueryCache()
 }, 60000) // Run every minute
