@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
+import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
 import { useToast } from "@/hooks/use-toast"
 
 interface Bookmark {
@@ -19,12 +20,6 @@ interface Bookmark {
   tags?: string[]
   read_status?: "unread" | "read"
   notes?: string
-}
-
-interface BookmarkStats {
-  total: number
-  unread: number
-  categories: Record<string, number>
 }
 
 interface BookmarksContextType {
@@ -67,20 +62,18 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
 
-  // Calculate stats
-  const stats = useMemo((): BookmarkStats => {
-    const total = bookmarks.length
-    const unread = bookmarks.filter((b) => b.read_status !== "read").length
-    const categories: Record<string, number> = {}
+  // Stats returned from Supabase RPC
+  const [stats, setStats] = useState<BookmarkStats>({ total: 0, unread: 0, categories: {} })
 
-    bookmarks.forEach((bookmark) => {
-      if (bookmark.category) {
-        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
-      }
-    })
-
-    return { total, unread, categories }
-  }, [bookmarks])
+  const fetchBookmarkStats = useCallback(async () => {
+    if (!user) return
+    try {
+      const data = await getBookmarkStats(user.id)
+      setStats(data)
+    } catch (error) {
+      console.error('Error fetching bookmark stats:', error)
+    }
+  }, [user])
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -105,15 +98,17 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     [bookmarks], // Keep dependency for reactivity
   )
 
-  // Fetch bookmarks when user changes
+  // Fetch bookmarks and stats when user changes
   useEffect(() => {
     if (user) {
       fetchBookmarks()
+      fetchBookmarkStats()
     } else {
       setBookmarks([])
+      setStats({ total: 0, unread: 0, categories: {} })
       setLoading(false)
     }
-  }, [user])
+  }, [user, fetchBookmarkStats])
 
   const fetchBookmarks = async () => {
     try {
@@ -141,6 +136,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       }
 
       setBookmarks(data || [])
+      await fetchBookmarkStats()
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -185,6 +181,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => [data, ...prev])
+        await fetchBookmarkStats()
       } finally {
         setIsLoading(false)
       }
@@ -205,6 +202,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
+        await fetchBookmarkStats()
       } finally {
         setIsLoading(false)
       }
@@ -231,6 +229,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
+        await fetchBookmarkStats()
       } finally {
         setIsLoading(false)
       }
@@ -251,6 +250,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
+        await fetchBookmarkStats()
 
         toast({
           title: "Bookmarks removed",
