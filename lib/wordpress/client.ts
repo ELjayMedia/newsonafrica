@@ -1,11 +1,10 @@
 import { cache } from "react"
+import { getCountryEndpoints } from "@/lib/getCountryEndpoints"
 
-export const WORDPRESS_GRAPHQL_URL =
-  process.env.WORDPRESS_GRAPHQL_URL ||
-  "https://newsonafrica.com/sz/graphql"
-export const WORDPRESS_REST_URL =
-  process.env.WORDPRESS_REST_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+// Default endpoints for the currently active country
+const defaultEndpoints = getCountryEndpoints()
+export const WORDPRESS_GRAPHQL_URL = defaultEndpoints.graphql
+export const WORDPRESS_REST_URL = defaultEndpoints.rest
 
 if (!WORDPRESS_GRAPHQL_URL) {
   console.error(

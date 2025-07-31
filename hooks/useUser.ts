@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import { supabaseClient } from "@/lib/api/supabase"
+import { supabaseClient } from "@/lib/supabaseClient"
 import type { UserProfile } from "@/lib/api/supabase"
 
 // Hook return type

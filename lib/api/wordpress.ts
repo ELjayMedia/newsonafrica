@@ -98,15 +98,7 @@ export interface WordPressSinglePostResponse {
 
 
 // Default country to use when none is specified
-const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
-
-function getCountryEndpoints(countryCode?: string) {
-  const code = countryCode || DEFAULT_COUNTRY
-  return {
-    graphql: `https://newsonafrica.com/${code}/graphql`,
-    rest: `https://newsonafrica.com/${code}/wp-json/wp/v2`,
-  }
-}
+import { DEFAULT_COUNTRY, getCountryEndpoints } from "@/lib/getCountryEndpoints"
 
 
 // Enhanced cache with LRU-like behavior

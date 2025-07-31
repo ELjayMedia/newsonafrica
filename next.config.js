@@ -65,6 +65,17 @@ const withPWA = require("@ducanh2912/next-pwa").default({
         },
       },
     },
+    {
+      urlPattern: /^https:\/\/newsonafrica\.com\/(?!api).*$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "pages-cache",
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 24 * 60 * 60,
+        },
+      },
+    },
   ],
 })
 

@@ -107,11 +107,16 @@
     "zod": "^3.25.31"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6",
+    "@testing-library/react": "^14",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "jest": "^29",
+    "jest-environment-jsdom": "^30.0.5",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
+    "ts-jest": "^29",
     "tsx": "^4.20.3",
     "typescript": "^5"
   }

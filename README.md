@@ -15,6 +15,13 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
 
+## PWA & Routing Enhancements
+
+- Dynamic country routes using `generateStaticParams` with fallback to `sz`
+- Offline caching via `next-pwa`, `manifest.json` and a service worker enabling "Add to Home Screen"
+- Supabase auth now reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY`
+- Run navigation routing tests with `pnpm test`
+
 ## 🏗️ Architecture
 
 ### Frontend Architecture
@@ -74,6 +81,7 @@ WORDPRESS_AUTH_TOKEN=your_wordpress_auth_token
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_KEY=your_supabase_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Authentication
