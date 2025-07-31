@@ -14,7 +14,9 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
+import { fetchMenuContent } from "@/lib/wordpress"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 
 interface HomeContentProps {
@@ -76,6 +78,7 @@ const fetchHomeData = async () => {
 
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
+  const { currentCountry } = useNavigationRouting()
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
@@ -136,7 +139,10 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
 
       const categoryPromises = categoryConfigs.map(async (config) => {
         try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 5)
+          const result = await fetchMenuContent(
+            currentCountry,
+            config.name.toLowerCase(),
+          )
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
           console.error(`Error fetching ${config.name} posts:`, error)
@@ -157,7 +163,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     }
 
     fetchCategoryPosts()
-  }, [isOffline])
+  }, [isOffline, currentCountry])
 
   // Show offline notification if needed
   const renderOfflineNotification = () => {

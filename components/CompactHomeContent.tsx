@@ -9,7 +9,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
+import { fetchMenuContent } from "@/lib/wordpress"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 import { categoryConfigs } from "@/config/homeConfig"
 import { ChevronRight, TrendingUp } from "lucide-react"
 
@@ -62,6 +64,7 @@ const fetchHomeData = async () => {
 
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
+  const { currentCountry } = useNavigationRouting()
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
@@ -112,7 +115,10 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
 
       const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
         try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 4)
+          const result = await fetchMenuContent(
+            currentCountry,
+            config.name.toLowerCase(),
+          )
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
           return { name: config.name, posts: [] }
@@ -132,7 +138,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     }
 
     fetchCategoryPosts()
-  }, [isOffline])
+  }, [isOffline, currentCountry])
 
   const {
     taggedPosts = [],
