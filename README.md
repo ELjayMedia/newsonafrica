@@ -117,6 +117,13 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
+### Android Build
+
+1. Install dependencies with `npm install`.
+2. Run `bash export-capacitor.sh` to generate the `out/` directory.
+3. Run `npx cap sync android` (or `npx cap copy android`) to copy web assets and plugins.
+4. Build artifacts (`.apk`, `.aab`) are ignored via `android/.gitignore`.
+
 ## ⚡ Performance
 
 The homepage now prefetches posts and categories on the server and passes them to the client via `initialData`. This avoids an extra fetch on page load and speeds up the first render.
