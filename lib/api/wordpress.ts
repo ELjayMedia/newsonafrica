@@ -7,7 +7,6 @@ import {
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
-import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_URL } from "../wordpress/client"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -101,10 +100,11 @@ export interface WordPressSinglePostResponse {
 // Default country to use when none is specified
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
-function getCountryEndpoints() {
+function getCountryEndpoints(countryCode?: string) {
+  const code = countryCode || DEFAULT_COUNTRY
   return {
-    graphql: WORDPRESS_GRAPHQL_URL,
-    rest: WORDPRESS_REST_URL,
+    graphql: `https://newsonafrica.com/${code}/graphql`,
+    rest: `https://newsonafrica.com/${code}/wp-json/wp/v2`,
   }
 }
 
@@ -152,7 +152,7 @@ async function graphqlRequest<T>(
   countryCode?: string,
   retries = 3,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints()
+  const endpoints = getCountryEndpoints(countryCode)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -206,7 +206,7 @@ async function restApiFallback<T>(
   transform: (data: any) => T,
   countryCode?: string,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints()
+  const endpoints = getCountryEndpoints(countryCode)
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
   const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
@@ -450,8 +450,10 @@ export async function getPostBySlug(
 /**
  * Get all categories
  */
-export async function getCategories(): Promise<WordPressCategory[]> {
-  return getCategoriesForCountry()
+export async function getCategories(
+  countryCode: string = DEFAULT_COUNTRY,
+): Promise<WordPressCategory[]> {
+  return getCategoriesForCountry(countryCode)
 }
 
 /**
@@ -520,19 +522,29 @@ export async function getPostsByCategory(
 /**
  * Get featured posts (sticky posts)
  */
-export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
+export async function getFeaturedPosts(
+  limit = 10,
+  countryCode: string = DEFAULT_COUNTRY,
+): Promise<WordPressPost[]> {
   try {
-    const data = await graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
-      first: limit,
-    })
+    const data = await graphqlRequest<WordPressPostsResponse>(
+      FEATURED_POSTS_QUERY,
+      {
+        first: limit,
+      },
+      countryCode,
+    )
 
     return data.posts.nodes
   } catch (error) {
     console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
 
     try {
-      return await restApiFallback("posts", { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
-        posts.map(transformRestPostToGraphQL),
+      return await restApiFallback(
+        "posts",
+        { sticky: true, per_page: limit, _embed: 1 },
+        (posts: any[]) => posts.map(transformRestPostToGraphQL),
+        countryCode,
       )
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
@@ -725,7 +737,7 @@ export async function getRelatedPosts(
 
     try {
       // REST API fallback
-      const endpoints = getCountryEndpoints()
+      const endpoints = getCountryEndpoints(countryCode)
 
       // Build query parameters for REST API
       const params = new URLSearchParams({
