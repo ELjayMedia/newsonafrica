@@ -1,11 +1,10 @@
 import { cache } from "react"
+import { getCountryEndpoints } from "../getCountryEndpoints"
 
-export const WORDPRESS_GRAPHQL_URL =
-  process.env.WORDPRESS_GRAPHQL_URL ||
-  "https://newsonafrica.com/sz/graphql"
-export const WORDPRESS_REST_URL =
-  process.env.WORDPRESS_REST_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+// Default endpoints derived from environment variables
+const defaultEndpoints = getCountryEndpoints()
+export const WORDPRESS_GRAPHQL_URL = defaultEndpoints.graphql
+export const WORDPRESS_REST_URL = `${defaultEndpoints.rest}/wp/v2`
 
 if (!WORDPRESS_GRAPHQL_URL) {
   console.error(
@@ -29,8 +28,13 @@ const isOnline = () => {
 const isServer = () => typeof window === "undefined"
 
 /** Simple GraphQL request function with proper headers */
-export async function graphqlRequest(query: string, variables: Record<string, any> = {}) {
-  const response = await fetch(WORDPRESS_GRAPHQL_URL, {
+export async function graphqlRequest(
+  query: string,
+  variables: Record<string, any> = {},
+  countryCode?: string,
+) {
+  const { graphql } = getCountryEndpoints(countryCode)
+  const response = await fetch(graphql, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -59,12 +63,17 @@ export async function graphqlRequest(query: string, variables: Record<string, an
 }
 
 /** Fetches data from the WordPress REST API with retry logic. */
-export async function fetchFromRestApi(endpoint: string, params: Record<string, any> = {}) {
+export async function fetchFromRestApi(
+  endpoint: string,
+  params: Record<string, any> = {},
+  countryCode?: string,
+) {
+  const { rest } = getCountryEndpoints(countryCode)
   const queryParams = new URLSearchParams(
     Object.entries(params).map(([key, value]) => [key, String(value)])
   ).toString()
 
-  const url = `${WORDPRESS_REST_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${rest}/wp-json/wp/v2/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   const MAX_RETRIES = 3
   let lastError
@@ -115,6 +124,7 @@ export async function fetchWithFallback(
   variables: Record<string, any> = {},
   cacheKey: string,
   restFallback: () => Promise<any>,
+  countryCode?: string,
 ) {
   const cached = apiCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < cached.ttl) {
@@ -127,7 +137,7 @@ export async function fetchWithFallback(
   }
 
   try {
-    const data = await graphqlRequest(query, variables)
+    const data = await graphqlRequest(query, variables, countryCode)
     apiCache.set(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL })
     return data
   } catch (error) {

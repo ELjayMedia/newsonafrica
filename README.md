@@ -59,21 +59,20 @@ news-on-africa/
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables. The application uses
-both the GraphQL and REST APIs from your WordPress instance, so set
-`WORDPRESS_GRAPHQL_URL` and `WORDPRESS_REST_URL` accordingly:
+Create a `.env.local` file with the following variables. WordPress endpoints are
+derived from `NEXT_PUBLIC_WP_BASE_URL` and the active country code.
 
 \`\`\`
 # WordPress
-WORDPRESS_GRAPHQL_URL=https://your-wordpress-api.com/graphql
-WORDPRESS_REST_URL=https://your-wordpress-api.com/wp-json/wp/v2
+NEXT_PUBLIC_WP_BASE_URL=https://your-wordpress-site.com
+NEXT_PUBLIC_DEFAULT_COUNTRY=sz
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
 WORDPRESS_AUTH_TOKEN=your_wordpress_auth_token
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_KEY=your_supabase_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Authentication
@@ -127,6 +126,23 @@ The application is deployed on Vercel with the following configuration:
 ## ⚡ Performance
 
 The homepage now prefetches posts and categories on the server and passes them to the client via `initialData`. This avoids an extra fetch on page load and speeds up the first render.
+
+## PWA & Routing Enhancements
+
+Environment variables now control endpoint selection. Set `NEXT_PUBLIC_WP_BASE_URL` and `NEXT_PUBLIC_DEFAULT_COUNTRY` to configure the WordPress host and default edition. Example:
+
+```ts
+import { getCountryEndpoints } from "./lib/getCountryEndpoints"
+const { graphql, rest } = getCountryEndpoints("ng")
+// graphql -> https://your-wordpress-site.com/ng/graphql
+// rest     -> https://your-wordpress-site.com/ng/wp-json
+```
+
+Run navigation routing tests with:
+
+```bash
+pnpm test
+```
 
 ## 🧪 Testing
 
