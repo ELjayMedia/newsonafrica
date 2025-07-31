@@ -53,7 +53,7 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
+ - Node.js 18+ and pnpm
 - Supabase account
 - WordPress instance with REST API
 
@@ -97,17 +97,17 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
-npm run dev
+pnpm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `npm run build`
+1. **Build Command**: `pnpm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
@@ -119,10 +119,10 @@ The homepage now prefetches posts and categories on the server and passes them t
 
 \`\`\`bash
 # Run unit tests
-npm test
+pnpm test
 
 # Run linting
-npm run lint
+pnpm run lint
 \`\`\`
 
 ## 📚 Documentation
