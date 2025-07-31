@@ -233,6 +233,22 @@ class RelatedPostsCache {
   }
 
   /**
+   * Get number of cached entries
+   */
+  getSize(): number {
+    this.cleanupExpired()
+    return this.cache.size
+  }
+
+  /**
+   * Manually trigger cache cleanup
+   */
+  cleanup(): void {
+    this.cleanupExpired()
+    this.enforceLimit()
+  }
+
+  /**
    * Get cache statistics
    */
   getStats(): CacheStats & { hitRate: number; avgEntrySize: number } {
@@ -321,6 +337,11 @@ export const relatedPostsCache = new RelatedPostsCache({
   maxEntries: 750,
   ttl: 20 * 60 * 1000, // 20 minutes
 })
+
+// Periodic cleanup of expired entries
+setInterval(() => {
+  relatedPostsCache.cleanup()
+}, 60 * 1000)
 
 // Export for testing and advanced usage
 export { RelatedPostsCache }
