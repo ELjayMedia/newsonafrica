@@ -149,12 +149,12 @@ export function Header() {
                   {categories.map((category) => (
                     <li key={category.slug} tabIndex={0}>
                       <button
-                        onClick={() => navigateTo(currentCountry, category.slug)}
+                        onClick={() => navigateTo(category.slug, currentCountry)}
                         className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
                           activeSlug === category.slug
                             ? "text-blue-600 border-b-2 border-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
-                        }`}
+                        } focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600`}
                         aria-current={activeSlug === category.slug ? "page" : undefined}
                       >
                         {category.name.toUpperCase()}

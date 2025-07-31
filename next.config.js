@@ -22,6 +22,22 @@ const withPWA = require("@ducanh2912/next-pwa").default({
       },
     },
     {
+      urlPattern: ({ request }) => request.mode === 'navigate',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages-cache',
+        expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
+      },
+    },
+    {
+      urlPattern: /manifest\.json$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'manifest',
+        expiration: { maxEntries: 1, maxAgeSeconds: 24 * 60 * 60 },
+      },
+    },
+    {
       urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
       handler: "CacheFirst",
       options: {

@@ -1,4 +1,4 @@
-import { WORDPRESS_REST_URL } from "./wordpress/client"
+import { getCountryEndpoints } from "./getCountryEndpoints"
 
 // Search result interface
 export interface WordPressSearchResult {
@@ -68,6 +68,7 @@ export async function searchWordPressPosts(
     orderBy?: "relevance" | "date" | "title"
     order?: "asc" | "desc"
   } = {},
+  countryCode?: string,
 ): Promise<SearchResponse> {
   const startTime = Date.now()
 
@@ -111,7 +112,8 @@ export async function searchWordPressPosts(
       searchParams.append("author", author.toString())
     }
 
-    const response = await fetch(`${WORDPRESS_REST_URL}/posts?${searchParams}`, {
+    const { rest } = getCountryEndpoints(countryCode)
+    const response = await fetch(`${rest}/wp-json/wp/v2/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -165,13 +167,18 @@ export async function searchWordPressPosts(
 /**
  * Get search suggestions from WordPress
  */
-export async function getSearchSuggestions(query: string, limit = 8): Promise<string[]> {
+export async function getSearchSuggestions(
+  query: string,
+  limit = 8,
+  countryCode?: string,
+): Promise<string[]> {
   if (!query || query.length < 2) return []
 
   try {
     // Search for posts to extract suggestions
+    const { rest } = getCountryEndpoints(countryCode)
     const response = await fetch(
-      `${WORDPRESS_REST_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${rest}/wp-json/wp/v2/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -218,10 +225,11 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 /**
  * Search categories
  */
-export async function searchCategories(query: string): Promise<any[]> {
+export async function searchCategories(query: string, countryCode?: string): Promise<any[]> {
   try {
+    const { rest } = getCountryEndpoints(countryCode)
     const response = await fetch(
-      `${WORDPRESS_REST_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${rest}/wp-json/wp/v2/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -240,9 +248,10 @@ export async function searchCategories(query: string): Promise<any[]> {
 /**
  * Search tags
  */
-export async function searchTags(query: string): Promise<any[]> {
+export async function searchTags(query: string, countryCode?: string): Promise<any[]> {
   try {
-    const response = await fetch(`${WORDPRESS_REST_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
+    const { rest } = getCountryEndpoints(countryCode)
+    const response = await fetch(`${rest}/wp-json/wp/v2/tags?search=${encodeURIComponent(query)}&per_page=10`, {
       headers: {
         "Content-Type": "application/json",
       },

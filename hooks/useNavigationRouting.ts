@@ -37,13 +37,13 @@ export function useNavigationRouting() {
   }
 
   const navigateTo = useCallback(
-    (country: string, slug?: string) => {
+    (slug?: string, countryCode: string = currentCountry) => {
       const path = slug
-        ? `/${country}/category/${slug}`
-        : `/${country}`
+        ? `/${countryCode}/category/${slug}`
+        : `/${countryCode}`
       router.push(path)
     },
-    [router],
+    [router, currentCountry],
   )
 
   return { currentCountry, activeSlug, navigateTo }

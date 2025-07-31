@@ -6,9 +6,13 @@ let clientInstance: ReturnType<typeof createSupabaseClient> | null = null
 export const createClient = () => {
   if (clientInstance) return clientInstance
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_KEY) {
+    throw new Error("Missing Supabase environment variables")
+  }
+
   clientInstance = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY!,
     {
       auth: {
         persistSession: true,

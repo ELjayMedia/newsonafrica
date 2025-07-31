@@ -7,6 +7,7 @@ import {
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
+import { getCountryEndpoints } from "../getCountryEndpoints"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -99,14 +100,6 @@ export interface WordPressSinglePostResponse {
 
 // Default country to use when none is specified
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
-
-function getCountryEndpoints(countryCode?: string) {
-  const code = countryCode || DEFAULT_COUNTRY
-  return {
-    graphql: `https://newsonafrica.com/${code}/graphql`,
-    rest: `https://newsonafrica.com/${code}/wp-json/wp/v2`,
-  }
-}
 
 
 // Enhanced cache with LRU-like behavior
@@ -209,7 +202,7 @@ async function restApiFallback<T>(
   const endpoints = getCountryEndpoints(countryCode)
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
-  const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${endpoints.rest}/wp/v2/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   try {
     const response = await fetch(url, {
@@ -750,7 +743,7 @@ export async function getRelatedPosts(
         params.append("categories", categories.join(","))
       }
 
-      const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
+      const response = await fetch(`${endpoints.rest}/wp/v2/posts?${params.toString()}`, {
         headers: {
           "Content-Type": "application/json",
           Connection: "keep-alive",
