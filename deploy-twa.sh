@@ -6,7 +6,8 @@ echo "🚀 News On Africa TWA Deployment Script"
 echo "======================================="
 
 # Configuration
-APP_VERSION=$(grep '"appVersionName"' twa-manifest.json | sed 's/.*: *"$$[^"]*$$".*/\1/')
+# Extract version name from twa-manifest.json using jq
+APP_VERSION=$(jq -r '.appVersionName' twa-manifest.json)
 BUILD_TYPE="release"
 
 echo "📱 App Version: $APP_VERSION"
