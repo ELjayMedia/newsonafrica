@@ -7,6 +7,10 @@ export {
   graphqlRequest,
   fetchFromRestApi,
   fetchWithFallback,
+  apiCache,
+  CACHE_TTL,
+  WORDPRESS_API_URL,
+  WORDPRESS_REST_API_URL,
   clearApiCache,
   getCacheStats,
 } from "./client"

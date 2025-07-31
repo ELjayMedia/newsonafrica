@@ -2,10 +2,16 @@ import { cache } from "react"
 
 export const WORDPRESS_GRAPHQL_URL =
   process.env.WORDPRESS_GRAPHQL_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/graphql"
 export const WORDPRESS_REST_URL =
   process.env.WORDPRESS_REST_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
+
+// Backwards compatibility aliases
+export const WORDPRESS_API_URL = WORDPRESS_GRAPHQL_URL
+export const WORDPRESS_REST_API_URL = WORDPRESS_REST_URL
 
 if (!WORDPRESS_GRAPHQL_URL) {
   console.error(
@@ -14,8 +20,8 @@ if (!WORDPRESS_GRAPHQL_URL) {
 }
 
 // Simple cache implementation
-const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+export const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+export const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Check if we're in a browser environment and if we're online
 const isOnline = () => {
