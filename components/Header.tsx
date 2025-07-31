@@ -2,29 +2,46 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
+import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
+import { getCategories, type WordPressCategory } from "@/lib/api/wordpress"
+import { Loader2 } from "lucide-react"
 
-const categories = [
-  { name: "NEWS", href: "/category/news" },
-  { name: "BUSINESS", href: "/category/business" },
-  { name: "SPORT", href: "/category/sport" },
-  { name: "HEALTH", href: "/category/health" },
-  { name: "POLITICS", href: "/category/politics" },
-  { name: "OPINION", href: "/category/editorial" },
-  { name: "ENTERTAINMENT", href: "/category/entertainment" },
-  { name: "FOOD", href: "/category/food" },
-  { name: "SPECIAL PROJECTS", href: "/special-projects" },
-]
 
 export function Header() {
   const router = useRouter()
   const { user, signOut } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+
+  const { currentCountry, activeSlug, navigateTo } = useNavigationRouting()
+
+  const [categories, setCategories] = useState<WordPressCategory[]>([])
+  const [isLoadingCats, setIsLoadingCats] = useState(true)
+  const [catError, setCatError] = useState(false)
+
+  const fetchCats = useCallback(async () => {
+    try {
+      setCatError(false)
+      setIsLoadingCats(true)
+      const data = await getCategories(currentCountry)
+      setCategories(data)
+    } catch (err) {
+      console.error("Failed to load categories", err)
+      setCatError(true)
+    } finally {
+      setIsLoadingCats(false)
+    }
+  }, [currentCountry])
+
+  useEffect(() => {
+    fetchCats()
+  }, [fetchCats])
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -112,24 +129,40 @@ export function Header() {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-4 md:mt-0 bg-white">
+          <nav className="mt-4 md:mt-0 bg-white" aria-label="Site categories">
             <div className="overflow-x-auto">
-              <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-                {categories.map((category) => (
-                  <li key={category.name}>
-                    <Link
-                      href={category.href}
-                      className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
-                        pathname === category.href
-                          ? "text-blue-600 border-b-2 border-blue-600"
-                          : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
-                      }`}
-                    >
-                      {category.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {isLoadingCats ? (
+                <div className="flex justify-center py-3" aria-live="polite" aria-busy="true">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : catError ? (
+                <div className="py-3 text-center">
+                  <button
+                    onClick={fetchCats}
+                    className="px-3 py-2 text-sm border border-blue-600 text-blue-600 rounded"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
+                  {categories.map((category) => (
+                    <li key={category.slug} tabIndex={0}>
+                      <button
+                        onClick={() => navigateTo(currentCountry, category.slug)}
+                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
+                          activeSlug === category.slug
+                            ? "text-blue-600 border-b-2 border-blue-600"
+                            : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                        }`}
+                        aria-current={activeSlug === category.slug ? "page" : undefined}
+                      >
+                        {category.name.toUpperCase()}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </nav>
         </div>
