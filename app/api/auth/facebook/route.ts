@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { GraphQLClient } from "graphql-request"
 import jwt from "jsonwebtoken"
-
-const WORDPRESS_GRAPHQL_URL = process.env.WORDPRESS_GRAPHQL_URL
+import { WORDPRESS_GRAPHQL_URL } from "@/lib/wordpress/client"
 const JWT_SECRET = process.env.JWT_SECRET
 const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
 const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET

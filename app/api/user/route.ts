@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { getCurrentUser } from "@/lib/auth"
+import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
 
 export async function GET(request: Request) {
   const token = getAuthTokenFromCookies()
@@ -34,7 +35,7 @@ export async function PUT(request: Request) {
 
   try {
     const userData = await request.json()
-    const response = await fetch(`${process.env.WORDPRESS_REST_URL}/wp/v2/users/me`, {
+    const response = await fetch(`${WORDPRESS_REST_URL}/wp/v2/users/me`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

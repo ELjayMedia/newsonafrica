@@ -1,11 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { optimizedWordPressSearch } from "@/lib/wordpress"
 import { setCacheHeaders } from "@/lib/api-utils"
-
-// WordPress API configuration
-const WORDPRESS_REST_URL =
-  process.env.WORDPRESS_REST_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
 
 // Rate limiting
 const RATE_LIMIT = 50

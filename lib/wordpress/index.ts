@@ -9,8 +9,8 @@ export {
   fetchWithFallback,
   apiCache,
   CACHE_TTL,
-  WORDPRESS_API_URL,
-  WORDPRESS_REST_API_URL,
+  WORDPRESS_GRAPHQL_URL,
+  WORDPRESS_REST_URL,
   clearApiCache,
   getCacheStats,
 } from "./client"

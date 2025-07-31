@@ -2,16 +2,10 @@ import { cache } from "react"
 
 export const WORDPRESS_GRAPHQL_URL =
   process.env.WORDPRESS_GRAPHQL_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/graphql"
 export const WORDPRESS_REST_URL =
   process.env.WORDPRESS_REST_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
-
-// Backwards compatibility aliases
-export const WORDPRESS_API_URL = WORDPRESS_GRAPHQL_URL
-export const WORDPRESS_REST_API_URL = WORDPRESS_REST_URL
 
 if (!WORDPRESS_GRAPHQL_URL) {
   console.error(
