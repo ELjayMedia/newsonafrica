@@ -20,3 +20,4 @@ export {
   fetchAuthors,
   updateUserProfile,
 } from "./users"
+export { fetchMenuContent } from "./fetchMenuContent"
