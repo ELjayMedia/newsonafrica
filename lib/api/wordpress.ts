@@ -7,13 +7,7 @@ import {
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
-
-const WORDPRESS_GRAPHQL_URL =
-  process.env.WORDPRESS_GRAPHQL_URL ||
-  "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_URL =
-  process.env.WORDPRESS_REST_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_URL } from "../wordpress/client"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {

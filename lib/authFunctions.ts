@@ -1,4 +1,4 @@
-const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_URL
+import { WORDPRESS_REST_URL } from "./wordpress/client"
 
 if (!WORDPRESS_REST_URL) {
   console.error("WORDPRESS_REST_URL is not set in the environment variables.")

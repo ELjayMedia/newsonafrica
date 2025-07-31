@@ -59,7 +59,9 @@ news-on-africa/
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables:
+Create a `.env.local` file with the following variables. The application uses
+both the GraphQL and REST APIs from your WordPress instance, so set
+`WORDPRESS_GRAPHQL_URL` and `WORDPRESS_REST_URL` accordingly:
 
 \`\`\`
 # WordPress

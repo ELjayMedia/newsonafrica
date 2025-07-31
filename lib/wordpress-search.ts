@@ -1,6 +1,4 @@
-const WORDPRESS_REST_URL =
-  process.env.WORDPRESS_REST_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { WORDPRESS_REST_URL } from "./wordpress/client"
 
 // Search result interface
 export interface WordPressSearchResult {
