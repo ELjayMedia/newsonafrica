@@ -7,9 +7,7 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-
-    "test": "node tests/bookmarks.test.js"
-
+    "test": "node run-tests.js"
   },
   "dependencies": {
     "@apollo/client": "latest",
@@ -114,6 +112,7 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
