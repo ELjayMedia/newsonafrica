@@ -745,7 +745,11 @@ export async function getRelatedPosts(
       }
 
       const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Connection: "keep-alive",
+          "Accept-Encoding": "gzip",
+        },
         next: { revalidate: 300 },
       })
 
