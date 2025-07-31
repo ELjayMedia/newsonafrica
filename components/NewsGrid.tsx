@@ -257,7 +257,11 @@ const RegularCategorySection = memo(function RegularCategorySection({
   secondaryPosts: Post[]
   blurURLs: { main: string; secondary: string[] }
 }) {
-  if (!mainPost) return null
+  if (!mainPost) {
+    return (
+      <div className="py-8 text-center md:col-span-2">No posts found</div>
+    )
+  }
 
   return (
     <>
