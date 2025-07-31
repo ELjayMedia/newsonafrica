@@ -788,6 +788,10 @@ export function getRelatedPostsCacheStats() {
   return relatedPostsCache.getStats()
 }
 
+export function getRelatedPostsCacheSize(): number {
+  return relatedPostsCache.getSize()
+}
+
 /**
  * Clear all related posts cache
  */
