@@ -1160,6 +1160,8 @@ export const deleteComment = async (commentId: string) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Connection: "keep-alive",
+        "Accept-Encoding": "gzip",
       },
     })
 
@@ -1213,6 +1215,8 @@ export const approveComment = async (commentId: string) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Connection: "keep-alive",
+        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify({
         status: "approved",
@@ -1462,6 +1466,8 @@ export const updateUserProfile = async (userId: string, profileData: any) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Connection: "keep-alive",
+        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify(profileData),
     })
