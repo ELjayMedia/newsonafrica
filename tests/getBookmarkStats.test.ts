@@ -1,11 +1,11 @@
-const assert = require('assert')
-const { getBookmarkStats } = require('../utils/supabase/getBookmarkStats')
+import assert from 'assert'
+import { getBookmarkStats } from '../utils/supabase/getBookmarkStats'
 
 ;(async () => {
   const expected = { total: 5, unread: 2, categories: { news: 3 } }
-  let called = null
+  let called: { name: string; params: any } | null = null
   const fakeSupabase = {
-    rpc(name, params) {
+    rpc(name: string, params: any) {
       called = { name, params }
       return {
         single() {
@@ -13,7 +13,7 @@ const { getBookmarkStats } = require('../utils/supabase/getBookmarkStats')
         },
       }
     },
-  }
+  } as any
 
   const stats = await getBookmarkStats('user123', fakeSupabase)
   assert.deepStrictEqual(called, {
