@@ -67,6 +67,7 @@ WORDPRESS_GRAPHQL_URL=https://your-wordpress-api.com/graphql
 WORDPRESS_REST_URL=https://your-wordpress-api.com/wp-json/wp/v2
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
+WORDPRESS_AUTH_TOKEN=your_wordpress_auth_token
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -76,6 +77,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 # Authentication
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
+JWT_SECRET=your_jwt_secret
 
 # Analytics
 NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
@@ -88,6 +90,8 @@ The application serves `robots.txt` from a Next.js route at
 `app/robots.txt/route.ts`. Ensure `NEXT_PUBLIC_SITE_URL` is configured so the
 generated sitemap URLs use the correct domain.
 Copy `google-services.json.example` to `google-services.json` and fill in your Firebase credentials. Keep this file out of version control. During automated deployments, decode the `GOOGLE_SERVICES_JSON` secret and write it to `google-services.json`.
+`WORDPRESS_AUTH_TOKEN` is used for authenticated WordPress requests.
+`JWT_SECRET` is the key for signing JSON Web Tokens.
 
 ### Installation
 
