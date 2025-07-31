@@ -24,7 +24,7 @@ const { useNavigationRouting } = require('../hooks/useNavigationRouting')
   // Selecting "Eswatini" should push "/sz" so API calls target
   // https://newsonafrica.com/sz/... endpoints
   const { navigateTo } = useNavigationRouting()
-  navigateTo('sz')
+  navigateTo(undefined, 'sz')
 
   // Restore original loader
   ;(Module as any)._load = originalLoad
