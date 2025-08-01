@@ -4,7 +4,7 @@ import { getCountryEndpoints } from "../getCountryEndpoints"
 // Default endpoints derived from environment variables
 const defaultEndpoints = getCountryEndpoints()
 export const WORDPRESS_GRAPHQL_URL = defaultEndpoints.graphql
-export const WORDPRESS_REST_URL = `${defaultEndpoints.rest}/wp/v2`
+export const WORDPRESS_REST_URL = `${defaultEndpoints.rest}/wp-json/wp/v2`
 
 if (!WORDPRESS_GRAPHQL_URL) {
   console.error(

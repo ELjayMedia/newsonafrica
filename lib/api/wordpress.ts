@@ -202,7 +202,7 @@ async function restApiFallback<T>(
   const endpoints = getCountryEndpoints(countryCode)
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
-  const url = `${endpoints.rest}/wp/v2/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${endpoints.rest}/wp-json/wp/v2/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   try {
     const response = await fetch(url, {
@@ -743,7 +743,9 @@ export async function getRelatedPosts(
         params.append("categories", categories.join(","))
       }
 
-      const response = await fetch(`${endpoints.rest}/wp/v2/posts?${params.toString()}`, {
+      const response = await fetch(
+        `${endpoints.rest}/wp-json/wp/v2/posts?${params.toString()}`,
+        {
         headers: {
           "Content-Type": "application/json",
           Connection: "keep-alive",
