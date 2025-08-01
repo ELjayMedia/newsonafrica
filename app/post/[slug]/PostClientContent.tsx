@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Clock, User } from "lucide-react"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
+import { CommentButton } from "@/components/CommentButton"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import {
   Breadcrumb,
@@ -173,7 +174,10 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
                 {post.author?.node?.name}
               </Link>
             </div>
-            <BookmarkButton post={post} />
+            <div className="flex items-center space-x-2">
+              <CommentButton />
+              <BookmarkButton post={post} />
+            </div>
           </div>
         </header>
 
