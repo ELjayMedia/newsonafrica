@@ -81,6 +81,7 @@
     "imagemin-webp": "latest",
     "input-otp": "^1.4.1",
     "jsonwebtoken": "latest",
+    "lru-cache": "^11.1.0",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "^0.4.4",
