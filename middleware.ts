@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/types/supabase"
+import { createClient } from "@/utils/supabase/middleware"
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
@@ -29,8 +29,7 @@ export async function middleware(request: NextRequest) {
   // Log API requests
   logApiRequest(request)
 
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient<Database>({ req: request, res })
+  const { supabase, response: res } = createClient(request)
 
   // Check if the user is authenticated
   const {
@@ -61,7 +60,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Add CORS headers for API routes
-    const response = NextResponse.next()
+    const apiResponse = NextResponse.next()
 
     // Define allowed origins based on environment
     const allowedOrigins =
@@ -72,13 +71,13 @@ export async function middleware(request: NextRequest) {
     const origin = request.headers.get("origin") || ""
 
     if (allowedOrigins.includes(origin)) {
-      response.headers.set("Access-Control-Allow-Origin", origin)
-      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-      response.headers.set("Access-Control-Max-Age", "86400")
+      apiResponse.headers.set("Access-Control-Allow-Origin", origin)
+      apiResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      apiResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+      apiResponse.headers.set("Access-Control-Max-Age", "86400")
     }
 
-    return response
+    return apiResponse
   }
 
   // If user is on an auth page but already logged in, redirect to profile
