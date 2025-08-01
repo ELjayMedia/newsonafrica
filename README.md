@@ -135,7 +135,7 @@ Environment variables now control endpoint selection. Set `NEXT_PUBLIC_WP_BASE_U
 import { getCountryEndpoints } from "./lib/getCountryEndpoints"
 const { graphql, rest } = getCountryEndpoints("ng")
 // graphql -> https://your-wordpress-site.com/ng/graphql
-// rest     -> https://your-wordpress-site.com/ng/wp-json
+// rest     -> https://your-wordpress-site.com/ng
 ```
 
 Run navigation routing tests with:
