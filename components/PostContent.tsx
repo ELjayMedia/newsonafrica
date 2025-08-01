@@ -13,6 +13,7 @@ import { Clock } from "lucide-react"
 import { CommentButton } from "@/components/CommentButton"
 import { GiftArticleButton } from "@/components/GiftArticleButton"
 import { formatDate } from "@/utils/date-utils"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface PostContentProps {
   post: Post
@@ -22,6 +23,8 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
   if (!post) {
     return <div>Loading...</div>
   }
+
+  const { getCategoryPath } = useNavigationRouting()
 
   return (
     <div className="container mx-auto px-4 pb-6 bg-white">
@@ -103,7 +106,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           {post.categories?.nodes?.map((category: Category) => (
             <Link
               key={category.id}
-              href={`/category/${category.slug}`}
+              href={getCategoryPath(category.slug)}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm"
             >
               {category.name}
