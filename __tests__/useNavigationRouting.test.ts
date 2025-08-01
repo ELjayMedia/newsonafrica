@@ -3,7 +3,9 @@ import { useNavigationRouting } from '../hooks/useNavigationRouting'
 import { getCountryEndpoints } from '../lib/getCountryEndpoints'
 
 jest.mock('next/navigation', () => ({
+
   useRouter: jest.fn(),
+
   usePathname: () => '/ng',
 }))
 const { useRouter } = require('next/navigation') as { useRouter: jest.Mock }
@@ -20,7 +22,10 @@ describe('useNavigationRouting', () => {
 
 describe('getCountryEndpoints', () => {
   it('resolves urls by code', () => {
-    const ep = getCountryEndpoints('za')
+    const ep = getCountryEndpoints('za', {
+      baseUrl: 'https://example.com',
+      defaultCountry: 'sz',
+    })
     expect(ep.graphql).toContain('/za/graphql')
     expect(ep.rest).toContain('/za')
     expect(ep.rest).not.toContain('wp-json')

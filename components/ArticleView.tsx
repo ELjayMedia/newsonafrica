@@ -58,6 +58,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
+  const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ""}${pathname}`
+  const shareDescription = excerpt?.replace(/<[^>]*>/g, "").trim() || title
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
@@ -329,8 +331,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
         <div className="flex items-center space-x-2">
           <ShareButtons
             title={title}
-            url={pathname}
-            description={excerpt}
+            url={shareUrl}
+            description={shareDescription}
             variant="outline"
             size="sm"
             className="flex items-center"
@@ -386,8 +388,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
           <div className="flex items-center space-x-4">
             <ShareButtons
               title={title}
-              url={pathname}
-              description={excerpt}
+              url={shareUrl}
+              description={shareDescription}
               variant="outline"
               size="sm"
               className="flex items-center"

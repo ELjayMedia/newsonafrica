@@ -7,6 +7,8 @@ function getCountryEndpoints(countryCode?: string) {
   return {
     graphql: `${base}${graphqlPath}`,
     rest: restPath,
+
   }
 }
-export { getCountryEndpoints };
+
+export { getCountryEndpoints }
