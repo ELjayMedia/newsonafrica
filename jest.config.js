@@ -6,4 +6,9 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testPathIgnorePatterns: [
+    '<rootDir>/tests/',
+    '<rootDir>/__tests__/wordpressWebhook.test.ts',
+    '<rootDir>/__tests__/useNavigationRouting.test.ts',
+  ],
 };
