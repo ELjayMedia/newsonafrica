@@ -1,4 +1,5 @@
-import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress"
+import { fetchTags, fetchRecentPosts } from "@/lib/wordpress"
+import { getCategories } from "@/lib/api/wordpress"
 import Link from "next/link"
 import type { Metadata } from "next"
 
@@ -9,10 +10,13 @@ export const metadata: Metadata = {
 
 export default async function SitemapPage() {
   // Fetch data
-  const [categories, tags, recentPosts] = await Promise.all([
-    fetchCategories(),
+  const countryCodes = (process.env.NEXT_PUBLIC_SUPPORTED_COUNTRIES ||
+    process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ||
+    "").split(",").filter(Boolean)
+  const [tags, recentPosts, categoriesByCountry] = await Promise.all([
     fetchTags(),
     fetchRecentPosts(50), // Get the 50 most recent posts
+    Promise.all(countryCodes.map((code) => getCategories(code))),
   ])
 
   return (
@@ -96,15 +100,23 @@ export default async function SitemapPage() {
 
         <div>
           <h2 className="text-2xl font-semibold mb-4">Categories</h2>
-          <ul className="grid grid-cols-2 gap-2">
-            {categories.map((category) => (
-              <li key={category.slug}>
-                <Link href={`/category/${category.slug}`} className="text-blue-600 hover:underline">
-                  {category.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {countryCodes.map((code, idx) => (
+            <div key={code} className="mb-4">
+              <h3 className="font-semibold uppercase mb-2">{code}</h3>
+              <ul className="grid grid-cols-2 gap-2">
+                {categoriesByCountry[idx].map((category) => (
+                  <li key={category.slug}>
+                    <Link
+                      href={`/${code}/category/${category.slug}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
 
           <h2 className="text-2xl font-semibold mt-8 mb-4">Popular Tags</h2>
           <div className="flex flex-wrap gap-2">

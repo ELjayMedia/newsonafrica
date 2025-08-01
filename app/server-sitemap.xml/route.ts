@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress"
+import { fetchPosts, fetchTags, fetchAuthors } from "@/lib/wordpress"
+import { getCategories } from "@/lib/api/wordpress"
 import { siteConfig } from "@/config/site"
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
   try {
-    // Fetch all necessary data in parallel
-    const [posts, categories, tags, authors] = await Promise.all([
+    // Fetch core data in parallel
+    const [posts, tags, authors] = await Promise.all([
       fetchPosts(1000),
-      fetchCategories(),
       fetchTags(),
       fetchAuthors(),
     ])
+
+    // Fetch categories for each supported country
+    const countryCodes = (process.env.NEXT_PUBLIC_SUPPORTED_COUNTRIES ||
+      process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ||
+      "").split(",").filter(Boolean)
+    const categoriesByCountry = await Promise.all(
+      countryCodes.map((code) => getCategories(code)),
+    )
 
     // Build the sitemap
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -42,15 +50,17 @@ export async function GET() {
   </url>`
     })
 
-    // Add categories
-    categories.forEach((category) => {
-      sitemap += `
+    // Add categories for each country edition
+    countryCodes.forEach((code, idx) => {
+      categoriesByCountry[idx].forEach((category) => {
+        sitemap += `
   <url>
-    <loc>${baseUrl}/category/${category.slug}</loc>
+    <loc>${baseUrl}/${code}/category/${category.slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>`
+      })
     })
 
     // Add tags
