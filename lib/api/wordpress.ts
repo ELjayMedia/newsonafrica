@@ -104,6 +104,7 @@ const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
 // Enhanced cache with LRU-like behavior
 const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
+const categoriesCache = new Map<string, { data: WordPressCategory[]; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const MAX_CACHE_SIZE = 50
 
@@ -137,6 +138,15 @@ function cleanupCache() {
 }
 
 setInterval(cleanupCache, 60000)
+function cleanupCategoriesCache() {
+  const now = Date.now()
+  for (const [key, entry] of categoriesCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      categoriesCache.delete(key)
+    }
+  }
+}
+setInterval(cleanupCategoriesCache, 60000)
 
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
@@ -353,19 +363,30 @@ export async function getPostsByCategoryForCountry(
  * Get categories for a specific country
  */
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+  const cached = categoriesCache.get(countryCode)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+
   try {
     const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
-    return data.categories.nodes
+    const categories = data.categories.nodes
+    categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
+    cleanupCategoriesCache()
+    return categories
   } catch (error) {
     console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
-      return await restApiFallback(
+      const categories = await restApiFallback(
         "categories",
         { per_page: 100 },
         (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
         countryCode,
       )
+      categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
+      cleanupCategoriesCache()
+      return categories
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return []
@@ -446,6 +467,10 @@ export async function getPostBySlug(
 export async function getCategories(
   countryCode: string = DEFAULT_COUNTRY,
 ): Promise<WordPressCategory[]> {
+  const cached = categoriesCache.get(countryCode)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
   return getCategoriesForCountry(countryCode)
 }
 
