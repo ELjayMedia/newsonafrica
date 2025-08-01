@@ -137,7 +137,6 @@ function cleanupCache() {
   }
 }
 
-setInterval(cleanupCache, 60000)
 function cleanupCategoriesCache() {
   const now = Date.now()
   for (const [key, entry] of categoriesCache.entries()) {
@@ -146,7 +145,27 @@ function cleanupCategoriesCache() {
     }
   }
 }
-setInterval(cleanupCategoriesCache, 60000)
+
+// On-demand cleanup guards
+let lastCategoryCacheCleanup = 0
+let lastCategoriesCacheCleanup = 0
+const CLEANUP_INTERVAL = 60_000
+
+function maybeCleanupCategoryCache() {
+  const now = Date.now()
+  if (now - lastCategoryCacheCleanup > CLEANUP_INTERVAL) {
+    cleanupCache()
+    lastCategoryCacheCleanup = now
+  }
+}
+
+function maybeCleanupCategoriesCache() {
+  const now = Date.now()
+  if (now - lastCategoriesCacheCleanup > CLEANUP_INTERVAL) {
+    cleanupCategoriesCache()
+    lastCategoriesCacheCleanup = now
+  }
+}
 
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
@@ -363,6 +382,7 @@ export async function getPostsByCategoryForCountry(
  * Get categories for a specific country
  */
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+  maybeCleanupCategoriesCache()
   const cached = categoriesCache.get(countryCode)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data
@@ -372,7 +392,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
     const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
     const categories = data.categories.nodes
     categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
-    cleanupCategoriesCache()
+    maybeCleanupCategoriesCache()
     return categories
   } catch (error) {
     console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
@@ -385,7 +405,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
         countryCode,
       )
       categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
-      cleanupCategoriesCache()
+      maybeCleanupCategoriesCache()
       return categories
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
@@ -467,6 +487,7 @@ export async function getPostBySlug(
 export async function getCategories(
   countryCode: string = DEFAULT_COUNTRY,
 ): Promise<WordPressCategory[]> {
+  maybeCleanupCategoriesCache()
   const cached = categoriesCache.get(countryCode)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data
@@ -488,6 +509,8 @@ export async function getPostsByCategory(
   hasNextPage: boolean
   endCursor: string | null
 }> {
+  maybeCleanupCategoryCache()
+
   // Create cache key
   const cacheKey = `category:${categorySlug}:${limit}:${after || "null"}`
 
@@ -517,7 +540,7 @@ export async function getPostsByCategory(
     }
 
     // Cleanup before caching new data
-    cleanupCache()
+    maybeCleanupCategoryCache()
 
     // Cache the result
     categoryCache.set(cacheKey, {
@@ -831,7 +854,7 @@ export function clearRelatedPostsCache(): void {
 
 // Category cache utilities
 export function getCategoryCacheSize(): number {
-  cleanupExpiredEntries()
+  maybeCleanupCategoryCache()
   return categoryCache.size
 }
 
