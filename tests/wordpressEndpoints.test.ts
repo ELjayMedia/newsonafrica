@@ -1,11 +1,12 @@
 import assert from 'assert'
-import {
-  getLatestPostsForCountry,
-  getCategoriesForCountry,
-  getFeaturedPosts,
-} from '../lib/api/wordpress'
-
 ;(async () => {
+  process.env.NEXT_PUBLIC_DEFAULT_COUNTRY = 'ng'
+  process.env.NEXT_PUBLIC_WP_BASE_URL = 'https://example.com/'
+  const {
+    getLatestPostsForCountry,
+    getCategoriesForCountry,
+    getFeaturedPosts,
+  } = await import('../lib/api/wordpress')
   const originalFetch = global.fetch as any
   const calledUrls: string[] = []
   global.fetch = async (url: any, options: any) => {

@@ -9,4 +9,5 @@ import { RelatedPostsCache } from '../lib/cache/related-posts-cache'
   cache.cleanup()
   assert.strictEqual(cache.getSize(), 0, 'expired entry should be cleaned up')
   console.log('relatedPostsCache test passed')
+  process.exit(0)
 })()
