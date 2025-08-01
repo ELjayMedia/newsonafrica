@@ -5,6 +5,8 @@ import { typeDefs } from "@/graphql/schema"
 import { resolvers } from "@/graphql/resolvers"
 import { createClient } from "@supabase/supabase-js"
 
+export const runtime = 'nodejs'
+
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""

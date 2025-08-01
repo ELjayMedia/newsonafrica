@@ -4,6 +4,8 @@ import { cookies } from "next/headers"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
+export const runtime = 'nodejs'
+
 // Input validation schema
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),

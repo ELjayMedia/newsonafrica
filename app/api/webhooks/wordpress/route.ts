@@ -5,6 +5,8 @@ import crypto from "crypto"
 import { fetchSinglePost } from "@/lib/wordpress"
 import { createAdminClient } from "@/lib/supabase"
 
+export const runtime = 'nodejs'
+
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
