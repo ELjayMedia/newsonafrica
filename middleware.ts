@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server"
 import type { Database } from "@/types/supabase"
 import { createClient } from "@/utils/supabase/middleware"
 
+const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
 
@@ -11,11 +13,13 @@ const AUTH_ROUTES = ["/auth", "/login", "/register"]
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP = {
-  "/news": "/category/news",
-  "/business": "/category/business",
-  "/sport": "/category/sport",
-  "/entertainment": "/category/entertainment",
+  "/news": `/${DEFAULT_COUNTRY}/category/news`,
+  "/business": `/${DEFAULT_COUNTRY}/category/business`,
+  "/sport": `/${DEFAULT_COUNTRY}/category/sport`,
+  "/entertainment": `/${DEFAULT_COUNTRY}/category/entertainment`,
 }
+
+const COUNTRY_CATEGORY_REGEX = /^\/[^/]+\/category(\/|$)/
 
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
@@ -94,6 +98,7 @@ export async function middleware(request: NextRequest) {
   if (
     !session &&
     !PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) &&
+    !COUNTRY_CATEGORY_REGEX.test(pathname) &&
     !pathname.startsWith("/auth") &&
     !pathname.includes(".")
   ) {
