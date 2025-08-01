@@ -5,6 +5,8 @@ import { z } from "zod"
 import { createProfile } from "@/services/profile-service"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
+export const runtime = 'nodejs'
+
 // Input validation schema
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
