@@ -75,6 +75,11 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_KEY=your_supabase_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
+# Paystack
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
+PAYSTACK_SECRET_KEY=your_paystack_secret_key
+PAYSTACK_API_BASE=https://api.paystack.co
+
 # Authentication
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
@@ -93,6 +98,18 @@ generated sitemap URLs use the correct domain.
 Copy `google-services.json.example` to `google-services.json` and fill in your Firebase credentials. Keep this file out of version control. During automated deployments, decode the `GOOGLE_SERVICES_JSON` secret and write it to `google-services.json`.
 `WORDPRESS_AUTH_TOKEN` is used for authenticated WordPress requests.
 `JWT_SECRET` is the key for signing JSON Web Tokens.
+
+### Subscription Setup
+
+Run the subscription database migration to create plans, subscriptions, and payments tables:
+
+```bash
+supabase db push --file lib/migrations/1.7.0-subscriptions.sql
+```
+
+Configure your Paystack dashboard webhook to point to `/api/webhooks/paystack`.
+
+To test the flow locally, start the development server and use a Paystack test card on the `/subscribe` page. You can trigger webhook events from the Paystack dashboard to simulate billing events.
 
 ### Installation
 
