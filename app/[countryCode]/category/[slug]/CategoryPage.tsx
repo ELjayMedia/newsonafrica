@@ -27,19 +27,20 @@ interface CategoryData {
 
 interface CategoryPageProps {
   slug: string
+  countryCode: string
   initialData: CategoryData
 }
 
-export function CategoryPage({ slug, initialData }: CategoryPageProps) {
+export function CategoryPage({ slug, countryCode, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
   const queryClient = useQueryClient()
 
   // Memoize query key to prevent unnecessary re-renders
-  const queryKey = useMemo(() => ["category", slug], [slug])
+  const queryKey = useMemo(() => ["category", countryCode, slug], [countryCode, slug])
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam = null }) => getPostsByCategory(slug, 20, pageParam),
+    queryFn: ({ pageParam = null }) => getPostsByCategory(slug, 20, pageParam, countryCode),
     getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
     initialPageParam: null,
     initialData: initialData
@@ -57,26 +58,27 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     async (relatedSlugs: string[]) => {
       const prefetchPromises = relatedSlugs.slice(0, 3).map((relatedSlug) =>
         queryClient.prefetchInfiniteQuery({
-          queryKey: ["category", relatedSlug],
-          queryFn: ({ pageParam = null }) => getPostsByCategory(relatedSlug, 20, pageParam),
+          queryKey: ["category", countryCode, relatedSlug],
+          queryFn: ({ pageParam = null }) =>
+            getPostsByCategory(relatedSlug, 20, pageParam, countryCode),
           initialPageParam: null,
           staleTime: 5 * 60 * 1000,
         }),
       )
       await Promise.allSettled(prefetchPromises)
     },
-    [queryClient],
+    [queryClient, countryCode],
   )
 
   // Generate schema.org structured data (memoized)
   const schemas = useMemo(() => {
     if (!slug) return []
 
-    const categoryUrl = `${siteConfig.url}/category/${slug}`
+    const categoryUrl = `${siteConfig.url}/${countryCode}/category/${slug}`
 
     return [
       getBreadcrumbSchema([
-        { name: "Home", url: siteConfig.url },
+        { name: "Home", url: `${siteConfig.url}/${countryCode}` },
         { name: slug.charAt(0).toUpperCase() + slug.slice(1), url: categoryUrl },
       ]),
       getWebPageSchema(
@@ -85,7 +87,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         initialData?.category?.description || `Latest articles in the ${slug} category`,
       ),
     ]
-  }, [slug, initialData])
+  }, [slug, countryCode, initialData])
 
   // Memoize computed values with chronological sorting
   const category = initialData?.category || null
@@ -146,7 +148,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         <h1 className="text-2xl font-bold mb-4">Category Not Found</h1>
         <p className="text-gray-700 mb-4">The category "{slug}" could not be found or has no posts.</p>
         <Link
-          href="/"
+          href={`/${countryCode}`}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block"
         >
           Return Home
@@ -171,7 +173,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
               {relatedCategoriesArray.map((relatedSlug) => (
                 <Link
                   key={relatedSlug}
-                  href={`/category/${relatedSlug}`}
+                  href={`/${countryCode}/category/${relatedSlug}`}
                   className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
                   {relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1)}
@@ -260,12 +262,12 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
           <div className="text-center py-12">
             <h3 className="text-xl font-semibold mb-2">No Posts Found</h3>
             <p className="text-gray-600 mb-4">There are currently no posts in the {category.name} category.</p>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block"
-            >
-              Browse All Posts
-            </Link>
+        <Link
+          href={`/${countryCode}`}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors inline-block"
+        >
+          Browse All Posts
+        </Link>
           </div>
         )}
       </div>

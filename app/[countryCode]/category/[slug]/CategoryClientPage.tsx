@@ -17,7 +17,7 @@ interface CategoryData {
 }
 
 interface CategoryClientPageProps {
-  params: { slug: string }
+  params: { countryCode: string; slug: string }
   initialData: CategoryData | null
 }
 
@@ -33,7 +33,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       setIsLoading(true)
       setError(null)
 
-      const data = await getPostsByCategory(params.slug, 20)
+      const data = await getPostsByCategory(params.slug, 20, undefined, params.countryCode)
 
       if (!data.category) {
         notFound()
@@ -42,7 +42,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       setCategoryData(data)
 
       // Cache the data in React Query for future use
-      queryClient.setQueryData(["category", params.slug], {
+      queryClient.setQueryData(["category", params.countryCode, params.slug], {
         pages: [data],
         pageParams: [null],
       })
@@ -52,11 +52,11 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
     } finally {
       setIsLoading(false)
     }
-  }, [params.slug, queryClient])
+  }, [params.slug, params.countryCode, queryClient])
 
   useEffect(() => {
     // Check if we have cached data first
-    const cachedData = queryClient.getQueryData(["category", params.slug])
+    const cachedData = queryClient.getQueryData(["category", params.countryCode, params.slug])
 
     if (cachedData && !initialData) {
       // Use cached data if available
@@ -77,7 +77,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
 
     // Fetch data client-side if not provided (fallback case)
     loadCategory()
-  }, [params.slug, initialData, loadCategory, queryClient])
+  }, [params.slug, params.countryCode, initialData, loadCategory, queryClient])
 
   // Loading state
   if (isLoading) {
@@ -117,7 +117,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
 
   return (
     <ErrorBoundary>
-      <CategoryPage slug={params.slug} initialData={categoryData} />
+      <CategoryPage slug={params.slug} countryCode={params.countryCode} initialData={categoryData} />
     </ErrorBoundary>
   )
 }
