@@ -16,6 +16,7 @@ import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
 import Script from "next/script"
+import { siteConfig } from "@/config/site"
 
 import "./globals.css"
 
@@ -27,21 +28,59 @@ const inter = Inter({
   fallback: ["system-ui", "sans-serif"],
 })
 
+const ogImageUrl = new URL(siteConfig.ogImage, siteConfig.url).toString()
+
 export const metadata: Metadata = {
-  title: "News On Africa",
-  description: "Your trusted source for news across Africa",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
-  applicationName: "News On Africa",
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url,
+  ),
+  applicationName: siteConfig.name,
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
-  creator: "News On Africa",
-  publisher: "News On Africa",
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   generator: "v0.dev",
+  alternates: {
+    canonical: siteConfig.url,
+  },
+  openGraph: {
+    title: siteConfig.name,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@newsonafrica",
+    creator: "@newsonafrica",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [ogImageUrl],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({
