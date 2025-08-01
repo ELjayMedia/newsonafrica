@@ -517,9 +517,65 @@ interface SearchResponse {
 }
 
 // Advanced caching with search-specific optimization
-const searchCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+const searchCache = new Map<string, CacheEntry<any>>()
+const CACHE_MAX_ENTRIES = 100
+const CACHE_CLEANUP_INTERVAL = 60_000 // 1 minute
 const SEARCH_CACHE_TTL = 10 * 60 * 1000 // 10 minutes for search results
 const SUGGESTION_CACHE_TTL = 30 * 60 * 1000 // 30 minutes for suggestions
+
+let cacheHits = 0
+let cacheMisses = 0
+let lastCleanup = 0
+
+function cleanupSearchCache(): void {
+  const now = Date.now()
+  for (const [key, entry] of searchCache.entries()) {
+    if (now - entry.timestamp > entry.ttl) {
+      searchCache.delete(key)
+    }
+  }
+}
+
+function maybeCleanupSearchCache(): void {
+  const now = Date.now()
+  if (now - lastCleanup > CACHE_CLEANUP_INTERVAL) {
+    cleanupSearchCache()
+    lastCleanup = now
+  }
+}
+
+function getFromCache<T>(key: string): T | undefined {
+  maybeCleanupSearchCache()
+  const entry = searchCache.get(key) as CacheEntry<T> | undefined
+  if (entry && Date.now() - entry.timestamp < entry.ttl) {
+    cacheHits++
+    searchCache.delete(key)
+    searchCache.set(key, entry)
+    return entry.data
+  }
+  if (entry) {
+    searchCache.delete(key)
+  }
+  cacheMisses++
+  return undefined
+}
+
+function setCache<T>(key: string, data: T, ttl: number): void {
+  maybeCleanupSearchCache()
+  if (searchCache.size >= CACHE_MAX_ENTRIES) {
+    const oldestKey = searchCache.keys().next().value
+    if (oldestKey !== undefined) {
+      searchCache.delete(oldestKey)
+    }
+  }
+  searchCache.set(key, { data, timestamp: Date.now(), ttl })
+}
 
 /**
  * Optimized WordPress search with parallel execution and smart caching
@@ -541,12 +597,12 @@ export async function optimizedWordPressSearch(query: string, options: SearchOpt
   const cacheKey = `search:${query}:${JSON.stringify(options)}`
 
   // Check cache first
-  const cached = searchCache.get(cacheKey)
-  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+  const cached = getFromCache<SearchResponse>(cacheKey)
+  if (cached) {
     return {
-      ...cached.data,
+      ...cached,
       performance: {
-        ...cached.data.performance,
+        ...cached.performance,
         responseTime: Date.now() - startTime,
         cached: true,
       },
@@ -565,11 +621,7 @@ export async function optimizedWordPressSearch(query: string, options: SearchOpt
     }
 
     // Cache the results
-    searchCache.set(cacheKey, {
-      data: searchResults,
-      timestamp: Date.now(),
-      ttl: SEARCH_CACHE_TTL,
-    })
+    setCache(cacheKey, searchResults, SEARCH_CACHE_TTL)
 
     return {
       ...searchResults,
@@ -970,9 +1022,9 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
   const cacheKey = `suggestions:${query}:${limit}`
 
   // Check cache
-  const cached = searchCache.get(cacheKey)
-  if (cached && Date.now() - cached.timestamp < SUGGESTION_CACHE_TTL) {
-    return cached.data
+  const cached = getFromCache<string[]>(cacheKey)
+  if (cached) {
+    return cached
   }
 
   try {
@@ -1011,11 +1063,7 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
     const suggestionArray = Array.from(suggestions).slice(0, limit)
 
     // Cache suggestions
-    searchCache.set(cacheKey, {
-      data: suggestionArray,
-      timestamp: Date.now(),
-      ttl: SUGGESTION_CACHE_TTL,
-    })
+    setCache(cacheKey, suggestionArray, SUGGESTION_CACHE_TTL)
 
     return suggestionArray
   } catch (error) {
@@ -1029,15 +1077,20 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
  */
 export function clearSearchCache(): void {
   searchCache.clear()
+  cacheHits = 0
+  cacheMisses = 0
+  lastCleanup = Date.now()
 }
 
 /**
  * Get search cache statistics
  */
 export function getSearchCacheStats() {
+  maybeCleanupSearchCache()
   return {
+    hits: cacheHits,
+    misses: cacheMisses,
     size: searchCache.size,
-    keys: Array.from(searchCache.keys()),
   }
 }
 
