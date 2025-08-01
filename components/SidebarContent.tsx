@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useState, useEffect } from "react"
+import { useMemo } from "react"
 import { AdSense } from "@/components/AdSense"
 import { AdErrorBoundary } from "./AdErrorBoundary"
 
@@ -31,20 +31,18 @@ const getViewCounts = (posts) => {
 }
 
 export function SidebarContent() {
-  const [mostReadPosts, setMostReadPosts] = useState([])
+  const limit = 10
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["recentPosts"],
-    queryFn: () => fetchRecentPosts(10),
+    queryKey: ["recentPosts", limit],
+    queryFn: () => fetchRecentPosts(limit),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
-  useEffect(() => {
-    if (data) {
-      const postsWithViews = getViewCounts(data)
-      const sortedPosts = postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
-      setMostReadPosts(sortedPosts)
-    }
+  const mostReadPosts = useMemo(() => {
+    if (!data) return []
+    const postsWithViews = getViewCounts(data)
+    return postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
   }, [data])
 
   if (isLoading) return <SidebarSkeleton />
