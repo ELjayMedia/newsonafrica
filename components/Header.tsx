@@ -25,12 +25,41 @@ export function Header() {
   const [isLoadingCats, setIsLoadingCats] = useState(true)
   const [catError, setCatError] = useState(false)
 
+  const CACHE_TTL = 24 * 60 * 60 * 1000
+
+  const loadCatsFromCache = useCallback(() => {
+    try {
+      const cacheKey = `menu-categories:${currentCountry}`
+      const cached = localStorage.getItem(cacheKey)
+      if (!cached) return false
+      const parsed = JSON.parse(cached)
+      const age = Date.now() - parsed.timestamp
+      if (navigator.onLine === false || age < CACHE_TTL) {
+        setCategories(parsed.categories)
+        setIsLoadingCats(false)
+        return true
+      }
+    } catch (err) {
+      console.error("Failed to load cached categories", err)
+    }
+    return false
+  }, [currentCountry])
+
   const fetchCats = useCallback(async () => {
     try {
       setCatError(false)
       setIsLoadingCats(true)
       const data = await getCategories(currentCountry)
       setCategories(data)
+      try {
+        const cacheKey = `menu-categories:${currentCountry}`
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({ categories: data, timestamp: Date.now() })
+        )
+      } catch (err) {
+        console.error("Failed to cache categories", err)
+      }
     } catch (err) {
       console.error("Failed to load categories", err)
       setCatError(true)
@@ -40,8 +69,14 @@ export function Header() {
   }, [currentCountry])
 
   useEffect(() => {
-    fetchCats()
-  }, [fetchCats])
+    if (!loadCatsFromCache()) {
+      if (navigator.onLine) {
+        fetchCats()
+      } else {
+        setIsLoadingCats(false)
+      }
+    }
+  }, [fetchCats, loadCatsFromCache])
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
