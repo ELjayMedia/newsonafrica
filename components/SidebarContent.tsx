@@ -9,6 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { useMemo } from "react"
 import { AdSense } from "@/components/AdSense"
 import { AdErrorBoundary } from "./AdErrorBoundary"
+import { SidebarSkeleton } from "./SidebarSkeleton"
 
 export function SidebarContent() {
 
@@ -128,37 +129,5 @@ export function SidebarContent() {
         </section>
       </div>
     </ErrorBoundary>
-  )
-}
-
-function SidebarSkeleton() {
-  return (
-    <div className="w-full md:w-80 space-y-8 animate-pulse">
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-3 mb-4">
-            <div className="w-6 h-6 bg-gray-200 rounded"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-2 mb-4">
-            <div className="w-16 h-16 bg-gray-200 rounded-sm"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
