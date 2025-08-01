@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SearchBox } from "./SearchBox"
 import { SearchResults } from "./SearchResults"
@@ -23,6 +23,9 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
   const [hasMore, setHasMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
 
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const latestQueryRef = useRef(initialQuery)
+
   // Perform search
   const performSearch = useCallback(async (query: string, page = 1, append = false) => {
     if (!query.trim()) {
@@ -32,11 +35,18 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       return
     }
 
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    latestQueryRef.current = query
+
     setIsLoading(true)
     console.log(`Performing search for: "${query}", page: ${page}, append: ${append}`)
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}&per_page=20`)
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}&per_page=20`, {
+        signal: controller.signal,
+      })
       console.log(`Search API response status: ${response.status}`)
 
       if (!response.ok) {
@@ -47,6 +57,10 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
 
       const data = await response.json()
       console.log("Search API response data:", data)
+
+      if (controller.signal.aborted || latestQueryRef.current !== query) {
+        return
+      }
 
       // Handle the response format from our API
       if (append) {
@@ -62,9 +76,13 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       setHasSearched(true)
 
       console.log(`Search completed: ${data.results?.length || 0} results found`)
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        console.log("Search aborted")
+        return
+      }
       console.error("Search error:", error)
-      if (!append) {
+      if (!append && latestQueryRef.current === query) {
         setResults([])
         setTotal(0)
         setTotalPages(0)
@@ -73,7 +91,9 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       }
       // You could add a toast notification here to show the error to users
     } finally {
-      setIsLoading(false)
+      if (!controller.signal.aborted && latestQueryRef.current === query) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
@@ -99,6 +119,7 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       if (query.trim()) {
         performSearch(query, 1, false)
       } else {
+        abortControllerRef.current?.abort()
         setResults([])
         setTotal(0)
         setHasSearched(false)
