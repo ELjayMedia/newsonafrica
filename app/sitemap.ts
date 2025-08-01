@@ -1,18 +1,26 @@
 import type { MetadataRoute } from "next"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress"
+import { fetchPosts, fetchTags, fetchAuthors } from "@/lib/wordpress"
+import { getCategories } from "@/lib/api/wordpress"
 import { siteConfig } from "@/config/site"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
   try {
-    // Fetch all necessary data in parallel with increased limits
-    const [posts, categories, tags, authors] = await Promise.all([
+    // Fetch core data in parallel with increased limits
+    const [posts, tags, authors] = await Promise.all([
       fetchPosts(1000), // Increased limit to ensure we get all posts
-      fetchCategories(),
       fetchTags(),
       fetchAuthors(),
     ])
+
+    // Fetch categories for each supported country
+    const countryCodes = (process.env.NEXT_PUBLIC_SUPPORTED_COUNTRIES ||
+      process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ||
+      "").split(",").filter(Boolean)
+    const categoriesByCountry = await Promise.all(
+      countryCodes.map((code) => getCategories(code)),
+    )
 
     // Static pages
     const staticPages = [
@@ -119,13 +127,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     })
 
-    // Category pages
-    const categoryPages = categories.map((category) => ({
-      url: `${baseUrl}/category/${category.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    }))
+    // Category pages for each country edition
+    const categoryPages = categoriesByCountry.flatMap((categories, index) =>
+      categories.map((category) => ({
+        url: `${baseUrl}/${countryCodes[index]}/category/${category.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      })),
+    )
 
     // Tag pages
     const tagPages = tags.map((tag) => ({
