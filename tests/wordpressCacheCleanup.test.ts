@@ -1,6 +1,8 @@
 import assert from 'assert'
 
 ;(async () => {
+  process.env.NEXT_PUBLIC_DEFAULT_COUNTRY = 'ng'
+  process.env.NEXT_PUBLIC_WP_BASE_URL = 'https://example.com/'
   const wp: any = await import('../lib/api/wordpress')
 
   // Mock time
