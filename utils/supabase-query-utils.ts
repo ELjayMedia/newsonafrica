@@ -1,27 +1,30 @@
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
+import { LRUCache } from "lru-cache"
 import { createClient } from "./supabase/client"
-
-// Cache for storing query results
-interface QueryCacheEntry<T> {
-  data: T
-  timestamp: number
-  expiresAt: number
-}
-
-// Global query cache with configurable TTL
-const queryCache = new Map<string, QueryCacheEntry<any>>()
-
-function cleanupQueryCache() {
-  const now = Date.now()
-  for (const [key, entry] of queryCache.entries()) {
-    if (now > entry.expiresAt) {
-      queryCache.delete(key)
-    }
-  }
-}
 
 // Default cache TTL in milliseconds (5 minutes)
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000
+
+// Global LRU cache configured with max size and default TTL
+const queryCache = new LRUCache<string, any>({
+  max: 500,
+  ttl: DEFAULT_CACHE_TTL,
+})
+
+function cleanupQueryCache() {
+  queryCache.purgeStale()
+}
+
+function generateFilterKey(filters?: unknown): string {
+  if (!filters) return "none"
+  try {
+    return typeof filters === "function"
+      ? filters.toString()
+      : JSON.stringify(filters)
+  } catch {
+    return "none"
+  }
+}
 
 /**
  * Clears the entire query cache or specific entries
@@ -61,12 +64,10 @@ export async function executeWithCache<T>(
   cacheKey: string,
   ttl: number = DEFAULT_CACHE_TTL,
 ): Promise<T[]> {
-  const now = Date.now()
-
   // Check if we have a valid cached result
   const cached = queryCache.get(cacheKey)
-  if (cached && now < cached.expiresAt) {
-    return cached.data as T[]
+  if (cached) {
+    return cached as T[]
   }
 
   try {
@@ -78,15 +79,8 @@ export async function executeWithCache<T>(
       throw error
     }
 
-    // Clean up before caching new data
-    cleanupQueryCache()
-
     // Cache the result
-    queryCache.set(cacheKey, {
-      data,
-      timestamp: now,
-      expiresAt: now + ttl,
-    })
+    queryCache.set(cacheKey, data, { ttl })
 
     return data as T[]
   } catch (error) {
@@ -140,8 +134,8 @@ export async function fetchById<T>(
 
   if (cache) {
     const cached = queryCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as T
+    if (cached) {
+      return cached as T
     }
   }
 
@@ -157,12 +151,7 @@ export async function fetchById<T>(
   }
 
   if (cache) {
-    cleanupQueryCache()
-    queryCache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + ttl,
-    })
+    queryCache.set(cacheKey, data, { ttl })
   }
 
   return data as T
@@ -194,8 +183,8 @@ export async function fetchByIds<T>(
 
   if (cache) {
     const cached = queryCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as T[]
+    if (cached) {
+      return cached as T[]
     }
   }
 
@@ -207,12 +196,7 @@ export async function fetchByIds<T>(
   }
 
   if (cache && data) {
-    cleanupQueryCache()
-    queryCache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + ttl,
-    })
+    queryCache.set(cacheKey, data, { ttl })
   }
 
   return (data as T[]) || []
@@ -348,13 +332,13 @@ export async function countRecords(
   const supabase = createClient()
 
   // Create a unique cache key based on the table and filters
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
+  const filterKey = generateFilterKey(filters)
   const cacheKey = `${table}:count:${filterKey}`
 
   if (cache) {
     const cached = queryCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as number
+    if (cached !== undefined) {
+      return cached as number
     }
   }
 
@@ -372,12 +356,7 @@ export async function countRecords(
   }
 
   if (cache) {
-    cleanupQueryCache()
-    queryCache.set(cacheKey, {
-      data: count,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + ttl,
-    })
+    queryCache.set(cacheKey, count, { ttl })
   }
 
   return count || 0
@@ -422,13 +401,13 @@ export async function fetchPaginated<T>(
   const supabase = createClient()
 
   // Create a unique cache key
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
+  const filterKey = generateFilterKey(filters)
   const cacheKey = `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${filterKey}`
 
   if (cache) {
     const cached = queryCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data
+    if (cached) {
+      return cached
     }
   }
 
@@ -460,12 +439,7 @@ export async function fetchPaginated<T>(
   }
 
   if (cache) {
-    cleanupQueryCache()
-    queryCache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + ttl,
-    })
+    queryCache.set(cacheKey, result, { ttl })
   }
 
   return result
@@ -544,8 +518,3 @@ export async function columnExists(table: string, column: string): Promise<boole
     return false
   }
 }
-
-// Clean up expired cache entries periodically
-setInterval(() => {
-  cleanupQueryCache()
-}, 60000) // Run every minute

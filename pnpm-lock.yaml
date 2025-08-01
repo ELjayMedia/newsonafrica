@@ -221,6 +221,9 @@ importers:
       jsonwebtoken:
         specifier: latest
         version: 9.0.2
+      lru-cache:
+        specifier: ^11.1.0
+        version: 11.1.0
       lucide-react:
         specifier: ^0.454.0
         version: 0.454.0(react@19.0.0)
