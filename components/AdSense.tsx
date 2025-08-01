@@ -32,6 +32,8 @@ export const AdSense = memo(function AdSense({
   const initAttempted = useRef(false)
   const adScriptLoaded = useRef(false)
   const checkTimer = useRef<NodeJS.Timeout | null>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
@@ -195,19 +197,23 @@ export const AdSense = memo(function AdSense({
     // Wait for script to load if needed
     if (adScriptLoaded.current) {
       // Add a small delay to ensure DOM is ready
-      setTimeout(initAd, 100)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(initAd, 100)
     } else {
       // Check periodically if script has loaded
-      const checkInterval = setInterval(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = setInterval(() => {
         if (adScriptLoaded.current) {
-          clearInterval(checkInterval)
-          setTimeout(initAd, 100)
+          if (intervalRef.current) clearInterval(intervalRef.current)
+          if (timeoutRef.current) clearTimeout(timeoutRef.current)
+          timeoutRef.current = setTimeout(initAd, 100)
         }
       }, 200)
 
       // Clear interval and finish loading after timeout
-      setTimeout(() => {
-        clearInterval(checkInterval)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current)
         setIsLoading(false)
       }, 5000)
     }
@@ -215,6 +221,8 @@ export const AdSense = memo(function AdSense({
     // Cleanup
     return () => {
       if (checkTimer.current) clearTimeout(checkTimer.current)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [inView, format, minWidth, id])
 
