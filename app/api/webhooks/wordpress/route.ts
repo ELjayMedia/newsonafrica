@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
-function verifyWebhookSignature(body: string, signature: string): boolean {
+export function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
     return false
@@ -17,7 +17,14 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
 
   const expectedSignature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
 
-  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
+  if (signature.length !== expectedSignature.length) {
+    return false
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, "hex"),
+    Buffer.from(expectedSignature, "hex"),
+  )
 }
 
 export async function POST(request: NextRequest) {
@@ -26,7 +33,11 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get("x-wp-signature")
 
     // Verify webhook signature if secret is configured
-    if (WEBHOOK_SECRET && signature) {
+    if (WEBHOOK_SECRET) {
+      if (!signature) {
+        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+      }
+
       const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
       if (!isValid) {
         console.error("Invalid webhook signature")
