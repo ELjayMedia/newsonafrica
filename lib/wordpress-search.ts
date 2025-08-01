@@ -50,9 +50,66 @@ export interface SearchResponse {
   suggestions?: string[]
 }
 
-// Cache for search results
-const searchCache = new Map<string, { data: SearchResponse; timestamp: number }>()
+// Cache for search results with basic LRU behavior
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+const searchCache = new Map<string, CacheEntry<SearchResponse>>()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const CACHE_MAX_ENTRIES = 100
+const CACHE_CLEANUP_INTERVAL = 60_000 // 1 minute
+
+let cacheHits = 0
+let cacheMisses = 0
+let lastCleanup = 0
+
+function cleanupCache(): void {
+  const now = Date.now()
+  for (const [key, entry] of searchCache.entries()) {
+    if (now - entry.timestamp > entry.ttl) {
+      searchCache.delete(key)
+    }
+  }
+}
+
+function maybeCleanupCache(): void {
+  const now = Date.now()
+  if (now - lastCleanup > CACHE_CLEANUP_INTERVAL) {
+    cleanupCache()
+    lastCleanup = now
+  }
+}
+
+function getFromCache(key: string): SearchResponse | undefined {
+  maybeCleanupCache()
+  const entry = searchCache.get(key)
+  if (entry && Date.now() - entry.timestamp < entry.ttl) {
+    cacheHits++
+    // Refresh order for LRU
+    searchCache.delete(key)
+    searchCache.set(key, entry)
+    return entry.data
+  }
+  if (entry) {
+    searchCache.delete(key)
+  }
+  cacheMisses++
+  return undefined
+}
+
+function setCache(key: string, data: SearchResponse): void {
+  maybeCleanupCache()
+  if (searchCache.size >= CACHE_MAX_ENTRIES) {
+    const oldestKey = searchCache.keys().next().value
+    if (oldestKey !== undefined) {
+      searchCache.delete(oldestKey)
+    }
+  }
+  searchCache.set(key, { data, timestamp: Date.now(), ttl: CACHE_DURATION })
+}
 
 /**
  * Search WordPress posts using REST API
@@ -78,10 +135,10 @@ export async function searchWordPressPosts(
   const cacheKey = `search:${query}:${JSON.stringify(options)}`
 
   // Check cache first
-  const cached = searchCache.get(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+  const cached = getFromCache(cacheKey)
+  if (cached) {
     return {
-      ...cached.data,
+      ...cached,
       searchTime: Date.now() - startTime,
     }
   }
@@ -142,10 +199,7 @@ export async function searchWordPressPosts(
     }
 
     // Cache the result
-    searchCache.set(cacheKey, {
-      data: searchResponse,
-      timestamp: Date.now(),
-    })
+    setCache(cacheKey, searchResponse)
 
     return searchResponse
   } catch (error) {
@@ -277,6 +331,21 @@ export function getPopularSearchTerms(): string[] {
  */
 export function clearSearchCache(): void {
   searchCache.clear()
+  cacheHits = 0
+  cacheMisses = 0
+  lastCleanup = Date.now()
+}
+
+/**
+ * Get search cache statistics
+ */
+export function getSearchCacheStats() {
+  maybeCleanupCache()
+  return {
+    hits: cacheHits,
+    misses: cacheMisses,
+    size: searchCache.size,
+  }
 }
 
 /**
