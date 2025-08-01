@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { fetchRecentPosts } from "@/lib/wordpress"
+import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress"
 import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
@@ -10,27 +10,8 @@ import { useMemo } from "react"
 import { AdSense } from "@/components/AdSense"
 import { AdErrorBoundary } from "./AdErrorBoundary"
 
-// Function to get view counts for posts
-const getViewCounts = (posts) => {
-  if (!posts || !Array.isArray(posts) || posts.length === 0) {
-    return []
-  }
-
-  const twentyDaysAgo = new Date()
-  twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20)
-
-  return posts
-    .filter((post) => {
-      const postDate = new Date(post.date)
-      return postDate >= twentyDaysAgo
-    })
-    .map((post) => ({
-      ...post,
-      viewCount: Math.floor(Math.random() * 1000), // Simulated view count
-    }))
-}
-
 export function SidebarContent() {
+
   const limit = 10
 
   const { data, isLoading, error } = useQuery({
@@ -47,7 +28,8 @@ export function SidebarContent() {
 
   if (isLoading) return <SidebarSkeleton />
 
-  if (error) {
+
+  if (mostReadError || recentError) {
     return (
       <div className="p-4 bg-red-50 rounded-lg">
         <div className="flex items-center mb-2">
@@ -60,7 +42,7 @@ export function SidebarContent() {
   }
 
   // Handle empty data
-  if (!data || data.length === 0) {
+  if (!mostReadPosts || mostReadPosts.length === 0) {
     return (
       <div className="space-y-6">
         <section className="bg-white shadow-md rounded-lg p-4">
@@ -110,9 +92,9 @@ export function SidebarContent() {
         {/* Latest News Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
-          {data.length > 0 ? (
+          {recentPosts && recentPosts.length > 0 ? (
             <div className="space-y-4">
-              {data.slice(0, 5).map((post) => (
+              {recentPosts.slice(0, 5).map((post) => (
                 <Link key={post.id} href={`/post/${post.slug}`} className="flex items-start gap-2 group">
                   {post.featuredImage && post.featuredImage.node && (
                     <div className="relative w-16 h-16 flex-shrink-0">

@@ -35,13 +35,22 @@ export function SubscribeContent() {
 
   const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId)
 
-  const handleSuccess = (reference: string, responseData: any) => {
+  const handleSuccess = async (reference: string, responseData: any) => {
     console.log("Subscription successful, storing data and redirecting...", { reference, responseData })
 
     try {
-      // Prevent multiple redirects
       if (isRedirecting) return
       setIsRedirecting(true)
+
+      const res = await fetch("/api/subscriptions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference, planId: selectedPlanId }),
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to store subscription")
+      }
 
       // Store subscription info in localStorage
       localStorage.setItem("subscription_active", "true")
@@ -49,13 +58,11 @@ export function SubscribeContent() {
       localStorage.setItem("subscription_plan", selectedPlanId)
       localStorage.setItem("subscription_date", new Date().toISOString())
 
-      // Show success message
       toast({
         title: "Subscription Activated",
         description: "Your subscription has been successfully activated. Redirecting to welcome page...",
       })
 
-      // Redirect to welcome page after a short delay
       setTimeout(() => {
         router.push("/welcome")
       }, 1500)

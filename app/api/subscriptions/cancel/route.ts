@@ -38,10 +38,15 @@ export async function POST(request: Request) {
     }
 
     // Cancel subscription with payment provider
-    if (subscription.provider === "paystack" && subscription.provider_subscription_id) {
-      await paystackClient.disableSubscription(subscription.provider_subscription_id, {
-        reason: "User requested cancellation",
-      })
+    if (
+      subscription.provider === "paystack" &&
+      subscription.provider_subscription_id &&
+      subscription.provider_email_token
+    ) {
+      await paystackClient.disableSubscription(
+        subscription.provider_subscription_id,
+        subscription.provider_email_token,
+      )
     }
 
     // Update subscription status in database
