@@ -146,6 +146,143 @@ export interface Database {
           created_at?: string
         }
       }
+      plans: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          paystack_plan_id: string
+          price: number
+          interval: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          paystack_plan_id: string
+          price: number
+          interval: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          paystack_plan_id?: string
+          price?: number
+          interval?: string
+          created_at?: string
+        }
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan_id: string
+          plan_name: string
+          provider: string
+          provider_subscription_id: string | null
+          provider_email_token: string | null
+          paystack_customer_id: string | null
+          paystack_authorization_code: string | null
+          status: string
+          current_period_end: string | null
+          cancel_at_period_end: boolean | null
+          cancelled_at: string | null
+          reference: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_id: string
+          plan_name: string
+          provider?: string
+          provider_subscription_id?: string | null
+          provider_email_token?: string | null
+          paystack_customer_id?: string | null
+          paystack_authorization_code?: string | null
+          status: string
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean | null
+          cancelled_at?: string | null
+          reference?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_id?: string
+          plan_name?: string
+          provider?: string
+          provider_subscription_id?: string | null
+          provider_email_token?: string | null
+          paystack_customer_id?: string | null
+          paystack_authorization_code?: string | null
+          status?: string
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean | null
+          cancelled_at?: string | null
+          reference?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      payments: {
+        Row: {
+          id: string
+          subscription_id: string
+          paystack_charge_id: string | null
+          amount: number
+          currency: string
+          status: string
+          paid_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subscription_id: string
+          paystack_charge_id?: string | null
+          amount: number
+          currency: string
+          status: string
+          paid_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subscription_id?: string
+          paystack_charge_id?: string | null
+          amount?: number
+          currency?: string
+          status?: string
+          paid_at?: string | null
+          created_at?: string
+        }
+      }
+      webhook_events: {
+        Row: {
+          id: number
+          event_type: string
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          id?: number
+          event_type: string
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          id?: number
+          event_type?: string
+          payload?: Json
+          received_at?: string
+        }
+      }
       schema_versions: {
         Row: {
           id: number
@@ -173,47 +310,6 @@ export interface Database {
           description?: string
           status?: string
           script?: string | null
-        }
-      }
-      subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          plan: string
-          status: string
-          start_date: string
-          end_date: string | null
-          payment_provider: string
-          payment_id: string
-          metadata: Json | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          plan: string
-          status: string
-          start_date: string
-          end_date?: string | null
-          payment_provider: string
-          payment_id: string
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          plan?: string
-          status?: string
-          start_date?: string
-          end_date?: string | null
-          payment_provider?: string
-          payment_id?: string
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
         }
       }
     }
