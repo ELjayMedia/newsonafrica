@@ -1334,10 +1334,119 @@ export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
   return data.tag?.posts?.nodes || []
 })
 
-/**
- * Alias for fetchTaggedPosts for backward compatibility
- */
-export const fetchPostsByTag = fetchTaggedPosts
+export async function fetchPostsByTag(tagSlug: string, after: string | null = null) {
+  const query = `
+    query TaggedPosts($tagSlug: ID!, $after: String) {
+      tag(id: $tagSlug, idType: SLUG) {
+        posts(first: 20, after: $after, where: { status: PUBLISH }) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            id
+            title
+            slug
+            date
+            excerpt
+            featuredImage {
+              node {
+                sourceUrl
+                altText
+              }
+            }
+            author {
+              node {
+                name
+                slug
+              }
+            }
+            categories {
+              nodes {
+                name
+                slug
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+  try {
+    const data = await graphqlRequest(query, { tagSlug, after })
+    return (
+      data?.tag?.posts || { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
+    )
+  } catch (error) {
+    console.error(`GraphQL fetchPostsByTag failed for ${tagSlug}:`, error)
+    try {
+      const tags = await fetchFromRestApi("tags", { slug: tagSlug })
+      if (!tags || tags.length === 0) {
+        return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
+      }
+      const tagId = tags[0].id
+      const perPage = 20
+      let page = 1
+      if (after) {
+        try {
+          const decoded = Buffer.from(after, "base64").toString("utf8")
+          const offset = parseInt(decoded.split(":").pop() || "0", 10)
+          page = Math.floor(offset / perPage) + 2
+        } catch {
+          const parsed = parseInt(after, 10)
+          if (!isNaN(parsed) && parsed > 0) {
+            page = parsed
+          }
+        }
+      }
+      const posts = await fetchFromRestApi("posts", {
+        tags: tagId,
+        per_page: perPage,
+        _embed: 1,
+        page,
+      })
+      const formatted = posts.map((post: any) => ({
+        id: post.id.toString(),
+        title: post.title?.rendered || "",
+        slug: post.slug || "",
+        date: post.date || "",
+        excerpt: post.excerpt?.rendered || "",
+        featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+          ? {
+              node: {
+                sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
+                altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+              },
+            }
+          : null,
+        author: {
+          node: {
+            name: post._embedded?.["author"]?.[0]?.name || "Unknown",
+            slug: post._embedded?.["author"]?.[0]?.slug || "",
+          },
+        },
+        categories: {
+          nodes:
+            post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+              name: cat.name,
+              slug: cat.slug,
+            })) || [],
+        },
+      }))
+      const hasNextPage = formatted.length === perPage
+      return {
+        pageInfo: {
+          hasNextPage,
+          endCursor: hasNextPage ? String(page + 1) : null,
+        },
+        nodes: formatted,
+      }
+    } catch (restError) {
+      console.error(`REST fetchPostsByTag failed for ${tagSlug}:`, restError)
+      return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
+    }
+  }
+}
 
 /**
  * Fetch single category data
