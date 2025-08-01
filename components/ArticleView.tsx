@@ -12,6 +12,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 import { RelatedPostsCarousel } from "./RelatedPostsCarousel"
 import { useRelatedPosts } from "@/hooks/useRelatedPosts"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface ArticleViewProps {
   post: {
@@ -66,6 +67,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const lastScrollPosition = useRef(0)
   const isManualScrolling = useRef(false)
   const forceScrollToTop = useRef(false)
+  const { getCategoryPath } = useNavigationRouting()
 
   // Extract categories for related posts
   const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
@@ -290,7 +292,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       <header className="mb-8">
         {primaryCategory && (
           <Link
-            href={`/category/${primaryCategory.slug}`}
+            href={getCategoryPath(primaryCategory.slug)}
             className="text-primary font-medium text-sm mb-2 inline-block"
           >
             {primaryCategory.name}

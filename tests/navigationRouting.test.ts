@@ -23,12 +23,14 @@ const { useNavigationRouting } = require('../hooks/useNavigationRouting')
 ;(function () {
   // Selecting "Eswatini" should push "/sz" so API calls target
   // https://newsonafrica.com/sz/... endpoints
-  const { navigateTo } = useNavigationRouting()
+  const { navigateTo, getCategoryPath } = useNavigationRouting()
   navigateTo(undefined, 'sz')
+  const built = getCategoryPath('news', 'ke')
 
   // Restore original loader
   ;(Module as any)._load = originalLoad
 
   assert.strictEqual(pushed[0], '/sz', 'navigateTo should push /sz')
+  assert.strictEqual(built, '/ke/category/news', 'getCategoryPath should build category path')
   console.log('navigationRouting test passed')
 })()

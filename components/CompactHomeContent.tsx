@@ -64,7 +64,7 @@ const fetchHomeData = async () => {
 
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const { currentCountry } = useNavigationRouting()
+  const { currentCountry, getCategoryPath } = useNavigationRouting()
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
@@ -190,7 +190,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                 <TrendingUp className="h-4 w-4 text-red-500" />
                 Quick Reads
               </h2>
-              <Link href="/category/news" className="text-xs text-blue-600 flex items-center gap-1">
+              <Link href={getCategoryPath("news") } className="text-xs text-blue-600 flex items-center gap-1">
                 More <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -212,7 +212,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
             <div className="bg-white rounded-lg shadow-sm">
               <div className="flex items-center justify-between p-2 border-b border-gray-100">
                 <h2 className="text-sm font-bold">Trending Now</h2>
-                <Link href="/category/news" className="text-xs text-blue-600">
+                <Link href={getCategoryPath("news")} className="text-xs text-blue-600">
                   View All
                 </Link>
               </div>
@@ -243,7 +243,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                   ))}
                 </div>
                 <Link
-                  href={`/category/${categoryName.toLowerCase()}`}
+                  href={getCategoryPath(categoryName.toLowerCase())}
                   className="block text-center text-xs text-blue-600 mt-2 py-1 border-t border-gray-100"
                 >
                   View all {categoryName} news

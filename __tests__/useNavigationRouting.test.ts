@@ -18,6 +18,13 @@ describe('useNavigationRouting', () => {
     act(() => result.current.navigateTo('news', 'ke'))
     expect(push).toHaveBeenCalledWith('/ke/category/news')
   })
+
+  it('returns category path for slug and country', () => {
+    const push = jest.fn()
+    useRouter.mockReturnValue({ push })
+    const { result } = renderHook(() => useNavigationRouting())
+    expect(result.current.getCategoryPath('news', 'ke')).toBe('/ke/category/news')
+  })
 })
 
 describe('getCountryEndpoints', () => {

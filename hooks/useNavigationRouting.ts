@@ -36,15 +36,19 @@ export function useNavigationRouting() {
     }
   }
 
-  const navigateTo = useCallback(
-    (slug?: string, countryCode: string = currentCountry) => {
-      const path = slug
-        ? `/${countryCode}/category/${slug}`
-        : `/${countryCode}`
-      router.push(path)
-    },
-    [router, currentCountry],
+  const getCategoryPath = useCallback(
+    (slug: string, countryCode: string = currentCountry) =>
+      `/${countryCode}/category/${slug}`,
+    [currentCountry],
   )
 
-  return { currentCountry, activeSlug, navigateTo }
+  const navigateTo = useCallback(
+    (slug?: string, countryCode: string = currentCountry) => {
+      const path = slug ? getCategoryPath(slug, countryCode) : `/${countryCode}`
+      router.push(path)
+    },
+    [router, currentCountry, getCategoryPath],
+  )
+
+  return { currentCountry, activeSlug, navigateTo, getCategoryPath }
 }

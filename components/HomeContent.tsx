@@ -15,6 +15,7 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
+import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface HomeContentProps {
   initialPosts?: any[]
@@ -95,6 +96,7 @@ const fetchHomeData = async () => {
 
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const [isOffline, setIsOffline] = useState(!isOnline())
+  const { getCategoryPath } = useNavigationRouting()
 
   // Listen for online/offline events
   useEffect(() => {
@@ -256,7 +258,10 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
       <>
         <section className="bg-white rounded-lg">
           <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+            <Link
+              href={getCategoryPath(name.toLowerCase())}
+              className="hover:text-blue-600 transition-colors"
+            >
               {name}
             </Link>
           </h2>
