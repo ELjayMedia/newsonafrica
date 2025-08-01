@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { optimizedWordPressSearch } from "@/lib/wordpress"
 import { setCacheHeaders } from "@/lib/api-utils"
 import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
+import Fuse from "fuse.js"
 
 // Rate limiting
 const RATE_LIMIT = 50
@@ -252,12 +253,12 @@ export async function GET(request: NextRequest) {
         })
         return setCacheHeaders(res, 300)
       } catch (restError) {
-        // Fallback to mock data
-        const filteredResults = FALLBACK_POSTS.filter(
-          (item) =>
-            item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
-            item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
-        )
+        // Fallback to mock data with fuzzy search
+        const fuse = new Fuse(FALLBACK_POSTS, {
+          keys: ["title.rendered", "excerpt.rendered"],
+          threshold: 0.4,
+        })
+        const filteredResults = fuse.search(queryParam).map((result) => result.item)
 
         const startIndex = (page - 1) * perPage
         const endIndex = startIndex + perPage

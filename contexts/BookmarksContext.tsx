@@ -8,6 +8,7 @@ import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
 import { useToast } from "@/hooks/use-toast"
+import Fuse from "fuse.js"
 
 
 export interface Bookmark {
@@ -344,14 +345,12 @@ export function BookmarksProvider({
     (query: string): Bookmark[] => {
       if (!query.trim()) return bookmarks
 
-      const searchTerm = query.toLowerCase()
-      return bookmarks.filter(
-        (bookmark) =>
-          bookmark.title.toLowerCase().includes(searchTerm) ||
-          bookmark.excerpt?.toLowerCase().includes(searchTerm) ||
-          bookmark.notes?.toLowerCase().includes(searchTerm) ||
-          bookmark.tags?.some((tag) => tag.toLowerCase().includes(searchTerm)),
-      )
+      const fuse = new Fuse(bookmarks, {
+        keys: ["title", "excerpt", "notes", "tags"],
+        threshold: 0.3,
+      })
+
+      return fuse.search(query).map((result) => result.item)
     },
     [bookmarks],
   )
