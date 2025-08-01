@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
 import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
+import { categoryConfigs } from "@/config/homeConfig"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -92,11 +93,25 @@ async function getHomePageData() {
       ),
     )
 
+    const categoryPosts: Record<string, any[]> = {}
+    for (const config of categoryConfigs) {
+      const slug = config.name.toLowerCase()
+      categoryPosts[config.name] = posts
+        .filter((post) =>
+          post.categories?.nodes?.some(
+            (cat) =>
+              cat.slug === slug || cat.name.toLowerCase() === slug,
+          ),
+        )
+        .slice(0, 5)
+    }
+
     const initialData = {
       taggedPosts,
       featuredPosts: posts.slice(0, 6),
       categories,
       recentPosts: posts.slice(0, 10),
+      categoryPosts,
     }
 
     return { posts, initialData }
@@ -104,7 +119,13 @@ async function getHomePageData() {
     console.error("Failed to fetch posts for homepage:", error)
     return {
       posts: [],
-      initialData: { taggedPosts: [], featuredPosts: [], categories: [], recentPosts: [] },
+      initialData: {
+        taggedPosts: [],
+        featuredPosts: [],
+        categories: [],
+        recentPosts: [],
+        categoryPosts: {},
+      },
     }
   }
 }
