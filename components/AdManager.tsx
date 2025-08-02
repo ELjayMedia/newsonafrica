@@ -34,6 +34,7 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
   const activeSlots = useRef<Set<string>>(new Set())
   const lastRefreshTime = useRef<number>(0)
   const refreshCooldown = 1000 // 1 second cooldown between refreshes
+  const gptLoadTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     // Check for ad blocker
@@ -55,10 +56,16 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
           })
         })
       } else {
-        setTimeout(checkGPTLoaded, 100)
+        const timeout = setTimeout(checkGPTLoaded, 100)
+        gptLoadTimeout.current = timeout
       }
     }
     checkGPTLoaded()
+    return () => {
+      if (gptLoadTimeout.current) {
+        clearTimeout(gptLoadTimeout.current)
+      }
+    }
   }, [])
 
   const registerAdSlot = (slotId: string) => {
