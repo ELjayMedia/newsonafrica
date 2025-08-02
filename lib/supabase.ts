@@ -60,15 +60,41 @@ export const createAdminClient = () => {
 
 // Helper function to get user profile with error handling and caching
 const profileCache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+export const __profileCache = profileCache // Exported for testing
+export const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+export const PROFILE_CACHE_MAX = 100
+
+export function purgeProfileCache() {
+  const now = Date.now()
+  for (const [key, value] of profileCache.entries()) {
+    if (now - value.timestamp >= CACHE_TTL) {
+      profileCache.delete(key)
+    }
+  }
+
+  while (profileCache.size > PROFILE_CACHE_MAX) {
+    const oldestKey = profileCache.keys().next().value
+    if (oldestKey !== undefined) {
+      profileCache.delete(oldestKey)
+    }
+  }
+}
+
+// Periodically purge expired entries
+setInterval(purgeProfileCache, CACHE_TTL).unref?.()
 
 export async function getUserProfile(userId: string) {
   try {
+    purgeProfileCache()
+
     // Check cache first
     const cached = profileCache.get(userId)
     const now = Date.now()
 
     if (cached && now - cached.timestamp < CACHE_TTL) {
+      // Move to end for LRU behavior
+      profileCache.delete(userId)
+      profileCache.set(userId, cached)
       return cached.data
     }
 
@@ -82,6 +108,7 @@ export async function getUserProfile(userId: string) {
 
     // Update cache
     profileCache.set(userId, { data, timestamp: now })
+    purgeProfileCache()
 
     return data
   } catch (error) {
@@ -102,6 +129,7 @@ export async function updateUserProfile(userId: string, updates: Partial<Profile
 
     // Update cache
     profileCache.set(userId, { data, timestamp: Date.now() })
+    purgeProfileCache()
 
     return data
   } catch (error) {
@@ -236,6 +264,7 @@ export async function handleSocialLoginProfile(user: any) {
 
     // Update cache
     profileCache.set(user.id, { data, timestamp: Date.now() })
+    purgeProfileCache()
 
     return data
   } catch (error) {
