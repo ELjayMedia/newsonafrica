@@ -31,50 +31,50 @@ export function Header() {
     try {
       const cacheKey = `menu-categories:${currentCountry}`
       const cached = localStorage.getItem(cacheKey)
-      if (!cached) return false
+      if (!cached) return { hasCache: false, isFresh: false }
       const parsed = JSON.parse(cached)
+      setCategories(parsed.categories)
+      setIsLoadingCats(false)
       const age = Date.now() - parsed.timestamp
-      if (navigator.onLine === false || age < CACHE_TTL) {
-        setCategories(parsed.categories)
-        setIsLoadingCats(false)
-        return true
-      }
+      return { hasCache: true, isFresh: age < CACHE_TTL }
     } catch (err) {
       console.error("Failed to load cached categories", err)
     }
-    return false
+    return { hasCache: false, isFresh: false }
   }, [currentCountry])
 
-  const fetchCats = useCallback(async () => {
-    try {
-      setCatError(false)
-      setIsLoadingCats(true)
-      const data = await getCategories(currentCountry)
-      setCategories(data)
+  const fetchCats = useCallback(
+    async (showLoading = true) => {
       try {
-        const cacheKey = `menu-categories:${currentCountry}`
-        localStorage.setItem(
-          cacheKey,
-          JSON.stringify({ categories: data, timestamp: Date.now() })
-        )
+        setCatError(false)
+        if (showLoading) setIsLoadingCats(true)
+        const data = await getCategories(currentCountry)
+        setCategories(data)
+        try {
+          const cacheKey = `menu-categories:${currentCountry}`
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({ categories: data, timestamp: Date.now() })
+          )
+        } catch (err) {
+          console.error("Failed to cache categories", err)
+        }
       } catch (err) {
-        console.error("Failed to cache categories", err)
+        console.error("Failed to load categories", err)
+        setCatError(true)
+      } finally {
+        if (showLoading) setIsLoadingCats(false)
       }
-    } catch (err) {
-      console.error("Failed to load categories", err)
-      setCatError(true)
-    } finally {
-      setIsLoadingCats(false)
-    }
-  }, [currentCountry])
+    },
+    [currentCountry]
+  )
 
   useEffect(() => {
-    if (!loadCatsFromCache()) {
-      if (navigator.onLine) {
-        fetchCats()
-      } else {
-        setIsLoadingCats(false)
-      }
+    const { hasCache, isFresh } = loadCatsFromCache()
+    if (navigator.onLine && !isFresh) {
+      fetchCats(!hasCache)
+    } else if (!hasCache) {
+      setIsLoadingCats(false)
     }
   }, [fetchCats, loadCatsFromCache])
 
