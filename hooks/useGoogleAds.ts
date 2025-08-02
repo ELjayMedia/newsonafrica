@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 declare global {
   interface Window {
@@ -33,12 +33,14 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [slot, setSlot] = useState<any>(null)
+  const adLoadedRef = useRef(false)
 
   useEffect(() => {
     // Only run on client side
     if (typeof window === "undefined") return
 
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | undefined
+    adLoadedRef.current = false
 
     const initializeAd = () => {
       try {
@@ -65,7 +67,6 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
 
               // Display the ad
               window.googletag.display(slotId)
-              setIsLoaded(true)
 
               // Listen for ad events
               window.googletag.pubads().addEventListener("slotRenderEnded", (event: any) => {
@@ -74,8 +75,10 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
                     console.warn(`Ad slot ${slotId} is empty`)
                     setHasError(true)
                   } else {
+                    adLoadedRef.current = true
                     setIsLoaded(true)
                     setHasError(false)
+                    clearTimeout(timeoutId)
                   }
                 }
               })
@@ -90,7 +93,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
 
         // Set a timeout to detect if ad fails to load
         timeoutId = setTimeout(() => {
-          if (!isLoaded) {
+          if (!adLoadedRef.current) {
             console.warn(`Ad slot ${slotId} failed to load within timeout`)
             setHasError(true)
           }
