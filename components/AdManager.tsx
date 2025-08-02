@@ -38,7 +38,6 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
   const [isGPTLoaded, setIsGPTLoaded] = useState(false)
   const activeSlots = useRef<Set<string>>(new Set())
   const lastRefreshTime = useRef<number>(0)
-
   useEffect(() => {
     // Check for ad blocker
     checkAdBlocker().then(setIsAdBlockerDetected)
@@ -59,10 +58,16 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
           })
         })
       } else {
-        setTimeout(checkGPTLoaded, 100)
+        const timeout = setTimeout(checkGPTLoaded, 100)
+        gptLoadTimeout.current = timeout
       }
     }
     checkGPTLoaded()
+    return () => {
+      if (gptLoadTimeout.current) {
+        clearTimeout(gptLoadTimeout.current)
+      }
+    }
   }, [])
 
   const registerAdSlot = (slotId: string) => {
