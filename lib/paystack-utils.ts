@@ -61,7 +61,7 @@ export function formatCurrency(amount: number, currency = "ZAR"): string {
     case "ZAR":
       return `R${actualAmount.toFixed(2)}`
     case "USD":
-      return `${actualAmount.toFixed(2)}`
+      return `$${actualAmount.toFixed(2)}`
     case "NGN":
       return `₦${actualAmount.toFixed(2)}`
     default:
