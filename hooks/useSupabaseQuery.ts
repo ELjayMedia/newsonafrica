@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
-import { executeWithCache } from "@/utils/supabase-query-utils"
+import { executeWithCache, clearQueryCache } from "@/utils/supabase-query-utils"
 
 interface UseSupabaseQueryOptions<T> {
   enabled?: boolean
@@ -135,6 +135,7 @@ export function useSupabaseQuery<T = any>(
  *
  * @param mutationFn - Function that performs the mutation
  * @param options - Mutation options
+ * @param options.invalidateQueries - Array of query keys to clear from cache after a successful mutation
  * @returns Mutation function and state
  */
 export function useSupabaseMutation<TData = any, TVariables = any>(
@@ -167,8 +168,7 @@ export function useSupabaseMutation<TData = any, TVariables = any>(
         // Invalidate queries if specified
         if (invalidateQueries.length > 0) {
           invalidateQueries.forEach((queryKey) => {
-            // This would ideally use a query client, but for simplicity we're just clearing the cache
-            // In a real implementation, you'd want to trigger a refetch of affected queries
+            clearQueryCache(queryKey)
           })
         }
 
