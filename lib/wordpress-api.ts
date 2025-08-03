@@ -1102,8 +1102,73 @@ export const fetchCategorizedPosts = async () => {
 }
 
 export const fetchAllPosts = fetchRecentPosts
-export const fetchAllTags = async () => []
-export const fetchAllAuthors = async () => []
+export const fetchAllTags = cache(async () => {
+  const query = `
+    query AllTags {
+      tags(first: 100, where: { hideEmpty: true }) {
+        nodes {
+          id
+          name
+          slug
+          description
+          count
+        }
+      }
+    }
+  `
+
+  const restFallback = async () => {
+    const tags = await fetchFromRestApi("tags", { per_page: 100, hide_empty: true })
+    return {
+      tags: {
+        nodes: tags.map((tag: any) => ({
+          id: tag.id.toString(),
+          name: tag.name,
+          slug: tag.slug,
+          description: tag.description || "",
+          count: tag.count || 0,
+        })),
+      },
+    }
+  }
+
+  const data = await fetchWithFallback(query, {}, "all-tags", restFallback)
+  return data.tags?.nodes || []
+})
+
+export const fetchAllAuthors = cache(async () => {
+  const query = `
+    query AllAuthors {
+      users(first: 100, where: { hasPublishedPosts: true }) {
+        nodes {
+          id
+          name
+          slug
+          description
+          avatar { url }
+        }
+      }
+    }
+  `
+
+  const restFallback = async () => {
+    const users = await fetchFromRestApi("users", { per_page: 100 })
+    return {
+      users: {
+        nodes: users.map((user: any) => ({
+          id: user.id.toString(),
+          name: user.name,
+          slug: user.slug,
+          description: user.description || "",
+          avatar: { url: user.avatar_urls?.["96"] || "" },
+        })),
+      },
+    }
+  }
+
+  const data = await fetchWithFallback(query, {}, "all-authors", restFallback)
+  return data.users?.nodes || []
+})
 export const fetchPosts = fetchRecentPosts
 export const fetchCategories = fetchAllCategories
 export const fetchTags = fetchAllTags
