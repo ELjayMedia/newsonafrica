@@ -162,11 +162,16 @@ export async function getNotifications(
 export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
   try {
     // Get the notification first to get its user_id for cache invalidation
-    const { data: notification } = await supabase
+    const { data: notification, error } = await supabase
       .from("notifications")
       .select("user_id")
       .eq("id", notificationId)
       .single()
+
+    if (error) {
+      console.error("Error fetching notification:", error)
+      return false
+    }
 
     if (!notification) {
       return false
