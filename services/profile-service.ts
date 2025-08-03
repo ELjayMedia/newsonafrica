@@ -163,13 +163,13 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
   try {
     const cacheKey = createQueryKey("profiles", { username_check: username })
 
-    const result = await executeWithCache<{ exists: boolean }>(
+    const result = await executeWithCache<Pick<Profile, "username">>(
       supabase.from("profiles").select("username").eq("username", username).limit(1),
       cacheKey,
       USERNAME_CACHE_TTL,
     )
 
-    return result.length > 0
+    return Boolean(result.length)
   } catch (error) {
     console.error("Error in checkUsernameExists:", error)
     throw error
