@@ -1,4 +1,3 @@
-import { cache } from "react"
 import { getCountryEndpoints } from "../getCountryEndpoints"
 
 // Default endpoints derived from environment variables
@@ -47,6 +46,8 @@ export async function graphqlRequest(
       query,
       variables,
     }),
+    cache: "no-store",
+    next: { revalidate: 0 },
   })
 
   if (!response.ok) {
@@ -92,7 +93,8 @@ export async function fetchFromRestApi(
           "Accept-Encoding": "gzip",
         },
         signal: controller.signal,
-        next: { revalidate: 300 },
+        cache: "no-store",
+        next: { revalidate: 0 },
       })
 
       clearTimeout(timeoutId)

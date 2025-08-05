@@ -1,4 +1,3 @@
-import { cache } from "react"
 import {
   graphqlRequest,
   fetchFromRestApi,
@@ -9,7 +8,7 @@ import {
 /**
  * Fetches recent posts
  */
-export const fetchRecentPosts = cache(async (limit = 20) => {
+export const fetchRecentPosts = async (limit = 20) => {
   const query = `
     query RecentPosts($limit: Int!) {
       posts(first: $limit, where: { orderby: { field: DATE, order: DESC }, status: PUBLISH }) {
@@ -99,12 +98,12 @@ export const fetchRecentPosts = cache(async (limit = 20) => {
 
   const data = await fetchWithFallback(query, { limit }, `recent-posts-${limit}`, restFallback)
   return data.posts?.nodes || []
-})
+}
 
 /**
  * Fetches posts by category
  */
-export const fetchCategoryPosts = cache(async (slug: string, after: string | null = null) => {
+export const fetchCategoryPosts = async (slug: string, after: string | null = null) => {
   const query = `
     query CategoryPosts($slug: ID!, $after: String) {
       category(id: $slug, idType: SLUG) {
@@ -236,12 +235,12 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
 
   const data = await fetchWithFallback(query, { slug, after }, `category-${slug}-${after || "first"}`, restFallback)
   return data.category
-})
+}
 
 /**
  * Fetches all categories
  */
-export const fetchAllCategories = cache(async () => {
+export const fetchAllCategories = async () => {
   const query = `
     query AllCategories {
       categories(first: 100, where: { hideEmpty: true }) {
@@ -273,7 +272,7 @@ export const fetchAllCategories = cache(async () => {
 
   const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
   return data.categories?.nodes || []
-})
+}
 
 /**
  * Fetches a single post
@@ -1102,7 +1101,7 @@ export const fetchCategorizedPosts = async () => {
 }
 
 export const fetchAllPosts = fetchRecentPosts
-export const fetchAllTags = cache(async () => {
+export const fetchAllTags = async () => {
   const query = `
     query AllTags {
       tags(first: 100, where: { hideEmpty: true }) {
@@ -1134,9 +1133,9 @@ export const fetchAllTags = cache(async () => {
 
   const data = await fetchWithFallback(query, {}, "all-tags", restFallback)
   return data.tags?.nodes || []
-})
+}
 
-export const fetchAllAuthors = cache(async () => {
+export const fetchAllAuthors = async () => {
   const query = `
     query AllAuthors {
       users(first: 100, where: { hasPublishedPosts: true }) {
@@ -1168,7 +1167,7 @@ export const fetchAllAuthors = cache(async () => {
 
   const data = await fetchWithFallback(query, {}, "all-authors", restFallback)
   return data.users?.nodes || []
-})
+}
 export const fetchPosts = fetchRecentPosts
 export const fetchCategories = fetchAllCategories
 export const fetchTags = fetchAllTags
@@ -1177,7 +1176,7 @@ export const fetchAuthors = fetchAllAuthors
 /**
  * Fetch author data by slug
  */
-export const fetchAuthorData = cache(async (slug: string) => {
+export const fetchAuthorData = async (slug: string) => {
   const query = `
     query AuthorData($slug: ID!) {
       user(id: $slug, idType: SLUG) {
@@ -1266,7 +1265,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `author-${slug}`, restFallback)
   return data.user
-})
+}
 
 /**
  * Delete a comment
@@ -1355,7 +1354,7 @@ export const approveComment = async (commentId: string) => {
 /**
  * Fetch posts by tag
  */
-export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
+export const fetchTaggedPosts = async (tagSlug: string, limit = 20) => {
   const query = `
     query TaggedPosts($tagSlug: ID!, $limit: Int!) {
       tag(id: $tagSlug, idType: SLUG) {
@@ -1450,7 +1449,7 @@ export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
 
   const data = await fetchWithFallback(query, { tagSlug, limit }, `tagged-posts-${tagSlug}-${limit}`, restFallback)
   return data.tag?.posts?.nodes || []
-})
+}
 
 export async function fetchPostsByTag(tagSlug: string, after: string | null = null) {
   const query = `
@@ -1569,7 +1568,7 @@ export async function fetchPostsByTag(tagSlug: string, after: string | null = nu
 /**
  * Fetch single category data
  */
-export const fetchSingleCategory = cache(async (slug: string) => {
+export const fetchSingleCategory = async (slug: string) => {
   const query = `
     query SingleCategory($slug: ID!) {
       category(id: $slug, idType: SLUG) {
@@ -1607,12 +1606,12 @@ export const fetchSingleCategory = cache(async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `single-category-${slug}`, restFallback)
   return data.category
-})
+}
 
 /**
  * Fetch single tag data
  */
-export const fetchSingleTag = cache(async (slug: string) => {
+export const fetchSingleTag = async (slug: string) => {
   const query = `
     query SingleTag($slug: ID!) {
       tag(id: $slug, idType: SLUG) {
@@ -1650,7 +1649,7 @@ export const fetchSingleTag = cache(async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `single-tag-${slug}`, restFallback)
   return data.tag
-})
+}
 
 /**
  * Fetch comments for a post
