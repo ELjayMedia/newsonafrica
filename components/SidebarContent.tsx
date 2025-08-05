@@ -6,7 +6,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useMemo } from "react"
 import { AdSense } from "@/components/AdSense"
 import { AdErrorBoundary } from "./AdErrorBoundary"
 import { SidebarSkeleton } from "./SidebarSkeleton"
@@ -14,21 +13,20 @@ import { SidebarSkeleton } from "./SidebarSkeleton"
 export function SidebarContent() {
 
   const limit = 10
+  const { data: mostReadPosts, isLoading: mostReadLoading, error: mostReadError } =
+    useQuery({
+      queryKey: ["mostReadPosts", limit],
+      queryFn: () => fetchMostReadPosts(limit),
+      staleTime: 1000 * 60 * 5,
+    })
 
-  const { data, isLoading, error } = useQuery({
+  const { data: recentPosts, isLoading: recentLoading, error: recentError } = useQuery({
     queryKey: ["recentPosts", limit],
     queryFn: () => fetchRecentPosts(limit),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
-  const mostReadPosts = useMemo(() => {
-    if (!data) return []
-    const postsWithViews = getViewCounts(data)
-    return postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
-  }, [data])
-
-  if (isLoading) return <SidebarSkeleton />
-
+  if (mostReadLoading || recentLoading) return <SidebarSkeleton />
 
   if (mostReadError || recentError) {
     return (
@@ -41,9 +39,8 @@ export function SidebarContent() {
       </div>
     )
   }
-
   // Handle empty data
-  if (!mostReadPosts || mostReadPosts.length === 0) {
+  if (!mostReadPosts || !recentPosts || mostReadPosts.length === 0 || recentPosts.length === 0) {
     return (
       <div className="space-y-6">
         <section className="bg-white shadow-md rounded-lg p-4">
