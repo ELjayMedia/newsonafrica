@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo, useEffect, useCallback } from "react"
-import { formatDate } from "@/lib/utils"
+import { formatPostDate } from "@/lib/date"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 import { useNavigationRouting } from "@/hooks/useNavigationRouting"
@@ -116,7 +116,7 @@ export const NewsGrid = memo(function NewsGrid({
               </div>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date}>{formatDate(post.date)}</time>
+                <time dateTime={post.date}>{formatPostDate(post.date)}</time>
               </div>
             </div>
           </Link>
@@ -208,7 +208,7 @@ const SportCategorySection = memo(function SportCategorySection({
           </div>
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-            <time dateTime={sportCategoryPosts[0]?.date}>{formatDate(sportCategoryPosts[0]?.date)}</time>
+            <time dateTime={sportCategoryPosts[0]?.date}>{formatPostDate(sportCategoryPosts[0]?.date)}</time>
           </div>
         </div>
       </Link>
@@ -227,8 +227,8 @@ const SportCategorySection = memo(function SportCategorySection({
               </h3>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
+                <time dateTime={post.date} title={formatPostDate(post.date)}>
+                  {formatPostDate(post.date)}
                 </time>
               </div>
             </div>
@@ -297,7 +297,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
           </div>
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-            <time dateTime={mainPost?.date}>{formatDate(mainPost?.date)}</time>
+            <time dateTime={mainPost?.date}>{formatPostDate(mainPost?.date)}</time>
           </div>
         </div>
       </Link>
@@ -318,8 +318,8 @@ const RegularCategorySection = memo(function RegularCategorySection({
               </div>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
+                <time dateTime={post.date} title={formatPostDate(post.date)}>
+                  {formatPostDate(post.date)}
                 </time>
               </div>
             </div>
