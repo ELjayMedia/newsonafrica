@@ -1,8 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { PostCard } from "./PostCard"
+import { formatPostDate } from "@/lib/date"
 
 
 interface HorizontalCardProps {
