@@ -86,7 +86,7 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 JWT_SECRET=your_jwt_secret
 
 # Analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-S55PVESFS2
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
