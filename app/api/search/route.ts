@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { optimizedWordPressSearch } from "@/lib/wordpress"
 import { setCacheHeaders } from "@/lib/api-utils"
 import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
-import Fuse from "fuse.js"
+import { fuzzySearch } from "@/utils/fuzzy-search"
 
 // Rate limiting
 const RATE_LIMIT = 50
@@ -254,11 +254,10 @@ export async function GET(request: NextRequest) {
         return setCacheHeaders(res, 300)
       } catch (restError) {
         // Fallback to mock data with fuzzy search
-        const fuse = new Fuse(FALLBACK_POSTS, {
+        const filteredResults = fuzzySearch(FALLBACK_POSTS, queryParam, {
           keys: ["title.rendered", "excerpt.rendered"],
           threshold: 0.4,
         })
-        const filteredResults = fuse.search(queryParam).map((result) => result.item)
 
         const startIndex = (page - 1) * perPage
         const endIndex = startIndex + perPage
