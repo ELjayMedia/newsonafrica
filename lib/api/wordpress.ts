@@ -34,6 +34,7 @@ export interface WordPressCategory {
   count?: number
   parent?: {
     node: {
+      id: string
       name: string
       slug: string
     }

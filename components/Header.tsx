@@ -11,6 +11,7 @@ import { SearchBox } from "@/components/SearchBox"
 import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 import { getCategories, type WordPressCategory } from "@/lib/api/wordpress"
 import { Loader2 } from "lucide-react"
+import CategoryDropdownNav from "@/components/CategoryDropdownNav"
 
 
 export function Header() {
@@ -180,23 +181,11 @@ export function Header() {
                   </button>
                 </div>
               ) : (
-                <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-                  {categories.map((category) => (
-                    <li key={category.slug} tabIndex={0}>
-                      <button
-                        onClick={() => navigateTo(category.slug, currentCountry)}
-                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
-                          activeSlug === category.slug
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
-                        } focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600`}
-                        aria-current={activeSlug === category.slug ? "page" : undefined}
-                      >
-                        {category.name.toUpperCase()}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <CategoryDropdownNav
+                  categories={categories}
+                  activeSlug={activeSlug}
+                  onNavigate={(slug) => navigateTo(slug, currentCountry)}
+                />
               )}
             </div>
           </nav>
