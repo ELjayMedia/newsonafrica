@@ -5,6 +5,7 @@ import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
+import GoogleAnalytics from "@/components/GoogleAnalytics"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
@@ -142,6 +143,7 @@ export function ClientLayout({
           </UserProvider>
         </ErrorBoundary>
         <GoogleAnalyticsScript />
+        <GoogleAnalytics />
         <Analytics />
         <SpeedInsights />
         <Script

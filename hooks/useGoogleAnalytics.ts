@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
+import { siteConfig } from "@/config/site"
 
 declare global {
   interface Window {
@@ -15,8 +16,9 @@ export const useGoogleAnalytics = () => {
 
   useEffect(() => {
     const handleRouteChange = (url: string) => {
-      if (typeof window.gtag === "function") {
-        window.gtag("config", "G-DQVSXQ97WQ", {
+      const measurementId = siteConfig.analytics.googleAnalyticsId
+      if (typeof window.gtag === "function" && measurementId) {
+        window.gtag("config", measurementId, {
           page_path: url,
         })
       }
