@@ -4,18 +4,16 @@ import { getCountryEndpoints } from '../lib/getCountryEndpoints'
 ;(function () {
   delete process.env.NEXT_PUBLIC_DEFAULT_COUNTRY
   process.env.NEXT_PUBLIC_WP_BASE_URL = 'https://example.com'
-  assert.throws(
-    () => getCountryEndpoints('ng'),
-    /NEXT_PUBLIC_DEFAULT_COUNTRY/, 
-    'should throw when NEXT_PUBLIC_DEFAULT_COUNTRY is missing'
-  )
+  const fallback = getCountryEndpoints()
+  assert.strictEqual(fallback.graphql, 'https://example.com/sz/graphql')
+  assert.strictEqual(fallback.rest, 'https://example.com/sz')
 
   process.env.NEXT_PUBLIC_DEFAULT_COUNTRY = 'ng'
   delete process.env.NEXT_PUBLIC_WP_BASE_URL
-  assert.throws(
-    () => getCountryEndpoints('ng'),
-    /NEXT_PUBLIC_WP_BASE_URL/, 
-    'should throw when NEXT_PUBLIC_WP_BASE_URL is missing'
+  const missingBase = getCountryEndpoints('ng')
+  assert.ok(
+    missingBase.error?.includes('NEXT_PUBLIC_WP_BASE_URL'),
+    'should return descriptive error when NEXT_PUBLIC_WP_BASE_URL is missing'
   )
 
   process.env.NEXT_PUBLIC_DEFAULT_COUNTRY = 'ng'
