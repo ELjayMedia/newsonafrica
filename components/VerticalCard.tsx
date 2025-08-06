@@ -8,6 +8,7 @@ import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { PostCard } from "./PostCard"
 import { cn } from "@/lib/utils"
 
+
 interface VerticalCardProps {
   post: {
     title: string
@@ -28,12 +29,7 @@ interface VerticalCardProps {
 }
 
 export const VerticalCard = memo(function VerticalCard({ post, className = "" }: VerticalCardProps) {
-  const formattedDate = useMemo(() => {
-    return new Date(post.date).toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-    })
-  }, [post.date])
+  const formattedDate = useMemo(() => formatPostDate(post.date), [post.date])
 
   const blurDataURL = useMemo(() => generateBlurDataURL(300, 200), [])
 

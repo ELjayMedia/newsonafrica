@@ -46,4 +46,5 @@ export function NewsGrid({ posts, layout = "mixed", className = "" }: NewsGridPr
       })}
     </div>
   )
+
 }

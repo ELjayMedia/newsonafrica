@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { PostCard } from "./PostCard"
 
+
 interface HorizontalCardProps {
   post: {
     id: string
@@ -27,7 +28,7 @@ interface HorizontalCardProps {
 }
 
 export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
-  const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
+  const formattedDate = post.date ? formatPostDate(post.date) : "Recently"
 
   const meta = (
     <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-300">
