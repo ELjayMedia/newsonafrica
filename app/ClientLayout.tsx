@@ -4,7 +4,8 @@ import "./globals.css"
 import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
-import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
+import GoogleAnalytics from "@/components/GoogleAnalytics"
+import { siteConfig } from "@/config/site"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
@@ -67,6 +68,24 @@ export function ClientLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
+        {/* Google tag (gtag.js) */}
+        {siteConfig.analytics.googleAnalyticsId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${siteConfig.analytics.googleAnalyticsId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+
+                gtag('config', '${siteConfig.analytics.googleAnalyticsId}');
+              `}
+            </Script>
+          </>
+        )}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
@@ -141,7 +160,7 @@ export function ClientLayout({
             </ClientWrapper>
           </UserProvider>
         </ErrorBoundary>
-        <GoogleAnalyticsScript />
+        <GoogleAnalytics />
         <Analytics />
         <SpeedInsights />
         <Script
