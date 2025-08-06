@@ -11,18 +11,18 @@ import { AdErrorBoundary } from "./AdErrorBoundary"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 
 export function SidebarContent() {
-
-  const limit = 10
+  const mostReadLimit = 5
+  const recentLimit = 10
   const { data: mostReadPosts, isLoading: mostReadLoading, error: mostReadError } =
     useQuery({
-      queryKey: ["mostReadPosts", limit],
-      queryFn: () => fetchMostReadPosts(limit),
+      queryKey: ["mostReadPosts", mostReadLimit],
+      queryFn: () => fetchMostReadPosts(mostReadLimit),
       staleTime: 1000 * 60 * 5,
     })
 
   const { data: recentPosts, isLoading: recentLoading, error: recentError } = useQuery({
-    queryKey: ["recentPosts", limit],
-    queryFn: () => fetchRecentPosts(limit),
+    queryKey: ["recentPosts", recentLimit],
+    queryFn: () => fetchRecentPosts(recentLimit),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
@@ -68,7 +68,7 @@ export function SidebarContent() {
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
           {mostReadPosts.length > 0 ? (
             <div className="space-y-4">
-              {mostReadPosts.map((post, index) => (
+              {mostReadPosts.slice(0, mostReadLimit).map((post, index) => (
                 <Link key={post.id} href={`/post/${post.slug}`} className="flex items-start gap-3 group">
                   <span className="text-2xl font-light text-gray-300 leading-tight">{index + 1}</span>
                   <div className="flex-1 min-w-0">
