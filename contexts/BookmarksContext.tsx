@@ -8,7 +8,7 @@ import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
 import { useToast } from "@/hooks/use-toast"
-import Fuse from "fuse.js"
+import { fuzzySearch } from "@/utils/fuzzy-search"
 
 
 export interface Bookmark {
@@ -345,12 +345,10 @@ export function BookmarksProvider({
     (query: string): Bookmark[] => {
       if (!query.trim()) return bookmarks
 
-      const fuse = new Fuse(bookmarks, {
+      return fuzzySearch(bookmarks, query, {
         keys: ["title", "excerpt", "notes", "tags"],
         threshold: 0.3,
       })
-
-      return fuse.search(query).map((result) => result.item)
     },
     [bookmarks],
   )

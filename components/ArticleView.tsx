@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { formatDate } from "@/utils/date-utils"
+import { formatPostDate } from "@/lib/date"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
@@ -281,7 +281,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
     return `${time} min read`
   }
 
-  const formattedDate = formatDate(date)
+  const formattedDate = formatPostDate(date)
 
   // Extract the first category if available
   const primaryCategory = categories?.edges?.[0]?.node

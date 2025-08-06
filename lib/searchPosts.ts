@@ -4,7 +4,7 @@
 
 import { siteConfig } from "@/config/site"
 import type { SearchPost } from "./search"
-import Fuse from "fuse.js"
+import { fuzzySearch } from "@/utils/fuzzy-search"
 
 export interface Post {
   id: string
@@ -160,10 +160,8 @@ function searchPostsLocal(posts: SearchPost[], query: string): SearchPost[] {
     return []
   }
 
-  const fuse = new Fuse(posts, {
+  return fuzzySearch(posts, normalizedQuery, {
     keys: ["title.rendered", "excerpt.rendered", "content.rendered"],
     threshold: 0.4,
   })
-
-  return fuse.search(normalizedQuery).map((result) => result.item)
 }
