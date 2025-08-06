@@ -1,7 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { formatDistanceToNow } from "date-fns"
-import Fuse from "fuse.js"
+import { cn } from "@/lib/utils"
+import { PostCard } from "./PostCard"
 
 interface HorizontalCardProps {
   post: {
@@ -28,50 +29,42 @@ interface HorizontalCardProps {
 export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
   const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
 
-  // Implementing fuzzy search with Fuse.js
-  const options = {
-    keys: ["title", "excerpt"],
-    threshold: 0.3,
-  }
-  const fuse = new Fuse([post], options)
-  const result = fuse.search("")
+  const meta = (
+    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-300">
+      <span>{formattedDate}</span>
+      {post.author && <span>by {post.author.node.name}</span>}
+    </div>
+  )
+
+  const image = post.featuredImage ? (
+    <Image
+      src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+      alt={post.title}
+      fill
+      className="object-cover"
+      sizes="(max-width: 768px) 100vw, 33vw"
+    />
+  ) : (
+    <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+      <span className="text-gray-400 dark:text-gray-500 text-sm">No image</span>
+    </div>
+  )
 
   return (
-    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
-      <div className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-        {/* Image container - left side */}
-        <div className="sm:w-1/3 h-40 sm:h-auto relative">
-          {post.featuredImage ? (
-            <Image
-              src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-              alt={post.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 33vw"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-              <span className="text-gray-400 dark:text-gray-500 text-sm">No image</span>
-            </div>
-          )}
-        </div>
-
-        {/* Content container - right side */}
-        <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{post.title}</h3>
-            <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
-              {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
-            </p>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500 dark:text-gray-300">{formattedDate}</span>
-            {post.author && (
-              <span className="text-sm text-gray-500 dark:text-gray-300">by {post.author.node.name}</span>
-            )}
-          </div>
-        </div>
-      </div>
+    <Link href={`/post/${post.slug}`} className={cn("block", className)}>
+      <PostCard
+        image={image}
+        title={post.title}
+        excerpt={
+          <p className="text-gray-600 dark:text-gray-400">
+            {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+          </p>
+        }
+        meta={meta}
+        className="flex flex-col sm:flex-row h-full bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        imageClassName="sm:w-1/3 h-40 sm:h-auto relative"
+        contentClassName="sm:w-2/3 p-4 sm:p-5"
+      />
     </Link>
   )
 }
