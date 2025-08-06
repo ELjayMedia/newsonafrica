@@ -14,7 +14,7 @@ import { siteConfig } from "@/config/site"
 import Link from "next/link"
 import Image from "next/image"
 import { Clock } from "lucide-react"
-import { formatDate } from "@/lib/utils"
+import { formatPostDate } from "@/lib/date"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
 
@@ -216,7 +216,7 @@ export function CategoryPage({ slug, countryCode, initialData }: CategoryPagePro
                       </h3>
                       <div className="flex items-center text-gray-500 text-xs mt-2">
                         <Clock className="h-3 w-3 mr-1" />
-                        <time dateTime={post.date}>{formatDate(post.date)}</time>
+                        <time dateTime={post.date}>{formatPostDate(post.date)}</time>
                       </div>
                     </div>
                     {post.featuredImage && (

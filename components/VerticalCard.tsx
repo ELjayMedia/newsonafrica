@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { formatPostDate } from "@/lib/date"
 
 interface VerticalCardProps {
   post: {
@@ -26,12 +27,7 @@ interface VerticalCardProps {
 }
 
 export const VerticalCard = memo(function VerticalCard({ post, className = "" }: VerticalCardProps) {
-  const formattedDate = useMemo(() => {
-    return new Date(post.date).toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-    })
-  }, [post.date])
+  const formattedDate = useMemo(() => formatPostDate(post.date), [post.date])
 
   const blurDataURL = useMemo(() => generateBlurDataURL(300, 200), [])
 

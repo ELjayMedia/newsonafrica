@@ -12,7 +12,7 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock } from "lucide-react"
 import { CommentButton } from "@/components/CommentButton"
 import { GiftArticleButton } from "@/components/GiftArticleButton"
-import { formatDate } from "@/utils/date-utils"
+import { formatPostDate } from "@/lib/date"
 import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface PostContentProps {
@@ -33,7 +33,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         <div className="flex justify-between items-center mb-4 text-sm">
           <div className="flex items-center text-gray-500">
             <Clock className="w-3 h-3 mr-1" />
-            <time dateTime={post.date}>{post.date ? formatDate(post.date, false) : "Unknown date"}</time>
+            <time dateTime={post.date}>{post.date ? formatPostDate(post.date) : "Unknown date"}</time>
           </div>
 
           <div className="flex items-center gap-1">

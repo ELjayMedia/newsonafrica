@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
 import Fuse from "fuse.js"
+import { formatPostDate } from "@/lib/date"
 
 interface HorizontalCardProps {
   post: {
@@ -26,7 +26,7 @@ interface HorizontalCardProps {
 }
 
 export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
-  const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
+  const formattedDate = post.date ? formatPostDate(post.date) : "Recently"
 
   // Implementing fuzzy search with Fuse.js
   const options = {
