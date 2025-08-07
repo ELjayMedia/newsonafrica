@@ -7,6 +7,7 @@ import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { CategoryAd } from "@/components/CategoryAd"
 import { useEffect, useMemo, useCallback } from "react"
+import { useNavigationState } from "@/contexts/NavigationContext"
 import { useInView } from "react-intersection-observer"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getBreadcrumbSchema, getWebPageSchema } from "@/lib/schema"
@@ -28,12 +29,18 @@ interface CategoryData {
 interface CategoryPageProps {
   slug: string
   countryCode: string
-  initialData: CategoryData
+  initialData?: CategoryData | null
 }
 
 export function CategoryPage({ slug, countryCode, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
   const queryClient = useQueryClient()
+  const { setActiveSlug } = useNavigationState()
+
+  useEffect(() => {
+    setActiveSlug(slug)
+    return () => setActiveSlug(null)
+  }, [slug, setActiveSlug])
 
   // Memoize query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => ["category", countryCode, slug], [countryCode, slug])

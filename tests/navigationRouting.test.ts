@@ -12,7 +12,12 @@ const originalLoad = (Module as any)._load
     }
   }
   if (request === 'react') {
-    return { useCallback: (fn: any) => fn }
+    return {
+      useCallback: (fn: any) => fn,
+      createContext: () => ({ Provider: ({ children }: any) => children }),
+      useContext: () => ({ activeSlug: null, setActiveSlug: () => {} }),
+      useState: (initial: any) => [initial, () => {}],
+    }
   }
   return originalLoad.apply(this, arguments as any)
 }

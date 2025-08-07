@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
-import CategoryClientPage from "./CategoryClientPage"
+import { CategoryPage } from "./CategoryPage"
 
 interface CategoryPageProps {
   params: { countryCode: string; slug: string }
@@ -216,12 +216,18 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
     }
 
     // Pass the fetched data to the client component
-    return <CategoryClientPage params={params} initialData={categoryData} />
+    return (
+      <CategoryPage
+        slug={params.slug}
+        countryCode={params.countryCode}
+        initialData={categoryData}
+      />
+    )
   } catch (error) {
     console.error(`Error loading category page for ${params.slug}:`, error)
 
     // For build-time errors, still try to render with empty data
     // The client component will handle the error state
-    return <CategoryClientPage params={params} initialData={null} />
+    return <CategoryPage slug={params.slug} countryCode={params.countryCode} initialData={null} />
   }
 }
