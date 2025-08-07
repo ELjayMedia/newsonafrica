@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/Skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 import { memo } from "react"
 
 export const PostSkeleton = memo(function PostSkeleton() {
