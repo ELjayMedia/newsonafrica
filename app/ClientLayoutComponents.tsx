@@ -1,3 +1,5 @@
+"use client"
+
 import dynamic from "next/dynamic"
 import { Suspense, type ReactNode } from "react"
 import { Header } from "@/components/Header"
