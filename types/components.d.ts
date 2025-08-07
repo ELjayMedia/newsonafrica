@@ -90,17 +90,9 @@ export interface FeaturedStoryProps extends BaseComponentProps {
  */
 export interface CategoryMenuProps extends BaseComponentProps {
   /**
-   * Array of categories to display
+   * Country code to load categories for
    */
-  categories: Category[]
-  /**
-   * Currently active category slug
-   */
-  activeCategory?: string
-  /**
-   * Callback when a category is selected
-   */
-  onCategorySelect?: (category: Category) => void
+  countryCode?: string
 }
 
 /**
