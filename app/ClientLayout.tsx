@@ -8,7 +8,6 @@ import GoogleAnalytics from "@/components/GoogleAnalytics"
 import { siteConfig } from "@/config/site"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TopBar } from "@/components/TopBar"
-import { Header } from "@/components/Header"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import { Footer } from "@/components/Footer"
@@ -105,7 +104,6 @@ export function ClientLayout({
               <TopBar />
               <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
                 <TopBannerAd />
-                <Header />
                 <BelowHeaderAd />
                 <div className="mt-4 md:mt-6">
                   <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
