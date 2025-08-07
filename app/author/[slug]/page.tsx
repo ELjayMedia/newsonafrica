@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { AuthorContent } from "@/components/AuthorContent"
 import { fetchAuthorData } from "@/lib/wordpress"
+import { AuthorPage } from "./AuthorPage"
 
 interface AuthorPageProps {
   params: { slug: string }
@@ -132,14 +132,14 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
 }
 
 // Server component that fetches data and renders the page
-export default async function AuthorPage({ params }: AuthorPageProps) {
+export default async function AuthorServerPage({ params }: AuthorPageProps) {
   try {
     const author = await fetchAuthorData(params.slug)
     if (!author) {
       notFound()
     }
 
-    return <AuthorContent slug={params.slug} />
+    return <AuthorPage slug={params.slug} initialData={author} />
   } catch (error) {
     console.error(`Error loading author page for ${params.slug}:`, error)
     throw error
