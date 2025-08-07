@@ -1176,9 +1176,9 @@ export const fetchAuthors = fetchAllAuthors
 /**
  * Fetch author data by slug
  */
-export const fetchAuthorData = async (slug: string) => {
+export const fetchAuthorData = async (slug: string, after: string | null = null) => {
   const query = `
-    query AuthorData($slug: ID!) {
+    query AuthorData($slug: ID!, $after: String) {
       user(id: $slug, idType: SLUG) {
         id
         name
@@ -1187,7 +1187,11 @@ export const fetchAuthorData = async (slug: string) => {
         avatar {
           url
         }
-        posts(first: 20, where: { status: PUBLISH }) {
+        posts(first: 20, after: $after, where: { status: PUBLISH }) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
           nodes {
             id
             title
@@ -1254,6 +1258,10 @@ export const fetchAuthorData = async (slug: string) => {
                   })) || [],
               },
             })),
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null,
+            },
           },
         },
       }
@@ -1263,7 +1271,12 @@ export const fetchAuthorData = async (slug: string) => {
     }
   }
 
-  const data = await fetchWithFallback(query, { slug }, `author-${slug}`, restFallback)
+  const data = await fetchWithFallback(
+    query,
+    { slug, after },
+    `author-${slug}-${after || "null"}`,
+    restFallback,
+  )
   return data.user
 }
 
