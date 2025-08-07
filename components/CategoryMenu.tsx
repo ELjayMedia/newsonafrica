@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { fetchAllCategories } from "@/lib/wordpress"
+import { getServerCategories } from "@/lib/categories"
 import { Button } from "@/components/ui/button"
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
@@ -11,16 +11,16 @@ interface CategoryMenuProps {
 export default async function CategoryMenu({
   countryCode = DEFAULT_COUNTRY,
 }: CategoryMenuProps) {
-  const categories = await fetchAllCategories()
-
-  if (!categories || categories.length === 0) {
+  const { categories } = await getServerCategories(countryCode)
+  const list = categories[countryCode] || []
+  if (!list || list.length === 0) {
     return null
   }
 
   return (
     <nav className="mb-6 overflow-x-auto scrollbar-hide" aria-label="Categories">
       <div className="flex space-x-2 whitespace-nowrap pb-2">
-        {categories.map((category: { name: string; slug: string; count?: number }) => (
+        {list.map((category: { name: string; slug: string; count?: number }) => (
           <Button
             key={category.slug}
             variant="outline"
