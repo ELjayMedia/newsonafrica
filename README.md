@@ -21,7 +21,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 
 The application follows a feature-based architecture with the following structure:
 
-\`\`\`
+```
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -39,7 +39,7 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-\`\`\`
+```
 
 ### Data Flow
 
@@ -62,7 +62,7 @@ news-on-africa/
 Create a `.env.local` file with the following variables. WordPress endpoints are
 derived from `NEXT_PUBLIC_WP_BASE_URL` and the active country code.
 
-\`\`\`
+```
 # WordPress
 NEXT_PUBLIC_WP_BASE_URL=https://your-wordpress-site.com
 NEXT_PUBLIC_DEFAULT_COUNTRY=sz
@@ -91,10 +91,14 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-S55PVESFS2
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 GOOGLE_SERVICES_JSON=your_firebase_config_json
-\`\`\`
+# Debugging
+# Enable verbose logging when set
+DEBUG=
+```
 The application serves `robots.txt` from a Next.js route at
 `app/robots.txt/route.ts`. Ensure `NEXT_PUBLIC_SITE_URL` is configured so the
 generated sitemap URLs use the correct domain.
+Set `DEBUG=1` to enable verbose logging for troubleshooting during development.
 Copy `google-services.json.example` to `google-services.json` and fill in your Firebase credentials. Keep this file out of version control. During automated deployments, decode the `GOOGLE_SERVICES_JSON` secret and write it to `google-services.json`.
 `WORDPRESS_AUTH_TOKEN` is used for authenticated WordPress requests.
 `JWT_SECRET` is the key for signing JSON Web Tokens.
@@ -113,7 +117,7 @@ To test the flow locally, start the development server and use a Paystack test c
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
@@ -123,7 +127,7 @@ pnpm install
 
 # Run the development server
 pnpm run dev
-\`\`\`
+```
 
 ## 📦 Deployment
 
@@ -163,13 +167,13 @@ pnpm test
 
 ## 🧪 Testing
 
-\`\`\`bash
+```bash
 # Run unit tests
 pnpm test
 
 # Run linting
 pnpm run lint
-\`\`\`
+```
 
 ## 📚 Documentation
 

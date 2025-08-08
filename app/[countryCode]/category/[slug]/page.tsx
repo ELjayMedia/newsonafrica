@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import logger from "@/utils/logger"
 import { CategoryPage } from "./CategoryPage"
 
 interface CategoryPageProps {
@@ -41,7 +42,7 @@ export async function generateStaticParams() {
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for category: ${params.slug} in ${params.countryCode}`)
+  logger(`🔍 Generating metadata for category: ${params.slug} in ${params.countryCode}`)
 
   try {
     const { category, posts } = await getPostsByCategory(
@@ -70,7 +71,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       }
     }
 
-    console.log(`✅ Generated metadata for category: "${category.name}"`)
+    logger(`✅ Generated metadata for category: "${category.name}"`)
 
     // Create dynamic description
     const baseDescription = category.description || `Latest articles in the ${category.name} category`
