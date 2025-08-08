@@ -1,3 +1,5 @@
+import { Buffer as BufferPolyfill } from "buffer"
+
 export function generateBlurDataURL(width: number, height: number): string {
   // Use a smaller, more efficient SVG
   const svg = `
@@ -9,6 +11,7 @@ export function generateBlurDataURL(width: number, height: number): string {
       <rect width="100%" height="100%" fill="#EEEEEE" filter="url(#b)"/>
     </svg>`
 
-  const encoded = btoa(unescape(encodeURIComponent(svg)))
+  const buffer = typeof Buffer !== "undefined" ? Buffer : BufferPolyfill
+  const encoded = buffer.from(svg).toString("base64")
   return `data:image/svg+xml;base64,${encoded}`
 }
