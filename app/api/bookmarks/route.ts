@@ -4,6 +4,12 @@ import { cookies } from "next/headers"
 
 export const runtime = 'nodejs'
 
+interface BookmarkStats {
+  total: number
+  unread: number
+  categories: Record<string, number>
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = cookies()
@@ -63,15 +69,18 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats using RPC
     const { data: statsData, error: statsError } = await supabase
-      .rpc("get_bookmark_stats", { user_uuid: user.id })
+      .rpc<BookmarkStats>("get_bookmark_stats", { user_uuid: user.id })
       .single()
 
     if (statsError) {
       console.error("Error fetching bookmark stats:", statsError)
     }
 
-    const stats =
-      statsData || ({ total: count || 0, unread: 0, categories: {} } as any)
+    const stats: BookmarkStats = {
+      total: statsData?.total ?? count ?? 0,
+      unread: statsData?.unread ?? 0,
+      categories: statsData?.categories ?? {},
+    }
 
     return NextResponse.json({
       bookmarks: bookmarks || [],
