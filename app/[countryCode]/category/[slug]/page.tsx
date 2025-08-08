@@ -18,18 +18,20 @@ export async function generateStaticParams() {
       .split(",")
       .filter(Boolean)
 
-    const params: { countryCode: string; slug: string }[] = []
+    const categoriesByCode = await Promise.all(
+      codes.map((code) =>
+        getCategories(code)
+          .then((categories) => ({ code, categories }))
+          .catch((err) => {
+            console.error(`Error fetching categories for ${code}:`, err)
+            return { code, categories: [] }
+          }),
+      ),
+    )
 
-    for (const code of codes) {
-      try {
-        const categories = await getCategories(code)
-        categories.slice(0, 50).forEach((category) => {
-          params.push({ countryCode: code, slug: category.slug })
-        })
-      } catch (err) {
-        console.error(`Error fetching categories for ${code}:`, err)
-      }
-    }
+    const params = categoriesByCode.flatMap(({ code, categories }) =>
+      categories.slice(0, 50).map((category) => ({ countryCode: code, slug: category.slug })),
+    )
 
     return params
   } catch (error) {
