@@ -15,8 +15,7 @@ const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
 const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/auth", "/category", "/search", "/post"]
-const COUNTRY_CATEGORY_REGEX = /^\/[^/]+\/category(\/|$)/
+const PUBLIC_ROUTES = ["/", "/auth", "/news", "/business", "/sport", "/entertainment", "/search", "/post"]
 
 /**
  * User context type definition
@@ -203,11 +202,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       // If this is a public route, allow access
       const pathname = window.location.pathname
-      if (
-        pathname &&
-        (PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) || COUNTRY_CATEGORY_REGEX.test(pathname))
-      )
-        return true
+      if (pathname && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return true
 
       // Otherwise redirect to auth page with return URL
       const returnUrl = encodeURIComponent(pathname || "/")

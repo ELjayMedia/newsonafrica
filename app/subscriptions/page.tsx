@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { SubscriptionsContent } from "@/components/SubscriptionsContent"
-import { createClient } from "@/utils/supabase/server"
 
 export const metadata: Metadata = {
   title: "Manage Subscriptions",
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 }
 
 export default async function SubscriptionsPage() {
-  const supabase = createClient(cookies())
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
   const {
     data: { session },

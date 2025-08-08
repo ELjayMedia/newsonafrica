@@ -5,6 +5,7 @@ import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
 import React, { useEffect, useState } from "react"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import { HomeMidContentAd } from "@/components/HomeMidContentAd"
 import useSWR from "swr"
@@ -13,9 +14,8 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
-import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
+import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
-import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface HomeContentProps {
   initialPosts?: any[]
@@ -24,7 +24,6 @@ interface HomeContentProps {
     featuredPosts: any[]
     categories: any[]
     recentPosts: any[]
-    categoryPosts: Record<string, any[]>
   }
 }
 
@@ -50,43 +49,24 @@ const fetchHomeData = async () => {
       getCategories(), // Get all categories
     ])
 
-    const latestPostsResult =
-      results[0].status === "fulfilled" ? results[0].value : { posts: [] }
-    const categoriesResult =
-      results[1].status === "fulfilled" ? results[1].value : { categories: [] }
+    const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
+    const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
 
     const posts = latestPostsResult.posts || []
     const categories = categoriesResult.categories || []
 
     // Filter posts that are tagged with 'fp'
     const fpTaggedPosts = posts.filter((post) =>
-      post.tags?.nodes?.some(
-        (tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp",
-      ),
+      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
     )
 
-    const categoryPosts: Record<string, any[]> = {}
-    for (const config of categoryConfigs) {
-      const slug = config.name.toLowerCase()
-      categoryPosts[config.name] = posts
-        .filter((post) =>
-          post.categories?.nodes?.some(
-            (cat) => cat.slug === slug || cat.name.toLowerCase() === slug,
-          ),
-        )
-        .slice(0, 5)
-    }
-
-    console.log(
-      `Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`,
-    )
+    console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
 
     return {
       taggedPosts: fpTaggedPosts, // Use all fp tagged posts
       featuredPosts: posts.slice(0, 6), // Use first 6 as featured
       categories: categories,
       recentPosts: posts.slice(0, 10), // Use first 10 as recent
-      categoryPosts,
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -95,8 +75,9 @@ const fetchHomeData = async () => {
 }
 
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const { getCategoryPath } = useNavigationRouting()
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
   // Listen for online/offline events
   useEffect(() => {
@@ -117,35 +98,17 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     initialPosts.length > 0
       ? {
           taggedPosts: initialPosts.filter((post) =>
-            post.tags?.nodes?.some(
-              (tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp",
-            ),
+            post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
           ),
           featuredPosts: initialPosts.slice(0, 6),
           categories: [],
           recentPosts: initialPosts.slice(0, 10),
-          categoryPosts: categoryConfigs.reduce<Record<string, any[]>>(
-            (acc, config) => {
-              const slug = config.name.toLowerCase()
-              acc[config.name] = initialPosts
-                .filter((post) =>
-                  post.categories?.nodes?.some(
-                    (cat) =>
-                      cat.slug === slug || cat.name.toLowerCase() === slug,
-                  ),
-                )
-                .slice(0, 5)
-              return acc
-            },
-            {},
-          ),
         }
       : {
           taggedPosts: [],
           featuredPosts: [],
           categories: [],
           recentPosts: [],
-          categoryPosts: {},
         }
 
   // Update the useSWR configuration for better error handling
@@ -166,6 +129,35 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     shouldRetryOnError: !isOffline,
   })
 
+  // Fetch category-specific posts
+  useEffect(() => {
+    const fetchCategoryPosts = async () => {
+      if (isOffline) return
+
+      const categoryPromises = categoryConfigs.map(async (config) => {
+        try {
+          const result = await getPostsByCategory(config.name.toLowerCase(), 5)
+          return { name: config.name, posts: result.posts || [] }
+        } catch (error) {
+          console.error(`Error fetching ${config.name} posts:`, error)
+          return { name: config.name, posts: [] }
+        }
+      })
+
+      const results = await Promise.allSettled(categoryPromises)
+      const newCategoryPosts: Record<string, any[]> = {}
+
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          newCategoryPosts[result.value.name] = result.value.posts
+        }
+      })
+
+      setCategoryPosts(newCategoryPosts)
+    }
+
+    fetchCategoryPosts()
+  }, [isOffline])
 
   // Show offline notification if needed
   const renderOfflineNotification = () => {
@@ -198,7 +190,6 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     featuredPosts = [],
     categories = [],
     recentPosts = [],
-    categoryPosts = {},
   } = data || initialData || fallbackData
 
   // Show skeleton during initial loading
@@ -241,6 +232,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   // Extract main content posts - ensure we have enough fp posts
   const mainStory = taggedPosts[0] || null // Show latest fp-tagged post only
   const secondaryStories = taggedPosts.slice(1, 5) || [] // Show next 4 fp-tagged posts
+  const verticalCardPosts = taggedPosts.slice(5, 8) || [] // Show next 3 fp-tagged posts after secondary stories
 
   // If we don't have enough fp posts, show a message or fallback
   if (taggedPosts.length === 0) {
@@ -255,13 +247,10 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     if (posts.length === 0) return null
 
     return (
-      <>
+      <React.Fragment key={name}>
         <section className="bg-white rounded-lg">
           <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link
-              href={getCategoryPath(name.toLowerCase())}
-              className="hover:text-blue-600 transition-colors"
-            >
+            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
               {name}
             </Link>
           </h2>
@@ -275,7 +264,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
           />
         </section>
         {showAdAfter && <HomeMidContentAd />}
-      </>
+      </React.Fragment>
     )
   }
 

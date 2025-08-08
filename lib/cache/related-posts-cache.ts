@@ -188,9 +188,6 @@ class RelatedPostsCache {
     posts: WordPressPost[],
     countryCode?: string,
   ): void {
-    // Clean up before caching new data
-    this.cleanupExpired()
-
     const key = this.generateKey(postId, categories, tags, limit, countryCode)
     const size = this.estimateSize(posts)
     const now = Date.now()
@@ -230,22 +227,6 @@ class RelatedPostsCache {
       totalSize: 0,
       entryCount: 0,
     }
-  }
-
-  /**
-   * Get number of cached entries
-   */
-  getSize(): number {
-    this.cleanupExpired()
-    return this.cache.size
-  }
-
-  /**
-   * Manually trigger cache cleanup
-   */
-  cleanup(): void {
-    this.cleanupExpired()
-    this.enforceLimit()
   }
 
   /**
@@ -337,11 +318,6 @@ export const relatedPostsCache = new RelatedPostsCache({
   maxEntries: 750,
   ttl: 20 * 60 * 1000, // 20 minutes
 })
-
-// Periodic cleanup of expired entries
-setInterval(() => {
-  relatedPostsCache.cleanup()
-}, 60 * 1000)
 
 // Export for testing and advanced usage
 export { RelatedPostsCache }

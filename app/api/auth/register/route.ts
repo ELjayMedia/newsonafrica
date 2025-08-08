@@ -1,11 +1,9 @@
 import type { NextRequest } from "next/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { z } from "zod"
 import { createProfile } from "@/services/profile-service"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
-import { createClient } from "@/utils/supabase/server"
-
-export const runtime = 'nodejs'
 
 // Input validation schema
 const registerSchema = z.object({
@@ -28,7 +26,8 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const { email, password, username } = registerSchema.parse(body)
 
-    const supabase = createClient(cookies())
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
     // Create the user
     const { data: authData, error: authError } = await supabase.auth.signUp({

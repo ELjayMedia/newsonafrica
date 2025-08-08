@@ -1,4 +1,4 @@
-import { getCountryEndpoints } from "./getCountryEndpoints"
+const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Search result interface
 export interface WordPressSearchResult {
@@ -50,66 +50,9 @@ export interface SearchResponse {
   suggestions?: string[]
 }
 
-// Cache for search results with basic LRU behavior
-interface CacheEntry<T> {
-  data: T
-  timestamp: number
-  ttl: number
-}
-
-const searchCache = new Map<string, CacheEntry<SearchResponse>>()
+// Cache for search results
+const searchCache = new Map<string, { data: SearchResponse; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-const CACHE_MAX_ENTRIES = 100
-const CACHE_CLEANUP_INTERVAL = 60_000 // 1 minute
-
-let cacheHits = 0
-let cacheMisses = 0
-let lastCleanup = 0
-
-function cleanupCache(): void {
-  const now = Date.now()
-  for (const [key, entry] of searchCache.entries()) {
-    if (now - entry.timestamp > entry.ttl) {
-      searchCache.delete(key)
-    }
-  }
-}
-
-function maybeCleanupCache(): void {
-  const now = Date.now()
-  if (now - lastCleanup > CACHE_CLEANUP_INTERVAL) {
-    cleanupCache()
-    lastCleanup = now
-  }
-}
-
-function getFromCache(key: string): SearchResponse | undefined {
-  maybeCleanupCache()
-  const entry = searchCache.get(key)
-  if (entry && Date.now() - entry.timestamp < entry.ttl) {
-    cacheHits++
-    // Refresh order for LRU
-    searchCache.delete(key)
-    searchCache.set(key, entry)
-    return entry.data
-  }
-  if (entry) {
-    searchCache.delete(key)
-  }
-  cacheMisses++
-  return undefined
-}
-
-function setCache(key: string, data: SearchResponse): void {
-  maybeCleanupCache()
-  if (searchCache.size >= CACHE_MAX_ENTRIES) {
-    const oldestKey = searchCache.keys().next().value
-    if (oldestKey !== undefined) {
-      searchCache.delete(oldestKey)
-    }
-  }
-  searchCache.set(key, { data, timestamp: Date.now(), ttl: CACHE_DURATION })
-}
 
 /**
  * Search WordPress posts using REST API
@@ -125,7 +68,6 @@ export async function searchWordPressPosts(
     orderBy?: "relevance" | "date" | "title"
     order?: "asc" | "desc"
   } = {},
-  countryCode?: string,
 ): Promise<SearchResponse> {
   const startTime = Date.now()
 
@@ -135,10 +77,10 @@ export async function searchWordPressPosts(
   const cacheKey = `search:${query}:${JSON.stringify(options)}`
 
   // Check cache first
-  const cached = getFromCache(cacheKey)
-  if (cached) {
+  const cached = searchCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return {
-      ...cached,
+      ...cached.data,
       searchTime: Date.now() - startTime,
     }
   }
@@ -169,8 +111,7 @@ export async function searchWordPressPosts(
       searchParams.append("author", author.toString())
     }
 
-    const { rest } = getCountryEndpoints(countryCode)
-    const response = await fetch(`${rest}/wp-json/wp/v2/posts?${searchParams}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -199,7 +140,10 @@ export async function searchWordPressPosts(
     }
 
     // Cache the result
-    setCache(cacheKey, searchResponse)
+    searchCache.set(cacheKey, {
+      data: searchResponse,
+      timestamp: Date.now(),
+    })
 
     return searchResponse
   } catch (error) {
@@ -221,18 +165,13 @@ export async function searchWordPressPosts(
 /**
  * Get search suggestions from WordPress
  */
-export async function getSearchSuggestions(
-  query: string,
-  limit = 8,
-  countryCode?: string,
-): Promise<string[]> {
+export async function getSearchSuggestions(query: string, limit = 8): Promise<string[]> {
   if (!query || query.length < 2) return []
 
   try {
     // Search for posts to extract suggestions
-    const { rest } = getCountryEndpoints(countryCode)
     const response = await fetch(
-      `${rest}/wp-json/wp/v2/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -279,11 +218,10 @@ export async function getSearchSuggestions(
 /**
  * Search categories
  */
-export async function searchCategories(query: string, countryCode?: string): Promise<any[]> {
+export async function searchCategories(query: string): Promise<any[]> {
   try {
-    const { rest } = getCountryEndpoints(countryCode)
     const response = await fetch(
-      `${rest}/wp-json/wp/v2/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -302,10 +240,9 @@ export async function searchCategories(query: string, countryCode?: string): Pro
 /**
  * Search tags
  */
-export async function searchTags(query: string, countryCode?: string): Promise<any[]> {
+export async function searchTags(query: string): Promise<any[]> {
   try {
-    const { rest } = getCountryEndpoints(countryCode)
-    const response = await fetch(`${rest}/wp-json/wp/v2/tags?search=${encodeURIComponent(query)}&per_page=10`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -331,21 +268,6 @@ export function getPopularSearchTerms(): string[] {
  */
 export function clearSearchCache(): void {
   searchCache.clear()
-  cacheHits = 0
-  cacheMisses = 0
-  lastCleanup = Date.now()
-}
-
-/**
- * Get search cache statistics
- */
-export function getSearchCacheStats() {
-  maybeCleanupCache()
-  return {
-    hits: cacheHits,
-    misses: cacheMisses,
-    size: searchCache.size,
-  }
 }
 
 /**

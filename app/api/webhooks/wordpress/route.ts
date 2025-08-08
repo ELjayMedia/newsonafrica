@@ -1,15 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
 import crypto from "crypto"
-import { fetchSinglePost } from "@/lib/wordpress"
-import { createAdminClient } from "@/lib/supabase"
-
-export const runtime = 'nodejs'
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
-export function verifyWebhookSignature(body: string, signature: string): boolean {
+function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
     return false
@@ -17,14 +12,7 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
 
   const expectedSignature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
 
-  if (signature.length !== expectedSignature.length) {
-    return false
-  }
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature, "hex"),
-    Buffer.from(expectedSignature, "hex"),
-  )
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
 }
 
 export async function POST(request: NextRequest) {
@@ -33,11 +21,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get("x-wp-signature")
 
     // Verify webhook signature if secret is configured
-    if (WEBHOOK_SECRET) {
-      if (!signature) {
-        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
-      }
-
+    if (WEBHOOK_SECRET && signature) {
       const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
       if (!isValid) {
         console.error("Invalid webhook signature")
@@ -47,8 +31,6 @@ export async function POST(request: NextRequest) {
 
     const data = JSON.parse(body)
     const { action, post } = data
-
-    const supabase = createAdminClient(cookies())
 
     console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
@@ -61,33 +43,6 @@ export async function POST(request: NextRequest) {
       case "post_published":
       case "post_updated":
         if (post?.slug) {
-          // Update bookmark records with fresh data
-          if (post.id) {
-            const postId = String(post.id)
-            const { data: existing } = await supabase
-              .from("bookmarks")
-              .select("id")
-              .eq("post_id", postId)
-
-            if (existing && existing.length > 0) {
-              const latest = await fetchSinglePost(post.slug)
-
-              if (latest) {
-                await supabase
-                  .from("bookmarks")
-                  .update({
-                    title: latest.title || "",
-                    slug: latest.slug || "",
-                    excerpt: latest.excerpt || "",
-                    featuredImage: latest.featuredImage
-                      ? JSON.stringify(latest.featuredImage)
-                      : null,
-                  })
-                  .eq("post_id", postId)
-              }
-            }
-          }
-
           // Revalidate the specific post page
           revalidatePath(`/post/${post.slug}`)
           revalidateTag(`post-${post.id}`)
@@ -108,9 +63,6 @@ export async function POST(request: NextRequest) {
         break
 
       case "post_deleted":
-        if (post?.id) {
-          await supabase.from("bookmarks").delete().eq("post_id", String(post.id))
-        }
         if (post?.slug) {
           // Revalidate pages that might have referenced this post
           revalidatePath(`/post/${post.slug}`)

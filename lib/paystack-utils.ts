@@ -1,8 +1,4 @@
-import crypto from "crypto"
 import type { PaystackVerifyResponse } from "@/config/paystack"
-
-const PAYSTACK_API_BASE = process.env.PAYSTACK_API_BASE || "https://api.paystack.co"
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || ""
 
 /**
  * Verifies a Paystack transaction using the transaction reference
@@ -61,7 +57,7 @@ export function formatCurrency(amount: number, currency = "ZAR"): string {
     case "ZAR":
       return `R${actualAmount.toFixed(2)}`
     case "USD":
-      return `$${actualAmount.toFixed(2)}`
+      return `${actualAmount.toFixed(2)}`
     case "NGN":
       return `₦${actualAmount.toFixed(2)}`
     default:
@@ -111,54 +107,6 @@ export function formatNextBillingDate(interval: string): string {
 }
 
 /**
- * Verify a Paystack webhook signature
- */
-export function verifyWebhookSignature(payload: string, signature: string, secret = PAYSTACK_SECRET_KEY) {
-  const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex")
-  return hash === signature
-}
-
-/**
- * Disable a Paystack subscription using subscription code and email token
- */
-export async function disableSubscription(code: string, emailToken: string) {
-  const response = await fetch(`${PAYSTACK_API_BASE}/subscription/disable`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ code, token: emailToken }),
-  })
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || "Failed to disable subscription")
-  }
-
-  return response.json()
-}
-
-/**
- * Fetch a subscription from Paystack
- */
-export async function getSubscription(code: string) {
-  const response = await fetch(`${PAYSTACK_API_BASE}/subscription/${code}`, {
-    headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || "Failed to fetch subscription")
-  }
-
-  return response.json()
-}
-
-/**
  * Starts a webhook tunnel for local development
  * This function is used to create a public URL that forwards to your local server
  * for testing Paystack webhooks in development
@@ -194,7 +142,4 @@ export const paystackClient = {
   verifyTransaction: verifyPaystackTransaction,
   generateReference: generateTransactionReference,
   formatAmount: formatCurrency,
-  disableSubscription,
-  getSubscription,
-  verifyWebhookSignature,
 }

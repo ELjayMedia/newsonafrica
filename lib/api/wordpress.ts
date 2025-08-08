@@ -5,9 +5,11 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
-import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
-import { getCountryEndpoints } from "../getCountryEndpoints"
+
+const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -34,7 +36,6 @@ export interface WordPressCategory {
   count?: number
   parent?: {
     node: {
-      id: string
       name: string
       slug: string
     }
@@ -98,30 +99,124 @@ export interface WordPressSinglePostResponse {
   post: WordPressPost | null
 }
 
+// Country configuration
+export interface CountryConfig {
+  code: string
+  name: string
+  flag: string
+  currency: string
+  timezone: string
+  languages: string[]
+  apiEndpoint: string
+  restEndpoint: string
+}
 
-// Default country to use when none is specified
-const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+export const COUNTRIES: Record<string, CountryConfig> = {
+  sz: {
+    code: "sz",
+    name: "Eswatini",
+    flag: "🇸🇿",
+    currency: "SZL",
+    timezone: "Africa/Mbabane",
+    languages: ["en", "ss"],
+    apiEndpoint: "https://newsonafrica.com/sz/graphql",
+    restEndpoint: "https://newsonafrica.com/sz/wp-json/wp/v2",
+  },
+  ng: {
+    code: "ng",
+    name: "Nigeria",
+    flag: "🇳🇬",
+    currency: "NGN",
+    timezone: "Africa/Lagos",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/ng/graphql",
+    restEndpoint: "https://newsonafrica.com/ng/wp-json/wp/v2",
+  },
+  ke: {
+    code: "ke",
+    name: "Kenya",
+    flag: "🇰🇪",
+    currency: "KES",
+    timezone: "Africa/Nairobi",
+    languages: ["en", "sw"],
+    apiEndpoint: "https://newsonafrica.com/ke/graphql",
+    restEndpoint: "https://newsonafrica.com/ke/wp-json/wp/v2",
+  },
+  za: {
+    code: "za",
+    name: "South Africa",
+    flag: "🇿🇦",
+    currency: "ZAR",
+    timezone: "Africa/Johannesburg",
+    languages: ["en", "af", "zu", "xh"],
+    apiEndpoint: "https://newsonafrica.com/za/graphql",
+    restEndpoint: "https://newsonafrica.com/za/wp-json/wp/v2",
+  },
+  gh: {
+    code: "gh",
+    name: "Ghana",
+    flag: "🇬🇭",
+    currency: "GHS",
+    timezone: "Africa/Accra",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/gh/graphql",
+    restEndpoint: "https://newsonafrica.com/gh/wp-json/wp/v2",
+  },
+  ug: {
+    code: "ug",
+    name: "Uganda",
+    flag: "🇺🇬",
+    currency: "UGX",
+    timezone: "Africa/Kampala",
+    languages: ["en"],
+    apiEndpoint: "https://newsonafrica.com/ug/graphql",
+    restEndpoint: "https://newsonafrica.com/ug/wp-json/wp/v2",
+  },
+  tz: {
+    code: "tz",
+    name: "Tanzania",
+    flag: "🇹🇿",
+    currency: "TZS",
+    timezone: "Africa/Dar_es_Salaam",
+    languages: ["en", "sw"],
+    apiEndpoint: "https://newsonafrica.com/tz/graphql",
+    restEndpoint: "https://newsonafrica.com/tz/wp-json/wp/v2",
+  },
+  rw: {
+    code: "rw",
+    name: "Rwanda",
+    flag: "🇷🇼",
+    currency: "RWF",
+    timezone: "Africa/Kigali",
+    languages: ["en", "rw", "fr"],
+    apiEndpoint: "https://newsonafrica.com/rw/graphql",
+    restEndpoint: "https://newsonafrica.com/rw/wp-json/wp/v2",
+  },
+}
 
-
-// Enhanced cache with LRU-like behavior
-const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
-const categoriesCache = new Map<string, { data: WordPressCategory[]; timestamp: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const MAX_CACHE_SIZE = 50
-
-// Remove expired entries
-function cleanupExpiredEntries() {
-  const now = Date.now()
-  for (const [key, entry] of categoryCache.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
-      categoryCache.delete(key)
+// Utility function to get country-specific endpoints
+function getCountryEndpoints(countryCode: string) {
+  const country = COUNTRIES[countryCode]
+  if (!country) {
+    // Fallback to default (sz)
+    return {
+      graphql: COUNTRIES.sz.apiEndpoint,
+      rest: COUNTRIES.sz.restEndpoint,
     }
+  }
+  return {
+    graphql: country.apiEndpoint,
+    rest: country.restEndpoint,
   }
 }
 
+// Enhanced cache with LRU-like behavior
+const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const MAX_CACHE_SIZE = 50
+
 // Cache cleanup function
 function cleanupCache() {
-  cleanupExpiredEntries()
   if (categoryCache.size <= MAX_CACHE_SIZE) return
 
   // Sort by hits and timestamp, remove least used entries
@@ -138,36 +233,6 @@ function cleanupCache() {
   }
 }
 
-function cleanupCategoriesCache() {
-  const now = Date.now()
-  for (const [key, entry] of categoriesCache.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
-      categoriesCache.delete(key)
-    }
-  }
-}
-
-// On-demand cleanup guards
-let lastCategoryCacheCleanup = 0
-let lastCategoriesCacheCleanup = 0
-const CLEANUP_INTERVAL = 60_000
-
-function maybeCleanupCategoryCache() {
-  const now = Date.now()
-  if (now - lastCategoryCacheCleanup > CLEANUP_INTERVAL) {
-    cleanupCache()
-    lastCategoryCacheCleanup = now
-  }
-}
-
-function maybeCleanupCategoriesCache() {
-  const now = Date.now()
-  if (now - lastCategoriesCacheCleanup > CLEANUP_INTERVAL) {
-    cleanupCategoriesCache()
-    lastCategoriesCacheCleanup = now
-  }
-}
-
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
   query: string,
@@ -175,7 +240,7 @@ async function graphqlRequest<T>(
   countryCode?: string,
   retries = 3,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode)
+  const endpoints = getCountryEndpoints(countryCode || "sz")
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -185,7 +250,6 @@ async function graphqlRequest<T>(
       headers: {
         "Content-Type": "application/json",
         Connection: "keep-alive",
-        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify({
         query,
@@ -229,17 +293,15 @@ async function restApiFallback<T>(
   transform: (data: any) => T,
   countryCode?: string,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode)
+  const endpoints = getCountryEndpoints(countryCode || "sz")
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
-  const url = `${endpoints.rest}/wp-json/wp/v2/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   try {
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        Connection: "keep-alive",
-        "Accept-Encoding": "gzip",
       },
       next: { revalidate: 300 },
     })
@@ -383,31 +445,19 @@ export async function getPostsByCategoryForCountry(
  * Get categories for a specific country
  */
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  maybeCleanupCategoriesCache()
-  const cached = categoriesCache.get(countryCode)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data
-  }
-
   try {
     const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
-    const categories = data.categories.nodes
-    categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
-    maybeCleanupCategoriesCache()
-    return categories
+    return data.categories.nodes
   } catch (error) {
     console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
-      const categories = await restApiFallback(
+      return await restApiFallback(
         "categories",
         { per_page: 100 },
         (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
         countryCode,
       )
-      categoriesCache.set(countryCode, { data: categories, timestamp: Date.now() })
-      maybeCleanupCategoriesCache()
-      return categories
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return []
@@ -418,29 +468,17 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
 /**
  * Get the latest posts from WordPress
  */
-export async function getLatestPosts(
-  limit = 20,
-  after?: string,
-  countryCode: string = DEFAULT_COUNTRY,
-) {
+export async function getLatestPosts(limit = 20, after?: string) {
   try {
-    const { posts, hasNextPage, endCursor } = await getLatestPostsForCountry(
-      countryCode,
-      limit,
-      after,
-    )
+    const posts = await fetchRecentPosts(limit)
     return {
-      posts,
-      hasNextPage,
-      endCursor,
+      posts: posts || [],
       error: null,
     }
   } catch (error) {
     console.error("Failed to fetch latest posts:", error)
     return {
       posts: [],
-      hasNextPage: false,
-      endCursor: null,
       error: error instanceof Error ? error.message : "Failed to fetch posts",
     }
   }
@@ -449,51 +487,33 @@ export async function getLatestPosts(
 /**
  * Get a single post by slug
  */
-export async function getPostBySlug(
-  slug: string,
-  countryCode?: string,
-): Promise<WordPressPost | null> {
-  const code = countryCode || DEFAULT_COUNTRY
-
+export async function getPostBySlug(slug: string): Promise<WordPressPost | null> {
   try {
-    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, { slug }, code)
-    if (data.post) {
-      return data.post
-    }
+    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, {
+      slug,
+    })
+
+    return data.post
   } catch (error) {
-    console.error(`Failed to fetch post "${slug}" via GraphQL:`, error)
-  }
+    console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
 
-  try {
-    return await restApiFallback(
-      `posts?slug=${slug}&_embed=1`,
-      {},
-      (posts: any[]) => {
+    try {
+      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
         if (!posts || posts.length === 0) return null
         return transformRestPostToGraphQL(posts[0])
-      },
-      code,
-    )
-  } catch (restError) {
-    console.error("Both GraphQL and REST API failed:", restError)
-    return null
+      })
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return null
+    }
   }
-
-  return null
 }
 
 /**
  * Get all categories
  */
-export async function getCategories(
-  countryCode: string = DEFAULT_COUNTRY,
-): Promise<WordPressCategory[]> {
-  maybeCleanupCategoriesCache()
-  const cached = categoriesCache.get(countryCode)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data
-  }
-  return getCategoriesForCountry(countryCode)
+export async function getCategories(): Promise<WordPressCategory[]> {
+  return getCategoriesForCountry("sz")
 }
 
 /**
@@ -503,25 +523,14 @@ export async function getPostsByCategory(
   categorySlug: string,
   limit = 20,
   after?: string | null,
-  countryCode: string = DEFAULT_COUNTRY,
 ): Promise<{
   category: WordPressCategory | null
   posts: WordPressPost[]
   hasNextPage: boolean
   endCursor: string | null
 }> {
-  maybeCleanupCategoryCache()
-
   // Create cache key
   const cacheKey = `category:${categorySlug}:${limit}:${after || "null"}`
-
-  // Handle common slug variations (e.g. "sport" vs "sports")
-  const slugAlternates: Record<string, string> = {
-    sport: "sports",
-    sports: "sport",
-  }
-
-  const fallbackSlug = slugAlternates[categorySlug]
 
   // Check cache first
   const cached = categoryCache.get(cacheKey)
@@ -533,15 +542,7 @@ export async function getPostsByCategory(
 
   try {
     // If not in cache, fetch from API
-    let result = await getPostsByCategoryForCountry(countryCode, categorySlug, limit, after || null)
-
-    // Retry with fallback slug if no category returned
-    if (!result.category && fallbackSlug) {
-      result = await getPostsByCategoryForCountry(countryCode, fallbackSlug, limit, after || null)
-    }
-
-    // Cleanup before caching new data
-    maybeCleanupCategoryCache()
+    const result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
 
     // Cache the result
     categoryCache.set(cacheKey, {
@@ -549,6 +550,9 @@ export async function getPostsByCategory(
       timestamp: Date.now(),
       hits: 1,
     })
+
+    // Cleanup cache if needed
+    cleanupCache()
 
     return result
   } catch (error) {
@@ -564,29 +568,19 @@ export async function getPostsByCategory(
 /**
  * Get featured posts (sticky posts)
  */
-export async function getFeaturedPosts(
-  limit = 10,
-  countryCode: string = DEFAULT_COUNTRY,
-): Promise<WordPressPost[]> {
+export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
   try {
-    const data = await graphqlRequest<WordPressPostsResponse>(
-      FEATURED_POSTS_QUERY,
-      {
-        first: limit,
-      },
-      countryCode,
-    )
+    const data = await graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
+      first: limit,
+    })
 
     return data.posts.nodes
   } catch (error) {
     console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
 
     try {
-      return await restApiFallback(
-        "posts",
-        { sticky: true, per_page: limit, _embed: 1 },
-        (posts: any[]) => posts.map(transformRestPostToGraphQL),
-        countryCode,
+      return await restApiFallback("posts", { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
+        posts.map(transformRestPostToGraphQL),
       )
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
@@ -779,7 +773,7 @@ export async function getRelatedPosts(
 
     try {
       // REST API fallback
-      const endpoints = getCountryEndpoints(countryCode)
+      const endpoints = getCountryEndpoints(countryCode || "sz")
 
       // Build query parameters for REST API
       const params = new URLSearchParams({
@@ -792,14 +786,8 @@ export async function getRelatedPosts(
         params.append("categories", categories.join(","))
       }
 
-      const response = await fetch(
-        `${endpoints.rest}/wp-json/wp/v2/posts?${params.toString()}`,
-        {
-        headers: {
-          "Content-Type": "application/json",
-          Connection: "keep-alive",
-          "Accept-Encoding": "gzip",
-        },
+      const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
+        headers: { "Content-Type": "application/json" },
         next: { revalidate: 300 },
       })
 
@@ -842,25 +830,11 @@ export function getRelatedPostsCacheStats() {
   return relatedPostsCache.getStats()
 }
 
-export function getRelatedPostsCacheSize(): number {
-  return relatedPostsCache.getSize()
-}
-
 /**
  * Clear all related posts cache
  */
 export function clearRelatedPostsCache(): void {
   relatedPostsCache.clear()
-}
-
-// Category cache utilities
-export function getCategoryCacheSize(): number {
-  maybeCleanupCategoryCache()
-  return categoryCache.size
-}
-
-export function clearCategoryCache(): void {
-  categoryCache.clear()
 }
 
 // Transform functions for REST API data
@@ -926,4 +900,4 @@ function transformRestCategoryToGraphQL(category: any): WordPressCategory {
 }
 
 // Export types for use in other files
-export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage }
+export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }

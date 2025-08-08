@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
       // Revalidate main content paths
       const contentPaths = [
         "/",
-        "/category/news",
-        "/category/business",
+        "/news",
+        "/business",
         "/sport",
         "/entertainment",
         "/life",

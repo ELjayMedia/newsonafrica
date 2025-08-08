@@ -7,19 +7,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchPostsByTag, type Post } from "@/lib/wordpress"
-
-interface TagPostsResponse {
-  pageInfo: {
-    hasNextPage: boolean
-    endCursor: string | null
-  }
-  nodes: Post[]
-}
+import { fetchPostsByTag } from "@/lib/wordpress-api"
 
 interface TagContentProps {
   slug: string
-  initialData: TagPostsResponse
+  initialData: any
   tag: {
     name: string
     description?: string
@@ -29,7 +21,7 @@ interface TagContentProps {
 export function TagContent({ slug, initialData, tag }: TagContentProps) {
   const { ref, inView } = useInView()
 
-  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery<TagPostsResponse>({
+  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
     queryKey: ["tagPosts", slug],
     queryFn: ({ pageParam = null }) => fetchPostsByTag(slug, pageParam),
     getNextPageParam: (lastPage) => (lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined),

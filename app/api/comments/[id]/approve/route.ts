@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
-import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
+
+const WP_API_URL = process.env.WORDPRESS_API_URL
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const token = getAuthTokenFromCookies()
@@ -10,7 +11,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const commentId = params.id
 
-  const response = await fetch(`${WORDPRESS_REST_URL}/wp/v2/comments/${commentId}`, {
+  const response = await fetch(`${WP_API_URL}/wp/v2/comments/${commentId}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

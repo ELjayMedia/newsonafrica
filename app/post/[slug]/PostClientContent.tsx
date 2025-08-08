@@ -6,20 +6,11 @@ import Link from "next/link"
 import { Clock, User } from "lucide-react"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { CommentButton } from "@/components/CommentButton"
-import { GiftArticleButton } from "@/components/GiftArticleButton"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { useEffect, useState, useRef } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchSinglePost } from "@/lib/wordpress"
+import { fetchSinglePost } from "@/lib/wordpress-api"
 import { PostSkeleton } from "@/components/PostSkeleton"
 import { AdSense } from "@/components/AdSense"
 import { CommentList } from "@/components/CommentList"
@@ -115,23 +106,15 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
       <article className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4">
         <ArticleJsonLd post={post} url={`https://newsonafrica.com/post/${slug}`} />
 
-        <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link
-                  href={`/category/${post.categories?.nodes?.[0]?.slug || "uncategorized"}`}
-                >
-                  {post.categories?.nodes?.[0]?.name || "Uncategorized"}
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{post.title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <Breadcrumbs
+          items={[
+            {
+              label: post.categories?.nodes?.[0]?.name || "Uncategorized",
+              href: `/category/${post.categories?.nodes?.[0]?.slug || "uncategorized"}`,
+            },
+            { label: post.title, href: `/post/${post.slug}` },
+          ]}
+        />
 
         <header className="mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between text-gray-600 text-sm space-y-2 md:space-y-0 mb-2 md:mb-4">
@@ -175,11 +158,7 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
                 {post.author?.node?.name}
               </Link>
             </div>
-            <div className="flex items-center space-x-2">
-              <CommentButton />
-              <GiftArticleButton postSlug={post.slug} postTitle={post.title} />
-              <BookmarkButton post={post} />
-            </div>
+            <BookmarkButton post={post} />
           </div>
         </header>
 

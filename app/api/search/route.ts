@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { optimizedWordPressSearch } from "@/lib/wordpress"
-import { setCacheHeaders } from "@/lib/api-utils"
-import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
-import { fuzzySearch } from "@/utils/fuzzy-search"
+
+// WordPress API configuration
+const WORDPRESS_API_URL =
+  process.env.WORDPRESS_REST_API_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Rate limiting
 const RATE_LIMIT = 50
@@ -44,7 +46,7 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-// Search WordPress posts via REST (fallback)
+// Search WordPress posts
 async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
   try {
     const searchParams = new URLSearchParams({
@@ -57,7 +59,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       status: "publish",
     })
 
-    const url = `${WORDPRESS_REST_URL}/posts?${searchParams}`
+    const url = `${WORDPRESS_API_URL}/posts?${searchParams}`
 
     const response = await fetch(url, {
       headers: {
@@ -93,7 +95,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
 async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_REST_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
+      `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -202,85 +204,59 @@ export async function GET(request: NextRequest) {
     if (suggestions) {
       try {
         const suggestionResults = await getSearchSuggestions(queryParam)
-        const res = NextResponse.json({
+        return NextResponse.json({
           suggestions: suggestionResults,
           performance: {
             responseTime: Date.now() - startTime,
             source: "wordpress-suggestions",
           },
         })
-        return setCacheHeaders(res, 300)
       } catch (error) {
-        return setCacheHeaders(NextResponse.json({ suggestions: [] }), 300)
+        return NextResponse.json({ suggestions: [] })
       }
     }
 
-    // Perform search using optimized search first
+    // Perform search
     try {
-      const optimizedResults = await optimizedWordPressSearch(queryParam, {
-        page,
-        perPage,
-      })
+      const searchResults = await searchWordPressPosts(queryParam, page, perPage)
+      const responseTime = Date.now() - startTime
 
-      const res = NextResponse.json({
-        results: optimizedResults.items,
-        total: optimizedResults.pagination.totalItems,
-        totalPages: optimizedResults.pagination.totalPages,
-        currentPage: optimizedResults.pagination.page,
-        hasMore: optimizedResults.pagination.hasMore,
+      return NextResponse.json({
+        ...searchResults,
+        query: queryParam,
+        performance: {
+          responseTime,
+          source: "wordpress",
+        },
+      })
+    } catch (wpError) {
+      // Fallback to mock data
+      const filteredResults = FALLBACK_POSTS.filter(
+        (item) =>
+          item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
+          item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
+      )
+
+      const startIndex = (page - 1) * perPage
+      const endIndex = startIndex + perPage
+      const paginatedResults = filteredResults.slice(startIndex, endIndex)
+
+      return NextResponse.json({
+        results: paginatedResults,
+        total: filteredResults.length,
+        totalPages: Math.ceil(filteredResults.length / perPage),
+        currentPage: page,
+        hasMore: page < Math.ceil(filteredResults.length / perPage),
         query: queryParam,
         performance: {
           responseTime: Date.now() - startTime,
-          source: optimizedResults.searchSource,
-          cached: optimizedResults.performance.cached,
-          ...(optimizedResults.performance.parallel
-            ? { parallel: optimizedResults.performance.parallel }
-            : {}),
+          source: "fallback",
+          error: true,
         },
       })
-      return setCacheHeaders(res, 300)
-    } catch (wpError) {
-      // Fallback to REST search
-      try {
-        const searchResults = await searchWordPressPosts(queryParam, page, perPage)
-        const res = NextResponse.json({
-          ...searchResults,
-          query: queryParam,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "wordpress-rest",
-          },
-        })
-        return setCacheHeaders(res, 300)
-      } catch (restError) {
-        // Fallback to mock data with fuzzy search
-        const filteredResults = fuzzySearch(FALLBACK_POSTS, queryParam, {
-          keys: ["title.rendered", "excerpt.rendered"],
-          threshold: 0.4,
-        })
-
-        const startIndex = (page - 1) * perPage
-        const endIndex = startIndex + perPage
-        const paginatedResults = filteredResults.slice(startIndex, endIndex)
-
-        const res = NextResponse.json({
-          results: paginatedResults,
-          total: filteredResults.length,
-          totalPages: Math.ceil(filteredResults.length / perPage),
-          currentPage: page,
-          hasMore: page < Math.ceil(filteredResults.length / perPage),
-          query: queryParam,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "fallback",
-            error: true,
-          },
-        })
-        return setCacheHeaders(res, 300)
-      }
     }
   } catch (error) {
-    const res = NextResponse.json(
+    return NextResponse.json(
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",
@@ -297,6 +273,5 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 },
     )
-    return setCacheHeaders(res, 60)
   }
 }

@@ -4,7 +4,6 @@
 
 import { siteConfig } from "@/config/site"
 import type { SearchPost } from "./search"
-import { fuzzySearch } from "@/utils/fuzzy-search"
 
 export interface Post {
   id: string
@@ -78,7 +77,7 @@ export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
     console.error("WordPress search error:", error)
     // Fallback to local search if API is unavailable
     const localPosts: SearchPost[] = [] // This should be populated with local posts data
-    return searchPostsLocal(localPosts, query)
+    return searchPosts(localPosts, query)
   }
 }
 
@@ -156,12 +155,18 @@ function searchPostsLocal(posts: SearchPost[], query: string): SearchPost[] {
   }
 
   const normalizedQuery = query.toLowerCase().trim()
-  if (normalizedQuery.length < 2) {
+  const terms = normalizedQuery.split(/\s+/).filter((term) => term.length > 1)
+
+  if (terms.length === 0) {
     return []
   }
 
-  return fuzzySearch(posts, normalizedQuery, {
-    keys: ["title.rendered", "excerpt.rendered", "content.rendered"],
-    threshold: 0.4,
+  return posts.filter((post) => {
+    const title = (post.title?.rendered || "").toLowerCase()
+    const excerpt = (post.excerpt?.rendered || "").toLowerCase()
+    const content = (post.content?.rendered || "").toLowerCase()
+
+    // Check if any term is in the title, excerpt, or content
+    return terms.some((term) => title.includes(term) || excerpt.includes(term) || content.includes(term))
   })
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { AuthorContent } from "@/components/AuthorContent"
-import { fetchAuthorData } from "@/lib/wordpress"
+import { getLatestPosts } from "@/lib/api/wordpress"
+import AuthorContent from "./AuthorContent"
 
 interface AuthorPageProps {
   params: { slug: string }
@@ -14,8 +14,13 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
   console.log(`🔍 Generating metadata for author: ${params.slug}`)
 
   try {
-    const author = await fetchAuthorData(params.slug)
-    if (!author) {
+    // Get latest posts to find author information
+    const { posts } = await getLatestPosts(100)
+
+    // Find posts by this author
+    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
+
+    if (authorPosts.length === 0) {
       console.warn(`⚠️ Author not found: ${params.slug}`)
       return {
         title: "Author Not Found - News On Africa",
@@ -27,25 +32,29 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       }
     }
 
+    const author = authorPosts[0].author.node
     console.log(`✅ Generated metadata for author: "${author.name}"`)
 
-    const posts = author.posts?.nodes || []
-    const postCount = posts.length
+    // Create dynamic description
+    const postCount = authorPosts.length
     const description =
       author.description ||
       `Read ${postCount} articles by ${author.name} on News On Africa. ${author.name} covers news and stories from across the African continent.`
 
+    // Get author avatar or featured image from their latest post
     const avatarUrl =
-      author.avatar?.url || posts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
+      author.avatar?.url || authorPosts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
 
+    // Create canonical URL
     const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`
 
+    // Generate keywords from author's articles
     const keywords = [
       author.name,
       `${author.name} Articles`,
       "African Journalist",
       "News On Africa",
-      ...posts.slice(0, 3).flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
+      ...authorPosts.slice(0, 3).flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
     ].join(", ")
 
     return {
@@ -134,12 +143,19 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
 // Server component that fetches data and renders the page
 export default async function AuthorPage({ params }: AuthorPageProps) {
   try {
-    const author = await fetchAuthorData(params.slug)
-    if (!author) {
+    // Get latest posts to find author and their articles
+    const { posts } = await getLatestPosts(200)
+
+    // Find posts by this author
+    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
+
+    if (authorPosts.length === 0) {
       notFound()
     }
 
-    return <AuthorContent slug={params.slug} />
+    const author = authorPosts[0].author.node
+
+    return <AuthorContent author={author} posts={authorPosts} />
   } catch (error) {
     console.error(`Error loading author page for ${params.slug}:`, error)
     throw error

@@ -1,4 +1,4 @@
-import { fetchPostsByTag, fetchSingleTag } from "@/lib/wordpress"
+import { fetchPostsByTag, fetchSingleTag } from "@/lib/wordpress-api"
 import { TagContent } from "@/components/TagContent"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"

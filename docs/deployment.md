@@ -20,10 +20,8 @@ Add these secrets to your GitHub repository settings:
 - `APPLE_TEAM_ID` - Apple Developer Team ID
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
 
-- `GOOGLE_SERVICES_JSON` - Firebase config for Android (base64 or raw JSON)
 #### Environment Variables
-- `WORDPRESS_GRAPHQL_URL`
-- `WORDPRESS_REST_URL`
+- `NEXT_PUBLIC_WORDPRESS_API_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`
@@ -33,10 +31,6 @@ Add these secrets to your GitHub repository settings:
 - `NEXT_PUBLIC_AUTH0_CLIENT_ID`
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
-
-The project generates `robots.txt` using the route
-`app/robots.txt/route.ts`. Set `NEXT_PUBLIC_SITE_URL` so sitemap links in this
-file use your production domain.
 
 ### Workflow Overview
 

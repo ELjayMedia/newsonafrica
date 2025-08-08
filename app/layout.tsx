@@ -16,7 +16,6 @@ import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
 import Script from "next/script"
-import { siteConfig } from "@/config/site"
 
 import "./globals.css"
 
@@ -28,59 +27,21 @@ const inter = Inter({
   fallback: ["system-ui", "sans-serif"],
 })
 
-const ogImageUrl = new URL(siteConfig.ogImage, siteConfig.url).toString()
-
 export const metadata: Metadata = {
-  title: {
-    default: siteConfig.name,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url,
-  ),
-  applicationName: siteConfig.name,
+  title: "News On Africa",
+  description: "Your trusted source for news across Africa",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
+  applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
-  creator: siteConfig.name,
-  publisher: siteConfig.name,
+  creator: "News On Africa",
+  publisher: "News On Africa",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   generator: "v0.dev",
-  alternates: {
-    canonical: siteConfig.url,
-  },
-  openGraph: {
-    title: siteConfig.name,
-    description: siteConfig.description,
-    url: siteConfig.url,
-    siteName: siteConfig.name,
-    locale: "en_US",
-    type: "website",
-    images: [
-      {
-        url: ogImageUrl,
-        width: 1200,
-        height: 630,
-        alt: siteConfig.name,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@newsonafrica",
-    creator: "@newsonafrica",
-    title: siteConfig.name,
-    description: siteConfig.description,
-    images: [ogImageUrl],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
 }
 
 export default function RootLayout({
@@ -94,24 +55,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
-        {/* Google tag (gtag.js) */}
-        {siteConfig.analytics.googleAnalyticsId && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${siteConfig.analytics.googleAnalyticsId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-
-                gtag('config', '${siteConfig.analytics.googleAnalyticsId}');
-              `}
-            </Script>
-          </>
-        )}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
@@ -159,11 +102,11 @@ export default function RootLayout({
                   </div>
                 </div>
                 <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-                  <Link href="/privacy" className="hover:underline">
+                  <Link href="/privacy-policy" className="hover:underline">
                     Privacy Policy
                   </Link>
                   {" | "}
-                  <Link href="/terms" className="hover:underline">
+                  <Link href="/terms-of-service" className="hover:underline">
                     Terms of Service
                   </Link>
                   {" | "}

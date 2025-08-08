@@ -1,5 +1,4 @@
 import Head from "next/head"
-import { siteConfig } from "@/config/site"
 
 interface SocialMetadataProps {
   title: string
@@ -26,9 +25,6 @@ export function SocialMetadata({
   keywords = [],
   section = "News",
 }: SocialMetadataProps) {
-  const twitterHandle = siteConfig.links.twitter
-    ? `@${siteConfig.links.twitter.split("twitter.com/")[1]}`
-    : "@newsonafrica"
   return (
     <Head>
       <title>{title}</title>
@@ -46,8 +42,7 @@ export function SocialMetadata({
       <meta property="og:image" content={image} />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={type} />
-      <meta property="og:site_name" content={siteConfig.name} />
-      <meta property="og:locale" content="en_US" />
+      <meta property="og:site_name" content="News On Africa" />
 
       {/* Article specific Open Graph */}
       {type === "article" && (
@@ -65,11 +60,11 @@ export function SocialMetadata({
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content={twitterHandle} />
+      <meta name="twitter:site" content="@newsonafrica" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
-      <meta name="twitter:creator" content={twitterHandle} />
+      <meta name="twitter:creator" content="@newsonafrica" />
 
       {/* Additional SEO tags */}
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />

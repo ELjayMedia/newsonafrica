@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "983051753775",
+    "project_id": "news-on-africa---ga4",
+    "storage_bucket": "news-on-africa---ga4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983051753775:android:22fc9cdc5dd08cafdf69da",
+        "android_client_info": {
+          "package_name": "com.newsonafrica.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUxYLeoLY9f64Ztjf72ctUvDwAAVGypwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

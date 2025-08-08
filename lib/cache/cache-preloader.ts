@@ -8,7 +8,7 @@ interface PreloadConfig {
   maxConcurrent?: number
 }
 
-export class CachePreloader {
+class CachePreloader {
   private isPreloading = false
   private preloadQueue: Array<{
     postId: string
@@ -16,10 +16,7 @@ export class CachePreloader {
     tags: string[]
     limit: number
     countryCode?: string
-    resolve: () => void
   }> = []
-  private activeCount = 0
-  private maxConcurrent = 3
 
   /**
    * Preload related posts for a single post
@@ -44,52 +41,7 @@ export class CachePreloader {
   }
 
   /**
-   * Enqueue a single preload job
-   */
-  private enqueue(post: {
-    id: string
-    categories: string[]
-    tags: string[]
-    limit?: number
-    countryCode?: string
-  }): Promise<void> {
-    return new Promise((resolve) => {
-      this.preloadQueue.push({
-        postId: post.id,
-        categories: post.categories,
-        tags: post.tags,
-        limit: post.limit ?? 6,
-        countryCode: post.countryCode,
-        resolve,
-      })
-      this.isPreloading = true
-      this.processQueue()
-    })
-  }
-
-  /**
-   * Process items in the queue respecting concurrency limits
-   */
-  private processQueue(): void {
-    while (this.activeCount < this.maxConcurrent && this.preloadQueue.length > 0) {
-      const item = this.preloadQueue.shift()!
-      this.activeCount++
-      this.preloadPost(item.postId, item.categories, item.tags, item.limit, item.countryCode)
-        .catch(() => {})
-        .finally(() => {
-          this.activeCount--
-          item.resolve()
-          if (this.preloadQueue.length === 0 && this.activeCount === 0) {
-            this.isPreloading = false
-          } else {
-            this.processQueue()
-          }
-        })
-    }
-  }
-
-  /**
-   * Preload related posts for multiple posts
+   * Preload related posts for multiple posts in batches
    */
   async preloadPosts(
     posts: Array<{
@@ -101,13 +53,39 @@ export class CachePreloader {
     }>,
     config: PreloadConfig = {},
   ): Promise<void> {
-    const { maxConcurrent = 3 } = config
+    const { batchSize = 5, delayBetweenBatches = 100, maxConcurrent = 3 } = config
 
-    this.maxConcurrent = maxConcurrent
+    if (this.isPreloading) {
+      console.warn("Preloading already in progress")
+      return
+    }
 
-    const promises = posts.map((post) => this.enqueue(post))
+    this.isPreloading = true
 
-    await Promise.all(promises)
+    try {
+      // Process posts in batches
+      for (let i = 0; i < posts.length; i += batchSize) {
+        const batch = posts.slice(i, i + batchSize)
+
+        // Process batch with limited concurrency
+        const semaphore = new Array(maxConcurrent).fill(null)
+        const promises = batch.map(async (post, index) => {
+          // Wait for semaphore slot
+          await semaphore[index % maxConcurrent]
+
+          return this.preloadPost(post.id, post.categories, post.tags, post.limit || 6, post.countryCode)
+        })
+
+        await Promise.allSettled(promises)
+
+        // Delay between batches to avoid overwhelming the server
+        if (i + batchSize < posts.length && delayBetweenBatches > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches))
+        }
+      }
+    } finally {
+      this.isPreloading = false
+    }
   }
 
   /**

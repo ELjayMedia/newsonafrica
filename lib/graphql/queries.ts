@@ -112,7 +112,6 @@ export const CATEGORIES_QUERY = `
         count
         parent {
           node {
-            id
             name
             slug
           }

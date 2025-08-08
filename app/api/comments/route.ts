@@ -4,8 +4,6 @@ import { cookies } from "next/headers"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
-export const runtime = 'nodejs'
-
 // Input validation schemas
 const getCommentsSchema = z.object({
   postId: z.string().min(1, "Post ID is required"),

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/types/supabase"
-import { createClient } from "@/utils/supabase/middleware"
-
-const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
@@ -13,13 +11,11 @@ const AUTH_ROUTES = ["/auth", "/login", "/register"]
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP = {
-  "/news": `/${DEFAULT_COUNTRY}/category/news`,
-  "/business": `/${DEFAULT_COUNTRY}/category/business`,
-  "/sport": `/${DEFAULT_COUNTRY}/category/sport`,
-  "/entertainment": `/${DEFAULT_COUNTRY}/category/entertainment`,
+  "/news": "/category/news",
+  "/business": "/category/business",
+  "/sport": "/category/sport",
+  "/entertainment": "/category/entertainment",
 }
-
-const COUNTRY_CATEGORY_REGEX = /^\/[^/]+\/category(\/|$)/
 
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
@@ -33,7 +29,8 @@ export async function middleware(request: NextRequest) {
   // Log API requests
   logApiRequest(request)
 
-  const { supabase, response: res } = createClient(request)
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient<Database>({ req: request, res })
 
   // Check if the user is authenticated
   const {
@@ -64,7 +61,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Add CORS headers for API routes
-    const apiResponse = NextResponse.next()
+    const response = NextResponse.next()
 
     // Define allowed origins based on environment
     const allowedOrigins =
@@ -75,13 +72,13 @@ export async function middleware(request: NextRequest) {
     const origin = request.headers.get("origin") || ""
 
     if (allowedOrigins.includes(origin)) {
-      apiResponse.headers.set("Access-Control-Allow-Origin", origin)
-      apiResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-      apiResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-      apiResponse.headers.set("Access-Control-Max-Age", "86400")
+      response.headers.set("Access-Control-Allow-Origin", origin)
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+      response.headers.set("Access-Control-Max-Age", "86400")
     }
 
-    return apiResponse
+    return response
   }
 
   // If user is on an auth page but already logged in, redirect to profile
@@ -98,7 +95,6 @@ export async function middleware(request: NextRequest) {
   if (
     !session &&
     !PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) &&
-    !COUNTRY_CATEGORY_REGEX.test(pathname) &&
     !pathname.startsWith("/auth") &&
     !pathname.includes(".")
   ) {

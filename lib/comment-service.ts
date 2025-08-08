@@ -3,7 +3,6 @@ import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "
 import { v4 as uuidv4 } from "uuid"
 import { createCommentReplyNotification } from "@/services/notification-service"
 import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
-import { WORDPRESS_REST_URL } from "@/lib/wordpress/client"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
@@ -382,7 +381,7 @@ export async function addComment(comment: NewComment): Promise<Comment> {
               postTitle = post.title
             } else {
               // Try to get the post title from WordPress
-              const response = await fetch(`${WORDPRESS_REST_URL}/wp/v2/posts/${comment.post_id}`)
+              const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
               if (response.ok) {
                 const wpPost = await response.json()
                 postTitle = wpPost.title.rendered || "a post"

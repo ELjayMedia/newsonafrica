@@ -2,82 +2,29 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
-import { useNavigationRouting } from "@/hooks/useNavigationRouting"
-import { getCategories, type WordPressCategory } from "@/lib/api/wordpress"
-import { Loader2 } from "lucide-react"
-import CategoryDropdownNav from "@/components/CategoryDropdownNav"
 
+const categories = [
+  { name: "NEWS", href: "/category/news" },
+  { name: "BUSINESS", href: "/category/business" },
+  { name: "SPORT", href: "/category/sport" },
+  { name: "HEALTH", href: "/category/health" },
+  { name: "POLITICS", href: "/category/politics" },
+  { name: "OPINION", href: "/category/editorial" },
+  { name: "ENTERTAINMENT", href: "/category/entertainment" },
+  { name: "FOOD", href: "/category/food" },
+  { name: "SPECIAL PROJECTS", href: "/special-projects" },
+]
 
 export function Header() {
   const router = useRouter()
   const { user, signOut } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
-
-  const { currentCountry, activeSlug, navigateTo } = useNavigationRouting()
-
-  const [categories, setCategories] = useState<WordPressCategory[]>([])
-  const [isLoadingCats, setIsLoadingCats] = useState(true)
-  const [catError, setCatError] = useState(false)
-
-  const CACHE_TTL = 24 * 60 * 60 * 1000
-
-  const loadCatsFromCache = useCallback(() => {
-    try {
-      const cacheKey = `menu-categories:${currentCountry}`
-      const cached = localStorage.getItem(cacheKey)
-      if (!cached) return { hasCache: false, isFresh: false }
-      const parsed = JSON.parse(cached)
-      setCategories(parsed.categories)
-      setIsLoadingCats(false)
-      const age = Date.now() - parsed.timestamp
-      return { hasCache: true, isFresh: age < CACHE_TTL }
-    } catch (err) {
-      console.error("Failed to load cached categories", err)
-    }
-    return { hasCache: false, isFresh: false }
-  }, [currentCountry])
-
-  const fetchCats = useCallback(
-    async (showLoading = true) => {
-      try {
-        setCatError(false)
-        if (showLoading) setIsLoadingCats(true)
-        const data = await getCategories(currentCountry)
-        setCategories(data)
-        try {
-          const cacheKey = `menu-categories:${currentCountry}`
-          localStorage.setItem(
-            cacheKey,
-            JSON.stringify({ categories: data, timestamp: Date.now() })
-          )
-        } catch (err) {
-          console.error("Failed to cache categories", err)
-        }
-      } catch (err) {
-        console.error("Failed to load categories", err)
-        setCatError(true)
-      } finally {
-        if (showLoading) setIsLoadingCats(false)
-      }
-    },
-    [currentCountry]
-  )
-
-  useEffect(() => {
-    const { hasCache, isFresh } = loadCatsFromCache()
-    if (navigator.onLine && !isFresh) {
-      fetchCats(!hasCache)
-    } else if (!hasCache) {
-      setIsLoadingCats(false)
-    }
-  }, [fetchCats, loadCatsFromCache])
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -165,28 +112,24 @@ export function Header() {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-4 md:mt-0 bg-white" aria-label="Site categories">
+          <nav className="mt-4 md:mt-0 bg-white">
             <div className="overflow-x-auto">
-              {isLoadingCats ? (
-                <div className="flex justify-center py-3" aria-live="polite" aria-busy="true">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : catError ? (
-                <div className="py-3 text-center">
-                  <button
-                    onClick={fetchCats}
-                    className="px-3 py-2 text-sm border border-blue-600 text-blue-600 rounded"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <CategoryDropdownNav
-                  categories={categories}
-                  activeSlug={activeSlug}
-                  onNavigate={(slug) => navigateTo(slug, currentCountry)}
-                />
-              )}
+              <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
+                {categories.map((category) => (
+                  <li key={category.name}>
+                    <Link
+                      href={category.href}
+                      className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
+                        pathname === category.href
+                          ? "text-blue-600 border-b-2 border-blue-600"
+                          : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                      }`}
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </nav>
         </div>

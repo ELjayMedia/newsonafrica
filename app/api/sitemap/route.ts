@@ -1,19 +1,17 @@
+const fetchAllCategories = async () => []
+const fetchRecentPosts = async () => []
+
 import { NextResponse } from "next/server"
-import { getCategories } from "@/lib/api/wordpress"
-import { fetchRecentPosts } from "@/lib/wordpress"
 
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
 
   try {
-    const countryCodes = (process.env.NEXT_PUBLIC_SUPPORTED_COUNTRIES ||
-      process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ||
-      "").split(",").filter(Boolean)
+    const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
 
-    const [posts, categoriesByCountry] = await Promise.all([
-      fetchRecentPosts(100),
-      Promise.all(countryCodes.map((code) => getCategories(code))),
-    ])
+    // Ensure categories and posts are arrays, even if empty
+    const safeCategories = Array.isArray(categories) ? categories : []
+    const safePosts = Array.isArray(posts) ? posts : []
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -22,26 +20,26 @@ export async function GET() {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-  ${categoriesByCountry
-    .flatMap((categories, idx) =>
-      categories.map(
-        (category) => `
+  ${safeCategories
+    .map(
+      (category) => `
   <url>
-    <loc>${baseUrl}/${countryCodes[idx]}/category/${category.slug}</loc>
+    <loc>${baseUrl}/category/${category.slug}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`,
-      ),
+  </url>
+  `,
     )
     .join("")}
-  ${posts
+  ${safePosts
     .map(
       (post) => `
   <url>
     <loc>${baseUrl}/post/${post.slug}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>`,
+  </url>
+  `,
     )
     .join("")}
 </urlset>`

@@ -48,7 +48,6 @@ Supabase provides authentication and database services:
 
 - **Auth Providers**: Email/password, Google, Facebook
 - **PostgreSQL Database**: Stores user profiles, bookmarks, comments
-- **RPC Functions**: Server-side routines like `get_bookmark_stats` provide aggregate data
 - **Row-Level Security**: For data protection
 - **Real-time Subscriptions**: For live updates
 
@@ -134,15 +133,6 @@ Vercel serves as the hosting and CDN platform:
 - **Performance Monitoring**: Web Vitals reporting
 - **User Analytics**: Google Analytics
 - **Server Monitoring**: Vercel Analytics
-
-## Bookmark Synchronization
-
-Bookmarks are stored in Supabase and reference WordPress posts by `post_id`.
-When WordPress sends an update or delete webhook, the API route refreshes or
-removes the matching bookmark rows. Users can also manually refresh a single
-bookmark from the client. A future server job or Supabase function can run
-periodically to ensure all bookmarks stay in sync with the latest WordPress
-content.
 
 ## Future Enhancements
 

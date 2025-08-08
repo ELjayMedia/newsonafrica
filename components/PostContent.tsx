@@ -9,11 +9,9 @@ import Link from "next/link"
 import { RelatedPosts } from "@/components/RelatedPosts"
 import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { Clock } from "lucide-react"
-import { CommentButton } from "@/components/CommentButton"
-import { GiftArticleButton } from "@/components/GiftArticleButton"
-import { formatPostDate } from "@/lib/date"
-import { useNavigationRouting } from "@/hooks/useNavigationRouting"
+import { Clock, MessageSquare, Gift } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { formatDate } from "@/utils/date-utils"
 
 interface PostContentProps {
   post: Post
@@ -24,8 +22,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
     return <div>Loading...</div>
   }
 
-  const { getCategoryPath } = useNavigationRouting()
-
   return (
     <div className="container mx-auto px-4 pb-6 bg-white">
       <article className="mb-8">
@@ -33,7 +29,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         <div className="flex justify-between items-center mb-4 text-sm">
           <div className="flex items-center text-gray-500">
             <Clock className="w-3 h-3 mr-1" />
-            <time dateTime={post.date}>{post.date ? formatPostDate(post.date) : "Unknown date"}</time>
+            <time dateTime={post.date}>{post.date ? formatDate(post.date, false) : "Unknown date"}</time>
           </div>
 
           <div className="flex items-center gap-1">
@@ -65,11 +61,21 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
           {/* Interactive buttons */}
           <div className="flex flex-wrap gap-1 md:gap-2">
-            <CommentButton
-              className="border border-input bg-background rounded-full flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
-            />
+            <Button
+              variant="outline"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              <MessageSquare className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Comments</span>
+            </Button>
 
-            <GiftArticleButton postSlug={post.slug} postTitle={post.title} />
+            <Button
+              variant="outline"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              <Gift className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Gift article</span>
+            </Button>
 
             <BookmarkButton post={post} />
           </div>
@@ -106,7 +112,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           {post.categories?.nodes?.map((category: Category) => (
             <Link
               key={category.id}
-              href={getCategoryPath(category.slug)}
+              href={`/category/${category.slug}`}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm"
             >
               {category.name}

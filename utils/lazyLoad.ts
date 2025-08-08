@@ -9,6 +9,15 @@ export function generateBlurDataURL(width: number, height: number): string {
       <rect width="100%" height="100%" fill="#EEEEEE" filter="url(#b)"/>
     </svg>`
 
-  const encoded = btoa(unescape(encodeURIComponent(svg)))
-  return `data:image/svg+xml;base64,${encoded}`
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+}
+
+// Optimized image loading utility
+export function getImageProps(src: string, width: number, height: number) {
+  return {
+    src,
+    blurDataURL: generateBlurDataURL(width, height),
+    placeholder: "blur",
+    loading: "lazy",
+  }
 }

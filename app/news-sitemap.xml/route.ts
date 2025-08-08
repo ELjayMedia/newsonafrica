@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchRecentPosts } from "@/lib/wordpress"
+import { fetchRecentPosts } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
 
 export async function GET() {

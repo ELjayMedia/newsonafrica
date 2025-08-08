@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { fetchTaggedPosts } from "@/lib/wordpress"
+import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 

@@ -10,7 +10,6 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 - **Fast loading times**: Optimized assets and code splitting for performance
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
 - **Personalization**: User profiles, bookmarks, and preferences
-- **Server-side bookmark stats**: Bookmark statistics are computed via a Supabase RPC
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
@@ -53,63 +52,36 @@ news-on-africa/
 
 ### Prerequisites
 
- - Node.js 18+ and pnpm
+- Node.js 18+ and npm/yarn
 - Supabase account
 - WordPress instance with REST API
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables. WordPress endpoints are
-derived from `NEXT_PUBLIC_WP_BASE_URL` and the active country code.
+Create a `.env.local` file with the following variables:
 
 \`\`\`
 # WordPress
-NEXT_PUBLIC_WP_BASE_URL=https://your-wordpress-site.com
-NEXT_PUBLIC_DEFAULT_COUNTRY=sz
+WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
-WORDPRESS_AUTH_TOKEN=your_wordpress_auth_token
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# Paystack
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
-PAYSTACK_SECRET_KEY=your_paystack_secret_key
-PAYSTACK_API_BASE=https://api.paystack.co
-
 # Authentication
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
-JWT_SECRET=your_jwt_secret
 
 # Analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-S55PVESFS2
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
-GOOGLE_SERVICES_JSON=your_firebase_config_json
 \`\`\`
-The application serves `robots.txt` from a Next.js route at
-`app/robots.txt/route.ts`. Ensure `NEXT_PUBLIC_SITE_URL` is configured so the
-generated sitemap URLs use the correct domain.
-Copy `google-services.json.example` to `google-services.json` and fill in your Firebase credentials. Keep this file out of version control. During automated deployments, decode the `GOOGLE_SERVICES_JSON` secret and write it to `google-services.json`.
-`WORDPRESS_AUTH_TOKEN` is used for authenticated WordPress requests.
-`JWT_SECRET` is the key for signing JSON Web Tokens.
-
-### Subscription Setup
-
-Run the subscription database migration to create plans, subscriptions, and payments tables:
-
-\`\`\`bash
-supabase db push --file lib/migrations/1.7.0-subscriptions.sql
-\`\`\`
-
-Configure your Paystack dashboard webhook to point to `/api/webhooks/paystack`.
-
-To test the flow locally, start the development server and use a Paystack test card on the `/subscribe` page. You can trigger webhook events from the Paystack dashboard to simulate billing events.
 
 ### Installation
 
@@ -119,56 +91,31 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-pnpm install
+npm install
 
 # Run the development server
-pnpm run dev
+npm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `pnpm run build`
+1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
-
-### Android Build
-
-1. Install dependencies with `npm install`.
-2. Run `bash export-capacitor.sh` to generate the `out/` directory.
-3. Run `npx cap sync android` (or `npx cap copy android`) to copy web assets and plugins.
-4. Build artifacts (`.apk`, `.aab`) are ignored via `android/.gitignore`.
-
-## ⚡ Performance
-
-The homepage now prefetches posts and categories on the server and passes them to the client via `initialData`. This avoids an extra fetch on page load and speeds up the first render.
-
-## PWA & Routing Enhancements
-
-Environment variables now control endpoint selection. Set `NEXT_PUBLIC_WP_BASE_URL` and `NEXT_PUBLIC_DEFAULT_COUNTRY` to configure the WordPress host and default edition. Example:
-
-\`\`\`ts
-import { getCountryEndpoints } from "./lib/getCountryEndpoints"
-const { graphql, rest } = getCountryEndpoints("ng")
-// graphql -> https://your-wordpress-site.com/ng/graphql
-// rest     -> https://your-wordpress-site.com/ng
-\`\`\`
-
-Run navigation routing tests with:
-
-\`\`\`bash
-pnpm test
-\`\`\`
 
 ## 🧪 Testing
 
 \`\`\`bash
 # Run unit tests
-pnpm test
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
 
 # Run linting
-pnpm run lint
+npm run lint
 \`\`\`
 
 ## 📚 Documentation

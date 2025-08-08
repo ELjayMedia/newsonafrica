@@ -1,39 +1,70 @@
 import { NextResponse } from "next/server"
-import { startWebhookTunnel, verifyWebhookSignature } from "@/lib/paystack-utils"
-import { createAdminClient } from "@/lib/supabase"
+import crypto from "crypto"
+import { startWebhookTunnel } from "@/lib/paystack-utils"
 
+// Start webhook tunnel in development
 if (process.env.NODE_ENV === "development") {
   startWebhookTunnel()
 }
 
 export async function POST(request: Request) {
   try {
-    const signature = request.headers.get("x-paystack-signature") || ""
+    // Get the signature from the headers
+    const signature = request.headers.get("x-paystack-signature")
+
+    if (!signature) {
+      console.error("No Paystack signature provided")
+      return NextResponse.json({ error: "No signature provided" }, { status: 400 })
+    }
+
+    // Get the request body as text
     const body = await request.text()
 
-    if (!verifyWebhookSignature(body, signature)) {
+    // Verify the signature
+    const secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+    const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
+
+    if (hash !== signature) {
+      console.error("Invalid Paystack signature")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
+    // Parse the body
     const event = JSON.parse(body)
-    const supabase = createAdminClient()
+    console.log(`Received Paystack webhook: ${event.event}`)
 
-    await supabase
-      .from("webhook_events")
-      .insert({ event_type: event.event, payload: event })
-
+    // Handle different event types
     switch (event.event) {
-      case "subscription.create":
-        await handleSubscriptionCreated(event.data, supabase)
-        break
       case "charge.success":
-        await handleChargeSuccess(event.data, supabase)
+        await handleChargeSuccess(event.data)
         break
+
+      case "subscription.create":
+        await handleSubscriptionCreated(event.data)
+        break
+
       case "subscription.disable":
-        await handleSubscriptionDisabled(event.data, supabase)
+        await handleSubscriptionDisabled(event.data)
         break
+
+      case "invoice.payment_failed":
+        await handlePaymentFailed(event.data)
+        break
+
+      case "invoice.update":
+        await handleInvoiceUpdate(event.data)
+        break
+
+      case "transfer.success":
+        await handleTransferSuccess(event.data)
+        break
+
+      case "transfer.failed":
+        await handleTransferFailed(event.data)
+        break
+
       default:
-        console.log(`Unhandled Paystack event: ${event.event}`)
+        console.log(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
     return NextResponse.json({ received: true })
@@ -43,72 +74,95 @@ export async function POST(request: Request) {
   }
 }
 
-async function handleSubscriptionCreated(data: any, supabase: any) {
-  const email = data.customer?.email
-  const planCode = data.plan?.plan_code
-  if (!email || !planCode) return
+// Event handlers
+async function handleChargeSuccess(data: any) {
+  console.log("Processing successful charge:", data.reference)
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", email)
-    .single()
-  if (!profile) return
+  // TODO: Implement your business logic
+  // 1. Verify the transaction (optional, as Paystack already verified it)
+  // 2. Update your database with payment information
+  // 3. Provision access to the user
 
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("id, name")
-    .eq("paystack_plan_id", planCode)
-    .single()
-  if (!plan) return
-
-  await supabase.from("subscriptions").upsert(
-    {
-      user_id: profile.id,
-      plan_id: plan.id,
-      plan_name: plan.name,
-      provider: "paystack",
-      provider_subscription_id: data.subscription_code,
-      provider_email_token: data.email_token,
-      status: data.status,
-      current_period_end: data.next_payment_date,
-    },
-    { onConflict: "provider_subscription_id" },
-  )
+  // Example:
+  // await db.transaction.create({
+  //   data: {
+  //     reference: data.reference,
+  //     amount: data.amount / 100, // Convert from kobo to naira
+  //     email: data.customer.email,
+  //     status: 'success',
+  //     metadata: data,
+  //   },
+  // })
 }
 
-async function handleChargeSuccess(data: any, supabase: any) {
-  const subCode = data.subscription_code || data.subscription?.subscription_code
-  if (!subCode) return
+async function handleSubscriptionCreated(data: any) {
+  console.log("Processing subscription creation:", data.subscription_code)
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("id")
-    .eq("provider_subscription_id", subCode)
-    .single()
-  if (!subscription) return
+  // TODO: Implement your business logic
+  // 1. Update your database with subscription information
+  // 2. Provision access to the user
 
-  await supabase.from("payments").insert({
-    subscription_id: subscription.id,
-    paystack_charge_id: String(data.id || data.reference),
-    amount: data.amount,
-    currency: data.currency,
-    status: data.status,
-    paid_at: data.paid_at || data.paidAt,
-  })
-
-  await supabase
-    .from("subscriptions")
-    .update({ status: "active" })
-    .eq("id", subscription.id)
+  // Example:
+  // await db.subscription.create({
+  //   data: {
+  //     code: data.subscription_code,
+  //     customer: data.customer.email,
+  //     plan: data.plan.name,
+  //     status: data.status,
+  //     start_date: new Date(data.createdAt),
+  //     next_payment_date: new Date(data.next_payment_date),
+  //   },
+  // })
 }
 
-async function handleSubscriptionDisabled(data: any, supabase: any) {
-  const subCode = data.subscription_code
-  if (!subCode) return
+async function handleSubscriptionDisabled(data: any) {
+  console.log("Processing subscription cancellation:", data.subscription_code)
 
-  await supabase
-    .from("subscriptions")
-    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-    .eq("provider_subscription_id", subCode)
+  // TODO: Implement your business logic
+  // 1. Update your database with subscription status
+  // 2. Revoke access at the appropriate time
+
+  // Example:
+  // await db.subscription.update({
+  //   where: { code: data.subscription_code },
+  //   data: { status: 'cancelled', cancelled_at: new Date() },
+  // })
+}
+
+async function handlePaymentFailed(data: any) {
+  console.log("Processing failed payment:", data.reference)
+
+  // TODO: Implement your business logic
+  // 1. Update your database with payment status
+  // 2. Notify the user
+  // 3. Attempt recovery if appropriate
+
+  // Example:
+  // await db.transaction.update({
+  //   where: { reference: data.reference },
+  //   data: { status: 'failed' },
+  // })
+  // await sendEmail({
+  //   to: data.customer.email,
+  //   subject: 'Payment Failed',
+  //   text: 'Your payment failed. Please update your payment method.',
+  // })
+}
+
+async function handleInvoiceUpdate(data: any) {
+  console.log("Processing invoice update:", data.invoice_code)
+
+  // TODO: Implement your business logic
+}
+
+async function handleTransferSuccess(data: any) {
+  console.log("Processing successful transfer:", data.reference)
+
+  // TODO: Implement your business logic
+}
+
+async function handleTransferFailed(data: any) {
+  console.log("Processing failed transfer:", data.reference)
+
+  // TODO: Implement your business logic
 }

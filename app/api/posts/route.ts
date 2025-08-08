@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { z } from "zod"
-import { fetchPosts } from "@/lib/wordpress"
+import { fetchPosts } from "@/lib/wordpress-api"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
 // Input validation schema

@@ -9,9 +9,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { getLatestPosts, getCategories } from "@/lib/api/wordpress"
-import { fetchMenuContent } from "@/lib/wordpress"
-import { useNavigationRouting } from "@/hooks/useNavigationRouting"
+import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs } from "@/config/homeConfig"
 import { ChevronRight, TrendingUp } from "lucide-react"
 
@@ -64,7 +62,6 @@ const fetchHomeData = async () => {
 
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const { currentCountry, getCategoryPath } = useNavigationRouting()
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
@@ -115,10 +112,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
 
       const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
         try {
-          const result = await fetchMenuContent(
-            currentCountry,
-            config.name.toLowerCase(),
-          )
+          const result = await getPostsByCategory(config.name.toLowerCase(), 4)
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
           return { name: config.name, posts: [] }
@@ -138,7 +132,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     }
 
     fetchCategoryPosts()
-  }, [isOffline, currentCountry])
+  }, [isOffline])
 
   const {
     taggedPosts = [],
@@ -190,7 +184,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                 <TrendingUp className="h-4 w-4 text-red-500" />
                 Quick Reads
               </h2>
-              <Link href={getCategoryPath("news") } className="text-xs text-blue-600 flex items-center gap-1">
+              <Link href="/news" className="text-xs text-blue-600 flex items-center gap-1">
                 More <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -212,7 +206,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
             <div className="bg-white rounded-lg shadow-sm">
               <div className="flex items-center justify-between p-2 border-b border-gray-100">
                 <h2 className="text-sm font-bold">Trending Now</h2>
-                <Link href={getCategoryPath("news")} className="text-xs text-blue-600">
+                <Link href="/news" className="text-xs text-blue-600">
                   View All
                 </Link>
               </div>
@@ -243,7 +237,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                   ))}
                 </div>
                 <Link
-                  href={getCategoryPath(categoryName.toLowerCase())}
+                  href={`/category/${categoryName.toLowerCase()}`}
                   className="block text-center text-xs text-blue-600 mt-2 py-1 border-t border-gray-100"
                 >
                   View all {categoryName} news

@@ -1,17 +1,12 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { fetchSinglePost } from "@/lib/wordpress"
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
-import { getBookmarkStats, type BookmarkStats } from "@/utils/supabase/bookmark-stats"
 import { useToast } from "@/hooks/use-toast"
-import { fuzzySearch } from "@/utils/fuzzy-search"
 
-
-export interface Bookmark {
+interface Bookmark {
   id: string
   user_id: string
   post_id: string
@@ -19,13 +14,18 @@ export interface Bookmark {
   slug?: string
   excerpt?: string
   created_at: string
-  featuredImage?: any
+  featured_image?: any
   category?: string
   tags?: string[]
   read_status?: "unread" | "read"
   notes?: string
 }
 
+interface BookmarkStats {
+  total: number
+  unread: number
+  categories: Record<string, number>
+}
 
 interface BookmarksContextType {
   bookmarks: Bookmark[]
@@ -44,7 +44,6 @@ interface BookmarksContextType {
   searchBookmarks: (query: string) => Bookmark[]
   filterByCategory: (category: string) => Bookmark[]
   refreshBookmarks: () => Promise<void>
-  refreshBookmark: (postId: string) => Promise<void>
   exportBookmarks: () => Promise<string>
   isLoading: boolean
 }
@@ -59,49 +58,29 @@ export function useBookmarks() {
   return context
 }
 
-
-interface BookmarksProviderProps {
-
-  children: React.ReactNode
-  initialBookmarks?: Bookmark[]
-  initialStats?: BookmarkStats
-}
-
-export function BookmarksProvider({
-  children,
-
-  initialBookmarks,
-  initialStats, // currently unused but accepted for future flexibility
-}: BookmarksProviderProps) {
+export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks ?? [])
-  const [loading, setLoading] = useState(initialBookmarks ? false : true)
-
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
-  const initialDataLoadedRef = useRef(false)
 
+  // Calculate stats
+  const stats = useMemo((): BookmarkStats => {
+    const total = bookmarks.length
+    const unread = bookmarks.filter((b) => b.read_status !== "read").length
+    const categories: Record<string, number> = {}
 
+    bookmarks.forEach((bookmark) => {
+      if (bookmark.category) {
+        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
+      }
+    })
 
-  // Stats returned from Supabase RPC
-  const [stats, setStats] = useState<BookmarkStats>({ total: 0, unread: 0, categories: {} })
-
-  const fetchBookmarkStats = useCallback(async () => {
-    if (!user) return
-    try {
-      const data = await getBookmarkStats(user.id)
-      setStats(data)
-    } catch (error) {
-      console.error('Error fetching bookmark stats:', error)
-    }
-  }, [user])
-
-  // Alias for backward compatibility
-  const refreshStats = fetchBookmarkStats
-
-
+    return { total, unread, categories }
+  }, [bookmarks])
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -126,19 +105,15 @@ export function BookmarksProvider({
     [bookmarks], // Keep dependency for reactivity
   )
 
-  // Fetch bookmarks and stats when user changes
+  // Fetch bookmarks when user changes
   useEffect(() => {
     if (user) {
-
       fetchBookmarks()
-      fetchBookmarkStats()
-
     } else {
       setBookmarks([])
-      setStats({ total: 0, unread: 0, categories: {} })
       setLoading(false)
     }
-  }, [user, fetchBookmarkStats])
+  }, [user])
 
   const fetchBookmarks = async () => {
     try {
@@ -165,10 +140,7 @@ export function BookmarksProvider({
         return
       }
 
-
       setBookmarks(data || [])
-      await fetchBookmarkStats()
-
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -199,7 +171,7 @@ export function BookmarksProvider({
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featuredImage: post.featuredImage || null,
+          featured_image: post.featured_image ? JSON.stringify(post.featured_image) : null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
@@ -213,14 +185,11 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => [data, ...prev])
-
-        await fetchBookmarkStats()
-
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase, isBookmarked, fetchBookmarkStats],
+    [user, supabase, isBookmarked],
   )
 
   const removeBookmark = useCallback(
@@ -236,14 +205,11 @@ export function BookmarksProvider({
         }
 
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
-
-        await fetchBookmarkStats()
-
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase, fetchBookmarkStats],
+    [user, supabase],
   )
 
   const updateBookmark = useCallback(
@@ -264,15 +230,12 @@ export function BookmarksProvider({
           throw error
         }
 
-
         setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
-        await fetchBookmarkStats()
-
       } finally {
         setIsLoading(false)
       }
     },
-    [user, supabase, fetchBookmarkStats],
+    [user, supabase],
   )
 
   const bulkRemoveBookmarks = useCallback(
@@ -289,9 +252,6 @@ export function BookmarksProvider({
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
 
-        await fetchBookmarkStats()
-
-
         toast({
           title: "Bookmarks removed",
           description: `${postIds.length} bookmarks removed successfully`,
@@ -306,7 +266,7 @@ export function BookmarksProvider({
         setIsLoading(false)
       }
     },
-    [user, supabase, toast, fetchBookmarkStats],
+    [user, supabase, toast],
   )
 
   const markAsRead = useCallback(
@@ -345,10 +305,14 @@ export function BookmarksProvider({
     (query: string): Bookmark[] => {
       if (!query.trim()) return bookmarks
 
-      return fuzzySearch(bookmarks, query, {
-        keys: ["title", "excerpt", "notes", "tags"],
-        threshold: 0.3,
-      })
+      const searchTerm = query.toLowerCase()
+      return bookmarks.filter(
+        (bookmark) =>
+          bookmark.title.toLowerCase().includes(searchTerm) ||
+          bookmark.excerpt?.toLowerCase().includes(searchTerm) ||
+          bookmark.notes?.toLowerCase().includes(searchTerm) ||
+          bookmark.tags?.some((tag) => tag.toLowerCase().includes(searchTerm)),
+      )
     },
     [bookmarks],
   )
@@ -381,61 +345,7 @@ export function BookmarksProvider({
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-    await fetchBookmarkStats()
-  }, [user, fetchBookmarkStats])
-
-  const refreshBookmark = useCallback(
-    async (postId: string) => {
-      if (!user) return
-
-      const existing = getBookmark(postId)
-      if (!existing) return
-
-      setIsLoading(true)
-      try {
-        const post = await fetchSinglePost(existing.slug || postId)
-
-        if (!post) return
-
-        const updates = {
-          title: post.title || existing.title,
-          slug: post.slug || existing.slug,
-          excerpt: post.excerpt || existing.excerpt,
-          featuredImage: post.featuredImage
-            ? JSON.stringify(post.featuredImage)
-            : null,
-        }
-
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .update(updates)
-          .eq("user_id", user.id)
-          .eq("post_id", postId)
-          .select()
-          .single()
-
-        if (error) {
-          throw error
-        }
-
-        if (data) {
-          setBookmarks((prev) =>
-            prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)),
-          )
-        }
-      } catch (error: any) {
-        console.error("Error refreshing bookmark:", error)
-        toast({
-          title: "Error",
-          description: `Failed to refresh bookmark: ${error.message}`,
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [user, supabase, getBookmark, toast],
-  )
+  }, [user])
 
   const contextValue = useMemo(
     () => ({
@@ -455,7 +365,6 @@ export function BookmarksProvider({
       searchBookmarks,
       filterByCategory,
       refreshBookmarks,
-      refreshBookmark,
       exportBookmarks,
       isLoading,
     }),
@@ -476,7 +385,6 @@ export function BookmarksProvider({
       searchBookmarks,
       filterByCategory,
       refreshBookmarks,
-      refreshBookmark,
       exportBookmarks,
       isLoading,
     ],

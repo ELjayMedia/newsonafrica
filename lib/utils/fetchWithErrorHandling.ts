@@ -313,24 +313,11 @@ export async function uploadFile<T>(
  */
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>()
 
-function cleanupExpired() {
-  const now = Date.now()
-  for (const [key, entry] of cache.entries()) {
-    if (now - entry.timestamp > entry.ttl) {
-      cache.delete(key)
-    }
-  }
-}
-
-// Periodic cleanup every minute
-setInterval(cleanupExpired, 60000)
-
 export async function fetchWithCache<T>(
   url: string,
   options: FetchOptions & { cacheTTL?: number } = {},
 ): Promise<FetchResponse<T>> {
   const { cacheTTL = 300000, ...fetchOptions } = options // Default 5 minutes
-  cleanupExpired()
   const cacheKey = `${url}:${JSON.stringify(fetchOptions)}`
 
   // Check cache
@@ -371,11 +358,6 @@ export function clearFetchCache(pattern?: string): void {
   } else {
     cache.clear()
   }
-}
-
-export function getFetchCacheSize(): number {
-  cleanupExpired()
-  return cache.size
 }
 
 // Export the simple version for backward compatibility

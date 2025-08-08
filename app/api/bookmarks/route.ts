@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 
-export const runtime = 'nodejs'
-
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = cookies()
@@ -61,17 +59,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch bookmarks" }, { status: 500 })
     }
 
-    // Calculate stats using RPC
-    const { data: statsData, error: statsError } = await supabase
-      .rpc("get_bookmark_stats", { user_uuid: user.id })
-      .single()
+    // Calculate stats
+    const { data: statsData } = await supabase.from("bookmarks").select("read_status, category").eq("user_id", user.id)
 
-    if (statsError) {
-      console.error("Error fetching bookmark stats:", statsError)
+    const stats = {
+      total: count || 0,
+      unread: statsData?.filter((b) => b.read_status !== "read").length || 0,
+      categories:
+        statsData?.reduce(
+          (acc, b) => {
+            if (b.category) {
+              acc[b.category] = (acc[b.category] || 0) + 1
+            }
+            return acc
+          },
+          {} as Record<string, number>,
+        ) || {},
     }
-
-    const stats =
-      statsData || ({ total: count || 0, unread: 0, categories: {} } as any)
 
     return NextResponse.json({
       bookmarks: bookmarks || [],
@@ -128,7 +132,7 @@ export async function POST(request: NextRequest) {
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
-      featuredImage: featuredImage ? JSON.stringify(featuredImage) : null,
+      featured_image: featuredImage ? JSON.stringify(featuredImage) : null,
       category: category || null,
       tags: tags || null,
       read_status: "unread" as const,

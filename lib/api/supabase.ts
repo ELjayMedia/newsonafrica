@@ -619,57 +619,5 @@ export async function signInWithOAuth(provider: "google" | "facebook"): Promise<
   }
 }
 
-/**
- * Delete a user and their profile using the service role key
- * @param userId - ID of the user to delete
- * @param client - Optional Supabase admin client (useful for testing)
- * @returns Promise with deletion result
- */
-export async function deleteUserAccount(
-  userId: string,
-  client?: ReturnType<typeof createClient>,
-): Promise<SupabaseResponse<null>> {
-  try {
-    if (!userId) {
-      return { data: null, error: "User ID is required", success: false }
-    }
-
-    let adminClient = client
-    if (!adminClient) {
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if (!serviceKey) {
-        return {
-          data: null,
-          error: "Missing Supabase service role key",
-          success: false,
-        }
-      }
-
-      adminClient = createClient<Database>(supabaseUrl, serviceKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      })
-    }
-
-    const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
-    if (authError) {
-      return {
-        data: null,
-        error: handleSupabaseError(authError),
-        success: false,
-      }
-    }
-
-    const { error: profileError } = await adminClient.from("profiles").delete().eq("id", userId)
-    if (profileError) {
-      return { data: null, error: "Failed to delete user profile", success: false }
-    }
-
-    return { data: null, error: null, success: true }
-  } catch (error) {
-    console.error("Error deleting user account:", error)
-    return { data: null, error: "Failed to delete user account", success: false }
-  }
-}
-
 // Export the Supabase client for direct use if needed
 export { supabase as supabaseClient }

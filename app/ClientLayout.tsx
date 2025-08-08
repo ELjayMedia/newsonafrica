@@ -4,8 +4,7 @@ import "./globals.css"
 import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
-import GoogleAnalytics from "@/components/GoogleAnalytics"
-import { siteConfig } from "@/config/site"
+import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
@@ -19,23 +18,13 @@ import { FooterBannerAd } from "@/components/FooterBannerAd"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Script from "next/script"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { ErrorFallback } from "@/components/ErrorFallback"
 import Link from "next/link"
-import dynamic from "next/dynamic"
-
-const CameraFeature = dynamic(() => import("@/components/CameraFeature"), {
-  ssr: false,
-})
-const GeolocationFeature = dynamic(
-  () => import("@/components/GeolocationFeature"),
-  { ssr: false }
-)
-const NotificationFeature = dynamic(
-  () => import("@/components/NotificationFeature"),
-  { ssr: false }
-)
+import { CameraFeature } from "@/components/CameraFeature" // New import
+import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
+import { NotificationFeature } from "@/components/NotificationFeature" // New import
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -44,7 +33,6 @@ export function ClientLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [showNativeFeatures, setShowNativeFeatures] = useState(false)
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       console.error("Unhandled error:", event.error)
@@ -68,24 +56,6 @@ export function ClientLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
-        {/* Google tag (gtag.js) */}
-        {siteConfig.analytics.googleAnalyticsId && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${siteConfig.analytics.googleAnalyticsId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-
-                gtag('config', '${siteConfig.analytics.googleAnalyticsId}');
-              `}
-            </Script>
-          </>
-        )}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
@@ -113,26 +83,12 @@ export function ClientLayout({
                       <div className="p-1 md:p-2">{children}</div>
                       {/* New section for Capacitor features */}
                       <div className="p-4 md:p-6 mt-8 border-t border-gray-200">
-                        <button
-                          onClick={() => setShowNativeFeatures((prev) => !prev)}
-                          className="mb-4 rounded-md bg-blue-600 px-4 py-2 text-white"
-                        >
-                          {showNativeFeatures
-                            ? "Hide Native Features"
-                            : "Show Native Features"}
-                        </button>
-                        {showNativeFeatures && (
-                          <>
-                            <h2 className="text-2xl font-bold mb-6 text-center">
-                              Capacitor Native Features
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              <CameraFeature />
-                              <GeolocationFeature />
-                              <NotificationFeature />
-                            </div>
-                          </>
-                        )}
+                        <h2 className="text-2xl font-bold mb-6 text-center">Capacitor Native Features</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <CameraFeature />
+                          <GeolocationFeature />
+                          <NotificationFeature />
+                        </div>
                       </div>
                     </main>
                     <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
@@ -145,11 +101,11 @@ export function ClientLayout({
               <BottomNavigation />
               <Footer />
               <div className="text-center text-sm text-gray-500 mt-4">
-                <Link href="/privacy" className="hover:underline">
+                <Link href="/privacy-policy" className="hover:underline">
                   Privacy Policy
                 </Link>
                 {" | "}
-                <Link href="/terms" className="hover:underline">
+                <Link href="/terms-of-service" className="hover:underline">
                   Terms of Service
                 </Link>
                 {" | "}
@@ -160,7 +116,7 @@ export function ClientLayout({
             </ClientWrapper>
           </UserProvider>
         </ErrorBoundary>
-        <GoogleAnalytics />
+        <GoogleAnalyticsScript />
         <Analytics />
         <SpeedInsights />
         <Script

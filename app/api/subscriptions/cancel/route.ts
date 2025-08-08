@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { paystackClient } from "@/lib/paystack-utils"
-import { createClient } from "@/utils/supabase/server"
-
-export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient(cookies())
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
     // Check authentication
     const {
@@ -38,15 +37,10 @@ export async function POST(request: Request) {
     }
 
     // Cancel subscription with payment provider
-    if (
-      subscription.provider === "paystack" &&
-      subscription.provider_subscription_id &&
-      subscription.provider_email_token
-    ) {
-      await paystackClient.disableSubscription(
-        subscription.provider_subscription_id,
-        subscription.provider_email_token,
-      )
+    if (subscription.provider === "paystack" && subscription.provider_subscription_id) {
+      await paystackClient.disableSubscription(subscription.provider_subscription_id, {
+        reason: "User requested cancellation",
+      })
     }
 
     // Update subscription status in database

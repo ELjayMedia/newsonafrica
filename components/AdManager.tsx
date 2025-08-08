@@ -4,11 +4,6 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { checkAdBlocker } from "@/lib/ad-utils"
 
-const DEFAULT_AD_REFRESH_COOLDOWN_MS = 30_000 // 30 seconds
-const AD_REFRESH_COOLDOWN_MS =
-  parseInt(process.env.NEXT_PUBLIC_AD_REFRESH_COOLDOWN_MS || "", 10) ||
-  DEFAULT_AD_REFRESH_COOLDOWN_MS
-
 interface AdManagerContextType {
   isAdBlockerDetected: boolean
   isGPTLoaded: boolean
@@ -38,6 +33,8 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
   const [isGPTLoaded, setIsGPTLoaded] = useState(false)
   const activeSlots = useRef<Set<string>>(new Set())
   const lastRefreshTime = useRef<number>(0)
+  const refreshCooldown = 1000 // 1 second cooldown between refreshes
+
   useEffect(() => {
     // Check for ad blocker
     checkAdBlocker().then(setIsAdBlockerDetected)
@@ -58,16 +55,10 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
           })
         })
       } else {
-        const timeout = setTimeout(checkGPTLoaded, 100)
-        gptLoadTimeout.current = timeout
+        setTimeout(checkGPTLoaded, 100)
       }
     }
     checkGPTLoaded()
-    return () => {
-      if (gptLoadTimeout.current) {
-        clearTimeout(gptLoadTimeout.current)
-      }
-    }
   }, [])
 
   const registerAdSlot = (slotId: string) => {
@@ -88,7 +79,7 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
     const now = Date.now()
 
     // Prevent too frequent refreshes
-    if (now - lastRefreshTime.current < AD_REFRESH_COOLDOWN_MS) {
+    if (now - lastRefreshTime.current < refreshCooldown) {
       console.log("⏳ Ad refresh skipped - too frequent")
       return
     }
@@ -110,7 +101,7 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
     const now = Date.now()
 
     // Prevent too frequent refreshes
-    if (now - lastRefreshTime.current < AD_REFRESH_COOLDOWN_MS) {
+    if (now - lastRefreshTime.current < refreshCooldown) {
       console.log("⏳ Route-based ad refresh skipped - too frequent")
       return
     }

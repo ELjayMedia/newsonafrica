@@ -1,14 +1,168 @@
-import {
-  graphqlRequest,
-  fetchFromRestApi,
-  fetchWithFallback,
-} from "./wordpress/client"
+import { cache } from "react"
 
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+
+if (!WORDPRESS_API_URL) {
+  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+}
+
+// Simple cache implementation
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Check if we're in a browser environment and if we're online
+const isOnline = () => {
+  if (typeof navigator !== "undefined" && "onLine" in navigator) {
+    return navigator.onLine
+  }
+  return true // Assume online in SSR context
+}
+
+// Check if we're in a server environment
+const isServer = () => typeof window === "undefined"
+
+/**
+ * Simple GraphQL request function with proper headers
+ */
+async function graphqlRequest(query: string, variables: Record<string, any> = {}) {
+  const response = await fetch(WORDPRESS_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "NewsOnAfrica/1.0",
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const result = await response.json()
+
+  if (result.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`)
+  }
+
+  return result.data
+}
+
+/**
+ * Fetches data from the WordPress REST API with retry logic.
+ */
+const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = {}) => {
+  const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
+
+  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+
+  const MAX_RETRIES = 3
+  let lastError
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "NewsOnAfrica/1.0",
+        },
+        signal: controller.signal,
+        next: { revalidate: 300 }, // 5 minutes
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`REST API error: ${response.status} ${response.statusText}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error(`REST API request attempt ${attempt + 1} failed:`, error)
+      lastError = error
+
+      if (attempt === MAX_RETRIES - 1) {
+        throw error
+      }
+
+      // Exponential backoff
+      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000)
+      await new Promise((resolve) => setTimeout(resolve, backoffTime))
+    }
+  }
+
+  throw lastError
+}
+
+/**
+ * Fetches data with caching and fallback to REST API
+ */
+const fetchWithFallback = async (
+  query: string,
+  variables: Record<string, any> = {},
+  cacheKey: string,
+  restFallback: () => Promise<any>,
+) => {
+  // Check cache first
+  const cached = apiCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data
+  }
+
+  // If offline, try cache or return empty
+  if (!isServer() && !isOnline()) {
+    console.log("Device is offline, using cache or returning empty data")
+    return cached?.data || []
+  }
+
+  try {
+    // Try GraphQL first
+    const data = await graphqlRequest(query, variables)
+
+    // Cache the result
+    apiCache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      ttl: CACHE_TTL,
+    })
+
+    return data
+  } catch (error) {
+    console.error("GraphQL request failed, falling back to REST API:", error)
+
+    try {
+      // Fallback to REST API
+      const restData = await restFallback()
+
+      // Cache the REST result
+      apiCache.set(cacheKey, {
+        data: restData,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL,
+      })
+
+      return restData
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+
+      // Return cached data if available, otherwise empty
+      return cached?.data || []
+    }
+  }
+}
 
 /**
  * Fetches recent posts
  */
-export const fetchRecentPosts = async (limit = 20) => {
+export const fetchRecentPosts = cache(async (limit = 20) => {
   const query = `
     query RecentPosts($limit: Int!) {
       posts(first: $limit, where: { orderby: { field: DATE, order: DESC }, status: PUBLISH }) {
@@ -98,12 +252,12 @@ export const fetchRecentPosts = async (limit = 20) => {
 
   const data = await fetchWithFallback(query, { limit }, `recent-posts-${limit}`, restFallback)
   return data.posts?.nodes || []
-}
+})
 
 /**
  * Fetches posts by category
  */
-export const fetchCategoryPosts = async (slug: string, after: string | null = null) => {
+export const fetchCategoryPosts = cache(async (slug: string, after: string | null = null) => {
   const query = `
     query CategoryPosts($slug: ID!, $after: String) {
       category(id: $slug, idType: SLUG) {
@@ -235,12 +389,12 @@ export const fetchCategoryPosts = async (slug: string, after: string | null = nu
 
   const data = await fetchWithFallback(query, { slug, after }, `category-${slug}-${after || "first"}`, restFallback)
   return data.category
-}
+})
 
 /**
  * Fetches all categories
  */
-export const fetchAllCategories = async () => {
+export const fetchAllCategories = cache(async () => {
   const query = `
     query AllCategories {
       categories(first: 100, where: { hideEmpty: true }) {
@@ -272,7 +426,7 @@ export const fetchAllCategories = async () => {
 
   const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
   return data.categories?.nodes || []
-}
+})
 
 /**
  * Fetches a single post
@@ -516,65 +670,9 @@ interface SearchResponse {
 }
 
 // Advanced caching with search-specific optimization
-interface CacheEntry<T> {
-  data: T
-  timestamp: number
-  ttl: number
-}
-
-const searchCache = new Map<string, CacheEntry<any>>()
-const CACHE_MAX_ENTRIES = 100
-const CACHE_CLEANUP_INTERVAL = 60_000 // 1 minute
+const searchCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
 const SEARCH_CACHE_TTL = 10 * 60 * 1000 // 10 minutes for search results
 const SUGGESTION_CACHE_TTL = 30 * 60 * 1000 // 30 minutes for suggestions
-
-let cacheHits = 0
-let cacheMisses = 0
-let lastCleanup = 0
-
-function cleanupSearchCache(): void {
-  const now = Date.now()
-  for (const [key, entry] of searchCache.entries()) {
-    if (now - entry.timestamp > entry.ttl) {
-      searchCache.delete(key)
-    }
-  }
-}
-
-function maybeCleanupSearchCache(): void {
-  const now = Date.now()
-  if (now - lastCleanup > CACHE_CLEANUP_INTERVAL) {
-    cleanupSearchCache()
-    lastCleanup = now
-  }
-}
-
-function getFromCache<T>(key: string): T | undefined {
-  maybeCleanupSearchCache()
-  const entry = searchCache.get(key) as CacheEntry<T> | undefined
-  if (entry && Date.now() - entry.timestamp < entry.ttl) {
-    cacheHits++
-    searchCache.delete(key)
-    searchCache.set(key, entry)
-    return entry.data
-  }
-  if (entry) {
-    searchCache.delete(key)
-  }
-  cacheMisses++
-  return undefined
-}
-
-function setCache<T>(key: string, data: T, ttl: number): void {
-  maybeCleanupSearchCache()
-  if (searchCache.size >= CACHE_MAX_ENTRIES) {
-    const oldestKey = searchCache.keys().next().value
-    if (oldestKey !== undefined) {
-      searchCache.delete(oldestKey)
-    }
-  }
-  searchCache.set(key, { data, timestamp: Date.now(), ttl })
-}
 
 /**
  * Optimized WordPress search with parallel execution and smart caching
@@ -596,12 +694,12 @@ export async function optimizedWordPressSearch(query: string, options: SearchOpt
   const cacheKey = `search:${query}:${JSON.stringify(options)}`
 
   // Check cache first
-  const cached = getFromCache<SearchResponse>(cacheKey)
-  if (cached) {
+  const cached = searchCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
     return {
-      ...cached,
+      ...cached.data,
       performance: {
-        ...cached.performance,
+        ...cached.data.performance,
         responseTime: Date.now() - startTime,
         cached: true,
       },
@@ -620,7 +718,11 @@ export async function optimizedWordPressSearch(query: string, options: SearchOpt
     }
 
     // Cache the results
-    setCache(cacheKey, searchResults, SEARCH_CACHE_TTL)
+    searchCache.set(cacheKey, {
+      data: searchResults,
+      timestamp: Date.now(),
+      ttl: SEARCH_CACHE_TTL,
+    })
 
     return {
       ...searchResults,
@@ -770,7 +872,7 @@ async function executeOptimizedSearch(query: string, options: SearchOptions): Pr
  * Search via GraphQL with optimized query
  */
 async function searchViaGraphQL(query: string, options: SearchOptions): Promise<Post[]> {
-  const { categories = [], tags = [], dateFrom, dateTo, perPage = 20 } = options
+  const { categories = [], tags = [], dateFrom, dateTo } = options
 
   // Build optimized GraphQL query
   const searchQuery = `
@@ -832,7 +934,7 @@ async function searchViaGraphQL(query: string, options: SearchOptions): Promise<
 
   const variables = {
     search: query,
-    first: Math.min(perPage * 5, 100), // Get more results for better sorting
+    first: 100, // Get more results for better sorting
     categoryIn: categories.length > 0 ? categories : undefined,
     tagIn: tags.length > 0 ? tags : undefined,
     dateQuery,
@@ -1021,9 +1123,9 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
   const cacheKey = `suggestions:${query}:${limit}`
 
   // Check cache
-  const cached = getFromCache<string[]>(cacheKey)
-  if (cached) {
-    return cached
+  const cached = searchCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < SUGGESTION_CACHE_TTL) {
+    return cached.data
   }
 
   try {
@@ -1062,7 +1164,11 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
     const suggestionArray = Array.from(suggestions).slice(0, limit)
 
     // Cache suggestions
-    setCache(cacheKey, suggestionArray, SUGGESTION_CACHE_TTL)
+    searchCache.set(cacheKey, {
+      data: suggestionArray,
+      timestamp: Date.now(),
+      ttl: SUGGESTION_CACHE_TTL,
+    })
 
     return suggestionArray
   } catch (error) {
@@ -1076,20 +1182,15 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
  */
 export function clearSearchCache(): void {
   searchCache.clear()
-  cacheHits = 0
-  cacheMisses = 0
-  lastCleanup = Date.now()
 }
 
 /**
  * Get search cache statistics
  */
 export function getSearchCacheStats() {
-  maybeCleanupSearchCache()
   return {
-    hits: cacheHits,
-    misses: cacheMisses,
     size: searchCache.size,
+    keys: Array.from(searchCache.keys()),
   }
 }
 
@@ -1101,82 +1202,30 @@ export const fetchCategorizedPosts = async () => {
 }
 
 export const fetchAllPosts = fetchRecentPosts
-export const fetchAllTags = async () => {
-  const query = `
-    query AllTags {
-      tags(first: 100, where: { hideEmpty: true }) {
-        nodes {
-          id
-          name
-          slug
-          description
-          count
-        }
-      }
-    }
-  `
-
-  const restFallback = async () => {
-    const tags = await fetchFromRestApi("tags", { per_page: 100, hide_empty: true })
-    return {
-      tags: {
-        nodes: tags.map((tag: any) => ({
-          id: tag.id.toString(),
-          name: tag.name,
-          slug: tag.slug,
-          description: tag.description || "",
-          count: tag.count || 0,
-        })),
-      },
-    }
-  }
-
-  const data = await fetchWithFallback(query, {}, "all-tags", restFallback)
-  return data.tags?.nodes || []
-}
-
-export const fetchAllAuthors = async () => {
-  const query = `
-    query AllAuthors {
-      users(first: 100, where: { hasPublishedPosts: true }) {
-        nodes {
-          id
-          name
-          slug
-          description
-          avatar { url }
-        }
-      }
-    }
-  `
-
-  const restFallback = async () => {
-    const users = await fetchFromRestApi("users", { per_page: 100 })
-    return {
-      users: {
-        nodes: users.map((user: any) => ({
-          id: user.id.toString(),
-          name: user.name,
-          slug: user.slug,
-          description: user.description || "",
-          avatar: { url: user.avatar_urls?.["96"] || "" },
-        })),
-      },
-    }
-  }
-
-  const data = await fetchWithFallback(query, {}, "all-authors", restFallback)
-  return data.users?.nodes || []
-}
+export const fetchAllTags = async () => []
+export const fetchAllAuthors = async () => []
 export const fetchPosts = fetchRecentPosts
 export const fetchCategories = fetchAllCategories
 export const fetchTags = fetchAllTags
 export const fetchAuthors = fetchAllAuthors
 
+// Clear cache function
+export const clearApiCache = () => {
+  apiCache.clear()
+}
+
+// Get cache stats
+export const getCacheStats = () => {
+  return {
+    size: apiCache.size,
+    keys: Array.from(apiCache.keys()),
+  }
+}
+
 /**
  * Fetch author data by slug
  */
-export const fetchAuthorData = async (slug: string) => {
+export const fetchAuthorData = cache(async (slug: string) => {
   const query = `
     query AuthorData($slug: ID!) {
       user(id: $slug, idType: SLUG) {
@@ -1265,20 +1314,18 @@ export const fetchAuthorData = async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `author-${slug}`, restFallback)
   return data.user
-}
+})
 
 /**
  * Delete a comment
  */
 export const deleteComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
-        Connection: "keep-alive",
-        "Accept-Encoding": "gzip",
       },
     })
 
@@ -1327,13 +1374,11 @@ export const fetchPendingComments = async () => {
  */
 export const approveComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
-        Connection: "keep-alive",
-        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify({
         status: "approved",
@@ -1354,7 +1399,7 @@ export const approveComment = async (commentId: string) => {
 /**
  * Fetch posts by tag
  */
-export const fetchTaggedPosts = async (tagSlug: string, limit = 20) => {
+export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
   const query = `
     query TaggedPosts($tagSlug: ID!, $limit: Int!) {
       tag(id: $tagSlug, idType: SLUG) {
@@ -1449,126 +1494,17 @@ export const fetchTaggedPosts = async (tagSlug: string, limit = 20) => {
 
   const data = await fetchWithFallback(query, { tagSlug, limit }, `tagged-posts-${tagSlug}-${limit}`, restFallback)
   return data.tag?.posts?.nodes || []
-}
+})
 
-export async function fetchPostsByTag(tagSlug: string, after: string | null = null) {
-  const query = `
-    query TaggedPosts($tagSlug: ID!, $after: String) {
-      tag(id: $tagSlug, idType: SLUG) {
-        posts(first: 20, after: $after, where: { status: PUBLISH }) {
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          nodes {
-            id
-            title
-            slug
-            date
-            excerpt
-            featuredImage {
-              node {
-                sourceUrl
-                altText
-              }
-            }
-            author {
-              node {
-                name
-                slug
-              }
-            }
-            categories {
-              nodes {
-                name
-                slug
-              }
-            }
-          }
-        }
-      }
-    }
-  `
-  try {
-    const data = await graphqlRequest(query, { tagSlug, after })
-    return (
-      data?.tag?.posts || { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
-    )
-  } catch (error) {
-    console.error(`GraphQL fetchPostsByTag failed for ${tagSlug}:`, error)
-    try {
-      const tags = await fetchFromRestApi("tags", { slug: tagSlug })
-      if (!tags || tags.length === 0) {
-        return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
-      }
-      const tagId = tags[0].id
-      const perPage = 20
-      let page = 1
-      if (after) {
-        try {
-          const decoded = Buffer.from(after, "base64").toString("utf8")
-          const offset = parseInt(decoded.split(":").pop() || "0", 10)
-          page = Math.floor(offset / perPage) + 2
-        } catch {
-          const parsed = parseInt(after, 10)
-          if (!isNaN(parsed) && parsed > 0) {
-            page = parsed
-          }
-        }
-      }
-      const posts = await fetchFromRestApi("posts", {
-        tags: tagId,
-        per_page: perPage,
-        _embed: 1,
-        page,
-      })
-      const formatted = posts.map((post: any) => ({
-        id: post.id.toString(),
-        title: post.title?.rendered || "",
-        slug: post.slug || "",
-        date: post.date || "",
-        excerpt: post.excerpt?.rendered || "",
-        featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-          ? {
-              node: {
-                sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-              },
-            }
-          : null,
-        author: {
-          node: {
-            name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-            slug: post._embedded?.["author"]?.[0]?.slug || "",
-          },
-        },
-        categories: {
-          nodes:
-            post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-              name: cat.name,
-              slug: cat.slug,
-            })) || [],
-        },
-      }))
-      const hasNextPage = formatted.length === perPage
-      return {
-        pageInfo: {
-          hasNextPage,
-          endCursor: hasNextPage ? String(page + 1) : null,
-        },
-        nodes: formatted,
-      }
-    } catch (restError) {
-      console.error(`REST fetchPostsByTag failed for ${tagSlug}:`, restError)
-      return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] }
-    }
-  }
-}
+/**
+ * Alias for fetchTaggedPosts for backward compatibility
+ */
+export const fetchPostsByTag = fetchTaggedPosts
 
 /**
  * Fetch single category data
  */
-export const fetchSingleCategory = async (slug: string) => {
+export const fetchSingleCategory = cache(async (slug: string) => {
   const query = `
     query SingleCategory($slug: ID!) {
       category(id: $slug, idType: SLUG) {
@@ -1606,12 +1542,12 @@ export const fetchSingleCategory = async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `single-category-${slug}`, restFallback)
   return data.category
-}
+})
 
 /**
  * Fetch single tag data
  */
-export const fetchSingleTag = async (slug: string) => {
+export const fetchSingleTag = cache(async (slug: string) => {
   const query = `
     query SingleTag($slug: ID!) {
       tag(id: $slug, idType: SLUG) {
@@ -1649,7 +1585,7 @@ export const fetchSingleTag = async (slug: string) => {
 
   const data = await fetchWithFallback(query, { slug }, `single-tag-${slug}`, restFallback)
   return data.tag
-}
+})
 
 /**
  * Fetch comments for a post
@@ -1680,20 +1616,25 @@ export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
   }
 }
 
-
+/**
+ * WordPress GraphQL client instance
+ */
+export const client = {
+  query: graphqlRequest,
+  endpoint: WORDPRESS_API_URL,
+  restEndpoint: WORDPRESS_REST_API_URL,
+}
 
 /**
  * Update user profile
  */
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_URL}/users/${userId}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
-        Connection: "keep-alive",
-        "Accept-Encoding": "gzip",
       },
       body: JSON.stringify(profileData),
     })
@@ -1750,5 +1691,3 @@ export interface Post {
   }
   content?: string
 }
-
-export { client, clearApiCache, getCacheStats } from "./wordpress/client"

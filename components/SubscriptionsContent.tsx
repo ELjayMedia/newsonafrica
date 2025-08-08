@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { createClient } from "@/utils/supabase/client"
 
 type Subscription = {
   id: string
@@ -17,7 +17,7 @@ type Subscription = {
 export function SubscriptionsContent({ userId }: { userId: string }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
     async function loadSubscriptions() {

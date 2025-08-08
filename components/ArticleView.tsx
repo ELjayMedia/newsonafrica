@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { formatPostDate } from "@/lib/date"
+import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
@@ -12,7 +12,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 import { RelatedPostsCarousel } from "./RelatedPostsCarousel"
 import { useRelatedPosts } from "@/hooks/useRelatedPosts"
-import { useNavigationRouting } from "@/hooks/useNavigationRouting"
 
 interface ArticleViewProps {
   post: {
@@ -59,15 +58,12 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
-  const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ""}${pathname}`
-  const shareDescription = excerpt?.replace(/<[^>]*>/g, "").trim() || title
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
   const lastScrollPosition = useRef(0)
   const isManualScrolling = useRef(false)
   const forceScrollToTop = useRef(false)
-  const { getCategoryPath } = useNavigationRouting()
 
   // Extract categories for related posts
   const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
@@ -281,7 +277,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
     return `${time} min read`
   }
 
-  const formattedDate = formatPostDate(date)
+  const formattedDate = formatDate(date)
 
   // Extract the first category if available
   const primaryCategory = categories?.edges?.[0]?.node
@@ -292,7 +288,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       <header className="mb-8">
         {primaryCategory && (
           <Link
-            href={getCategoryPath(primaryCategory.slug)}
+            href={`/category/${primaryCategory.slug}`}
             className="text-primary font-medium text-sm mb-2 inline-block"
           >
             {primaryCategory.name}
@@ -333,8 +329,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
         <div className="flex items-center space-x-2">
           <ShareButtons
             title={title}
-            url={shareUrl}
-            description={shareDescription}
+            url={pathname}
+            description={excerpt}
             variant="outline"
             size="sm"
             className="flex items-center"
@@ -390,8 +386,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
           <div className="flex items-center space-x-4">
             <ShareButtons
               title={title}
-              url={shareUrl}
-              description={shareDescription}
+              url={pathname}
+              description={excerpt}
               variant="outline"
               size="sm"
               className="flex items-center"
