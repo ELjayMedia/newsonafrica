@@ -1,5 +1,5 @@
 import { HomeContent } from "@/components/HomeContent";
-import { getHomePageData, EMPTY_HOME_PAGE_RESPONSE } from "@/lib/homepage";
+import { getHomePageData } from "@/lib/homepage";
 
 interface CountryPageProps {
   params: { countryCode: string };
@@ -18,11 +18,6 @@ export default async function CountryHomePage({ params }: CountryPageProps) {
     return <HomeContent initialPosts={posts} initialData={initialData} />;
   } catch (error) {
     console.error("Country homepage data fetch failed:", error);
-    return (
-      <HomeContent
-        initialPosts={EMPTY_HOME_PAGE_RESPONSE.posts}
-        initialData={EMPTY_HOME_PAGE_RESPONSE.initialData}
-      />
-    );
+    return <HomeContent initialPosts={[]} />;
   }
 }
