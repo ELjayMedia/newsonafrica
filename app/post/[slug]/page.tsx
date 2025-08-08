@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
+import { getPostBySlug, getAllPostSlugs } from "@/lib/api/wordpress"
 import logger from "@/utils/logger"
 import { PostClientContent } from "./PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
@@ -17,46 +17,42 @@ export async function generateStaticParams() {
   logger("🚀 Starting generateStaticParams for posts...")
 
   try {
-    // Get latest posts for static generation
-    logger("📡 Fetching posts from WordPress API...")
+    // Get post slugs for static generation
+    logger("📡 Fetching post slugs from WordPress API...")
     const startTime = Date.now()
 
-    const { posts, hasNextPage } = await getLatestPosts(1000)
+    const { slugs, hasNextPage } = await getAllPostSlugs(500)
 
     const fetchTime = Date.now() - startTime
-    logger(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
+    logger(`✅ Fetched ${slugs.length} slugs in ${fetchTime}ms`)
     logger(`📄 Has more pages: ${hasNextPage}`)
 
-    // Validate posts data
-    const validPosts = posts.filter((post) => {
-      if (!post.slug) {
-        console.warn(`⚠️ Post missing slug: ${post.title || post.id}`)
-        return false
-      }
-      if (typeof post.slug !== "string") {
-        console.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`)
+    // Validate slug data
+    const validSlugs = slugs.filter((item) => {
+      if (!item.slug || typeof item.slug !== "string") {
+        console.warn(`⚠️ Invalid slug: ${item.slug}`)
         return false
       }
       return true
     })
 
-    logger(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
+    logger(`✅ ${validSlugs.length} valid slugs out of ${slugs.length} total`)
 
-    // Log sample of posts being generated
-    if (validPosts.length > 0) {
-      logger("📝 Sample posts being pre-generated:")
-      validPosts.slice(0, 5).forEach((post, index) => {
-        logger(`  ${index + 1}. ${post.slug} - "${post.title}"`)
+    // Log sample of slugs being generated
+    if (validSlugs.length > 0) {
+      logger("📝 Sample slugs being pre-generated:")
+      validSlugs.slice(0, 5).forEach((item, index) => {
+        logger(`  ${index + 1}. ${item.slug}`)
       })
 
-      if (validPosts.length > 5) {
-        logger(`  ... and ${validPosts.length - 5} more posts`)
+      if (validSlugs.length > 5) {
+        logger(`  ... and ${validSlugs.length - 5} more slugs`)
       }
     }
 
     // Return array of params for static generation
-    const staticParams = validPosts.map((post) => ({
-      slug: post.slug,
+    const staticParams = validSlugs.map((item) => ({
+      slug: item.slug,
     }))
 
     logger(`🎯 Generating static params for ${staticParams.length} posts`)
