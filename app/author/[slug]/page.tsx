@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { fetchAuthorData } from "@/lib/wordpress"
+import logger from "@/utils/logger"
 import { AuthorPage } from "./AuthorPage"
 
 interface AuthorPageProps {
@@ -11,7 +12,7 @@ export const revalidate = 600 // Revalidate every 10 minutes
 
 // Enhanced metadata generation for author pages
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for author: ${params.slug}`)
+  logger(`🔍 Generating metadata for author: ${params.slug}`)
 
   try {
     const author = await fetchAuthorData(params.slug)
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       }
     }
 
-    console.log(`✅ Generated metadata for author: "${author.name}"`)
+    logger(`✅ Generated metadata for author: "${author.name}"`)
 
     const posts = author.posts?.nodes || []
     const postCount = posts.length

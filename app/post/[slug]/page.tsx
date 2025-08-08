@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
+import logger from "@/utils/logger"
 import { PostClientContent } from "./PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
@@ -13,18 +14,18 @@ interface PostPageProps {
 
 // Generate static paths for posts at build time
 export async function generateStaticParams() {
-  console.log("🚀 Starting generateStaticParams for posts...")
+  logger("🚀 Starting generateStaticParams for posts...")
 
   try {
     // Get latest posts for static generation
-    console.log("📡 Fetching posts from WordPress API...")
+    logger("📡 Fetching posts from WordPress API...")
     const startTime = Date.now()
 
     const { posts, hasNextPage } = await getLatestPosts(1000)
 
     const fetchTime = Date.now() - startTime
-    console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
-    console.log(`📄 Has more pages: ${hasNextPage}`)
+    logger(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
+    logger(`📄 Has more pages: ${hasNextPage}`)
 
     // Validate posts data
     const validPosts = posts.filter((post) => {
@@ -39,17 +40,17 @@ export async function generateStaticParams() {
       return true
     })
 
-    console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
+    logger(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
 
     // Log sample of posts being generated
     if (validPosts.length > 0) {
-      console.log("📝 Sample posts being pre-generated:")
+      logger("📝 Sample posts being pre-generated:")
       validPosts.slice(0, 5).forEach((post, index) => {
-        console.log(`  ${index + 1}. ${post.slug} - "${post.title}"`)
+        logger(`  ${index + 1}. ${post.slug} - "${post.title}"`)
       })
 
       if (validPosts.length > 5) {
-        console.log(`  ... and ${validPosts.length - 5} more posts`)
+        logger(`  ... and ${validPosts.length - 5} more posts`)
       }
     }
 
@@ -58,7 +59,7 @@ export async function generateStaticParams() {
       slug: post.slug,
     }))
 
-    console.log(`🎯 Generating static params for ${staticParams.length} posts`)
+    logger(`🎯 Generating static params for ${staticParams.length} posts`)
     return staticParams
   } catch (error) {
     console.error("❌ Error in generateStaticParams for posts:", error)
@@ -70,14 +71,14 @@ export async function generateStaticParams() {
     }
 
     // Return empty array to allow fallback generation
-    console.log("🔄 Falling back to on-demand generation")
+    logger("🔄 Falling back to on-demand generation")
     return []
   }
 }
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for post: ${params.slug}`)
+  logger(`🔍 Generating metadata for post: ${params.slug}`)
 
   try {
     const post = await getPostBySlug(params.slug)
@@ -99,7 +100,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       }
     }
 
-    console.log(`✅ Generated metadata for: "${post.title}"`)
+    logger(`✅ Generated metadata for: "${post.title}"`)
 
     // Extract clean text from excerpt for description
     const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
@@ -242,7 +243,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  console.log(`📖 Rendering post page: ${params.slug}`)
+  logger(`📖 Rendering post page: ${params.slug}`)
 
   try {
     // Fetch post data server-side
@@ -255,7 +256,7 @@ export default async function PostPage({ params }: PostPageProps) {
       notFound()
     }
 
-    console.log(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
+    logger(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
 
     return (
       <Suspense fallback={<PostSkeleton />}>
