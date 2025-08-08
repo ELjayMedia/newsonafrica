@@ -49,6 +49,20 @@ export const LATEST_POSTS_QUERY = `
   }
 `
 
+export const ALL_POST_SLUGS_QUERY = `
+  query AllPostSlugs($first: Int, $after: String) {
+    posts(first: $first, after: $after, where: { status: PUBLISH }) {
+      nodes {
+        slug
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`
+
 export const POST_BY_SLUG_QUERY = `
   query GetPostBySlug($slug: ID!) {
     post(id: $slug, idType: SLUG) {
