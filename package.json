@@ -107,6 +107,7 @@
     "zod": "^4.0.15"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^30.0.0",
