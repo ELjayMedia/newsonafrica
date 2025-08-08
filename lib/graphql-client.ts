@@ -20,17 +20,23 @@ export function setAuthToken(token: string | null) {
 }
 
 // Cached query function for server components
-export const fetchGraphQL = cache(async (query: string, variables = {}) => {
-  try {
-    return await graphqlClient.request(query, variables)
-  } catch (error) {
-    console.error("GraphQL request error:", error)
-    throw error
-  }
-})
+export const fetchGraphQL = cache(
+  async <T = unknown>(query: string, variables: Record<string, unknown> = {}): Promise<T> => {
+    try {
+      return await graphqlClient.request<T>(query, variables)
+    } catch (error) {
+      console.error("GraphQL request error:", error)
+      throw error
+    }
+  },
+)
 
 // Client-side query function
-export async function fetchGraphQLClient(query: string, variables = {}, token?: string) {
+export async function fetchGraphQLClient<T = unknown>(
+  query: string,
+  variables: Record<string, unknown> = {},
+  token?: string,
+): Promise<T> {
   try {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -55,7 +61,7 @@ export async function fetchGraphQLClient(query: string, variables = {}, token?: 
       throw new Error(result.errors[0].message)
     }
 
-    return result.data
+    return result.data as T
   } catch (error) {
     console.error("GraphQL client request error:", error)
     throw error

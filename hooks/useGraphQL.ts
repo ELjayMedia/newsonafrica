@@ -5,11 +5,11 @@ import { fetchGraphQLClient } from "@/lib/graphql-client"
 import { useAuth } from "@/hooks/useAuth"
 
 interface UseQueryOptions {
-  variables?: Record<string, any>
+  variables?: Record<string, unknown>
   skip?: boolean
 }
 
-export function useQuery<T = any>(query: string, options: UseQueryOptions = {}) {
+export function useQuery<T = unknown>(query: string, options: UseQueryOptions = {}) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -23,7 +23,7 @@ export function useQuery<T = any>(query: string, options: UseQueryOptions = {}) 
 
     try {
       setLoading(true)
-      const result = await fetchGraphQLClient(query, options.variables || {}, token)
+      const result = await fetchGraphQLClient<T>(query, options.variables ?? {}, token)
       setData(result)
       setError(null)
     } catch (err) {
@@ -44,12 +44,15 @@ export function useQuery<T = any>(query: string, options: UseQueryOptions = {}) 
   return { data, loading, error, refetch }
 }
 
-interface UseMutationOptions {
-  onCompleted?: (data: any) => void
+interface UseMutationOptions<T = unknown> {
+  onCompleted?: (data: T) => void
   onError?: (error: Error) => void
 }
 
-export function useMutation<T = any, V = Record<string, any>>(mutation: string, options: UseMutationOptions = {}) {
+export function useMutation<
+  T = unknown,
+  V extends Record<string, unknown> = Record<string, unknown>,
+>(mutation: string, options: UseMutationOptions<T> = {}) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -59,7 +62,11 @@ export function useMutation<T = any, V = Record<string, any>>(mutation: string, 
     async (variables?: V) => {
       try {
         setLoading(true)
-        const result = await fetchGraphQLClient(mutation, variables || {}, token)
+        const result = await fetchGraphQLClient<T>(
+          mutation,
+          (variables ?? {}) as Record<string, unknown>,
+          token,
+        )
         setData(result)
         setError(null)
         options.onCompleted?.(result)
