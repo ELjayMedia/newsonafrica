@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { startWebhookTunnel, verifyWebhookSignature } from "@/lib/paystack-utils"
 import { createAdminClient } from "@/lib/supabase"
-import logger from "@/utils/logger"
 
 if (process.env.NODE_ENV === "development") {
   startWebhookTunnel()
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
         await handleSubscriptionDisabled(event.data, supabase)
         break
       default:
-        logger(`Unhandled Paystack event: ${event.event}`)
+        console.log(`Unhandled Paystack event: ${event.event}`)
     }
 
     return NextResponse.json({ received: true })

@@ -10,15 +10,6 @@ interface AuthError {
   code?: string
 }
 
-function isAuthError(error: unknown): error is AuthError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  )
-}
-
 export function useSupabaseAuth() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,10 +20,10 @@ export function useSupabaseAuth() {
     setError(null)
   }, [])
 
-  const handleAuthError = useCallback((error: unknown): string => {
+  const handleAuthError = useCallback((error: any): string => {
     console.error("Auth error:", error)
 
-    if (isAuthError(error)) {
+    if (error?.message) {
       switch (error.message) {
         case "Invalid login credentials":
           return "Invalid email or password. Please check your credentials and try again."
@@ -86,7 +77,7 @@ export function useSupabaseAuth() {
         }
 
         return { success: false }
-      } catch (error: unknown) {
+      } catch (error) {
         setError(handleAuthError(error))
         return { success: false }
       } finally {
@@ -174,7 +165,7 @@ export function useSupabaseAuth() {
         }
 
         return { success: false }
-      } catch (error: unknown) {
+      } catch (error) {
         setError(handleAuthError(error))
         return { success: false }
       } finally {
@@ -210,7 +201,7 @@ export function useSupabaseAuth() {
         })
 
         return { success: true }
-      } catch (error: unknown) {
+      } catch (error) {
         setError(handleAuthError(error))
         return { success: false }
       } finally {
@@ -247,7 +238,7 @@ export function useSupabaseAuth() {
 
         // OAuth redirect will happen automatically
         return { success: true }
-      } catch (error: unknown) {
+      } catch (error) {
         setError(handleAuthError(error))
         return { success: false }
       } finally {
@@ -276,7 +267,7 @@ export function useSupabaseAuth() {
 
       router.push("/auth")
       return { success: true }
-    } catch (error: unknown) {
+    } catch (error) {
       setError(handleAuthError(error))
       return { success: false }
     } finally {

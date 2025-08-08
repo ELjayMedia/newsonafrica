@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
-import logger from "@/utils/logger"
-import { CategoryPage } from "./CategoryPage"
+import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {
   params: { countryCode: string; slug: string }
@@ -19,20 +18,18 @@ export async function generateStaticParams() {
       .split(",")
       .filter(Boolean)
 
-    const categoriesByCode = await Promise.all(
-      codes.map((code) =>
-        getCategories(code)
-          .then((categories) => ({ code, categories }))
-          .catch((err) => {
-            console.error(`Error fetching categories for ${code}:`, err)
-            return { code, categories: [] }
-          }),
-      ),
-    )
+    const params: { countryCode: string; slug: string }[] = []
 
-    const params = categoriesByCode.flatMap(({ code, categories }) =>
-      categories.slice(0, 50).map((category) => ({ countryCode: code, slug: category.slug })),
-    )
+    for (const code of codes) {
+      try {
+        const categories = await getCategories(code)
+        categories.slice(0, 50).forEach((category) => {
+          params.push({ countryCode: code, slug: category.slug })
+        })
+      } catch (err) {
+        console.error(`Error fetching categories for ${code}:`, err)
+      }
+    }
 
     return params
   } catch (error) {
@@ -44,7 +41,7 @@ export async function generateStaticParams() {
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  logger(`🔍 Generating metadata for category: ${params.slug} in ${params.countryCode}`)
+  console.log(`🔍 Generating metadata for category: ${params.slug} in ${params.countryCode}`)
 
   try {
     const { category, posts } = await getPostsByCategory(
@@ -73,7 +70,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       }
     }
 
-    logger(`✅ Generated metadata for category: "${category.name}"`)
+    console.log(`✅ Generated metadata for category: "${category.name}"`)
 
     // Create dynamic description
     const baseDescription = category.description || `Latest articles in the ${category.name} category`
@@ -219,18 +216,12 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
     }
 
     // Pass the fetched data to the client component
-    return (
-      <CategoryPage
-        slug={params.slug}
-        countryCode={params.countryCode}
-        initialData={categoryData}
-      />
-    )
+    return <CategoryClientPage params={params} initialData={categoryData} />
   } catch (error) {
     console.error(`Error loading category page for ${params.slug}:`, error)
 
     // For build-time errors, still try to render with empty data
     // The client component will handle the error state
-    return <CategoryPage slug={params.slug} countryCode={params.countryCode} initialData={null} />
+    return <CategoryClientPage params={params} initialData={null} />
   }
 }

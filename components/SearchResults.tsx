@@ -66,7 +66,7 @@ export function SearchResults({
             <Link href={`/post/${result.slug}`} className="block group">
               <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {isClient ? (
-                  <span
+                  <div
                     dangerouslySetInnerHTML={{
                       __html: highlightSearchTerms(result.title.rendered, query),
                     }}
@@ -83,7 +83,7 @@ export function SearchResults({
               </div>
               <p className="mt-1 text-gray-600">
                 {isClient ? (
-                  <span
+                  <div
                     dangerouslySetInnerHTML={{
                       __html: highlightSearchTerms(stripHtml(result.excerpt.rendered).slice(0, 200), query),
                     }}

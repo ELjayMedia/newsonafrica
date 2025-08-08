@@ -4,7 +4,6 @@ import { cookies } from "next/headers"
 import crypto from "crypto"
 import { fetchSinglePost } from "@/lib/wordpress"
 import { createAdminClient } from "@/lib/supabase"
-import logger from "@/utils/logger"
 
 export const runtime = 'nodejs'
 
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient(cookies())
 
-    logger(`WordPress webhook received: ${action}`, {
+    console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
       postTitle: post?.title?.rendered,
       postSlug: post?.slug,
@@ -104,7 +103,7 @@ export async function POST(request: NextRequest) {
           revalidatePath("/")
           revalidateTag("posts")
 
-          logger(`Revalidated post: ${post.slug}`)
+          console.log(`Revalidated post: ${post.slug}`)
         }
         break
 
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest) {
           revalidatePath("/")
           revalidateTag("posts")
 
-          logger(`Revalidated after deletion: ${post.slug}`)
+          console.log(`Revalidated after deletion: ${post.slug}`)
         }
         break
 
@@ -127,12 +126,12 @@ export async function POST(request: NextRequest) {
           revalidatePath(`/category/${post.slug}`)
           revalidateTag(`category-${post.id}`)
 
-          logger(`Revalidated category: ${post.slug}`)
+          console.log(`Revalidated category: ${post.slug}`)
         }
         break
 
       default:
-        logger(`Unhandled webhook action: ${action}`)
+        console.log(`Unhandled webhook action: ${action}`)
     }
 
     return NextResponse.json({

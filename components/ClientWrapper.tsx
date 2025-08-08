@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useRef, useState, useEffect } from "react"
 import { UserProvider } from "@/contexts/UserContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
-import { NavigationProvider } from "@/contexts/NavigationContext"
 
 // Create a persistent QueryClient instance
 const createQueryClient = () =>
@@ -54,11 +53,9 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClientRef.current}>
-      <NavigationProvider>
-        <UserProvider>
-          <BookmarksProvider>{children}</BookmarksProvider>
-        </UserProvider>
-      </NavigationProvider>
+      <UserProvider>
+        <BookmarksProvider>{children}</BookmarksProvider>
+      </UserProvider>
     </QueryClientProvider>
   )
 }

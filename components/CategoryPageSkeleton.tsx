@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/Skeleton"
 import { memo } from "react"
 
 export const CategoryPageSkeleton = memo(function CategoryPageSkeleton() {

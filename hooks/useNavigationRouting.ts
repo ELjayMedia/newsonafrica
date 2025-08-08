@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname } from "next/navigation"
 import { useCallback } from "react"
-import { useNavigationState } from "@/contexts/NavigationContext"
 
 // Fallback country code if none is present in the URL
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
@@ -21,25 +20,19 @@ const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 export function useNavigationRouting() {
   const router = useRouter()
   const pathname = usePathname()
-  const { activeSlug: contextSlug } = useNavigationState()
 
   let currentCountry = DEFAULT_COUNTRY
-  let activeSlug: string | null = contextSlug
+  let activeSlug: string | null = null
 
   if (pathname) {
     const segments = pathname.split("/").filter(Boolean)
-    if (segments.length >= 1) {
-      if (segments[0].length === 2) {
-        currentCountry = segments[0]
-      }
-
-      if (!activeSlug) {
-        if (segments.length >= 3 && segments[1] === "category") {
-          activeSlug = segments[2]
-        } else if (segments.length >= 2 && segments[0] === "category") {
-          activeSlug = segments[1]
-        }
-      }
+    if (segments.length >= 3 && segments[1] === "category") {
+      // /{country}/category/{slug}
+      currentCountry = segments[0]
+      activeSlug = segments[2]
+    } else if (segments.length >= 2 && segments[0] === "category") {
+      // /category/{slug}
+      activeSlug = segments[1]
     }
   }
 

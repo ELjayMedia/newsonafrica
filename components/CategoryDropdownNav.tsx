@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect, type KeyboardEvent, type FocusEvent } from "react"
-import { ChevronDown } from "lucide-react"
+import { useState, type KeyboardEvent } from "react"
 import { type WordPressCategory } from "@/lib/api/wordpress"
 
 interface CategoryDropdownNavProps {
@@ -18,18 +17,9 @@ export function CategoryDropdownNav({ categories, activeSlug, onNavigate }: Cate
   const tree = buildCategoryTree(categories)
 
   return (
-    <ul
-      className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light"
-      role="menubar"
-    >
+    <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
       {tree.map((cat) => (
-        <NavItem
-          key={cat.slug}
-          category={cat}
-          depth={0}
-          activeSlug={activeSlug}
-          onNavigate={onNavigate}
-        />
+        <NavItem key={cat.slug} category={cat} depth={0} activeSlug={activeSlug} onNavigate={onNavigate} />
       ))}
     </ul>
   )
@@ -45,13 +35,7 @@ interface NavItemProps {
 function NavItem({ category, depth, activeSlug, onNavigate }: NavItemProps) {
   const { slug, name, children } = category
   const hasChildren = children.length > 0
-  const menuId = `${slug}-menu`
-  const containsActive = categoryContainsSlug(category, activeSlug)
-  const [open, setOpen] = useState(containsActive)
-
-  useEffect(() => {
-    setOpen(containsActive)
-  }, [containsActive])
+  const [open, setOpen] = useState(false)
 
   const handleClick = () => {
     if (hasChildren) {
@@ -61,61 +45,10 @@ function NavItem({ category, depth, activeSlug, onNavigate }: NavItemProps) {
     }
   }
 
-  const moveFocus = (element: Element | null) => {
-    const btn = element?.querySelector<HTMLButtonElement>("button")
-    btn?.focus()
-  }
-
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    switch (e.key) {
-      case "Enter":
-      case " ":
-        if (hasChildren) {
-          e.preventDefault()
-          setOpen((o) => !o)
-        }
-        break
-      case "ArrowDown":
-        e.preventDefault()
-        if (hasChildren && !open) {
-          setOpen(true)
-          moveFocus(e.currentTarget.nextElementSibling?.firstElementChild as Element)
-        } else {
-          moveFocus(e.currentTarget.closest("li")?.nextElementSibling as Element)
-        }
-        break
-      case "ArrowUp":
-        e.preventDefault()
-        moveFocus(e.currentTarget.closest("li")?.previousElementSibling as Element)
-        break
-      case "ArrowRight":
-        e.preventDefault()
-        if (depth === 0) {
-          moveFocus(e.currentTarget.closest("li")?.nextElementSibling as Element)
-        } else if (hasChildren) {
-          setOpen(true)
-          moveFocus(e.currentTarget.nextElementSibling?.firstElementChild as Element)
-        }
-        break
-      case "ArrowLeft":
-        e.preventDefault()
-        if (depth === 0) {
-          moveFocus(e.currentTarget.closest("li")?.previousElementSibling as Element)
-        } else {
-          setOpen(false)
-          moveFocus(e.currentTarget.closest("ul")?.parentElement as Element)
-        }
-        break
-      case "Escape":
-        setOpen(false)
-        moveFocus(e.currentTarget.closest("ul")?.parentElement as Element)
-        break
-    }
-  }
-
-  const handleBlur = (e: FocusEvent<HTMLLIElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setOpen(false)
+    if ((e.key === "Enter" || e.key === " ") && hasChildren) {
+      e.preventDefault()
+      setOpen((o) => !o)
     }
   }
 
@@ -134,27 +67,19 @@ function NavItem({ category, depth, activeSlug, onNavigate }: NavItemProps) {
       className="relative group"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
-      onBlur={handleBlur}
     >
       <button
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         aria-haspopup={hasChildren ? "menu" : undefined}
         aria-expanded={hasChildren ? open : undefined}
-        aria-controls={hasChildren ? menuId : undefined}
-        role="menuitem"
         className={linkClasses}
       >
         {name.toUpperCase()}
-        {hasChildren && (
-          <span className="ml-1 inline-flex items-center">
-            <ChevronDown aria-hidden="true" className="h-3 w-3" />
-            <span className="sr-only">Toggle submenu</span>
-          </span>
-        )}
+        {hasChildren && <span className="ml-1 text-xs">▼</span>}
       </button>
       {hasChildren && (
-        <ul id={menuId} role="menu" className={menuClasses}>
+        <ul className={menuClasses}>
           {children.map((child) => (
             <NavItem
               key={child.slug}
@@ -189,11 +114,4 @@ function buildCategoryTree(categories: WordPressCategory[]): CategoryNode[] {
   return roots
 }
 
-function categoryContainsSlug(category: CategoryNode, slug?: string): boolean {
-  if (!slug) return false
-  if (category.slug === slug) return true
-  return category.children.some((child) => categoryContainsSlug(child, slug))
-}
-
 export default CategoryDropdownNav
-

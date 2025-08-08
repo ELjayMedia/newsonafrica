@@ -35,4 +35,3 @@ describe("markNotificationAsRead", () => {
     errorSpy.mockRestore()
   })
 })
-

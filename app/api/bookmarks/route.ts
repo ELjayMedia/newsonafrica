@@ -4,12 +4,6 @@ import { cookies } from "next/headers"
 
 export const runtime = 'nodejs'
 
-interface BookmarkStats {
-  total: number
-  unread: number
-  categories: Record<string, number>
-}
-
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = cookies()
@@ -25,58 +19,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-
-    const MAX_PAGE = 1000
-    const MAX_LIMIT = 100
-    const pageParam = searchParams.get("page") || "1"
-    const limitParam = searchParams.get("limit") || "20"
-    const sortByParam = searchParams.get("sortBy") || "created_at"
-    const sortOrderParam = searchParams.get("sortOrder") || "desc"
-
-    const page = Number(pageParam)
-    const limit = Number(limitParam)
-    const allowedSortBy = ["created_at", "title", "read_status"]
-    const allowedSortOrder = ["asc", "desc"]
-
-    if (!Number.isInteger(page) || page < 1 || page > MAX_PAGE) {
-      return NextResponse.json(
-        { error: `Invalid page. Must be a positive integer up to ${MAX_PAGE}.` },
-        { status: 400 },
-      )
-    }
-
-    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Invalid limit. Must be a positive integer up to ${MAX_LIMIT}.`,
-        },
-        { status: 400 },
-      )
-    }
-
-    if (!allowedSortBy.includes(sortByParam)) {
-      return NextResponse.json(
-        {
-          error: `Invalid sortBy. Allowed values are: ${allowedSortBy.join(", ")}.`,
-        },
-        { status: 400 },
-      )
-    }
-
-    if (!allowedSortOrder.includes(sortOrderParam)) {
-      return NextResponse.json(
-        {
-          error: `Invalid sortOrder. Allowed values are: ${allowedSortOrder.join(", ")}.`,
-        },
-        { status: 400 },
-      )
-    }
-
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "20")
     const search = searchParams.get("search")
     const category = searchParams.get("category")
     const status = searchParams.get("status") // 'read' | 'unread'
-    const sortBy = sortByParam
-    const sortOrder = sortOrderParam
+    const sortBy = searchParams.get("sortBy") || "created_at"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
 
     const offset = (page - 1) * limit
 
@@ -114,18 +63,15 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats using RPC
     const { data: statsData, error: statsError } = await supabase
-      .rpc<BookmarkStats>("get_bookmark_stats", { user_uuid: user.id })
+      .rpc("get_bookmark_stats", { user_uuid: user.id })
       .single()
 
     if (statsError) {
       console.error("Error fetching bookmark stats:", statsError)
     }
 
-    const stats: BookmarkStats = {
-      total: statsData?.total ?? count ?? 0,
-      unread: statsData?.unread ?? 0,
-      categories: statsData?.categories ?? {},
-    }
+    const stats =
+      statsData || ({ total: count || 0, unread: 0, categories: {} } as any)
 
     return NextResponse.json({
       bookmarks: bookmarks || [],

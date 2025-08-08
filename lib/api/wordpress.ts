@@ -4,7 +4,6 @@ import {
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
-  ALL_POST_SLUGS_QUERY,
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
@@ -82,16 +81,6 @@ export interface WordPressPost {
 export interface WordPressPostsResponse {
   posts: {
     nodes: WordPressPost[]
-    pageInfo: {
-      hasNextPage: boolean
-      endCursor: string | null
-    }
-  }
-}
-
-export interface WordPressPostSlugsResponse {
-  posts: {
-    nodes: { slug: string }[]
     pageInfo: {
       hasNextPage: boolean
       endCursor: string | null
@@ -422,56 +411,6 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
       return []
-    }
-  }
-}
-
-/**
- * Get all post slugs with minimal data
- */
-export async function getAllPostSlugs(limit = 500) {
-  const slugs: { slug: string }[] = []
-  const pageSize = 100
-  let after: string | null = null
-  let hasNextPage = true
-
-  try {
-    while (hasNextPage && slugs.length < limit) {
-      const data = await graphqlRequest<WordPressPostSlugsResponse>(
-        ALL_POST_SLUGS_QUERY,
-        { first: Math.min(pageSize, limit - slugs.length), after },
-        DEFAULT_COUNTRY,
-      )
-
-      slugs.push(...data.posts.nodes)
-      hasNextPage = data.posts.pageInfo.hasNextPage
-      after = data.posts.pageInfo.endCursor
-    }
-
-    return { slugs, hasNextPage }
-  } catch (error) {
-    console.error("Failed to fetch post slugs via GraphQL, trying REST API:", error)
-
-    try {
-      const perPage = Math.min(100, limit)
-      let page = 1
-      let fetched: { slug: string }[]
-
-      do {
-        fetched = await restApiFallback(
-          "posts",
-          { per_page: perPage, page, _fields: "slug" },
-          (posts: any[]) => posts.map((p: any) => ({ slug: p.slug })),
-          DEFAULT_COUNTRY,
-        )
-        slugs.push(...fetched)
-        page++
-      } while (fetched.length === perPage && slugs.length < limit)
-
-      return { slugs: slugs.slice(0, limit), hasNextPage: fetched.length === perPage }
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return { slugs: slugs.slice(0, limit), hasNextPage: false }
     }
   }
 }

@@ -8,4 +8,3 @@ fi
 
 npx next build
 npx next export -o out
-

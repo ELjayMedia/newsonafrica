@@ -2,7 +2,12 @@
 
 import dynamic from "next/dynamic"
 import { Suspense, type ReactNode } from "react"
-import { Header } from "@/components/Header"
+
+// Dynamically import components that might use useMediaQuery
+const Header = dynamic(() => import("@/components/Header").then((mod) => ({ default: mod.Header })), {
+  ssr: false,
+  loading: () => <div className="h-16 bg-white shadow-md animate-pulse" />,
+})
 
 const BottomNavigation = dynamic(
   () => import("@/components/BottomNavigation").then((mod) => ({ default: mod.BottomNavigation })),

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
-import logger from "@/utils/logger"
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const reference = searchParams.get("reference")
 
-  logger("Verifying transaction with reference:", reference)
+  console.log("Verifying transaction with reference:", reference)
 
   if (!reference) {
     console.error("Missing reference parameter")
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    logger("Making request to Paystack API")
+    console.log("Making request to Paystack API")
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       method: "GET",
       headers: {
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
     })
 
     const data = await response.json()
-    logger("Paystack API response status:", response.status)
+    console.log("Paystack API response status:", response.status)
 
     if (!response.ok) {
       console.error("Paystack API error:", data)
@@ -46,10 +45,10 @@ export async function GET(request: NextRequest) {
       try {
         if (data.data.metadata?.type === "gift") {
           // Gift article purchase
-          logger("Gift purchase recorded:", data.data.reference)
+          console.log("Gift purchase recorded:", data.data.reference)
         } else {
           // Subscription purchase
-          logger("Subscription verified and stored:", data.data.reference)
+          console.log("Subscription verified and stored:", data.data.reference)
         }
       } catch (dbError) {
         console.error("Error storing payment record:", dbError)

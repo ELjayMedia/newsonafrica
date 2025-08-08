@@ -1,8 +1,7 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { getPostBySlug, getAllPostSlugs } from "@/lib/api/wordpress"
-import logger from "@/utils/logger"
+import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
 import { PostClientContent } from "./PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
@@ -14,48 +13,52 @@ interface PostPageProps {
 
 // Generate static paths for posts at build time
 export async function generateStaticParams() {
-  logger("🚀 Starting generateStaticParams for posts...")
+  console.log("🚀 Starting generateStaticParams for posts...")
 
   try {
-    // Get post slugs for static generation
-    logger("📡 Fetching post slugs from WordPress API...")
+    // Get latest posts for static generation
+    console.log("📡 Fetching posts from WordPress API...")
     const startTime = Date.now()
 
-    const { slugs, hasNextPage } = await getAllPostSlugs(500)
+    const { posts, hasNextPage } = await getLatestPosts(1000)
 
     const fetchTime = Date.now() - startTime
-    logger(`✅ Fetched ${slugs.length} slugs in ${fetchTime}ms`)
-    logger(`📄 Has more pages: ${hasNextPage}`)
+    console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
+    console.log(`📄 Has more pages: ${hasNextPage}`)
 
-    // Validate slug data
-    const validSlugs = slugs.filter((item) => {
-      if (!item.slug || typeof item.slug !== "string") {
-        console.warn(`⚠️ Invalid slug: ${item.slug}`)
+    // Validate posts data
+    const validPosts = posts.filter((post) => {
+      if (!post.slug) {
+        console.warn(`⚠️ Post missing slug: ${post.title || post.id}`)
+        return false
+      }
+      if (typeof post.slug !== "string") {
+        console.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`)
         return false
       }
       return true
     })
 
-    logger(`✅ ${validSlugs.length} valid slugs out of ${slugs.length} total`)
+    console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
 
-    // Log sample of slugs being generated
-    if (validSlugs.length > 0) {
-      logger("📝 Sample slugs being pre-generated:")
-      validSlugs.slice(0, 5).forEach((item, index) => {
-        logger(`  ${index + 1}. ${item.slug}`)
+    // Log sample of posts being generated
+    if (validPosts.length > 0) {
+      console.log("📝 Sample posts being pre-generated:")
+      validPosts.slice(0, 5).forEach((post, index) => {
+        console.log(`  ${index + 1}. ${post.slug} - "${post.title}"`)
       })
 
-      if (validSlugs.length > 5) {
-        logger(`  ... and ${validSlugs.length - 5} more slugs`)
+      if (validPosts.length > 5) {
+        console.log(`  ... and ${validPosts.length - 5} more posts`)
       }
     }
 
     // Return array of params for static generation
-    const staticParams = validSlugs.map((item) => ({
-      slug: item.slug,
+    const staticParams = validPosts.map((post) => ({
+      slug: post.slug,
     }))
 
-    logger(`🎯 Generating static params for ${staticParams.length} posts`)
+    console.log(`🎯 Generating static params for ${staticParams.length} posts`)
     return staticParams
   } catch (error) {
     console.error("❌ Error in generateStaticParams for posts:", error)
@@ -67,14 +70,14 @@ export async function generateStaticParams() {
     }
 
     // Return empty array to allow fallback generation
-    logger("🔄 Falling back to on-demand generation")
+    console.log("🔄 Falling back to on-demand generation")
     return []
   }
 }
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  logger(`🔍 Generating metadata for post: ${params.slug}`)
+  console.log(`🔍 Generating metadata for post: ${params.slug}`)
 
   try {
     const post = await getPostBySlug(params.slug)
@@ -96,7 +99,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       }
     }
 
-    logger(`✅ Generated metadata for: "${post.title}"`)
+    console.log(`✅ Generated metadata for: "${post.title}"`)
 
     // Extract clean text from excerpt for description
     const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
@@ -239,7 +242,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  logger(`📖 Rendering post page: ${params.slug}`)
+  console.log(`📖 Rendering post page: ${params.slug}`)
 
   try {
     // Fetch post data server-side
@@ -252,7 +255,7 @@ export default async function PostPage({ params }: PostPageProps) {
       notFound()
     }
 
-    logger(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
+    console.log(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
 
     return (
       <Suspense fallback={<PostSkeleton />}>

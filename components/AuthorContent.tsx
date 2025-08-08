@@ -9,30 +9,23 @@ import { useEffect } from "react"
 import { useInView } from "react-intersection-observer"
 import { Button } from "@/components/ui/button"
 
-interface AuthorPageProps {
+interface AuthorContentProps {
   slug: string
-  initialData: any
 }
 
-export function AuthorPage({ slug, initialData }: AuthorPageProps) {
+export function AuthorContent({ slug }: AuthorContentProps) {
   const { ref, inView } = useInView()
 
-  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: ["author", slug],
-      queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
-      getNextPageParam: (lastPage) =>
-        lastPage?.posts.pageInfo.hasNextPage ? lastPage.posts.pageInfo.endCursor : undefined,
-      initialPageParam: null,
-      initialData: initialData
-        ? { pages: [initialData], pageParams: [null] }
-        : undefined,
-      retry: 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-      onError: (error) => {
-        console.error(`Error fetching author data for ${slug}:`, error)
-      },
-    })
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ["author", slug],
+    queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
+    getNextPageParam: (lastPage) => lastPage?.posts.pageInfo.endCursor ?? undefined,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onError: (error) => {
+      console.error(`Error fetching author data for ${slug}:`, error)
+    },
+  })
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -40,8 +33,9 @@ export function AuthorPage({ slug, initialData }: AuthorPageProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  if (isLoading && !initialData) return <AuthorSkeleton />
+  if (isLoading) return <AuthorSkeleton />
 
+  // Improved error handling
   if (error) {
     console.error("Author content error:", error)
     return (

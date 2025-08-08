@@ -8,4 +8,3 @@ import { formatDate } from "./utils"
 export function formatPostDate(date: string | Date): string {
   return formatDate(date)
 }
-
