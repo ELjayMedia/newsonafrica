@@ -7,8 +7,8 @@ import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useState, useEffect } from "react"
-import { AdSense } from "@/components/AdSense"
-import { AdErrorBoundary } from "./AdErrorBoundary"
+import { SidebarAd } from "./SidebarAd"
+import { SidebarSkeleton } from "./SidebarSkeleton"
 
 // Function to get view counts for posts
 const getViewCounts = (posts) => {
@@ -70,9 +70,7 @@ export function SidebarContent() {
           <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
         </section>
 
-        <AdErrorBoundary collapse={true}>
-          <AdSense slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
-        </AdErrorBoundary>
+        <SidebarAd slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
 
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
@@ -105,9 +103,7 @@ export function SidebarContent() {
         </section>
 
         {/* AdSense ad between Most Read and Latest News */}
-        <AdErrorBoundary collapse={true}>
-          <AdSense slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
-        </AdErrorBoundary>
+        <SidebarAd slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
 
         {/* Latest News Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
@@ -148,37 +144,5 @@ export function SidebarContent() {
         </section>
       </div>
     </ErrorBoundary>
-  )
-}
-
-function SidebarSkeleton() {
-  return (
-    <div className="w-full md:w-80 space-y-8 animate-pulse">
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-3 mb-4">
-            <div className="w-6 h-6 bg-gray-200 rounded"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-2 mb-4">
-            <div className="w-16 h-16 bg-gray-200 rounded-sm"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }

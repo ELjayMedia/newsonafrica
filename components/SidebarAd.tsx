@@ -1,12 +1,20 @@
-import { AdErrorBoundary } from "./AdErrorBoundary"
-import { AdSense } from "./AdSense"
+import { AdErrorBoundary } from "@/components/AdErrorBoundary"
+import { AdSense } from "@/components/AdSense"
 
-export function SidebarAd() {
+interface SidebarAdProps {
+  slot: string
+  format?: string
+  className?: string
+}
+
+export function SidebarAd({
+  slot,
+  format = "rectangle",
+  className = "w-full min-w-[300px] h-[250px]",
+}: SidebarAdProps) {
   return (
-    <div className="hidden md:block w-full">
-      <AdErrorBoundary collapse={true}>
-        <AdSense slot="4567890123" format="rectangle" className="mx-auto" minWidth={300} />
-      </AdErrorBoundary>
-    </div>
+    <AdErrorBoundary collapse>
+      <AdSense slot={slot} format={format} className={className} />
+    </AdErrorBoundary>
   )
 }
