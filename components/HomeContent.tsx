@@ -2,12 +2,8 @@
 
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
-import { NewsGrid } from "@/components/NewsGrid"
-import Link from "next/link"
 import React, { useEffect, useState } from "react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
-import { HomeMidContentAd } from "@/components/HomeMidContentAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -15,7 +11,9 @@ import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
-import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
+import { categoryConfigs } from "@/config/homeConfig"
+import { CategorySection } from "./CategorySection"
+import { OfflineNotice } from "./OfflineNotice"
 
 interface HomeContentProps {
   initialPosts?: any[]
@@ -75,7 +73,6 @@ const fetchHomeData = async () => {
 }
 
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
@@ -159,36 +156,11 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     fetchCategoryPosts()
   }, [isOffline])
 
-  // Show offline notification if needed
-  const renderOfflineNotification = () => {
-    if (isOffline) {
-      return (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">You are currently offline. Some content may not be up to date.</p>
-            </div>
-          </div>
-        </div>
-      )
-    }
-    return null
-  }
 
   // Safely extract data with fallbacks
   const {
     taggedPosts = [],
     featuredPosts = [],
-    categories = [],
     recentPosts = [],
   } = data || initialData || fallbackData
 
@@ -232,40 +204,10 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   // Extract main content posts - ensure we have enough fp posts
   const mainStory = taggedPosts[0] || null // Show latest fp-tagged post only
   const secondaryStories = taggedPosts.slice(1, 5) || [] // Show next 4 fp-tagged posts
-  const verticalCardPosts = taggedPosts.slice(5, 8) || [] // Show next 3 fp-tagged posts after secondary stories
 
   // If we don't have enough fp posts, show a message or fallback
   if (taggedPosts.length === 0) {
     console.warn("No fp-tagged posts found, using fallback content")
-  }
-
-  // Reusable CategorySection component
-  const CategorySection = ({ name, layout, typeOverride, showAdAfter }: CategoryConfig) => {
-    const posts = categoryPosts[name] || []
-
-    // Only render the section if there are posts
-    if (posts.length === 0) return null
-
-    return (
-      <React.Fragment key={name}>
-        <section className="bg-white rounded-lg">
-          <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
-              {name}
-            </Link>
-          </h2>
-          <NewsGrid
-            posts={posts.map((post) => ({
-              ...post,
-              type: typeOverride,
-            }))}
-            layout={layout}
-            className="compact-grid"
-          />
-        </section>
-        {showAdAfter && <HomeMidContentAd />}
-      </React.Fragment>
-    )
   }
 
   // Generate schema.org structured data for the homepage
@@ -311,7 +253,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
       <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
-        {renderOfflineNotification()}
+        {isOffline && <OfflineNotice />}
 
         {/* Hero Section - Show the latest post */}
         {mainStory && (
@@ -332,7 +274,11 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => (
-            <CategorySection key={config.name} {...config} />
+            <CategorySection
+              key={config.name}
+              {...config}
+              posts={categoryPosts[config.name] || []}
+            />
           ))}
         </div>
       </div>

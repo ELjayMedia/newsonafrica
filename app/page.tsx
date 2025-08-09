@@ -71,22 +71,17 @@ export const metadata: Metadata = {
 
 export const revalidate = 600 // Revalidate every 10 minutes
 
-async function getHomePageData() {
+async function getHomePageData(limit = 20) {
   try {
-    const { posts } = await getLatestPosts(20)
-    return { posts: posts || [] }
+    const { posts } = await getLatestPosts(limit)
+    return posts ?? []
   } catch (error) {
     console.error("Failed to fetch posts for homepage:", error)
-    return { posts: [] }
+    return []
   }
 }
 
 export default async function Home() {
-  try {
-    const { posts } = await getHomePageData()
-    return <HomeContent initialPosts={posts} />
-  } catch (error) {
-    console.error("Homepage data fetch failed:", error)
-    return <HomeContent initialPosts={[]} />
-  }
+  const posts = await getHomePageData()
+  return <HomeContent initialPosts={posts} />
 }
