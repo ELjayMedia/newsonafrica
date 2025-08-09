@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { z } from "zod"
-import { createProfile } from "@/services/profile-service"
+import { createProfile, ProfileServiceError } from "@/services/profile-service"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
 // Input validation schema
@@ -46,13 +46,16 @@ export async function POST(request: NextRequest) {
 
     // Create the profile
     if (authData.user) {
-      const profile = await createProfile(authData.user.id, {
-        username,
-        email,
-      })
-
-      if (!profile) {
-        return handleApiError(new Error("Failed to create user profile"))
+      try {
+        await createProfile(authData.user.id, {
+          username,
+          email,
+        })
+      } catch (error) {
+        if (error instanceof ProfileServiceError) {
+          return handleApiError(error)
+        }
+        throw error
       }
     }
 
