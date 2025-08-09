@@ -7,7 +7,9 @@ import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useState, useEffect } from "react"
+
 import { SidebarAd } from "./SidebarAd"
+
 import { SidebarSkeleton } from "./SidebarSkeleton"
 
 // Function to get view counts for posts

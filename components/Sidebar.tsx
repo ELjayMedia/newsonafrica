@@ -12,9 +12,11 @@ export function Sidebar() {
       </Suspense>
 
       {/* Third AdSense ad at the bottom of sidebar */}
+
       <div className="bg-white p-4 rounded-lg shadow-sm">
         <SidebarAd slot="8721564553" />
       </div>
+
     </aside>
   )
 }

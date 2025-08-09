@@ -3,6 +3,7 @@ import { AdSense } from "@/components/AdSense"
 
 interface SidebarAdProps {
   slot: string
+
   format?: string
   className?: string
 }
@@ -16,5 +17,6 @@ export function SidebarAd({
     <AdErrorBoundary collapse>
       <AdSense slot={slot} format={format} className={className} />
     </AdErrorBoundary>
+
   )
 }
