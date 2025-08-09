@@ -51,6 +51,24 @@ export interface SearchDocument {
   featured_media_url?: string
 }
 
+export interface WordPressPost {
+  id: number | string
+  title?: { rendered?: string } | string
+  excerpt?: { rendered?: string } | string
+  content?: { rendered?: string } | string
+  slug?: string
+  date?: string
+  categories?: number[] | { nodes: { name: string }[] }
+  tags?: number[]
+  author?: number | { posts_count: number }
+  featured_media?: number
+  _embedded?: {
+    author?: Array<{ name?: string; posts_count?: number }>
+    ["wp:featuredmedia"]?: Array<{ source_url?: string }>
+    ["wp:term"]?: Array<Array<{ name: string }>>
+  }
+}
+
 // Fine-tuned configuration
 const SEARCH_CONFIG = {
   // Index update intervals based on content freshness
@@ -270,7 +288,7 @@ export class SearchIndexer {
 
   private gcTimer: NodeJS.Timeout | null = null
   private isBuilding = false
-  private buildQueue: any[] = []
+  private buildQueue: WordPressPost[] = []
 
   constructor() {
     this.startGarbageCollection()
@@ -338,7 +356,7 @@ export class SearchIndexer {
     })
   }
 
-  async buildIndex(posts: any[]): Promise<void> {
+  async buildIndex(posts: WordPressPost[]): Promise<void> {
     if (this.isBuilding) {
       this.buildQueue = posts
       return
@@ -399,7 +417,7 @@ export class SearchIndexer {
     }
   }
 
-  private async processBatch(posts: any[]): Promise<void> {
+  private async processBatch(posts: WordPressPost[]): Promise<void> {
     posts.forEach((post) => {
       try {
         const indexedPost = this.processPost(post)
@@ -412,7 +430,7 @@ export class SearchIndexer {
     })
   }
 
-  private processPost(post: any): IndexedPost {
+  private processPost(post: WordPressPost): IndexedPost {
     const title = this.stripHtml(post.title?.rendered || post.title || "")
     const excerpt = this.stripHtml(post.excerpt?.rendered || post.excerpt || "")
     const content = this.stripHtml(post.content?.rendered || post.content || "")
@@ -441,7 +459,7 @@ export class SearchIndexer {
     }
   }
 
-  private calculatePopularity(post: any, wordCount: number, readingTime: number): number {
+  private calculatePopularity(post: WordPressPost, wordCount: number, readingTime: number): number {
     let score = 0
 
     // Time-based scoring with fine-tuned decay
@@ -491,21 +509,33 @@ export class SearchIndexer {
     }
 
     // Author credibility (if available)
-    if (post.author && typeof post.author === "object" && post.author.posts_count > 50) {
+    if (
+      post.author &&
+      typeof post.author === "object" &&
+      "posts_count" in post.author &&
+      post.author.posts_count > 50
+    ) {
       score += 1
     }
 
     return Math.max(0, score)
   }
 
-  private extractCategories(post: any): string[] {
+  private extractCategories(post: WordPressPost): string[] {
     try {
-      return (
-        post.categories?.nodes?.map((cat: any) => cat.name) ||
-        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => cat.name) ||
-        post.categories?.map((id: number) => `category-${id}`) ||
-        []
-      ).filter(Boolean)
+      if (post.categories && !Array.isArray(post.categories)) {
+        return post.categories.nodes.map((cat) => cat.name).filter(Boolean)
+      }
+
+      if (post._embedded?.["wp:term"]?.[0]) {
+        return post._embedded["wp:term"][0].map((cat) => cat.name).filter(Boolean)
+      }
+
+      if (Array.isArray(post.categories)) {
+        return post.categories.map((id) => `category-${id}`).filter(Boolean)
+      }
+
+      return []
     } catch {
       return []
     }
@@ -965,7 +995,7 @@ export class SearchIndexer {
   private cache = new Map<string, SearchDocument[]>()
   private cacheTimeout = 5 * 60 * 1000
 
-  async indexPost(post: any): Promise<void> {
+  async indexPost(post: WordPressPost): Promise<void> {
     this.clearCache()
   }
 
@@ -974,7 +1004,7 @@ export class SearchIndexer {
     this.clearCache()
   }
 
-  async updatePost(post: any): Promise<void> {
+  async updatePost(post: WordPressPost): Promise<void> {
     this.clearCache()
   }
 
@@ -1020,18 +1050,18 @@ export class SearchIndexer {
         throw new Error(`Search failed: ${response.statusText}`)
       }
 
-      const posts = await response.json()
+      const posts: WordPressPost[] = await response.json()
       const total = Number.parseInt(response.headers.get("X-WP-Total") || "0")
 
-      const searchDocuments: SearchDocument[] = posts.map((post: any) => ({
+      const searchDocuments: SearchDocument[] = posts.map((post) => ({
         id: post.id.toString(),
         title: post.title.rendered,
         content: post.content.rendered,
         excerpt: post.excerpt.rendered,
         slug: post.slug,
         date: post.date,
-        categories: post._embedded?.["wp:term"]?.[0]?.map((cat: any) => cat.name) || [],
-        tags: post._embedded?.["wp:term"]?.[1]?.map((tag: any) => tag.name) || [],
+        categories: post._embedded?.["wp:term"]?.[0]?.map((cat) => cat.name) || [],
+        tags: post._embedded?.["wp:term"]?.[1]?.map((tag) => tag.name) || [],
         author: post._embedded?.author?.[0]?.name || "Unknown",
         featured_media_url: post._embedded?.["wp:featuredmedia"]?.[0]?.source_url,
       }))
