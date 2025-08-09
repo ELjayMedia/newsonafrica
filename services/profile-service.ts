@@ -9,6 +9,13 @@ import {
   clearQueryCache,
 } from "@/utils/supabase-query-utils"
 
+export class ProfileServiceError extends Error {
+  constructor(message: string, public cause?: unknown) {
+    super(message)
+    this.name = "ProfileServiceError"
+  }
+}
+
 /**
  * Profile interface
  */
@@ -35,9 +42,10 @@ const USERNAME_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
  *
  * @param userId - The user ID to create the profile for
  * @param profileData - The initial profile data
- * @returns The created profile or null if creation failed
+ * @returns The created profile
+ * @throws {ProfileServiceError} If the profile could not be created
  */
-export async function createProfile(userId: string, profileData: Partial<Profile>): Promise<Profile | null> {
+export async function createProfile(userId: string, profileData: Partial<Profile>): Promise<Profile> {
   try {
     const newProfile = {
       id: userId,
@@ -53,10 +61,15 @@ export async function createProfile(userId: string, profileData: Partial<Profile
       clearCache: /^profiles:/,
     })
 
-    return profiles[0] || null
+    const profile = profiles[0]
+    if (!profile) {
+      throw new ProfileServiceError("Profile creation returned no data")
+    }
+    return profile
   } catch (error) {
     console.error("Error in createProfile:", error)
-    return null
+    if (error instanceof ProfileServiceError) throw error
+    throw new ProfileServiceError("Failed to create profile", error)
   }
 }
 
@@ -64,16 +77,22 @@ export async function createProfile(userId: string, profileData: Partial<Profile
  * Fetch a user profile by ID
  *
  * @param userId - The user ID to fetch the profile for
- * @returns The user profile or null if not found
+ * @returns The user profile
+ * @throws {ProfileServiceError} If the profile cannot be retrieved
  */
-export async function fetchProfile(userId: string): Promise<Profile | null> {
+export async function fetchProfile(userId: string): Promise<Profile> {
   try {
-    return await fetchById<Profile>("profiles", userId, {
+    const profile = await fetchById<Profile>("profiles", userId, {
       ttl: PROFILE_CACHE_TTL,
     })
+    if (!profile) {
+      throw new ProfileServiceError("Profile not found")
+    }
+    return profile
   } catch (error) {
     console.error("Error in fetchProfile:", error)
-    return null
+    if (error instanceof ProfileServiceError) throw error
+    throw new ProfileServiceError("Failed to fetch profile", error)
   }
 }
 
@@ -82,6 +101,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
  *
  * @param userIds - Array of user IDs to fetch profiles for
  * @returns Array of user profiles
+ * @throws {ProfileServiceError} If the profiles cannot be retrieved
  */
 export async function fetchProfiles(userIds: string[]): Promise<Profile[]> {
   try {
@@ -92,7 +112,7 @@ export async function fetchProfiles(userIds: string[]): Promise<Profile[]> {
     })
   } catch (error) {
     console.error("Error in fetchProfiles:", error)
-    return []
+    throw new ProfileServiceError("Failed to fetch profiles", error)
   }
 }
 
@@ -101,21 +121,29 @@ export async function fetchProfiles(userIds: string[]): Promise<Profile[]> {
  *
  * @param userId - The user ID to update the profile for
  * @param updates - The profile fields to update
- * @returns The updated profile or null if update failed
+ * @returns The updated profile
+ * @throws {ProfileServiceError} If the profile could not be updated
  */
-export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
+export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
   try {
     const updatedData = {
       ...updates,
       updated_at: new Date().toISOString(),
     }
 
-    return await updateRecord<Profile>("profiles", userId, updatedData, {
+    const profile = await updateRecord<Profile>("profiles", userId, updatedData, {
       clearCache: new RegExp(`^profiles:.*${userId}`),
     })
+
+    if (!profile) {
+      throw new ProfileServiceError("Profile not found")
+    }
+
+    return profile
   } catch (error) {
     console.error("Error in updateProfile:", error)
-    return null
+    if (error instanceof ProfileServiceError) throw error
+    throw new ProfileServiceError("Failed to update profile", error)
   }
 }
 
