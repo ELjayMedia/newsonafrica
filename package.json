@@ -2,6 +2,7 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.11.0",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
@@ -52,7 +53,6 @@
     "@supabase/postgrest-js": "latest",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
-    "@sveltejs/kit": "latest",
     "@tailwindcss/typography": "latest",
     "@tanstack/react-query": "latest",
     "@vercel/analytics": "latest",
@@ -98,17 +98,13 @@
     "sonner": "^1.7.1",
     "stream-browserify": "^3.0.0",
     "subscriptions-transport-ws": "latest",
-    "svelte": "latest",
     "swr": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "util": "latest",
     "uuid": "latest",
     "vaul": "^0.9.6",
-    "vue": "latest",
-    "vue-router": "latest",
     "web-vitals": "latest",
-    "webpack": "latest",
     "zod": "^3.24.1"
   },
   "devDependencies": {
