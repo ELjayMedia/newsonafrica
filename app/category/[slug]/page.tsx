@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
 import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {
@@ -28,6 +29,105 @@ export async function generateStaticParams() {
   }
 }
 
+function buildCategoryMetadata(
+  category: WordPressCategory,
+  posts: WordPressPost[],
+  slug: string,
+): Metadata {
+  const baseDescription = category.description || `Latest articles in the ${category.name} category`
+  const postCount = category.count || posts.length
+  const description = `${baseDescription}. Browse ${postCount} articles covering ${category.name.toLowerCase()} news from across Africa.`
+
+  const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
+  const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
+
+  const canonicalUrl = `https://newsonafrica.com/category/${slug}`
+
+  const keywords = [
+    category.name,
+    `${category.name} News`,
+    "African News",
+    "News On Africa",
+    ...posts.slice(0, 5).map((post) => post.title.split(" ").slice(0, 3).join(" ")),
+  ].join(", ")
+
+  return {
+    title: `${category.name} News - News On Africa`,
+    description,
+    keywords,
+    category: category.name,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: {
+        "en-US": canonicalUrl,
+        en: canonicalUrl,
+      },
+    },
+    robots: {
+      index: true,
+      follow: true,
+      nocache: false,
+      googleBot: {
+        index: true,
+        follow: true,
+        noimageindex: false,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+      bingBot: {
+        index: true,
+        follow: true,
+        "max-snippet": -1,
+        "max-image-preview": "large",
+      },
+    },
+    openGraph: {
+      type: "website",
+      title: `${category.name} - News On Africa`,
+      description,
+      url: canonicalUrl,
+      siteName: "News On Africa",
+      locale: "en_US",
+      images: [
+        {
+          url: featuredImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${category.name} news from News On Africa`,
+          type: "image/jpeg",
+        },
+        {
+          url: featuredImageUrl,
+          width: 800,
+          height: 600,
+          alt: `${category.name} news from News On Africa`,
+          type: "image/jpeg",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@newsonafrica",
+      title: `${category.name} - News On Africa`,
+      description,
+      images: [
+        {
+          url: featuredImageUrl,
+          alt: `${category.name} news from News On Africa`,
+        },
+      ],
+    },
+    other: {
+      "article:section": category.name,
+      "article:tag": category.name,
+      "og:updated_time": new Date().toISOString(),
+      "og:site_name": "News On Africa",
+      "og:locale": "en_US",
+    },
+  }
+}
+
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   console.log(`🔍 Generating metadata for category: ${params.slug}`)
@@ -52,113 +152,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     }
 
     console.log(`✅ Generated metadata for category: "${category.name}"`)
-
-    // Create dynamic description
-    const baseDescription = category.description || `Latest articles in the ${category.name} category`
-    const postCount = category.count || posts.length
-    const description = `${baseDescription}. Browse ${postCount} articles covering ${category.name.toLowerCase()} news from across Africa.`
-
-    // Get featured image from the first post with an image
-    const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
-    const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
-
-    // Create canonical URL
-    const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
-
-    // Generate keywords
-    const keywords = [
-      category.name,
-      `${category.name} News`,
-      "African News",
-      "News On Africa",
-      ...posts.slice(0, 5).map((post) => post.title.split(" ").slice(0, 3).join(" ")),
-    ].join(", ")
-
-    return {
-      title: `${category.name} News - News On Africa`,
-      description,
-      keywords,
-      category: category.name,
-
-      // Canonical URL and robots directives
-      alternates: {
-        canonical: canonicalUrl,
-        languages: {
-          "en-US": canonicalUrl,
-          en: canonicalUrl,
-        },
-      },
-
-      // Enhanced robots directives
-      robots: {
-        index: true,
-        follow: true,
-        nocache: false,
-        googleBot: {
-          index: true,
-          follow: true,
-          noimageindex: false,
-          "max-video-preview": -1,
-          "max-image-preview": "large",
-          "max-snippet": -1,
-        },
-        bingBot: {
-          index: true,
-          follow: true,
-          "max-snippet": -1,
-          "max-image-preview": "large",
-        },
-      },
-
-      // Open Graph metadata
-      openGraph: {
-        type: "website",
-        title: `${category.name} - News On Africa`,
-        description,
-        url: canonicalUrl,
-        siteName: "News On Africa",
-        locale: "en_US",
-        images: [
-          {
-            url: featuredImageUrl,
-            width: 1200,
-            height: 630,
-            alt: `${category.name} news from News On Africa`,
-            type: "image/jpeg",
-          },
-          {
-            url: featuredImageUrl,
-            width: 800,
-            height: 600,
-            alt: `${category.name} news from News On Africa`,
-            type: "image/jpeg",
-          },
-        ],
-      },
-
-      // Twitter metadata
-      twitter: {
-        card: "summary_large_image",
-        site: "@newsonafrica",
-        title: `${category.name} - News On Africa`,
-        description,
-        images: [
-          {
-            url: featuredImageUrl,
-            alt: `${category.name} news from News On Africa`,
-          },
-        ],
-      },
-
-      // Additional SEO metadata
-      other: {
-        "article:section": category.name,
-        "article:tag": category.name,
-        "og:updated_time": new Date().toISOString(),
-        "og:site_name": "News On Africa",
-        "og:locale": "en_US",
-      },
-    }
+    return buildCategoryMetadata(category, posts, params.slug)
   } catch (error) {
     console.error(`❌ Error generating metadata for category ${params.slug}:`, error)
     return {
@@ -176,7 +170,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 }
 
 // Server component that fetches data and renders the page
-export default async function CategoryServerPage({ params }: CategoryPageProps) {
+export default async function CategoryPage({ params }: CategoryPageProps) {
   try {
     // Fetch category data and initial posts
     const categoryData = await getPostsByCategory(params.slug, 20)

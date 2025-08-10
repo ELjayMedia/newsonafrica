@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
+import type { WordPressPost } from "@/lib/api/wordpress"
 import { PostClientContent } from "@/components/PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
@@ -16,17 +17,13 @@ export async function generateStaticParams() {
   console.log("🚀 Starting generateStaticParams for posts...")
 
   try {
-    // Get latest posts for static generation
-    console.log("📡 Fetching posts from WordPress API...")
     const startTime = Date.now()
-
     const { posts, hasNextPage } = await getLatestPosts(1000)
 
     const fetchTime = Date.now() - startTime
     console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
     console.log(`📄 Has more pages: ${hasNextPage}`)
 
-    // Validate posts data
     const validPosts = posts.filter((post) => {
       if (!post.slug) {
         console.warn(`⚠️ Post missing slug: ${post.title || post.id}`)
@@ -41,7 +38,6 @@ export async function generateStaticParams() {
 
     console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
 
-    // Log sample of posts being generated
     if (validPosts.length > 0) {
       console.log("📝 Sample posts being pre-generated:")
       validPosts.slice(0, 5).forEach((post, index) => {
@@ -53,7 +49,6 @@ export async function generateStaticParams() {
       }
     }
 
-    // Return array of params for static generation
     const staticParams = validPosts.map((post) => ({
       slug: post.slug,
     }))
@@ -63,15 +58,124 @@ export async function generateStaticParams() {
   } catch (error) {
     console.error("❌ Error in generateStaticParams for posts:", error)
 
-    // Log detailed error information
     if (error instanceof Error) {
       console.error("Error message:", error.message)
       console.error("Error stack:", error.stack)
     }
 
-    // Return empty array to allow fallback generation
     console.log("🔄 Falling back to on-demand generation")
     return []
+  }
+}
+
+function buildPostMetadata(post: WordPressPost, slug: string): Metadata {
+  const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
+  const description = post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
+
+  const featuredImageUrl =
+    post.seo?.opengraphImage?.sourceUrl || post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
+
+  const keywords = [
+    ...(post.categories?.nodes?.map((cat) => cat.name) || []),
+    ...(post.tags?.nodes?.map((tag) => tag.name) || []),
+    "News On Africa",
+    "African News",
+    post.author.node.name,
+  ].join(", ")
+
+  const canonicalUrl = `https://newsonafrica.com/post/${slug}`
+
+  return {
+    title: post.seo?.title || `${post.title} - News On Africa`,
+    description,
+    keywords,
+    authors: [
+      {
+        name: post.author.node.name,
+        url: `https://newsonafrica.com/author/${post.author.node.slug}`,
+      },
+    ],
+    creator: post.author.node.name,
+    publisher: "News On Africa",
+    category: post.categories?.nodes?.[0]?.name || "News",
+    alternates: {
+      canonical: canonicalUrl,
+      languages: {
+        "en-US": canonicalUrl,
+        en: canonicalUrl,
+      },
+    },
+    robots: {
+      index: true,
+      follow: true,
+      nocache: false,
+      googleBot: {
+        index: true,
+        follow: true,
+        noimageindex: false,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+      bingBot: {
+        index: true,
+        follow: true,
+        "max-snippet": -1,
+        "max-image-preview": "large",
+      },
+    },
+    openGraph: {
+      type: "article",
+      title: post.seo?.title || post.title,
+      description,
+      url: canonicalUrl,
+      siteName: "News On Africa",
+      locale: "en_US",
+      publishedTime: post.date,
+      modifiedTime: post.modified || post.date,
+      expirationTime: undefined,
+      authors: [post.author.node.name],
+      section: post.categories?.nodes?.[0]?.name || "News",
+      tags: post.tags?.nodes?.map((tag) => tag.name) || [],
+      images: [
+        {
+          url: featuredImageUrl,
+          width: 1200,
+          height: 630,
+          alt: post.featuredImage?.node?.altText || post.title,
+          type: "image/jpeg",
+        },
+        {
+          url: featuredImageUrl,
+          width: 800,
+          height: 600,
+          alt: post.featuredImage?.node?.altText || post.title,
+          type: "image/jpeg",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@newsonafrica",
+      creator: `@${post.author.node.slug}`,
+      title: post.seo?.title || post.title,
+      description,
+      images: [
+        {
+          url: featuredImageUrl,
+          alt: post.featuredImage?.node?.altText || post.title,
+        },
+      ],
+    },
+    other: {
+      "article:author": post.author.node.name,
+      "article:published_time": post.date,
+      "article:modified_time": post.modified || post.date,
+      "article:section": post.categories?.nodes?.[0]?.name || "News",
+      "article:tag": post.tags?.nodes?.map((tag) => tag.name).join(", ") || "",
+      "og:site_name": "News On Africa",
+      "og:locale": "en_US",
+    },
   }
 }
 
@@ -100,130 +204,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     }
 
     console.log(`✅ Generated metadata for: "${post.title}"`)
-
-    // Extract clean text from excerpt for description
-    const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
-    const description = post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
-
-    // Get featured image URL
-    const featuredImageUrl =
-      post.seo?.opengraphImage?.sourceUrl || post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-
-    // Generate keywords from categories and tags
-    const keywords = [
-      ...(post.categories?.nodes?.map((cat) => cat.name) || []),
-      ...(post.tags?.nodes?.map((tag) => tag.name) || []),
-      "News On Africa",
-      "African News",
-      post.author.node.name,
-    ].join(", ")
-
-    // Create canonical URL - using the current URL structure
-    const canonicalUrl = `https://newsonafrica.com/post/${params.slug}`
-
-    return {
-      title: post.seo?.title || `${post.title} - News On Africa`,
-      description,
-      keywords,
-      authors: [
-        {
-          name: post.author.node.name,
-          url: `https://newsonafrica.com/author/${post.author.node.slug}`,
-        },
-      ],
-      creator: post.author.node.name,
-      publisher: "News On Africa",
-      category: post.categories?.nodes?.[0]?.name || "News",
-
-      // Canonical URL and robots directives
-      alternates: {
-        canonical: canonicalUrl,
-        languages: {
-          "en-US": canonicalUrl,
-          en: canonicalUrl,
-        },
-      },
-
-      // Enhanced robots directives
-      robots: {
-        index: true,
-        follow: true,
-        nocache: false,
-        googleBot: {
-          index: true,
-          follow: true,
-          noimageindex: false,
-          "max-video-preview": -1,
-          "max-image-preview": "large",
-          "max-snippet": -1,
-        },
-        bingBot: {
-          index: true,
-          follow: true,
-          "max-snippet": -1,
-          "max-image-preview": "large",
-        },
-      },
-
-      // Open Graph metadata
-      openGraph: {
-        type: "article",
-        title: post.seo?.title || post.title,
-        description,
-        url: canonicalUrl,
-        siteName: "News On Africa",
-        locale: "en_US",
-        publishedTime: post.date,
-        modifiedTime: post.modified || post.date,
-        expirationTime: undefined, // Articles don't expire
-        authors: [post.author.node.name],
-        section: post.categories?.nodes?.[0]?.name || "News",
-        tags: post.tags?.nodes?.map((tag) => tag.name) || [],
-        images: [
-          {
-            url: featuredImageUrl,
-            width: 1200,
-            height: 630,
-            alt: post.featuredImage?.node?.altText || post.title,
-            type: "image/jpeg",
-          },
-          // Add additional image sizes for better social sharing
-          {
-            url: featuredImageUrl,
-            width: 800,
-            height: 600,
-            alt: post.featuredImage?.node?.altText || post.title,
-            type: "image/jpeg",
-          },
-        ],
-      },
-
-      // Twitter metadata
-      twitter: {
-        card: "summary_large_image",
-        site: "@newsonafrica",
-        creator: `@${post.author.node.slug}`,
-        title: post.seo?.title || post.title,
-        description,
-        images: [
-          {
-            url: featuredImageUrl,
-            alt: post.featuredImage?.node?.altText || post.title,
-          },
-        ],
-      },
-
-      // Additional SEO metadata
-      other: {
-        "article:author": post.author.node.name,
-        "article:published_time": post.date,
-        "article:modified_time": post.modified || post.date,
-        "article:section": post.categories?.nodes?.[0]?.name || "News",
-        "article:tag": post.tags?.nodes?.map((tag) => tag.name).join(", ") || "",
-        "og:site_name": "News On Africa",
-        "og:locale": "en_US",
-      },
-    }
+    return buildPostMetadata(post, params.slug)
   } catch (error) {
     console.error(`❌ Error generating metadata for post ${params.slug}:`, error)
     return {
