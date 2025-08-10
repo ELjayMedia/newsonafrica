@@ -9,3 +9,11 @@ yarn-error.log*
 
 # macOS
 .DS_Store
+
+*.aab
+*.apk
+*.ipa
+android.keystore
+android/*.keystore
+ios/Pods/
+ios/DerivedData/
