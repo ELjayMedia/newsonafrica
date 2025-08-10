@@ -95,28 +95,28 @@ export function TopNavigation() {
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <nav className="space-y-2">
             <Link
-              href="/news"
+              href="/category/news"
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               News
             </Link>
             <Link
-              href="/business"
+              href="/category/business"
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               Business
             </Link>
             <Link
-              href="/sport"
+              href="/category/sport"
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               Sport
             </Link>
             <Link
-              href="/entertainment"
+              href="/category/entertainment"
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >

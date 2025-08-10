@@ -29,17 +29,17 @@ export default async function SitemapPage() {
               </Link>
             </li>
             <li>
-              <Link href="/news" className="text-blue-600 hover:underline">
+              <Link href="/category/news" className="text-blue-600 hover:underline">
                 News
               </Link>
             </li>
             <li>
-              <Link href="/business" className="text-blue-600 hover:underline">
+              <Link href="/category/business" className="text-blue-600 hover:underline">
                 Business
               </Link>
             </li>
             <li>
-              <Link href="/sport" className="text-blue-600 hover:underline">
+              <Link href="/category/sport" className="text-blue-600 hover:underline">
                 Sport
               </Link>
             </li>
