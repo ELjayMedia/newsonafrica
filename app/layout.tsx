@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import localFont from "next/font/local"
+import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -19,12 +19,9 @@ import Script from "next/script"
 
 import "./globals.css"
 
-// Optimize font loading using locally hosted fonts
-const inter = localFont({
-  src: [
-    { path: "../public/fonts/Inter-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../public/fonts/Inter-Bold.woff2", weight: "700", style: "normal" },
-  ],
+// Optimize font loading
+const inter = Inter({
+  subsets: ["latin"],
   display: "swap",
   preload: true,
   fallback: ["system-ui", "sans-serif"],
@@ -58,6 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <link rel="preconnect" href="https://securepubads.g.doubleclick.net" crossOrigin="anonymous" />

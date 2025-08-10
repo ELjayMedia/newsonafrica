@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
-import { revalidateTags } from "@/lib/revalidate"
+import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
@@ -46,14 +45,18 @@ export async function POST(request: NextRequest) {
         if (post?.slug) {
           // Revalidate the specific post page
           revalidatePath(`/post/${post.slug}`)
-          revalidatePath("/")
+          revalidateTag(`post-${post.id}`)
 
-          const tags = ["post", post.slug, "posts"]
+          // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
-            tags.push(...post.categories.map((categoryId: number) => `category-${categoryId}`))
+            for (const categoryId of post.categories) {
+              revalidateTag(`category-${categoryId}`)
+            }
           }
 
-          await revalidateTags(tags)
+          // Revalidate home page to show latest posts
+          revalidatePath("/")
+          revalidateTag("posts")
 
           console.log(`Revalidated post: ${post.slug}`)
         }
@@ -64,8 +67,7 @@ export async function POST(request: NextRequest) {
           // Revalidate pages that might have referenced this post
           revalidatePath(`/post/${post.slug}`)
           revalidatePath("/")
-
-          await revalidateTags(["post", post.slug, "posts"])
+          revalidateTag("posts")
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
       case "category_updated":
         if (post?.slug) {
           revalidatePath(`/category/${post.slug}`)
-          await revalidateTags([`category-${post.id}`])
+          revalidateTag(`category-${post.id}`)
 
           console.log(`Revalidated category: ${post.slug}`)
         }

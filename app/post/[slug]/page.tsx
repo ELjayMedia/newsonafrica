@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
 import type { WordPressPost } from "@/lib/api/wordpress"
-import { PostContent } from "@/components/PostContent"
+import { PostClientContent } from "@/components/PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
 export const revalidate = 300 // Revalidate every 5 minutes
@@ -184,7 +184,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   console.log(`🔍 Generating metadata for post: ${params.slug}`)
 
   try {
-    const post = await getPostBySlug(params.slug, ["post", params.slug])
+    const post = await getPostBySlug(params.slug)
 
     if (!post) {
       console.warn(`⚠️ Post not found for metadata generation: ${params.slug}`)
@@ -228,7 +228,7 @@ export default async function PostPage({ params }: PostPageProps) {
   try {
     // Fetch post data server-side
     const startTime = Date.now()
-    const post = await getPostBySlug(params.slug, ["post", params.slug])
+    const post = await getPostBySlug(params.slug)
     const fetchTime = Date.now() - startTime
 
     if (!post) {
@@ -333,7 +333,7 @@ function PostWrapper({ post, slug }: { post: any; slug: string }) {
         }}
       />
 
-      <PostContent post={post} />
+      <PostClientContent slug={slug} initialData={post} />
     </div>
   )
 }

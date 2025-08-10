@@ -1,8 +1,3 @@
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
-  enabled: process.env.ANALYZE === "true",
-  openAnalyzer: false,
-})
-
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -16,21 +11,19 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   },
   runtimeCaching: [
     {
-      urlPattern: ({ url }) =>
-        url.pathname.startsWith("/api") || url.pathname.startsWith("/auth"),
-      handler: "NetworkOnly",
-    },
-    {
-      urlPattern: ({ request }) => request.mode === "navigate",
+      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
       handler: "NetworkFirst",
       options: {
-        cacheName: "html-cache",
-        networkTimeoutSeconds: 30,
+        cacheName: "api-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
       },
     },
     {
-      urlPattern: ({ request }) => request.destination === "image",
-      handler: "StaleWhileRevalidate",
+      urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
+      handler: "CacheFirst",
       options: {
         cacheName: "image-cache",
         expiration: {
@@ -40,16 +33,35 @@ const withPWA = require("@ducanh2912/next-pwa").default({
       },
     },
     {
-      urlPattern: ({ request }) => request.destination === "font",
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/i,
       handler: "CacheFirst",
       options: {
-        cacheName: "font-cache",
+        cacheName: "google-fonts",
         expiration: {
           maxEntries: 30,
-          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
         },
-        cacheableResponse: {
-          statuses: [0, 200],
+      },
+    },
+    {
+      urlPattern: /\.(?:js)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "js-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:css)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "css-cache",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
         },
       },
     },
@@ -165,4 +177,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withBundleAnalyzer(withPWA(nextConfig))
+module.exports = withPWA(nextConfig)

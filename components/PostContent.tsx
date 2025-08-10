@@ -1,5 +1,8 @@
+"use client"
+
+import type React from "react"
 import { CommentList } from "@/components/CommentList"
-import type { WordPressPost } from "@/lib/api/wordpress"
+import type { Post } from "@/types/post"
 import type { Category } from "@/types/category"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,10 +14,10 @@ import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
 
 interface PostContentProps {
-  post: WordPressPost
+  post: Post
 }
 
-export function PostContent({ post }: PostContentProps) {
+export const PostContent: React.FC<PostContentProps> = ({ post }) => {
   if (!post) {
     return <div>Loading...</div>
   }

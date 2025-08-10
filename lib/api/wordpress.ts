@@ -239,7 +239,6 @@ async function graphqlRequest<T>(
   variables: Record<string, any> = {},
   countryCode?: string,
   retries = 3,
-  tags?: string[],
 ): Promise<T> {
   const endpoints = getCountryEndpoints(countryCode || "sz")
   const controller = new AbortController()
@@ -257,7 +256,7 @@ async function graphqlRequest<T>(
         variables,
       }),
       signal: controller.signal,
-      next: { revalidate: 300, tags }, // Cache for 5 minutes with tags
+      next: { revalidate: 300 }, // Cache for 5 minutes
     })
 
     clearTimeout(timeoutId)
@@ -488,20 +487,11 @@ export async function getLatestPosts(limit = 20, after?: string) {
 /**
  * Get a single post by slug
  */
-export async function getPostBySlug(
-  slug: string,
-  tags?: string[],
-): Promise<WordPressPost | null> {
+export async function getPostBySlug(slug: string): Promise<WordPressPost | null> {
   try {
-    const data = await graphqlRequest<WordPressSinglePostResponse>(
-      POST_BY_SLUG_QUERY,
-      {
-        slug,
-      },
-      undefined,
-      3,
-      tags,
-    )
+    const data = await graphqlRequest<WordPressSinglePostResponse>(POST_BY_SLUG_QUERY, {
+      slug,
+    })
 
     return data.post
   } catch (error) {
