@@ -1,4 +1,3 @@
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
 import { createClient } from "./supabase/client"
 
 // Cache for storing query results
@@ -43,7 +42,7 @@ export function clearQueryCache(key?: string, pattern?: RegExp): void {
  * @returns The query result
  */
 export async function executeWithCache<T>(
-  queryBuilder: PostgrestFilterBuilder<any, any, any[]>,
+  queryBuilder: any,
   cacheKey: string,
   ttl: number = DEFAULT_CACHE_TTL,
 ): Promise<T[]> {
@@ -319,7 +318,7 @@ export async function deleteRecord(
  */
 export async function countRecords(
   table: string,
-  filters?: (query: PostgrestFilterBuilder<any, any, any[]>) => PostgrestFilterBuilder<any, any, any[]>,
+  filters?: (query: any) => any,
   options: {
     cache?: boolean
     ttl?: number
@@ -378,7 +377,7 @@ export async function fetchPaginated<T>(
     columns?: string
     orderBy?: string
     ascending?: boolean
-    filters?: (query: PostgrestFilterBuilder<any, any, any[]>) => PostgrestFilterBuilder<any, any, any[]>
+    filters?: (query: any) => any
     cache?: boolean
     ttl?: number
   } = {},
@@ -470,7 +469,7 @@ export async function upsertRecords<T>(
   const { onConflict, returning = "*", clearCache = false } = options
   const supabase = createClient()
 
-  let query = supabase.from(table).upsert(records)
+  let query: any = supabase.from(table).upsert(records as any)
 
   if (onConflict) {
     query = query.onConflict(onConflict)
@@ -505,10 +504,12 @@ export async function columnExists(table: string, column: string): Promise<boole
 
   try {
     // First try using RPC if available
-    const { data, error } = await supabase.rpc("column_exists", { table_name: table, column_name: column }).single()
+    const { data, error } = (await supabase
+      .rpc("column_exists", { table_name: table, column_name: column })
+      .single()) as any
 
     if (!error && data) {
-      return data.exists
+      return (data as any).exists
     }
 
     // Fallback: try selecting the column
