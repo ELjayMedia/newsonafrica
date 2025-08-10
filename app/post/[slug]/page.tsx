@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
 import type { WordPressPost } from "@/lib/api/wordpress"
-import { PostClientContent } from "@/components/PostClientContent"
+import { PostContent } from "@/components/PostContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 
 export const revalidate = 300 // Revalidate every 5 minutes
@@ -333,7 +333,7 @@ function PostWrapper({ post, slug }: { post: any; slug: string }) {
         }}
       />
 
-      <PostClientContent slug={slug} initialData={post} />
+      <PostContent post={post} />
     </div>
   )
 }
