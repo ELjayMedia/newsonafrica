@@ -9,14 +9,14 @@ interface CategorySectionProps extends CategoryConfig {
   posts: any[]
 }
 
-export function CategorySection({ name, layout, typeOverride, showAdAfter, posts }: CategorySectionProps) {
+export function CategorySection({ name, slug, layout, typeOverride, showAdAfter, posts }: CategorySectionProps) {
   if (posts.length === 0) return null
 
   return (
     <React.Fragment>
       <section className="bg-white rounded-lg">
         <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-          <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+          <Link href={`/category/${slug}`} className="hover:text-blue-600 transition-colors">
             {name}
           </Link>
         </h2>

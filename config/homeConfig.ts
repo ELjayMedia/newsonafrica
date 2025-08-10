@@ -2,6 +2,7 @@
 
 export interface CategoryConfig {
   name: string
+  slug: string
   layout: "grid" | "list" | "horizontal" | "vertical"
   typeOverride?: string
   showAdAfter?: boolean
@@ -11,6 +12,7 @@ export interface CategoryConfig {
 export const categoryConfigs: CategoryConfig[] = [
   {
     name: "News",
+    slug: "news",
     layout: "grid",
     typeOverride: "news",
     showAdAfter: false,
@@ -18,6 +20,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Business",
+    slug: "business",
     layout: "horizontal",
     typeOverride: "business",
     showAdAfter: true,
@@ -25,6 +28,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Sport",
+    slug: "sport",
     layout: "grid",
     typeOverride: "sport",
     showAdAfter: false,
@@ -32,6 +36,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Entertainment",
+    slug: "entertainment",
     layout: "horizontal",
     typeOverride: "entertainment",
     showAdAfter: true,
@@ -39,6 +44,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Life",
+    slug: "lifestyle",
     layout: "grid",
     typeOverride: "lifestyle",
     showAdAfter: false,
@@ -46,6 +52,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Health",
+    slug: "health",
     layout: "horizontal",
     typeOverride: "health",
     showAdAfter: false,
@@ -53,6 +60,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Politics",
+    slug: "politics",
     layout: "grid",
     typeOverride: "politics",
     showAdAfter: true,
@@ -60,6 +68,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Food",
+    slug: "food",
     layout: "horizontal",
     typeOverride: "food",
     showAdAfter: false,
@@ -67,6 +76,7 @@ export const categoryConfigs: CategoryConfig[] = [
   },
   {
     name: "Opinion",
+    slug: "opinion",
     layout: "list",
     typeOverride: "opinion",
     showAdAfter: false,
