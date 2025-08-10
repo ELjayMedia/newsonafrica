@@ -12,12 +12,11 @@ import {
   fetchComments,
 } from "../lib/wordpress-api"
 import { createClient } from "@supabase/supabase-js"
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/utils/supabase/env"
 import DataLoader from "dataloader"
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
 
 // Create DataLoaders for batching and caching
 const postLoader = new DataLoader(async (slugs) => {

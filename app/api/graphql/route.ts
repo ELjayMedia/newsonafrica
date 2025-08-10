@@ -4,11 +4,10 @@ import type { NextRequest } from "next/server"
 import { typeDefs } from "@/graphql/schema"
 import { resolvers } from "@/graphql/resolvers"
 import { createClient } from "@supabase/supabase-js"
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/utils/supabase/env"
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
 
 // Create Apollo Server
 const server = new ApolloServer({
