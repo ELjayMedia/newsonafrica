@@ -1,7 +1,7 @@
 "use client"
 
 import "./globals.css"
-import { Inter } from "next/font/google"
+import localFont from "next/font/local"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
@@ -26,7 +26,15 @@ import { CameraFeature } from "@/components/CameraFeature" // New import
 import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
 import { NotificationFeature } from "@/components/NotificationFeature" // New import
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = localFont({
+  src: [
+    { path: "../public/fonts/Inter-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/Inter-Bold.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
+})
 
 export function ClientLayout({
   children,
@@ -57,7 +65,6 @@ export function ClientLayout({
     <html lang="en" className={inter.className}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
       </head>
       <body className="bg-gray-100">
