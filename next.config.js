@@ -16,19 +16,21 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   },
   runtimeCaching: [
     {
-      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+      urlPattern: ({ url }) =>
+        url.pathname.startsWith("/api") || url.pathname.startsWith("/auth"),
+      handler: "NetworkOnly",
+    },
+    {
+      urlPattern: ({ request }) => request.mode === "navigate",
       handler: "NetworkFirst",
       options: {
-        cacheName: "api-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24, // 24 hours
-        },
+        cacheName: "html-cache",
+        networkTimeoutSeconds: 30,
       },
     },
     {
-      urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
-      handler: "CacheFirst",
+      urlPattern: ({ request }) => request.destination === "image",
+      handler: "StaleWhileRevalidate",
       options: {
         cacheName: "image-cache",
         expiration: {
@@ -38,35 +40,16 @@ const withPWA = require("@ducanh2912/next-pwa").default({
       },
     },
     {
-      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/i,
+      urlPattern: ({ request }) => request.destination === "font",
       handler: "CacheFirst",
       options: {
-        cacheName: "google-fonts",
+        cacheName: "font-cache",
         expiration: {
           maxEntries: 30,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
         },
-      },
-    },
-    {
-      urlPattern: /\.(?:js)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "js-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:css)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "css-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        cacheableResponse: {
+          statuses: [0, 200],
         },
       },
     },
