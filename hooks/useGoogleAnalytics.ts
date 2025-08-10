@@ -16,7 +16,7 @@ export const useGoogleAnalytics = () => {
   useEffect(() => {
     const handleRouteChange = (url: string) => {
       if (typeof window.gtag === "function") {
-        window.gtag("config", "G-DQVSXQ97WQ", {
+        window.gtag("config", "G-S55PVESFS2", {
           page_path: url,
         })
       }
