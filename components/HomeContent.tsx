@@ -57,11 +57,11 @@ const fetchHomeData = async () => {
     // Fetch category-specific posts
     const categoryPromises = categoryConfigs.map(async (config) => {
       try {
-        const result = await getPostsByCategory(config.name.toLowerCase(), 5)
-        return { name: config.name, posts: result.posts || [] }
+        const result = await getPostsByCategory(config.slug, 5)
+        return { slug: config.slug, posts: result.posts || [] }
       } catch (error) {
         console.error(`Error fetching ${config.name} posts:`, error)
-        return { name: config.name, posts: [] }
+        return { slug: config.slug, posts: [] }
       }
     })
 
@@ -70,7 +70,7 @@ const fetchHomeData = async () => {
 
     categoryResults.forEach((result) => {
       if (result.status === "fulfilled") {
-        categoryPosts[result.value.name] = result.value.posts
+        categoryPosts[result.value.slug] = result.value.posts
       }
     })
 
@@ -269,9 +269,9 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => (
             <CategorySection
-              key={config.name}
+              key={config.slug}
               {...config}
-              posts={categoryPosts[config.name] || []}
+              posts={categoryPosts[config.slug] || []}
             />
           ))}
         </div>

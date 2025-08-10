@@ -20,7 +20,7 @@ interface CompactHomeContentProps {
     featuredPosts: any[]
     categories: any[]
     recentPosts: any[]
-    categoryPosts?: Record<string, any[]>
+    categoryPosts?: Record<string, { name: string; posts: any[] }>
   }
 }
 
@@ -47,19 +47,19 @@ const fetchHomeData = async () => {
 
     const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
       try {
-        const result = await getPostsByCategory(config.name.toLowerCase(), 4)
-        return { name: config.name, posts: result.posts || [] }
+        const result = await getPostsByCategory(config.slug, 4)
+        return { slug: config.slug, name: config.name, posts: result.posts || [] }
       } catch (error) {
-        return { name: config.name, posts: [] }
+        return { slug: config.slug, name: config.name, posts: [] }
       }
     })
 
     const categoryResults = await Promise.allSettled(categoryPromises)
-    const categoryPosts: Record<string, any[]> = {}
+    const categoryPosts: Record<string, { name: string; posts: any[] }> = {}
 
     categoryResults.forEach((result) => {
       if (result.status === "fulfilled") {
-        categoryPosts[result.value.name] = result.value.posts
+        categoryPosts[result.value.slug] = { name: result.value.name, posts: result.value.posts }
       }
     })
 
@@ -215,15 +215,15 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
 
         {/* Category Sections - Collapsible */}
         <div className="px-2 space-y-2">
-          {Object.entries(categoryPosts).map(([categoryName, posts]) => {
+          {Object.entries(categoryPosts).map(([slug, { name, posts }]) => {
             if (posts.length === 0) return null
 
             return (
               <CollapsibleSection
-                key={categoryName}
-                title={categoryName}
+                key={slug}
+                title={name}
                 compact
-                defaultOpen={categoryName === "Business"}
+                defaultOpen={name === "Business"}
               >
                 <div className="space-y-1">
                   {posts.slice(0, 3).map((post) => (
@@ -231,10 +231,10 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                   ))}
                 </div>
                 <Link
-                  href={`/category/${categoryName.toLowerCase()}`}
+                  href={`/category/${slug}`}
                   className="block text-center text-xs text-blue-600 mt-2 py-1 border-t border-gray-100"
                 >
-                  View all {categoryName} news
+                  View all {name} news
                 </Link>
               </CollapsibleSection>
             )
