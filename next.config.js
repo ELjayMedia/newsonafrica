@@ -1,3 +1,8 @@
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
+})
+
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -177,4 +182,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = withBundleAnalyzer(withPWA(nextConfig))
