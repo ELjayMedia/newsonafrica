@@ -167,9 +167,8 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
             <Image
               src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
               alt={post.featuredImage.node.altText || post.title}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-lg"
+              fill
+              className="rounded-lg object-cover"
               loading="eager"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority

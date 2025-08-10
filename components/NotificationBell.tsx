@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Bell } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useNotifications } from "@/contexts/NotificationContext"
 import {
@@ -140,10 +141,13 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
       >
         <div className="flex items-start gap-3">
           {notification.metadata?.sender_avatar ? (
-            <img
+            <Image
               src={notification.metadata.sender_avatar || "/placeholder.svg"}
               alt={notification.metadata.sender_name || "User"}
+              width={32}
+              height={32}
               className="h-8 w-8 rounded-full"
+              sizes="32px"
             />
           ) : (
             <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">

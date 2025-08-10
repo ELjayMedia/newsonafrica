@@ -91,6 +91,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
               height={675}
               className="w-full rounded-lg"
               priority
+              sizes="(max-width: 1200px) 100vw, 1200px"
             />
             {post.featuredImage.node.caption && (
               <figcaption

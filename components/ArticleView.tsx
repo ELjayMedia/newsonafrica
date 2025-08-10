@@ -307,6 +307,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
                   width={24}
                   height={24}
                   className="rounded-full mr-2"
+                  sizes="24px"
                 />
               )}
               <span>{author.node.firstName || author.node.name}</span>

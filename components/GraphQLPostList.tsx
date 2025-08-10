@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { fetchGraphQLClient } from "@/lib/graphql-client"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -93,10 +94,13 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
         {posts.map((post) => (
           <div key={post.id} className="border rounded-lg overflow-hidden shadow-sm">
             {post.featuredImage && (
-              <img
+              <Image
                 src={post.featuredImage.sourceUrl || "/placeholder.svg"}
                 alt={post.featuredImage.altText || post.title}
+                width={600}
+                height={400}
                 className="w-full h-48 object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             )}
             <div className="p-4">

@@ -64,6 +64,7 @@ export const VerticalCard = memo(function VerticalCard({ post, className = "" }:
               className="transition-transform duration-300 group-hover:scale-105 object-cover"
               placeholder="blur"
               blurDataURL={blurDataURL}
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
           </div>
         )}
