@@ -51,15 +51,15 @@ export async function GET(request: NextRequest) {
       // Revalidate main content paths
       const contentPaths = [
         "/",
-        "/news",
-        "/business",
-        "/sport",
-        "/entertainment",
-        "/life",
-        "/health",
-        "/politics",
-        "/food",
-        "/opinion",
+        "/category/news",
+        "/category/business",
+        "/category/sport",
+        "/category/entertainment",
+        "/category/life",
+        "/category/health",
+        "/category/politics",
+        "/category/food",
+        "/category/opinion",
       ]
 
       contentPaths.forEach((path) => {
