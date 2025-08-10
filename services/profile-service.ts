@@ -192,7 +192,7 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
     const cacheKey = createQueryKey("profiles", { username_check: username })
 
     const result = await executeWithCache<{ exists: boolean }>(
-      supabase.from("profiles").select("username").eq("username", username).limit(1),
+      supabase.from("profiles").select("username").eq("username", username as any).limit(1) as any,
       cacheKey,
       USERNAME_CACHE_TTL,
     )
@@ -252,7 +252,7 @@ export async function getPaginatedProfiles(
     const { data, count } = await supabase.from("profiles").select("*", { count: "exact" }).range(from, to)
 
     return {
-      profiles: data as Profile[],
+      profiles: (data ?? []) as unknown as Profile[],
       totalCount: count || 0,
       hasMore: count ? from + pageSize < count : false,
     }

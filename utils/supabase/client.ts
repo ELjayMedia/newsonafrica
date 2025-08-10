@@ -1,7 +1,7 @@
 "use client"
 
 import { createBrowserClient } from "@supabase/ssr"
-import type { Database } from "@/lib/supabase"
+import type { Database } from "@/types/supabase"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = null

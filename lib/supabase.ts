@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
-import type { Database } from "@/lib/supabase"
+import type { Database } from "@/types/supabase"
 import type { Session } from "@supabase/supabase-js"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
