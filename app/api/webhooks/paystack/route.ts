@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { startWebhookTunnel } from "@/lib/paystack-utils"
+import { createAdminClient } from "@/lib/supabase"
+
+function calculateEndDate(interval?: string) {
+  const end = new Date()
+  switch (interval) {
+    case "annually":
+      end.setFullYear(end.getFullYear() + 1)
+      break
+    case "biannually":
+      end.setMonth(end.getMonth() + 6)
+      break
+    default:
+      end.setMonth(end.getMonth() + 1)
+  }
+  return end.toISOString()
+}
 
 // Start webhook tunnel in development
 if (process.env.NODE_ENV === "development") {
@@ -77,82 +93,119 @@ export async function POST(request: Request) {
 // Event handlers
 async function handleChargeSuccess(data: any) {
   console.log("Processing successful charge:", data.reference)
+  try {
+    const admin = createAdminClient()
+    const metadata = data.metadata || {}
+    const userId = metadata.user_id as string | undefined
+    const type = (metadata.type as string) || "subscription"
 
-  // TODO: Implement your business logic
-  // 1. Verify the transaction (optional, as Paystack already verified it)
-  // 2. Update your database with payment information
-  // 3. Provision access to the user
+    await admin.from("payments").insert({
+      user_id: userId || null,
+      type,
+      reference: data.reference,
+      amount: data.amount,
+      currency: data.currency || "NGN",
+      status: data.status,
+      description: metadata.description || null,
+    })
 
-  // Example:
-  // await db.transaction.create({
-  //   data: {
-  //     reference: data.reference,
-  //     amount: data.amount / 100, // Convert from kobo to naira
-  //     email: data.customer.email,
-  //     status: 'success',
-  //     metadata: data,
-  //   },
-  // })
+    if (type === "subscription" && userId) {
+      await admin.from("subscriptions").insert({
+        user_id: userId,
+        plan: metadata.plan_id || metadata.plan_name || "plan",
+        status: "active",
+        start_date: new Date().toISOString(),
+        end_date: calculateEndDate(metadata.interval),
+        payment_provider: "paystack",
+        payment_id: data.reference,
+        metadata: data,
+      })
+    } else if (type === "gift") {
+      await admin.from("article_gifts").insert({
+        user_id: userId || null,
+        article_id: metadata.article_id,
+        recipient_email: metadata.recipient_email,
+        reference: data.reference,
+        amount: data.amount,
+        currency: data.currency || "NGN",
+        status: data.status,
+      })
+    }
+  } catch (error) {
+    console.error("Error processing charge.success webhook:", error)
+  }
 }
 
 async function handleSubscriptionCreated(data: any) {
   console.log("Processing subscription creation:", data.subscription_code)
+  try {
+    const admin = createAdminClient()
+    const metadata = data.customer?.metadata || {}
+    const userId = metadata.user_id as string | undefined
 
-  // TODO: Implement your business logic
-  // 1. Update your database with subscription information
-  // 2. Provision access to the user
-
-  // Example:
-  // await db.subscription.create({
-  //   data: {
-  //     code: data.subscription_code,
-  //     customer: data.customer.email,
-  //     plan: data.plan.name,
-  //     status: data.status,
-  //     start_date: new Date(data.createdAt),
-  //     next_payment_date: new Date(data.next_payment_date),
-  //   },
-  // })
+    await admin.from("subscriptions").insert({
+      user_id: userId || null,
+      plan: data.plan?.plan_code || data.plan?.name || "plan",
+      status: data.status || "active",
+      start_date: new Date(data.createdAt).toISOString(),
+      end_date: data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null,
+      payment_provider: "paystack",
+      payment_id: data.subscription_code,
+      metadata: data,
+    })
+  } catch (error) {
+    console.error("Error storing subscription from webhook:", error)
+  }
 }
 
 async function handleSubscriptionDisabled(data: any) {
   console.log("Processing subscription cancellation:", data.subscription_code)
-
-  // TODO: Implement your business logic
-  // 1. Update your database with subscription status
-  // 2. Revoke access at the appropriate time
-
-  // Example:
-  // await db.subscription.update({
-  //   where: { code: data.subscription_code },
-  //   data: { status: 'cancelled', cancelled_at: new Date() },
-  // })
+  try {
+    const admin = createAdminClient()
+    await admin
+      .from("subscriptions")
+      .update({ status: "cancelled", end_date: new Date().toISOString() })
+      .eq("payment_id", data.subscription_code)
+  } catch (error) {
+    console.error("Error cancelling subscription:", error)
+  }
 }
 
 async function handlePaymentFailed(data: any) {
   console.log("Processing failed payment:", data.reference)
+  try {
+    const admin = createAdminClient()
+    const metadata = data.metadata || {}
+    const userId = metadata.user_id as string | undefined
+    const type = (metadata.type as string) || "subscription"
 
-  // TODO: Implement your business logic
-  // 1. Update your database with payment status
-  // 2. Notify the user
-  // 3. Attempt recovery if appropriate
-
-  // Example:
-  // await db.transaction.update({
-  //   where: { reference: data.reference },
-  //   data: { status: 'failed' },
-  // })
-  // await sendEmail({
-  //   to: data.customer.email,
-  //   subject: 'Payment Failed',
-  //   text: 'Your payment failed. Please update your payment method.',
-  // })
+    await admin.from("payments").insert({
+      user_id: userId || null,
+      type,
+      reference: data.reference,
+      amount: data.amount,
+      currency: data.currency || "NGN",
+      status: "failed",
+      description: metadata.description || null,
+    })
+  } catch (error) {
+    console.error("Error storing failed payment:", error)
+  }
 }
 
 async function handleInvoiceUpdate(data: any) {
   console.log("Processing invoice update:", data.invoice_code)
-
-  // TODO: Implement your business logic
+  try {
+    const admin = createAdminClient()
+    if (data.status === "success" && data.subscription?.subscription_code) {
+      await admin
+        .from("subscriptions")
+        .update({ end_date: data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null })
+        .eq("payment_id", data.subscription.subscription_code)
+    }
+  } catch (error) {
+    console.error("Error processing invoice update:", error)
+  }
 }
 
 async function handleTransferSuccess(data: any) {

@@ -100,6 +100,44 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Create payments table to track all Paystack transactions
+CREATE TABLE IF NOT EXISTS public.payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  reference TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  status TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own payments"
+  ON public.payments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "System can insert payments"
+  ON public.payments FOR INSERT WITH CHECK (true);
+
+-- Create article_gifts table for article gifting transactions
+CREATE TABLE IF NOT EXISTS public.article_gifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  article_id UUID NOT NULL,
+  recipient_email TEXT NOT NULL,
+  reference TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.article_gifts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their gifts"
+  ON public.article_gifts FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "System can insert gifts"
+  ON public.article_gifts FOR INSERT WITH CHECK (true);
+
 -- Create RLS policies
 -- Profiles: Users can read any profile but only update their own
 CREATE POLICY "Profiles are viewable by everyone" 

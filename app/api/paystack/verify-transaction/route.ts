@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
+import { createAdminClient } from "@/lib/supabase"
+
+function calculateEndDate(interval: string | undefined) {
+  const end = new Date()
+  switch (interval) {
+    case "annually":
+      end.setFullYear(end.getFullYear() + 1)
+      break
+    case "biannually":
+      end.setMonth(end.getMonth() + 6)
+      break
+    default:
+      end.setMonth(end.getMonth() + 1)
+  }
+  return end.toISOString()
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -40,26 +56,51 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Store subscription information in database
+    // Store payment and related information in database
     if (data.status && data.data.status === "success") {
       try {
-        // Here you would typically store the subscription in your database
-        // For example:
-        // await storeSubscription({
-        //   userId: data.data.metadata.user_id,
-        //   planId: data.data.metadata.plan_id,
-        //   reference: data.data.reference,
-        //   amount: data.data.amount,
-        //   status: data.data.status,
-        //   startDate: new Date(),
-        //   endDate: calculateEndDate(data.data.metadata.interval),
-        // })
+        const admin = createAdminClient()
+        const metadata = data.data.metadata || {}
+        const userId = metadata.user_id as string | undefined
+        const type = (metadata.type as string) || "subscription"
 
-        console.log("Subscription verified and stored:", data.data.reference)
+        // Record payment
+        await admin.from("payments").insert({
+          user_id: userId || null,
+          type,
+          reference: data.data.reference,
+          amount: data.data.amount,
+          currency: data.data.currency,
+          status: data.data.status,
+          description: metadata.description || null,
+        })
+
+        if (type === "subscription" && userId) {
+          await admin.from("subscriptions").insert({
+            user_id: userId,
+            plan: metadata.plan_id || metadata.plan_name || "plan",
+            status: "active",
+            start_date: new Date().toISOString(),
+            end_date: calculateEndDate(metadata.interval),
+            payment_provider: "paystack",
+            payment_id: data.data.reference,
+            metadata: data.data,
+          })
+        } else if (type === "gift") {
+          await admin.from("article_gifts").insert({
+            user_id: userId || null,
+            article_id: metadata.article_id,
+            recipient_email: metadata.recipient_email,
+            reference: data.data.reference,
+            amount: data.data.amount,
+            currency: data.data.currency,
+            status: data.data.status,
+          })
+        }
+
+        console.log("Payment verified and stored:", data.data.reference)
       } catch (dbError) {
-        console.error("Error storing subscription:", dbError)
-        // We still return success to the client since the payment was successful
-        // But log the error for server-side investigation
+        console.error("Error storing payment information:", dbError)
       }
     }
 

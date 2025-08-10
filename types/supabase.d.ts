@@ -216,6 +216,76 @@ export interface Database {
           updated_at?: string
         }
       }
+      payments: {
+        Row: {
+          id: string
+          user_id: string | null
+          type: string
+          reference: string
+          amount: number
+          currency: string
+          status: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          type: string
+          reference: string
+          amount: number
+          currency: string
+          status: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          type?: string
+          reference?: string
+          amount?: number
+          currency?: string
+          status?: string
+          description?: string | null
+          created_at?: string
+        }
+      }
+      article_gifts: {
+        Row: {
+          id: string
+          user_id: string | null
+          article_id: string
+          recipient_email: string
+          reference: string
+          amount: number
+          currency: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          article_id: string
+          recipient_email: string
+          reference: string
+          amount: number
+          currency: string
+          status: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          article_id?: string
+          recipient_email?: string
+          reference?: string
+          amount?: number
+          currency?: string
+          status?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
