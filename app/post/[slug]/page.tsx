@@ -184,7 +184,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   console.log(`🔍 Generating metadata for post: ${params.slug}`)
 
   try {
-    const post = await getPostBySlug(params.slug)
+    const post = await getPostBySlug(params.slug, ["post", params.slug])
 
     if (!post) {
       console.warn(`⚠️ Post not found for metadata generation: ${params.slug}`)
@@ -228,7 +228,7 @@ export default async function PostPage({ params }: PostPageProps) {
   try {
     // Fetch post data server-side
     const startTime = Date.now()
-    const post = await getPostBySlug(params.slug)
+    const post = await getPostBySlug(params.slug, ["post", params.slug])
     const fetchTime = Date.now() - startTime
 
     if (!post) {
