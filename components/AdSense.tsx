@@ -71,7 +71,6 @@ export const AdSense = memo(function AdSense({
 
     // If container is too small for the ad format
     if (width < minWidth) {
-      console.log(`Container too small for ad: ${width}px < ${minWidth}px minimum`)
       setContainerTooSmall(true)
       return false
     }
@@ -139,7 +138,6 @@ export const AdSense = memo(function AdSense({
 
     // Check if this ad ID has already been initialized
     if (initializedAds.has(id)) {
-      console.log(`Ad ${id} already initialized, skipping`)
       setIsLoading(false)
       return
     }
