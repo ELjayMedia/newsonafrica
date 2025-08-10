@@ -83,13 +83,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: "https", hostname: "i0.wp.com", pathname: "/**" },
+      { protocol: "https", hostname: "i1.wp.com", pathname: "/**" },
+      { protocol: "https", hostname: "i2.wp.com", pathname: "/**" },
+    ],
     domains: [
       "newsonafrica.com",
       "secure.gravatar.com",
-      "i0.wp.com",
-      "i1.wp.com",
-      "i2.wp.com",
       "blob.v0.dev",
       "cdn-lfdfp.nitrocdn.com",
       "via.placeholder.com",
