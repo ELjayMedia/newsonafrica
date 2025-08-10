@@ -84,39 +84,16 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
     if (!authLoading && user) {
       const redirectTo = searchParams.redirectTo || urlSearchParams.get("redirectTo") || "/"
 
-      toast({
-        title: "Welcome back!",
-        description: "You're now signed in.",
-      })
-
-      // Small delay to show the toast
+      // Small delay to allow any success UI to display
       setTimeout(() => {
         if (redirectTo === "back") {
           router.back()
         } else {
           router.push(redirectTo)
         }
-      }, 1000)
+      }, 100)
     }
   }, [user, authLoading, router, searchParams, urlSearchParams])
-
-  // Handle successful authentication
-  const handleAuthSuccess = () => {
-    const redirectTo = searchParams.redirectTo || urlSearchParams.get("redirectTo") || "/"
-
-    toast({
-      title: "Welcome!",
-      description: "You've successfully signed in.",
-    })
-
-    setTimeout(() => {
-      if (redirectTo === "back") {
-        router.back()
-      } else {
-        router.push(redirectTo)
-      }
-    }, 1000)
-  }
 
   // Show loading state while checking auth
   if (isLoading || authLoading) {
@@ -175,12 +152,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
           )}
 
           {/* Auth Form */}
-          <AuthForm
-            redirectTo={searchParams.redirectTo}
-            onAuthSuccess={handleAuthSuccess}
-            defaultTab="signin"
-            inModal={false}
-          />
+          <AuthForm redirectTo={searchParams.redirectTo} defaultTab="signin" inModal={false} />
         </CardContent>
       </Card>
     </div>
