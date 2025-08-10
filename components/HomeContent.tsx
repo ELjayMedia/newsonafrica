@@ -2,7 +2,7 @@
 
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -12,7 +12,8 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs } from "@/config/homeConfig"
-import { CategorySection } from "./CategorySection"
+import Link from "next/link"
+import { NewsGrid } from "@/components/NewsGrid"
 import { OfflineNotice } from "./OfflineNotice"
 
 interface HomeContentProps {
@@ -149,7 +150,6 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     shouldRetryOnError: !isOffline,
   })
 
-
   // Safely extract data with fallbacks
   const {
     taggedPosts = [],
@@ -265,15 +265,35 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
           </section>
         )}
 
-        {/* Category Sections - Show posts from each category */}
+        {/* Category Sections - Restored using NewsGrid */}
         <div className="grid grid-cols-1 gap-3 md:gap-4">
-          {categoryConfigs.map((config) => (
-            <CategorySection
-              key={config.slug}
-              {...config}
-              posts={categoryPosts[config.slug] || []}
-            />
-          ))}
+          {categoryConfigs.map((config) => {
+            const posts = categoryPosts[config.slug] || []
+            if (!posts || posts.length === 0) return null
+
+            const isSport = config.slug === "sport"
+
+            return (
+              <section key={config.slug} className="bg-white p-2 md:p-3 rounded-lg">
+                <div className="flex items-center mb-2 md:mb-3">
+                  <h2 className="text-base md:text-lg font-bold">{config.name}</h2>
+                  <Link
+                    href={`/category/${config.slug}`}
+                    className="ml-auto text-xs md:text-sm text-blue-500 hover:underline"
+                  >
+                    View all
+                  </Link>
+                </div>
+
+                <NewsGrid
+                  posts={isSport ? posts.slice(0, 4) : posts}
+                  showSportCategory={isSport}
+                  sportCategoryPosts={isSport ? posts : []}
+                  className=""
+                />
+              </section>
+            )
+          })}
         </div>
       </div>
     </ErrorBoundary>

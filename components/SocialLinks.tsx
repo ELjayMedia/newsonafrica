@@ -56,4 +56,3 @@ export function SocialLinks() {
     </div>
   )
 }
-
