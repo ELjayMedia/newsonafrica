@@ -16,6 +16,12 @@ export function useSupabaseAuth() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Session durations in seconds
+  const SESSION_DURATIONS = {
+    DEFAULT: 60 * 60, // 1 hour
+    EXTENDED: 60 * 60 * 24 * 30, // 30 days
+  }
+
   const clearError = useCallback(() => {
     setError(null)
   }, [])
@@ -48,7 +54,7 @@ export function useSupabaseAuth() {
   }, [])
 
   const signIn = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, rememberMe = false) => {
       if (!email || !password) {
         setError("Email and password are required")
         return { success: false }
@@ -58,14 +64,23 @@ export function useSupabaseAuth() {
       setError(null)
 
       try {
+        const expiresIn = rememberMe ? SESSION_DURATIONS.EXTENDED : SESSION_DURATIONS.DEFAULT
+
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password,
+          options: {
+            expiresIn,
+          },
         })
 
         if (signInError) {
           setError(handleAuthError(signInError))
           return { success: false }
+        }
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("noa_remember_me", rememberMe ? "true" : "false")
         }
 
         if (data.user) {
@@ -212,23 +227,35 @@ export function useSupabaseAuth() {
   )
 
   const signInWithOAuth = useCallback(
-    async (provider: "google" | "facebook") => {
+    async (provider: "google" | "facebook", rememberMe = false) => {
       setLoading(true)
       setError(null)
 
       try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("noa_remember_me", rememberMe ? "true" : "false")
+        }
+
+        const options: Record<string, any> = {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+
+        if (provider === "google") {
+          options.scopes = "email profile"
+          if (rememberMe) {
+            options.scopes += " offline_access"
+          }
+          options.queryParams = { access_type: "offline", prompt: "consent" }
+        } else if (provider === "facebook") {
+          options.scopes = "email,public_profile"
+          if (rememberMe) {
+            options.scopes += ",user_friends"
+          }
+        }
+
         const { error: oauthError } = await supabase.auth.signInWithOAuth({
           provider,
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
-            queryParams:
-              provider === "google"
-                ? {
-                    access_type: "offline",
-                    prompt: "consent",
-                  }
-                : undefined,
-          },
+          options,
         })
 
         if (oauthError) {
