@@ -22,6 +22,7 @@ interface HomeContentProps {
     featuredPosts: any[]
     categories: any[]
     recentPosts: any[]
+    categoryPosts?: Record<string, any[]>
   }
 }
 
@@ -53,6 +54,26 @@ const fetchHomeData = async () => {
     const posts = latestPostsResult.posts || []
     const categories = categoriesResult.categories || []
 
+    // Fetch category-specific posts
+    const categoryPromises = categoryConfigs.map(async (config) => {
+      try {
+        const result = await getPostsByCategory(config.name.toLowerCase(), 5)
+        return { name: config.name, posts: result.posts || [] }
+      } catch (error) {
+        console.error(`Error fetching ${config.name} posts:`, error)
+        return { name: config.name, posts: [] }
+      }
+    })
+
+    const categoryResults = await Promise.allSettled(categoryPromises)
+    const categoryPosts: Record<string, any[]> = {}
+
+    categoryResults.forEach((result) => {
+      if (result.status === "fulfilled") {
+        categoryPosts[result.value.name] = result.value.posts
+      }
+    })
+
     // Filter posts that are tagged with 'fp'
     const fpTaggedPosts = posts.filter((post) =>
       post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
@@ -65,6 +86,7 @@ const fetchHomeData = async () => {
       featuredPosts: posts.slice(0, 6), // Use first 6 as featured
       categories: categories,
       recentPosts: posts.slice(0, 10), // Use first 10 as recent
+      categoryPosts,
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -74,7 +96,6 @@ const fetchHomeData = async () => {
 
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
   // Listen for online/offline events
   useEffect(() => {
@@ -100,12 +121,14 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
           featuredPosts: initialPosts.slice(0, 6),
           categories: [],
           recentPosts: initialPosts.slice(0, 10),
+          categoryPosts: {},
         }
       : {
           taggedPosts: [],
           featuredPosts: [],
           categories: [],
           recentPosts: [],
+          categoryPosts: {},
         }
 
   // Update the useSWR configuration for better error handling
@@ -126,42 +149,13 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     shouldRetryOnError: !isOffline,
   })
 
-  // Fetch category-specific posts
-  useEffect(() => {
-    const fetchCategoryPosts = async () => {
-      if (isOffline) return
-
-      const categoryPromises = categoryConfigs.map(async (config) => {
-        try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 5)
-          return { name: config.name, posts: result.posts || [] }
-        } catch (error) {
-          console.error(`Error fetching ${config.name} posts:`, error)
-          return { name: config.name, posts: [] }
-        }
-      })
-
-      const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, any[]> = {}
-
-      results.forEach((result) => {
-        if (result.status === "fulfilled") {
-          newCategoryPosts[result.value.name] = result.value.posts
-        }
-      })
-
-      setCategoryPosts(newCategoryPosts)
-    }
-
-    fetchCategoryPosts()
-  }, [isOffline])
-
 
   // Safely extract data with fallbacks
   const {
     taggedPosts = [],
     featuredPosts = [],
     recentPosts = [],
+    categoryPosts = {},
   } = data || initialData || fallbackData
 
   // Show skeleton during initial loading

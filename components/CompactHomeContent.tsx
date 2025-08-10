@@ -20,6 +20,7 @@ interface CompactHomeContentProps {
     featuredPosts: any[]
     categories: any[]
     recentPosts: any[]
+    categoryPosts?: Record<string, any[]>
   }
 }
 
@@ -44,6 +45,24 @@ const fetchHomeData = async () => {
     const posts = latestPostsResult.posts || []
     const categories = categoriesResult.categories || []
 
+    const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
+      try {
+        const result = await getPostsByCategory(config.name.toLowerCase(), 4)
+        return { name: config.name, posts: result.posts || [] }
+      } catch (error) {
+        return { name: config.name, posts: [] }
+      }
+    })
+
+    const categoryResults = await Promise.allSettled(categoryPromises)
+    const categoryPosts: Record<string, any[]> = {}
+
+    categoryResults.forEach((result) => {
+      if (result.status === "fulfilled") {
+        categoryPosts[result.value.name] = result.value.posts
+      }
+    })
+
     const fpTaggedPosts = posts.filter((post) =>
       post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
     )
@@ -53,6 +72,7 @@ const fetchHomeData = async () => {
       featuredPosts: posts.slice(0, 6),
       categories: categories,
       recentPosts: posts.slice(0, 10),
+      categoryPosts,
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -63,7 +83,6 @@ const fetchHomeData = async () => {
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -87,12 +106,14 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
           featuredPosts: initialPosts.slice(0, 6),
           categories: [],
           recentPosts: initialPosts.slice(0, 10),
+          categoryPosts: {},
         }
       : {
           taggedPosts: [],
           featuredPosts: [],
           categories: [],
           recentPosts: [],
+          categoryPosts: {},
         }
 
   const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
@@ -106,39 +127,12 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     shouldRetryOnError: !isOffline,
   })
 
-  useEffect(() => {
-    const fetchCategoryPosts = async () => {
-      if (isOffline) return
-
-      const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
-        try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 4)
-          return { name: config.name, posts: result.posts || [] }
-        } catch (error) {
-          return { name: config.name, posts: [] }
-        }
-      })
-
-      const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, any[]> = {}
-
-      results.forEach((result) => {
-        if (result.status === "fulfilled") {
-          newCategoryPosts[result.value.name] = result.value.posts
-        }
-      })
-
-      setCategoryPosts(newCategoryPosts)
-    }
-
-    fetchCategoryPosts()
-  }, [isOffline])
-
   const {
     taggedPosts = [],
     featuredPosts = [],
     categories = [],
     recentPosts = [],
+    categoryPosts = {},
   } = data || initialData || fallbackData
 
   if (isLoading && !initialData && !initialPosts.length) {
