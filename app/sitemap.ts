@@ -23,19 +23,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: `${baseUrl}/category/news`,
+        url: `${baseUrl}/news`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${baseUrl}/category/business`,
+        url: `${baseUrl}/business`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${baseUrl}/category/sport`,
+        url: `${baseUrl}/sport`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,

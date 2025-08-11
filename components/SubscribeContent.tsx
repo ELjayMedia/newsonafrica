@@ -390,14 +390,7 @@ export function SubscribeContent() {
             <div className="flex items-center justify-center mt-4 text-xs text-gray-500">
               <Lock className="h-3 w-3 mr-1" />
               <span>Secure payment powered by</span>
-              <Image
-                src="/paystack-logo.svg"
-                alt="Paystack"
-                width={60}
-                height={20}
-                className="ml-1"
-                sizes="60px"
-              />
+              <Image src="/paystack-logo.svg" alt="Paystack" width={60} height={20} className="ml-1" />
             </div>
 
             <div className="mt-6 flex justify-between">

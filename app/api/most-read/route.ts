@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { getSupabaseUrl, getSupabaseServiceRoleKey } from "@/utils/supabase/env"
 
 export const revalidate = 300 // ISR-like cache hint for this route (5 minutes)
 
@@ -24,8 +23,8 @@ type Item = { slug: string; title: string }
 
 // Try Supabase (admin) if configured
 async function fetchFromSupabase(limit: number): Promise<Item[] | null> {
-  const url = getSupabaseUrl()
-  const key = getSupabaseServiceRoleKey()
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
     // Not configured; signal caller to try fallback
     return null

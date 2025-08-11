@@ -2,7 +2,6 @@
 
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
-import { getSupabaseUrl, getSupabaseAnonKey } from "@/utils/supabase/env"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = null
@@ -10,9 +9,13 @@ let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = nu
 export const createClient = () => {
   if (clientInstance) return clientInstance
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error("Missing Supabase environment variables")
+  }
+
   clientInstance = createBrowserClient<Database>(
-    getSupabaseUrl(),
-    getSupabaseAnonKey(),
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       auth: {
         persistSession: true,

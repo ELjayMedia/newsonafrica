@@ -6,6 +6,8 @@ import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
+import { CommentButton } from "./CommentButton"
+import { CommentList } from "./CommentList"
 import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -307,7 +309,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
                   width={24}
                   height={24}
                   className="rounded-full mr-2"
-                  sizes="24px"
                 />
               )}
               <span>{author.node.firstName || author.node.name}</span>
@@ -354,6 +355,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
             size="sm"
             className="flex items-center"
           />
+
+          <CommentButton className="flex items-center" />
         </div>
       </header>
 
@@ -411,6 +414,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
               size="sm"
               className="flex items-center"
             />
+
+            <CommentButton className="flex items-center" />
           </div>
         </div>
       </footer>
@@ -439,12 +444,9 @@ export default function ArticleView({ post }: ArticleViewProps) {
         )}
       </div>
 
-      {/* Comments Section would go here */}
+      {/* Comments Section */}
       <div id="comments-section" className="border-t border-gray-200 pt-8">
-        {/* Comments component will be rendered here */}
-        <div className="text-center text-gray-500 py-8">
-          <p>Comments section will appear here</p>
-        </div>
+        <CommentList postId={id} />
       </div>
 
       {/* Scroll to top button */}

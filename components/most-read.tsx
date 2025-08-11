@@ -1,101 +1,122 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import React from "react"
+import SidebarWidget from "./ui/sidebar-widget"
+import HeadlineList, { type HeadlineItem } from "./ui/headline-list"
+import { designTokens, combineTokens } from "./ui/design-tokens"
 
 type MostReadItem = {
-  slug: string
+  id?: string | number
   title: string
+  href: string
 }
 
-export default function MostRead({
-  limit = 5,
-  className = "",
-  title = "Most Read",
-}: {
-  limit?: number
-  className?: string
+type ApiItem = {
+  id?: string | number
   title?: string
-}) {
-  const [items, setItems] = useState<MostReadItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  slug?: string
+  link?: string
+  url?: string
+}
 
-  useEffect(() => {
-    const controller = new AbortController()
+/**
+ * MostRead
+ * - Attempts to fetch from /api/most-read first.
+ * - Falls back to /api/posts (limit=5) if primary fails.
+ * - Final fallback: empty state.
+ * - Always renders exactly 5 slots: shows skeleton while loading.
+ */
+export function MostRead() {
+  const [items, setItems] = React.useState<MostReadItem[] | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+
     async function load() {
       try {
-        setLoading(true)
-        setError(null)
-        const res = await fetch(`/api/most-read?limit=${encodeURIComponent(limit)}`, {
-          signal: controller.signal,
-          headers: { "x-requested-with": "most-read" },
-        })
-        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`)
-        const json = (await res.json()) as { items: MostReadItem[] }
-        setItems((json.items || []).slice(0, limit))
-      } catch (e: any) {
-        if (e?.name !== "AbortError") {
-          setError("Unable to load most read right now.")
-        }
-      } finally {
-        setLoading(false)
+        const list = await fetchMostRead()
+        if (!cancelled) setItems(list)
+      } catch (err) {
+        if (!cancelled) setError("Failed to load.")
       }
     }
+
     load()
-    return () => controller.abort()
-  }, [limit])
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const skeleton = (
+    <ol className="space-y-5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <li key={i} className="grid grid-cols-[2rem_1fr] gap-3 items-start">
+          <span
+            className={combineTokens(
+              "font-extrabold",
+              designTokens.typography.special.number,
+              designTokens.colors.text.muted,
+            )}
+          >
+            {i + 1}
+          </span>
+          <div className={combineTokens("h-5 w-full animate-pulse rounded", designTokens.colors.surface)} />
+        </li>
+      ))}
+    </ol>
+  )
 
   return (
-    <Card className={className}>
-      <CardHeader className="py-3 border-b">
-        <div className="flex flex-col">
-          <CardTitle className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">{title}</CardTitle>
-          <div className="mt-2 h-[3px] w-10 rounded bg-blue-600" />
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-4">
-        {loading ? (
-          <ol className="space-y-5" aria-label="Loading most read headlines">
-            {Array.from({ length: limit }).map((_, i) => (
-              <li key={i} className="flex items-start gap-4">
-                <span className="select-none text-2xl font-extrabold leading-none text-gray-300" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-[92%] max-w-[280px]" />
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : error ? (
-          <div role="status" className="text-sm text-red-600">
-            {error}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-sm text-neutral-500">No popular articles yet.</div>
-        ) : (
-          <ol className="space-y-5" aria-label="Most read headlines">
-            {items.slice(0, limit).map((item, idx) => (
-              <li key={item.slug} className="flex items-start gap-4">
-                <span className="select-none text-2xl font-extrabold leading-none text-gray-300" aria-hidden="true">
-                  {idx + 1}
-                </span>
-                <Link
-                  href={`/post/${encodeURIComponent(item.slug)}`}
-                  className="flex-1 text-[15px] font-semibold leading-6 text-slate-900 hover:underline focus:underline focus:outline-none"
-                  data-rank={idx + 1}
-                >
-                  {item.title}
-                </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </CardContent>
-    </Card>
+    <SidebarWidget title="Most Read">
+      {!items && !error ? (
+        skeleton
+      ) : items && items.length > 0 ? (
+        <HeadlineList items={items as HeadlineItem[]} max={5} numbered />
+      ) : (
+        <p className={combineTokens(designTokens.typography.body.small, designTokens.colors.text.muted)}>
+          No popular articles yet.
+        </p>
+      )}
+    </SidebarWidget>
   )
 }
+
+async function fetchMostRead(): Promise<MostReadItem[]> {
+  // Try the dedicated API first (server may aggregate from Supabase or WP)
+  try {
+    const res = await fetch(`/api/most-read?limit=5`, { cache: "no-store" })
+    if (res.ok) {
+      const data: ApiItem[] = await res.json()
+      return mapApiItems(data)
+    }
+  } catch {
+    // continue to fallback
+  }
+
+  // Fallback to posts API if available
+  try {
+    const res = await fetch(`/api/posts?limit=5`, { cache: "no-store" })
+    if (res.ok) {
+      const data: ApiItem[] = await res.json()
+      return mapApiItems(data)
+    }
+  } catch {
+    // ignore
+  }
+
+  return []
+}
+
+function mapApiItems(data: ApiItem[]): MostReadItem[] {
+  return (data || [])
+    .filter((d) => d && (d.title || d.slug))
+    .slice(0, 5)
+    .map((d) => ({
+      id: d.id ?? d.slug ?? d.link ?? d.url ?? Math.random().toString(36).slice(2),
+      title: d.title ?? d.slug ?? "Untitled",
+      href: d.link ?? d.url ?? (d.slug ? `/post/${d.slug}` : "#"),
+    }))
+}
+
+export default MostRead

@@ -38,13 +38,7 @@ export function CameraFeature() {
         <Button onClick={takePicture}>Take Photo</Button>
         {imageSrc && (
           <div className="relative w-48 h-48 rounded-md overflow-hidden">
-            <Image
-              src={imageSrc || "/placeholder.svg"}
-              alt="Captured"
-              fill
-              className="object-cover"
-              sizes="192px"
-            />
+            <Image src={imageSrc || "/placeholder.svg"} alt="Captured" layout="fill" objectFit="cover" />
           </div>
         )}
         {error && <p className="text-red-500 text-sm">{error}</p>}

@@ -75,7 +75,6 @@ export function AuthorContent({ slug }: AuthorContentProps) {
             width={100}
             height={100}
             className="rounded-full"
-            sizes="100px"
           />
         </div>
         <div>

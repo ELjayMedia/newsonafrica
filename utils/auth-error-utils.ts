@@ -16,6 +16,44 @@ export enum AuthErrorCategory {
   Unknown = "unknown",
 }
 
+export class AuthError extends Error {
+  public readonly code?: string
+  public readonly status?: number
+  public readonly category: AuthErrorCategory
+  public readonly cause?: unknown
+  public readonly raw?: unknown
+
+  constructor(info: AuthErrorInfo, category?: AuthErrorCategory) {
+    super(info.message)
+    this.name = "AuthError"
+    this.code = info.code
+    this.status = info.status
+    this.category = category || getAuthErrorCategory(info)
+    this.cause = info.cause
+    this.raw = info.raw
+  }
+
+  static fromUnknown(error: unknown, context?: { action?: string; metadata?: Record<string, unknown> }): AuthError {
+    const info = parseAuthError(error)
+    const category = getAuthErrorCategory(error)
+
+    // Log the error
+    logAuthError(error, context)
+
+    return new AuthError(info, category)
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      status: this.status,
+      category: this.category,
+    }
+  }
+}
+
 /**
  * Normalize various auth-related errors (fetch, Next.js, Supabase, OAuth, generic Error)
  * into a simple, serializable shape for UI and logging.

@@ -1,8 +1,5 @@
-"use client"
-
-import type React from "react"
 import { CommentList } from "@/components/CommentList"
-import type { Post } from "@/types/post"
+import type { WordPressPost } from "@/lib/api/wordpress"
 import type { Category } from "@/types/category"
 import Image from "next/image"
 import Link from "next/link"
@@ -14,10 +11,10 @@ import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
 
 interface PostContentProps {
-  post: Post
+  post: WordPressPost
 }
 
-export const PostContent: React.FC<PostContentProps> = ({ post }) => {
+export function PostContent({ post }: PostContentProps) {
   if (!post) {
     return <div>Loading...</div>
   }
@@ -91,7 +88,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
               height={675}
               className="w-full rounded-lg"
               priority
-              sizes="(max-width: 1200px) 100vw, 1200px"
             />
             {post.featuredImage.node.caption && (
               <figcaption

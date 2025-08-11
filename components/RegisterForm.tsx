@@ -48,14 +48,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex justify-center mb-6">
-        <Image
-          src="/images/news-on-africa-logo.png"
-          alt="News On Africa"
-          width={200}
-          height={80}
-          priority
-          sizes="200px"
-        />
+        <Image src="/images/news-on-africa-logo.png" alt="News On Africa" width={200} height={80} priority />
       </div>
 
       <div className="space-y-2">

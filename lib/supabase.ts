@@ -1,10 +1,16 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import type { Session } from "@supabase/supabase-js"
-import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseServiceRoleKey } from "@/utils/supabase/env"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Missing Supabase environment variables. Please check your .env file.")
+}
 
 // Create a single instance of the Supabase client to be reused
-export const supabase = createClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -33,9 +39,13 @@ export const supabase = createClient<Database>(getSupabaseUrl(), getSupabaseAnon
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
 export const createAdminClient = () => {
-  const supabaseServiceKey = getSupabaseServiceRoleKey()
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  return createClient<Database>(getSupabaseUrl(), supabaseServiceKey, {
+  if (!supabaseServiceKey) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
+import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { createClient } from "@/utils/supabase/server"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
@@ -27,7 +27,19 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse
 
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {},
+          remove() {},
+        },
+      },
+    )
 
     const { searchParams } = new URL(request.url)
     const params = Object.fromEntries(searchParams.entries())
@@ -144,7 +156,19 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse
 
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {},
+          remove() {},
+        },
+      },
+    )
 
     // Check if user is authenticated
     const {
@@ -232,7 +256,19 @@ export async function PATCH(request: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse
 
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {},
+          remove() {},
+        },
+      },
+    )
 
     // Check if user is authenticated
     const {

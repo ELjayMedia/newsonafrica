@@ -1,5 +1,4 @@
 import { cache } from "react"
-import { getCategories, getMenu } from "./wp"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -393,17 +392,40 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
 })
 
 /**
- * Fetches all categories using the batched WP helper
+ * Fetches all categories
  */
 export const fetchAllCategories = cache(async () => {
-  return await getCategories()
-})
+  const query = `
+    query AllCategories {
+      categories(first: 100, where: { hideEmpty: true }) {
+        nodes {
+          id
+          name
+          slug
+          description
+          count
+        }
+      }
+    }
+  `
 
-/**
- * Fetches menu items using the batched WP helper
- */
-export const fetchMenuItems = cache(async () => {
-  return await getMenu()
+  const restFallback = async () => {
+    const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
+    return {
+      categories: {
+        nodes: categories.map((cat: any) => ({
+          id: cat.id.toString(),
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description || "",
+          count: cat.count || 0,
+        })),
+      },
+    }
+  }
+
+  const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
+  return data.categories?.nodes || []
 })
 
 /**
@@ -1184,7 +1206,6 @@ export const fetchAllTags = async () => []
 export const fetchAllAuthors = async () => []
 export const fetchPosts = fetchRecentPosts
 export const fetchCategories = fetchAllCategories
-export const fetchMenu = fetchMenuItems
 export const fetchTags = fetchAllTags
 export const fetchAuthors = fetchAllAuthors
 

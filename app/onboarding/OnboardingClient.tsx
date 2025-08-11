@@ -331,7 +331,6 @@ export function OnboardingClient() {
                       width={400}
                       height={120}
                       className="rounded-md w-full object-cover"
-                      sizes="(max-width: 768px) 100vw, 400px"
                     />
                   </div>
                 </div>

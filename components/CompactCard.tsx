@@ -1,10 +1,6 @@
 "use client"
 
-import Image from "next/image"
-import Link from "next/link"
-import { Clock } from "lucide-react"
-import { memo, useMemo } from "react"
-import { formatDistanceToNow } from "date-fns"
+import { UnifiedCard } from "./ui/unified-card"
 
 interface CompactCardProps {
   post: {
@@ -12,140 +8,16 @@ interface CompactCardProps {
     title: string
     excerpt?: string
     slug: string
-    featuredImage?:
-      | {
-          node: {
-            sourceUrl: string
-          }
-        }
-      | {
-          sourceUrl: string
-        }
+    featuredImage?: { node: { sourceUrl: string } } | { sourceUrl: string }
     date: string
-    author?: {
-      node: {
-        name: string
-      }
-    }
-    categories?: {
-      nodes: Array<{
-        name: string
-        slug: string
-      }>
-    }
+    author?: { node: { name: string } }
+    categories?: { nodes: Array<{ name: string; slug: string }> }
   }
   layout?: "horizontal" | "vertical" | "minimal"
   showExcerpt?: boolean
   className?: string
 }
 
-export const CompactCard = memo(function CompactCard({
-  post,
-  layout = "horizontal",
-  showExcerpt = false,
-  className = "",
-}: CompactCardProps) {
-  const formattedDate = useMemo(() => {
-    return formatDistanceToNow(new Date(post.date), { addSuffix: true })
-  }, [post.date])
-
-  const imageUrl = useMemo(() => {
-    if (!post.featuredImage) return "/placeholder.svg"
-    if ("sourceUrl" in post.featuredImage) {
-      return post.featuredImage.sourceUrl
-    }
-    if ("node" in post.featuredImage) {
-      return post.featuredImage.node.sourceUrl
-    }
-    return "/placeholder.svg"
-  }, [post.featuredImage])
-
-  const category = post.categories?.nodes?.[0]
-
-  if (layout === "minimal") {
-    return (
-      <Link href={`/post/${post.slug}`} className={`block ${className}`}>
-        <article className="py-2 border-b border-gray-100 last:border-b-0">
-          <div className="flex gap-2">
-            <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
-              <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="64px" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1">{post.title}</h3>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>{formattedDate}</span>
-                {category && (
-                  <>
-                    <span>•</span>
-                    <span className="text-blue-600">{category.name}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </article>
-      </Link>
-    )
-  }
-
-  if (layout === "vertical") {
-    return (
-      <Link href={`/post/${post.slug}`} className={`block ${className}`}>
-        <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-          <div className="relative h-32 overflow-hidden">
-            <Image
-              src={imageUrl || "/placeholder.svg"}
-              alt={post.title}
-              fill
-              className="object-cover transition-transform duration-300 hover:scale-105"
-              sizes="(max-width: 768px) 50vw, 25vw"
-            />
-            {category && (
-              <div className="absolute top-1 left-1">
-                <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">{category.name}</span>
-              </div>
-            )}
-          </div>
-          <div className="p-2">
-            <h3 className="font-semibold text-sm line-clamp-2 mb-1 leading-tight">{post.title}</h3>
-            {showExcerpt && post.excerpt && <p className="text-xs text-gray-600 line-clamp-2 mb-1">{post.excerpt}</p>}
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span>{formattedDate}</span>
-              </div>
-              {post.author && <span className="truncate max-w-20">{post.author.node.name}</span>}
-            </div>
-          </div>
-        </article>
-      </Link>
-    )
-  }
-
-  // Horizontal layout (default)
-  return (
-    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
-      <article className="flex gap-2 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow p-2">
-        <div className="w-20 h-16 flex-shrink-0 relative rounded overflow-hidden">
-          <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="80px" />
-        </div>
-        <div className="flex-1 min-w-0">
-          {category && <span className="text-xs text-blue-600 font-medium">{category.name}</span>}
-          <h3 className="font-semibold text-sm line-clamp-2 mb-1 leading-tight">{post.title}</h3>
-          {showExcerpt && post.excerpt && <p className="text-xs text-gray-600 line-clamp-1 mb-1">{post.excerpt}</p>}
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
-            <span>{formattedDate}</span>
-            {post.author && (
-              <>
-                <span>•</span>
-                <span className="truncate">{post.author.node.name}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </article>
-    </Link>
-  )
-})
+export function CompactCard({ layout = "horizontal", ...props }: CompactCardProps) {
+  return <UnifiedCard {...props} variant={layout} />
+}

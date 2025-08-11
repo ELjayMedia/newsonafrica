@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import type { cookies } from "next/headers"
 import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/data/migrations"
-import { getSupabaseUrl, getSupabaseServiceRoleKey } from "@/utils/supabase/env"
 
 export interface MigrationResult {
   version: string
@@ -29,8 +28,8 @@ export class MigrationService {
 
   constructor(cookieStore: ReturnType<typeof cookies>) {
     this.supabase = createServerClient(
-      getSupabaseUrl(),
-      getSupabaseServiceRoleKey(), // Use service role key for migrations
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key for migrations
       {
         cookies: {
           get(name: string) {
