@@ -11,7 +11,7 @@ export async function GET() {
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
 
-    const recentPosts = await fetchRecentPosts(200)
+    const { posts: recentPosts } = await fetchRecentPosts(200)
     const filteredPosts = recentPosts.filter((post) => new Date(post.date) > twoDaysAgo)
 
     // Generate static URLs inline instead of importing from missing file

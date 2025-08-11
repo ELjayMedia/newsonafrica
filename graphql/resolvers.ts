@@ -54,15 +54,15 @@ export const resolvers = {
         }
       }
 
-      const posts = await fetchRecentPosts(offset + limit)
+      const { posts, total } = await fetchRecentPosts(limit, offset)
 
       return {
-        edges: posts.slice(offset),
+        edges: posts,
         pageInfo: {
-          hasNextPage: posts.length > offset + limit,
-          endCursor: offset + limit < posts.length ? String(offset + limit) : null,
+          hasNextPage: offset + limit < total,
+          endCursor: offset + limit < total ? String(offset + limit) : null,
         },
-        totalCount: posts.length,
+        totalCount: total,
       }
     },
 
