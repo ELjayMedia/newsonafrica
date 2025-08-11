@@ -1,246 +1,74 @@
 "use client"
 
-import { FeaturedHero } from "@/components/FeaturedHero"
-import { CompactCard } from "@/components/CompactCard"
-import { CollapsibleSection } from "@/components/CollapsibleSection"
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
-import useSWR from "swr"
-import ErrorBoundary from "@/components/ErrorBoundary"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
-import { categoryConfigs } from "@/config/homeConfig"
-import { ChevronRight, TrendingUp } from "lucide-react"
+import { useState, useEffect } from "react"
 
-interface CompactHomeContentProps {
-  initialPosts?: any[]
-  initialData?: {
-    taggedPosts: any[]
-    featuredPosts: any[]
-    categories: any[]
-    recentPosts: any[]
-    categoryPosts?: Record<string, { name: string; posts: any[] }>
-  }
+interface Post {
+  id: number
+  title: { rendered: string }
+  link: string
+  date: string
 }
 
-const isOnline = () => {
-  if (typeof navigator !== "undefined" && "onLine" in navigator) {
-    return navigator.onLine
-  }
-  return true
-}
-
-const fetchHomeData = async () => {
-  try {
-    if (!isOnline()) {
-      throw new Error("Device is offline")
-    }
-
-    const results = await Promise.allSettled([getLatestPosts(50), getCategories()])
-
-    const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
-    const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
-
-    const posts = latestPostsResult.posts || []
-    const categories = categoriesResult.categories || []
-
-    const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
-      try {
-        const result = await getPostsByCategory(config.slug, 4)
-        return { slug: config.slug, name: config.name, posts: result.posts || [] }
-      } catch (error) {
-        return { slug: config.slug, name: config.name, posts: [] }
-      }
-    })
-
-    const categoryResults = await Promise.allSettled(categoryPromises)
-    const categoryPosts: Record<string, { name: string; posts: any[] }> = {}
-
-    categoryResults.forEach((result) => {
-      if (result.status === "fulfilled") {
-        categoryPosts[result.value.slug] = { name: result.value.name, posts: result.value.posts }
-      }
-    })
-
-    const fpTaggedPosts = posts.filter((post) =>
-      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-    )
-
-    return {
-      taggedPosts: fpTaggedPosts,
-      featuredPosts: posts.slice(0, 6),
-      categories: categories,
-      recentPosts: posts.slice(0, 10),
-      categoryPosts,
-    }
-  } catch (error) {
-    console.error("Error fetching home data:", error)
-    throw error
-  }
-}
-
-export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
-  const [isOffline, setIsOffline] = useState(!isOnline())
+export default function CompactHomeContent() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
+    const fetchPosts = async () => {
+      try {
+        const mockPosts: Post[] = [
+          {
+            id: 1,
+            title: { rendered: "Breaking: African Union Summit Updates" },
+            link: "/post/au-summit",
+            date: new Date().toISOString(),
+          },
+          {
+            id: 2,
+            title: { rendered: "Economic Growth Across West Africa" },
+            link: "/post/west-africa-economy",
+            date: new Date().toISOString(),
+          },
+        ]
+        setPosts(mockPosts)
+      } catch (error) {
+        console.error("Error fetching posts:", error)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchPosts()
   }, [])
 
-  const fallbackData =
-    initialPosts.length > 0
-      ? {
-          taggedPosts: initialPosts.filter((post) =>
-            post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-          ),
-          featuredPosts: initialPosts.slice(0, 6),
-          categories: [],
-          recentPosts: initialPosts.slice(0, 10),
-          categoryPosts: {},
-        }
-      : {
-          taggedPosts: [],
-          featuredPosts: [],
-          categories: [],
-          recentPosts: [],
-          categoryPosts: {},
-        }
-
-  const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
-    fallbackData: initialData || fallbackData,
-    revalidateOnMount: !initialData && !initialPosts.length,
-    revalidateOnFocus: false,
-    refreshInterval: isOffline ? 0 : 300000,
-    dedupingInterval: 60000,
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-    shouldRetryOnError: !isOffline,
-  })
-
-  const {
-    taggedPosts = [],
-    featuredPosts = [],
-    categories = [],
-    recentPosts = [],
-    categoryPosts = {},
-  } = data || initialData || fallbackData
-
-  if (isLoading && !initialData && !initialPosts.length) {
+  if (loading) {
     return (
-      <div className="space-y-2 p-2">
+      <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="flex gap-2">
-              <div className="w-20 h-16 bg-gray-200 rounded"></div>
-              <div className="flex-1 space-y-1">
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-2 bg-gray-200 rounded w-1/4"></div>
-              </div>
-            </div>
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-100 rounded w-3/4"></div>
           </div>
         ))}
       </div>
     )
   }
 
-  const mainStory = taggedPosts[0] || featuredPosts[0] || null
-  const quickReads = taggedPosts.slice(1, 4) || featuredPosts.slice(1, 4) || []
-  const trendingStories = featuredPosts.slice(0, 5) || []
-
   return (
-    <ErrorBoundary>
-      <div className="space-y-3 pb-16">
-        {/* Compact Hero */}
-        {mainStory && (
-          <section className="px-2">
-            <div className="relative rounded-lg overflow-hidden">
-              <FeaturedHero post={mainStory} />
-            </div>
-          </section>
-        )}
-
-        {/* Quick Reads - Horizontal Scroll */}
-        {quickReads.length > 0 && (
-          <section className="px-2">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-red-500" />
-                Quick Reads
-              </h2>
-              <Link href="/news" className="text-xs text-blue-600 flex items-center gap-1">
-                More <ChevronRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {quickReads.map((post) => (
-                <div key={post.id} className="flex-shrink-0 w-64">
-                  <CompactCard post={post} layout="horizontal" />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <HomeAfterHeroAd />
-
-        {/* Trending Stories - Minimal Layout */}
-        {trendingStories.length > 0 && (
-          <section className="px-2">
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="flex items-center justify-between p-2 border-b border-gray-100">
-                <h2 className="text-sm font-bold">Trending Now</h2>
-                <Link href="/news" className="text-xs text-blue-600">
-                  View All
-                </Link>
-              </div>
-              <div className="p-2 space-y-1">
-                {trendingStories.slice(0, 4).map((post) => (
-                  <CompactCard key={post.id} post={post} layout="minimal" />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Category Sections - Collapsible */}
-        <div className="px-2 space-y-2">
-          {Object.entries(categoryPosts).map(([slug, { name, posts }]) => {
-            if (posts.length === 0) return null
-
-            return (
-              <CollapsibleSection
-                key={slug}
-                title={name}
-                compact
-                defaultOpen={name === "Business"}
-              >
-                <div className="space-y-1">
-                  {posts.slice(0, 3).map((post) => (
-                    <CompactCard key={post.id} post={post} layout="minimal" />
-                  ))}
-                </div>
-                <Link
-                  href={`/category/${slug}`}
-                  className="block text-center text-xs text-blue-600 mt-2 py-1 border-t border-gray-100"
-                >
-                  View all {name} news
-                </Link>
-              </CollapsibleSection>
-            )
-          })}
-        </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold mb-4">Recent Updates</h2>
+      <div className="space-y-3">
+        {posts.map((post) => (
+          <article key={post.id} className="border-b border-gray-100 pb-3">
+            <h3 className="text-sm font-medium leading-tight mb-1">
+              <a href={post.link} className="text-gray-900 hover:text-blue-600 transition-colors">
+                {post.title.rendered}
+              </a>
+            </h3>
+            <time className="text-xs text-gray-500">{new Date(post.date).toLocaleDateString()}</time>
+          </article>
+        ))}
       </div>
-    </ErrorBoundary>
+    </div>
   )
 }

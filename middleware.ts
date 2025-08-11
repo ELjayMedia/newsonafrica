@@ -11,8 +11,6 @@ const AUTH_ROUTES = ["/auth", "/login", "/register"]
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP = {
-  "/news": "/category/news",
-  "/business": "/category/business",
   "/sport": "/category/sport",
   "/entertainment": "/category/entertainment",
 }

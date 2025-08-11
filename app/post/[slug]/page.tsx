@@ -223,16 +223,17 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  console.log(`📖 Rendering post page: ${params.slug}`)
+  const decodedSlug = decodeURIComponent(params.slug)
+  console.log(`📖 Rendering post page: ${params.slug} (decoded: ${decodedSlug})`)
 
   try {
     // Fetch post data server-side
     const startTime = Date.now()
-    const post = await getPostBySlug(params.slug, ["post", params.slug])
+    const post = await getPostBySlug(decodedSlug, ["post", decodedSlug])
     const fetchTime = Date.now() - startTime
 
     if (!post) {
-      console.warn(`⚠️ Post not found: ${params.slug}`)
+      console.warn(`⚠️ Post not found: ${params.slug} (decoded: ${decodedSlug})`)
       notFound()
     }
 
@@ -240,18 +241,18 @@ export default async function PostPage({ params }: PostPageProps) {
 
     return (
       <Suspense fallback={<PostSkeleton />}>
-        <PostWrapper post={post} slug={params.slug} />
+        <PostWrapper post={post} slug={params.slug} decodedSlug={decodedSlug} />
       </Suspense>
     )
   } catch (error) {
-    console.error(`❌ Error fetching post ${params.slug}:`, error)
+    console.error(`❌ Error fetching post ${params.slug} (decoded: ${decodedSlug}):`, error)
     // Let error boundary handle this
     throw error
   }
 }
 
 // Wrapper component to handle post rendering
-function PostWrapper({ post, slug }: { post: any; slug: string }) {
+function PostWrapper({ post, slug, decodedSlug }: { post: any; slug: string; decodedSlug: string }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Additional head elements for enhanced SEO */}
@@ -288,7 +289,7 @@ function PostWrapper({ post, slug }: { post: any; slug: string }) {
             },
             mainEntityOfPage: {
               "@type": "WebPage",
-              "@id": `https://newsonafrica.com/post/${slug}`,
+              "@id": `https://newsonafrica.com/post/${decodedSlug}`,
             },
             articleSection: post.categories?.nodes?.[0]?.name || "News",
             keywords: [
@@ -297,7 +298,7 @@ function PostWrapper({ post, slug }: { post: any; slug: string }) {
             ].join(", "),
             wordCount: post.content?.replace(/<[^>]*>/g, "").split(" ").length || 0,
             inLanguage: "en-US",
-            url: `https://newsonafrica.com/post/${slug}`,
+            url: `https://newsonafrica.com/post/${decodedSlug}`,
           }),
         }}
       />
@@ -326,7 +327,7 @@ function PostWrapper({ post, slug }: { post: any; slug: string }) {
                 "@type": "ListItem",
                 position: 3,
                 name: post.title,
-                item: `https://newsonafrica.com/post/${slug}`,
+                item: `https://newsonafrica.com/post/${decodedSlug}`,
               },
             ],
           }),
