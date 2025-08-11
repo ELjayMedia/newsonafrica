@@ -11,7 +11,9 @@ export default function ServerSafeMediaQuery({ query, children, fallback }: Serv
   return (
     <>
       {fallback && <noscript>{fallback}</noscript>}
-      <ClientMediaQueryWrapper type="mediaQuery" query={query} children={children} />
+      <ClientMediaQueryWrapper type="mediaQuery" query={query}>
+        {children}
+      </ClientMediaQueryWrapper>
     </>
   )
 }
