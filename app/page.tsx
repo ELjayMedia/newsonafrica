@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import { getLatestPosts } from "@/lib/api/wordpress"
+import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import { categoryConfigs } from "@/config/homeConfig"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -71,17 +72,63 @@ export const metadata: Metadata = {
 
 export const revalidate = 600 // Revalidate every 10 minutes
 
-async function getHomePageData(limit = 20) {
+async function getHomePageData(limit = 50) {
   try {
-    const { posts } = await getLatestPosts(limit)
-    return posts ?? []
+    // Fetch initial posts and categories in parallel
+    const [postsResult, categoriesResult] = await Promise.allSettled([getLatestPosts(limit), getCategories()])
+
+    const posts = postsResult.status === "fulfilled" ? (postsResult.value.posts ?? []) : []
+    const categories = categoriesResult.status === "fulfilled" ? (categoriesResult.value.categories ?? []) : []
+
+    const categoryPromises = categoryConfigs.map(async (config) => {
+      try {
+        const result = await getPostsByCategory(config.slug, 5)
+        return { slug: config.slug, posts: result.posts || [] }
+      } catch (error) {
+        console.error(`Error fetching ${config.name} posts:`, error)
+        return { slug: config.slug, posts: [] }
+      }
+    })
+
+    const categoryResults = await Promise.allSettled(categoryPromises)
+    const categoryPosts: Record<string, any[]> = {}
+
+    categoryResults.forEach((result) => {
+      if (result.status === "fulfilled") {
+        categoryPosts[result.value.slug] = result.value.posts
+      }
+    })
+
+    const fpTaggedPosts = posts.filter((post) =>
+      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
+    )
+
+    return {
+      posts,
+      initialData: {
+        taggedPosts: fpTaggedPosts,
+        featuredPosts: posts.slice(0, 6),
+        categories,
+        recentPosts: posts.slice(0, 10),
+        categoryPosts,
+      },
+    }
   } catch (error) {
     console.error("Failed to fetch posts for homepage:", error)
-    return []
+    return {
+      posts: [],
+      initialData: {
+        taggedPosts: [],
+        featuredPosts: [],
+        categories: [],
+        recentPosts: [],
+        categoryPosts: {},
+      },
+    }
   }
 }
 
 export default async function Home() {
-  const posts = await getHomePageData()
-  return <HomeContent initialPosts={posts} />
+  const { posts, initialData } = await getHomePageData()
+  return <HomeContent initialPosts={posts} initialData={initialData} />
 }

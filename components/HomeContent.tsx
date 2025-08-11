@@ -35,7 +35,6 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
-// Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async () => {
   try {
     if (!isOnline()) {
@@ -44,10 +43,7 @@ const fetchHomeData = async () => {
     }
 
     // Use Promise.allSettled to handle partial failures
-    const results = await Promise.allSettled([
-      getLatestPosts(50), // Get more posts to ensure we have enough fp-tagged ones
-      getCategories(), // Get all categories
-    ])
+    const results = await Promise.allSettled([getLatestPosts(50), getCategories()])
 
     const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
     const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
@@ -55,7 +51,6 @@ const fetchHomeData = async () => {
     const posts = latestPostsResult.posts || []
     const categories = categoriesResult.categories || []
 
-    // Fetch category-specific posts
     const categoryPromises = categoryConfigs.map(async (config) => {
       try {
         const result = await getPostsByCategory(config.slug, 5)
@@ -75,7 +70,6 @@ const fetchHomeData = async () => {
       }
     })
 
-    // Filter posts that are tagged with 'fp'
     const fpTaggedPosts = posts.filter((post) =>
       post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
     )
@@ -83,10 +77,10 @@ const fetchHomeData = async () => {
     console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
 
     return {
-      taggedPosts: fpTaggedPosts, // Use all fp tagged posts
-      featuredPosts: posts.slice(0, 6), // Use first 6 as featured
+      taggedPosts: fpTaggedPosts,
+      featuredPosts: posts.slice(0, 6),
       categories: categories,
-      recentPosts: posts.slice(0, 10), // Use first 10 as recent
+      recentPosts: posts.slice(0, 10),
       categoryPosts,
     }
   } catch (error) {
@@ -112,9 +106,9 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     }
   }, [])
 
-  // Create fallback data from initialPosts if provided
   const fallbackData =
-    initialPosts.length > 0
+    initialData ||
+    (initialPosts.length > 0
       ? {
           taggedPosts: initialPosts.filter((post) =>
             post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
@@ -130,14 +124,13 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
           categories: [],
           recentPosts: [],
           categoryPosts: {},
-        }
+        })
 
-  // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
-    fallbackData: initialData || fallbackData,
-    revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
+    fallbackData,
+    revalidateOnMount: !initialData, // Only revalidate if no server-provided initial data
     revalidateOnFocus: false,
-    refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
+    refreshInterval: isOffline ? 0 : 300000,
     dedupingInterval: 60000,
     errorRetryCount: 3,
     errorRetryInterval: 5000,
@@ -150,15 +143,8 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
     shouldRetryOnError: !isOffline,
   })
 
-  // Safely extract data with fallbacks
-  const {
-    taggedPosts = [],
-    featuredPosts = [],
-    recentPosts = [],
-    categoryPosts = {},
-  } = data || initialData || fallbackData
+  const { taggedPosts = [], featuredPosts = [], recentPosts = [], categoryPosts = {} } = data || fallbackData
 
-  // Show skeleton during initial loading
   if (isLoading && !initialData && !initialPosts.length) {
     return <HomePageSkeleton />
   }
