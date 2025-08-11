@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { AuthForm } from "@/components/AuthForm"
-import { useEnhancedAuth } from "@/contexts/EnhancedAuthContext"
 import { toast } from "@/hooks/use-toast"
+import { createClient } from "@/utils/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
 interface AuthPageClientProps {
   searchParams: { redirectTo?: string; error?: string; message?: string }
@@ -16,7 +17,9 @@ interface AuthPageClientProps {
 function AuthPageContent({ searchParams }: AuthPageClientProps) {
   const router = useRouter()
   const urlSearchParams = useSearchParams()
-  const { user, loading: authLoading } = useEnhancedAuth()
+  const supabase = createClient()
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -73,11 +76,35 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
     // Handle OAuth callback with code
     if (code && !error) {
       setAuthMessage("Processing authentication...")
-      // The auth context will handle the code exchange
+      // The `/auth/callback` route handler processes the code exchange
     }
 
     setIsLoading(false)
   }, [searchParams, urlSearchParams])
+
+  // Initialize and listen for auth state changes
+  useEffect(() => {
+    const getInitialUser = async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        setUser(data.user ?? null)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    getInitialUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   // Redirect authenticated users
   useEffect(() => {
@@ -117,7 +144,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
           <CardContent className="flex flex-col items-center justify-center p-8">
             <CheckCircle className="h-8 w-8 text-green-600 mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome back!</h2>
-            <p className="text-gray-600 text-center mb-4">You're signed in as {user.email}</p>
+            <p className="text-gray-600 text-center mb-4">You&apos;re signed in as {user.email}</p>
             <p className="text-sm text-gray-500">Redirecting...</p>
           </CardContent>
         </Card>
