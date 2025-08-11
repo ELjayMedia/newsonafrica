@@ -471,7 +471,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
  */
 export async function getLatestPosts(limit = 20, after?: string) {
   try {
-    const posts = await fetchRecentPosts(limit)
+    const { posts } = await fetchRecentPosts(limit)
     return {
       posts: posts || [],
       error: null,

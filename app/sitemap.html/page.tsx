@@ -9,11 +9,13 @@ export const metadata: Metadata = {
 
 export default async function SitemapPage() {
   // Fetch data
-  const [categories, tags, recentPosts] = await Promise.all([
+  const [categories, tags, recentData] = await Promise.all([
     fetchCategories(),
     fetchTags(),
     fetchRecentPosts(50), // Get the 50 most recent posts
   ])
+
+  const recentPosts = recentData.posts
 
   return (
     <div className="container mx-auto px-4 py-8">

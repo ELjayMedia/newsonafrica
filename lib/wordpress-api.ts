@@ -162,10 +162,16 @@ const fetchWithFallback = async (
 /**
  * Fetches recent posts
  */
-export const fetchRecentPosts = cache(async (limit = 20) => {
+export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
   const query = `
-    query RecentPosts($limit: Int!) {
-      posts(first: $limit, where: { orderby: { field: DATE, order: DESC }, status: PUBLISH }) {
+    query RecentPosts($limit: Int!, $offset: Int!) {
+      posts(
+        where: {
+          offsetPagination: { offset: $offset, size: $limit }
+          orderby: { field: DATE, order: DESC }
+          status: PUBLISH
+        }
+      ) {
         nodes {
           id
           title
@@ -197,17 +203,41 @@ export const fetchRecentPosts = cache(async (limit = 20) => {
             }
           }
         }
+        pageInfo {
+          offsetPagination {
+            total
+          }
+        }
       }
     }
   `
 
   const restFallback = async () => {
-    const posts = await fetchFromRestApi("posts", {
-      per_page: limit,
-      _embed: 1,
+    const params = new URLSearchParams({
+      per_page: String(limit),
+      offset: String(offset),
+      _embed: "1",
       orderby: "date",
       order: "desc",
     })
+
+    const url = `${WORDPRESS_REST_API_URL}/posts?${params.toString()}`
+
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "NewsOnAfrica/1.0",
+      },
+      next: { revalidate: 300 },
+    })
+
+    if (!response.ok) {
+      throw new Error(`REST API error: ${response.status} ${response.statusText}`)
+    }
+
+    const total = parseInt(response.headers.get("X-WP-Total") || "0", 10)
+    const posts = await response.json()
 
     return {
       posts: {
@@ -246,12 +276,26 @@ export const fetchRecentPosts = cache(async (limit = 20) => {
               })) || [],
           },
         })),
+        pageInfo: {
+          offsetPagination: {
+            total,
+          },
+        },
       },
     }
   }
 
-  const data = await fetchWithFallback(query, { limit }, `recent-posts-${limit}`, restFallback)
-  return data.posts?.nodes || []
+  const data = await fetchWithFallback(
+    query,
+    { limit, offset },
+    `recent-posts-${limit}-${offset}`,
+    restFallback,
+  )
+
+  return {
+    posts: data.posts?.nodes || [],
+    total: data.posts?.pageInfo?.offsetPagination?.total || 0,
+  }
 })
 
 /**
@@ -1130,7 +1174,7 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
 
   try {
     // Get recent posts for suggestions
-    const posts = await fetchRecentPosts(50)
+    const { posts } = await fetchRecentPosts(50)
 
     // Extract potential suggestions
     const suggestions = new Set<string>()

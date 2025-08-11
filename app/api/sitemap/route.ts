@@ -1,5 +1,5 @@
 const fetchAllCategories = async () => []
-const fetchRecentPosts = async () => []
+const fetchRecentPosts = async () => ({ posts: [] })
 
 import { NextResponse } from "next/server"
 
@@ -7,11 +7,11 @@ export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
 
   try {
-    const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
+  const [categories, recent] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
 
-    // Ensure categories and posts are arrays, even if empty
-    const safeCategories = Array.isArray(categories) ? categories : []
-    const safePosts = Array.isArray(posts) ? posts : []
+  // Ensure categories and posts are arrays, even if empty
+  const safeCategories = Array.isArray(categories) ? categories : []
+  const safePosts = Array.isArray(recent.posts) ? recent.posts : []
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
