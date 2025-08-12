@@ -3,6 +3,8 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { paystackClient } from "@/lib/paystack-utils"
 
+export const runtime = "nodejs"
+
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()

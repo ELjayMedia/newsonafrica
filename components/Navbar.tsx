@@ -8,7 +8,6 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, X, Menu } from "lucide-react"
-import { navConfig } from "@/config/nav"
 
 export default function Navbar() {
   const router = useRouter()
@@ -53,11 +52,15 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex space-x-4">
-            {navConfig.map((item) => (
-              <Link key={item.title} href={item.href} className="hover:text-primary-foreground/80">
-                {item.title}
-              </Link>
-            ))}
+            <Link href="/news" className="hover:text-primary-foreground/80">
+              News
+            </Link>
+            <Link href="/business" className="hover:text-primary-foreground/80">
+              Business
+            </Link>
+            <Link href="/sport" className="hover:text-primary-foreground/80">
+              Sport
+            </Link>
           </div>
 
           <div className="flex items-center">
@@ -97,16 +100,27 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden mt-4 bg-primary-foreground/10 rounded-md p-4">
             <div className="flex flex-col space-y-3">
-              {navConfig.map((item) => (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="text-primary-foreground hover:text-primary-foreground/80 py-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.title}
-                </Link>
-              ))}
+              <Link
+                href="/news"
+                className="text-primary-foreground hover:text-primary-foreground/80 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                News
+              </Link>
+              <Link
+                href="/business"
+                className="text-primary-foreground hover:text-primary-foreground/80 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Business
+              </Link>
+              <Link
+                href="/sport"
+                className="text-primary-foreground hover:text-primary-foreground/80 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sport
+              </Link>
             </div>
           </div>
         )}

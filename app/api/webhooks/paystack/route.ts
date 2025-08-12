@@ -3,6 +3,8 @@ import crypto from "crypto"
 import { startWebhookTunnel } from "@/lib/paystack-utils"
 import { createAdminClient } from "@/lib/supabase"
 
+export const runtime = "nodejs"
+
 function calculateEndDate(interval?: string) {
   const end = new Date()
   switch (interval) {

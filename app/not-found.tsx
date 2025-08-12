@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 export default function NotFound() {
   return (
     <html lang="en">
@@ -28,7 +30,7 @@ export default function NotFound() {
           <p style={{ color: "#6B7280", marginBottom: "32px", maxWidth: "400px", lineHeight: "1.5" }}>
             The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
           </p>
-          <a
+          <Link
             href="/"
             style={{
               padding: "12px 24px",
@@ -47,7 +49,7 @@ export default function NotFound() {
             }}
           >
             Return to Homepage
-          </a>
+          </Link>
         </div>
       </body>
     </html>

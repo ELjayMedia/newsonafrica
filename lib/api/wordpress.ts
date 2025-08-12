@@ -5,9 +5,10 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from "@/lib/graphql/queries"
-import { cache } from "react"
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from "@/config/wordpress"
+
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -327,6 +328,7 @@ async function fetchWithFallback(
   }
 }
 
+
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
   query: string,
@@ -413,6 +415,24 @@ async function restApiFallback<T>(
   }
 }
 
+async function fetchWithGraphQLFallback<T>(
+  graphqlFetch: () => Promise<T>,
+  restFetch: () => Promise<T>,
+  defaultValue: T,
+): Promise<T> {
+  try {
+    return await graphqlFetch()
+  } catch (error) {
+    console.error("GraphQL request failed, trying REST API:", error)
+    try {
+      return await restFetch()
+    } catch (restError) {
+      console.error("Both GraphQL and REST API failed:", restError)
+      return defaultValue
+    }
+  }
+}
+
 /**
  * Get the latest posts from WordPress for a specific country
  */
@@ -421,26 +441,22 @@ export async function getLatestPostsForCountry(
   limit = 20,
   after?: string,
 ): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
-  try {
-    const data = await graphqlRequest<WordPressPostsResponse>(
-      LATEST_POSTS_QUERY,
-      {
-        first: limit,
-        after,
-      },
-      countryCode,
-    )
-
-    return {
-      posts: data.posts.nodes,
-      hasNextPage: data.posts.pageInfo.hasNextPage,
-      endCursor: data.posts.pageInfo.endCursor,
-    }
-  } catch (error) {
-    console.error(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API:`, error)
-
-    try {
-      return await restApiFallback(
+  return fetchWithGraphQLFallback(
+    () =>
+      graphqlRequest<WordPressPostsResponse>(
+        LATEST_POSTS_QUERY,
+        {
+          first: limit,
+          after,
+        },
+        countryCode,
+      ).then((data) => ({
+        posts: data.posts.nodes,
+        hasNextPage: data.posts.pageInfo.hasNextPage,
+        endCursor: data.posts.pageInfo.endCursor,
+      })),
+    () =>
+      restApiFallback(
         "posts",
         { per_page: limit, _embed: 1 },
         (posts: any[]) => ({
@@ -449,12 +465,9 @@ export async function getLatestPostsForCountry(
           endCursor: null,
         }),
         countryCode,
-      )
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return { posts: [], hasNextPage: false, endCursor: null }
-    }
-  }
+      ),
+    { posts: [], hasNextPage: false, endCursor: null },
+  )
 }
 
 /**
@@ -471,37 +484,33 @@ export async function getPostsByCategoryForCountry(
   hasNextPage: boolean
   endCursor: string | null
 }> {
-  try {
-    const data = await graphqlRequest<{ category: any }>(
-      POSTS_BY_CATEGORY_QUERY,
-      {
-        slug: categorySlug,
-        first: limit,
-        after,
-      },
-      countryCode,
-    )
-
-    if (!data.category) {
-      return { category: null, posts: [], hasNextPage: false, endCursor: null }
-    }
-
-    return {
-      category: {
-        id: data.category.id,
-        name: data.category.name,
-        slug: data.category.slug,
-        description: data.category.description,
-      },
-      posts: data.category.posts.nodes,
-      hasNextPage: data.category.posts.pageInfo.hasNextPage,
-      endCursor: data.category.posts.pageInfo.endCursor,
-    }
-  } catch (error) {
-    console.error(`Failed to fetch category "${categorySlug}" for ${countryCode} via GraphQL, trying REST API:`, error)
-
-    try {
-      // First get category info
+  return fetchWithGraphQLFallback(
+    () =>
+      graphqlRequest<{ category: any }>(
+        POSTS_BY_CATEGORY_QUERY,
+        {
+          slug: categorySlug,
+          first: limit,
+          after,
+        },
+        countryCode,
+      ).then((data) => {
+        if (!data.category) {
+          return { category: null, posts: [], hasNextPage: false, endCursor: null }
+        }
+        return {
+          category: {
+            id: data.category.id,
+            name: data.category.name,
+            slug: data.category.slug,
+            description: data.category.description,
+          },
+          posts: data.category.posts.nodes,
+          hasNextPage: data.category.posts.pageInfo.hasNextPage,
+          endCursor: data.category.posts.pageInfo.endCursor,
+        }
+      }),
+    async () => {
       const categories = await restApiFallback(
         `categories?slug=${categorySlug}`,
         {},
@@ -514,8 +523,6 @@ export async function getPostsByCategoryForCountry(
       }
 
       const category = categories[0]
-
-      // Then get posts for this category
       const posts = await restApiFallback(
         "posts",
         { categories: category.id, per_page: limit, _embed: 1 },
@@ -529,35 +536,31 @@ export async function getPostsByCategoryForCountry(
         hasNextPage: posts.length === limit,
         endCursor: null,
       }
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return { category: null, posts: [], hasNextPage: false, endCursor: null }
-    }
-  }
+    },
+    { category: null, posts: [], hasNextPage: false, endCursor: null },
+  )
 }
 
 /**
  * Get categories for a specific country
  */
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  try {
-    const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
-    return data.categories.nodes
-  } catch (error) {
-    console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
-
-    try {
-      return await restApiFallback(
+  return fetchWithGraphQLFallback(
+    () =>
+      graphqlRequest<WordPressCategoriesResponse>(
+        CATEGORIES_QUERY,
+        {},
+        countryCode,
+      ).then((data) => data.categories.nodes),
+    () =>
+      restApiFallback(
         "categories",
         { per_page: 100 },
         (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
         countryCode,
-      )
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return []
-    }
-  }
+      ),
+    [],
+  )
 }
 
 /**
@@ -586,31 +589,24 @@ export async function getPostBySlug(
   slug: string,
   tags?: string[],
 ): Promise<WordPressPost | null> {
-  try {
-    const data = await graphqlRequest<WordPressSinglePostResponse>(
-      POST_BY_SLUG_QUERY,
-      {
-        slug,
-      },
-      undefined,
-      3,
-      tags,
-    )
-
-    return data.post
-  } catch (error) {
-    console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
-
-    try {
-      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
+  return fetchWithGraphQLFallback(
+    () =>
+      graphqlRequest<WordPressSinglePostResponse>(
+        POST_BY_SLUG_QUERY,
+        {
+          slug,
+        },
+        undefined,
+        3,
+        tags,
+      ).then((data) => data.post),
+    () =>
+      restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
         if (!posts || posts.length === 0) return null
         return transformRestPostToGraphQL(posts[0])
-      })
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return null
-    }
-  }
+      }),
+    null,
+  )
 }
 
 /**
@@ -673,24 +669,19 @@ export async function getPostsByCategory(
  * Get featured posts (sticky posts)
  */
 export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
-  try {
-    const data = await graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
-      first: limit,
-    })
-
-    return data.posts.nodes
-  } catch (error) {
-    console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
-
-    try {
-      return await restApiFallback("posts", { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
-        posts.map(transformRestPostToGraphQL),
-      )
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return []
-    }
-  }
+  return fetchWithGraphQLFallback(
+    () =>
+      graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
+        first: limit,
+      }).then((data) => data.posts.nodes),
+    () =>
+      restApiFallback(
+        "posts",
+        { sticky: true, per_page: limit, _embed: 1 },
+        (posts: any[]) => posts.map(transformRestPostToGraphQL),
+      ),
+    [],
+  )
 }
 
 /**
@@ -754,9 +745,7 @@ export async function getRelatedPosts(
   if (cached) {
     return cached
   }
-
-  try {
-    // Create GraphQL query for related posts
+  const graphqlFetch = async () => {
     const RELATED_POSTS_QUERY = `
       query GetRelatedPosts($categoryIn: [ID], $tagIn: [ID], $notIn: [ID], $first: Int) {
         posts(
@@ -819,8 +808,6 @@ export async function getRelatedPosts(
         }
       }
     `
-
-    // Try categories first, then tags if not enough results
     let relatedPosts: WordPressPost[] = []
 
     if (categories.length > 0) {
@@ -836,7 +823,6 @@ export async function getRelatedPosts(
       relatedPosts = categoryData.posts.nodes
     }
 
-    // If we don't have enough posts from categories, try tags
     if (relatedPosts.length < limit && tags.length > 0) {
       const remainingLimit = limit - relatedPosts.length
       const tagData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
@@ -851,7 +837,6 @@ export async function getRelatedPosts(
       relatedPosts = [...relatedPosts, ...tagData.posts.nodes]
     }
 
-    // If still not enough, get latest posts from same categories
     if (relatedPosts.length < 3 && categories.length > 0) {
       const remainingLimit = Math.max(3 - relatedPosts.length, 0)
       const latestData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
@@ -867,50 +852,38 @@ export async function getRelatedPosts(
     }
 
     const finalPosts = relatedPosts.slice(0, limit)
-
-    // Cache the result
     relatedPostsCache.set(postId, categories, tags, limit, finalPosts, countryCode)
-
     return finalPosts
-  } catch (error) {
-    console.error("Failed to fetch related posts via GraphQL, trying REST API:", error)
-
-    try {
-      // REST API fallback
-      const endpoints = getCountryEndpoints(countryCode || "sz")
-
-      // Build query parameters for REST API
-      const params = new URLSearchParams({
-        per_page: limit.toString(),
-        exclude: postId,
-        _embed: "1",
-      })
-
-      if (categories.length > 0) {
-        params.append("categories", categories.join(","))
-      }
-
-      const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
-        headers: { "Content-Type": "application/json" },
-        next: { revalidate: 300 },
-      })
-
-      if (!response.ok) {
-        throw new Error(`REST API request failed: ${response.status}`)
-      }
-
-      const posts = await response.json()
-      const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit)
-
-      // Cache the REST API result too
-      relatedPostsCache.set(postId, categories, tags, limit, transformedPosts, countryCode)
-
-      return transformedPosts
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed for related posts:", restError)
-      return []
-    }
   }
+
+  const restFetch = async () => {
+    const endpoints = getCountryEndpoints(countryCode || "sz")
+    const params = new URLSearchParams({
+      per_page: limit.toString(),
+      exclude: postId,
+      _embed: "1",
+    })
+
+    if (categories.length > 0) {
+      params.append("categories", categories.join(","))
+    }
+
+    const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
+      headers: { "Content-Type": "application/json" },
+      next: { revalidate: 300 },
+    })
+
+    if (!response.ok) {
+      throw new Error(`REST API request failed: ${response.status}`)
+    }
+
+    const posts = await response.json()
+    const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit)
+    relatedPostsCache.set(postId, categories, tags, limit, transformedPosts, countryCode)
+    return transformedPosts
+  }
+
+  return fetchWithGraphQLFallback(graphqlFetch, restFetch, [])
 }
 
 /**
@@ -942,6 +915,7 @@ export function clearRelatedPostsCache(): void {
 }
 
 /**
+
  * Fetches recent posts
  */
 export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
@@ -1675,6 +1649,7 @@ export const updateUserProfile = async (userId: string, profileData: any) => {
 }
 
 /**
+
  * Pick top story preferring posts tagged with "fp"
  */
 export function pickTopStory(posts: WordPressPost[]): WordPressPost | null {
@@ -1751,75 +1726,5 @@ export async function votePoll(_optionId: string): Promise<void> {
 }
 
 // Transform functions for REST API data
-function transformRestPostToGraphQL(post: any): WordPressPost {
-  return {
-    id: post.id.toString(),
-    title: post.title.rendered,
-    content: post.content?.rendered,
-    excerpt: post.excerpt.rendered,
-    slug: post.slug,
-    date: post.date,
-    modified: post.modified,
-    featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-      ? {
-          node: {
-            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-            altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-          },
-        }
-      : undefined,
-    author: {
-      node: {
-        id: post._embedded?.author?.[0]?.id?.toString() || "0",
-        name: post._embedded?.author?.[0]?.name || "Unknown Author",
-        slug: post._embedded?.author?.[0]?.slug || "unknown-author",
-        description: post._embedded?.author?.[0]?.description || "",
-        avatar: {
-          url: post._embedded?.author?.[0]?.avatar_urls?.["96"] || "",
-        },
-      },
-    },
-    categories: {
-      nodes:
-        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-          id: cat.id.toString(),
-          name: cat.name,
-          slug: cat.slug,
-        })) || [],
-    },
-    tags: {
-      nodes:
-        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-          id: tag.id.toString(),
-          name: tag.name,
-          slug: tag.slug,
-        })) || [],
-    },
-    seo: {
-      title: post.yoast_title || post.title.rendered,
-      metaDesc: post.yoast_meta?.description || post.excerpt.rendered.replace(/<[^>]*>/g, ""),
-    },
-  }
-}
-
-function transformRestCategoryToGraphQL(category: any): WordPressCategory {
-  return {
-    id: category.id.toString(),
-    name: category.name,
-    slug: category.slug,
-    description: category.description || "",
-    count: category.count,
-  }
-}
-
 // Export types for use in other files
-export type {
-  WordPressPost,
-  WordPressCategory,
-  WordPressAuthor,
-  WordPressTag,
-  WordPressImage,
-  CountryConfig,
-}
-
-export type Post = WordPressPost
+export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }
