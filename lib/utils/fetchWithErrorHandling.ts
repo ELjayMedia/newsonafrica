@@ -12,13 +12,17 @@ export interface FetchOptions extends RequestInit {
   retries?: number
   retryDelay?: number
   baseURL?: string
-  validateStatus?: (status: number) => boolean
+  // the parameter is intentionally prefixed with an underscore to avoid
+  // no-unused-vars warnings while still documenting the callback shape
+  validateStatus?: (_status: number) => boolean
 }
 
 export interface RetryConfig {
   retries: number
   retryDelay: number
-  retryCondition?: (error: Error, attempt: number) => boolean
+  // mark parameters as unused to satisfy the linter without altering the
+  // external API of the callback
+  retryCondition?: (_error: Error, _attempt: number) => boolean
 }
 
 /**
@@ -294,7 +298,6 @@ export async function uploadFile<T>(
   url: string,
   file: File,
   options: Omit<FetchOptions, "method" | "body"> = {},
-  onProgress?: (progress: number) => void,
 ): Promise<FetchResponse<T>> {
   const formData = new FormData()
   formData.append("file", file)

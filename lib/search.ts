@@ -261,7 +261,7 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
         query: normalizedQuery,
         performance: {
           responseTime,
-          source: "wordpress",
+          source: "wordpress-api",
           cached: false,
         },
         suggestions,

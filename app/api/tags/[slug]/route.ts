@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchPostsByTag } from "@/lib/api/wordpress"
+import { fetchPostsByTag } from "@/lib/wordpress-api"
 
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   const { searchParams } = new URL(request.url)

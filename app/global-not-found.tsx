@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function GlobalNotFound() {
   return (
     <html lang="en">
@@ -25,7 +27,7 @@ export default function GlobalNotFound() {
           <p style={{ marginBottom: "32px", color: "#6B7280", lineHeight: "1.5" }}>
             Sorry, we couldn't find the page you're looking for.
           </p>
-          <a
+          <Link
             href="/"
             style={{
               color: "#2563eb",
@@ -34,7 +36,7 @@ export default function GlobalNotFound() {
             }}
           >
             Return to Homepage
-          </a>
+          </Link>
         </div>
       </body>
     </html>

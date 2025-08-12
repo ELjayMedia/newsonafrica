@@ -1,6 +1,6 @@
 import { JsonLd } from "@/components/JsonLd"
 import { getNewsArticleSchema } from "@/lib/schema"
-import type { Post } from "@/lib/api/wordpress"
+import type { Post } from "@/lib/wordpress-api"
 
 interface ArticleJsonLdProps {
   post: Post
