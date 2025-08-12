@@ -723,16 +723,8 @@ const SUGGESTION_CACHE_TTL = 30 * 60 * 1000 // 30 minutes for suggestions
  */
 export async function optimizedWordPressSearch(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
   const startTime = Date.now()
-  const {
-    page = 1,
-    perPage = 20,
-    categories = [],
-    tags = [],
-    dateFrom,
-    dateTo,
-    includeParallel = false,
-    sortBy = "relevance",
-  } = options
+  // only pull out the option actually used in this scope
+  const { includeParallel = false } = options
 
   // Create cache key
   const cacheKey = `search:${query}:${JSON.stringify(options)}`
