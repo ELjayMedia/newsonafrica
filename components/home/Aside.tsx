@@ -2,6 +2,7 @@ import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress'
 import { MostRead } from '@/components/aside/MostRead'
 import { PollWidget } from '@/components/aside/PollWidget'
 import { GamesPromo } from '@/components/aside/GamesPromo'
+import { SponsoredPromo } from '@/components/aside/SponsoredPromo'
 import { MarketTicker } from './MarketTicker'
 
 export async function Aside() {
@@ -12,10 +13,11 @@ export async function Aside() {
   ])
   return (
     <div className="space-y-6">
-      <MarketTicker items={markets} />
       <MostRead posts={mostRead} />
       <PollWidget poll={poll} />
       <GamesPromo />
+      <MarketTicker items={markets} />
+      <SponsoredPromo />
     </div>
   )
 }
