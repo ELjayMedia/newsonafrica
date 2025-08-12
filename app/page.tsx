@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
+import { HomeShell } from "@/components/home/HomeShell"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs } from "@/config/homeConfig"
 
@@ -130,5 +131,15 @@ async function getHomePageData(limit = 50) {
 
 export default async function Home() {
   const { posts, initialData } = await getHomePageData()
-  return <HomeContent initialPosts={posts} initialData={initialData} />
+  try {
+    return (
+      <HomeShell
+        topStory={initialData.taggedPosts[0] ?? posts[0]}
+        categoryPosts={initialData.categoryPosts}
+        categories={initialData.categories}
+      />
+    )
+  } catch (e) {
+    return <HomeContent initialPosts={posts} initialData={initialData} />
+  }
 }

@@ -3,6 +3,10 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
+import { UtilityBar } from "@/components/header/UtilityBar"
+import { MegaNav } from "@/components/header/MegaNav"
+import { MarketTicker } from "@/components/home/MarketTicker"
+import { getMarketSnapshot } from "@/lib/api/wordpress"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -47,13 +51,14 @@ export const metadata: Metadata = {
   generator: "v0.dev",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
+  const marketItems = await getMarketSnapshot()
 
   return (
     <html lang="en" className={inter.className}>
@@ -93,7 +98,10 @@ export default function RootLayout({
               <ClientWrapper>
                 <ScrollToTop />
                 <ClientDynamicComponents />
+                <UtilityBar />
                 <TopBar />
+                <MegaNav />
+                <MarketTicker items={marketItems} />
                 <div className="flex-grow">
                   <div className="mx-auto max-w-full md:max-w-[980px]">
                     <ClientLayoutComponents>
