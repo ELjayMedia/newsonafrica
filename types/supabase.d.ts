@@ -122,27 +122,33 @@ export interface Database {
           id: string
           user_id: string
           type: string
-          content: string
-          related_id: string | null
-          read: boolean
+          title: string
+          message: string
+          link: string
+          is_read: boolean
+          metadata: Json | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
           type: string
-          content: string
-          related_id?: string | null
-          read?: boolean
+          title: string
+          message: string
+          link: string
+          is_read?: boolean
+          metadata?: Json | null
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           type?: string
-          content?: string
-          related_id?: string | null
-          read?: boolean
+          title?: string
+          message?: string
+          link?: string
+          is_read?: boolean
+          metadata?: Json | null
           created_at?: string
         }
       }
