@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { WORDPRESS_REST_API_URL } from '@/config/wordpress';
 
 // This is a fallback implementation that doesn't use Algolia
 // It can be used if we continue to have issues with the Algolia client
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use WordPress REST API for search instead
-    const wpApiUrl = process.env.WORDPRESS_API_URL || 'https://example.com/wp-json';
+    const wpApiUrl = WORDPRESS_REST_API_URL.replace(/\/wp\/v2$/, '');
     const searchUrl = `${wpApiUrl}/wp/v2/posts?search=${encodeURIComponent(query)}&_embed=true`;
     
     const response = await fetch(searchUrl);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
 
 export const runtime = "nodejs"
 
@@ -72,30 +73,8 @@ async function fetchFromSupabase(limit: number): Promise<Item[] | null> {
 
 // Fallback to WordPress REST posts
 function wpPostsUrl(perPage: number) {
-  const raw =
-    process.env.WORDPRESS_REST_API_URL ||
-    process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-    process.env.WORDPRESS_REST_URL ||
-    process.env.WORDPRESS_API_URL ||
-    ""
-
-  const base = raw?.replace(/\/$/, "") || ""
-  if (!base) {
-    return null
-  }
-
-  // If user provided a base ending with /wp-json/wp/v2, append /posts
-  if (/\/wp-json\/wp\/v2$/.test(base)) {
-    return `${base}/posts?per_page=${perPage}&_fields=slug,title`
-  }
-
-  // If base already includes /wp-json, tack on /wp/v2/posts
-  if (/\/wp-json$/.test(base)) {
-    return `${base}/wp/v2/posts?per_page=${perPage}&_fields=slug,title`
-  }
-
-  // Otherwise assume it's the site origin
-  return `${base}/wp-json/wp/v2/posts?per_page=${perPage}&_fields=slug,title`
+  const base = WORDPRESS_REST_API_URL.replace(/\/$/, "")
+  return `${base}/posts?per_page=${perPage}&_fields=slug,title`
 }
 
 async function fetchFromWordPress(limit: number): Promise<Item[] | null> {

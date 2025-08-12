@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { fetcher } from "./fetcher";
+import { WORDPRESS_REST_API_URL } from "@/config/wordpress";
 
-const REST_BASE = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2";
+const REST_BASE = WORDPRESS_REST_API_URL;
 
 function buildUrl(path: string, params: Record<string, any> = {}, site?: string) {
   let base = REST_BASE;

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
-
-const WP_API_URL = process.env.WORDPRESS_API_URL
+import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
 
 export async function GET() {
   const token = getAuthTokenFromCookies()
@@ -11,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(`${WP_API_URL}/wp/v2/users/me`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
