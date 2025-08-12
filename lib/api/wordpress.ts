@@ -847,6 +847,82 @@ export function clearRelatedPostsCache(): void {
   relatedPostsCache.clear()
 }
 
+/**
+ * Pick top story preferring posts tagged with "fp"
+ */
+export function pickTopStory(posts: WordPressPost[]): WordPressPost | null {
+  if (!posts.length) return null
+  const featured = posts.find((p) =>
+    p.tags?.nodes?.some((t) => t.slug === "fp" || t.name?.toLowerCase() === "fp"),
+  )
+  return featured || posts[0]
+}
+
+/**
+ * Get the top story from latest posts
+ */
+export async function getTopStory(): Promise<WordPressPost | null> {
+  const { posts } = await getLatestPosts(10)
+  return pickTopStory(posts)
+}
+
+/**
+ * Sort posts by date descending
+ */
+export function sortPostsByDate(posts: WordPressPost[]): WordPressPost[] {
+  return [...posts].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  )
+}
+
+/**
+ * Temporary Most Read implementation using latest posts
+ * TODO: Replace with analytics-driven endpoint
+ */
+export async function getMostRead(limit = 10): Promise<WordPressPost[]> {
+  const { posts } = await getLatestPosts(limit)
+  return sortPostsByDate(posts).slice(0, limit)
+}
+
+export type MarketItem = {
+  symbol: string
+  label: string
+  price: number
+  change: number
+  changePct: number
+}
+
+export async function getMarketSnapshot(): Promise<MarketItem[]> {
+  const res = await fetch("/markets.json", { next: { revalidate: 60 } })
+  return res.json()
+}
+
+export type PollOption = { id: string; label: string; votes: number }
+
+export type Poll = {
+  id: string
+  question: string
+  options: PollOption[]
+  userHasVoted?: boolean
+}
+
+// Temporary static poll implementation
+export async function getPoll(): Promise<Poll> {
+  return {
+    id: "static",
+    question: "Do you like the new homepage?",
+    options: [
+      { id: "yes", label: "Yes", votes: 0 },
+      { id: "no", label: "No", votes: 0 },
+    ],
+  }
+}
+
+export async function votePoll(_optionId: string): Promise<void> {
+  // TODO: wire up real poll voting
+  return
+}
+
 // Transform functions for REST API data
 function transformRestPostToGraphQL(post: any): WordPressPost {
   return {
