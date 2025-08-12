@@ -71,7 +71,6 @@ export function MobileProfileMenu() {
           <div>
             <h2 className="font-semibold">{profile?.full_name || profile?.username || "User"}</h2>
             <p className="text-sm text-gray-500">{user.email}</p>
-            {profile?.country && <p className="text-xs text-gray-500 mt-1">{profile.country}</p>}
           </div>
         </div>
 

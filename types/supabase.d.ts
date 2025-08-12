@@ -9,42 +9,27 @@ export interface Database {
           username: string
           full_name: string | null
           avatar_url: string | null
-          website: string | null
           email: string | null
-          bio: string | null
-          country: string | null
-          interests: string[] | null
           updated_at: string | null
           created_at: string
-          is_admin: boolean | null
         }
         Insert: {
           id: string
           username: string
           full_name?: string | null
           avatar_url?: string | null
-          website?: string | null
           email?: string | null
-          bio?: string | null
-          country?: string | null
-          interests?: string[] | null
           updated_at?: string | null
           created_at?: string
-          is_admin?: boolean | null
         }
         Update: {
           id?: string
           username?: string
           full_name?: string | null
           avatar_url?: string | null
-          website?: string | null
           email?: string | null
-          bio?: string | null
-          country?: string | null
-          interests?: string[] | null
           updated_at?: string | null
           created_at?: string
-          is_admin?: boolean | null
         }
       }
       bookmarks: {

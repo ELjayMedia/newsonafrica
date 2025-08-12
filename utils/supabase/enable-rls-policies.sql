@@ -262,17 +262,6 @@ WITH CHECK (
 -- UTILITY FUNCTIONS
 -- =============================================================================
 
--- Function to check if user is admin/moderator
-CREATE OR REPLACE FUNCTION public.is_admin(user_id uuid)
-RETURNS boolean AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = user_id AND role IN ('admin', 'moderator')
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Function to check if user owns a resource
 CREATE OR REPLACE FUNCTION public.is_owner(user_id uuid, resource_user_id uuid)
 RETURNS boolean AS $$

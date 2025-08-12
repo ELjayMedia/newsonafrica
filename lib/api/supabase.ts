@@ -31,12 +31,8 @@ export interface UserProfile {
   id: string
   username: string
   full_name?: string
-  bio?: string
   avatar_url?: string
-  website?: string
   email?: string
-  country?: string
-  interests?: string[]
   created_at: string
   updated_at: string
 }
