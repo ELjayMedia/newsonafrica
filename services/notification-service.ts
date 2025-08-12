@@ -164,15 +164,15 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
     // Get the notification first to get its user_id for cache invalidation
     const { data: notification } = await supabase
       .from("notifications")
-      .select("user_id")
-      .eq("id", notificationId)
-      .single()
+      .select("user_id, id")
+      .eq("id", notificationId as any)
+      .single<{ user_id: string; id: string }>()
 
     if (!notification) {
       return false
     }
 
-    const updated = await updateRecord(
+    const updated = await updateRecord<Notification>(
       "notifications",
       notificationId,
       { is_read: true },
@@ -195,9 +195,9 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
   try {
     const { error } = await supabase
       .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", userId)
-      .eq("is_read", false)
+      .update({ is_read: true } as any)
+      .eq("user_id", userId as any)
+      .eq("is_read", false as any)
 
     if (error) {
       console.error("Error marking all notifications as read:", error)
@@ -222,9 +222,9 @@ export async function deleteNotification(notificationId: string): Promise<boolea
     // Get the notification first to get its user_id for cache invalidation
     const { data: notification } = await supabase
       .from("notifications")
-      .select("user_id")
-      .eq("id", notificationId)
-      .single()
+      .select("user_id, id")
+      .eq("id", notificationId as any)
+      .single<{ user_id: string; id: string }>()
 
     if (!notification) {
       return false
@@ -244,7 +244,10 @@ export async function deleteNotification(notificationId: string): Promise<boolea
  */
 export async function deleteAllNotifications(userId: string): Promise<boolean> {
   try {
-    const { error } = await supabase.from("notifications").delete().eq("user_id", userId)
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId as any)
 
     if (error) {
       console.error("Error deleting all notifications:", error)

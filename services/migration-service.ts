@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import type { cookies } from "next/headers"
-import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/data/migrations"
+import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/lib/migrations"
 
 export interface MigrationResult {
   version: string
@@ -366,7 +366,7 @@ export class MigrationService {
           p_status: "error",
           p_error_message: error.message || "Unknown error",
         })
-        .catch((e) => console.error("Error registering failed migration:", e))
+        .catch((e: unknown) => console.error("Error registering failed migration:", e))
 
       return {
         version: migration.version,
@@ -393,7 +393,7 @@ export class MigrationService {
 
       // Get migration objects
       const pendingMigrations = pendingVersions
-        .map((version) => migrations.find((m) => m.version === version))
+        .map((version) => migrations.find((m: Migration) => m.version === version))
         .filter((m): m is Migration => m !== undefined)
 
       // Sort migrations based on dependencies
