@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 import { transformRestPostToGraphQL, transformRestCategoryToGraphQL } from "./utils/wordpress"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
@@ -11,6 +12,9 @@ if (!WORDPRESS_API_URL) {
 // Simple cache implementation
 const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Revalidation interval for category fetching (defaults to 1 hour)
+const CATEGORY_REVALIDATE = Number(process.env.CATEGORIES_REVALIDATE || 3600)
 
 // Check if we're in a browser environment and if we're online
 const isOnline = () => {
@@ -369,35 +373,44 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
 })
 
 /**
- * Fetches all categories
+ * Fetches all categories with configurable caching
  */
-export const fetchAllCategories = cache(async () => {
-  const query = `
-    query AllCategories {
-      categories(first: 100, where: { hideEmpty: true }) {
-        nodes {
-          id
-          name
-          slug
-          description
-          count
+export const fetchAllCategories = unstable_cache(
+  async () => {
+    const query = `
+      query AllCategories {
+        categories(first: 100, where: { hideEmpty: true }) {
+          nodes {
+            id
+            name
+            slug
+            description
+            count
+          }
         }
       }
-    }
-  `
+    `
 
-  const restFallback = async () => {
-    const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
-    return {
-      categories: {
-        nodes: categories.map(transformRestCategoryToGraphQL),
-      },
+    const restFallback = async () => {
+      const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
+      return {
+        categories: {
+          nodes: categories.map(transformRestCategoryToGraphQL),
+        },
+      }
     }
-  }
 
-  const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
-  return data.categories?.nodes || []
-})
+    try {
+      const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
+      return data.categories?.nodes || []
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+      return []
+    }
+  },
+  ["all-categories"],
+  { revalidate: CATEGORY_REVALIDATE },
+)
 
 /**
  * Fetches a single post
