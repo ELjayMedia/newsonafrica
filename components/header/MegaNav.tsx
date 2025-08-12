@@ -1,7 +1,7 @@
-'use client'
-import * as NavigationMenu from '@radix-ui/react-navigation-menu'
-import Link from 'next/link'
-import { navConfig } from '@/config/nav'
+"use client"
+import * as NavigationMenu from "@radix-ui/react-navigation-menu"
+import Link from "next/link"
+import { navConfig } from "@/config/nav"
 
 export function MegaNav() {
   return (
