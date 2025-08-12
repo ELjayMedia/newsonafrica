@@ -187,7 +187,7 @@ export const migrations: Migration[] = [
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
         user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        reaction_type TEXT NOT NULL,
+        reaction_type TEXT NOT NULL CHECK (reaction_type IN ('like', 'love', 'laugh', 'sad', 'angry')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(comment_id, user_id)
       );

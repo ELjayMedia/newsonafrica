@@ -22,6 +22,9 @@ export type Comment = {
     username: string
     avatar_url: string | null
   }
+  // Reaction data
+  reaction_count: number
+  reactions: CommentReaction[]
   // Replies
   replies?: Comment[]
 }
@@ -40,6 +43,15 @@ export type ReportCommentData = {
   reportedBy: string
   reason: string
 }
+
+export type ReactionType = 'like' | 'love' | 'laugh' | 'sad' | 'angry'
+
+export type CommentReaction = {
+  user_id: string
+  reaction_type: ReactionType
+}
+
+export const REACTION_TYPES: ReactionType[] = ['like', 'love', 'laugh', 'sad', 'angry']
 
 // For rate limiting
 export interface CommentSubmission {
