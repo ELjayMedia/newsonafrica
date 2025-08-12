@@ -54,7 +54,12 @@ export interface Database {
           post_id: string
           title?: string
           slug?: string
-          featuredImage?: Json
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: 'read' | 'unread' | null
+          notes?: string | null
           created_at: string
         }
         Insert: {
@@ -63,7 +68,12 @@ export interface Database {
           post_id: string
           title?: string
           slug?: string
-          featuredImage?: Json
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: 'read' | 'unread' | null
+          notes?: string | null
           created_at?: string
         }
         Update: {
@@ -72,7 +82,12 @@ export interface Database {
           post_id?: string
           title?: string
           slug?: string
-          featuredImage?: Json
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: 'read' | 'unread' | null
+          notes?: string | null
           created_at?: string
         }
       }

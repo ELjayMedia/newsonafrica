@@ -64,7 +64,11 @@ export function BookmarkDebugger() {
         title: "Test Bookmark",
         slug: "test-bookmark",
         excerpt: "This is a test bookmark",
-        featuredImage: null,
+        featured_image: null,
+        category: null,
+        tags: null,
+        read_status: "unread" as const,
+        notes: null,
       }
 
       const { data, error } = await supabase.from("bookmarks").insert(testBookmark).select().single()
