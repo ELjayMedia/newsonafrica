@@ -431,3 +431,31 @@ export async function getCurrentSession() {
     return { session: null, user: null }
   }
 }
+
+export type Subscription = {
+  id: string
+  paystack_customer_id: string | null
+  plan: string
+  status: string
+  current_period_end: string | null
+  updated_at: string
+}
+
+/**
+ * Retrieve the user's current subscription
+ */
+export async function getUserSubscription(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("id, paystack_customer_id, plan, status, current_period_end, updated_at")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data as Subscription | null
+  } catch (error) {
+    console.error("Error fetching subscription:", error)
+    return null
+  }
+}

@@ -66,28 +66,24 @@ export async function GET(request: NextRequest) {
         const userId = metadata.user_id as string | undefined
         const type = (metadata.type as string) || "subscription"
 
-        // Record payment
-        await admin.from("payments").insert({
-          user_id: userId || null,
-          type,
-          reference: data.data.reference,
-          amount: data.data.amount,
-          currency: data.data.currency,
-          status: data.data.status,
-          description: metadata.description || null,
-        })
-
+        let subscriptionId: string | null = null
         if (type === "subscription" && userId) {
-          await admin.from("subscriptions").insert({
-            user_id: userId,
-            plan: metadata.plan_id || metadata.plan_name || "plan",
-            status: "active",
-            start_date: new Date().toISOString(),
-            end_date: calculateEndDate(metadata.interval),
-            payment_provider: "paystack",
-            payment_id: data.data.reference,
-            metadata: data.data,
-          })
+          const { data: sub } = await admin
+            .from("subscriptions")
+            .upsert(
+              {
+                user_id: userId,
+                paystack_customer_id: data.data.customer?.customer_code || null,
+                plan: metadata.plan_id || metadata.plan_name || "plan",
+                status: "active",
+                current_period_end: calculateEndDate(metadata.interval),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            )
+            .select("id")
+            .single()
+          subscriptionId = sub?.id ?? null
         } else if (type === "gift") {
           await admin.from("article_gifts").insert({
             user_id: userId || null,
@@ -99,6 +95,16 @@ export async function GET(request: NextRequest) {
             status: data.data.status,
           })
         }
+
+        // Record payment
+        await admin.from("payments").insert({
+          subscription_id: subscriptionId,
+          reference: data.data.reference,
+          amount: data.data.amount,
+          currency: data.data.currency,
+          status: data.data.status,
+          description: metadata.description || null,
+        })
 
         console.log("Payment verified and stored:", data.data.reference)
       } catch (dbError) {
