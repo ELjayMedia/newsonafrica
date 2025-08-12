@@ -1,17 +1,34 @@
-"use client"
-import { MostRead } from "./most-read"
-import { designTokens } from "./ui/design-tokens"
+import {
+  getMostRead,
+  getPoll,
+  getMarketSnapshot,
+} from "@/lib/api/wordpress"
+import { MostRead } from "./aside/MostRead"
+import { PollWidget } from "./aside/PollWidget"
+import { GamesPromo } from "./aside/GamesPromo"
+import { MarketTicker } from "./home/MarketTicker"
+import { SponsoredPromo } from "./aside/SponsoredPromo"
 
 /**
  * SidebarContent
  * - Centralized sidebar layout using standardized widgets
  * - Mobile-first: renders full width on small screens, becomes a sidebar on lg+
+ * - Renders sidebar widgets in recommended order
  */
-export function SidebarContent() {
+export async function SidebarContent() {
+  const [mostRead, poll, markets] = await Promise.all([
+    getMostRead(5),
+    getPoll(),
+    getMarketSnapshot(),
+  ])
+
   return (
-    <aside className={designTokens.spacing.gap.xl}>
-      <MostRead />
-      {/* Additional sidebar widgets can be added here in the same standardized pattern */}
+    <aside className="space-y-6">
+      <MostRead posts={mostRead} />
+      <PollWidget poll={poll} />
+      <GamesPromo />
+      {markets.length > 0 && <MarketTicker items={markets} />}
+      <SponsoredPromo />
     </aside>
   )
 }
