@@ -1,6 +1,6 @@
 // Fixed imports to use correct file paths and exports
 import { siteConfig } from "@/config/site"
-import { fetchRecentPosts } from "@/lib/wordpress-api"
+import { fetchRecentPosts } from "@/lib/api/wordpress"
 import { NextResponse } from "next/server"
 
 export async function GET() {

@@ -1,5 +1,6 @@
 'use client'
 import Link from "next/link"
+import { fetchAllCategories } from "@/lib/api/wordpress"
 import { Button } from "@/components/ui/button"
 import { useNav } from "@/contexts/NavContext"
 
