@@ -78,13 +78,21 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- Create schema_versions table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.schema_versions (
   id SERIAL PRIMARY KEY,
-  version TEXT NOT NULL UNIQUE,
+  version VARCHAR(50) NOT NULL,
+  description TEXT,
   applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  applied_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
-  description TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'applied',
-  script TEXT
+  applied_by UUID REFERENCES auth.users(id),
+  script_name TEXT,
+  checksum TEXT,
+  execution_time INTEGER,
+  status TEXT NOT NULL DEFAULT 'success',
+  error_message TEXT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS schema_versions_version_idx ON public.schema_versions(version);
+
+-- Remove legacy migrations table if present
+DROP TABLE IF EXISTS public.migrations;
 
 -- Create subscriptions table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.subscriptions (

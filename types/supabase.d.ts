@@ -208,29 +208,38 @@ export interface Database {
         Row: {
           id: number
           version: string
+          description: string | null
           applied_at: string
-          applied_by: string
-          description: string
+          applied_by: string | null
+          script_name: string | null
+          checksum: string | null
+          execution_time: number | null
           status: string
-          script: string | null
+          error_message: string | null
         }
         Insert: {
           id?: number
           version: string
+          description?: string | null
           applied_at?: string
-          applied_by: string
-          description: string
-          status: string
-          script?: string | null
+          applied_by?: string | null
+          script_name?: string | null
+          checksum?: string | null
+          execution_time?: number | null
+          status?: string
+          error_message?: string | null
         }
         Update: {
           id?: number
           version?: string
+          description?: string | null
           applied_at?: string
-          applied_by?: string
-          description?: string
+          applied_by?: string | null
+          script_name?: string | null
+          checksum?: string | null
+          execution_time?: number | null
           status?: string
-          script?: string | null
+          error_message?: string | null
         }
       }
       subscriptions: {

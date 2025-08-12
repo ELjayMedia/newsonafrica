@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS public.schema_versions (
 -- Create unique index on version
 CREATE UNIQUE INDEX IF NOT EXISTS schema_versions_version_idx ON public.schema_versions(version);
 
+-- Drop legacy migrations table if it exists
+DROP TABLE IF EXISTS public.migrations;
+
 -- Create function to get current schema version
 CREATE OR REPLACE FUNCTION get_current_schema_version()
 RETURNS VARCHAR AS $$
