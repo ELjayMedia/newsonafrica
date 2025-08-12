@@ -63,6 +63,9 @@ export class MigrationService {
         
         -- Create unique index on version
         CREATE UNIQUE INDEX IF NOT EXISTS schema_versions_version_idx ON public.schema_versions(version);
+
+        -- Drop legacy migrations table if present
+        DROP TABLE IF EXISTS public.migrations;
         
         -- Create function to get current schema version
         CREATE OR REPLACE FUNCTION get_current_schema_version()
