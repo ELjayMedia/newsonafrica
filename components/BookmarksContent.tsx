@@ -17,6 +17,9 @@ import {
   Calendar,
   Tag,
   MoreVertical,
+  FolderPlus,
+  Folder,
+  Edit,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -27,6 +30,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
@@ -49,6 +55,11 @@ export default function BookmarksContent() {
     filterByCategory,
     exportBookmarks,
     isLoading,
+    collections,
+    addCollection,
+    updateCollection,
+    deleteCollection,
+    assignBookmarkToCollection,
   } = useBookmarks()
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -56,9 +67,12 @@ export default function BookmarksContent() {
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [filterBy, setFilterBy] = useState<FilterOption>("all")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedCollection, setSelectedCollection] = useState<string>("all")
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [notePostId, setNotePostId] = useState<string>("")
   const [noteText, setNoteText] = useState("")
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false)
+  const [newCollectionName, setNewCollectionName] = useState("")
   const { toast } = useToast()
 
   // Filter and sort bookmarks
@@ -75,6 +89,11 @@ export default function BookmarksContent() {
     // Filter by category
     if (selectedCategory !== "all") {
       filtered = filterByCategory(selectedCategory)
+    }
+
+    // Filter by collection
+    if (selectedCollection !== "all") {
+      filtered = filtered.filter((b) => b.collection_id === selectedCollection)
     }
 
     // Sort bookmarks
@@ -94,7 +113,7 @@ export default function BookmarksContent() {
           return 0
       }
     })
-  }, [bookmarks, searchQuery, sortBy, filterBy, selectedCategory, searchBookmarks, filterByCategory])
+  }, [bookmarks, searchQuery, sortBy, filterBy, selectedCategory, selectedCollection, searchBookmarks, filterByCategory])
 
   const handleSelectAll = useCallback(() => {
     if (selectedBookmarks.length === filteredBookmarks.length) {
@@ -260,6 +279,25 @@ export default function BookmarksContent() {
             </SelectContent>
           </Select>
 
+          <Select value={selectedCollection} onValueChange={setSelectedCollection}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All Collections" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Collections</SelectItem>
+              {collections.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" onClick={() => setCollectionDialogOpen(true)}>
+            <FolderPlus className="h-4 w-4 mr-2" />
+            Collections
+          </Button>
+
           <Button variant="outline" onClick={handleExport} disabled={bookmarks.length === 0}>
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -387,6 +425,25 @@ export default function BookmarksContent() {
                             {bookmark.notes ? "Edit Note" : "Add Note"}
                           </DropdownMenuItem>
 
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <div className="flex items-center">
+                                <Folder className="h-4 w-4 mr-2" />
+                                <span>Move to Collection</span>
+                              </div>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              {collections.map((c) => (
+                                <DropdownMenuItem
+                                  key={c.id}
+                                  onClick={() => assignBookmarkToCollection(bookmark.post_id, c.id)}
+                                >
+                                  {c.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
                           <DropdownMenuSeparator />
 
                           <DropdownMenuItem onClick={() => removeBookmark(bookmark.post_id)} className="text-red-600">
@@ -423,6 +480,61 @@ export default function BookmarksContent() {
               </Button>
               <Button onClick={handleAddNote} disabled={!noteText.trim()}>
                 Save Note
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Collections Dialog */}
+      <Dialog open={collectionDialogOpen} onOpenChange={setCollectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Collections</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {collections.map((c) => (
+              <div key={c.id} className="flex items-center justify-between">
+                <span>{c.name}</span>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const name = prompt("New name", c.name)
+                      if (name) updateCollection(c.id, { name })
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  {!c.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteCollection(c.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Input
+                placeholder="New collection name"
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+              />
+              <Button
+                onClick={() => {
+                  if (!newCollectionName.trim()) return
+                  addCollection(newCollectionName.trim())
+                  setNewCollectionName("")
+                }}
+                disabled={!newCollectionName.trim()}
+              >
+                Add
               </Button>
             </div>
           </div>

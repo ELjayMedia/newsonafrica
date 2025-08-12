@@ -19,6 +19,17 @@ interface Bookmark {
   tags?: string[]
   read_status?: "unread" | "read"
   notes?: string
+  collection_id?: string | null
+}
+
+interface BookmarkCollection {
+  id: string
+  user_id: string
+  name: string
+  description?: string | null
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }
 
 interface BookmarkStats {
@@ -46,6 +57,11 @@ interface BookmarksContextType {
   refreshBookmarks: () => Promise<void>
   exportBookmarks: () => Promise<string>
   isLoading: boolean
+  collections: BookmarkCollection[]
+  addCollection: (name: string, description?: string) => Promise<void>
+  updateCollection: (id: string, updates: Partial<BookmarkCollection>) => Promise<void>
+  deleteCollection: (id: string) => Promise<void>
+  assignBookmarkToCollection: (postId: string, collectionId: string) => Promise<void>
 }
 
 const BookmarksContext = createContext<BookmarksContextType | undefined>(undefined)
@@ -63,6 +79,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+  const [collections, setCollections] = useState<BookmarkCollection[]>([])
   const { toast } = useToast()
   const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
@@ -109,9 +126,11 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user) {
       fetchBookmarks()
+      fetchCollections()
     } else {
       setBookmarks([])
       setLoading(false)
+      setCollections([])
     }
   }, [user])
 
@@ -153,6 +172,30 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const fetchCollections = async () => {
+    try {
+      if (!user) {
+        setCollections([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("bookmark_collections")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+
+      if (error) {
+        console.error("Error fetching collections:", error)
+        return
+      }
+
+      setCollections(data || [])
+    } catch (error) {
+      console.error("Error fetching collections:", error)
+    }
+  }
+
   const addBookmark = useCallback(
     async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
       if (!user) {
@@ -176,6 +219,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           tags: post.tags || null,
           read_status: "unread" as const,
           notes: post.notes || null,
+          collection_id: post.collection_id || null,
         }
 
         const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
@@ -236,6 +280,81 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [user, supabase],
+  )
+
+  const addCollection = useCallback(
+    async (name: string, description?: string) => {
+      if (!user) return
+
+      setIsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from("bookmark_collections")
+          .insert({ user_id: user.id, name, description: description || null })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setCollections((prev) => [...prev, data])
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user, supabase],
+  )
+
+  const updateCollection = useCallback(
+    async (id: string, updates: Partial<BookmarkCollection>) => {
+      if (!user) return
+
+      setIsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from("bookmark_collections")
+          .update(updates)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user, supabase],
+  )
+
+  const deleteCollection = useCallback(
+    async (id: string) => {
+      if (!user) return
+
+      setIsLoading(true)
+      try {
+        const { error } = await supabase
+          .from("bookmark_collections")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id)
+
+        if (error) throw error
+
+        setCollections((prev) => prev.filter((c) => c.id !== id))
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user, supabase],
+  )
+
+  const assignBookmarkToCollection = useCallback(
+    async (postId: string, collectionId: string) => {
+      await updateBookmark(postId, { collection_id: collectionId })
+    },
+    [updateBookmark],
   )
 
   const bulkRemoveBookmarks = useCallback(
@@ -367,6 +486,11 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       refreshBookmarks,
       exportBookmarks,
       isLoading,
+      collections,
+      addCollection,
+      updateCollection,
+      deleteCollection,
+      assignBookmarkToCollection,
     }),
     [
       bookmarks,
@@ -387,6 +511,11 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       refreshBookmarks,
       exportBookmarks,
       isLoading,
+      collections,
+      addCollection,
+      updateCollection,
+      deleteCollection,
+      assignBookmarkToCollection,
     ],
   )
 
