@@ -363,6 +363,32 @@ export interface Database {
           status?: string
           created_at?: string
         }
+      },
+      read_history: {
+        Row: {
+          id: string
+          user_id: string
+          post_id: string
+          category: string | null
+          tags: Json | null
+          read_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          post_id: string
+          category?: string | null
+          tags?: Json | null
+          read_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          post_id?: string
+          category?: string | null
+          tags?: Json | null
+          read_at?: string
+        }
       }
     }
     Views: {
