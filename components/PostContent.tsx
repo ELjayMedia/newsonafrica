@@ -9,6 +9,7 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
+import { ReadLogger } from "@/components/ReadLogger"
 
 interface PostContentProps {
   post: WordPressPost
@@ -21,6 +22,11 @@ export function PostContent({ post }: PostContentProps) {
 
   return (
     <div className="container mx-auto px-4 pb-6 bg-white">
+      <ReadLogger
+        postId={post.id}
+        category={post.categories?.nodes?.[0]?.name}
+        tags={post.tags?.nodes?.map((tag: any) => tag.name)}
+      />
       <article className="mb-8">
         {/* Top date and share section */}
         <div className="flex justify-between items-center mb-4 text-sm">
