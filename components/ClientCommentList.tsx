@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Trash2, Reply, ThumbsUp } from "lucide-react"
-import { deleteComment } from "@/lib/wordpress-api"
+import { deleteComment } from "@/lib/api/wordpress"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Comment {
