@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { revalidateTags } from "@/lib/revalidate"
+import { createAdminClient } from "@/lib/supabase"
 import crypto from "crypto"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
@@ -32,6 +33,17 @@ export async function POST(request: NextRequest) {
 
     const data = JSON.parse(body)
     const { action, post } = data
+
+    try {
+      const admin = createAdminClient()
+      await admin.from("webhook_events").insert({
+        event_type: action,
+        payload: data,
+        received_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.error("Failed to log WordPress webhook:", err)
+    }
 
     console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
