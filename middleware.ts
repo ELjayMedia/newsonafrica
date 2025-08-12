@@ -3,8 +3,6 @@ import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/types/supabase"
 
-export const runtime = "nodejs"
-
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
 

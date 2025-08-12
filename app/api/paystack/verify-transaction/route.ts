@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
 import { createAdminClient } from "@/lib/supabase"
 
-export const runtime = "nodejs"
-
 function calculateEndDate(interval: string | undefined) {
   const end = new Date()
   switch (interval) {

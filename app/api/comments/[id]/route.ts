@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-export const runtime = "nodejs"
-
 // Update a comment
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const cookieStore = cookies()

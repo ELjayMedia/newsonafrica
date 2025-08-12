@@ -156,8 +156,8 @@ The app uses a small data layer built around [`lib/fetcher.ts`](./lib/fetcher.ts
 
 WordPress can trigger incremental static regeneration by calling:
 
-```
+\`\`\`
 POST https://<your-vercel-app>/api/revalidate?secret=MY_SECRET&path=/updated-path
-```
+\`\`\`
 
 Configure the secret via `REVALIDATION_SECRET` and see [`app/api/revalidate/route.ts`](./app/api/revalidate/route.ts).
