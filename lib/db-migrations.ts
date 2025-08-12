@@ -427,6 +427,63 @@ export const migrations: Migration[] = [
       EXECUTE FUNCTION refresh_post_comment_counts();
     `,
   },
+  {
+    id: "008_bookmark_collections",
+    name: "Bookmark Collections",
+    description: "Creates bookmark collections table and links bookmarks",
+    sql: `
+      -- Create bookmark collections table
+      CREATE TABLE IF NOT EXISTS public.bookmark_collections (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        is_default BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      -- Enable RLS for bookmark collections
+      ALTER TABLE public.bookmark_collections ENABLE ROW LEVEL SECURITY;
+
+      -- Policies for bookmark collections
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'bookmark_collections' AND policyname = 'Users can view own bookmark collections'
+        ) THEN
+          CREATE POLICY "Users can view own bookmark collections" ON public.bookmark_collections
+            FOR SELECT USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'bookmark_collections' AND policyname = 'Users can create own bookmark collections'
+        ) THEN
+          CREATE POLICY "Users can create own bookmark collections" ON public.bookmark_collections
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'bookmark_collections' AND policyname = 'Users can update own bookmark collections'
+        ) THEN
+          CREATE POLICY "Users can update own bookmark collections" ON public.bookmark_collections
+            FOR UPDATE USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'bookmark_collections' AND policyname = 'Users can delete own bookmark collections'
+        ) THEN
+          CREATE POLICY "Users can delete own bookmark collections" ON public.bookmark_collections
+            FOR DELETE USING (auth.uid() = user_id);
+        END IF;
+      END
+      $$;
+
+      -- Add collection_id column to bookmarks table
+      ALTER TABLE public.bookmarks
+      ADD COLUMN IF NOT EXISTS collection_id UUID REFERENCES public.bookmark_collections(id) ON DELETE SET NULL;
+    `,
+  },
 ]
 
 // Function to apply a single migration
