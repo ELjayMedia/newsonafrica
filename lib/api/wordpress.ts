@@ -7,9 +7,7 @@ import {
 } from "@/lib/graphql/queries"
 import { cache } from "react"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
-
-const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from "@/config/wordpress"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -252,7 +250,7 @@ async function fetchFromRestApi(endpoint: string, params: Record<string, any> = 
     Object.entries(params).map(([key, value]) => [key, String(value)]),
   ).toString()
 
-  const url = `${WORDPRESS_REST_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   const MAX_RETRIES = 3
   let lastError: any
@@ -1005,7 +1003,7 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
       order: "desc",
     })
 
-    const url = `${WORDPRESS_REST_URL}/posts?${params.toString()}`
+    const url = `${WORDPRESS_REST_API_URL}/posts?${params.toString()}`
 
     const response = await fetch(url, {
       headers: {
@@ -1522,7 +1520,7 @@ export const fetchAuthorData = cache(async (slug: string, _after: string | null 
  * Delete a comment
  */
 export const deleteComment = async (commentId: string) => {
-  const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
+  const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
@@ -1545,7 +1543,7 @@ export const fetchPendingComments = async () => {
  * Approve a comment
  */
 export const approveComment = async (commentId: string) => {
-  const response = await fetch(`${WORDPRESS_REST_URL}/comments/${commentId}`, {
+  const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1648,7 +1646,7 @@ export const client = {
   request: (query: string, variables?: Record<string, any>) =>
     graphqlRequest<any>(query, variables),
   endpoint: WORDPRESS_GRAPHQL_URL,
-  restEndpoint: WORDPRESS_REST_URL,
+  restEndpoint: WORDPRESS_REST_API_URL,
 }
 
 /**
@@ -1656,7 +1654,7 @@ export const client = {
  */
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_URL}/users/${userId}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

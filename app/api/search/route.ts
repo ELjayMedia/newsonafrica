@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
 
 // WordPress API configuration
-const WORDPRESS_API_URL =
-  process.env.WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_API_URL = WORDPRESS_REST_API_URL
 
 // Rate limiting
 const RATE_LIMIT = 50
