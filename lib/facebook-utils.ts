@@ -23,7 +23,7 @@ export async function getFacebookUserData(accessToken: string) {
 export async function updateProfileWithFacebookData(userId: string, facebookData: any): Promise<Profile> {
   try {
     // Extract relevant data from Facebook response
-    const { name, email, picture, first_name, last_name, link } = facebookData
+    const { name, email, picture, first_name, last_name } = facebookData
     const avatarUrl = picture?.data?.url
 
     // Check if profile exists
@@ -54,21 +54,6 @@ export async function updateProfileWithFacebookData(userId: string, facebookData
         updates.avatar_url = avatarUrl
       }
 
-      // Add additional fields if available
-      if (!existingProfile.website && link) {
-        updates.website = link
-      }
-
-      // Store first and last name in metadata if available
-      const metadata = existingProfile.metadata || {}
-      if (first_name && !metadata.first_name) {
-        metadata.first_name = first_name
-      }
-      if (last_name && !metadata.last_name) {
-        metadata.last_name = last_name
-      }
-      updates.metadata = metadata
-
       // Update the profile
       const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single()
 
@@ -94,13 +79,6 @@ export async function updateProfileWithFacebookData(userId: string, facebookData
       // If username exists, append a random number
       const finalUsername = existingUser ? `${username}_${Math.floor(Math.random() * 10000)}` : username
 
-      // Create metadata object for additional fields
-      const metadata = {
-        first_name: first_name || "",
-        last_name: last_name || "",
-        source: "facebook",
-      }
-
       // Create the profile
       const newProfile = {
         id: userId,
@@ -108,8 +86,6 @@ export async function updateProfileWithFacebookData(userId: string, facebookData
         full_name: name,
         email,
         avatar_url: avatarUrl,
-        website: link,
-        metadata,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }

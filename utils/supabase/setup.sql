@@ -11,12 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   username TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
-  website TEXT,
   email TEXT,
-  bio TEXT,
-  country TEXT,
-  interests TEXT[],
-  is_admin BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ
 );
@@ -231,13 +226,14 @@ CREATE TRIGGER set_profiles_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, email, avatar_url, created_at, updated_at)
+  INSERT INTO public.profiles (id, username, full_name, email, avatar_url, created_at, updated_at)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', 
+    COALESCE(NEW.raw_user_meta_data->>'username',
              NEW.raw_user_meta_data->>'name',
-             NEW.raw_user_meta_data->>'full_name', 
+             NEW.raw_user_meta_data->>'full_name',
              NEW.email),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
     NEW.email,
     NEW.raw_user_meta_data->>'avatar_url',
     NEW.created_at,

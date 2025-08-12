@@ -63,7 +63,7 @@ export function useAuth() {
         if (returnTo) {
           router.push(decodeURIComponent(returnTo))
         } else {
-          router.push("/onboarding")
+          router.push("/")
         }
 
         return { success: true }

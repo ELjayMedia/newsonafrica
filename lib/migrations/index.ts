@@ -26,9 +26,7 @@ export const migrations: Migration[] = [
         username TEXT UNIQUE,
         full_name TEXT,
         avatar_url TEXT,
-        website TEXT,
         email TEXT,
-        bio TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ
       );

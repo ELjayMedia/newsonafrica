@@ -23,12 +23,8 @@ export interface Profile {
   id: string
   username: string
   full_name?: string
-  bio?: string
   avatar_url?: string
-  website?: string
   email?: string
-  country?: string
-  interests?: string[]
   updated_at?: string
   created_at?: string
 }

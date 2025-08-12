@@ -20,9 +20,7 @@ export const migrations: Migration[] = [
         username TEXT UNIQUE NOT NULL,
         full_name TEXT,
         avatar_url TEXT,
-        website TEXT,
         email TEXT,
-        bio TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
