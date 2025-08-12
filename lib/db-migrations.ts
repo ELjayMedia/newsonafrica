@@ -68,6 +68,14 @@ export const migrations: Migration[] = [
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
         post_id TEXT NOT NULL,
+        title TEXT,
+        slug TEXT,
+        excerpt TEXT,
+        featured_image JSONB,
+        category TEXT,
+        tags TEXT[],
+        read_status TEXT DEFAULT 'unread' CHECK (read_status IN ('read','unread')),
+        notes TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(user_id, post_id)
       );

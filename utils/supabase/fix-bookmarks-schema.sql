@@ -10,6 +10,10 @@ CREATE TABLE bookmarks (
   slug TEXT,
   excerpt TEXT,
   featured_image JSONB,
+  category TEXT,
+  tags TEXT[],
+  read_status TEXT DEFAULT 'unread' CHECK (read_status IN ('read','unread')),
+  notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, post_id)

@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId, title, slug, excerpt, featuredImage, category, tags, notes } = body
+    const { postId, title, slug, excerpt, featured_image, category, tags, notes } = body
 
     if (!postId) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 })
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
-      featured_image: featuredImage ? JSON.stringify(featuredImage) : null,
+      featured_image: featured_image ? JSON.stringify(featured_image) : null,
       category: category || null,
       tags: tags || null,
       read_status: "unread" as const,

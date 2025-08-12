@@ -28,7 +28,12 @@ CREATE TABLE IF NOT EXISTS public.bookmarks (
   post_id TEXT NOT NULL,
   title TEXT,
   slug TEXT,
-  featuredImage JSONB,
+  excerpt TEXT,
+  featured_image JSONB,
+  category TEXT,
+  tags TEXT[],
+  read_status TEXT DEFAULT 'unread' CHECK (read_status IN ('read','unread')),
+  notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, post_id)
 );
