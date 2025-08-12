@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "analyze": "ANALYZE=true next build",
-    "build": "next build",
-    "dev": "next dev",
+    "prepare": "husky install",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "build": "next build",
+    "build:web": "next build && next export",
+    "analyze": "ANALYZE=true next build",
+    "ci:verify": "node -v && pnpm -v && pnpm install --frozen-lockfile && pnpm typecheck && pnpm build",
+    "clean": "rimraf .next out node_modules && pnpm store prune",
+    "dev": "next dev",
     "start": "next start",
     "test": "vitest run"
   },
@@ -126,5 +131,8 @@
     "typescript": "^5",
     "vitest": "^1.6.1"
   },
-  "packageManager": "pnpm@10.11.0"
+  "engines": {
+    "node": ">=18.18 <19"
+  },
+  "packageManager": "pnpm@9.12.0"
 }

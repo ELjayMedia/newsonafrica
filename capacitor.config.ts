@@ -1,9 +1,11 @@
 import type { CapacitorConfig } from "@capacitor/cli"
 
+const webDir = process.env.CAPACITOR_WEB_DIR || "out"
+
 const config: CapacitorConfig = {
   appId: "com.newsonafrica.app", // Replace with your actual app ID
   appName: "News On Africa",
-  webDir: "out", // Or 'build' if you're using a different build output directory
+  webDir,
   bundledWebRuntime: false,
   plugins: {
     LocalNotifications: {
