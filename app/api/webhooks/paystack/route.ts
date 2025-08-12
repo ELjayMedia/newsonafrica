@@ -51,6 +51,18 @@ export async function POST(request: Request) {
     const event = JSON.parse(body)
     console.log(`Received Paystack webhook: ${event.event}`)
 
+    // Log webhook event
+    try {
+      const admin = createAdminClient()
+      await admin.from("webhook_events").insert({
+        event_type: event.event,
+        payload: event,
+        received_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.error("Failed to log Paystack webhook:", err)
+    }
+
     // Handle different event types
     switch (event.event) {
       case "charge.success":

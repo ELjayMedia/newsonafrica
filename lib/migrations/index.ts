@@ -450,6 +450,20 @@ export const migrations: Migration[] = [
       EXECUTE FUNCTION create_user_settings();
     `,
   },
+  {
+    version: "1.7.0",
+    description: "Add webhook_events table",
+    scriptName: "webhook-events-table.sql",
+    dependencies: ["1.0.0"],
+    sql: `
+      CREATE TABLE IF NOT EXISTS public.webhook_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `,
+  },
 ]
 
 // Get all available migration versions
