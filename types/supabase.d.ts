@@ -178,10 +178,9 @@ export interface Database {
           user_id: string
           type: string
           title: string
-          message: string
-          link: string
-          is_read: boolean
-          metadata: Json | null
+          message: string | null
+          link: string | null
+          read: boolean
           created_at: string
         }
         Insert: {
@@ -189,10 +188,9 @@ export interface Database {
           user_id: string
           type: string
           title: string
-          message: string
-          link: string
-          is_read?: boolean
-          metadata?: Json | null
+          message?: string | null
+          link?: string | null
+          read?: boolean
           created_at?: string
         }
         Update: {
@@ -200,10 +198,9 @@ export interface Database {
           user_id?: string
           type?: string
           title?: string
-          message?: string
-          link?: string
-          is_read?: boolean
-          metadata?: Json | null
+          message?: string | null
+          link?: string | null
+          read?: boolean
           created_at?: string
         }
       }

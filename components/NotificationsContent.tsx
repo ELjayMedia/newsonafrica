@@ -71,12 +71,12 @@ export function NotificationsContent() {
         <TabsContent value="unread">
           {loading ? (
             <NotificationsLoading />
-          ) : notifications.filter((n) => !n.is_read).length === 0 ? (
+          ) : notifications.filter((n) => !n.read).length === 0 ? (
             <EmptyNotifications message="You have no unread notifications" />
           ) : (
             <div className="space-y-4">
               {notifications
-                .filter((n) => !n.is_read)
+                .filter((n) => !n.read)
                 .map((notification) => (
                   <NotificationCard
                     key={notification.id}
@@ -117,22 +117,14 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
 
   return (
     <div
-      className={`border rounded-lg p-4 shadow-sm ${!notification.is_read ? "bg-blue-50 border-blue-100" : "bg-white"}`}
+      className={`border rounded-lg p-4 shadow-sm ${!notification.read ? "bg-blue-50 border-blue-100" : "bg-white"}`}
     >
       <div className="flex items-start gap-4">
-        {notification.metadata?.sender_avatar ? (
-          <img
-            src={notification.metadata.sender_avatar || "/placeholder.svg"}
-            alt={notification.metadata.sender_name || "User"}
-            className="h-10 w-10 rounded-full"
-          />
-        ) : (
-          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-            <span className="text-sm font-medium">
-              {notification.metadata?.sender_name?.substring(0, 2).toUpperCase() || "U"}
-            </span>
-          </div>
-        )}
+        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+          <span className="text-sm font-medium">
+            {notification.title.substring(0, 2).toUpperCase()}
+          </span>
+        </div>
 
         <div className="flex-1">
           <h3 className="font-medium">{notification.title}</h3>
@@ -140,7 +132,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-gray-500">{timeAgo}</span>
             <div className="flex gap-2">
-              {!notification.is_read && (
+              {!notification.read && (
                 <Button variant="ghost" size="sm" onClick={onMarkAsRead}>
                   <CheckCircle className="h-4 w-4" />
                   <span className="sr-only">Mark as read</span>
@@ -151,7 +143,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
                 <span className="sr-only">Delete</span>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href={notification.link}>View</Link>
+                <Link href={notification.link || "#"}>View</Link>
               </Button>
             </div>
           </div>

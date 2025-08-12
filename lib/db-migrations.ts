@@ -266,16 +266,15 @@ export const migrations: Migration[] = [
         user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
         type TEXT NOT NULL,
         title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        link TEXT NOT NULL,
-        is_read BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        metadata JSONB
+        message TEXT,
+        link TEXT,
+        read BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
       -- Create indexes for notifications
       CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
-      CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON public.notifications(is_read);
+      CREATE INDEX IF NOT EXISTS notifications_read_idx ON public.notifications(read);
       CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON public.notifications(created_at);
 
       -- Set up RLS for notifications

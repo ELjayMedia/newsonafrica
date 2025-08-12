@@ -68,9 +68,10 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
-  content TEXT NOT NULL,
-  related_id TEXT,
-  read BOOLEAN DEFAULT false,
+  title TEXT NOT NULL,
+  message TEXT,
+  link TEXT,
+  read BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

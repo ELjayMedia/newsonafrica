@@ -21,14 +21,12 @@ export async function createNotification({
   title,
   message,
   link,
-  metadata,
 }: {
   userId: string
   type: NotificationType
   title: string
-  message: string
-  link: string
-  metadata?: Record<string, any>
+  message?: string
+  link?: string
 }): Promise<Notification | null> {
   try {
     const notifications = await insertRecords<Notification>(
@@ -39,8 +37,7 @@ export async function createNotification({
         title,
         message,
         link,
-        is_read: false,
-        metadata,
+        read: false,
       },
       {
         clearCache: new RegExp(`^notifications:.*${userId}`),
@@ -93,14 +90,6 @@ export async function createCommentReplyNotification({
     title,
     message,
     link,
-    metadata: {
-      comment_id: commentId,
-      post_id: postId,
-      post_title: postTitle,
-      sender_id: senderId,
-      sender_name: senderName,
-      sender_avatar: senderAvatar,
-    },
   })
 }
 
@@ -118,7 +107,7 @@ export async function getNotifications(
     const filters = (query: any) => {
       let q = query.eq("user_id", userId)
       if (!includeRead) {
-        q = q.eq("is_read", false)
+        q = q.eq("read", false)
       }
       return q
     }
@@ -139,7 +128,7 @@ export async function getNotifications(
 
     const unreadCount = await countRecords(
       "notifications",
-      (query) => query.eq("user_id", userId).eq("is_read", false),
+      (query) => query.eq("user_id", userId).eq("read", false),
       { ttl: NOTIFICATION_CACHE_TTL },
     )
 
@@ -175,7 +164,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
     const updated = await updateRecord<Notification>(
       "notifications",
       notificationId,
-      { is_read: true },
+      { read: true },
       {
         clearCache: new RegExp(`^notifications:.*${notification.user_id}`),
       },
@@ -195,9 +184,9 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
   try {
     const { error } = await supabase
       .from("notifications")
-      .update({ is_read: true } as any)
+      .update({ read: true } as any)
       .eq("user_id", userId as any)
-      .eq("is_read", false as any)
+      .eq("read", false as any)
 
     if (error) {
       console.error("Error marking all notifications as read:", error)
@@ -298,7 +287,7 @@ export async function getNotificationCount(userId: string): Promise<Notification
 
     const unreadCount = await countRecords(
       "notifications",
-      (query) => query.eq("user_id", userId).eq("is_read", false),
+      (query) => query.eq("user_id", userId).eq("read", false),
       { ttl: NOTIFICATION_CACHE_TTL },
     )
 
