@@ -1,28 +1,31 @@
+'use client'
 import Link from "next/link"
-import { fetchAllCategories } from "@/lib/wordpress-api"
 import { Button } from "@/components/ui/button"
+import { useNav } from "@/contexts/NavContext"
 
-export default async function CategoryMenu() {
-  const categories = await fetchAllCategories()
+export default function CategoryMenu() {
+  const { items } = useNav()
 
-  if (!categories || categories.length === 0) {
+  if (!items || items.length === 0) {
     return null
   }
 
   return (
     <nav className="mb-6 overflow-x-auto scrollbar-hide" aria-label="Categories">
       <div className="flex space-x-2 whitespace-nowrap pb-2">
-        {categories.map((category: { name: string; slug: string; count?: number }) => (
+        {items.map((category) => (
           <Button
-            key={category.slug}
+            key={category.href}
             variant="outline"
             size="sm"
             className="rounded-full hover:bg-blue-50 hover:text-blue-700 transition-colors"
             asChild
           >
-            <Link href={`/category/${category.slug}`}>
-              {category.name}
-              {category.count !== undefined && <span className="ml-1 text-xs text-gray-500">({category.count})</span>}
+            <Link href={category.href}>
+              {category.title}
+              {category.count !== undefined && (
+                <span className="ml-1 text-xs text-gray-500">({category.count})</span>
+              )}
             </Link>
           </Button>
         ))}

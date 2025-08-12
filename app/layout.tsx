@@ -20,6 +20,8 @@ import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
 import Script from "next/script"
+import { getNavItems } from "@/config/nav"
+import { NavProvider } from "@/contexts/NavContext"
 
 import "./globals.css"
 
@@ -58,6 +60,7 @@ export default async function RootLayout({
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
+  const navItems = await getNavItems()
   const marketItems = await getMarketSnapshot()
 
   return (
@@ -93,6 +96,7 @@ export default async function RootLayout({
         <Script src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" strategy="afterInteractive" async />
 
         <ThemeProvider attribute="class" defaultTheme="light">
+          <NavProvider items={navItems}>
           <UserProvider>
             <BookmarksProvider>
               <ClientWrapper>
@@ -130,6 +134,7 @@ export default async function RootLayout({
               </ClientWrapper>
             </BookmarksProvider>
           </UserProvider>
+          </NavProvider>
         </ThemeProvider>
       </body>
     </html>
