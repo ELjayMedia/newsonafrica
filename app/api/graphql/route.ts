@@ -62,4 +62,10 @@ const handler = startServerAndCreateNextHandler(server, {
   context: createContext,
 })
 
-export { handler as GET, handler as POST }
+export async function GET(request: NextRequest, _ctx: { params: Promise<Record<string, string | string[] | undefined>> }) {
+  return handler(request)
+}
+
+export async function POST(request: NextRequest, _ctx: { params: Promise<Record<string, string | string[] | undefined>> }) {
+  return handler(request)
+}
