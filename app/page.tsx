@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
 import { HomeShell } from "@/components/home/HomeShell"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import { getCategories, getPosts } from "@/lib/wp-client"
 import { categoryConfigs } from "@/config/homeConfig"
 
 export const metadata: Metadata = {
@@ -75,39 +75,35 @@ export const revalidate = 600 // Revalidate every 10 minutes
 
 async function getHomePageData(limit = 50) {
   try {
-    // Fetch initial posts and categories in parallel
-    const [postsResult, categoriesResult] = await Promise.allSettled([getLatestPosts(limit), getCategories()])
+    const [posts, categories] = await Promise.all([
+      getPosts({ perPage: limit }),
+      getCategories(),
+    ])
 
-    const posts = postsResult.status === "fulfilled" ? (postsResult.value.posts ?? []) : []
-    const categories = categoriesResult.status === "fulfilled" ? (categoriesResult.value.categories ?? []) : []
+    const catMap = new Map(categories.map((c) => [c.slug, c.id]))
 
     const categoryPromises = categoryConfigs.map(async (config) => {
+      const id = catMap.get(config.slug)
+      if (!id) return { slug: config.slug, posts: [] }
       try {
-        const result = await getPostsByCategory(config.slug, 5)
-        return { slug: config.slug, posts: result.posts || [] }
+        const result = await getPosts({ category: id, perPage: 5 })
+        return { slug: config.slug, posts: result }
       } catch (error) {
         console.error(`Error fetching ${config.name} posts:`, error)
         return { slug: config.slug, posts: [] }
       }
     })
 
-    const categoryResults = await Promise.allSettled(categoryPromises)
+    const categoryResults = await Promise.all(categoryPromises)
     const categoryPosts: Record<string, any[]> = {}
-
-    categoryResults.forEach((result) => {
-      if (result.status === "fulfilled") {
-        categoryPosts[result.value.slug] = result.value.posts
-      }
+    categoryResults.forEach((r) => {
+      categoryPosts[r.slug] = r.posts
     })
-
-    const fpTaggedPosts = posts.filter((post) =>
-      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-    )
 
     return {
       posts,
       initialData: {
-        taggedPosts: fpTaggedPosts,
+        taggedPosts: [],
         featuredPosts: posts.slice(0, 6),
         categories,
         recentPosts: posts.slice(0, 10),

@@ -142,3 +142,22 @@ The development of News On Africa is funded by PJA Media. We appreciate their su
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 📡 Data fetching & caching
+
+The app uses a small data layer built around [`lib/fetcher.ts`](./lib/fetcher.ts) and [`lib/wp-client.ts`](./lib/wp-client.ts).
+
+- Requests are deduplicated and retried with exponential backoff.
+- Responses are cached using HTTP ETags and validated with Zod at the boundary.
+- Server components leverage ISR (`revalidate` + `force-cache`) to keep data fresh.
+- Client components can use React Query/SWR with a `staleTime` of 60–300s.
+
+### On‑demand revalidation
+
+WordPress can trigger incremental static regeneration by calling:
+
+```
+POST https://<your-vercel-app>/api/revalidate?secret=MY_SECRET&path=/updated-path
+```
+
+Configure the secret via `REVALIDATION_SECRET` and see [`app/api/revalidate/route.ts`](./app/api/revalidate/route.ts).
