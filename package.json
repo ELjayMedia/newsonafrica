@@ -1,6 +1,9 @@
 {
   "name": "my-v0-project",
   "version": "0.1.0",
+  "engines": {
+    "node": "22.x"
+  },
   "private": true,
   "scripts": {
     "analyze": "ANALYZE=true next build",
