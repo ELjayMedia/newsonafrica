@@ -78,11 +78,11 @@ export function NotificationBell() {
           </div>
           <TabsContent value="unread" className="mt-0">
             <ScrollArea className="h-[300px]">
-              {notifications.filter((n) => !n.is_read).length === 0 ? (
+              {notifications.filter((n) => !n.read).length === 0 ? (
                 <div className="p-4 text-center text-sm text-gray-500">No unread notifications</div>
               ) : (
                 notifications
-                  .filter((n) => !n.is_read)
+                  .filter((n) => !n.read)
                   .map((notification) => (
                     <NotificationItem
                       key={notification.id}
@@ -134,24 +134,16 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
   return (
     <DropdownMenuItem asChild className="cursor-pointer p-0">
       <Link
-        href={notification.link}
-        className={`block w-full p-4 hover:bg-gray-50 ${!notification.is_read ? "bg-blue-50" : ""}`}
+        href={notification.link || "#"}
+        className={`block w-full p-4 hover:bg-gray-50 ${!notification.read ? "bg-blue-50" : ""}`}
         onClick={onClick}
       >
         <div className="flex items-start gap-3">
-          {notification.metadata?.sender_avatar ? (
-            <img
-              src={notification.metadata.sender_avatar || "/placeholder.svg"}
-              alt={notification.metadata.sender_name || "User"}
-              className="h-8 w-8 rounded-full"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-xs font-medium">
-                {notification.metadata?.sender_name?.substring(0, 2).toUpperCase() || "U"}
-              </span>
-            </div>
-          )}
+          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+            <span className="text-xs font-medium">
+              {notification.title.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">{notification.title}</p>
             <p className="text-xs text-gray-500 mt-1">{notification.message}</p>

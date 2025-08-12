@@ -52,7 +52,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Update local state
         setNotifications((prev) =>
           prev.map((notification) =>
-            notification.id === notificationId ? { ...notification, is_read: true } : notification,
+            notification.id === notificationId ? { ...notification, read: true } : notification,
           ),
         )
         setNotificationCount((prev) => ({
@@ -72,7 +72,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const success = await NotificationService.markAllNotificationsAsRead(user.id)
       if (success) {
         // Update local state
-        setNotifications((prev) => prev.map((notification) => ({ ...notification, is_read: true })))
+        setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
         setNotificationCount((prev) => ({
           ...prev,
           unread: 0,
@@ -101,7 +101,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setNotifications((prev) => prev.filter((notification) => notification.id !== notificationId))
         setNotificationCount((prev) => ({
           total: Math.max(0, prev.total - 1),
-          unread: deletedNotification && !deletedNotification.is_read ? Math.max(0, prev.unread - 1) : prev.unread,
+          unread: deletedNotification && !deletedNotification.read ? Math.max(0, prev.unread - 1) : prev.unread,
         }))
       }
     } catch (error) {
