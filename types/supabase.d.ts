@@ -237,39 +237,62 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          paystack_customer_id: string | null
           plan: string
           status: string
-          start_date: string
-          end_date: string | null
-          payment_provider: string
-          payment_id: string
-          metadata: Json | null
-          created_at: string
+          current_period_end: string | null
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
+          paystack_customer_id?: string | null
           plan: string
           status: string
-          start_date: string
-          end_date?: string | null
-          payment_provider: string
-          payment_id: string
-          metadata?: Json | null
-          created_at?: string
+          current_period_end?: string | null
           updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
+          paystack_customer_id?: string | null
           plan?: string
           status?: string
-          start_date?: string
-          end_date?: string | null
-          payment_provider?: string
-          payment_id?: string
-          metadata?: Json | null
+          current_period_end?: string | null
+          updated_at?: string
+        }
+      }
+      plans: {
+        Row: {
+          id: string
+          name: string
+          paystack_plan_id: string
+          amount: number
+          currency: string
+          interval: string
+          features: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          paystack_plan_id: string
+          amount: number
+          currency?: string
+          interval: string
+          features?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          paystack_plan_id?: string
+          amount?: number
+          currency?: string
+          interval?: string
+          features?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -277,8 +300,7 @@ export interface Database {
       payments: {
         Row: {
           id: string
-          user_id: string | null
-          type: string
+          subscription_id: string | null
           reference: string
           amount: number
           currency: string
@@ -288,8 +310,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id?: string | null
-          type: string
+          subscription_id?: string | null
           reference: string
           amount: number
           currency: string
@@ -299,8 +320,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string | null
-          type?: string
+          subscription_id?: string | null
           reference?: string
           amount?: number
           currency?: string

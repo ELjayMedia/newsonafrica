@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
-import { paystackClient } from "@/lib/paystack-utils"
 
 export const runtime = "nodejs"
 
@@ -38,17 +37,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 })
     }
 
-    // Cancel subscription with payment provider
-    if (subscription.provider === "paystack" && subscription.provider_subscription_id) {
-      await paystackClient.disableSubscription(subscription.provider_subscription_id, {
-        reason: "User requested cancellation",
-      })
-    }
-
     // Update subscription status in database
     const { error: updateError } = await supabase
       .from("subscriptions")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
       .eq("id", subscriptionId)
       .eq("user_id", session.user.id)
 

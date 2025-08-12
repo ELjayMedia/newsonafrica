@@ -101,27 +101,24 @@ async function handleChargeSuccess(data: any) {
     const userId = metadata.user_id as string | undefined
     const type = (metadata.type as string) || "subscription"
 
-    await admin.from("payments").insert({
-      user_id: userId || null,
-      type,
-      reference: data.reference,
-      amount: data.amount,
-      currency: data.currency || "NGN",
-      status: data.status,
-      description: metadata.description || null,
-    })
-
+    let subscriptionId: string | null = null
     if (type === "subscription" && userId) {
-      await admin.from("subscriptions").insert({
-        user_id: userId,
-        plan: metadata.plan_id || metadata.plan_name || "plan",
-        status: "active",
-        start_date: new Date().toISOString(),
-        end_date: calculateEndDate(metadata.interval),
-        payment_provider: "paystack",
-        payment_id: data.reference,
-        metadata: data,
-      })
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .upsert(
+          {
+            user_id: userId,
+            paystack_customer_id: data.customer?.customer_code || null,
+            plan: metadata.plan_id || metadata.plan_name || "plan",
+            status: "active",
+            current_period_end: calculateEndDate(metadata.interval),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
+        .select("id")
+        .single()
+      subscriptionId = sub?.id ?? null
     } else if (type === "gift") {
       await admin.from("article_gifts").insert({
         user_id: userId || null,
@@ -133,6 +130,15 @@ async function handleChargeSuccess(data: any) {
         status: data.status,
       })
     }
+
+    await admin.from("payments").insert({
+      subscription_id: subscriptionId,
+      reference: data.reference,
+      amount: data.amount,
+      currency: data.currency || "NGN",
+      status: data.status,
+      description: metadata.description || null,
+    })
   } catch (error) {
     console.error("Error processing charge.success webhook:", error)
   }
@@ -145,16 +151,21 @@ async function handleSubscriptionCreated(data: any) {
     const metadata = data.customer?.metadata || {}
     const userId = metadata.user_id as string | undefined
 
-    await admin.from("subscriptions").insert({
-      user_id: userId || null,
-      plan: data.plan?.plan_code || data.plan?.name || "plan",
-      status: data.status || "active",
-      start_date: new Date(data.createdAt).toISOString(),
-      end_date: data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null,
-      payment_provider: "paystack",
-      payment_id: data.subscription_code,
-      metadata: data,
-    })
+    await admin
+      .from("subscriptions")
+      .upsert(
+        {
+          user_id: userId || null,
+          paystack_customer_id: data.customer?.customer_code || null,
+          plan: data.plan?.plan_code || data.plan?.name || "plan",
+          status: data.status || "active",
+          current_period_end: data.next_payment_date
+            ? new Date(data.next_payment_date).toISOString()
+            : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      )
   } catch (error) {
     console.error("Error storing subscription from webhook:", error)
   }
@@ -166,8 +177,11 @@ async function handleSubscriptionDisabled(data: any) {
     const admin = createAdminClient()
     await admin
       .from("subscriptions")
-      .update({ status: "cancelled", end_date: new Date().toISOString() })
-      .eq("payment_id", data.subscription_code)
+      .update({
+        status: "cancelled",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("paystack_customer_id", data.customer?.customer_code || "")
   } catch (error) {
     console.error("Error cancelling subscription:", error)
   }
@@ -179,11 +193,18 @@ async function handlePaymentFailed(data: any) {
     const admin = createAdminClient()
     const metadata = data.metadata || {}
     const userId = metadata.user_id as string | undefined
-    const type = (metadata.type as string) || "subscription"
+    let subscriptionId: string | null = null
+    if (userId) {
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle()
+      subscriptionId = sub?.id ?? null
+    }
 
     await admin.from("payments").insert({
-      user_id: userId || null,
-      type,
+      subscription_id: subscriptionId,
       reference: data.reference,
       amount: data.amount,
       currency: data.currency || "NGN",
@@ -199,11 +220,16 @@ async function handleInvoiceUpdate(data: any) {
   console.log("Processing invoice update:", data.invoice_code)
   try {
     const admin = createAdminClient()
-    if (data.status === "success" && data.subscription?.subscription_code) {
+    if (data.status === "success" && data.subscription?.customer?.customer_code) {
       await admin
         .from("subscriptions")
-        .update({ end_date: data.next_payment_date ? new Date(data.next_payment_date).toISOString() : null })
-        .eq("payment_id", data.subscription.subscription_code)
+        .update({
+          current_period_end: data.next_payment_date
+            ? new Date(data.next_payment_date).toISOString()
+            : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("paystack_customer_id", data.subscription.customer.customer_code)
     }
   } catch (error) {
     console.error("Error processing invoice update:", error)

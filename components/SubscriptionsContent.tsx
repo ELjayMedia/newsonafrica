@@ -9,9 +9,9 @@ import { toast } from "@/hooks/use-toast"
 type Subscription = {
   id: string
   status: string
-  plan_name: string
-  current_period_end: string
-  created_at: string
+  plan: string
+  current_period_end: string | null
+  updated_at: string
 }
 
 export function SubscriptionsContent({ userId }: { userId: string }) {
@@ -26,7 +26,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
           .from("subscriptions")
           .select("*")
           .eq("user_id", userId)
-          .order("created_at", { ascending: false })
+          .order("updated_at", { ascending: false })
 
         if (error) throw error
         setSubscriptions(data || [])
@@ -66,11 +66,11 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
       })
 
       // Refresh subscriptions
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+        const { data, error } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
 
       if (error) throw error
       setSubscriptions(data || [])
@@ -113,7 +113,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
       {subscriptions.map((subscription) => (
         <Card key={subscription.id}>
           <CardHeader>
-            <CardTitle>{subscription.plan_name}</CardTitle>
+            <CardTitle>{subscription.plan}</CardTitle>
             <CardDescription>
               Status: <span className="font-medium capitalize">{subscription.status}</span>
             </CardDescription>
@@ -121,7 +121,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm">
-                <span className="font-medium">Started:</span> {new Date(subscription.created_at).toLocaleDateString()}
+                <span className="font-medium">Updated:</span> {new Date(subscription.updated_at).toLocaleDateString()}
               </p>
               {subscription.current_period_end && (
                 <p className="text-sm">

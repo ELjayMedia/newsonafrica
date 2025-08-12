@@ -489,6 +489,136 @@ export const migrations: Migration[] = [
       ADD COLUMN IF NOT EXISTS collection_id UUID REFERENCES public.bookmark_collections(id) ON DELETE SET NULL;
     `,
   },
+  {
+    id: "009_subscriptions_table",
+    name: "Subscriptions Table",
+    description: "Creates subscriptions table with paystack support",
+    sql: `
+      -- Recreate subscriptions table
+      DROP TABLE IF EXISTS public.subscriptions;
+      CREATE TABLE public.subscriptions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        paystack_customer_id TEXT,
+        plan TEXT NOT NULL,
+        status TEXT NOT NULL,
+        current_period_end TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(user_id)
+      );
+
+      -- Enable RLS
+      ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+
+      -- RLS policies
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'subscriptions' AND policyname = 'Users can view own subscriptions'
+        ) THEN
+          CREATE POLICY "Users can view own subscriptions" ON public.subscriptions
+            FOR SELECT USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'subscriptions' AND policyname = 'Users can create own subscriptions'
+        ) THEN
+          CREATE POLICY "Users can create own subscriptions" ON public.subscriptions
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'subscriptions' AND policyname = 'Users can update own subscriptions'
+        ) THEN
+          CREATE POLICY "Users can update own subscriptions" ON public.subscriptions
+            FOR UPDATE USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'subscriptions' AND policyname = 'Users can delete own subscriptions'
+        ) THEN
+          CREATE POLICY "Users can delete own subscriptions" ON public.subscriptions
+            FOR DELETE USING (auth.uid() = user_id);
+        END IF;
+      END
+      $$;
+    `,
+  },
+  {
+    id: "010_plans_table",
+    name: "Plans Table",
+    description: "Creates plans table for subscription offerings",
+    sql: `
+      -- Create plans table
+      CREATE TABLE IF NOT EXISTS public.plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        paystack_plan_id TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'NGN',
+        interval TEXT NOT NULL,
+        features TEXT[],
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
+
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'plans' AND policyname = 'Plans are viewable by everyone'
+        ) THEN
+          CREATE POLICY "Plans are viewable by everyone" ON public.plans
+            FOR SELECT USING (true);
+        END IF;
+      END
+      $$;
+    `,
+  },
+  {
+    id: "011_payments_table",
+    name: "Payments Table",
+    description: "Creates payments table linked to subscriptions",
+    sql: `
+      -- Recreate payments table
+      DROP TABLE IF EXISTS public.payments;
+      CREATE TABLE public.payments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        subscription_id UUID REFERENCES public.subscriptions(id) ON DELETE SET NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        status TEXT NOT NULL,
+        reference TEXT UNIQUE NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'payments' AND policyname = 'Users can view own payments'
+        ) THEN
+          CREATE POLICY "Users can view own payments" ON public.payments
+            FOR SELECT USING (
+              subscription_id IN (
+                SELECT id FROM public.subscriptions WHERE user_id = auth.uid()
+              )
+            );
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'payments' AND policyname = 'System can insert payments'
+        ) THEN
+          CREATE POLICY "System can insert payments" ON public.payments
+            FOR INSERT WITH CHECK (true);
+        END IF;
+      END
+      $$;
+    `,
+  },
 ]
 
 // Function to apply a single migration
