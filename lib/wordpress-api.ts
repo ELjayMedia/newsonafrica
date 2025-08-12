@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { transformRestPostToGraphQL, transformRestCategoryToGraphQL } from "./utils/wordpress"
 
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -241,41 +242,7 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
 
     return {
       posts: {
-        nodes: posts.map((post: any) => ({
-          id: post.id.toString(),
-          title: post.title?.rendered || "",
-          slug: post.slug || "",
-          date: post.date || "",
-          excerpt: post.excerpt?.rendered || "",
-          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-            ? {
-                node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                },
-              }
-            : null,
-          author: {
-            node: {
-              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-              slug: post._embedded?.["author"]?.[0]?.slug || "",
-            },
-          },
-          categories: {
-            nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-          tags: {
-            nodes:
-              post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                name: tag.name,
-                slug: tag.slug,
-              })) || [],
-          },
-        })),
+        nodes: posts.map(transformRestPostToGraphQL),
         pageInfo: {
           offsetPagination: {
             total,
@@ -377,41 +344,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
               hasNextPage: posts.length >= 20,
               endCursor: null,
             },
-            nodes: posts.map((post: any) => ({
-              id: post.id.toString(),
-              title: post.title?.rendered || "",
-              slug: post.slug || "",
-              date: post.date || "",
-              excerpt: post.excerpt?.rendered || "",
-              featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-                ? {
-                    node: {
-                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                    },
-                  }
-                : null,
-              author: {
-                node: {
-                  name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-                  slug: post._embedded?.["author"]?.[0]?.slug || "",
-                },
-              },
-              categories: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                    name: cat.name,
-                    slug: cat.slug,
-                  })) || [],
-              },
-              tags: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-                    name: tag.name,
-                    slug: tag.slug,
-                  })) || [],
-              },
-            })),
+            nodes: posts.map(transformRestPostToGraphQL),
           },
         },
       }
@@ -457,13 +390,7 @@ export const fetchAllCategories = cache(async () => {
     const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
     return {
       categories: {
-        nodes: categories.map((cat: any) => ({
-          id: cat.id.toString(),
-          name: cat.name,
-          slug: cat.slug,
-          description: cat.description || "",
-          count: cat.count || 0,
-        })),
+        nodes: categories.map(transformRestCategoryToGraphQL),
       },
     }
   }
@@ -530,53 +457,7 @@ export const fetchSinglePost = async (slug: string) => {
     }
 
     const post = posts[0]
-    return {
-      post: {
-        id: post.id.toString(),
-        title: post.title?.rendered || "",
-        content: post.content?.rendered || "",
-        excerpt: post.excerpt?.rendered || "",
-        slug: post.slug || "",
-        date: post.date || "",
-        modified: post.modified || "",
-        featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-          ? {
-              node: {
-                sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-              },
-            }
-          : null,
-        author: {
-          node: {
-            name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-            slug: post._embedded?.["author"]?.[0]?.slug || "",
-            description: post._embedded?.["author"]?.[0]?.description || "",
-            avatar: {
-              url: post._embedded?.["author"]?.[0]?.avatar_urls?.["96"] || "",
-            },
-          },
-        },
-        categories: {
-          nodes:
-            post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-              name: cat.name,
-              slug: cat.slug,
-            })) || [],
-        },
-        tags: {
-          nodes:
-            post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-              name: tag.name,
-              slug: tag.slug,
-            })) || [],
-        },
-        seo: {
-          title: post.title?.rendered || "",
-          metaDesc: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "",
-        },
-      },
-    }
+    return { post: transformRestPostToGraphQL(post) }
   }
 
   const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback)
@@ -641,34 +522,7 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
           hasNextPage: posts.length >= perPage,
           endCursor: null,
         },
-        nodes: posts.map((post: any) => ({
-          id: post.id.toString(),
-          title: post.title?.rendered || "",
-          slug: post.slug || "",
-          date: post.date || "",
-          excerpt: post.excerpt?.rendered || "",
-          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-            ? {
-                node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                },
-              }
-            : null,
-          author: {
-            node: {
-              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-              slug: post._embedded?.["author"]?.[0]?.slug || "",
-            },
-          },
-          categories: {
-            nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-        })),
+        nodes: posts.map(transformRestPostToGraphQL),
       },
     }
   }
@@ -1014,41 +868,7 @@ async function searchViaREST(query: string, options: SearchOptions): Promise<Pos
 
   const posts = await fetchFromRestApi("posts", params)
 
-  return posts.map((post: any) => ({
-    id: post.id.toString(),
-    title: post.title?.rendered || "",
-    slug: post.slug || "",
-    date: post.date || "",
-    excerpt: post.excerpt?.rendered || "",
-    featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-      ? {
-          node: {
-            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-            altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-          },
-        }
-      : null,
-    author: {
-      node: {
-        name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-        slug: post._embedded?.["author"]?.[0]?.slug || "",
-      },
-    },
-    categories: {
-      nodes:
-        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-          name: cat.name,
-          slug: cat.slug,
-        })) || [],
-    },
-    tags: {
-      nodes:
-        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
-          name: tag.name,
-          slug: tag.slug,
-        })) || [],
-    },
-  }))
+  return posts.map(transformRestPostToGraphQL)
 }
 
 /**
@@ -1317,28 +1137,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
             url: user.avatar_urls?.["96"] || "",
           },
           posts: {
-            nodes: posts.map((post: any) => ({
-              id: post.id.toString(),
-              title: post.title?.rendered || "",
-              slug: post.slug || "",
-              date: post.date || "",
-              excerpt: post.excerpt?.rendered || "",
-              featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-                ? {
-                    node: {
-                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                    },
-                  }
-                : null,
-              categories: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                    name: cat.name,
-                    slug: cat.slug,
-                  })) || [],
-              },
-            })),
+            nodes: posts.map(transformRestPostToGraphQL),
           },
         },
       }
@@ -1491,34 +1290,7 @@ export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
           id: tagId.toString(),
           name: tags[0].name,
           posts: {
-            nodes: posts.map((post: any) => ({
-              id: post.id.toString(),
-              title: post.title?.rendered || "",
-              slug: post.slug || "",
-              date: post.date || "",
-              excerpt: post.excerpt?.rendered || "",
-              featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
-                ? {
-                    node: {
-                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
-                    },
-                  }
-                : null,
-              author: {
-                node: {
-                  name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-                  slug: post._embedded?.["author"]?.[0]?.slug || "",
-                },
-              },
-              categories: {
-                nodes:
-                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
-                    name: cat.name,
-                    slug: cat.slug,
-                  })) || [],
-              },
-            })),
+            nodes: posts.map(transformRestPostToGraphQL),
           },
         },
       }
