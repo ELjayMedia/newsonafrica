@@ -619,6 +619,55 @@ export const migrations: Migration[] = [
       $$;
     `,
   },
+  {
+    id: "012_read_history",
+    name: "Read History",
+    description: "Creates read history table",
+    sql: `
+      -- Create read_history table
+      CREATE TABLE IF NOT EXISTS public.read_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        post_id TEXT NOT NULL,
+        category TEXT,
+        tags JSONB,
+        read_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      -- Create indexes for faster lookups
+      CREATE INDEX IF NOT EXISTS read_history_user_id_idx ON public.read_history(user_id);
+      CREATE INDEX IF NOT EXISTS read_history_post_id_idx ON public.read_history(post_id);
+
+      -- Enable RLS
+      ALTER TABLE public.read_history ENABLE ROW LEVEL SECURITY;
+
+      -- RLS policies
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'read_history' AND policyname = 'Users can view own read history'
+        ) THEN
+          CREATE POLICY "Users can view own read history" ON public.read_history
+            FOR SELECT USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'read_history' AND policyname = 'Users can insert own read history'
+        ) THEN
+          CREATE POLICY "Users can insert own read history" ON public.read_history
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'read_history' AND policyname = 'Users can delete own read history'
+        ) THEN
+          CREATE POLICY "Users can delete own read history" ON public.read_history
+            FOR DELETE USING (auth.uid() = user_id);
+        END IF;
+      END
+      $$;
+    `,
+  },
 ]
 
 // Function to apply a single migration
