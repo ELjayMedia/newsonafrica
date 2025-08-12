@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { Reply, Edit, Trash2, MoreVertical, Flag } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { Comment } from "@/lib/supabase-schema"
+import { REACTION_TYPES, type Comment, type ReactionType } from "@/lib/supabase-schema"
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,14 @@ export function CommentItem({
   const isAuthor = user && user.id === comment.user_id
   const isOptimistic = comment.isOptimistic === true
   const formattedDate = new Date(comment.created_at).toLocaleString()
+
+  const reactionCounts = REACTION_TYPES.reduce(
+    (acc, type) => {
+      acc[type] = comment.reactions.filter((r) => r.reaction_type === type).length
+      return acc
+    },
+    {} as Record<ReactionType, number>,
+  )
 
   const getInitials = (name: string) => {
     return name
@@ -265,6 +273,15 @@ export function CommentItem({
             </div>
           ) : (
             renderContent()
+          )}
+
+          {Object.values(reactionCounts).some((count) => count > 0) && (
+            <div className="mt-2 flex space-x-2 text-xs text-gray-500">
+              {REACTION_TYPES.map((type) => {
+                const count = reactionCounts[type]
+                return count > 0 ? <span key={type}>{type} {count}</span> : null
+              })}
+            </div>
           )}
 
           {!isEditing && !isOptimistic && (

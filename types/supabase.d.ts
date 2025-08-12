@@ -164,6 +164,29 @@ export interface Database {
           reviewed_by?: string | null
         }
       }
+      comment_reactions: {
+        Row: {
+          id: string
+          comment_id: string
+          user_id: string
+          reaction_type: 'like' | 'love' | 'laugh' | 'sad' | 'angry'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          user_id: string
+          reaction_type: 'like' | 'love' | 'laugh' | 'sad' | 'angry'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          user_id?: string
+          reaction_type?: 'like' | 'love' | 'laugh' | 'sad' | 'angry'
+          created_at?: string
+        }
+      }
       notifications: {
         Row: {
           id: string

@@ -1,9 +1,19 @@
 import { supabase } from "@/lib/supabase"
-import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
+import {
+  REACTION_TYPES,
+  type Comment,
+  type NewComment,
+  type ReportCommentData,
+  type CommentSortOption,
+  type CommentReaction,
+  type ReactionType,
+} from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
 import { createCommentReplyNotification } from "@/services/notification-service"
 import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
 import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
+
+export { REACTION_TYPES }
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
@@ -236,7 +246,7 @@ export async function fetchComments(
     const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
 
     // Fetch reactions for all comments in a single query
-    const reactions = []
+    const reactions: CommentReaction[] = []
 
     // Extract all user IDs from comments and replies
     const userIds = [
@@ -266,7 +276,7 @@ export async function fetchComments(
     })
 
     // Create a map of comment_id to reactions
-    const reactionMap = new Map()
+    const reactionMap = new Map<string, CommentReaction[]>()
 
     // Process all comments with profile data and reactions
     const processedComments = comments.map((comment) => {
@@ -283,7 +293,7 @@ export async function fetchComments(
               avatar_url: profile.avatar_url,
             }
           : undefined,
-        reactions: [],
+        reactions: [] as CommentReaction[],
       }
     })
 
@@ -303,7 +313,7 @@ export async function fetchComments(
                 avatar_url: profile.avatar_url,
               }
             : undefined,
-          reactions: [],
+          reactions: [] as CommentReaction[],
         }
       }) || []
 
@@ -423,7 +433,7 @@ export async function addComment(comment: NewComment): Promise<Comment> {
             avatar_url: profile.avatar_url,
           }
         : undefined,
-      reactions: [],
+      reactions: [] as CommentReaction[],
     }
   } catch (error) {
     console.error("Error in addComment:", error)
@@ -585,7 +595,7 @@ export function createOptimisticComment(comment: NewComment, username: string, a
       username,
       avatar_url: avatarUrl || null,
     },
-    reactions: [],
+    reactions: [] as CommentReaction[],
     replies: [],
   }
 }

@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.comment_reactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  reaction_type TEXT NOT NULL,
+  reaction_type TEXT NOT NULL CHECK (reaction_type IN ('like', 'love', 'laugh', 'sad', 'angry')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(comment_id, user_id)
 );
