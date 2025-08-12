@@ -127,6 +127,10 @@ Additional documentation:
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
 
+## 💰 Funding
+
+The development of News On Africa is funded by PJA Media. We appreciate their support.
+
 ## 🤝 Contributing
 
 1. Fork the repository
