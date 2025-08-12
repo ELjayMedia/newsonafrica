@@ -1,27 +1,28 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function BookmarksSkeleton() {
   return (
     <div>
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="h-10 bg-gray-200 rounded flex-grow"></div>
-        <div className="h-10 w-32 bg-gray-200 rounded"></div>
+        <Skeleton className="h-10 flex-grow" />
+        <Skeleton className="h-10 w-32" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <Card key={i} className="overflow-hidden flex flex-col h-full animate-pulse">
+          <Card key={i} className="overflow-hidden flex flex-col h-full">
             <div className="relative">
-              <div className="aspect-video relative overflow-hidden bg-gray-200"></div>
+              <Skeleton className="aspect-video w-full" />
             </div>
-            <CardContent className="flex-grow pt-4">
-              <div className="h-6 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
+            <CardContent className="flex-grow pt-4 space-y-2">
+              <Skeleton className="h-6" />
+              <Skeleton className="h-4" />
+              <Skeleton className="h-4" />
             </CardContent>
             <CardFooter className="pt-0 text-sm text-gray-500 flex justify-between">
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-4 bg-gray-200 rounded w-16"></div>
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-4 w-16" />
             </CardFooter>
           </Card>
         ))}
