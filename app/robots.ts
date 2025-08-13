@@ -6,12 +6,11 @@ export default function robots(): MetadataRoute.Robots {
   const baseUrl = siteConfig.url || 'https://newsonafrica.com';
 
   return {
-    rules: {
+    rules: [{
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin/', '/_next/'],
-    },
-    sitemap: `${baseUrl}/sitemap-index.xml`,
+    }],
+    sitemap: `${baseUrl}/sitemap.xml`,
     host: baseUrl,
   };
 }
