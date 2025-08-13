@@ -1,7 +1,7 @@
 "use client"
 
 import "./globals.css"
-import localFont from "next/font/local"
+import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
@@ -26,11 +26,9 @@ import { CameraFeature } from "@/components/CameraFeature" // New import
 import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
 import { NotificationFeature } from "@/components/NotificationFeature" // New import
 
-const inter = localFont({
-  src: [
-    { path: "../public/fonts/Inter-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../public/fonts/Inter-Bold.woff2", weight: "700", style: "normal" },
-  ],
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
   preload: true,
   fallback: ["system-ui", "sans-serif"],
