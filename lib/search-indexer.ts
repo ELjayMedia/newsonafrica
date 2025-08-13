@@ -1,4 +1,7 @@
 import { siteConfig } from "@/config/site"
+import { writeFile, readFile, mkdir } from "fs/promises"
+import { existsSync } from "fs"
+import path from "path"
 
 interface IndexedPost {
   id: string
@@ -23,7 +26,6 @@ interface SearchIndex {
   categoryIndex: Map<number, Set<string>>
   tagIndex: Map<number, Set<string>>
   bigramIndex: Map<string, Set<string>>
-  trigramIndex: Map<string, Set<string>>
   lastUpdated: number
   version: number
 }
@@ -96,10 +98,14 @@ const SEARCH_CONFIG = {
     CATEGORY_MATCH: 12,
     TAG_MATCH: 8,
     BIGRAM_MATCH: 6,
-    TRIGRAM_MATCH: 4,
     RECENCY_BONUS_MAX: 10,
     POPULARITY_MULTIPLIER: 1.5,
     READING_TIME_BONUS: 2,
+  },
+
+  // N-gram limits
+  NGRAMS: {
+    MAX_POSTS_PER_BIGRAM: 50,
   },
 
   // Performance thresholds
@@ -116,6 +122,7 @@ const SEARCH_CONFIG = {
     MAX_INDEX_SIZE_MB: 50,
     CLEANUP_THRESHOLD: 0.8, // Clean when 80% full
     GC_INTERVAL: 60 * 1000, // 1 minute
+    SNAPSHOT_INTERVAL: 60 * 1000, // 1 minute
   },
 }
 
@@ -281,17 +288,20 @@ export class SearchIndexer {
     categoryIndex: new Map(),
     tagIndex: new Map(),
     bigramIndex: new Map(),
-    trigramIndex: new Map(),
     lastUpdated: 0,
     version: 1,
   }
 
   private gcTimer: NodeJS.Timeout | null = null
+  private profileTimer: NodeJS.Timeout | null = null
   private isBuilding = false
   private buildQueue: WordPressPost[] = []
+  private readonly indexFilePath = path.join(process.cwd(), "data", "search-index.json")
 
   constructor() {
     this.startGarbageCollection()
+    this.startMemoryProfiler()
+    void this.loadIndexFromDisk()
   }
 
   private startGarbageCollection(): void {
@@ -318,6 +328,22 @@ export class SearchIndexer {
 
       console.log(`Removed ${toRemove} posts from search index`)
     }
+  }
+
+  private startMemoryProfiler(): void {
+    this.profileTimer = setInterval(() => {
+      const usage = process.memoryUsage()
+      console.log(
+        `Search index memory snapshot - RSS ${(usage.rss / 1024 / 1024).toFixed(2)}MB, Heap ${(usage.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+      )
+    }, SEARCH_CONFIG.MEMORY.SNAPSHOT_INTERVAL)
+  }
+
+  private logMemorySnapshot(label: string): void {
+    const usage = process.memoryUsage()
+    console.log(
+      `${label} - RSS ${(usage.rss / 1024 / 1024).toFixed(2)}MB, Heap ${(usage.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+    )
   }
 
   private removePostFromIndex(postId: string): void {
@@ -364,6 +390,7 @@ export class SearchIndexer {
 
     this.isBuilding = true
     console.log(`Building optimized search index for ${posts.length} posts...`)
+    this.logMemorySnapshot("before build")
     const startTime = Date.now()
 
     try {
@@ -375,7 +402,6 @@ export class SearchIndexer {
         categoryIndex: new Map(),
         tagIndex: new Map(),
         bigramIndex: new Map(),
-        trigramIndex: new Map(),
         lastUpdated: Date.now(),
         version: this.index.version + 1,
       }
@@ -399,6 +425,8 @@ export class SearchIndexer {
       }
 
       const buildTime = Date.now() - startTime
+      await this.saveIndexToDisk()
+      this.logMemorySnapshot("after build")
       console.log(`Optimized search index built in ${buildTime}ms for ${this.index.posts.size} posts`)
       console.log(
         `Index stats: ${this.getStats().memoryUsage}MB, ${this.index.titleIndex.size} title words, ${this.index.contentIndex.size} content words`,
@@ -582,21 +610,17 @@ export class SearchIndexer {
   private indexNGrams(post: IndexedPost): void {
     const words = this.extractWords(post.title.toLowerCase())
 
-    // Create bigrams and trigrams for better phrase matching
+    // Create bigrams for better phrase matching
     for (let i = 0; i < words.length - 1; i++) {
       const bigram = `${words[i]} ${words[i + 1]}`
       if (!this.index.bigramIndex.has(bigram)) {
         this.index.bigramIndex.set(bigram, new Set())
       }
-      this.index.bigramIndex.get(bigram)!.add(post.id)
-
-      // Trigrams
-      if (i < words.length - 2) {
-        const trigram = `${words[i]} ${words[i + 1]} ${words[i + 2]}`
-        if (!this.index.trigramIndex.has(trigram)) {
-          this.index.trigramIndex.set(trigram, new Set())
-        }
-        this.index.trigramIndex.get(trigram)!.add(post.id)
+      const set = this.index.bigramIndex.get(bigram)!
+      set.add(post.id)
+      if (set.size > SEARCH_CONFIG.NGRAMS.MAX_POSTS_PER_BIGRAM) {
+        const first = set.values().next().value
+        set.delete(first)
       }
     }
   }
@@ -617,6 +641,7 @@ export class SearchIndexer {
 
   search(query: string, options: SearchOptions = {}): IndexedPost[] {
     const startTime = Date.now()
+    this.logMemorySnapshot("search start")
     const {
       limit = 20,
       categories = [],
@@ -651,14 +676,6 @@ export class SearchIndexer {
         bigramMatches.forEach((postId) => {
           postScores.set(postId, (postScores.get(postId) || 0) + SEARCH_CONFIG.SCORING.BIGRAM_MATCH * 2)
         })
-
-        if (phraseWords.length >= 3) {
-          const trigram = phraseWords.slice(0, 3).join(" ")
-          const trigramMatches = this.index.trigramIndex.get(trigram) || new Set()
-          trigramMatches.forEach((postId) => {
-            postScores.set(postId, (postScores.get(postId) || 0) + SEARCH_CONFIG.SCORING.TRIGRAM_MATCH * 2)
-          })
-        }
       }
     })
 
@@ -752,7 +769,9 @@ export class SearchIndexer {
       console.warn(`Slow search query: "${query}" took ${searchTime}ms`)
     }
 
-    return results.slice(0, limit).map((result) => result.post)
+    const output = results.slice(0, limit).map((result) => result.post)
+    this.logMemorySnapshot("search end")
+    return output
   }
 
   private calculateSimilarity(str1: string, str2: string): number {
@@ -897,7 +916,6 @@ export class SearchIndexer {
       titleWords: this.index.titleIndex.size,
       contentWords: this.index.contentIndex.size,
       bigrams: this.index.bigramIndex.size,
-      trigrams: this.index.trigramIndex.size,
       categories: this.index.categoryIndex.size,
       tags: this.index.tagIndex.size,
       lastUpdated: new Date(this.index.lastUpdated).toISOString(),
@@ -910,15 +928,47 @@ export class SearchIndexer {
   }
 
   private calculateMemoryUsage(): number {
+    const usage = process.memoryUsage()
+    return usage.heapUsed / (1024 * 1024)
+  }
+
+  private async saveIndexToDisk(): Promise<void> {
     const indexData = {
       posts: Array.from(this.index.posts.entries()),
       titleIndex: Array.from(this.index.titleIndex.entries()),
       contentIndex: Array.from(this.index.contentIndex.entries()),
+      categoryIndex: Array.from(this.index.categoryIndex.entries()),
+      tagIndex: Array.from(this.index.tagIndex.entries()),
       bigramIndex: Array.from(this.index.bigramIndex.entries()),
-      trigramIndex: Array.from(this.index.trigramIndex.entries()),
+      lastUpdated: this.index.lastUpdated,
+      version: this.index.version,
     }
 
-    return JSON.stringify(indexData).length / (1024 * 1024) // Convert to MB
+    const dir = path.dirname(this.indexFilePath)
+    if (!existsSync(dir)) {
+      await mkdir(dir, { recursive: true })
+    }
+    await writeFile(this.indexFilePath, JSON.stringify(indexData), "utf-8")
+  }
+
+  private async loadIndexFromDisk(): Promise<void> {
+    if (!existsSync(this.indexFilePath)) return
+    try {
+      const data = await readFile(this.indexFilePath, "utf-8")
+      const parsed = JSON.parse(data)
+      this.index = {
+        posts: new Map(parsed.posts || []),
+        titleIndex: new Map(parsed.titleIndex || []),
+        contentIndex: new Map(parsed.contentIndex || []),
+        categoryIndex: new Map(parsed.categoryIndex || []),
+        tagIndex: new Map(parsed.tagIndex || []),
+        bigramIndex: new Map(parsed.bigramIndex || []),
+        lastUpdated: parsed.lastUpdated || 0,
+        version: parsed.version || 1,
+      }
+    } catch (error) {
+      console.error("Failed to load search index from disk", error)
+    }
   }
 
   private calculateAveragePopularity(): number {
@@ -970,7 +1020,6 @@ export class SearchIndexer {
       categoryIndex: new Map(),
       tagIndex: new Map(),
       bigramIndex: new Map(),
-      trigramIndex: new Map(),
       lastUpdated: 0,
       version: 1,
     }
@@ -978,6 +1027,10 @@ export class SearchIndexer {
     if (this.gcTimer) {
       clearInterval(this.gcTimer)
       this.gcTimer = null
+    }
+    if (this.profileTimer) {
+      clearInterval(this.profileTimer)
+      this.profileTimer = null
     }
   }
 
