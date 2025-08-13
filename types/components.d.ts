@@ -151,27 +151,3 @@ export interface SearchFormProps extends BaseComponentProps {
   placeholder?: string
 }
 
-/**
- * Props for the AdComponent
- */
-export interface AdProps extends BaseComponentProps {
-  /**
-   * Unique identifier for the ad slot
-   */
-  slotId: string
-  /**
-   * Type of ad (banner, sidebar, etc.)
-   */
-  adType: "banner" | "sidebar" | "in-article" | "native"
-  /**
-   * Whether to show a placeholder while ad is loading
-   */
-  showPlaceholder?: boolean
-  /**
-   * Custom dimensions for the ad
-   */
-  dimensions?: {
-    width: number
-    height: number
-  }
-}
