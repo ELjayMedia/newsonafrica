@@ -128,11 +128,15 @@ async function getHomePageData(limit = 50) {
 export default async function Home() {
   const { posts, initialData } = await getHomePageData()
   try {
+    const topStory = initialData.taggedPosts[0] ?? posts[0]
+    const secondaryPosts = posts.slice(1, 5)
+    const verticalPosts = posts.slice(5, 8)
     return (
       <HomeShell
-        topStory={initialData.taggedPosts[0] ?? posts[0]}
+        topStory={topStory}
+        secondaryPosts={secondaryPosts}
+        verticalPosts={verticalPosts}
         categoryPosts={initialData.categoryPosts}
-        categories={initialData.categories}
       />
     )
   } catch (e) {
