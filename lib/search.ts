@@ -125,10 +125,13 @@ const FALLBACK_POSTS: SearchPost[] = [
 ]
 
 /**
- * Fetch posts with caching
+ * Fetch posts with caching. A limit can be provided to avoid pulling
+ * more posts into memory than necessary. An AbortSignal is also
+ * supported so callers can cancel the request when a faster source
+ * returns.
  */
-async function fetchPosts(): Promise<SearchPost[]> {
-  const cacheKey = "posts-data"
+async function fetchPosts(limit = 20, signal?: AbortSignal): Promise<SearchPost[]> {
+  const cacheKey = `posts-data-${limit}`
 
   // Check cache first
   const cached = postsCache.get(cacheKey)
@@ -137,10 +140,11 @@ async function fetchPosts(): Promise<SearchPost[]> {
   }
 
   try {
-    const response = await fetch("/api/posts?per_page=100&_embed=1", {
+    const response = await fetch(`/api/posts?per_page=${limit}&_embed=1`, {
       headers: {
         "Content-Type": "application/json",
       },
+      signal,
     })
 
     if (!response.ok) {
@@ -228,102 +232,136 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
   }
 
   try {
-    // Use WordPress API search
-    try {
-      const categoryParams = categories.length > 0 ? `&categories=${categories.join(",")}` : ""
-      const tagParams = tags.length > 0 ? `&tags=${tags.join(",")}` : ""
-      const sortParam = sortBy === "date" ? "&orderby=date&order=desc" : ""
+    const categoryParams = categories.length > 0 ? `&categories=${categories.join(",")}` : ""
+    const tagParams = tags.length > 0 ? `&tags=${tags.join(",")}` : ""
+    const sortParam = sortBy === "date" ? "&orderby=date&order=desc" : ""
 
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(normalizedQuery)}&per_page=${limit}${categoryParams}${tagParams}${sortParam}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
+    const apiController = new AbortController()
+    const localController = new AbortController()
+
+    const apiPromise = (async (): Promise<SearchResponse | null> => {
+      try {
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(normalizedQuery)}&per_page=${limit}${categoryParams}${tagParams}${sortParam}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            signal: apiController.signal,
           },
-        },
-      )
+        )
 
-      if (!response.ok) {
-        throw new Error(`Search API error: ${response.status}`)
+        if (!response.ok) {
+          throw new Error(`Search API error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        const results = (data.results || []).slice(0, limit)
+        const total = data.total || results.length
+
+        const suggestions = await getSearchSuggestions(normalizedQuery, 5)
+
+        const responseTime = Date.now() - startTime
+        return {
+          results,
+          total,
+          query: normalizedQuery,
+          performance: {
+            responseTime,
+            source: "wordpress-api",
+            cached: false,
+          },
+          suggestions,
+        }
+      } catch (err) {
+        return null
       }
+    })()
 
-      const data = await response.json()
-      const results = data.results || []
-      const total = data.total || 0
+    const localPromise = (async (): Promise<SearchResponse | null> => {
+      try {
+        const posts = await fetchPosts(limit, localController.signal)
+        const searchResults = utilitySearchPosts(posts, normalizedQuery)
 
-      // Get search suggestions
-      const suggestions = await getSearchSuggestions(normalizedQuery, 5)
+        let filteredResults = searchResults
 
-      const responseTime = Date.now() - startTime
-      const searchResponse: SearchResponse = {
-        results,
+        if (categories.length > 0) {
+          filteredResults = filteredResults.filter((post) =>
+            post.categories?.some((catId) =>
+              categories.some((cat) => cat.toLowerCase().includes(catId.toString())),
+            ),
+          )
+        }
+
+        if (tags.length > 0) {
+          filteredResults = filteredResults.filter((post) =>
+            post._embedded?.["wp:term"]?.[1]?.some((tag: any) =>
+              tags.some((t) => tag.name.toLowerCase().includes(t.toLowerCase())),
+            ),
+          )
+        }
+
+        if (sortBy === "date") {
+          filteredResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        }
+
+        const results = filteredResults.slice(0, limit)
+        const total = filteredResults.length
+        const responseTime = Date.now() - startTime
+
+        return {
+          results,
+          total,
+          query: normalizedQuery,
+          performance: {
+            responseTime,
+            source: "utility-search",
+            cached: false,
+          },
+        }
+      } catch (err) {
+        return null
+      }
+    })()
+
+    const first = await Promise.race([
+      apiPromise.then((res) => ({ source: "api" as const, res })),
+      localPromise.then((res) => ({ source: "local" as const, res })),
+    ])
+
+    let finalResponse: SearchResponse | null = null
+
+    if (first.res && first.res.results.length >= limit) {
+      // We have satisfactory results, cancel the other fetch
+      if (first.source === "api") {
+        localController.abort()
+      } else {
+        apiController.abort()
+      }
+      finalResponse = first.res
+    } else {
+      const other = first.source === "api" ? await localPromise : await apiPromise
+      const mergedResults = [...(first.res?.results || []), ...(other?.results || [])].slice(0, limit)
+      const total = (first.res?.total || 0) + (other?.total || 0)
+
+      finalResponse = {
+        results: mergedResults,
         total,
         query: normalizedQuery,
         performance: {
-          responseTime,
-          source: "wordpress-api",
+          responseTime: Date.now() - startTime,
+          source: `${first.source}-${first.source === "api" ? "local" : "api"}`,
           cached: false,
         },
-        suggestions,
+        suggestions: first.res?.suggestions || other?.suggestions,
       }
-
-      // Cache successful results if enabled
-      if (useCache) {
-        searchResultsCache.set(cacheKey, searchResponse)
-      }
-
-      return searchResponse
-    } catch (apiError) {
-      console.error("WordPress API search failed, using utility search:", apiError)
-
-      // Fallback to utility search
-      const posts = await fetchPosts()
-      const searchResults = utilitySearchPosts(posts, normalizedQuery)
-
-      // Apply filtering
-      let filteredResults = searchResults
-
-      if (categories.length > 0) {
-        filteredResults = filteredResults.filter((post) =>
-          post.categories?.some((catId) => categories.some((cat) => cat.toLowerCase().includes(catId.toString()))),
-        )
-      }
-
-      if (tags.length > 0) {
-        filteredResults = filteredResults.filter((post) =>
-          post._embedded?.["wp:term"]?.[1]?.some((tag: any) =>
-            tags.some((t) => tag.name.toLowerCase().includes(t.toLowerCase())),
-          ),
-        )
-      }
-
-      // Apply sorting
-      if (sortBy === "date") {
-        filteredResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      }
-
-      const results = filteredResults.slice(0, limit)
-      const total = filteredResults.length
-      const responseTime = Date.now() - startTime
-
-      const searchResponse: SearchResponse = {
-        results,
-        total,
-        query: normalizedQuery,
-        performance: {
-          responseTime,
-          source: "utility-search",
-          cached: false,
-        },
-      }
-
-      // Cache results
-      if (useCache) {
-        searchResultsCache.set(cacheKey, searchResponse)
-      }
-
-      return searchResponse
     }
+
+    if (useCache && finalResponse) {
+      searchResultsCache.set(cacheKey, finalResponse)
+    }
+
+    return finalResponse!
   } catch (error) {
     console.error("Search failed completely:", error)
 
