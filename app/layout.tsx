@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import localFont from "next/font/local"
+import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { UtilityBar } from "@/components/header/UtilityBar"
@@ -23,12 +23,10 @@ import Script from "next/script"
 
 import "./globals.css"
 
-// Optimize font loading using locally hosted fonts
-const inter = localFont({
-  src: [
-    { path: "../public/fonts/Inter-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../public/fonts/Inter-Bold.woff2", weight: "700", style: "normal" },
-  ],
+// Load Inter font from Google Fonts
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
   preload: true,
   fallback: ["system-ui", "sans-serif"],
