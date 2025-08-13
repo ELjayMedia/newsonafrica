@@ -23,6 +23,7 @@ import { UserProvider } from '@/contexts/UserContext';
 import { getMarketSnapshot } from '@/lib/api/wordpress';
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 import { ConsentManager } from '@/features/consent/ConsentManager';
+import { initAuth } from '@/lib/initAuth';
 
 
 
@@ -61,6 +62,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await initAuth();
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()];
   const marketItems = await getMarketSnapshot();

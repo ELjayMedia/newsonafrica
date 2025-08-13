@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { WPR } from '@/lib/wp-client/rest';
 import { ArticleList } from '~/features/articles/components/ArticleList';
 import { titleTemplate, canonicalUrl, ogImageUrl, hreflangLinks } from '@/lib/seo/meta';
+import ForYouSlot from '@/features/personalization/ForYouSlot';
+import { Suspense } from 'react';
 
 export async function generateMetadata({ params }: { params: { country: string } }): Promise<Metadata> {
   const path = '/';
@@ -27,6 +29,9 @@ export default async function CountryHome({ params }: { params: { country: strin
   return (
     <main className="max-w-4xl mx-auto">
       <ArticleList posts={posts} />
+      <Suspense fallback={null}>
+        <ForYouSlot country={params.country} />
+      </Suspense>
     </main>
   );
 }

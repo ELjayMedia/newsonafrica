@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 
 import { PostContent } from '@/components/PostContent';
 import { PostSkeleton } from '@/components/PostSkeleton';
+import Comments from '@/features/comments/Comments';
 import { getPostBySlug, getLatestPosts } from '@/lib/api/wordpress';
 import type { WordPressPost } from '@/lib/api/wordpress';
 
@@ -346,6 +347,7 @@ function PostWrapper({
       />
 
       <PostContent post={post} />
+      <Comments slug={slug} articleId={decodedSlug} />
     </div>
   );
 }
