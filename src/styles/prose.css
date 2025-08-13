@@ -1,0 +1,6 @@
+/* Additional typography styles */
+
+.prose {
+  @apply prose prose-slate dark:prose-invert;
+}
+

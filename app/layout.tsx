@@ -1,4 +1,4 @@
-import '../src/config/env';
+import '@/config/env';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
@@ -26,6 +26,7 @@ import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 
 
 import './globals.css';
+import '@/styles/prose.css';
 
 // Load Inter font from Google Fonts
 const inter = Inter({
