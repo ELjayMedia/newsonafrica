@@ -1,10 +1,10 @@
-import { JsonLd } from "@/components/JsonLd"
-import { getNewsArticleSchema } from "@/lib/schema"
-import type { Post } from "@/lib/wordpress-api"
+import { JsonLd } from '@/components/JsonLd';
+import { getNewsArticleSchema } from '@/lib/schema';
+import type { Post } from '@/lib/wordpress-api';
 
 interface ArticleJsonLdProps {
-  post: Post
-  url: string
+  post: Post;
+  url: string;
 }
 
 export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
@@ -12,12 +12,12 @@ export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
     url: url,
     title: post.title,
     description: post.excerpt,
-    images: [post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"],
+    images: [post.featuredImage?.node?.sourceUrl || '/default-og-image.jpg'],
     datePublished: post.date,
     dateModified: post.modified,
     authorName: post.author.node.name,
     authorUrl: `https://newsonafrica.com/author/${post.author.node.slug}`,
-  })
+  });
 
-  return <JsonLd data={schema} />
+  return <JsonLd data={schema} />;
 }

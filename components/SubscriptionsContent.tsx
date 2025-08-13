@@ -1,93 +1,101 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "@/hooks/use-toast"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useEffect, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
 
 type Subscription = {
-  id: string
-  status: string
-  plan: string
-  current_period_end: string | null
-  updated_at: string
-}
+  id: string;
+  status: string;
+  plan: string;
+  current_period_end: string | null;
+  updated_at: string;
+};
 
 export function SubscriptionsContent({ userId }: { userId: string }) {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-  const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     async function loadSubscriptions() {
       try {
         const { data, error } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", userId)
-          .order("updated_at", { ascending: false })
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false });
 
-        if (error) throw error
-        setSubscriptions(data || [])
+        if (error) throw error;
+        setSubscriptions(data || []);
       } catch (error) {
-        console.error("Error loading subscriptions:", error)
+        console.error('Error loading subscriptions:', error);
         toast({
-          title: "Error",
-          description: "Failed to load subscription data. Please try again.",
-          variant: "destructive",
-        })
+          title: 'Error',
+          description: 'Failed to load subscription data. Please try again.',
+          variant: 'destructive',
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    loadSubscriptions()
-  }, [userId, supabase])
+    loadSubscriptions();
+  }, [userId, supabase]);
 
   const handleCancelSubscription = async (subscriptionId: string) => {
     try {
-      setLoading(true)
-      const response = await fetch("/api/subscriptions/cancel", {
-        method: "POST",
+      setLoading(true);
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ subscriptionId }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to cancel subscription")
+        throw new Error('Failed to cancel subscription');
       }
 
       toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription has been cancelled successfully.",
-      })
+        title: 'Subscription Cancelled',
+        description: 'Your subscription has been cancelled successfully.',
+      });
 
       // Refresh subscriptions
-        const { data, error } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", userId)
-          .order("updated_at", { ascending: false })
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
 
-      if (error) throw error
-      setSubscriptions(data || [])
+      if (error) throw error;
+      setSubscriptions(data || []);
     } catch (error) {
-      console.error("Error cancelling subscription:", error)
+      console.error('Error cancelling subscription:', error);
       toast({
-        title: "Error",
-        description: "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to cancel subscription. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
-    return <div className="animate-pulse h-96 bg-gray-100 rounded-md"></div>
+    return <div className="animate-pulse h-96 bg-gray-100 rounded-md"></div>;
   }
 
   if (subscriptions.length === 0) {
@@ -96,7 +104,8 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
         <CardHeader>
           <CardTitle>No Active Subscriptions</CardTitle>
           <CardDescription>
-            You don't have any active subscriptions. Subscribe to get premium access to News On Africa.
+            You don't have any active subscriptions. Subscribe to get premium access to News On
+            Africa.
           </CardDescription>
         </CardHeader>
         <CardFooter>
@@ -105,7 +114,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
           </Button>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   return (
@@ -121,19 +130,24 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm">
-                <span className="font-medium">Updated:</span> {new Date(subscription.updated_at).toLocaleDateString()}
+                <span className="font-medium">Updated:</span>{' '}
+                {new Date(subscription.updated_at).toLocaleDateString()}
               </p>
               {subscription.current_period_end && (
                 <p className="text-sm">
-                  <span className="font-medium">Renews:</span>{" "}
+                  <span className="font-medium">Renews:</span>{' '}
                   {new Date(subscription.current_period_end).toLocaleDateString()}
                 </p>
               )}
             </div>
           </CardContent>
           <CardFooter>
-            {subscription.status === "active" && (
-              <Button variant="outline" onClick={() => handleCancelSubscription(subscription.id)} disabled={loading}>
+            {subscription.status === 'active' && (
+              <Button
+                variant="outline"
+                onClick={() => handleCancelSubscription(subscription.id)}
+                disabled={loading}
+              >
                 Cancel Subscription
               </Button>
             )}
@@ -141,5 +155,5 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
         </Card>
       ))}
     </div>
-  )
+  );
 }

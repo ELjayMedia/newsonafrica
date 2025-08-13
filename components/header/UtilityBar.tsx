@@ -1,5 +1,5 @@
-'use client'
-import Link from 'next/link'
+'use client';
+import Link from 'next/link';
 
 export function UtilityBar() {
   const date = new Date().toLocaleDateString('en-US', {
@@ -7,7 +7,7 @@ export function UtilityBar() {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  })
+  });
   return (
     <div className="bg-gray-100 text-xs py-2 px-3 flex justify-between">
       <div className="space-x-3">
@@ -25,5 +25,5 @@ export function UtilityBar() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

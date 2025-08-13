@@ -1,6 +1,6 @@
-import type React from "react"
+import type React from 'react';
 const WeatherWidget: React.FC = () => {
-  return null
-}
+  return null;
+};
 
-export { WeatherWidget }
+export { WeatherWidget };

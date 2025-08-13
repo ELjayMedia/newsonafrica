@@ -1,14 +1,15 @@
-import { fetchAllTags } from "@/lib/wordpress-api"
-import Link from "next/link"
-import type { Metadata } from "next"
+import type { Metadata } from 'next';
+import Link from 'next/link';
+
+import { fetchAllTags } from '@/lib/wordpress-api';
 
 export const metadata: Metadata = {
-  title: "All Tags - News On Africa",
-  description: "Browse all tags on News On Africa",
-}
+  title: 'All Tags - News On Africa',
+  description: 'Browse all tags on News On Africa',
+};
 
 export default async function TagsPage() {
-  const tags = await fetchAllTags()
+  const tags = await fetchAllTags();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -26,5 +27,5 @@ export default async function TagsPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }

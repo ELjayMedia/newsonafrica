@@ -1,17 +1,18 @@
-import type { WordPressPost } from '@/lib/api/wordpress'
-import { categoryConfigs } from '@/config/homeConfig'
-import { TopStory } from './TopStory'
-import { CategoryRail } from './CategoryRail'
-import { SponsoredRail } from './SponsoredRail'
-import { Aside } from './Aside'
-import { SecondaryStories } from '@/components/SecondaryStories'
-import { VerticalCard } from '@/components/VerticalCard'
+import { Aside } from './Aside';
+import { CategoryRail } from './CategoryRail';
+import { SponsoredRail } from './SponsoredRail';
+import { TopStory } from './TopStory';
+
+import { SecondaryStories } from '@/components/SecondaryStories';
+import { VerticalCard } from '@/components/VerticalCard';
+import { categoryConfigs } from '@/config/homeConfig';
+import type { WordPressPost } from '@/lib/api/wordpress';
 
 interface Props {
-  topStory: WordPressPost | null
-  secondaryPosts?: WordPressPost[]
-  verticalPosts?: WordPressPost[]
-  categoryPosts: Record<string, WordPressPost[]>
+  topStory: WordPressPost | null;
+  secondaryPosts?: WordPressPost[];
+  verticalPosts?: WordPressPost[];
+  categoryPosts: Record<string, WordPressPost[]>;
 }
 
 export function HomeShell({
@@ -20,16 +21,12 @@ export function HomeShell({
   verticalPosts = [],
   categoryPosts,
 }: Props) {
-  const sortedConfigs = [...categoryConfigs].sort(
-    (a, b) => (a.priority || 0) - (b.priority || 0),
-  )
+  const sortedConfigs = [...categoryConfigs].sort((a, b) => (a.priority || 0) - (b.priority || 0));
   return (
     <div className="mx-auto max-w-[1280px] px-3 md:px-6 space-y-6">
       <TopStory post={topStory} />
       <SponsoredRail />
-      {secondaryPosts.length > 0 && (
-        <SecondaryStories posts={secondaryPosts} layout="horizontal" />
-      )}
+      {secondaryPosts.length > 0 && <SecondaryStories posts={secondaryPosts} layout="horizontal" />}
       {verticalPosts.length > 0 && (
         <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {verticalPosts.map((post) => (
@@ -56,5 +53,5 @@ export function HomeShell({
         </aside>
       </div>
     </div>
-  )
+  );
 }

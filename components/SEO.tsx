@@ -1,28 +1,29 @@
-import { SchemaOrg } from "@/components/SchemaOrg"
-import { SocialMetadata } from "@/components/SocialMetadata"
-import { CanonicalUrl } from "@/components/CanonicalUrl"
-import Head from "next/head"
+import Head from 'next/head';
+
+import { CanonicalUrl } from '@/components/CanonicalUrl';
+import { SchemaOrg } from '@/components/SchemaOrg';
+import { SocialMetadata } from '@/components/SocialMetadata';
 
 interface SEOProps {
-  title: string
-  description: string
-  image?: string
-  url: string
-  type?: string
-  publishedTime?: string
-  modifiedTime?: string
-  authorName?: string
-  keywords?: string[]
-  section?: string
-  schemas?: any[]
+  title: string;
+  description: string;
+  image?: string;
+  url: string;
+  type?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  authorName?: string;
+  keywords?: string[];
+  section?: string;
+  schemas?: any[];
 }
 
 export function SEO({
   title,
   description,
-  image = "/default-og-image.jpg",
+  image = '/default-og-image.jpg',
   url,
-  type = "website",
+  type = 'website',
   publishedTime,
   modifiedTime,
   authorName,
@@ -30,7 +31,7 @@ export function SEO({
   section,
   schemas = [],
 }: SEOProps) {
-  const path = url.replace(/^https?:\/\/[^/]+/, "")
+  const path = url.replace(/^https?:\/\/[^/]+/, '');
 
   return (
     <>
@@ -53,5 +54,5 @@ export function SEO({
       />
       <SchemaOrg schemas={schemas} />
     </>
-  )
+  );
 }

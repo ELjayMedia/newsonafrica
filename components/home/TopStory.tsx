@@ -1,15 +1,16 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import type { WordPressPost } from '@/lib/api/wordpress'
+import Image from 'next/image';
+import Link from 'next/link';
+
+import type { WordPressPost } from '@/lib/api/wordpress';
 
 interface Props {
-  post: WordPressPost | null
+  post: WordPressPost | null;
 }
 
 export function TopStory({ post }: Props) {
-  if (!post) return null
-  const updated = post.modified ? new Date(post.modified) : new Date(post.date)
-  const diffHours = Math.round((Date.now() - updated.getTime()) / 3600000)
+  if (!post) return null;
+  const updated = post.modified ? new Date(post.modified) : new Date(post.date);
+  const diffHours = Math.round((Date.now() - updated.getTime()) / 3600000);
   return (
     <article className="space-y-3">
       {post.featuredImage?.node?.sourceUrl && (
@@ -33,5 +34,5 @@ export function TopStory({ post }: Props) {
         Updated {diffHours}h ago
       </time>
     </article>
-  )
+  );
 }

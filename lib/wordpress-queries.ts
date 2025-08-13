@@ -397,7 +397,7 @@ export const queries = {
       }
     }
   `,
-}
+};
 
 export const mutations = {
   approveComment: `
@@ -443,4 +443,4 @@ export const mutations = {
       }
     }
   `,
-}
+};

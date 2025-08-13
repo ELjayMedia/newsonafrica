@@ -2,90 +2,100 @@ export interface Post {
   /**
    * Unique identifier for the post
    */
-  id: number
+  id: number;
   /**
    * Post title
    */
   title: {
-    rendered: string
-  }
+    rendered: string;
+  };
   /**
    * Post content
    */
   content: {
-    rendered: string
-    protected: boolean
-  }
+    rendered: string;
+    protected: boolean;
+  };
   /**
    * Post excerpt
    */
   excerpt: {
-    rendered: string
-  }
+    rendered: string;
+  };
   /**
    * Post slug for URL
    */
-  slug: string
+  slug: string;
   /**
    * Post status (publish, draft, etc.)
    */
-  status: "publish" | "draft" | "pending" | "private"
+  status: 'publish' | 'draft' | 'pending' | 'private';
   /**
    * Post type
    */
-  type: "post" | "page" | "attachment"
+  type: 'post' | 'page' | 'attachment';
   /**
    * Post author ID
    */
-  author: number
+  author: number;
   /**
    * Featured media ID
    */
-  featured_media: number
+  featured_media: number;
   /**
    * Post categories
    */
-  categories: number[]
+  categories: number[];
   /**
    * Post tags
    */
-  tags: number[]
+  tags: number[];
   /**
    * Post date
    */
-  date: string
+  date: string;
   /**
    * Post modified date
    */
-  modified: string
+  modified: string;
   /**
    * Post link
    */
-  link: string
+  link: string;
   /**
    * Post format
    */
-  format: "standard" | "aside" | "gallery" | "link" | "image" | "quote" | "status" | "video" | "audio" | "chat"
+  format:
+    | 'standard'
+    | 'aside'
+    | 'gallery'
+    | 'link'
+    | 'image'
+    | 'quote'
+    | 'status'
+    | 'video'
+    | 'audio'
+    | 'chat';
   /**
    * Post meta data
    */
-  meta: Record<string, any>
+  meta: Record<string, any>;
   /**
    * Whether comments are allowed
    */
-  comment_status: "open" | "closed"
+  comment_status: 'open' | 'closed';
   /**
    * Featured image URL (added by custom code)
    */
-  featured_image_url?: string
+  featured_image_url?: string;
   /**
    * Author data (added by custom code)
    */
-  author_data?: Author
+  author_data?: Author;
   /**
    * Category data (added by custom code)
    */
-  category_data?: Category[]
+  category_data?: Category[];
 }
 
 /**
@@ -95,43 +105,43 @@ export interface Category {
   /**
    * Unique identifier for the category
    */
-  id: number
+  id: number;
   /**
    * Category count
    */
-  count: number
+  count: number;
   /**
    * Category description
    */
-  description: string
+  description: string;
   /**
    * Category link
    */
-  link: string
+  link: string;
   /**
    * Category name
    */
-  name: string
+  name: string;
   /**
    * Category slug
    */
-  slug: string
+  slug: string;
   /**
    * Category taxonomy
    */
-  taxonomy: "category"
+  taxonomy: 'category';
   /**
    * Parent category ID
    */
-  parent: number
+  parent: number;
   /**
    * Category meta data
    */
-  meta: Record<string, any>
+  meta: Record<string, any>;
   /**
    * Category image URL (added by custom code)
    */
-  image_url?: string
+  image_url?: string;
 }
 
 /**
@@ -141,35 +151,35 @@ export interface Tag {
   /**
    * Unique identifier for the tag
    */
-  id: number
+  id: number;
   /**
    * Tag count
    */
-  count: number
+  count: number;
   /**
    * Tag description
    */
-  description: string
+  description: string;
   /**
    * Tag link
    */
-  link: string
+  link: string;
   /**
    * Tag name
    */
-  name: string
+  name: string;
   /**
    * Tag slug
    */
-  slug: string
+  slug: string;
   /**
    * Tag taxonomy
    */
-  taxonomy: "post_tag"
+  taxonomy: 'post_tag';
   /**
    * Tag meta data
    */
-  meta: Record<string, any>
+  meta: Record<string, any>;
 }
 
 /**
@@ -179,39 +189,39 @@ export interface Author {
   /**
    * Unique identifier for the author
    */
-  id: number
+  id: number;
   /**
    * Author name
    */
-  name: string
+  name: string;
   /**
    * Author URL
    */
-  url: string
+  url: string;
   /**
    * Author description
    */
-  description: string
+  description: string;
   /**
    * Author link
    */
-  link: string
+  link: string;
   /**
    * Author slug
    */
-  slug: string
+  slug: string;
   /**
    * Author avatar URLs
    */
   avatar_urls: {
-    "24": string
-    "48": string
-    "96": string
-  }
+    '24': string;
+    '48': string;
+    '96': string;
+  };
   /**
    * Author meta data
    */
-  meta: Record<string, any>
+  meta: Record<string, any>;
 }
 
 /**
@@ -221,57 +231,57 @@ export interface Comment {
   /**
    * Unique identifier for the comment
    */
-  id: number
+  id: number;
   /**
    * Post ID the comment belongs to
    */
-  post: number
+  post: number;
   /**
    * Parent comment ID
    */
-  parent: number
+  parent: number;
   /**
    * Comment author ID
    */
-  author: number
+  author: number;
   /**
    * Comment author name
    */
-  author_name: string
+  author_name: string;
   /**
    * Comment author URL
    */
-  author_url: string
+  author_url: string;
   /**
    * Comment date
    */
-  date: string
+  date: string;
   /**
    * Comment content
    */
   content: {
-    rendered: string
-  }
+    rendered: string;
+  };
   /**
    * Comment status
    */
-  status: "approved" | "hold" | "spam" | "trash"
+  status: 'approved' | 'hold' | 'spam' | 'trash';
   /**
    * Comment type
    */
-  type: "comment"
+  type: 'comment';
   /**
    * Author avatar URLs
    */
   author_avatar_urls: {
-    "24": string
-    "48": string
-    "96": string
-  }
+    '24': string;
+    '48': string;
+    '96': string;
+  };
   /**
    * Comment meta data
    */
-  meta: Record<string, any>
+  meta: Record<string, any>;
 }
 
 /**
@@ -281,13 +291,13 @@ export interface WPResponse<T> {
   /**
    * Response data
    */
-  data: T
+  data: T;
   /**
    * Response headers
    */
-  headers: Headers
+  headers: Headers;
   /**
    * Response status
    */
-  status: number
+  status: number;
 }

@@ -1,28 +1,29 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { useUser } from "@/contexts/UserContext"
-import { Button } from "@/components/ui/button"
-import { Home, Search, Grid, Bookmark, User, Menu, X } from "lucide-react"
+import { Home, Search, Grid, Bookmark, User, Menu, X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { useUser } from '@/contexts/UserContext';
 
 export default function Navigation() {
-  const pathname = usePathname()
-  const { isAuthenticated } = useUser()
-  const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname();
+  const { isAuthenticated } = useUser();
+  const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Search", href: "/search", icon: Search },
-    { name: "Discover", href: "/discover", icon: Grid },
-    { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
-    { name: "Profile", href: "/profile", icon: User },
-  ]
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Search', href: '/search', icon: Search },
+    { name: 'Discover', href: '/discover', icon: Grid },
+    { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
+    { name: 'Profile', href: '/profile', icon: User },
+  ];
 
   const isActive = (path: string) => {
-    return pathname === path
-  }
+    return pathname === path;
+  };
 
   return (
     <>
@@ -31,23 +32,23 @@ export default function Navigation() {
         <div className="flex justify-around items-center py-2">
           {navItems.map((item) => {
             // Skip bookmarks for non-authenticated users
-            if (item.name === "Bookmarks" && !isAuthenticated) return null
+            if (item.name === 'Bookmarks' && !isAuthenticated) return null;
 
-            const active = isActive(item.href)
-            const Icon = item.icon
+            const active = isActive(item.href);
+            const Icon = item.icon;
 
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`flex flex-col items-center justify-center px-3 py-1 text-xs ${
-                  active ? "text-primary" : "text-gray-600"
+                  active ? 'text-primary' : 'text-gray-600'
                 }`}
               >
-                <Icon className={`h-5 w-5 mb-1 ${active ? "text-primary" : "text-gray-600"}`} />
+                <Icon className={`h-5 w-5 mb-1 ${active ? 'text-primary' : 'text-gray-600'}`} />
                 <span>{item.name}</span>
               </Link>
-            )
+            );
           })}
         </div>
       </div>
@@ -56,23 +57,23 @@ export default function Navigation() {
       <div className="hidden md:flex md:justify-center md:items-center md:space-x-8 md:py-4">
         {navItems.map((item) => {
           // Skip bookmarks for non-authenticated users
-          if (item.name === "Bookmarks" && !isAuthenticated) return null
+          if (item.name === 'Bookmarks' && !isAuthenticated) return null;
 
-          const active = isActive(item.href)
-          const Icon = item.icon
+          const active = isActive(item.href);
+          const Icon = item.icon;
 
           return (
             <Link
               key={item.name}
               href={item.href}
               className={`flex items-center px-3 py-2 rounded-md ${
-                active ? "text-primary font-medium" : "text-gray-600"
+                active ? 'text-primary font-medium' : 'text-gray-600'
               } hover:bg-gray-100 transition-colors`}
             >
               <Icon className="h-5 w-5 mr-2" />
               <span>{item.name}</span>
             </Link>
-          )
+          );
         })}
       </div>
 
@@ -92,10 +93,10 @@ export default function Navigation() {
           <div className="flex flex-col items-center justify-center h-full space-y-6">
             {navItems.map((item) => {
               // Skip bookmarks for non-authenticated users
-              if (item.name === "Bookmarks" && !isAuthenticated) return null
+              if (item.name === 'Bookmarks' && !isAuthenticated) return null;
 
-              const active = isActive(item.href)
-              const Icon = item.icon
+              const active = isActive(item.href);
+              const Icon = item.icon;
 
               return (
                 <Link
@@ -103,17 +104,17 @@ export default function Navigation() {
                   href={item.href}
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center px-4 py-2 rounded-md ${
-                    active ? "text-primary font-medium" : "text-gray-700"
+                    active ? 'text-primary font-medium' : 'text-gray-700'
                   }`}
                 >
                   <Icon className="h-6 w-6 mr-3" />
                   <span className="text-xl">{item.name}</span>
                 </Link>
-              )
+              );
             })}
           </div>
         </div>
       )}
     </>
-  )
+  );
 }

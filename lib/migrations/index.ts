@@ -1,24 +1,24 @@
-import { createHash } from "crypto"
+import { createHash } from 'crypto';
 
 export interface Migration {
-  version: string
-  description: string
-  scriptName: string
-  sql: string
-  dependencies?: string[]
+  version: string;
+  description: string;
+  scriptName: string;
+  sql: string;
+  dependencies?: string[];
 }
 
 // Helper function to generate a checksum for a migration
 export function generateChecksum(sql: string): string {
-  return createHash("sha256").update(sql).digest("hex")
+  return createHash('sha256').update(sql).digest('hex');
 }
 
 // Define all migrations here
 export const migrations: Migration[] = [
   {
-    version: "1.0.0",
-    description: "Initial schema setup",
-    scriptName: "initial-schema.sql",
+    version: '1.0.0',
+    description: 'Initial schema setup',
+    scriptName: 'initial-schema.sql',
     sql: `
       -- Create initial tables if they don't exist
       CREATE TABLE IF NOT EXISTS public.profiles (
@@ -48,10 +48,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.1.0",
-    description: "Add comments table",
-    scriptName: "comments-table.sql",
-    dependencies: ["1.0.0"],
+    version: '1.1.0',
+    description: 'Add comments table',
+    scriptName: 'comments-table.sql',
+    dependencies: ['1.0.0'],
     sql: `
       -- Create comments table if it doesn't exist
       CREATE TABLE IF NOT EXISTS public.comments (
@@ -108,10 +108,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.2.0",
-    description: "Add comment moderation fields",
-    scriptName: "comment-moderation.sql",
-    dependencies: ["1.1.0"],
+    version: '1.2.0',
+    description: 'Add comment moderation fields',
+    scriptName: 'comment-moderation.sql',
+    dependencies: ['1.1.0'],
     sql: `
       -- Add status column if it doesn't exist
       DO $$
@@ -170,10 +170,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.3.0",
-    description: "Add comment reactions",
-    scriptName: "comment-reactions.sql",
-    dependencies: ["1.2.0"],
+    version: '1.3.0',
+    description: 'Add comment reactions',
+    scriptName: 'comment-reactions.sql',
+    dependencies: ['1.2.0'],
     sql: `
       -- Add is_rich_text column if it doesn't exist
       DO $$
@@ -270,10 +270,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.4.0",
-    description: "Add bookmarks table",
-    scriptName: "bookmarks-table.sql",
-    dependencies: ["1.0.0"],
+    version: '1.4.0',
+    description: 'Add bookmarks table',
+    scriptName: 'bookmarks-table.sql',
+    dependencies: ['1.0.0'],
     sql: `
       -- Create bookmarks table if it doesn't exist
       CREATE TABLE IF NOT EXISTS public.bookmarks (
@@ -327,10 +327,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.5.0",
-    description: "Add notifications table",
-    scriptName: "notifications-table.sql",
-    dependencies: ["1.0.0"],
+    version: '1.5.0',
+    description: 'Add notifications table',
+    scriptName: 'notifications-table.sql',
+    dependencies: ['1.0.0'],
     sql: `
       -- Create notifications table if it doesn't exist
       CREATE TABLE IF NOT EXISTS public.notifications (
@@ -386,10 +386,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.6.0",
-    description: "Add user settings table",
-    scriptName: "user-settings-table.sql",
-    dependencies: ["1.0.0"],
+    version: '1.6.0',
+    description: 'Add user settings table',
+    scriptName: 'user-settings-table.sql',
+    dependencies: ['1.0.0'],
     sql: `
       -- Create user_settings table if it doesn't exist
       CREATE TABLE IF NOT EXISTS public.user_settings (
@@ -451,10 +451,10 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.7.0",
-    description: "Add webhook_events table",
-    scriptName: "webhook-events-table.sql",
-    dependencies: ["1.0.0"],
+    version: '1.7.0',
+    description: 'Add webhook_events table',
+    scriptName: 'webhook-events-table.sql',
+    dependencies: ['1.0.0'],
     sql: `
       CREATE TABLE IF NOT EXISTS public.webhook_events (
         id BIGSERIAL PRIMARY KEY,
@@ -465,9 +465,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.8.0",
-    description: "Create schema_versions table",
-    scriptName: "schema-versions-table.sql",
+    version: '1.8.0',
+    description: 'Create schema_versions table',
+    scriptName: 'schema-versions-table.sql',
     sql: `
       CREATE TABLE IF NOT EXISTS public.schema_versions (
         id SERIAL PRIMARY KEY,
@@ -488,76 +488,76 @@ export const migrations: Migration[] = [
       DROP TABLE IF EXISTS public.migrations;
     `,
   },
-]
+];
 
 // Get all available migration versions
 export function getAvailableMigrationVersions(): string[] {
-  return migrations.map((m) => m.version)
+  return migrations.map((m) => m.version);
 }
 
 // Get a migration by version
 export function getMigrationByVersion(version: string): Migration | undefined {
-  return migrations.find((m) => m.version === version)
+  return migrations.find((m) => m.version === version);
 }
 
 // Sort migrations topologically based on dependencies
 export function sortMigrations(migrationList: Migration[]): Migration[] {
-  const result: Migration[] = []
-  const visited = new Set<string>()
-  const temp = new Set<string>()
+  const result: Migration[] = [];
+  const visited = new Set<string>();
+  const temp = new Set<string>();
 
   function visit(migration: Migration) {
     if (temp.has(migration.version)) {
-      throw new Error(`Circular dependency detected in migrations: ${migration.version}`)
+      throw new Error(`Circular dependency detected in migrations: ${migration.version}`);
     }
 
     if (visited.has(migration.version)) {
-      return
+      return;
     }
 
-    temp.add(migration.version)
+    temp.add(migration.version);
 
     // Visit all dependencies first
     if (migration.dependencies) {
       for (const depVersion of migration.dependencies) {
-        const depMigration = getMigrationByVersion(depVersion)
+        const depMigration = getMigrationByVersion(depVersion);
         if (depMigration) {
-          visit(depMigration)
+          visit(depMigration);
         } else {
-          throw new Error(`Dependency not found: ${depVersion} required by ${migration.version}`)
+          throw new Error(`Dependency not found: ${depVersion} required by ${migration.version}`);
         }
       }
     }
 
-    temp.delete(migration.version)
-    visited.add(migration.version)
-    result.push(migration)
+    temp.delete(migration.version);
+    visited.add(migration.version);
+    result.push(migration);
   }
 
   // Visit all migrations
   for (const migration of migrationList) {
     if (!visited.has(migration.version)) {
-      visit(migration)
+      visit(migration);
     }
   }
 
-  return result
+  return result;
 }
 
 // Compare semantic versions
 export function compareVersions(v1: string, v2: string): number {
-  const v1Parts = v1.split(".").map((p) => Number.parseInt(p, 10))
-  const v2Parts = v2.split(".").map((p) => Number.parseInt(p, 10))
+  const v1Parts = v1.split('.').map((p) => Number.parseInt(p, 10));
+  const v2Parts = v2.split('.').map((p) => Number.parseInt(p, 10));
 
   // Ensure arrays have the same length
-  while (v1Parts.length < v2Parts.length) v1Parts.push(0)
-  while (v2Parts.length < v1Parts.length) v2Parts.push(0)
+  while (v1Parts.length < v2Parts.length) v1Parts.push(0);
+  while (v2Parts.length < v1Parts.length) v2Parts.push(0);
 
   // Compare each part
   for (let i = 0; i < v1Parts.length; i++) {
-    if (v1Parts[i] > v2Parts[i]) return 1
-    if (v1Parts[i] < v2Parts[i]) return -1
+    if (v1Parts[i] > v2Parts[i]) return 1;
+    if (v1Parts[i] < v2Parts[i]) return -1;
   }
 
-  return 0 // versions are equal
+  return 0; // versions are equal
 }

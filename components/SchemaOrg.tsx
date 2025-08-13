@@ -1,7 +1,7 @@
-import { JsonLd } from "@/components/JsonLd"
+import { JsonLd } from '@/components/JsonLd';
 
 interface SchemaOrgProps {
-  schemas: any[]
+  schemas: any[];
 }
 
 export function SchemaOrg({ schemas }: SchemaOrgProps) {
@@ -11,5 +11,5 @@ export function SchemaOrg({ schemas }: SchemaOrgProps) {
         <JsonLd key={index} data={schema} />
       ))}
     </>
-  )
+  );
 }

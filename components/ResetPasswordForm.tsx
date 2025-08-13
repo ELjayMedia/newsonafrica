@@ -1,46 +1,46 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState } from 'react';
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { resetPassword } from "@/lib/auth"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { resetPassword } from '@/lib/auth';
 
 interface ResetPasswordFormProps {
-  resetKey: string
+  resetKey: string;
 }
 
 export function ResetPasswordForm({ resetKey }: ResetPasswordFormProps) {
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
-  const router = useRouter()
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError('');
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError('Passwords do not match');
+      return;
     }
 
     try {
-      await resetPassword(resetKey, password)
-      setSuccess(true)
+      await resetPassword(resetKey, password);
+      setSuccess(true);
       setTimeout(() => {
-        router.push("/auth")
-      }, 3000)
+        router.push('/auth');
+      }, 3000);
     } catch (err) {
-      setError("Failed to reset password. Please try again.")
+      setError('Failed to reset password. Please try again.');
     }
-  }
+  };
 
   if (success) {
-    return <p>Password reset successfully. Redirecting to login page...</p>
+    return <p>Password reset successfully. Redirecting to login page...</p>;
   }
 
   return (
@@ -76,5 +76,5 @@ export function ResetPasswordForm({ resetKey }: ResetPasswordFormProps) {
         Reset Password
       </Button>
     </form>
-  )
+  );
 }

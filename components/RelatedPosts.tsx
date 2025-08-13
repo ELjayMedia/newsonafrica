@@ -1,27 +1,27 @@
-import Image from "next/image"
-import Link from "next/link"
-import { Clock } from "lucide-react"
+import { Clock } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface Post {
-  id: string
-  title: string
-  slug: string
-  date: string
+  id: string;
+  title: string;
+  slug: string;
+  date: string;
   featuredImage?: {
     node: {
-      sourceUrl: string
-    }
-  }
+      sourceUrl: string;
+    };
+  };
 }
 
 interface RelatedPostsProps {
-  posts: Post[]
-  title?: string
+  posts: Post[];
+  title?: string;
 }
 
-export function RelatedPosts({ posts, title = "Related Posts" }: RelatedPostsProps) {
+export function RelatedPosts({ posts, title = 'Related Posts' }: RelatedPostsProps) {
   if (!posts || posts.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -34,7 +34,8 @@ export function RelatedPosts({ posts, title = "Related Posts" }: RelatedPostsPro
               <div className="relative h-40">
                 <Image
                   src={
-                    post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=300&width=500&query=related news"
+                    post.featuredImage?.node?.sourceUrl ||
+                    '/placeholder.svg?height=300&width=500&query=related news'
                   }
                   alt={post.title}
                   fill
@@ -50,10 +51,10 @@ export function RelatedPosts({ posts, title = "Related Posts" }: RelatedPostsPro
                 <div className="flex items-center text-sm text-gray-500 mt-auto">
                   <Clock className="w-4 h-4 mr-1 flex-shrink-0" />
                   <time dateTime={post.date}>
-                    {new Date(post.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
+                    {new Date(post.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
                     })}
                   </time>
                 </div>
@@ -63,5 +64,5 @@ export function RelatedPosts({ posts, title = "Related Posts" }: RelatedPostsPro
         ))}
       </div>
     </section>
-  )
+  );
 }

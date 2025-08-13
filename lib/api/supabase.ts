@@ -1,13 +1,14 @@
-import { createClient } from "@supabase/supabase-js"
-import type { User, Session, AuthError } from "@supabase/supabase-js"
-import type { Database } from "@/types/supabase"
+import { createClient } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
+
+import type { Database } from '@/types/supabase';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables")
+  throw new Error('Missing Supabase environment variables');
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -15,68 +16,68 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: "noa_supabase_auth",
-    flowType: "pkce",
+    storageKey: 'noa_supabase_auth',
+    flowType: 'pkce',
   },
-})
+});
 
 // TypeScript types for API responses
 export interface SupabaseResponse<T = any> {
-  data: T | null
-  error: string | null
-  success: boolean
+  data: T | null;
+  error: string | null;
+  success: boolean;
 }
 
 export interface UserProfile {
-  id: string
-  username: string
-  full_name?: string
-  avatar_url?: string
-  email?: string
-  created_at: string
-  updated_at: string
+  id: string;
+  username: string;
+  full_name?: string;
+  avatar_url?: string;
+  email?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthResponse {
-  user: User | null
-  session: Session | null
-  profile?: UserProfile | null
-  error: string | null
-  success: boolean
+  user: User | null;
+  session: Session | null;
+  profile?: UserProfile | null;
+  error: string | null;
+  success: boolean;
 }
 
 export interface UploadResponse {
-  url: string | null
-  path: string | null
-  error: string | null
-  success: boolean
+  url: string | null;
+  path: string | null;
+  error: string | null;
+  success: boolean;
 }
 
 // Helper function to handle Supabase errors
 function handleSupabaseError(error: AuthError | Error | null): string | null {
-  if (!error) return null
+  if (!error) return null;
 
   // Handle specific Supabase auth errors
-  if ("message" in error) {
+  if ('message' in error) {
     switch (error.message) {
-      case "Invalid login credentials":
-        return "Invalid email or password. Please check your credentials and try again."
-      case "Email not confirmed":
-        return "Please check your email and click the confirmation link before signing in."
-      case "User not found":
-        return "No account found with this email address."
-      case "Password should be at least 6 characters":
-        return "Password must be at least 6 characters long."
-      case "Unable to validate email address: invalid format":
-        return "Please enter a valid email address."
-      case "signup_disabled":
-        return "New user registration is currently disabled."
+      case 'Invalid login credentials':
+        return 'Invalid email or password. Please check your credentials and try again.';
+      case 'Email not confirmed':
+        return 'Please check your email and click the confirmation link before signing in.';
+      case 'User not found':
+        return 'No account found with this email address.';
+      case 'Password should be at least 6 characters':
+        return 'Password must be at least 6 characters long.';
+      case 'Unable to validate email address: invalid format':
+        return 'Please enter a valid email address.';
+      case 'signup_disabled':
+        return 'New user registration is currently disabled.';
       default:
-        return error.message
+        return error.message;
     }
   }
 
-  return "An unexpected error occurred. Please try again."
+  return 'An unexpected error occurred. Please try again.';
 }
 
 /**
@@ -88,7 +89,7 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
     const {
       data: { session },
       error: sessionError,
-    } = await supabase.auth.getSession()
+    } = await supabase.auth.getSession();
 
     if (sessionError) {
       return {
@@ -97,10 +98,10 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
         profile: null,
         error: handleSupabaseError(sessionError),
         success: false,
-      }
+      };
     }
 
-    const user = session?.user
+    const user = session?.user;
 
     if (!user) {
       return {
@@ -109,18 +110,18 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
         profile: null,
         error: null,
         success: true,
-      }
+      };
     }
 
     // Fetch user profile from Supabase
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single()
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
     if (profileError) {
-      console.error("Error fetching user profile:", profileError)
+      console.error('Error fetching user profile:', profileError);
       // Return user without profile if profile fetch fails
       return {
         user,
@@ -128,7 +129,7 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
         profile: null,
         error: null,
         success: true,
-      }
+      };
     }
 
     return {
@@ -137,16 +138,16 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
       profile: profile as UserProfile,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error getting user session:", error)
+    console.error('Error getting user session:', error);
     return {
       user: null,
       session: null,
       profile: null,
-      error: "Failed to retrieve user session",
+      error: 'Failed to retrieve user session',
       success: false,
-    }
+    };
   }
 }
 
@@ -163,15 +164,15 @@ export async function signInWithEmail(email: string, password: string): Promise<
         user: null,
         session: null,
         profile: null,
-        error: "Email and password are required",
+        error: 'Email and password are required',
         success: false,
-      }
+      };
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
-    })
+    });
 
     if (error) {
       return {
@@ -180,7 +181,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
         profile: null,
         error: handleSupabaseError(error),
         success: false,
-      }
+      };
     }
 
     return {
@@ -189,16 +190,16 @@ export async function signInWithEmail(email: string, password: string): Promise<
       profile: null,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error signing in:", error)
+    console.error('Error signing in:', error);
     return {
       user: null,
       session: null,
       profile: null,
-      error: "Failed to sign in. Please try again.",
+      error: 'Failed to sign in. Please try again.',
       success: false,
-    }
+    };
   }
 }
 
@@ -209,33 +210,37 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * @param username - User's desired username
  * @returns Promise with authentication result
  */
-export async function signUpWithEmail(email: string, password: string, username: string): Promise<AuthResponse> {
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResponse> {
   try {
     if (!email || !password || !username) {
       return {
         user: null,
         session: null,
         profile: null,
-        error: "Email, password, and username are required",
+        error: 'Email, password, and username are required',
         success: false,
-      }
+      };
     }
 
     // Check if username already exists
     const { data: existingUser } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("username", username.trim())
-      .single()
+      .from('profiles')
+      .select('username')
+      .eq('username', username.trim())
+      .single();
 
     if (existingUser) {
       return {
         user: null,
         session: null,
         profile: null,
-        error: "Username is already taken. Please choose another.",
+        error: 'Username is already taken. Please choose another.',
         success: false,
-      }
+      };
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -246,7 +251,7 @@ export async function signUpWithEmail(email: string, password: string, username:
           username: username.trim(),
         },
       },
-    })
+    });
 
     if (error) {
       return {
@@ -255,21 +260,21 @@ export async function signUpWithEmail(email: string, password: string, username:
         profile: null,
         error: handleSupabaseError(error),
         success: false,
-      }
+      };
     }
 
     // Create user profile
     if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").insert({
+      const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         username: username.trim(),
         email: email.trim().toLowerCase(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+      });
 
       if (profileError) {
-        console.error("Error creating user profile:", profileError)
+        console.error('Error creating user profile:', profileError);
         // Don't fail the signup if profile creation fails
       }
     }
@@ -280,16 +285,16 @@ export async function signUpWithEmail(email: string, password: string, username:
       profile: null,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error signing up:", error)
+    console.error('Error signing up:', error);
     return {
       user: null,
       session: null,
       profile: null,
-      error: "Failed to create account. Please try again.",
+      error: 'Failed to create account. Please try again.',
       success: false,
-    }
+    };
   }
 }
 
@@ -299,28 +304,28 @@ export async function signUpWithEmail(email: string, password: string, username:
  */
 export async function signOutUser(): Promise<SupabaseResponse<null>> {
   try {
-    const { error } = await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
       return {
         data: null,
         error: handleSupabaseError(error),
         success: false,
-      }
+      };
     }
 
     return {
       data: null,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error signing out:", error)
+    console.error('Error signing out:', error);
     return {
       data: null,
-      error: "Failed to sign out. Please try again.",
+      error: 'Failed to sign out. Please try again.',
       success: false,
-    }
+    };
   }
 }
 
@@ -336,94 +341,96 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
       return {
         url: null,
         path: null,
-        error: "No file provided",
+        error: 'No file provided',
         success: false,
-      }
+      };
     }
 
     // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       return {
         url: null,
         path: null,
-        error: "Invalid file type. Please upload a JPEG, PNG, or WebP image.",
+        error: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.',
         success: false,
-      }
+      };
     }
 
     // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return {
         url: null,
         path: null,
-        error: "File size too large. Please upload an image smaller than 5MB.",
+        error: 'File size too large. Please upload an image smaller than 5MB.',
         success: false,
-      }
+      };
     }
 
     // Get user ID from session if not provided
-    let currentUserId = userId
+    let currentUserId = userId;
     if (!currentUserId) {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
       if (!user) {
         return {
           url: null,
           path: null,
-          error: "User not authenticated",
+          error: 'User not authenticated',
           success: false,
-        }
+        };
       }
-      currentUserId = user.id
+      currentUserId = user.id;
     }
 
     // Generate unique filename
-    const fileExt = file.name.split(".").pop()
-    const fileName = `${currentUserId}-${Date.now()}.${fileExt}`
-    const filePath = `avatars/${fileName}`
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${currentUserId}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage.from("profiles").upload(filePath, file, {
-      cacheControl: "3600",
-      upsert: false,
-    })
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('profiles')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
     if (uploadError) {
-      console.error("Upload error:", uploadError)
+      console.error('Upload error:', uploadError);
       return {
         url: null,
         path: null,
-        error: "Failed to upload image. Please try again.",
+        error: 'Failed to upload image. Please try again.',
         success: false,
-      }
+      };
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage.from("profiles").getPublicUrl(filePath)
+    const { data: urlData } = supabase.storage.from('profiles').getPublicUrl(filePath);
 
     if (!urlData.publicUrl) {
       return {
         url: null,
         path: null,
-        error: "Failed to get image URL",
+        error: 'Failed to get image URL',
         success: false,
-      }
+      };
     }
 
     // Update user profile with new avatar URL
     const { error: updateError } = await supabase
-      .from("profiles")
+      .from('profiles')
       .update({
         avatar_url: urlData.publicUrl,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", currentUserId)
+      .eq('id', currentUserId);
 
     if (updateError) {
-      console.error("Error updating profile:", updateError)
+      console.error('Error updating profile:', updateError);
       // Don't fail the upload if profile update fails
     }
 
@@ -432,15 +439,15 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
       path: filePath,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error uploading avatar:", error)
+    console.error('Error uploading avatar:', error);
     return {
       url: null,
       path: null,
-      error: "Failed to upload avatar. Please try again.",
+      error: 'Failed to upload avatar. Please try again.',
       success: false,
-    }
+    };
   }
 }
 
@@ -454,33 +461,33 @@ export async function getUserProfile(userId: string): Promise<SupabaseResponse<U
     if (!userId) {
       return {
         data: null,
-        error: "User ID is required",
+        error: 'User ID is required',
         success: false,
-      }
+      };
     }
 
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
     if (error) {
       return {
         data: null,
-        error: "Failed to fetch user profile",
+        error: 'Failed to fetch user profile',
         success: false,
-      }
+      };
     }
 
     return {
       data: data as UserProfile,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error getting user profile:", error)
+    console.error('Error getting user profile:', error);
     return {
       data: null,
-      error: "Failed to fetch user profile",
+      error: 'Failed to fetch user profile',
       success: false,
-    }
+    };
   }
 }
 
@@ -498,41 +505,41 @@ export async function updateUserProfile(
     if (!userId) {
       return {
         data: null,
-        error: "User ID is required",
+        error: 'User ID is required',
         success: false,
-      }
+      };
     }
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from('profiles')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", userId)
+      .eq('id', userId)
       .select()
-      .single()
+      .single();
 
     if (error) {
       return {
         data: null,
-        error: "Failed to update profile",
+        error: 'Failed to update profile',
         success: false,
-      }
+      };
     }
 
     return {
       data: data as UserProfile,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error updating user profile:", error)
+    console.error('Error updating user profile:', error);
     return {
       data: null,
-      error: "Failed to update profile",
+      error: 'Failed to update profile',
       success: false,
-    }
+    };
   }
 }
 
@@ -546,35 +553,35 @@ export async function resetUserPassword(email: string): Promise<SupabaseResponse
     if (!email) {
       return {
         data: null,
-        error: "Email is required",
+        error: 'Email is required',
         success: false,
-      }
+      };
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-    })
+    });
 
     if (error) {
       return {
         data: null,
         error: handleSupabaseError(error),
         success: false,
-      }
+      };
     }
 
     return {
       data: null,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error("Error resetting password:", error)
+    console.error('Error resetting password:', error);
     return {
       data: null,
-      error: "Failed to send reset email. Please try again.",
+      error: 'Failed to send reset email. Please try again.',
       success: false,
-    }
+    };
   }
 }
 
@@ -583,37 +590,39 @@ export async function resetUserPassword(email: string): Promise<SupabaseResponse
  * @param provider - OAuth provider name
  * @returns Promise with authentication result
  */
-export async function signInWithOAuth(provider: "google" | "facebook"): Promise<SupabaseResponse<null>> {
+export async function signInWithOAuth(
+  provider: 'google' | 'facebook',
+): Promise<SupabaseResponse<null>> {
   try {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
-    })
+    });
 
     if (error) {
       return {
         data: null,
         error: handleSupabaseError(error),
         success: false,
-      }
+      };
     }
 
     return {
       data: null,
       error: null,
       success: true,
-    }
+    };
   } catch (error) {
-    console.error(`Error signing in with ${provider}:`, error)
+    console.error(`Error signing in with ${provider}:`, error);
     return {
       data: null,
       error: `Failed to sign in with ${provider}. Please try again.`,
       success: false,
-    }
+    };
   }
 }
 
 // Export the Supabase client for direct use if needed
-export { supabase as supabaseClient }
+export { supabase as supabaseClient };

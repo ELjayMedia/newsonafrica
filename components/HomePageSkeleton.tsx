@@ -1,10 +1,11 @@
-import { Skeleton } from "@/components/ui/skeleton"
-import { memo } from "react"
+import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Using memo to prevent unnecessary re-renders
 export const HomePageSkeleton = memo(function HomePageSkeleton() {
   // Create an array of delays for staggered animation effect
-  const getStaggeredDelay = (index: number, baseDelay = 100) => index * baseDelay
+  const getStaggeredDelay = (index: number, baseDelay = 100) => index * baseDelay;
 
   return (
     <div className="space-y-6">
@@ -28,8 +29,16 @@ export const HomePageSkeleton = memo(function HomePageSkeleton() {
             <div className="w-full bg-white rounded-lg overflow-hidden shadow-sm">
               <Skeleton className="w-full h-32" animation="shimmer" delay={getStaggeredDelay(i)} />
               <div className="p-3 space-y-2">
-                <Skeleton className="h-4 w-3/4" animation="shimmer" delay={getStaggeredDelay(i + 3)} />
-                <Skeleton className="h-3 w-1/2" animation="shimmer" delay={getStaggeredDelay(i + 6)} />
+                <Skeleton
+                  className="h-4 w-3/4"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i + 3)}
+                />
+                <Skeleton
+                  className="h-3 w-1/2"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i + 6)}
+                />
               </div>
             </div>
           </div>
@@ -41,10 +50,22 @@ export const HomePageSkeleton = memo(function HomePageSkeleton() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col bg-gray-50 rounded-lg overflow-hidden shadow-sm">
-              <Skeleton className="w-full aspect-video" animation="shimmer" delay={getStaggeredDelay(i)} />
+              <Skeleton
+                className="w-full aspect-video"
+                animation="shimmer"
+                delay={getStaggeredDelay(i)}
+              />
               <div className="p-2 flex-1 flex flex-col">
-                <Skeleton className="h-4 w-3/4 mb-1" animation="shimmer" delay={getStaggeredDelay(i + 3)} />
-                <Skeleton className="h-3 w-1/2 mt-auto" animation="shimmer" delay={getStaggeredDelay(i + 6)} />
+                <Skeleton
+                  className="h-4 w-3/4 mb-1"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i + 3)}
+                />
+                <Skeleton
+                  className="h-3 w-1/2 mt-auto"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i + 6)}
+                />
               </div>
             </div>
           ))}
@@ -54,7 +75,11 @@ export const HomePageSkeleton = memo(function HomePageSkeleton() {
       {/* Category Sections Skeleton - optimized with fewer sections */}
       {Array.from({ length: 2 }).map((_, sectionIndex) => (
         <section key={sectionIndex} className="bg-white p-4 rounded-lg shadow-sm">
-          <Skeleton className="h-6 w-1/4 mb-4" animation="shimmer" delay={getStaggeredDelay(sectionIndex * 10)} />
+          <Skeleton
+            className="h-6 w-1/4 mb-4"
+            animation="shimmer"
+            delay={getStaggeredDelay(sectionIndex * 10)}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex gap-3 items-start bg-white p-2 rounded-lg shadow-sm">
@@ -81,5 +106,5 @@ export const HomePageSkeleton = memo(function HomePageSkeleton() {
         </section>
       ))}
     </div>
-  )
-})
+  );
+});

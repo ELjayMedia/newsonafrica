@@ -1,12 +1,13 @@
-import { cookies } from "next/headers"
-import { createClient } from "@/utils/supabase/server"
+import { cookies } from 'next/headers';
+
+import { createClient } from '@/utils/supabase/server';
 
 export default async function ReportsPage() {
-  const supabase = createClient(cookies())
+  const supabase = createClient(cookies());
   const { data } = await supabase
-    .from("payments")
-    .select("reference,amount,status,created_at,subscriptions(user_id)")
-    .order("created_at", { ascending: false })
+    .from('payments')
+    .select('reference,amount,status,created_at,subscriptions(user_id)')
+    .order('created_at', { ascending: false });
 
   return (
     <div className="p-4">
@@ -38,5 +39,5 @@ export default async function ReportsPage() {
         Export CSV
       </a>
     </div>
-  )
+  );
 }

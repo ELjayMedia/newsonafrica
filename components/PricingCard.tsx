@@ -1,26 +1,27 @@
-"use client"
+'use client';
 
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Check } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface PricingFeature {
-  text: string
-  included: boolean
+  text: string;
+  included: boolean;
 }
 
 interface PricingCardProps {
-  title: string
-  price: string
-  duration: string
-  description: string
-  isPopular?: boolean
-  savings?: string
-  features?: PricingFeature[]
-  buttonText?: string
-  onButtonClick?: () => void
-  className?: string
+  title: string;
+  price: string;
+  duration: string;
+  description: string;
+  isPopular?: boolean;
+  savings?: string;
+  features?: PricingFeature[];
+  buttonText?: string;
+  onButtonClick?: () => void;
+  className?: string;
 }
 
 export function PricingCard({
@@ -31,15 +32,15 @@ export function PricingCard({
   isPopular,
   savings,
   features = [],
-  buttonText = "Subscribe",
+  buttonText = 'Subscribe',
   onButtonClick,
   className,
 }: PricingCardProps) {
   return (
     <Card
       className={cn(
-        "relative flex flex-col justify-between transition-shadow hover:shadow-lg h-full",
-        isPopular && "border-2 border-blue-600 shadow-md",
+        'relative flex flex-col justify-between transition-shadow hover:shadow-lg h-full',
+        isPopular && 'border-2 border-blue-600 shadow-md',
         className,
       )}
     >
@@ -63,20 +64,27 @@ export function PricingCard({
           <ul className="space-y-3 text-left mt-6">
             {features.map((feature, index) => (
               <li key={index} className="flex items-start">
-                <span className={`mr-2 mt-1 ${feature.included ? "text-green-500" : "text-gray-400"}`}>
+                <span
+                  className={`mr-2 mt-1 ${feature.included ? 'text-green-500' : 'text-gray-400'}`}
+                >
                   <Check className="h-4 w-4" />
                 </span>
-                <span className={feature.included ? "text-gray-700" : "text-gray-400"}>{feature.text}</span>
+                <span className={feature.included ? 'text-gray-700' : 'text-gray-400'}>
+                  {feature.text}
+                </span>
               </li>
             ))}
           </ul>
         )}
       </CardContent>
       <CardFooter className="pb-6 pt-2 flex justify-center">
-        <Button onClick={onButtonClick} className={cn("w-full", isPopular ? "bg-blue-600 hover:bg-blue-700" : "")}>
+        <Button
+          onClick={onButtonClick}
+          className={cn('w-full', isPopular ? 'bg-blue-600 hover:bg-blue-700' : '')}
+        >
           {buttonText}
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }

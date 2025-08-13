@@ -1,16 +1,16 @@
-import Head from "next/head"
+import Head from 'next/head';
 
 interface SocialMetadataProps {
-  title: string
-  description: string
-  image: string
-  url: string
-  type?: string
-  publishedTime?: string
-  modifiedTime?: string
-  authorName?: string
-  keywords?: string[]
-  section?: string
+  title: string;
+  description: string;
+  image: string;
+  url: string;
+  type?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  authorName?: string;
+  keywords?: string[];
+  section?: string;
 }
 
 export function SocialMetadata({
@@ -18,12 +18,12 @@ export function SocialMetadata({
   description,
   image,
   url,
-  type = "article",
+  type = 'article',
   publishedTime,
   modifiedTime,
   authorName,
   keywords = [],
-  section = "News",
+  section = 'News',
 }: SocialMetadataProps) {
   return (
     <Head>
@@ -34,7 +34,7 @@ export function SocialMetadata({
       <link rel="canonical" href={url} />
 
       {/* Keywords */}
-      {keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
+      {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
 
       {/* Open Graph */}
       <meta property="og:title" content={title} />
@@ -45,7 +45,7 @@ export function SocialMetadata({
       <meta property="og:site_name" content="News On Africa" />
 
       {/* Article specific Open Graph */}
-      {type === "article" && (
+      {type === 'article' && (
         <>
           {publishedTime && <meta property="article:published_time" content={publishedTime} />}
           {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
@@ -67,7 +67,10 @@ export function SocialMetadata({
       <meta name="twitter:creator" content="@newsonafrica" />
 
       {/* Additional SEO tags */}
-      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <meta
+        name="robots"
+        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      />
     </Head>
-  )
+  );
 }

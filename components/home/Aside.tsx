@@ -1,16 +1,18 @@
-import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress'
-import { MostRead } from '@/components/aside/MostRead'
-import { PollWidget } from '@/components/aside/PollWidget'
-import { GamesPromo } from '@/components/aside/GamesPromo'
-import { SponsoredPromo } from '@/components/aside/SponsoredPromo'
-import { MarketTicker } from './MarketTicker'
+import { MarketTicker } from './MarketTicker';
+
+import { GamesPromo } from '@/components/aside/GamesPromo';
+import { MostRead } from '@/components/aside/MostRead';
+import { PollWidget } from '@/components/aside/PollWidget';
+import { SponsoredPromo } from '@/components/aside/SponsoredPromo';
+import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress';
+
 
 export async function Aside() {
   const [mostRead, poll, markets] = await Promise.all([
     getMostRead(5),
     getPoll(),
     getMarketSnapshot(),
-  ])
+  ]);
   return (
     <div className="space-y-6">
       <MostRead posts={mostRead} />
@@ -19,5 +21,5 @@ export async function Aside() {
       <MarketTicker items={markets} />
       <SponsoredPromo />
     </div>
-  )
+  );
 }

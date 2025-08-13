@@ -1,214 +1,219 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { Search, X, Loader2, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { useState, useCallback, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Search, X, Loader2, Clock } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface SearchFormProps {
-  placeholder?: string
-  className?: string
-  onSearch?: (query: string) => void
-  showSuggestions?: boolean
-  autoFocus?: boolean
-  size?: "sm" | "md" | "lg"
+  placeholder?: string;
+  className?: string;
+  onSearch?: (query: string) => void;
+  showSuggestions?: boolean;
+  autoFocus?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 interface SearchSuggestion {
-  text: string
-  type: "recent" | "trending" | "suggestion"
+  text: string;
+  type: 'recent' | 'trending' | 'suggestion';
 }
 
 export function SearchForm({
-  placeholder = "Search articles, news, and stories...",
-  className = "",
+  placeholder = 'Search articles, news, and stories...',
+  className = '',
   onSearch,
   showSuggestions = true,
   autoFocus = false,
-  size = "md",
+  size = 'md',
 }: SearchFormProps) {
-  const [query, setQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
-  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
-  const [selectedSuggestion, setSelectedSuggestion] = useState(-1)
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [query, setQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   // Load recent searches from localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem("newsOnAfrica_recentSearches")
+        const saved = localStorage.getItem('newsOnAfrica_recentSearches');
         if (saved) {
-          setRecentSearches(JSON.parse(saved).slice(0, 5))
+          setRecentSearches(JSON.parse(saved).slice(0, 5));
         }
       } catch (e) {
-        console.error("Error loading recent searches:", e)
+        console.error('Error loading recent searches:', e);
       }
     }
-  }, [])
+  }, []);
 
   // Save search to recent searches
   const saveToRecentSearches = useCallback(
     (searchQuery: string) => {
-      if (typeof window === "undefined") return
+      if (typeof window === 'undefined') return;
 
-      const trimmed = searchQuery.trim()
-      if (!trimmed || trimmed.length < 2) return
+      const trimmed = searchQuery.trim();
+      if (!trimmed || trimmed.length < 2) return;
 
-      const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5)
-      setRecentSearches(updated)
-      localStorage.setItem("newsOnAfrica_recentSearches", JSON.stringify(updated))
+      const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 5);
+      setRecentSearches(updated);
+      localStorage.setItem('newsOnAfrica_recentSearches', JSON.stringify(updated));
     },
     [recentSearches],
-  )
+  );
 
   // Fetch suggestions with debouncing
   useEffect(() => {
     if (!showSuggestions || query.length < 2) {
-      setSuggestions([])
-      return
+      setSuggestions([]);
+      return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`);
         if (response.ok) {
-          const data = await response.json()
+          const data = await response.json();
           const searchSuggestions: SearchSuggestion[] = [
             ...recentSearches
               .filter((search) => search.toLowerCase().includes(query.toLowerCase()))
-              .map((text) => ({ text, type: "recent" as const })),
-            ...(data.suggestions || []).map((text: string) => ({ text, type: "suggestion" as const })),
-          ].slice(0, 8)
+              .map((text) => ({ text, type: 'recent' as const })),
+            ...(data.suggestions || []).map((text: string) => ({
+              text,
+              type: 'suggestion' as const,
+            })),
+          ].slice(0, 8);
 
-          setSuggestions(searchSuggestions)
+          setSuggestions(searchSuggestions);
         }
       } catch (error) {
-        console.error("Error fetching suggestions:", error)
+        console.error('Error fetching suggestions:', error);
       }
-    }, 300)
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [query, showSuggestions, recentSearches])
+    return () => clearTimeout(timer);
+  }, [query, showSuggestions, recentSearches]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault()
+      e.preventDefault();
 
-      if (!query.trim()) return
+      if (!query.trim()) return;
 
-      setIsLoading(true)
-      setShowSuggestionsList(false)
+      setIsLoading(true);
+      setShowSuggestionsList(false);
 
       try {
-        saveToRecentSearches(query.trim())
+        saveToRecentSearches(query.trim());
 
         if (onSearch) {
-          onSearch(query.trim())
+          onSearch(query.trim());
         } else {
-          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`);
         }
       } catch (error) {
-        console.error("Search form error:", error)
+        console.error('Search form error:', error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     [query, onSearch, router, saveToRecentSearches],
-  )
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setQuery(value)
-    setSelectedSuggestion(-1)
-    setShowSuggestionsList(value.length > 0 && showSuggestions)
-  }
+    const value = e.target.value;
+    setQuery(value);
+    setSelectedSuggestion(-1);
+    setShowSuggestionsList(value.length > 0 && showSuggestions);
+  };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
-    setQuery(suggestion.text)
-    setShowSuggestionsList(false)
-    saveToRecentSearches(suggestion.text)
+    setQuery(suggestion.text);
+    setShowSuggestionsList(false);
+    saveToRecentSearches(suggestion.text);
 
     if (onSearch) {
-      onSearch(suggestion.text)
+      onSearch(suggestion.text);
     } else {
-      router.push(`/search?q=${encodeURIComponent(suggestion.text)}`)
+      router.push(`/search?q=${encodeURIComponent(suggestion.text)}`);
     }
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestionsList || suggestions.length === 0) return
+    if (!showSuggestionsList || suggestions.length === 0) return;
 
     switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault()
-        setSelectedSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))
-        break
-      case "ArrowUp":
-        e.preventDefault()
-        setSelectedSuggestion((prev) => (prev > 0 ? prev - 1 : -1))
-        break
-      case "Enter":
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestion((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case 'Enter':
         if (selectedSuggestion >= 0) {
-          e.preventDefault()
-          handleSuggestionClick(suggestions[selectedSuggestion])
+          e.preventDefault();
+          handleSuggestionClick(suggestions[selectedSuggestion]);
         }
-        break
-      case "Escape":
-        setShowSuggestionsList(false)
-        setSelectedSuggestion(-1)
-        inputRef.current?.blur()
-        break
+        break;
+      case 'Escape':
+        setShowSuggestionsList(false);
+        setSelectedSuggestion(-1);
+        inputRef.current?.blur();
+        break;
     }
-  }
+  };
 
   const clearSearch = () => {
-    setQuery("")
-    setShowSuggestionsList(false)
-    setSelectedSuggestion(-1)
-    inputRef.current?.focus()
-  }
+    setQuery('');
+    setShowSuggestionsList(false);
+    setSelectedSuggestion(-1);
+    inputRef.current?.focus();
+  };
 
   const clearRecentSearches = () => {
-    setRecentSearches([])
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("newsOnAfrica_recentSearches")
+    setRecentSearches([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('newsOnAfrica_recentSearches');
     }
-  }
+  };
 
   // Size configurations
   const sizeConfig = {
     sm: {
-      input: "h-9 text-sm",
-      button: "h-7 px-2 text-xs",
-      icon: "h-3 w-3",
+      input: 'h-9 text-sm',
+      button: 'h-7 px-2 text-xs',
+      icon: 'h-3 w-3',
     },
     md: {
-      input: "h-11 text-base",
-      button: "h-8 px-3 text-sm",
-      icon: "h-4 w-4",
+      input: 'h-11 text-base',
+      button: 'h-8 px-3 text-sm',
+      icon: 'h-4 w-4',
     },
     lg: {
-      input: "h-14 text-lg",
-      button: "h-10 px-4",
-      icon: "h-5 w-5",
+      input: 'h-14 text-lg',
+      button: 'h-10 px-4',
+      icon: 'h-5 w-5',
     },
-  }
+  };
 
-  const config = sizeConfig[size]
+  const config = sizeConfig[size];
 
   return (
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
-          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${config.icon}`} />
+          <Search
+            className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${config.icon}`}
+          />
           <Input
             ref={inputRef}
             type="text"
@@ -218,7 +223,7 @@ export function SearchForm({
             onFocus={() => setShowSuggestionsList(query.length > 0 && showSuggestions)}
             onBlur={() => {
               // Delay hiding to allow suggestion clicks
-              setTimeout(() => setShowSuggestionsList(false), 150)
+              setTimeout(() => setShowSuggestionsList(false), 150);
             }}
             placeholder={placeholder}
             className={`pl-10 pr-24 ${config.input} transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
@@ -251,7 +256,7 @@ export function SearchForm({
               disabled={isLoading || !query.trim()}
               className={`${config.button} bg-blue-600 hover:bg-blue-700 text-white`}
             >
-              {isLoading ? <Loader2 className={`${config.icon} animate-spin`} /> : "Search"}
+              {isLoading ? <Loader2 className={`${config.icon} animate-spin`} /> : 'Search'}
             </Button>
           </div>
         </div>
@@ -268,16 +273,18 @@ export function SearchForm({
                   type="button"
                   onClick={() => handleSuggestionClick(suggestion)}
                   className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 ${
-                    index === selectedSuggestion ? "bg-blue-50 text-blue-600" : ""
+                    index === selectedSuggestion ? 'bg-blue-50 text-blue-600' : ''
                   }`}
                 >
-                  {suggestion.type === "recent" ? (
+                  {suggestion.type === 'recent' ? (
                     <Clock className="h-3 w-3 text-gray-400" />
                   ) : (
                     <Search className="h-3 w-3 text-gray-400" />
                   )}
                   <span className="flex-1">{suggestion.text}</span>
-                  {suggestion.type === "recent" && <span className="text-xs text-gray-400">Recent</span>}
+                  {suggestion.type === 'recent' && (
+                    <span className="text-xs text-gray-400">Recent</span>
+                  )}
                 </button>
               ))}
 
@@ -304,7 +311,7 @@ export function SearchForm({
                   <button
                     key={search}
                     type="button"
-                    onClick={() => handleSuggestionClick({ text: search, type: "recent" })}
+                    onClick={() => handleSuggestionClick({ text: search, type: 'recent' })}
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Clock className="h-3 w-3 text-gray-400" />
@@ -331,5 +338,5 @@ export function SearchForm({
         </div>
       )}
     </div>
-  )
+  );
 }

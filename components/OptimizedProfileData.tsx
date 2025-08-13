@@ -1,24 +1,34 @@
-"use client"
+'use client';
 
-import { createClient } from "@/utils/supabase/client"
-import { useSupabaseQuery } from "@/hooks/useSupabaseQuery"
-import type { Profile } from "@/services/profile-service"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
+import type { Profile } from '@/services/profile-service';
+import { createClient } from '@/utils/supabase/client';
 
 interface ProfileDataProps {
-  userId: string
+  userId: string;
 }
 
 export function OptimizedProfileData({ userId }: ProfileDataProps) {
-  const supabase = createClient()
+  const supabase = createClient();
 
-  const { data: profile, isLoading, isError, error } = useSupabaseQuery<Profile>(
-    () => supabase.from("profiles").select("id, username, full_name, avatar_url").eq("id", userId).single(),
-    ["profile", userId],
-    { cacheTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000 }
-  )
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+  } = useSupabaseQuery<Profile>(
+    () =>
+      supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .eq('id', userId)
+        .single(),
+    ['profile', userId],
+    { cacheTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000 },
+  );
 
   if (isLoading) {
     return (
@@ -38,7 +48,7 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (isError) {
@@ -48,10 +58,10 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
           <CardTitle>Error Loading Profile</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-red-500">{error?.message || "Failed to load profile data"}</p>
+          <p className="text-red-500">{error?.message || 'Failed to load profile data'}</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!profile) {
@@ -64,7 +74,7 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
           <p>No profile data available for this user.</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -75,7 +85,7 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
       <CardContent>
         <div className="flex items-center space-x-4">
           <Avatar>
-            <AvatarImage src={profile.avatar_url || "/default-avatar.png"} />
+            <AvatarImage src={profile.avatar_url || '/default-avatar.png'} />
             <AvatarFallback>{profile.username.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
@@ -84,6 +94,5 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-

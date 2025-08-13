@@ -1,192 +1,198 @@
-"use client"
+'use client';
 
-import { useEffect, useState, useRef, useCallback } from "react"
-import { fetchComments } from "@/lib/comment-service"
-import { CommentForm } from "@/components/CommentForm"
-import { CommentItem } from "@/components/CommentItem"
-import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
-import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useInView } from "react-intersection-observer"
-import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
-import { useUser } from "@/contexts/UserContext"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MessageSquare, AlertCircle, ArrowUpDown } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useInView } from 'react-intersection-observer';
+
+import { CommentForm } from '@/components/CommentForm';
+import { CommentItem } from '@/components/CommentItem';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useUser } from '@/contexts/UserContext';
+import { fetchComments } from '@/lib/comment-service';
+import { MIGRATION_INSTRUCTIONS } from '@/lib/supabase-migrations';
+import type { Comment, CommentSortOption } from '@/lib/supabase-schema';
 
 interface CommentListProps {
-  postId: string
+  postId: string;
 }
 
 export function CommentList({ postId }: CommentListProps) {
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [totalComments, setTotalComments] = useState(0)
-  const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
-  const [showMigrationInfo, setShowMigrationInfo] = useState(false)
-  const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
-  const { user } = useUser()
-  const [retryCount, setRetryCount] = useState(0)
-  const maxRetries = 3
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalComments, setTotalComments] = useState(0);
+  const [optimisticComments, setOptimisticComments] = useState<Comment[]>([]);
+  const [showMigrationInfo, setShowMigrationInfo] = useState(false);
+  const [sortOption, setSortOption] = useState<CommentSortOption>('newest');
+  const { user } = useUser();
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   // For infinite scroll
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: false,
-  })
+  });
 
   // For rate limiting
-  const lastCommentTime = useRef<number | null>(null)
-  const RATE_LIMIT_MS = 10000 // 10 seconds
+  const lastCommentTime = useRef<number | null>(null);
+  const RATE_LIMIT_MS = 10000; // 10 seconds
 
   // For optimistic updates
-  const [failedComments, setFailedComments] = useState<string[]>([])
+  const [failedComments, setFailedComments] = useState<string[]>([]);
 
   const loadComments = useCallback(
     async (pageNum = 0, append = false) => {
       try {
-        setLoading(true)
+        setLoading(true);
 
         // Add a small delay to prevent rapid retries
         if (retryCount > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
+          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
         }
 
         const {
           comments: fetchedComments,
           hasMore: moreAvailable,
           total,
-        } = await fetchComments(postId, pageNum, 10, sortOption)
+        } = await fetchComments(postId, pageNum, 10, sortOption);
 
         if (append) {
-          setComments((prevComments) => [...prevComments, ...fetchedComments])
+          setComments((prevComments) => [...prevComments, ...fetchedComments]);
         } else {
-          setComments(fetchedComments)
+          setComments(fetchedComments);
         }
 
-        setHasMore(moreAvailable)
-        setTotalComments(total)
-        setError(null)
-        setRetryCount(0) // Reset retry count on success
+        setHasMore(moreAvailable);
+        setTotalComments(total);
+        setError(null);
+        setRetryCount(0); // Reset retry count on success
       } catch (err: any) {
-        console.error("Error loading comments:", err)
+        console.error('Error loading comments:', err);
 
         // Check if we should retry
         if (retryCount < maxRetries) {
-          setRetryCount((prev) => prev + 1)
-          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
-          return loadComments(pageNum, append)
+          setRetryCount((prev) => prev + 1);
+          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`);
+          return loadComments(pageNum, append);
         }
 
         // Check if this is a schema-related error
         if (
           err.message &&
-          (err.message.includes("status") ||
-            err.message.includes("column") ||
-            err.message.includes("schema") ||
-            err.message.includes("execute is not a function"))
+          (err.message.includes('status') ||
+            err.message.includes('column') ||
+            err.message.includes('schema') ||
+            err.message.includes('execute is not a function'))
         ) {
-          setShowMigrationInfo(true)
-          setError("The comment system needs a database update. Please contact the administrator.")
+          setShowMigrationInfo(true);
+          setError('The comment system needs a database update. Please contact the administrator.');
         } else {
-          setError("Failed to load comments. Please try refreshing the page.")
+          setError('Failed to load comments. Please try refreshing the page.');
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
     [postId, sortOption, retryCount, maxRetries],
-  )
+  );
 
   // Load initial comments
   useEffect(() => {
-    setPage(0)
-    setRetryCount(0) // Reset retry count when sort option changes
-    loadComments()
-  }, [loadComments, sortOption])
+    setPage(0);
+    setRetryCount(0); // Reset retry count when sort option changes
+    loadComments();
+  }, [loadComments, sortOption]);
 
   // Handle infinite scroll
   useEffect(() => {
     if (inView && hasMore && !loading) {
-      const nextPage = page + 1
-      setPage(nextPage)
-      loadComments(nextPage, true)
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadComments(nextPage, true);
     }
-  }, [inView, hasMore, loading, loadComments, page])
+  }, [inView, hasMore, loading, loadComments, page]);
 
   // Handle optimistic updates
   const handleCommentAdded = useCallback(
     (optimisticComment?: Comment) => {
       if (optimisticComment?.isOptimistic) {
         // Add optimistic comment to the UI
-        setOptimisticComments((prev) => [optimisticComment, ...prev])
+        setOptimisticComments((prev) => [optimisticComment, ...prev]);
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
-        setRetryCount(0) // Reset retry count
-        loadComments()
-        setOptimisticComments([])
+        setRetryCount(0); // Reset retry count
+        loadComments();
+        setOptimisticComments([]);
       }
     },
     [loadComments],
-  )
+  );
 
   // Handle comment failure
   const handleCommentFailed = useCallback((commentId: string) => {
-    setFailedComments((prev) => [...prev, commentId])
+    setFailedComments((prev) => [...prev, commentId]);
 
     // Remove from optimistic comments after a delay
     setTimeout(() => {
-      setOptimisticComments((prev) => prev.filter((comment) => comment.id !== commentId))
-      setFailedComments((prev) => prev.filter((id) => id !== commentId))
-    }, 5000) // Show error state for 5 seconds
-  }, [])
+      setOptimisticComments((prev) => prev.filter((comment) => comment.id !== commentId));
+      setFailedComments((prev) => prev.filter((id) => id !== commentId));
+    }, 5000); // Show error state for 5 seconds
+  }, []);
 
   // Check if user is rate limited
   const isRateLimited = useCallback(() => {
-    if (!lastCommentTime.current) return false
+    if (!lastCommentTime.current) return false;
 
-    const timeSinceLastComment = Date.now() - lastCommentTime.current
-    return timeSinceLastComment < RATE_LIMIT_MS
-  }, [])
+    const timeSinceLastComment = Date.now() - lastCommentTime.current;
+    return timeSinceLastComment < RATE_LIMIT_MS;
+  }, []);
 
   // Calculate time remaining for rate limit
   const getRateLimitTimeRemaining = useCallback(() => {
-    if (!lastCommentTime.current) return 0
+    if (!lastCommentTime.current) return 0;
 
-    const timeSinceLastComment = Date.now() - lastCommentTime.current
-    return Math.max(0, Math.ceil((RATE_LIMIT_MS - timeSinceLastComment) / 1000))
-  }, [])
+    const timeSinceLastComment = Date.now() - lastCommentTime.current;
+    return Math.max(0, Math.ceil((RATE_LIMIT_MS - timeSinceLastComment) / 1000));
+  }, []);
 
   // Handle sort change
   const handleSortChange = (option: CommentSortOption) => {
-    setSortOption(option)
-  }
+    setSortOption(option);
+  };
 
   // Get sort option display text
   const getSortOptionText = (option: CommentSortOption) => {
     switch (option) {
-      case "newest":
-        return "Newest First"
-      case "oldest":
-        return "Oldest First"
-      case "popular":
-        return "Most Popular"
+      case 'newest':
+        return 'Newest First';
+      case 'oldest':
+        return 'Oldest First';
+      case 'popular':
+        return 'Most Popular';
       default:
-        return "Sort"
+        return 'Sort';
     }
-  }
+  };
 
   // Handle retry
   const handleRetry = () => {
-    setRetryCount(0)
-    setError(null)
-    loadComments()
-  }
+    setRetryCount(0);
+    setError(null);
+    loadComments();
+  };
 
   // Combine real and optimistic comments for display
-  const displayComments = [...optimisticComments, ...comments]
+  const displayComments = [...optimisticComments, ...comments];
 
   return (
     <div id="comments" className="mt-4 space-y-4">
@@ -204,9 +210,15 @@ export function CommentList({ postId }: CommentListProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleSortChange("newest")}>Newest First</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSortChange("oldest")}>Oldest First</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSortChange("popular")}>Most Popular</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSortChange('newest')}>
+              Newest First
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSortChange('oldest')}>
+              Oldest First
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSortChange('popular')}>
+              Most Popular
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -225,10 +237,12 @@ export function CommentList({ postId }: CommentListProps) {
           <AlertDescription>
             <p className="font-medium">Database Migration Required</p>
             <p className="text-sm mt-1">
-              The enhanced comment system requires a database update. Please provide the following SQL to your database
-              administrator:
+              The enhanced comment system requires a database update. Please provide the following
+              SQL to your database administrator:
             </p>
-            <pre className="text-xs bg-gray-100 p-2 mt-2 rounded overflow-auto max-h-40">{MIGRATION_INSTRUCTIONS}</pre>
+            <pre className="text-xs bg-gray-100 p-2 mt-2 rounded overflow-auto max-h-40">
+              {MIGRATION_INSTRUCTIONS}
+            </pre>
           </AlertDescription>
         </Alert>
       )}
@@ -286,9 +300,9 @@ export function CommentList({ postId }: CommentListProps) {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const nextPage = page + 1
-                    setPage(nextPage)
-                    loadComments(nextPage, true)
+                    const nextPage = page + 1;
+                    setPage(nextPage);
+                    loadComments(nextPage, true);
                   }}
                 >
                   Load More Comments
@@ -299,5 +313,5 @@ export function CommentList({ postId }: CommentListProps) {
         </>
       )}
     </div>
-  )
+  );
 }

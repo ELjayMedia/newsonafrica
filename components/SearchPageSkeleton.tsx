@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function SearchPageSkeleton() {
   return (
@@ -25,5 +25,5 @@ export function SearchPageSkeleton() {
         <Skeleton className="h-10 w-32" />
       </div>
     </div>
-  )
+  );
 }

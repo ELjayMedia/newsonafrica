@@ -1,54 +1,57 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Sun, Moon, Search, Menu, User, BellRing } from "lucide-react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Sun, Moon, Search, Menu, User, BellRing } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
+
 
 export function TopNavigation() {
-  const [isDark, setIsDark] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const router = useRouter()
+  const [isDark, setIsDark] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
 
   // Check for user's theme preference
   useEffect(() => {
     const isDarkMode =
-      localStorage.getItem("theme") === "dark" ||
-      (localStorage.getItem("theme") === null && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      localStorage.getItem('theme') === 'dark' ||
+      (localStorage.getItem('theme') === null &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-    setIsDark(isDarkMode)
+    setIsDark(isDarkMode);
 
     if (isDarkMode) {
-      document.documentElement.classList.add("dark")
+      document.documentElement.classList.add('dark');
     }
-  }, [])
+  }, []);
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
+    setIsDark(!isDark);
     if (isDark) {
-      document.documentElement.classList.remove("dark")
-      localStorage.setItem("theme", "light")
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     } else {
-      document.documentElement.classList.add("dark")
-      localStorage.setItem("theme", "dark")
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     }
-  }
+  };
 
   const handleSearch = () => {
-    router.push("/search")
-    setIsMenuOpen(false)
-  }
+    router.push('/search');
+    setIsMenuOpen(false);
+  };
 
   const handleProfile = () => {
-    router.push("/profile")
-    setIsMenuOpen(false)
-  }
+    router.push('/profile');
+    setIsMenuOpen(false);
+  };
 
   const handleNotifications = () => {
-    router.push("/notifications")
-    setIsMenuOpen(false)
-  }
+    router.push('/notifications');
+    setIsMenuOpen(false);
+  };
 
   return (
     <header className="border-b bg-white dark:bg-gray-800 sticky top-0 z-30">
@@ -59,7 +62,7 @@ export function TopNavigation() {
               variant="ghost"
               size="icon"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
             >
               <Menu className="h-5 w-5" />
@@ -73,14 +76,19 @@ export function TopNavigation() {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={handleSearch} aria-label="Search">
               <Search className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleNotifications} aria-label="Notifications">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNotifications}
+              aria-label="Notifications"
+            >
               <BellRing className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon" onClick={handleProfile} aria-label="User profile">
@@ -126,5 +134,5 @@ export function TopNavigation() {
         </div>
       )}
     </header>
-  )
+  );
 }

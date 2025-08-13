@@ -1,25 +1,26 @@
-"use client"
+'use client';
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import type { User, Session } from "@supabase/supabase-js"
-import { supabaseClient } from "@/lib/api/supabase"
-import type { UserProfile } from "@/lib/api/supabase"
+import type { User, Session } from '@supabase/supabase-js';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+
+import { supabaseClient } from '@/lib/api/supabase';
+import type { UserProfile } from '@/lib/api/supabase';
 
 // Hook return type
 export interface UseUserReturn {
-  user: User | null
-  profile: UserProfile | null
-  session: Session | null
-  loading: boolean
-  error: string | null
-  isAuthenticated: boolean
-  refreshUser: () => Promise<void>
+  user: User | null;
+  profile: UserProfile | null;
+  session: Session | null;
+  loading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 // Cache for user profile to avoid unnecessary API calls
-const profileCache: { [userId: string]: UserProfile } = {}
-const profileCacheTimestamp: { [userId: string]: number } = {}
-const PROFILE_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const profileCache: { [userId: string]: UserProfile } = {};
+const profileCacheTimestamp: { [userId: string]: number } = {};
+const PROFILE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Custom hook to manage user authentication state with Supabase
@@ -34,12 +35,12 @@ const PROFILE_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
  * @returns {UseUserReturn} User state and utilities
  */
 export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   /**
    * Fetch user profile with caching
@@ -47,117 +48,121 @@ export function useUser(): UseUserReturn {
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
       // Check cache first
-      const now = Date.now()
-      const cachedProfile = profileCache[userId]
-      const cacheTimestamp = profileCacheTimestamp[userId]
+      const now = Date.now();
+      const cachedProfile = profileCache[userId];
+      const cacheTimestamp = profileCacheTimestamp[userId];
 
       if (cachedProfile && cacheTimestamp && now - cacheTimestamp < PROFILE_CACHE_DURATION) {
-        return cachedProfile
+        return cachedProfile;
       }
 
       // Fetch from Supabase
-      const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single()
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
       if (error) {
-        console.error("Error fetching user profile:", error)
-        return null
+        console.error('Error fetching user profile:', error);
+        return null;
       }
 
       if (data) {
         // Update cache
-        profileCache[userId] = data as UserProfile
-        profileCacheTimestamp[userId] = now
-        return data as UserProfile
+        profileCache[userId] = data as UserProfile;
+        profileCacheTimestamp[userId] = now;
+        return data as UserProfile;
       }
 
-      return null
+      return null;
     } catch (error) {
-      console.error("Error in fetchUserProfile:", error)
-      return null
+      console.error('Error in fetchUserProfile:', error);
+      return null;
     }
-  }, [])
+  }, []);
 
   /**
    * Handle auth state changes
    */
   const handleAuthStateChange = useCallback(
     async (event: string, newSession: Session | null) => {
-      console.log("Auth state changed:", event)
+      console.log('Auth state changed:', event);
 
       try {
-        setSession(newSession)
-        setUser(newSession?.user ?? null)
-        setError(null)
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setError(null);
 
         if (newSession?.user) {
           // Fetch user profile
-          const userProfile = await fetchUserProfile(newSession.user.id)
-          setProfile(userProfile)
+          const userProfile = await fetchUserProfile(newSession.user.id);
+          setProfile(userProfile);
         } else {
           // Clear profile when user signs out
-          setProfile(null)
+          setProfile(null);
           // Clear cache for signed out user
           if (user?.id) {
-            delete profileCache[user.id]
-            delete profileCacheTimestamp[user.id]
+            delete profileCache[user.id];
+            delete profileCacheTimestamp[user.id];
           }
         }
       } catch (error) {
-        console.error("Error handling auth state change:", error)
-        setError("Failed to update user session")
+        console.error('Error handling auth state change:', error);
+        setError('Failed to update user session');
       } finally {
-        setLoading(false)
-        setInitialLoadComplete(true)
+        setLoading(false);
+        setInitialLoadComplete(true);
       }
     },
     [fetchUserProfile, user?.id],
-  )
+  );
 
   /**
    * Refresh user data manually
    */
   const refreshUser = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       const {
         data: { session: currentSession },
         error: sessionError,
-      } = await supabaseClient.auth.getSession()
+      } = await supabaseClient.auth.getSession();
 
       if (sessionError) {
-        throw sessionError
+        throw sessionError;
       }
 
-      setSession(currentSession)
-      setUser(currentSession?.user ?? null)
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
         // Force refresh profile (bypass cache)
-        const userId = currentSession.user.id
-        delete profileCache[userId]
-        delete profileCacheTimestamp[userId]
+        const userId = currentSession.user.id;
+        delete profileCache[userId];
+        delete profileCacheTimestamp[userId];
 
-        const userProfile = await fetchUserProfile(userId)
-        setProfile(userProfile)
+        const userProfile = await fetchUserProfile(userId);
+        setProfile(userProfile);
       } else {
-        setProfile(null)
+        setProfile(null);
       }
     } catch (error) {
-      console.error("Error refreshing user:", error)
-      setError("Failed to refresh user data")
+      console.error('Error refreshing user:', error);
+      setError('Failed to refresh user data');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [fetchUserProfile])
+  }, [fetchUserProfile]);
 
   /**
    * Initialize auth state and set up listener
    */
   useEffect(() => {
-    let mounted = true
-    let authListener: { subscription: { unsubscribe: () => void } } | null = null
+    let mounted = true;
+    let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const initializeAuth = async () => {
       try {
@@ -165,63 +170,63 @@ export function useUser(): UseUserReturn {
         const {
           data: { session: initialSession },
           error: sessionError,
-        } = await supabaseClient.auth.getSession()
+        } = await supabaseClient.auth.getSession();
 
-        if (!mounted) return
+        if (!mounted) return;
 
         if (sessionError) {
-          console.error("Error getting initial session:", sessionError)
-          setError("Failed to initialize authentication")
-          setLoading(false)
-          return
+          console.error('Error getting initial session:', sessionError);
+          setError('Failed to initialize authentication');
+          setLoading(false);
+          return;
         }
 
         // Set initial state
-        setSession(initialSession)
-        setUser(initialSession?.user ?? null)
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
 
         // Fetch profile if user exists
         if (initialSession?.user) {
-          const userProfile = await fetchUserProfile(initialSession.user.id)
+          const userProfile = await fetchUserProfile(initialSession.user.id);
           if (mounted) {
-            setProfile(userProfile)
+            setProfile(userProfile);
           }
         }
 
         // Set up auth state listener
-        const { data: listener } = supabaseClient.auth.onAuthStateChange(handleAuthStateChange)
-        authListener = listener
+        const { data: listener } = supabaseClient.auth.onAuthStateChange(handleAuthStateChange);
+        authListener = listener;
 
         if (mounted) {
-          setLoading(false)
-          setInitialLoadComplete(true)
+          setLoading(false);
+          setInitialLoadComplete(true);
         }
       } catch (error) {
-        console.error("Error initializing auth:", error)
+        console.error('Error initializing auth:', error);
         if (mounted) {
-          setError("Failed to initialize authentication")
-          setLoading(false)
-          setInitialLoadComplete(true)
+          setError('Failed to initialize authentication');
+          setLoading(false);
+          setInitialLoadComplete(true);
         }
       }
-    }
+    };
 
-    initializeAuth()
+    initializeAuth();
 
     // Cleanup function
     return () => {
-      mounted = false
+      mounted = false;
       if (authListener) {
-        authListener.subscription.unsubscribe()
+        authListener.subscription.unsubscribe();
       }
-    }
-  }, [fetchUserProfile, handleAuthStateChange])
+    };
+  }, [fetchUserProfile, handleAuthStateChange]);
 
   /**
    * Memoized return value to prevent unnecessary re-renders
    */
   const memoizedValue = useMemo(() => {
-    const isAuthenticated = !!(user && session)
+    const isAuthenticated = !!(user && session);
 
     return {
       user,
@@ -231,10 +236,10 @@ export function useUser(): UseUserReturn {
       error,
       isAuthenticated,
       refreshUser,
-    }
-  }, [user, profile, session, loading, initialLoadComplete, error, refreshUser])
+    };
+  }, [user, profile, session, loading, initialLoadComplete, error, refreshUser]);
 
-  return memoizedValue
+  return memoizedValue;
 }
 
 /**
@@ -242,7 +247,7 @@ export function useUser(): UseUserReturn {
  * Lightweight version that only returns authentication status
  */
 export function useAuth(): { isAuthenticated: boolean; loading: boolean } {
-  const { isAuthenticated, loading } = useUser()
+  const { isAuthenticated, loading } = useUser();
 
   return useMemo(
     () => ({
@@ -250,7 +255,7 @@ export function useAuth(): { isAuthenticated: boolean; loading: boolean } {
       loading,
     }),
     [isAuthenticated, loading],
-  )
+  );
 }
 
 /**
@@ -258,12 +263,12 @@ export function useAuth(): { isAuthenticated: boolean; loading: boolean } {
  * Useful when you only need profile data
  */
 export function useUserProfile(): {
-  profile: UserProfile | null
-  loading: boolean
-  error: string | null
-  refreshProfile: () => Promise<void>
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  refreshProfile: () => Promise<void>;
 } {
-  const { profile, loading, error, refreshUser } = useUser()
+  const { profile, loading, error, refreshUser } = useUser();
 
   return useMemo(
     () => ({
@@ -273,7 +278,7 @@ export function useUserProfile(): {
       refreshProfile: refreshUser,
     }),
     [profile, loading, error, refreshUser],
-  )
+  );
 }
 
 /**
@@ -281,16 +286,21 @@ export function useUserProfile(): {
  * Returns session-specific data and utilities
  */
 export function useSession(): {
-  session: Session | null
-  user: User | null
-  loading: boolean
-  error: string | null
-  isValid: boolean
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  isValid: boolean;
 } {
-  const { session, user, loading, error } = useUser()
+  const { session, user, loading, error } = useUser();
 
   return useMemo(() => {
-    const isValid = !!(session && user && session.expires_at && session.expires_at > Date.now() / 1000)
+    const isValid = !!(
+      session &&
+      user &&
+      session.expires_at &&
+      session.expires_at > Date.now() / 1000
+    );
 
     return {
       session,
@@ -298,9 +308,9 @@ export function useSession(): {
       loading,
       error,
       isValid,
-    }
-  }, [session, user, loading, error])
+    };
+  }, [session, user, loading, error]);
 }
 
 // Export default hook
-export default useUser
+export default useUser;

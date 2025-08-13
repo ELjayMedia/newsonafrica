@@ -1,25 +1,26 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Loader2, Lock } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
-import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
-import type { PaystackOptions, SubscriptionPlan } from "@/config/paystack"
+import { Loader2, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { PAYSTACK_PUBLIC_KEY } from '@/config/paystack';
+import type { PaystackOptions, SubscriptionPlan } from '@/config/paystack';
+import { useToast } from '@/hooks/use-toast';
+import { generateTransactionReference, verifyPaystackTransaction } from '@/lib/paystack-utils';
 
 interface PaystackButtonProps {
-  email: string
-  plan: SubscriptionPlan
-  onSuccess?: (reference: string, response: any) => void
-  onError?: (error: string) => void
-  className?: string
-  disabled?: boolean
-  metadata?: Record<string, any>
-  firstName?: string
-  lastName?: string
-  phone?: string
-  label?: string
+  email: string;
+  plan: SubscriptionPlan;
+  onSuccess?: (reference: string, response: any) => void;
+  onError?: (error: string) => void;
+  className?: string;
+  disabled?: boolean;
+  metadata?: Record<string, any>;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  label?: string;
 }
 
 export function PaystackButton({
@@ -27,79 +28,79 @@ export function PaystackButton({
   plan,
   onSuccess,
   onError,
-  className = "",
+  className = '',
   disabled = false,
   metadata = {},
   firstName,
   lastName,
   phone,
-  label = "Subscribe Now",
+  label = 'Subscribe Now',
 }: PaystackButtonProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [scriptLoaded, setScriptLoaded] = useState(false)
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const { toast } = useToast();
 
   // Load Paystack script
   useEffect(() => {
     // Check if the script is already loaded
     if (window.PaystackPop) {
-      setScriptLoaded(true)
-      return
+      setScriptLoaded(true);
+      return;
     }
 
     // Load Paystack script
-    const script = document.createElement("script")
-    script.src = "https://js.paystack.co/v1/inline.js"
-    script.async = true
-    script.onload = () => setScriptLoaded(true)
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.async = true;
+    script.onload = () => setScriptLoaded(true);
     script.onerror = () => {
-      console.error("Failed to load Paystack script")
+      console.error('Failed to load Paystack script');
       toast({
-        title: "Payment Error",
-        description: "Failed to load payment gateway. Please try again later.",
-        variant: "destructive",
-      })
-    }
-    document.body.appendChild(script)
+        title: 'Payment Error',
+        description: 'Failed to load payment gateway. Please try again later.',
+        variant: 'destructive',
+      });
+    };
+    document.body.appendChild(script);
 
     return () => {
       // Clean up script if component unmounts
       if (document.body.contains(script)) {
-        document.body.removeChild(script)
+        document.body.removeChild(script);
       }
-    }
-  }, [toast])
+    };
+  }, [toast]);
 
   const handlePayment = async () => {
     if (!scriptLoaded) {
       toast({
-        title: "Payment Error",
-        description: "Payment system is still initializing. Please try again in a moment.",
-        variant: "destructive",
-      })
-      return
+        title: 'Payment Error',
+        description: 'Payment system is still initializing. Please try again in a moment.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     if (!PAYSTACK_PUBLIC_KEY) {
-      console.error("PAYSTACK_PUBLIC_KEY is not defined")
+      console.error('PAYSTACK_PUBLIC_KEY is not defined');
       toast({
-        title: "Configuration Error",
-        description: "Payment system is not properly configured. Please contact support.",
-        variant: "destructive",
-      })
-      return
+        title: 'Configuration Error',
+        description: 'Payment system is not properly configured. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      const reference = generateTransactionReference()
+      const reference = generateTransactionReference();
 
       const paystackOptions: PaystackOptions = {
         key: PAYSTACK_PUBLIC_KEY,
         email,
         amount: plan.amount,
-        currency: plan.currency || "ZAR",
+        currency: plan.currency || 'ZAR',
         ref: reference,
         plan: plan.paystackPlanId, // Use the Paystack plan ID
         label: plan.name,
@@ -110,92 +111,93 @@ export function PaystackButton({
           ...metadata,
           custom_fields: [
             {
-              display_name: "Plan",
-              variable_name: "plan",
+              display_name: 'Plan',
+              variable_name: 'plan',
               value: plan.name,
             },
             {
-              display_name: "Interval",
-              variable_name: "interval",
+              display_name: 'Interval',
+              variable_name: 'interval',
               value: plan.interval,
             },
           ],
         },
         onSuccess: async (response) => {
           try {
-            console.log("Payment successful, verifying transaction...", response)
+            console.log('Payment successful, verifying transaction...', response);
             // Verify the transaction on the server
-            const verificationResult = await verifyPaystackTransaction(response.reference)
+            const verificationResult = await verifyPaystackTransaction(response.reference);
 
             if (verificationResult.status) {
               toast({
-                title: "Payment Successful",
+                title: 'Payment Successful',
                 description: `Your ${plan.name} subscription has been activated.`,
-              })
+              });
 
               if (onSuccess) {
-                onSuccess(response.reference, verificationResult.data)
+                onSuccess(response.reference, verificationResult.data);
               }
             } else {
-              throw new Error(verificationResult.message || "Transaction verification failed")
+              throw new Error(verificationResult.message || 'Transaction verification failed');
             }
           } catch (error) {
-            console.error("Verification error:", error)
+            console.error('Verification error:', error);
             toast({
-              title: "Verification Error",
-              description: "We received your payment, but there was an issue confirming it. Please contact support.",
-              variant: "destructive",
-            })
+              title: 'Verification Error',
+              description:
+                'We received your payment, but there was an issue confirming it. Please contact support.',
+              variant: 'destructive',
+            });
 
             if (onError) {
-              onError("Verification failed")
+              onError('Verification failed');
             }
           } finally {
             // Always reset loading state
-            setIsLoading(false)
+            setIsLoading(false);
           }
         },
         onCancel: () => {
-          console.log("Payment cancelled by user")
-          setIsLoading(false)
+          console.log('Payment cancelled by user');
+          setIsLoading(false);
           toast({
-            title: "Payment Cancelled",
-            description: "You cancelled the payment process.",
-          })
+            title: 'Payment Cancelled',
+            description: 'You cancelled the payment process.',
+          });
         },
-      }
+      };
 
       // Add optional fields if provided
-      if (firstName) paystackOptions.firstname = firstName
-      if (lastName) paystackOptions.lastname = lastName
-      if (phone) paystackOptions.phone = phone
+      if (firstName) paystackOptions.firstname = firstName;
+      if (lastName) paystackOptions.lastname = lastName;
+      if (phone) paystackOptions.phone = phone;
 
       // Open Paystack payment modal
-      const handler = window.PaystackPop.setup(paystackOptions)
-      handler.openIframe()
+      const handler = window.PaystackPop.setup(paystackOptions);
+      handler.openIframe();
 
       // Add a safety timeout to reset loading state if callbacks don't fire
       setTimeout(() => {
         if (isLoading) {
-          console.log("Safety timeout triggered to reset loading state")
-          setIsLoading(false)
+          console.log('Safety timeout triggered to reset loading state');
+          setIsLoading(false);
         }
-      }, 60000) // 1 minute timeout
+      }, 60000); // 1 minute timeout
     } catch (error) {
-      console.error("Payment initialization error:", error)
+      console.error('Payment initialization error:', error);
       toast({
-        title: "Payment Error",
-        description: "There was an error initializing your payment. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Payment Error',
+        description: 'There was an error initializing your payment. Please try again.',
+        variant: 'destructive',
+      });
 
       if (onError) {
-        onError("Payment initialization failed")
+        onError('Payment initialization failed');
       }
 
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Button
@@ -215,5 +217,5 @@ export function PaystackButton({
         </>
       )}
     </Button>
-  )
+  );
 }

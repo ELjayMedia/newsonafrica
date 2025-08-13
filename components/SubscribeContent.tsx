@@ -1,111 +1,125 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { PaystackButton } from "@/components/PaystackButton"
-import { SUBSCRIPTION_PLANS } from "@/config/paystack"
-import { formatCurrency, calculateMonthlyPrice, formatNextBillingDate } from "@/lib/paystack-utils"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from "lucide-react"
-import { useUser } from "@/contexts/UserContext"
-import Link from "next/link"
-import Image from "next/image"
+import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
+import { PaystackButton } from '@/components/PaystackButton';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SUBSCRIPTION_PLANS } from '@/config/paystack';
+import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/use-toast';
+import { formatCurrency, calculateMonthlyPrice, formatNextBillingDate } from '@/lib/paystack-utils';
+
 
 export function SubscribeContent() {
-  const [email, setEmail] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [selectedPlanId, setSelectedPlanId] = useState("biannually") // Default to the popular plan
-  const [step, setStep] = useState(1)
-  const [isRedirecting, setIsRedirecting] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
-  const { user } = useUser()
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState('biannually'); // Default to the popular plan
+  const [step, setStep] = useState(1);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user } = useUser();
 
   // Pre-fill email if user is logged in
   useEffect(() => {
     if (user?.email) {
-      setEmail(user.email)
+      setEmail(user.email);
     }
-  }, [user])
+  }, [user]);
 
-  const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId)
+  const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId);
 
   const handleSuccess = (reference: string, responseData: any) => {
-    console.log("Subscription successful, storing data and redirecting...", { reference, responseData })
+    console.log('Subscription successful, storing data and redirecting...', {
+      reference,
+      responseData,
+    });
 
     try {
       // Prevent multiple redirects
-      if (isRedirecting) return
-      setIsRedirecting(true)
+      if (isRedirecting) return;
+      setIsRedirecting(true);
 
       // Store subscription info in localStorage
-      localStorage.setItem("subscription_active", "true")
-      localStorage.setItem("subscription_reference", reference)
-      localStorage.setItem("subscription_plan", selectedPlanId)
-      localStorage.setItem("subscription_date", new Date().toISOString())
+      localStorage.setItem('subscription_active', 'true');
+      localStorage.setItem('subscription_reference', reference);
+      localStorage.setItem('subscription_plan', selectedPlanId);
+      localStorage.setItem('subscription_date', new Date().toISOString());
 
       // Show success message
       toast({
-        title: "Subscription Activated",
-        description: "Your subscription has been successfully activated. Redirecting to welcome page...",
-      })
+        title: 'Subscription Activated',
+        description:
+          'Your subscription has been successfully activated. Redirecting to welcome page...',
+      });
 
       // Redirect to welcome page after a short delay
       setTimeout(() => {
-        router.push("/welcome")
-      }, 1500)
+        router.push('/welcome');
+      }, 1500);
     } catch (error) {
-      console.error("Error in handleSuccess:", error)
-      setIsRedirecting(false)
+      console.error('Error in handleSuccess:', error);
+      setIsRedirecting(false);
       toast({
-        title: "Error",
-        description: "There was an error processing your subscription. Please contact support.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'There was an error processing your subscription. Please contact support.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   const handleError = (error: string) => {
-    console.error("Payment error:", error)
+    console.error('Payment error:', error);
     toast({
-      title: "Payment Failed",
-      description: "There was an error processing your payment. Please try again or contact support.",
-      variant: "destructive",
-    })
-  }
+      title: 'Payment Failed',
+      description:
+        'There was an error processing your payment. Please try again or contact support.',
+      variant: 'destructive',
+    });
+  };
 
-  const isFormValid = email && email.includes("@") && firstName && lastName && selectedPlan
+  const isFormValid = email && email.includes('@') && firstName && lastName && selectedPlan;
 
   const goToNextStep = () => {
     if (step === 1 && !selectedPlan) {
       toast({
-        title: "Please select a plan",
-        description: "You need to select a subscription plan to continue.",
-        variant: "destructive",
-      })
-      return
+        title: 'Please select a plan',
+        description: 'You need to select a subscription plan to continue.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     if (step === 2 && !isFormValid) {
       toast({
-        title: "Please complete all fields",
-        description: "All fields are required to proceed with your subscription.",
-        variant: "destructive",
-      })
-      return
+        title: 'Please complete all fields',
+        description: 'All fields are required to proceed with your subscription.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    setStep(step + 1)
-  }
+    setStep(step + 1);
+  };
 
   const goToPreviousStep = () => {
-    setStep(step - 1)
-  }
+    setStep(step - 1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -121,27 +135,31 @@ export function SubscribeContent() {
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center">
-            <div className={`flex items-center ${step >= 1 ? "text-blue-600" : "text-gray-400"}`}>
+            <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
               <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 1 ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}
+                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 1 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}
               >
                 1
               </div>
               <span className="ml-2 text-sm font-medium hidden sm:inline">Select Plan</span>
             </div>
-            <div className={`w-12 sm:w-24 h-1 mx-2 ${step >= 2 ? "bg-blue-600" : "bg-gray-300"}`}></div>
-            <div className={`flex items-center ${step >= 2 ? "text-blue-600" : "text-gray-400"}`}>
+            <div
+              className={`w-12 sm:w-24 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}
+            ></div>
+            <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
               <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 2 ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}
+                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 2 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}
               >
                 2
               </div>
               <span className="ml-2 text-sm font-medium hidden sm:inline">Your Details</span>
             </div>
-            <div className={`w-12 sm:w-24 h-1 mx-2 ${step >= 3 ? "bg-blue-600" : "bg-gray-300"}`}></div>
-            <div className={`flex items-center ${step >= 3 ? "text-blue-600" : "text-gray-400"}`}>
+            <div
+              className={`w-12 sm:w-24 h-1 mx-2 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}
+            ></div>
+            <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
               <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 3 ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}
+                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${step >= 3 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}
               >
                 3
               </div>
@@ -169,7 +187,7 @@ export function SubscribeContent() {
 
               {SUBSCRIPTION_PLANS.map((plan) => (
                 <TabsContent key={plan.id} value={plan.id} className="space-y-4">
-                  <Card className={`${plan.isPopular ? "border-blue-600 shadow-md" : ""}`}>
+                  <Card className={`${plan.isPopular ? 'border-blue-600 shadow-md' : ''}`}>
                     <CardHeader>
                       <div className="flex justify-between items-center">
                         <div>
@@ -177,10 +195,14 @@ export function SubscribeContent() {
                           <CardDescription>{plan.description}</CardDescription>
                         </div>
                         <div className="text-right">
-                          <div className="text-3xl font-bold">{formatCurrency(plan.amount, plan.currency)}</div>
+                          <div className="text-3xl font-bold">
+                            {formatCurrency(plan.amount, plan.currency)}
+                          </div>
                           <div className="text-sm text-gray-500">per {plan.interval}</div>
                           {plan.savePercentage && (
-                            <div className="text-sm font-medium text-green-600">Save {plan.savePercentage}%</div>
+                            <div className="text-sm font-medium text-green-600">
+                              Save {plan.savePercentage}%
+                            </div>
                           )}
                         </div>
                       </div>
@@ -210,10 +232,14 @@ export function SubscribeContent() {
                             <p className="text-sm text-gray-600 mb-2">
                               Next billing date: {formatNextBillingDate(plan.interval)}
                             </p>
-                            {plan.interval !== "monthly" && (
+                            {plan.interval !== 'monthly' && (
                               <p className="text-sm text-gray-600">
-                                Monthly equivalent:{" "}
-                                {formatCurrency(calculateMonthlyPrice(plan.amount, plan.interval), plan.currency)}/month
+                                Monthly equivalent:{' '}
+                                {formatCurrency(
+                                  calculateMonthlyPrice(plan.amount, plan.interval),
+                                  plan.currency,
+                                )}
+                                /month
                               </p>
                             )}
                           </div>
@@ -223,7 +249,9 @@ export function SubscribeContent() {
                                 <Award className="h-5 w-5 text-blue-600 mr-2" />
                                 <h3 className="font-medium">Free Trial</h3>
                               </div>
-                              <p className="text-sm text-gray-600">Start with {plan.trial} before your first payment</p>
+                              <p className="text-sm text-gray-600">
+                                Start with {plan.trial} before your first payment
+                              </p>
                             </div>
                           )}
                         </div>
@@ -248,21 +276,22 @@ export function SubscribeContent() {
                 <div>
                   <h3 className="font-semibold">How does the free trial work?</h3>
                   <p className="text-sm text-gray-600">
-                    Your free trial begins immediately. You won't be charged until the trial period ends, and you can
-                    cancel anytime.
+                    Your free trial begins immediately. You won't be charged until the trial period
+                    ends, and you can cancel anytime.
                   </p>
                 </div>
                 <div>
                   <h3 className="font-semibold">Can I cancel my subscription?</h3>
                   <p className="text-sm text-gray-600">
-                    Yes, you can cancel your subscription at any time from your account settings. Your access will
-                    continue until the end of your billing period.
+                    Yes, you can cancel your subscription at any time from your account settings.
+                    Your access will continue until the end of your billing period.
                   </p>
                 </div>
                 <div>
                   <h3 className="font-semibold">What payment methods are accepted?</h3>
                   <p className="text-sm text-gray-600">
-                    We accept all major credit and debit cards, including Visa, Mastercard, and American Express.
+                    We accept all major credit and debit cards, including Visa, Mastercard, and
+                    American Express.
                   </p>
                 </div>
               </div>
@@ -323,7 +352,7 @@ export function SubscribeContent() {
                 onClick={goToNextStep}
                 disabled={!isFormValid}
                 className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ${
-                  !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+                  !isFormValid ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 Continue to Payment
@@ -381,7 +410,7 @@ export function SubscribeContent() {
                 metadata={{
                   full_name: `${firstName} ${lastName}`,
                 }}
-                label={isRedirecting ? "Redirecting..." : "Complete Subscription"}
+                label={isRedirecting ? 'Redirecting...' : 'Complete Subscription'}
                 disabled={isRedirecting}
               />
             </div>
@@ -390,7 +419,13 @@ export function SubscribeContent() {
             <div className="flex items-center justify-center mt-4 text-xs text-gray-500">
               <Lock className="h-3 w-3 mr-1" />
               <span>Secure payment powered by</span>
-              <Image src="/paystack-logo.svg" alt="Paystack" width={60} height={20} className="ml-1" />
+              <Image
+                src="/paystack-logo.svg"
+                alt="Paystack"
+                width={60}
+                height={20}
+                className="ml-1"
+              />
             </div>
 
             <div className="mt-6 flex justify-between">
@@ -409,7 +444,7 @@ export function SubscribeContent() {
         <div className="text-center">
           <div className="inline-flex items-center text-sm text-gray-600">
             <HelpCircle className="h-4 w-4 mr-2" />
-            Need help?{" "}
+            Need help?{' '}
             <Link href="/contact" className="text-blue-600 hover:underline ml-1">
               Contact us
             </Link>
@@ -419,11 +454,11 @@ export function SubscribeContent() {
         {/* Terms and Privacy */}
         <div className="text-center mt-8 text-xs text-gray-500">
           <p>
-            By subscribing, you agree to our{" "}
+            By subscribing, you agree to our{' '}
             <Link href="/terms" className="text-blue-600 hover:underline">
               Terms
-            </Link>{" "}
-            and{" "}
+            </Link>{' '}
+            and{' '}
             <Link href="/privacy" className="text-blue-600 hover:underline">
               Privacy Policy
             </Link>
@@ -431,5 +466,5 @@ export function SubscribeContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }

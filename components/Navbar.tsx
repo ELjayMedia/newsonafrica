@@ -1,35 +1,36 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { Search, X, Menu } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, X, Menu } from "lucide-react"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
 
 export default function Navbar() {
-  const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchTerm.trim()) {
-      router.push(`/search?query=${encodeURIComponent(searchTerm.trim())}`)
-      setIsSearchOpen(false)
-      setSearchTerm("")
+      router.push(`/search?query=${encodeURIComponent(searchTerm.trim())}`);
+      setIsSearchOpen(false);
+      setSearchTerm('');
     }
-  }
+  };
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
-      searchInputRef.current.focus()
+      searchInputRef.current.focus();
     }
-  }, [isSearchOpen])
+  }, [isSearchOpen]);
 
   return (
     <nav className="bg-primary text-primary-foreground p-4 sticky top-0 z-30 shadow-md">
@@ -41,7 +42,7 @@ export default function Navbar() {
               size="icon"
               className="mr-2 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMobileMenuOpen}
             >
               <Menu className="h-5 w-5" />
@@ -89,7 +90,12 @@ export default function Navbar() {
                 </Button>
               </form>
             ) : (
-              <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} aria-label="Open search">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchOpen(true)}
+                aria-label="Open search"
+              >
                 <Search className="h-5 w-5" />
               </Button>
             )}
@@ -126,5 +132,5 @@ export default function Navbar() {
         )}
       </div>
     </nav>
-  )
+  );
 }

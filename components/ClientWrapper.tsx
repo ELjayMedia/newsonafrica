@@ -1,10 +1,11 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { useRef, useState, useEffect } from "react"
-import { UserProvider } from "@/contexts/UserContext"
-import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type React from 'react';
+import { useRef, useState, useEffect } from 'react';
+
+import { BookmarksProvider } from '@/contexts/BookmarksContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 // Create a persistent QueryClient instance
 const createQueryClient = () =>
@@ -18,37 +19,37 @@ const createQueryClient = () =>
         refetchOnMount: false,
       },
     },
-  })
+  });
 
 export function ClientWrapper({ children }: { children: React.ReactNode }) {
   // Use state to ensure proper hydration
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
 
   // Use ref to avoid recreating the client on each render
-  const queryClientRef = useRef<QueryClient | null>(null)
+  const queryClientRef = useRef<QueryClient | null>(null);
 
   // Initialize the query client only once
   if (!queryClientRef.current) {
-    queryClientRef.current = createQueryClient()
+    queryClientRef.current = createQueryClient();
   }
 
   // Ensure hydration is complete before rendering
   useEffect(() => {
-    setMounted(true)
+    setMounted(true);
 
     // Add performance monitoring in development
-    if (process.env.NODE_ENV === "development") {
-      const startTime = performance.now()
+    if (process.env.NODE_ENV === 'development') {
+      const startTime = performance.now();
       return () => {
-        const endTime = performance.now()
-        console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
-      }
+        const endTime = performance.now();
+        console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`);
+      };
     }
-  }, [])
+  }, []);
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
-    return null
+    return null;
   }
 
   return (
@@ -57,5 +58,5 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
         <BookmarksProvider>{children}</BookmarksProvider>
       </UserProvider>
     </QueryClientProvider>
-  )
+  );
 }

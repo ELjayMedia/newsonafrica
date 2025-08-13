@@ -1,23 +1,24 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { Card } from '@/components/ui/card'
-import type { WordPressPost } from '@/lib/api/wordpress'
+import Image from 'next/image';
+import Link from 'next/link';
+
+import { Card } from '@/components/ui/card';
+import type { WordPressPost } from '@/lib/api/wordpress';
 
 interface Props {
-  title: string
-  slug: string
-  layout: 'grid' | 'list' | 'horizontal' | 'vertical'
-  posts: WordPressPost[]
+  title: string;
+  slug: string;
+  layout: 'grid' | 'list' | 'horizontal' | 'vertical';
+  posts: WordPressPost[];
 }
 
 export function CategoryRail({ title, layout, posts }: Props) {
-  if (!posts.length) return null
+  if (!posts.length) return null;
   const containerClass =
     layout === 'grid'
       ? 'grid grid-cols-2 gap-4'
       : layout === 'horizontal'
         ? 'flex overflow-x-auto gap-4'
-        : 'space-y-4'
+        : 'space-y-4';
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">{title}</h2>
@@ -43,5 +44,5 @@ export function CategoryRail({ title, layout, posts }: Props) {
         ))}
       </div>
     </section>
-  )
+  );
 }

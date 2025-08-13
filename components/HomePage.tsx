@@ -6,5 +6,5 @@ export function HomePage() {
       {/* Your hero section */}
       {/* Content previously separated by ads removed */}
     </div>
-  )
+  );
 }

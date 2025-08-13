@@ -1,95 +1,96 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { Clock, User } from "lucide-react"
-import { memo, useMemo } from "react"
-import { formatDistanceToNow } from "date-fns"
-import { designTokens, componentStyles, combineTokens } from "./design-tokens"
+import { formatDistanceToNow } from 'date-fns';
+import { Clock, User } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { memo, useMemo } from 'react';
+
+import { designTokens, componentStyles, combineTokens } from './design-tokens';
 
 interface UnifiedCardProps {
   post: {
-    id: string
-    title: string
-    excerpt?: string
-    slug: string
-    featuredImage?: { sourceUrl: string } | { node: { sourceUrl: string } }
-    date: string
+    id: string;
+    title: string;
+    excerpt?: string;
+    slug: string;
+    featuredImage?: { sourceUrl: string } | { node: { sourceUrl: string } };
+    date: string;
     author?: {
-      node: { name: string }
-    }
+      node: { name: string };
+    };
     categories?: {
       nodes: Array<{
-        name: string
-        slug: string
-      }>
-    }
-    type?: string
-  }
+        name: string;
+        slug: string;
+      }>;
+    };
+    type?: string;
+  };
 
   // Layout variants
-  variant?: "horizontal" | "vertical" | "minimal" | "featured"
+  variant?: 'horizontal' | 'vertical' | 'minimal' | 'featured';
 
   // Display options
-  showExcerpt?: boolean
-  showAuthor?: boolean
-  showCategory?: boolean
-  showDate?: boolean
+  showExcerpt?: boolean;
+  showAuthor?: boolean;
+  showCategory?: boolean;
+  showDate?: boolean;
 
   // Styling
-  className?: string
-  imageAspect?: "square" | "wide" | "tall"
+  className?: string;
+  imageAspect?: 'square' | 'wide' | 'tall';
 
   // Behavior
-  allowHtml?: boolean
+  allowHtml?: boolean;
 }
 
 export const UnifiedCard = memo(function UnifiedCard({
   post,
-  variant = "horizontal",
+  variant = 'horizontal',
   showExcerpt = false,
   showAuthor = true,
   showCategory = true,
   showDate = true,
-  className = "",
-  imageAspect = "wide",
+  className = '',
+  imageAspect = 'wide',
   allowHtml = false,
 }: UnifiedCardProps) {
   const formattedDate = useMemo(() => {
-    if (!showDate || !post.date) return null
-    return formatDistanceToNow(new Date(post.date), { addSuffix: true })
-  }, [post.date, showDate])
+    if (!showDate || !post.date) return null;
+    return formatDistanceToNow(new Date(post.date), { addSuffix: true });
+  }, [post.date, showDate]);
 
   const imageUrl = useMemo(() => {
-    if (!post.featuredImage) return "/placeholder.svg"
-    if ("sourceUrl" in post.featuredImage) {
-      return post.featuredImage.sourceUrl
+    if (!post.featuredImage) return '/placeholder.svg';
+    if ('sourceUrl' in post.featuredImage) {
+      return post.featuredImage.sourceUrl;
     }
-    if ("node" in post.featuredImage) {
-      return post.featuredImage.node.sourceUrl
+    if ('node' in post.featuredImage) {
+      return post.featuredImage.node.sourceUrl;
     }
-    return "/placeholder.svg"
-  }, [post.featuredImage])
+    return '/placeholder.svg';
+  }, [post.featuredImage]);
 
-  const category = showCategory ? post.categories?.nodes?.[0] : null
-  const author = showAuthor ? post.author?.node : null
+  const category = showCategory ? post.categories?.nodes?.[0] : null;
+  const author = showAuthor ? post.author?.node : null;
 
   const getImageDimensions = () => {
     switch (variant) {
-      case "minimal":
-        return { width: "w-16", height: "h-12" }
-      case "horizontal":
-        return { width: "w-20", height: "h-16" }
-      case "vertical":
-        return { width: "w-full", height: "h-32" }
-      case "featured":
-        return { width: "w-full", height: "h-48" }
+      case 'minimal':
+        return { width: 'w-16', height: 'h-12' };
+      case 'horizontal':
+        return { width: 'w-20', height: 'h-16' };
+      case 'vertical':
+        return { width: 'w-full', height: 'h-32' };
+      case 'featured':
+        return { width: 'w-full', height: 'h-48' };
       default:
-        return { width: "w-20", height: "h-16" }
+        return { width: 'w-20', height: 'h-16' };
     }
-  }
+  };
 
-  const imageDimensions = getImageDimensions()
+  const imageDimensions = getImageDimensions();
 
   const renderMetaInfo = () => (
     <div className={componentStyles.metaInfo}>
@@ -107,10 +108,10 @@ export const UnifiedCard = memo(function UnifiedCard({
         </>
       )}
     </div>
-  )
+  );
 
   const renderCategory = () => {
-    if (!category) return null
+    if (!category) return null;
     return (
       <span
         className={combineTokens(
@@ -122,26 +123,44 @@ export const UnifiedCard = memo(function UnifiedCard({
       >
         {category.name}
       </span>
-    )
-  }
+    );
+  };
 
-  if (variant === "minimal") {
+  if (variant === 'minimal') {
     return (
       <Link
         href={`/post/${post.slug}`}
-        className={combineTokens("block", designTokens.colors.states.hover, designTokens.transitions.colors, className)}
+        className={combineTokens(
+          'block',
+          designTokens.colors.states.hover,
+          designTokens.transitions.colors,
+          className,
+        )}
       >
-        <article className={combineTokens(designTokens.spacing.padding.sm, "border-b border-gray-100 last:border-b-0")}>
-          <div className={combineTokens(designTokens.layout.flex.start, designTokens.spacing.gap.sm)}>
+        <article
+          className={combineTokens(
+            designTokens.spacing.padding.sm,
+            'border-b border-gray-100 last:border-b-0',
+          )}
+        >
+          <div
+            className={combineTokens(designTokens.layout.flex.start, designTokens.spacing.gap.sm)}
+          >
             <div
               className={combineTokens(
                 imageDimensions.width,
                 imageDimensions.height,
-                "flex-shrink-0",
+                'flex-shrink-0',
                 componentStyles.imageContainer,
               )}
             >
-              <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="64px" />
+              <Image
+                src={imageUrl || '/placeholder.svg'}
+                alt={post.title}
+                fill
+                className="object-cover"
+                sizes="64px"
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className={componentStyles.headlineSecondary}>{post.title}</h3>
@@ -150,22 +169,28 @@ export const UnifiedCard = memo(function UnifiedCard({
           </div>
         </article>
       </Link>
-    )
+    );
   }
 
-  if (variant === "vertical") {
+  if (variant === 'vertical') {
     return (
-      <Link href={`/post/${post.slug}`} className={combineTokens("block group h-full", className)}>
+      <Link href={`/post/${post.slug}`} className={combineTokens('block group h-full', className)}>
         <article
           className={combineTokens(
             componentStyles.cardInteractive,
             designTokens.layout.flex.col,
-            "h-full overflow-hidden",
+            'h-full overflow-hidden',
           )}
         >
-          <div className={combineTokens(imageDimensions.width, imageDimensions.height, componentStyles.imageContainer)}>
+          <div
+            className={combineTokens(
+              imageDimensions.width,
+              imageDimensions.height,
+              componentStyles.imageContainer,
+            )}
+          >
             <Image
-              src={imageUrl || "/placeholder.svg"}
+              src={imageUrl || '/placeholder.svg'}
               alt={post.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -174,13 +199,17 @@ export const UnifiedCard = memo(function UnifiedCard({
             {category && <div className="absolute top-2 left-2">{renderCategory()}</div>}
           </div>
 
-          <div className={combineTokens(designTokens.spacing.padding.md, "flex-1 flex flex-col")}>
-            {post.type && <div className={combineTokens(designTokens.typography.meta.accent, "mb-1")}>{post.type}</div>}
+          <div className={combineTokens(designTokens.spacing.padding.md, 'flex-1 flex flex-col')}>
+            {post.type && (
+              <div className={combineTokens(designTokens.typography.meta.accent, 'mb-1')}>
+                {post.type}
+              </div>
+            )}
 
             <h3
               className={combineTokens(
                 componentStyles.headlinePrimary,
-                "group-hover:text-blue-600 transition-colors duration-200 mb-2",
+                'group-hover:text-blue-600 transition-colors duration-200 mb-2',
               )}
             >
               {post.title}
@@ -191,10 +220,14 @@ export const UnifiedCard = memo(function UnifiedCard({
                 className={combineTokens(
                   designTokens.typography.body.small,
                   designTokens.colors.text.muted,
-                  "line-clamp-2 mb-2",
+                  'line-clamp-2 mb-2',
                 )}
               >
-                {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+                {allowHtml ? (
+                  <span dangerouslySetInnerHTML={{ __html: post.excerpt }} />
+                ) : (
+                  post.excerpt
+                )}
               </p>
             )}
 
@@ -202,16 +235,22 @@ export const UnifiedCard = memo(function UnifiedCard({
           </div>
         </article>
       </Link>
-    )
+    );
   }
 
-  if (variant === "featured") {
+  if (variant === 'featured') {
     return (
-      <Link href={`/post/${post.slug}`} className={combineTokens("block group", className)}>
-        <article className={combineTokens(componentStyles.cardInteractive, "overflow-hidden")}>
-          <div className={combineTokens(imageDimensions.width, imageDimensions.height, componentStyles.imageContainer)}>
+      <Link href={`/post/${post.slug}`} className={combineTokens('block group', className)}>
+        <article className={combineTokens(componentStyles.cardInteractive, 'overflow-hidden')}>
+          <div
+            className={combineTokens(
+              imageDimensions.width,
+              imageDimensions.height,
+              componentStyles.imageContainer,
+            )}
+          >
             <Image
-              src={imageUrl || "/placeholder.svg"}
+              src={imageUrl || '/placeholder.svg'}
               alt={post.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -224,7 +263,7 @@ export const UnifiedCard = memo(function UnifiedCard({
             <h2
               className={combineTokens(
                 designTokens.typography.headline.large,
-                "group-hover:text-blue-600 transition-colors duration-200 mb-3",
+                'group-hover:text-blue-600 transition-colors duration-200 mb-3',
               )}
             >
               {post.title}
@@ -235,10 +274,14 @@ export const UnifiedCard = memo(function UnifiedCard({
                 className={combineTokens(
                   designTokens.typography.body.medium,
                   designTokens.colors.text.muted,
-                  "line-clamp-3 mb-3",
+                  'line-clamp-3 mb-3',
                 )}
               >
-                {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+                {allowHtml ? (
+                  <span dangerouslySetInnerHTML={{ __html: post.excerpt }} />
+                ) : (
+                  post.excerpt
+                )}
               </p>
             )}
 
@@ -246,15 +289,20 @@ export const UnifiedCard = memo(function UnifiedCard({
           </div>
         </article>
       </Link>
-    )
+    );
   }
 
   return (
-    <Link href={`/post/${post.slug}`} className={combineTokens("block group", className)}>
-      <article className={combineTokens(componentStyles.cardInteractive, "flex flex-col sm:flex-row overflow-hidden")}>
-        <div className={combineTokens("sm:w-1/3 h-40 sm:h-auto", componentStyles.imageContainer)}>
+    <Link href={`/post/${post.slug}`} className={combineTokens('block group', className)}>
+      <article
+        className={combineTokens(
+          componentStyles.cardInteractive,
+          'flex flex-col sm:flex-row overflow-hidden',
+        )}
+      >
+        <div className={combineTokens('sm:w-1/3 h-40 sm:h-auto', componentStyles.imageContainer)}>
           <Image
-            src={imageUrl || "/placeholder.svg"}
+            src={imageUrl || '/placeholder.svg'}
             alt={post.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -264,10 +312,10 @@ export const UnifiedCard = memo(function UnifiedCard({
 
         <div
           className={combineTokens(
-            "sm:w-2/3 flex-1",
+            'sm:w-2/3 flex-1',
             designTokens.spacing.padding.lg,
             designTokens.layout.flex.col,
-            "justify-between",
+            'justify-between',
           )}
         >
           <div>
@@ -276,7 +324,7 @@ export const UnifiedCard = memo(function UnifiedCard({
             <h3
               className={combineTokens(
                 componentStyles.headlinePrimary,
-                "group-hover:text-blue-600 transition-colors duration-200 mb-2",
+                'group-hover:text-blue-600 transition-colors duration-200 mb-2',
               )}
             >
               {post.title}
@@ -287,10 +335,14 @@ export const UnifiedCard = memo(function UnifiedCard({
                 className={combineTokens(
                   designTokens.typography.body.medium,
                   designTokens.colors.text.muted,
-                  "line-clamp-3 mb-3",
+                  'line-clamp-3 mb-3',
                 )}
               >
-                {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
+                {allowHtml ? (
+                  <span dangerouslySetInnerHTML={{ __html: post.excerpt }} />
+                ) : (
+                  post.excerpt
+                )}
               </p>
             )}
           </div>
@@ -299,5 +351,5 @@ export const UnifiedCard = memo(function UnifiedCard({
         </div>
       </article>
     </Link>
-  )
-})
+  );
+});

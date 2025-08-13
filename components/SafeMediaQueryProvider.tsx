@@ -1,23 +1,23 @@
-"use client"
+'use client';
 
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from 'react';
 
 interface MediaQueryContextType {
-  isMobile: boolean
-  isTablet: boolean
-  isDesktop: boolean
+  isMobile: boolean;
+  isTablet: boolean;
+  isDesktop: boolean;
 }
 
 const MediaQueryContext = createContext<MediaQueryContextType>({
   isMobile: false,
   isTablet: false,
   isDesktop: true,
-})
+});
 
-export const useMediaQueryContext = () => useContext(MediaQueryContext)
+export const useMediaQueryContext = () => useContext(MediaQueryContext);
 
 interface SafeMediaQueryProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export default function SafeMediaQueryProvider({ children }: SafeMediaQueryProviderProps) {
@@ -26,7 +26,7 @@ export default function SafeMediaQueryProvider({ children }: SafeMediaQueryProvi
     isMobile: false,
     isTablet: false,
     isDesktop: true,
-  }
+  };
 
-  return <MediaQueryContext.Provider value={contextValue}>{children}</MediaQueryContext.Provider>
+  return <MediaQueryContext.Provider value={contextValue}>{children}</MediaQueryContext.Provider>;
 }

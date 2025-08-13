@@ -1,4 +1,4 @@
-import { Skeleton } from "./Skeleton"
+import { Skeleton } from './Skeleton';
 
 export function SecondaryStoriesSkeleton() {
   return (
@@ -13,5 +13,5 @@ export function SecondaryStoriesSkeleton() {
         </div>
       ))}
     </div>
-  )
+  );
 }

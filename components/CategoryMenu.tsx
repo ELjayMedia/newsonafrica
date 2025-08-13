@@ -1,13 +1,14 @@
-import Link from "next/link"
-import { fetchAllCategories } from "@/lib/wordpress-api"
-import { Button } from "@/components/ui/button"
+import Link from 'next/link';
+
+import { Button } from '@/components/ui/button';
+import { fetchAllCategories } from '@/lib/wordpress-api';
 
 export default async function CategoryMenu() {
   try {
-    const categories = await fetchAllCategories()
+    const categories = await fetchAllCategories();
 
     if (!categories || categories.length === 0) {
-      return null
+      return null;
     }
 
     return (
@@ -23,15 +24,17 @@ export default async function CategoryMenu() {
             >
               <Link href={`/category/${category.slug}`}>
                 {category.name}
-                {category.count !== undefined && <span className="ml-1 text-xs text-gray-500">({category.count})</span>}
+                {category.count !== undefined && (
+                  <span className="ml-1 text-xs text-gray-500">({category.count})</span>
+                )}
               </Link>
             </Button>
           ))}
         </div>
       </nav>
-    )
+    );
   } catch (error) {
-    console.error("CategoryMenu failed to load categories:", error)
-    return null
+    console.error('CategoryMenu failed to load categories:', error);
+    return null;
   }
 }

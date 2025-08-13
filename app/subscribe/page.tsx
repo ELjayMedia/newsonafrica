@@ -1,18 +1,20 @@
-import type { Metadata } from "next"
-import { SubscribeContent } from "@/components/SubscribeContent"
-import { Suspense } from "react"
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
+
+import { SubscribeContent } from '@/components/SubscribeContent';
 
 export const metadata: Metadata = {
-  title: "Subscribe to News On Africa",
-  description: "Choose your subscription plan and get unlimited access to Africa's trusted news source",
-}
+  title: 'Subscribe to News On Africa',
+  description:
+    "Choose your subscription plan and get unlimited access to Africa's trusted news source",
+};
 
 export default function SubscribePage() {
   return (
     <Suspense fallback={<SubscriptionSkeleton />}>
       <SubscribeContent />
     </Suspense>
-  )
+  );
 }
 
 function SubscriptionSkeleton() {
@@ -46,5 +48,5 @@ function SubscriptionSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }

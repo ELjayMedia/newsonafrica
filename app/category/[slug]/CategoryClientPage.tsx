@@ -1,87 +1,90 @@
-"use client"
+'use client';
 
-import { useEffect, useState, useCallback } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import { getPostsByCategory } from "@/lib/api/wordpress"
-import { CategoryPage } from "./CategoryPage"
-import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
-import ErrorBoundary from "@/components/ErrorBoundary"
-import { notFound } from "next/navigation"
-import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
+import { useQueryClient } from '@tanstack/react-query';
+import { notFound } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+
+
+import { CategoryPage } from './CategoryPage';
+
+import { CategoryPageSkeleton } from '@/components/CategoryPageSkeleton';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { getPostsByCategory } from '@/lib/api/wordpress';
+import type { WordPressCategory, WordPressPost } from '@/lib/api/wordpress';
 
 interface CategoryData {
-  category: WordPressCategory | null
-  posts: WordPressPost[]
-  hasNextPage: boolean
-  endCursor: string | null
+  category: WordPressCategory | null;
+  posts: WordPressPost[];
+  hasNextPage: boolean;
+  endCursor: string | null;
 }
 
 interface CategoryClientPageProps {
-  params: { slug: string }
-  initialData: CategoryData | null
+  params: { slug: string };
+  initialData: CategoryData | null;
 }
 
 export default function CategoryClientPage({ params, initialData }: CategoryClientPageProps) {
-  const [categoryData, setCategoryData] = useState<CategoryData | null>(initialData)
-  const [isLoading, setIsLoading] = useState(!initialData)
-  const [error, setError] = useState<Error | null>(null)
-  const queryClient = useQueryClient()
+  const [categoryData, setCategoryData] = useState<CategoryData | null>(initialData);
+  const [isLoading, setIsLoading] = useState(!initialData);
+  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
   // Memoize the load function to prevent unnecessary re-renders
   const loadCategory = useCallback(async () => {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
-      const data = await getPostsByCategory(params.slug, 20)
+      const data = await getPostsByCategory(params.slug, 20);
 
       if (!data.category) {
-        notFound()
+        notFound();
       }
 
-      setCategoryData(data)
+      setCategoryData(data);
 
       // Cache the data in React Query for future use
-      queryClient.setQueryData(["category", params.slug], {
+      queryClient.setQueryData(['category', params.slug], {
         pages: [data],
         pageParams: [null],
-      })
+      });
     } catch (err) {
-      console.error(`Error loading category ${params.slug}:`, err)
-      setError(err instanceof Error ? err : new Error(String(err)))
+      console.error(`Error loading category ${params.slug}:`, err);
+      setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [params.slug, queryClient])
+  }, [params.slug, queryClient]);
 
   useEffect(() => {
     // Check if we have cached data first
-    const cachedData = queryClient.getQueryData(["category", params.slug])
+    const cachedData = queryClient.getQueryData(['category', params.slug]);
 
     if (cachedData && !initialData) {
       // Use cached data if available
-      const firstPage = (cachedData as any)?.pages?.[0]
+      const firstPage = (cachedData as any)?.pages?.[0];
       if (firstPage) {
-        setCategoryData(firstPage)
-        setIsLoading(false)
-        return
+        setCategoryData(firstPage);
+        setIsLoading(false);
+        return;
       }
     }
 
     // If we have initial data, no need to fetch again
     if (initialData) {
-      setCategoryData(initialData)
-      setIsLoading(false)
-      return
+      setCategoryData(initialData);
+      setIsLoading(false);
+      return;
     }
 
     // Fetch data client-side if not provided (fallback case)
-    loadCategory()
-  }, [params.slug, initialData, loadCategory, queryClient])
+    loadCategory();
+  }, [params.slug, initialData, loadCategory, queryClient]);
 
   // Loading state
   if (isLoading) {
-    return <CategoryPageSkeleton />
+    return <CategoryPageSkeleton />;
   }
 
   // Error state
@@ -107,17 +110,17 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   // Category not found
   if (!categoryData?.category) {
-    return notFound()
+    return notFound();
   }
 
   return (
     <ErrorBoundary>
       <CategoryPage slug={params.slug} initialData={categoryData} />
     </ErrorBoundary>
-  )
+  );
 }

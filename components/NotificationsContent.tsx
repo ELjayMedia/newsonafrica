@@ -1,17 +1,18 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useNotifications } from "@/contexts/NotificationContext"
-import { useUser } from "@/contexts/UserContext"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDistanceToNow } from "date-fns"
-import { Trash2, CheckCircle, Bell, BellOff } from "lucide-react"
-import Link from "next/link"
-import { ClientRedirect } from "@/components/ClientRedirect"
+import { formatDistanceToNow } from 'date-fns';
+import { Trash2, CheckCircle, Bell, BellOff } from 'lucide-react';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
+import { ClientRedirect } from '@/components/ClientRedirect';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useUser } from '@/contexts/UserContext';
 
 export function NotificationsContent() {
-  const { user, isAuthenticated, loading: userLoading } = useUser()
+  const { user, isAuthenticated, loading: userLoading } = useUser();
   const {
     notifications,
     notificationCount,
@@ -21,23 +22,23 @@ export function NotificationsContent() {
     markAllAsRead,
     deleteNotification,
     deleteAllNotifications,
-  } = useNotifications()
-  const [activeTab, setActiveTab] = useState("unread")
+  } = useNotifications();
+  const [activeTab, setActiveTab] = useState('unread');
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchNotifications(activeTab === "all")
+      fetchNotifications(activeTab === 'all');
     }
-  }, [isAuthenticated, activeTab, fetchNotifications])
+  }, [isAuthenticated, activeTab, fetchNotifications]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    fetchNotifications(value === "all")
-  }
+    setActiveTab(value);
+    fetchNotifications(value === 'all');
+  };
 
   // Redirect if not authenticated
   if (!userLoading && !isAuthenticated) {
-    return <ClientRedirect to="/auth?redirect=/notifications" />
+    return <ClientRedirect to="/auth?redirect=/notifications" />;
   }
 
   return (
@@ -45,11 +46,21 @@ export function NotificationsContent() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Notifications</h1>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={notificationCount.unread === 0}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={markAllAsRead}
+            disabled={notificationCount.unread === 0}
+          >
             <CheckCircle className="mr-2 h-4 w-4" />
             Mark all as read
           </Button>
-          <Button variant="outline" size="sm" onClick={deleteAllNotifications} disabled={notificationCount.total === 0}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={deleteAllNotifications}
+            disabled={notificationCount.total === 0}
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             Clear all
           </Button>
@@ -109,15 +120,15 @@ export function NotificationsContent() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
-  const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
+  const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true });
 
   return (
     <div
-      className={`border rounded-lg p-4 shadow-sm ${!notification.read ? "bg-blue-50 border-blue-100" : "bg-white"}`}
+      className={`border rounded-lg p-4 shadow-sm ${!notification.read ? 'bg-blue-50 border-blue-100' : 'bg-white'}`}
     >
       <div className="flex items-start gap-4">
         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -143,14 +154,14 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: any) {
                 <span className="sr-only">Delete</span>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href={notification.link || "#"}>View</Link>
+                <Link href={notification.link || '#'}>View</Link>
               </Button>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function NotificationsLoading() {
@@ -169,7 +180,7 @@ function NotificationsLoading() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function EmptyNotifications({ message }: { message: string }) {
@@ -179,5 +190,5 @@ function EmptyNotifications({ message }: { message: string }) {
       <h3 className="text-lg font-medium text-gray-900 mb-1">No notifications</h3>
       <p className="text-gray-500">{message}</p>
     </div>
-  )
+  );
 }

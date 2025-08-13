@@ -7,11 +7,13 @@ Add these URLs to your Supabase project settings:
 **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**
 
 ### Production URLs
+
 - `https://app.newsonafrica.com/auth/callback`
 - `https://app.newsonafrica.com/`
 - `https://app.newsonafrica.com/auth`
 
 ### Development URLs (if testing locally)
+
 - `http://localhost:3000/auth/callback`
 - `http://localhost:3000/`
 - `http://localhost:3000/auth`
@@ -66,6 +68,6 @@ In your Supabase project:
 - **"Invalid redirect URI" error**: Verify OAuth app settings match Supabase callback URL
 - **Session not persisting**: Check that callback handler is working correctly
 - **Profile not created**: Verify database permissions and RLS policies
-\`\`\`
+  \`\`\`
 
 Let's also create a client-side auth state manager:

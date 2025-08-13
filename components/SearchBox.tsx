@@ -1,121 +1,121 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { Search, X, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { useState, useCallback, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Search, X, Loader2 } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface SearchBoxProps {
-  placeholder?: string
-  className?: string
-  onSearch?: (query: string) => void
-  initialValue?: string
-  showSuggestions?: boolean
-  autoFocus?: boolean
-  size?: "default" | "compact"
+  placeholder?: string;
+  className?: string;
+  onSearch?: (query: string) => void;
+  initialValue?: string;
+  showSuggestions?: boolean;
+  autoFocus?: boolean;
+  size?: 'default' | 'compact';
 }
 
 export function SearchBox({
-  placeholder = "Search articles, news, and more...",
-  className = "",
+  placeholder = 'Search articles, news, and more...',
+  className = '',
   onSearch,
-  initialValue = "",
+  initialValue = '',
   showSuggestions = true,
   autoFocus = false,
-  size = "default",
+  size = 'default',
 }: SearchBoxProps) {
-  const [query, setQuery] = useState(initialValue)
-  const [isLoading, setIsLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
+  const [query, setQuery] = useState(initialValue);
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   // Fetch suggestions with debouncing
   useEffect(() => {
     if (!showSuggestions || query.length < 2) {
-      setSuggestions([])
-      return
+      setSuggestions([]);
+      return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`);
         if (response.ok) {
-          const data = await response.json()
-          setSuggestions(data.suggestions || [])
+          const data = await response.json();
+          setSuggestions(data.suggestions || []);
         }
       } catch (error) {
-        console.error("Error fetching suggestions:", error)
+        console.error('Error fetching suggestions:', error);
       }
-    }, 300)
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [query, showSuggestions])
+    return () => clearTimeout(timer);
+  }, [query, showSuggestions]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault()
+      e.preventDefault();
 
-      if (!query.trim()) return
+      if (!query.trim()) return;
 
-      setIsLoading(true)
-      setShowSuggestionsList(false)
+      setIsLoading(true);
+      setShowSuggestionsList(false);
 
       try {
         if (onSearch) {
-          onSearch(query.trim())
+          onSearch(query.trim());
         } else {
-          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`);
         }
       } catch (error) {
-        console.error("Search error:", error)
+        console.error('Search error:', error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     [query, onSearch, router],
-  )
+  );
 
   const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion)
-    setShowSuggestionsList(false)
+    setQuery(suggestion);
+    setShowSuggestionsList(false);
 
     if (onSearch) {
-      onSearch(suggestion)
+      onSearch(suggestion);
     } else {
-      router.push(`/search?q=${encodeURIComponent(suggestion)}`)
+      router.push(`/search?q=${encodeURIComponent(suggestion)}`);
     }
-  }
+  };
 
-  const isCompact = size === "compact"
+  const isCompact = size === 'compact';
 
   return (
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <Search
-            className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}`}
+            className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4'}`}
           />
           <Input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value)
-              setShowSuggestionsList(e.target.value.length > 0 && showSuggestions)
+              setQuery(e.target.value);
+              setShowSuggestionsList(e.target.value.length > 0 && showSuggestions);
             }}
             onFocus={() => setShowSuggestionsList(query.length > 0 && showSuggestions)}
             onBlur={() => {
               // Delay hiding to allow suggestion clicks
-              setTimeout(() => setShowSuggestionsList(false), 150)
+              setTimeout(() => setShowSuggestionsList(false), 150);
             }}
             placeholder={placeholder}
             className={`
-              ${isCompact ? "pl-9 h-8 text-sm bg-gray-100 border-none rounded-full" : "pl-10 pr-24 h-12"}
+              ${isCompact ? 'pl-9 h-8 text-sm bg-gray-100 border-none rounded-full' : 'pl-10 pr-24 h-12'}
               transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
             `}
             disabled={isLoading}
@@ -134,8 +134,8 @@ export function SearchBox({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setQuery("")
-                    inputRef.current?.focus()
+                    setQuery('');
+                    inputRef.current?.focus();
                   }}
                   className="hover:bg-gray-100 p-1"
                   tabIndex={-1}
@@ -151,7 +151,7 @@ export function SearchBox({
                 disabled={isLoading || !query.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
               </Button>
             </div>
           )}
@@ -176,5 +176,5 @@ export function SearchBox({
         </div>
       )}
     </div>
-  )
+  );
 }

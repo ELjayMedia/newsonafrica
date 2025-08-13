@@ -1,28 +1,29 @@
-"use client"
+'use client';
 
-import { useState, useEffect, useCallback } from "react"
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
-import { executeWithCache } from "@/utils/supabase-query-utils"
+import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
+import { useState, useEffect, useCallback } from 'react';
+
+import { executeWithCache } from '@/utils/supabase-query-utils';
 
 interface UseSupabaseQueryOptions<T> {
-  enabled?: boolean
-  initialData?: T
-  cacheTime?: number
-  staleTime?: number
-  onSuccess?: (data: T) => void
-  onError?: (error: Error) => void
-  refetchInterval?: number | false
-  refetchOnWindowFocus?: boolean
-  select?: (data: any) => T
+  enabled?: boolean;
+  initialData?: T;
+  cacheTime?: number;
+  staleTime?: number;
+  onSuccess?: (data: T) => void;
+  onError?: (error: Error) => void;
+  refetchInterval?: number | false;
+  refetchOnWindowFocus?: boolean;
+  select?: (data: any) => T;
 }
 
 interface UseSupabaseQueryResult<T> {
-  data: T | undefined
-  error: Error | null
-  isLoading: boolean
-  isError: boolean
-  isSuccess: boolean
-  refetch: () => Promise<void>
+  data: T | undefined;
+  error: Error | null;
+  isLoading: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  refetch: () => Promise<void>;
 }
 
 /**
@@ -47,78 +48,78 @@ export function useSupabaseQuery<T = any>(
     refetchInterval = false,
     refetchOnWindowFocus = true,
     select = (data) => data as T,
-  } = options
+  } = options;
 
-  const [data, setData] = useState<T | undefined>(initialData)
-  const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(enabled)
-  const [isSuccess, setIsSuccess] = useState<boolean>(false)
+  const [data, setData] = useState<T | undefined>(initialData);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   // Convert queryKey to string
-  const cacheKey = Array.isArray(queryKey) ? queryKey.join(":") : queryKey
+  const cacheKey = Array.isArray(queryKey) ? queryKey.join(':') : queryKey;
 
   // Function to fetch data
   const fetchData = useCallback(async () => {
-    if (!enabled) return
+    if (!enabled) return;
 
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const query = queryFn()
-      const result = await executeWithCache(query, cacheKey, cacheTime)
+      const query = queryFn();
+      const result = await executeWithCache(query, cacheKey, cacheTime);
 
-      const processedData = select(result)
-      setData(processedData)
-      setIsSuccess(true)
+      const processedData = select(result);
+      setData(processedData);
+      setIsSuccess(true);
 
       if (onSuccess) {
-        onSuccess(processedData)
+        onSuccess(processedData);
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
-      setError(error)
-      setIsSuccess(false)
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      setIsSuccess(false);
 
       if (onError) {
-        onError(error)
+        onError(error);
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [cacheKey, cacheTime, enabled, onError, onSuccess, queryFn, select])
+  }, [cacheKey, cacheTime, enabled, onError, onSuccess, queryFn, select]);
 
   // Initial fetch
   useEffect(() => {
     if (enabled) {
-      fetchData()
+      fetchData();
     }
-  }, [enabled, fetchData])
+  }, [enabled, fetchData]);
 
   // Set up refetch interval
   useEffect(() => {
-    if (!refetchInterval || !enabled) return undefined
+    if (!refetchInterval || !enabled) return undefined;
 
     const intervalId = setInterval(() => {
-      fetchData()
-    }, refetchInterval)
+      fetchData();
+    }, refetchInterval);
 
-    return () => clearInterval(intervalId)
-  }, [refetchInterval, fetchData, enabled])
+    return () => clearInterval(intervalId);
+  }, [refetchInterval, fetchData, enabled]);
 
   // Set up window focus refetch
   useEffect(() => {
-    if (!refetchOnWindowFocus || !enabled) return undefined
+    if (!refetchOnWindowFocus || !enabled) return undefined;
 
     const handleFocus = () => {
-      fetchData()
-    }
+      fetchData();
+    };
 
-    window.addEventListener("focus", handleFocus)
+    window.addEventListener('focus', handleFocus);
     return () => {
-      window.removeEventListener("focus", handleFocus)
-    }
-  }, [refetchOnWindowFocus, fetchData, enabled])
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refetchOnWindowFocus, fetchData, enabled]);
 
   return {
     data,
@@ -127,7 +128,7 @@ export function useSupabaseQuery<T = any>(
     isError: !!error,
     isSuccess,
     refetch: fetchData,
-  }
+  };
 }
 
 /**
@@ -140,28 +141,28 @@ export function useSupabaseQuery<T = any>(
 export function useSupabaseMutation<TData = any, TVariables = any>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options: {
-    onSuccess?: (data: TData, variables: TVariables) => void
-    onError?: (error: Error, variables: TVariables) => void
-    onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void
-    invalidateQueries?: string[]
+    onSuccess?: (data: TData, variables: TVariables) => void;
+    onError?: (error: Error, variables: TVariables) => void;
+    onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
+    invalidateQueries?: string[];
   } = {},
 ) {
-  const { onSuccess, onError, onSettled, invalidateQueries = [] } = options
-  const [data, setData] = useState<TData | undefined>(undefined)
-  const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const { onSuccess, onError, onSettled, invalidateQueries = [] } = options;
+  const [data, setData] = useState<TData | undefined>(undefined);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const mutate = useCallback(
     async (variables: TVariables) => {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
-        const result = await mutationFn(variables)
-        setData(result)
+        const result = await mutationFn(variables);
+        setData(result);
 
         if (onSuccess) {
-          onSuccess(result, variables)
+          onSuccess(result, variables);
         }
 
         // Invalidate queries if specified
@@ -169,33 +170,33 @@ export function useSupabaseMutation<TData = any, TVariables = any>(
           invalidateQueries.forEach((queryKey) => {
             // This would ideally use a query client, but for simplicity we're just clearing the cache
             // In a real implementation, you'd want to trigger a refetch of affected queries
-          })
+          });
         }
 
         if (onSettled) {
-          onSettled(result, null, variables)
+          onSettled(result, null, variables);
         }
 
-        return result
+        return result;
       } catch (err) {
-        const errorObj = err instanceof Error ? err : new Error(String(err))
-        setError(errorObj)
+        const errorObj = err instanceof Error ? err : new Error(String(err));
+        setError(errorObj);
 
         if (onError) {
-          onError(errorObj, variables)
+          onError(errorObj, variables);
         }
 
         if (onSettled) {
-          onSettled(undefined, errorObj, variables)
+          onSettled(undefined, errorObj, variables);
         }
 
-        throw errorObj
+        throw errorObj;
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     [invalidateQueries, mutationFn, onError, onSettled, onSuccess],
-  )
+  );
 
   return {
     mutate,
@@ -205,8 +206,8 @@ export function useSupabaseMutation<TData = any, TVariables = any>(
     isError: !!error,
     isSuccess: !!data && !error,
     reset: () => {
-      setData(undefined)
-      setError(null)
+      setData(undefined);
+      setError(null);
     },
-  }
+  };
 }

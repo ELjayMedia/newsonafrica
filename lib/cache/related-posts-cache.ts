@@ -1,44 +1,44 @@
-import type { WordPressPost } from "@/lib/api/wordpress"
+import type { WordPressPost } from '@/lib/api/wordpress';
 
 interface CacheEntry<T> {
-  data: T
-  timestamp: number
-  hits: number
-  lastAccessed: number
-  size: number // Approximate size in bytes for memory management
+  data: T;
+  timestamp: number;
+  hits: number;
+  lastAccessed: number;
+  size: number; // Approximate size in bytes for memory management
 }
 
 interface CacheStats {
-  hits: number
-  misses: number
-  evictions: number
-  totalSize: number
-  entryCount: number
+  hits: number;
+  misses: number;
+  evictions: number;
+  totalSize: number;
+  entryCount: number;
 }
 
 class RelatedPostsCache {
-  private cache = new Map<string, CacheEntry<WordPressPost[]>>()
-  private readonly maxSize: number
-  private readonly maxEntries: number
-  private readonly ttl: number
+  private cache = new Map<string, CacheEntry<WordPressPost[]>>();
+  private readonly maxSize: number;
+  private readonly maxEntries: number;
+  private readonly ttl: number;
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
     evictions: 0,
     totalSize: 0,
     entryCount: 0,
-  }
+  };
 
   constructor(
     options: {
-      maxSize?: number // Max cache size in bytes (default: 10MB)
-      maxEntries?: number // Max number of entries (default: 500)
-      ttl?: number // Time to live in milliseconds (default: 15 minutes)
+      maxSize?: number; // Max cache size in bytes (default: 10MB)
+      maxEntries?: number; // Max number of entries (default: 500)
+      ttl?: number; // Time to live in milliseconds (default: 15 minutes)
     } = {},
   ) {
-    this.maxSize = options.maxSize || 10 * 1024 * 1024 // 10MB
-    this.maxEntries = options.maxEntries || 500
-    this.ttl = options.ttl || 15 * 60 * 1000 // 15 minutes
+    this.maxSize = options.maxSize || 10 * 1024 * 1024; // 10MB
+    this.maxEntries = options.maxEntries || 500;
+    this.ttl = options.ttl || 15 * 60 * 1000; // 15 minutes
   }
 
   /**
@@ -51,9 +51,9 @@ class RelatedPostsCache {
     limit: number,
     countryCode?: string,
   ): string {
-    const sortedCategories = [...categories].sort().join(",")
-    const sortedTags = [...tags].sort().join(",")
-    return `related:${postId}:${sortedCategories}:${sortedTags}:${limit}:${countryCode || "sz"}`
+    const sortedCategories = [...categories].sort().join(',');
+    const sortedTags = [...tags].sort().join(',');
+    return `related:${postId}:${sortedCategories}:${sortedTags}:${limit}:${countryCode || 'sz'}`;
   }
 
   /**
@@ -61,72 +61,75 @@ class RelatedPostsCache {
    */
   private estimateSize(posts: WordPressPost[]): number {
     // Rough estimation: each post object is approximately 2KB
-    return posts.length * 2048 + 200 // 200 bytes for metadata
+    return posts.length * 2048 + 200; // 200 bytes for metadata
   }
 
   /**
    * Check if an entry is expired
    */
   private isExpired(entry: CacheEntry<WordPressPost[]>): boolean {
-    return Date.now() - entry.timestamp > this.ttl
+    return Date.now() - entry.timestamp > this.ttl;
   }
 
   /**
    * Remove expired entries
    */
   private cleanupExpired(): void {
-    const now = Date.now()
-    const expiredKeys: string[] = []
+    const now = Date.now();
+    const expiredKeys: string[] = [];
 
     for (const [key, entry] of this.cache.entries()) {
       if (this.isExpired(entry)) {
-        expiredKeys.push(key)
-        this.stats.totalSize -= entry.size
+        expiredKeys.push(key);
+        this.stats.totalSize -= entry.size;
       }
     }
 
     expiredKeys.forEach((key) => {
-      this.cache.delete(key)
-      this.stats.evictions++
-    })
+      this.cache.delete(key);
+      this.stats.evictions++;
+    });
 
-    this.stats.entryCount = this.cache.size
+    this.stats.entryCount = this.cache.size;
   }
 
   /**
    * Evict least recently used entries to make space
    */
   private evictLRU(targetSize: number): void {
-    if (this.cache.size === 0) return
+    if (this.cache.size === 0) return;
 
     // Sort entries by last accessed time and hit count (LRU + LFU hybrid)
     const entries = Array.from(this.cache.entries()).sort((a, b) => {
-      const aScore = a[1].lastAccessed + a[1].hits * 1000 // Boost frequently used items
-      const bScore = b[1].lastAccessed + b[1].hits * 1000
-      return aScore - bScore
-    })
+      const aScore = a[1].lastAccessed + a[1].hits * 1000; // Boost frequently used items
+      const bScore = b[1].lastAccessed + b[1].hits * 1000;
+      return aScore - bScore;
+    });
 
-    let freedSize = 0
-    const keysToRemove: string[] = []
+    let freedSize = 0;
+    const keysToRemove: string[] = [];
 
     for (const [key, entry] of entries) {
-      if (this.stats.totalSize - freedSize <= targetSize && this.cache.size - keysToRemove.length <= this.maxEntries) {
-        break
+      if (
+        this.stats.totalSize - freedSize <= targetSize &&
+        this.cache.size - keysToRemove.length <= this.maxEntries
+      ) {
+        break;
       }
-      keysToRemove.push(key)
-      freedSize += entry.size
-      this.stats.evictions++
+      keysToRemove.push(key);
+      freedSize += entry.size;
+      this.stats.evictions++;
     }
 
     keysToRemove.forEach((key) => {
-      const entry = this.cache.get(key)
+      const entry = this.cache.get(key);
       if (entry) {
-        this.stats.totalSize -= entry.size
-        this.cache.delete(key)
+        this.stats.totalSize -= entry.size;
+        this.cache.delete(key);
       }
-    })
+    });
 
-    this.stats.entryCount = this.cache.size
+    this.stats.entryCount = this.cache.size;
   }
 
   /**
@@ -134,12 +137,12 @@ class RelatedPostsCache {
    */
   private enforceLimit(): void {
     // First remove expired entries
-    this.cleanupExpired()
+    this.cleanupExpired();
 
     // Then check if we need to evict more entries
     if (this.stats.totalSize > this.maxSize || this.cache.size > this.maxEntries) {
-      const targetSize = Math.floor(this.maxSize * 0.8) // Target 80% of max size
-      this.evictLRU(targetSize)
+      const targetSize = Math.floor(this.maxSize * 0.8); // Target 80% of max size
+      this.evictLRU(targetSize);
     }
   }
 
@@ -153,28 +156,28 @@ class RelatedPostsCache {
     limit: number,
     countryCode?: string,
   ): WordPressPost[] | null {
-    const key = this.generateKey(postId, categories, tags, limit, countryCode)
-    const entry = this.cache.get(key)
+    const key = this.generateKey(postId, categories, tags, limit, countryCode);
+    const entry = this.cache.get(key);
 
     if (!entry) {
-      this.stats.misses++
-      return null
+      this.stats.misses++;
+      return null;
     }
 
     if (this.isExpired(entry)) {
-      this.cache.delete(key)
-      this.stats.totalSize -= entry.size
-      this.stats.entryCount--
-      this.stats.misses++
-      return null
+      this.cache.delete(key);
+      this.stats.totalSize -= entry.size;
+      this.stats.entryCount--;
+      this.stats.misses++;
+      return null;
     }
 
     // Update access statistics
-    entry.hits++
-    entry.lastAccessed = Date.now()
-    this.stats.hits++
+    entry.hits++;
+    entry.lastAccessed = Date.now();
+    this.stats.hits++;
 
-    return entry.data
+    return entry.data;
   }
 
   /**
@@ -188,9 +191,9 @@ class RelatedPostsCache {
     posts: WordPressPost[],
     countryCode?: string,
   ): void {
-    const key = this.generateKey(postId, categories, tags, limit, countryCode)
-    const size = this.estimateSize(posts)
-    const now = Date.now()
+    const key = this.generateKey(postId, categories, tags, limit, countryCode);
+    const size = this.estimateSize(posts);
+    const now = Date.now();
 
     const entry: CacheEntry<WordPressPost[]> = {
       data: posts,
@@ -198,90 +201,91 @@ class RelatedPostsCache {
       hits: 0,
       lastAccessed: now,
       size,
-    }
+    };
 
     // Remove existing entry if it exists
-    const existingEntry = this.cache.get(key)
+    const existingEntry = this.cache.get(key);
     if (existingEntry) {
-      this.stats.totalSize -= existingEntry.size
+      this.stats.totalSize -= existingEntry.size;
     } else {
-      this.stats.entryCount++
+      this.stats.entryCount++;
     }
 
-    this.cache.set(key, entry)
-    this.stats.totalSize += size
+    this.cache.set(key, entry);
+    this.stats.totalSize += size;
 
     // Enforce cache limits
-    this.enforceLimit()
+    this.enforceLimit();
   }
 
   /**
    * Clear all cached entries
    */
   clear(): void {
-    this.cache.clear()
+    this.cache.clear();
     this.stats = {
       hits: 0,
       misses: 0,
       evictions: 0,
       totalSize: 0,
       entryCount: 0,
-    }
+    };
   }
 
   /**
    * Get cache statistics
    */
   getStats(): CacheStats & { hitRate: number; avgEntrySize: number } {
-    const totalRequests = this.stats.hits + this.stats.misses
-    const hitRate = totalRequests > 0 ? this.stats.hits / totalRequests : 0
-    const avgEntrySize = this.stats.entryCount > 0 ? this.stats.totalSize / this.stats.entryCount : 0
+    const totalRequests = this.stats.hits + this.stats.misses;
+    const hitRate = totalRequests > 0 ? this.stats.hits / totalRequests : 0;
+    const avgEntrySize =
+      this.stats.entryCount > 0 ? this.stats.totalSize / this.stats.entryCount : 0;
 
     return {
       ...this.stats,
       hitRate,
       avgEntrySize,
-    }
+    };
   }
 
   /**
    * Remove entries for a specific post (useful for cache invalidation)
    */
   invalidatePost(postId: string): void {
-    const keysToRemove: string[] = []
+    const keysToRemove: string[] = [];
 
     for (const key of this.cache.keys()) {
       if (key.includes(`related:${postId}:`)) {
-        const entry = this.cache.get(key)
+        const entry = this.cache.get(key);
         if (entry) {
-          this.stats.totalSize -= entry.size
-          keysToRemove.push(key)
+          this.stats.totalSize -= entry.size;
+          keysToRemove.push(key);
         }
       }
     }
 
-    keysToRemove.forEach((key) => this.cache.delete(key))
-    this.stats.entryCount = this.cache.size
+    keysToRemove.forEach((key) => this.cache.delete(key));
+    this.stats.entryCount = this.cache.size;
   }
 
   /**
    * Remove entries for a specific category (useful when category content changes)
    */
   invalidateCategory(categorySlug: string): void {
-    const keysToRemove: string[] = []
+    const keysToRemove: string[] = [];
 
     for (const key of this.cache.keys()) {
       if (key.includes(categorySlug)) {
-        const entry = this.cache.get(key)
+        const entry = this.cache.get(key);
         if (entry) {
-          this.stats.totalSize -= entry.size
-          keysToRemove.push(key)
+          this.stats.totalSize -= entry.size;
+          keysToRemove.push(key);
         }
       }
     }
 
-    keysToRemove.forEach((key) => this.cache.delete(key))
-    this.stats.entryCount = this.cache.size
+    keysToRemove.forEach((key) => this.cache.delete(key));
+    this.stats.entryCount = this.cache.size;
   }
 
   /**
@@ -289,26 +293,31 @@ class RelatedPostsCache {
    */
   async preload(
     posts: Array<{
-      id: string
-      categories: string[]
-      tags: string[]
+      id: string;
+      categories: string[];
+      tags: string[];
     }>,
-    fetchFunction: (postId: string, categories: string[], tags: string[], limit: number) => Promise<WordPressPost[]>,
+    fetchFunction: (
+      postId: string,
+      categories: string[],
+      tags: string[],
+      limit: number,
+    ) => Promise<WordPressPost[]>,
     limit = 6,
   ): Promise<void> {
     const promises = posts.map(async (post) => {
-      const key = this.generateKey(post.id, post.categories, post.tags, limit)
+      const key = this.generateKey(post.id, post.categories, post.tags, limit);
       if (!this.cache.has(key)) {
         try {
-          const relatedPosts = await fetchFunction(post.id, post.categories, post.tags, limit)
-          this.set(post.id, post.categories, post.tags, limit, relatedPosts)
+          const relatedPosts = await fetchFunction(post.id, post.categories, post.tags, limit);
+          this.set(post.id, post.categories, post.tags, limit, relatedPosts);
         } catch (error) {
-          console.warn(`Failed to preload related posts for ${post.id}:`, error)
+          console.warn(`Failed to preload related posts for ${post.id}:`, error);
         }
       }
-    })
+    });
 
-    await Promise.allSettled(promises)
+    await Promise.allSettled(promises);
   }
 }
 
@@ -317,8 +326,8 @@ export const relatedPostsCache = new RelatedPostsCache({
   maxSize: 15 * 1024 * 1024, // 15MB
   maxEntries: 750,
   ttl: 20 * 60 * 1000, // 20 minutes
-})
+});
 
 // Export for testing and advanced usage
-export { RelatedPostsCache }
-export type { CacheStats }
+export { RelatedPostsCache };
+export type { CacheStats };

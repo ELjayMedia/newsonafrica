@@ -1,5 +1,5 @@
-'use client'
-import Link from 'next/link'
+'use client';
+import Link from 'next/link';
 
 export function SponsoredPromo() {
   return (
@@ -9,7 +9,7 @@ export function SponsoredPromo() {
         Partner story
       </Link>
     </div>
-  )
+  );
 }
 
-export default SponsoredPromo
+export default SponsoredPromo;

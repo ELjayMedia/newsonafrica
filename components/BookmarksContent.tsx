@@ -1,12 +1,6 @@
-"use client"
+'use client';
 
-import { useState, useMemo, useCallback } from "react"
-import { useBookmarks } from "@/contexts/BookmarksContext"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+import { formatDistanceToNow } from 'date-fns';
 import {
   Search,
   Download,
@@ -20,10 +14,15 @@ import {
   FolderPlus,
   Folder,
   Edit,
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+} from 'lucide-react';
+import Link from 'next/link';
+import { useState, useMemo, useCallback } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,13 +32,21 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useBookmarks } from '@/contexts/BookmarksContext';
+import { useToast } from '@/hooks/use-toast';
 
-type SortOption = "newest" | "oldest" | "title" | "unread"
-type FilterOption = "all" | "unread" | "read"
+type SortOption = 'newest' | 'oldest' | 'title' | 'unread';
+type FilterOption = 'all' | 'unread' | 'read';
 
 export default function BookmarksContent() {
   const {
@@ -60,130 +67,139 @@ export default function BookmarksContent() {
     updateCollection,
     deleteCollection,
     assignBookmarkToCollection,
-  } = useBookmarks()
+  } = useBookmarks();
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<SortOption>("newest")
-  const [filterBy, setFilterBy] = useState<FilterOption>("all")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [selectedCollection, setSelectedCollection] = useState<string>("all")
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false)
-  const [notePostId, setNotePostId] = useState<string>("")
-  const [noteText, setNoteText] = useState("")
-  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false)
-  const [newCollectionName, setNewCollectionName] = useState("")
-  const { toast } = useToast()
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCollection, setSelectedCollection] = useState<string>('all');
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [notePostId, setNotePostId] = useState<string>('');
+  const [noteText, setNoteText] = useState('');
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const { toast } = useToast();
 
   // Filter and sort bookmarks
   const filteredBookmarks = useMemo(() => {
-    let filtered = searchQuery ? searchBookmarks(searchQuery) : bookmarks
+    let filtered = searchQuery ? searchBookmarks(searchQuery) : bookmarks;
 
     // Filter by read status
-    if (filterBy === "unread") {
-      filtered = filtered.filter((b) => b.read_status !== "read")
-    } else if (filterBy === "read") {
-      filtered = filtered.filter((b) => b.read_status === "read")
+    if (filterBy === 'unread') {
+      filtered = filtered.filter((b) => b.read_status !== 'read');
+    } else if (filterBy === 'read') {
+      filtered = filtered.filter((b) => b.read_status === 'read');
     }
 
     // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filterByCategory(selectedCategory)
+    if (selectedCategory !== 'all') {
+      filtered = filterByCategory(selectedCategory);
     }
 
     // Filter by collection
-    if (selectedCollection !== "all") {
-      filtered = filtered.filter((b) => b.collection_id === selectedCollection)
+    if (selectedCollection !== 'all') {
+      filtered = filtered.filter((b) => b.collection_id === selectedCollection);
     }
 
     // Sort bookmarks
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case "newest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        case "title":
-          return a.title.localeCompare(b.title)
-        case "unread":
-          if (a.read_status === "unread" && b.read_status === "read") return -1
-          if (a.read_status === "read" && b.read_status === "unread") return 1
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'unread':
+          if (a.read_status === 'unread' && b.read_status === 'read') return -1;
+          if (a.read_status === 'read' && b.read_status === 'unread') return 1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         default:
-          return 0
+          return 0;
       }
-    })
-  }, [bookmarks, searchQuery, sortBy, filterBy, selectedCategory, selectedCollection, searchBookmarks, filterByCategory])
+    });
+  }, [
+    bookmarks,
+    searchQuery,
+    sortBy,
+    filterBy,
+    selectedCategory,
+    selectedCollection,
+    searchBookmarks,
+    filterByCategory,
+  ]);
 
   const handleSelectAll = useCallback(() => {
     if (selectedBookmarks.length === filteredBookmarks.length) {
-      setSelectedBookmarks([])
+      setSelectedBookmarks([]);
     } else {
-      setSelectedBookmarks(filteredBookmarks.map((b) => b.post_id))
+      setSelectedBookmarks(filteredBookmarks.map((b) => b.post_id));
     }
-  }, [selectedBookmarks, filteredBookmarks])
+  }, [selectedBookmarks, filteredBookmarks]);
 
   const handleBulkDelete = useCallback(async () => {
-    if (selectedBookmarks.length === 0) return
+    if (selectedBookmarks.length === 0) return;
 
     try {
-      await bulkRemoveBookmarks(selectedBookmarks)
-      setSelectedBookmarks([])
+      await bulkRemoveBookmarks(selectedBookmarks);
+      setSelectedBookmarks([]);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to remove bookmarks",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to remove bookmarks',
+        variant: 'destructive',
+      });
     }
-  }, [selectedBookmarks, bulkRemoveBookmarks, toast])
+  }, [selectedBookmarks, bulkRemoveBookmarks, toast]);
 
   const handleExport = useCallback(async () => {
     try {
-      const exportData = await exportBookmarks()
-      const blob = new Blob([exportData], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `bookmarks-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const exportData = await exportBookmarks();
+      const blob = new Blob([exportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bookmarks-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast({
-        title: "Export successful",
-        description: "Your bookmarks have been exported",
-      })
+        title: 'Export successful',
+        description: 'Your bookmarks have been exported',
+      });
     } catch (error) {
       toast({
-        title: "Export failed",
-        description: "Failed to export bookmarks",
-        variant: "destructive",
-      })
+        title: 'Export failed',
+        description: 'Failed to export bookmarks',
+        variant: 'destructive',
+      });
     }
-  }, [exportBookmarks, toast])
+  }, [exportBookmarks, toast]);
 
   const handleAddNote = useCallback(async () => {
-    if (!notePostId || !noteText.trim()) return
+    if (!notePostId || !noteText.trim()) return;
 
     try {
-      await addNote(notePostId, noteText.trim())
-      setNoteDialogOpen(false)
-      setNotePostId("")
-      setNoteText("")
+      await addNote(notePostId, noteText.trim());
+      setNoteDialogOpen(false);
+      setNotePostId('');
+      setNoteText('');
       toast({
-        title: "Note added",
-        description: "Your note has been saved",
-      })
+        title: 'Note added',
+        description: 'Your note has been saved',
+      });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to save note",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to save note',
+        variant: 'destructive',
+      });
     }
-  }, [notePostId, noteText, addNote, toast])
+  }, [notePostId, noteText, addNote, toast]);
 
   if (loading) {
     return (
@@ -197,7 +213,7 @@ export default function BookmarksContent() {
           </Card>
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -319,7 +335,10 @@ export default function BookmarksContent() {
       {/* Select all */}
       {filteredBookmarks.length > 0 && (
         <div className="flex items-center space-x-2">
-          <Checkbox checked={selectedBookmarks.length === filteredBookmarks.length} onCheckedChange={handleSelectAll} />
+          <Checkbox
+            checked={selectedBookmarks.length === filteredBookmarks.length}
+            onCheckedChange={handleSelectAll}
+          />
           <span className="text-sm text-gray-600">Select all</span>
         </div>
       )}
@@ -332,7 +351,9 @@ export default function BookmarksContent() {
               <BookmarkCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No bookmarks found</h3>
               <p className="text-gray-600">
-                {searchQuery ? "Try adjusting your search terms" : "Start bookmarking articles to see them here"}
+                {searchQuery
+                  ? 'Try adjusting your search terms'
+                  : 'Start bookmarking articles to see them here'}
               </p>
             </CardContent>
           </Card>
@@ -345,9 +366,11 @@ export default function BookmarksContent() {
                     checked={selectedBookmarks.includes(bookmark.post_id)}
                     onCheckedChange={(checked) => {
                       if (checked) {
-                        setSelectedBookmarks((prev) => [...prev, bookmark.post_id])
+                        setSelectedBookmarks((prev) => [...prev, bookmark.post_id]);
                       } else {
-                        setSelectedBookmarks((prev) => prev.filter((id) => id !== bookmark.post_id))
+                        setSelectedBookmarks((prev) =>
+                          prev.filter((id) => id !== bookmark.post_id),
+                        );
                       }
                     }}
                   />
@@ -355,21 +378,30 @@ export default function BookmarksContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <Link href={`/post/${bookmark.slug}`} className="block hover:text-blue-600 transition-colors">
-                          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
+                        <Link
+                          href={`/post/${bookmark.slug}`}
+                          className="block hover:text-blue-600 transition-colors"
+                        >
+                          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
+                            {bookmark.title}
+                          </h3>
                         </Link>
 
                         {bookmark.excerpt && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{bookmark.excerpt}</p>
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                            {bookmark.excerpt}
+                          </p>
                         )}
 
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                           <span className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {formatDistanceToNow(new Date(bookmark.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(bookmark.created_at), {
+                              addSuffix: true,
+                            })}
                           </span>
 
-                          {bookmark.read_status === "unread" && (
+                          {bookmark.read_status === 'unread' && (
                             <Badge variant="secondary" className="text-xs">
                               Unread
                             </Badge>
@@ -390,7 +422,9 @@ export default function BookmarksContent() {
                         </div>
 
                         {bookmark.notes && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">{bookmark.notes}</div>
+                          <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">
+                            {bookmark.notes}
+                          </div>
                         )}
                       </div>
 
@@ -403,26 +437,26 @@ export default function BookmarksContent() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              if (bookmark.read_status === "read") {
-                                markAsUnread(bookmark.post_id)
+                              if (bookmark.read_status === 'read') {
+                                markAsUnread(bookmark.post_id);
                               } else {
-                                markAsRead(bookmark.post_id)
+                                markAsRead(bookmark.post_id);
                               }
                             }}
                           >
                             <BookOpen className="h-4 w-4 mr-2" />
-                            Mark as {bookmark.read_status === "read" ? "Unread" : "Read"}
+                            Mark as {bookmark.read_status === 'read' ? 'Unread' : 'Read'}
                           </DropdownMenuItem>
 
                           <DropdownMenuItem
                             onClick={() => {
-                              setNotePostId(bookmark.post_id)
-                              setNoteText(bookmark.notes || "")
-                              setNoteDialogOpen(true)
+                              setNotePostId(bookmark.post_id);
+                              setNoteText(bookmark.notes || '');
+                              setNoteDialogOpen(true);
                             }}
                           >
                             <StickyNote className="h-4 w-4 mr-2" />
-                            {bookmark.notes ? "Edit Note" : "Add Note"}
+                            {bookmark.notes ? 'Edit Note' : 'Add Note'}
                           </DropdownMenuItem>
 
                           <DropdownMenuSub>
@@ -446,7 +480,10 @@ export default function BookmarksContent() {
 
                           <DropdownMenuSeparator />
 
-                          <DropdownMenuItem onClick={() => removeBookmark(bookmark.post_id)} className="text-red-600">
+                          <DropdownMenuItem
+                            onClick={() => removeBookmark(bookmark.post_id)}
+                            className="text-red-600"
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Remove
                           </DropdownMenuItem>
@@ -501,18 +538,14 @@ export default function BookmarksContent() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const name = prompt("New name", c.name)
-                      if (name) updateCollection(c.id, { name })
+                      const name = prompt('New name', c.name);
+                      if (name) updateCollection(c.id, { name });
                     }}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   {!c.is_default && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteCollection(c.id)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => deleteCollection(c.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -528,9 +561,9 @@ export default function BookmarksContent() {
               />
               <Button
                 onClick={() => {
-                  if (!newCollectionName.trim()) return
-                  addCollection(newCollectionName.trim())
-                  setNewCollectionName("")
+                  if (!newCollectionName.trim()) return;
+                  addCollection(newCollectionName.trim());
+                  setNewCollectionName('');
                 }}
                 disabled={!newCollectionName.trim()}
               >
@@ -541,5 +574,5 @@ export default function BookmarksContent() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

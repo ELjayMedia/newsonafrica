@@ -1,11 +1,12 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+
+import { Button } from '@/components/ui/button';
 
 export const metadata = {
-  title: "Subscription Confirmed - News On Africa",
-  description: "Your subscription to News On Africa has been successfully activated",
-}
+  title: 'Subscription Confirmed - News On Africa',
+  description: 'Your subscription to News On Africa has been successfully activated',
+};
 
 export default function WelcomePage() {
   return (
@@ -18,7 +19,8 @@ export default function WelcomePage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to News On Africa!</h1>
 
         <p className="text-gray-600 mb-6">
-          Your subscription has been successfully activated. Thank you for supporting quality journalism across Africa.
+          Your subscription has been successfully activated. Thank you for supporting quality
+          journalism across Africa.
         </p>
 
         <div className="bg-blue-50 p-4 rounded-lg mb-6">
@@ -43,7 +45,8 @@ export default function WelcomePage() {
 
         <div className="mt-8 text-sm text-gray-500">
           <p>
-            We've sent a confirmation email with your subscription details. If you have any questions, please{" "}
+            We've sent a confirmation email with your subscription details. If you have any
+            questions, please{' '}
             <Link href="/contact" className="text-blue-600 hover:underline">
               contact us
             </Link>
@@ -52,5 +55,5 @@ export default function WelcomePage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,17 +1,17 @@
-import { createClient } from "./supabase/client"
+import { createClient } from './supabase/client';
 
 // Cache for storing query results
 interface QueryCacheEntry<T> {
-  data: T
-  timestamp: number
-  expiresAt: number
+  data: T;
+  timestamp: number;
+  expiresAt: number;
 }
 
 // Global query cache with configurable TTL
-const queryCache = new Map<string, QueryCacheEntry<any>>()
+const queryCache = new Map<string, QueryCacheEntry<any>>();
 
 // Default cache TTL in milliseconds (5 minutes)
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000
+const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
 
 /**
  * Clears the entire query cache or specific entries
@@ -21,15 +21,15 @@ const DEFAULT_CACHE_TTL = 5 * 60 * 1000
  */
 export function clearQueryCache(key?: string, pattern?: RegExp): void {
   if (key) {
-    queryCache.delete(key)
+    queryCache.delete(key);
   } else if (pattern) {
     for (const cacheKey of queryCache.keys()) {
       if (pattern.test(cacheKey)) {
-        queryCache.delete(cacheKey)
+        queryCache.delete(cacheKey);
       }
     }
   } else {
-    queryCache.clear()
+    queryCache.clear();
   }
 }
 
@@ -46,21 +46,21 @@ export async function executeWithCache<T>(
   cacheKey: string,
   ttl: number = DEFAULT_CACHE_TTL,
 ): Promise<T[]> {
-  const now = Date.now()
+  const now = Date.now();
 
   // Check if we have a valid cached result
-  const cached = queryCache.get(cacheKey)
+  const cached = queryCache.get(cacheKey);
   if (cached && now < cached.expiresAt) {
-    return cached.data as T[]
+    return cached.data as T[];
   }
 
   try {
     // Execute the query
-    const { data, error } = await queryBuilder
+    const { data, error } = await queryBuilder;
 
     if (error) {
-      console.error("Supabase query error:", error)
-      throw error
+      console.error('Supabase query error:', error);
+      throw error;
     }
 
     // Cache the result
@@ -68,12 +68,12 @@ export async function executeWithCache<T>(
       data,
       timestamp: now,
       expiresAt: now + ttl,
-    })
+    });
 
-    return data as T[]
+    return data as T[];
   } catch (error) {
-    console.error("Error executing query:", error)
-    throw error
+    console.error('Error executing query:', error);
+    throw error;
   }
 }
 
@@ -84,7 +84,7 @@ export async function executeWithCache<T>(
  * @returns Array of query results
  */
 export async function executeBatch<T>(queries: (() => Promise<T>)[]): Promise<T[]> {
-  return Promise.all(queries.map((query) => query()))
+  return Promise.all(queries.map((query) => query()));
 }
 
 /**
@@ -95,7 +95,7 @@ export async function executeBatch<T>(queries: (() => Promise<T>)[]): Promise<T[
  * @returns A unique cache key
  */
 export function createQueryKey(table: string, params: Record<string, any>): string {
-  return `${table}:${JSON.stringify(params)}`
+  return `${table}:${JSON.stringify(params)}`;
 }
 
 /**
@@ -110,32 +110,32 @@ export async function fetchById<T>(
   table: string,
   id: string,
   options: {
-    columns?: string
-    cache?: boolean
-    ttl?: number
+    columns?: string;
+    cache?: boolean;
+    ttl?: number;
   } = {},
 ): Promise<T | null> {
-  const { columns = "*", cache = true, ttl = DEFAULT_CACHE_TTL } = options
-  const supabase = createClient()
+  const { columns = '*', cache = true, ttl = DEFAULT_CACHE_TTL } = options;
+  const supabase = createClient();
 
-  const cacheKey = `${table}:id:${id}:${columns}`
+  const cacheKey = `${table}:id:${id}:${columns}`;
 
   if (cache) {
-    const cached = queryCache.get(cacheKey)
+    const cached = queryCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as T
+      return cached.data as T;
     }
   }
 
-  const { data, error } = await supabase.from(table).select(columns).eq("id", id).single()
+  const { data, error } = await supabase.from(table).select(columns).eq('id', id).single();
 
   if (error) {
-    if (error.code === "PGRST116") {
+    if (error.code === 'PGRST116') {
       // Record not found
-      return null
+      return null;
     }
-    console.error(`Error fetching ${table} by ID:`, error)
-    throw error
+    console.error(`Error fetching ${table} by ID:`, error);
+    throw error;
   }
 
   if (cache) {
@@ -143,10 +143,10 @@ export async function fetchById<T>(
       data,
       timestamp: Date.now(),
       expiresAt: Date.now() + ttl,
-    })
+    });
   }
 
-  return data as T
+  return data as T;
 }
 
 /**
@@ -161,30 +161,30 @@ export async function fetchByIds<T>(
   table: string,
   ids: string[],
   options: {
-    columns?: string
-    cache?: boolean
-    ttl?: number
+    columns?: string;
+    cache?: boolean;
+    ttl?: number;
   } = {},
 ): Promise<T[]> {
-  if (ids.length === 0) return []
+  if (ids.length === 0) return [];
 
-  const { columns = "*", cache = true, ttl = DEFAULT_CACHE_TTL } = options
-  const supabase = createClient()
+  const { columns = '*', cache = true, ttl = DEFAULT_CACHE_TTL } = options;
+  const supabase = createClient();
 
-  const cacheKey = `${table}:ids:${ids.join(",")}:${columns}`
+  const cacheKey = `${table}:ids:${ids.join(',')}:${columns}`;
 
   if (cache) {
-    const cached = queryCache.get(cacheKey)
+    const cached = queryCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as T[]
+      return cached.data as T[];
     }
   }
 
-  const { data, error } = await supabase.from(table).select(columns).in("id", ids)
+  const { data, error } = await supabase.from(table).select(columns).in('id', ids);
 
   if (error) {
-    console.error(`Error fetching ${table} by IDs:`, error)
-    throw error
+    console.error(`Error fetching ${table} by IDs:`, error);
+    throw error;
   }
 
   if (cache && data) {
@@ -192,10 +192,10 @@ export async function fetchByIds<T>(
       data,
       timestamp: Date.now(),
       expiresAt: Date.now() + ttl,
-    })
+    });
   }
 
-  return (data as T[]) || []
+  return (data as T[]) || [];
 }
 
 /**
@@ -210,28 +210,28 @@ export async function insertRecords<T>(
   table: string,
   records: Partial<T> | Partial<T>[],
   options: {
-    returning?: string
-    clearCache?: boolean | RegExp
+    returning?: string;
+    clearCache?: boolean | RegExp;
   } = {},
 ): Promise<T[]> {
-  const { returning = "*", clearCache = false } = options
-  const supabase = createClient()
+  const { returning = '*', clearCache = false } = options;
+  const supabase = createClient();
 
-  const { data, error } = await supabase.from(table).insert(records).select(returning)
+  const { data, error } = await supabase.from(table).insert(records).select(returning);
 
   if (error) {
-    console.error(`Error inserting into ${table}:`, error)
-    throw error
+    console.error(`Error inserting into ${table}:`, error);
+    throw error;
   }
 
   // Clear relevant cache entries
   if (clearCache === true) {
-    clearQueryCache(undefined, new RegExp(`^${table}:`))
+    clearQueryCache(undefined, new RegExp(`^${table}:`));
   } else if (clearCache instanceof RegExp) {
-    clearQueryCache(undefined, clearCache)
+    clearQueryCache(undefined, clearCache);
   }
 
-  return data as T[]
+  return data as T[];
 }
 
 /**
@@ -248,29 +248,34 @@ export async function updateRecord<T>(
   id: string,
   updates: Partial<T>,
   options: {
-    returning?: string
-    clearCache?: boolean | RegExp
+    returning?: string;
+    clearCache?: boolean | RegExp;
   } = {},
 ): Promise<T | null> {
-  const { returning = "*", clearCache = false } = options
-  const supabase = createClient()
+  const { returning = '*', clearCache = false } = options;
+  const supabase = createClient();
 
-  const { data, error } = await supabase.from(table).update(updates).eq("id", id).select(returning).single()
+  const { data, error } = await supabase
+    .from(table)
+    .update(updates)
+    .eq('id', id)
+    .select(returning)
+    .single();
 
   if (error) {
-    console.error(`Error updating ${table}:`, error)
-    throw error
+    console.error(`Error updating ${table}:`, error);
+    throw error;
   }
 
   // Clear relevant cache entries
   if (clearCache === true) {
-    clearQueryCache(undefined, new RegExp(`^${table}:`))
-    clearQueryCache(`${table}:id:${id}:${returning}`)
+    clearQueryCache(undefined, new RegExp(`^${table}:`));
+    clearQueryCache(`${table}:id:${id}:${returning}`);
   } else if (clearCache instanceof RegExp) {
-    clearQueryCache(undefined, clearCache)
+    clearQueryCache(undefined, clearCache);
   }
 
-  return data as T
+  return data as T;
 }
 
 /**
@@ -285,27 +290,27 @@ export async function deleteRecord(
   table: string,
   id: string,
   options: {
-    clearCache?: boolean | RegExp
+    clearCache?: boolean | RegExp;
   } = {},
 ): Promise<boolean> {
-  const { clearCache = false } = options
-  const supabase = createClient()
+  const { clearCache = false } = options;
+  const supabase = createClient();
 
-  const { error } = await supabase.from(table).delete().eq("id", id)
+  const { error } = await supabase.from(table).delete().eq('id', id);
 
   if (error) {
-    console.error(`Error deleting from ${table}:`, error)
-    throw error
+    console.error(`Error deleting from ${table}:`, error);
+    throw error;
   }
 
   // Clear relevant cache entries
   if (clearCache === true) {
-    clearQueryCache(undefined, new RegExp(`^${table}:`))
+    clearQueryCache(undefined, new RegExp(`^${table}:`));
   } else if (clearCache instanceof RegExp) {
-    clearQueryCache(undefined, clearCache)
+    clearQueryCache(undefined, clearCache);
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -320,35 +325,35 @@ export async function countRecords(
   table: string,
   filters?: (query: any) => any,
   options: {
-    cache?: boolean
-    ttl?: number
+    cache?: boolean;
+    ttl?: number;
   } = {},
 ): Promise<number> {
-  const { cache = true, ttl = DEFAULT_CACHE_TTL } = options
-  const supabase = createClient()
+  const { cache = true, ttl = DEFAULT_CACHE_TTL } = options;
+  const supabase = createClient();
 
   // Create a unique cache key based on the table and filters
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
-  const cacheKey = `${table}:count:${filterKey}`
+  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : 'none';
+  const cacheKey = `${table}:count:${filterKey}`;
 
   if (cache) {
-    const cached = queryCache.get(cacheKey)
+    const cached = queryCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
-      return cached.data as number
+      return cached.data as number;
     }
   }
 
-  let query = supabase.from(table).select("*", { count: "exact", head: true })
+  let query = supabase.from(table).select('*', { count: 'exact', head: true });
 
   if (filters) {
-    query = filters(query)
+    query = filters(query);
   }
 
-  const { count, error } = await query
+  const { count, error } = await query;
 
   if (error) {
-    console.error(`Error counting ${table} records:`, error)
-    throw error
+    console.error(`Error counting ${table} records:`, error);
+    throw error;
   }
 
   if (cache) {
@@ -356,10 +361,10 @@ export async function countRecords(
       data: count,
       timestamp: Date.now(),
       expiresAt: Date.now() + ttl,
-    })
+    });
   }
 
-  return count || 0
+  return count || 0;
 }
 
 /**
@@ -372,63 +377,67 @@ export async function countRecords(
 export async function fetchPaginated<T>(
   table: string,
   options: {
-    page?: number
-    pageSize?: number
-    columns?: string
-    orderBy?: string
-    ascending?: boolean
-    filters?: (query: any) => any
-    cache?: boolean
-    ttl?: number
+    page?: number;
+    pageSize?: number;
+    columns?: string;
+    orderBy?: string;
+    ascending?: boolean;
+    filters?: (query: any) => any;
+    cache?: boolean;
+    ttl?: number;
   } = {},
 ): Promise<{
-  data: T[]
-  count: number
-  pageCount: number
-  hasMore: boolean
+  data: T[];
+  count: number;
+  pageCount: number;
+  hasMore: boolean;
 }> {
   const {
     page = 1,
     pageSize = 10,
-    columns = "*",
-    orderBy = "created_at",
+    columns = '*',
+    orderBy = 'created_at',
     ascending = false,
     filters,
     cache = true,
     ttl = DEFAULT_CACHE_TTL,
-  } = options
+  } = options;
 
-  const supabase = createClient()
+  const supabase = createClient();
 
   // Create a unique cache key
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
-  const cacheKey = `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${filterKey}`
+  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : 'none';
+  const cacheKey = `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${filterKey}`;
 
   if (cache) {
-    const cached = queryCache.get(cacheKey)
+    const cached = queryCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
-      return cached.data
+      return cached.data;
     }
   }
 
   // Calculate range for pagination
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   // Build query
-  let query = supabase.from(table).select(columns, { count: "exact" }).order(orderBy, { ascending }).range(from, to)
+  let query = supabase
+    .from(table)
+    .select(columns, { count: 'exact' })
+    .order(orderBy, { ascending })
+    .range(from, to);
 
   // Apply filters if provided
   if (filters) {
-    query = filters(query)
+    query = filters(query);
   }
 
   // Execute query
-  const { data, error, count } = await query
+  const { data, error, count } = await query;
 
   if (error) {
-    console.error(`Error fetching paginated ${table}:`, error)
-    throw error
+    console.error(`Error fetching paginated ${table}:`, error);
+    throw error;
   }
 
   const result = {
@@ -436,17 +445,17 @@ export async function fetchPaginated<T>(
     count: count || 0,
     pageCount: Math.ceil((count || 0) / pageSize),
     hasMore: (count || 0) > page * pageSize,
-  }
+  };
 
   if (cache) {
     queryCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
       expiresAt: Date.now() + ttl,
-    })
+    });
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -461,35 +470,35 @@ export async function upsertRecords<T>(
   table: string,
   records: Partial<T> | Partial<T>[],
   options: {
-    onConflict?: string
-    returning?: string
-    clearCache?: boolean | RegExp
+    onConflict?: string;
+    returning?: string;
+    clearCache?: boolean | RegExp;
   } = {},
 ): Promise<T[]> {
-  const { onConflict, returning = "*", clearCache = false } = options
-  const supabase = createClient()
+  const { onConflict, returning = '*', clearCache = false } = options;
+  const supabase = createClient();
 
-  let query: any = supabase.from(table).upsert(records as any)
+  let query: any = supabase.from(table).upsert(records as any);
 
   if (onConflict) {
-    query = query.onConflict(onConflict)
+    query = query.onConflict(onConflict);
   }
 
-  const { data, error } = await query.select(returning)
+  const { data, error } = await query.select(returning);
 
   if (error) {
-    console.error(`Error upserting into ${table}:`, error)
-    throw error
+    console.error(`Error upserting into ${table}:`, error);
+    throw error;
   }
 
   // Clear relevant cache entries
   if (clearCache === true) {
-    clearQueryCache(undefined, new RegExp(`^${table}:`))
+    clearQueryCache(undefined, new RegExp(`^${table}:`));
   } else if (clearCache instanceof RegExp) {
-    clearQueryCache(undefined, clearCache)
+    clearQueryCache(undefined, clearCache);
   }
 
-  return data as T[]
+  return data as T[];
 }
 
 /**
@@ -500,37 +509,37 @@ export async function upsertRecords<T>(
  * @returns Whether the column exists
  */
 export async function columnExists(table: string, column: string): Promise<boolean> {
-  const supabase = createClient()
+  const supabase = createClient();
 
   try {
     // First try using RPC if available
     const { data, error } = (await supabase
-      .rpc("column_exists", { table_name: table, column_name: column })
-      .single()) as any
+      .rpc('column_exists', { table_name: table, column_name: column })
+      .single()) as any;
 
     if (!error && data) {
-      return (data as any).exists
+      return (data as any).exists;
     }
 
     // Fallback: try selecting the column
     try {
-      await supabase.from(table).select(column).limit(1)
-      return true
+      await supabase.from(table).select(column).limit(1);
+      return true;
     } catch (e) {
-      return false
+      return false;
     }
   } catch (error) {
-    console.error(`Error checking if column ${column} exists in table ${table}:`, error)
-    return false
+    console.error(`Error checking if column ${column} exists in table ${table}:`, error);
+    return false;
   }
 }
 
 // Clean up expired cache entries periodically
 setInterval(() => {
-  const now = Date.now()
+  const now = Date.now();
   for (const [key, entry] of queryCache.entries()) {
     if (now > entry.expiresAt) {
-      queryCache.delete(key)
+      queryCache.delete(key);
     }
   }
-}, 60000) // Run every minute
+}, 60000); // Run every minute

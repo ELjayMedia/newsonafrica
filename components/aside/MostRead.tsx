@@ -1,9 +1,10 @@
-'use client'
-import Link from 'next/link'
-import type { WordPressPost } from '@/lib/api/wordpress'
+'use client';
+import Link from 'next/link';
+
+import type { WordPressPost } from '@/lib/api/wordpress';
 
 interface Props {
-  posts: WordPressPost[]
+  posts: WordPressPost[];
 }
 
 export function MostRead({ posts }: Props) {
@@ -21,5 +22,5 @@ export function MostRead({ posts }: Props) {
         ))}
       </ol>
     </div>
-  )
+  );
 }

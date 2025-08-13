@@ -1,13 +1,14 @@
-'use client'
-import { useState } from 'react'
-import type { Poll } from '@/lib/api/wordpress'
+'use client';
+import { useState } from 'react';
+
+import type { Poll } from '@/lib/api/wordpress';
 
 interface Props {
-  poll: Poll
+  poll: Poll;
 }
 
 export function PollWidget({ poll }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(null);
   return (
     <div>
       <h3 className="font-semibold mb-2">Poll</h3>
@@ -15,12 +16,7 @@ export function PollWidget({ poll }: Props) {
       <form className="space-y-2">
         {poll.options.map((opt) => (
           <label key={opt.id} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="poll"
-              value={opt.id}
-              onChange={() => setSelected(opt.id)}
-            />
+            <input type="radio" name="poll" value={opt.id} onChange={() => setSelected(opt.id)} />
             {opt.label}
           </label>
         ))}
@@ -29,5 +25,5 @@ export function PollWidget({ poll }: Props) {
         </button>
       </form>
     </div>
-  )
+  );
 }

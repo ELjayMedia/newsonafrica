@@ -1,21 +1,21 @@
 interface RateLimitInfo {
-  count: number
-  resetTime: number
-  isLimited: boolean
+  count: number;
+  resetTime: number;
+  isLimited: boolean;
 }
 
 // Map to store rate limit info by key
-const rateLimitMap = new Map<string, RateLimitInfo>()
+const rateLimitMap = new Map<string, RateLimitInfo>();
 
 // Clean up expired rate limit entries
 setInterval(() => {
-  const now = Date.now()
+  const now = Date.now();
   for (const [key, info] of rateLimitMap.entries()) {
     if (now > info.resetTime) {
-      rateLimitMap.delete(key)
+      rateLimitMap.delete(key);
     }
   }
-}, 60000) // Clean up every minute
+}, 60000); // Clean up every minute
 
 /**
  * Check if a request is rate limited
@@ -25,7 +25,7 @@ setInterval(() => {
  * @returns Object with isLimited flag and retryAfter time in seconds
  */
 export function checkRateLimit(key: string, limit: number, windowMs = 60000) {
-  const now = Date.now()
+  const now = Date.now();
 
   // Get or create rate limit info
   if (!rateLimitMap.has(key)) {
@@ -33,34 +33,34 @@ export function checkRateLimit(key: string, limit: number, windowMs = 60000) {
       count: 0,
       resetTime: now + windowMs,
       isLimited: false,
-    })
+    });
   }
 
-  const info = rateLimitMap.get(key)!
+  const info = rateLimitMap.get(key)!;
 
   // Reset if window has passed
   if (now > info.resetTime) {
-    info.count = 0
-    info.resetTime = now + windowMs
-    info.isLimited = false
+    info.count = 0;
+    info.resetTime = now + windowMs;
+    info.isLimited = false;
   }
 
   // Check if already limited
   if (info.isLimited) {
-    const retryAfter = Math.ceil((info.resetTime - now) / 1000)
-    return { isLimited: true, retryAfter }
+    const retryAfter = Math.ceil((info.resetTime - now) / 1000);
+    return { isLimited: true, retryAfter };
   }
 
   // Increment count and check limit
-  info.count += 1
+  info.count += 1;
 
   if (info.count > limit) {
-    info.isLimited = true
-    const retryAfter = Math.ceil((info.resetTime - now) / 1000)
-    return { isLimited: true, retryAfter }
+    info.isLimited = true;
+    const retryAfter = Math.ceil((info.resetTime - now) / 1000);
+    return { isLimited: true, retryAfter };
   }
 
-  return { isLimited: false, retryAfter: 0 }
+  return { isLimited: false, retryAfter: 0 };
 }
 
 /**
@@ -71,8 +71,8 @@ export function checkRateLimit(key: string, limit: number, windowMs = 60000) {
  * @returns Delay in milliseconds
  */
 export function calculateBackoff(baseDelay: number, retryCount: number, maxMultiplier = 10) {
-  const multiplier = Math.min(Math.pow(2, retryCount), maxMultiplier)
-  return baseDelay * multiplier
+  const multiplier = Math.min(Math.pow(2, retryCount), maxMultiplier);
+  return baseDelay * multiplier;
 }
 
 /**
@@ -82,11 +82,11 @@ export function calculateBackoff(baseDelay: number, retryCount: number, maxMulti
  */
 export function formatRetryMessage(seconds: number): string {
   if (seconds < 60) {
-    return `Please try again in ${seconds} seconds`
+    return `Please try again in ${seconds} seconds`;
   } else if (seconds < 120) {
-    return `Please try again in 1 minute`
+    return `Please try again in 1 minute`;
   } else {
-    const minutes = Math.ceil(seconds / 60)
-    return `Please try again in ${minutes} minutes`
+    const minutes = Math.ceil(seconds / 60);
+    return `Please try again in ${minutes} minutes`;
   }
 }

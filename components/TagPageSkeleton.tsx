@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function TagPageSkeleton() {
   return (
@@ -8,7 +8,10 @@ export function TagPageSkeleton() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+          <div
+            key={i}
+            className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+          >
             <div className="flex-1 space-y-2 mr-3">
               <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-full" />
@@ -23,5 +26,5 @@ export function TagPageSkeleton() {
         <Skeleton className="h-10 w-32" />
       </div>
     </div>
-  )
+  );
 }

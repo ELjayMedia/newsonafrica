@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { AuthForm } from "@/components/AuthForm"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthForm } from '@/components/AuthForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function AuthContent() {
   return (
@@ -10,7 +10,9 @@ export function AuthContent() {
 
       <Card className="border-0 shadow-lg">
         <CardHeader className="pb-2">
-          <CardTitle className="text-center text-2xl font-bold">Welcome to News on Africa</CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">
+            Welcome to News on Africa
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <AuthForm />
@@ -19,11 +21,11 @@ export function AuthContent() {
 
       <div className="mt-6 text-center text-sm text-gray-500">
         <p>
-          By signing in, you agree to our{" "}
+          By signing in, you agree to our{' '}
           <a href="/terms" className="text-blue-600 hover:underline">
             Terms of Service
-          </a>{" "}
-          and{" "}
+          </a>{' '}
+          and{' '}
           <a href="/privacy" className="text-blue-600 hover:underline">
             Privacy Policy
           </a>
@@ -31,5 +33,5 @@ export function AuthContent() {
         </p>
       </div>
     </div>
-  )
+  );
 }

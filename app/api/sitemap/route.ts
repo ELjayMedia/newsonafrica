@@ -1,17 +1,17 @@
-const fetchAllCategories = async () => []
-const fetchRecentPosts = async () => ({ posts: [] })
+const fetchAllCategories = async () => [];
+const fetchRecentPosts = async () => ({ posts: [] });
 
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://newsonafrica.com';
 
   try {
-  const [categories, recent] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
+    const [categories, recent] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)]);
 
-  // Ensure categories and posts are arrays, even if empty
-  const safeCategories = Array.isArray(categories) ? categories : []
-  const safePosts = Array.isArray(recent.posts) ? recent.posts : []
+    // Ensure categories and posts are arrays, even if empty
+    const safeCategories = Array.isArray(categories) ? categories : [];
+    const safePosts = Array.isArray(recent.posts) ? recent.posts : [];
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -30,7 +30,7 @@ export async function GET() {
   </url>
   `,
     )
-    .join("")}
+    .join('')}
   ${safePosts
     .map(
       (post) => `
@@ -41,16 +41,16 @@ export async function GET() {
   </url>
   `,
     )
-    .join("")}
-</urlset>`
+    .join('')}
+</urlset>`;
 
     return new NextResponse(sitemap, {
       headers: {
-        "Content-Type": "application/xml",
+        'Content-Type': 'application/xml',
       },
-    })
+    });
   } catch (error) {
-    console.error("Error generating sitemap:", error)
-    return new NextResponse("Error generating sitemap", { status: 500 })
+    console.error('Error generating sitemap:', error);
+    return new NextResponse('Error generating sitemap', { status: 500 });
   }
 }

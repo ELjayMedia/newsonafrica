@@ -1,84 +1,85 @@
-const fs = require("fs")
-const path = require("path")
-const { promisify } = require("util")
-const imagemin = require("imagemin")
-const imageminMozjpeg = require("imagemin-mozjpeg")
-const imageminPngquant = require("imagemin-pngquant")
-const imageminWebp = require("imagemin-webp")
+const fs = require('fs');
+const path = require('path');
+const { promisify } = require('util');
 
-const readdir = promisify(fs.readdir)
-const stat = promisify(fs.stat)
+const imagemin = require('imagemin');
+const imageminMozjpeg = require('imagemin-mozjpeg');
+const imageminPngquant = require('imagemin-pngquant');
+const imageminWebp = require('imagemin-webp');
+
+const readdir = promisify(fs.readdir);
+const stat = promisify(fs.stat);
 
 // Directories to process
-const PUBLIC_DIR = path.join(process.cwd(), "public")
+const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
 // Function to get all image files recursively
 async function getImageFiles(dir) {
-  const files = await readdir(dir)
-  const imageFiles = []
+  const files = await readdir(dir);
+  const imageFiles = [];
 
   for (const file of files) {
-    const filePath = path.join(dir, file)
-    const stats = await stat(filePath)
+    const filePath = path.join(dir, file);
+    const stats = await stat(filePath);
 
     if (stats.isDirectory()) {
-      const subDirImages = await getImageFiles(filePath)
-      imageFiles.push(...subDirImages)
+      const subDirImages = await getImageFiles(filePath);
+      imageFiles.push(...subDirImages);
     } else if (/\.(jpe?g|png)$/i.test(file)) {
-      imageFiles.push(filePath)
+      imageFiles.push(filePath);
     }
   }
 
-  return imageFiles
+  return imageFiles;
 }
 
 // Function to optimize images
 async function optimizeImages() {
   try {
-    console.log("Scanning for images...")
-    const imageFiles = await getImageFiles(PUBLIC_DIR)
-    console.log(`Found ${imageFiles.length} images to optimize`)
+    console.log('Scanning for images...');
+    const imageFiles = await getImageFiles(PUBLIC_DIR);
+    console.log(`Found ${imageFiles.length} images to optimize`);
 
     if (imageFiles.length === 0) {
-      console.log("No images to optimize")
-      return
+      console.log('No images to optimize');
+      return;
     }
 
     // Group images by directory for processing
     const imagesByDir = imageFiles.reduce((acc, file) => {
-      const dir = path.dirname(file)
+      const dir = path.dirname(file);
       if (!acc[dir]) {
-        acc[dir] = []
+        acc[dir] = [];
       }
-      acc[dir].push(path.basename(file))
-      return acc
-    }, {})
+      acc[dir].push(path.basename(file));
+      return acc;
+    }, {});
 
     // Process each directory
     for (const [dir, files] of Object.entries(imagesByDir)) {
-      console.log(`Processing ${files.length} images in ${dir}...`)
+      console.log(`Processing ${files.length} images in ${dir}...`);
 
       // Optimize JPEG and PNG
       await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
         destination: dir,
         plugins: [imageminMozjpeg({ quality: 80 }), imageminPngquant({ quality: [0.65, 0.8] })],
-      })
+      });
 
       // Convert to WebP
       await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
         destination: dir,
         plugins: [imageminWebp({ quality: 75 })],
-      })
+      });
 
-      console.log(`Finished processing images in ${dir}`)
+      console.log(`Finished processing images in ${dir}`);
     }
 
-    console.log("Image optimization complete!")
+    console.log('Image optimization complete!');
   } catch (error) {
-    console.error("Error optimizing images:", error)
-    process.exit(1)
+    console.error('Error optimizing images:', error);
+    process.exit(1);
   }
 }
 
 // Run the optimization
-optimizeImages()
+optimizeImages();

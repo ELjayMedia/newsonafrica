@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql } from '@apollo/client';
 
 export const GET_RECENT_POSTS = gql`
   query GetRecentPosts($count: Int) {
@@ -16,7 +16,7 @@ export const GET_RECENT_POSTS = gql`
       }
     }
   }
-`
+`;
 
 export const GET_BOOKMARKS = gql`
   query GetBookmarks($userId: ID!) {
@@ -47,7 +47,7 @@ export const GET_BOOKMARKS = gql`
       }
     }
   }
-`
+`;
 
 export const ADD_BOOKMARK = gql`
   mutation AddBookmark($postId: ID!, $userId: ID!) {
@@ -60,7 +60,7 @@ export const ADD_BOOKMARK = gql`
       }
     }
   }
-`
+`;
 
 export const REMOVE_BOOKMARK = gql`
   mutation RemoveBookmark($id: ID!) {
@@ -68,4 +68,4 @@ export const REMOVE_BOOKMARK = gql`
       deletedId
     }
   }
-`
+`;

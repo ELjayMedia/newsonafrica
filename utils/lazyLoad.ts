@@ -7,9 +7,9 @@ export function generateBlurDataURL(width: number, height: number): string {
       </filter>
       <rect width="100%" height="100%" fill="#EEEEEE"/>
       <rect width="100%" height="100%" fill="#EEEEEE" filter="url(#b)"/>
-    </svg>`
+    </svg>`;
 
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 // Optimized image loading utility
@@ -17,9 +17,9 @@ export function getImageProps(src: string, width: number, height: number) {
   return {
     src,
     blurDataURL: generateBlurDataURL(width, height),
-    placeholder: "blur",
-    loading: "lazy",
-  }
+    placeholder: 'blur',
+    loading: 'lazy',
+  };
 }
 
 /**
@@ -29,21 +29,21 @@ export function getImageProps(src: string, width: number, height: number) {
  */
 export function formatImagePath(path: string): string {
   // If the path already starts with http/https, it's an external URL
-  if (path.startsWith("http")) {
-    return path
+  if (path.startsWith('http')) {
+    return path;
   }
 
   // Remove any '/public' prefix if it exists
-  if (path.startsWith("/public/")) {
-    return path.replace("/public", "")
+  if (path.startsWith('/public/')) {
+    return path.replace('/public', '');
   }
 
   // Ensure the path starts with a slash
-  if (!path.startsWith("/")) {
-    return `/${path}`
+  if (!path.startsWith('/')) {
+    return `/${path}`;
   }
 
-  return path
+  return path;
 }
 
 /**
@@ -57,19 +57,19 @@ export function createResponsiveSrcSet(
   sizes: number[] = [640, 750, 828, 1080, 1200, 1920],
 ): { srcSet: string; sizes: string } {
   // Only works for images that support size parameters
-  if (!basePath.includes("?") && !basePath.includes("placeholder")) {
+  if (!basePath.includes('?') && !basePath.includes('placeholder')) {
     return {
-      srcSet: "",
-      sizes: "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
-    }
+      srcSet: '',
+      sizes: '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+    };
   }
 
-  const srcSet = sizes.map((size) => `${basePath}&w=${size} ${size}w`).join(", ")
+  const srcSet = sizes.map((size) => `${basePath}&w=${size} ${size}w`).join(', ');
 
   return {
     srcSet,
-    sizes: "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
-  }
+    sizes: '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+  };
 }
 
-export { lazyLoadComponent, lazyLoadSkeleton } from "./lazy-load-client"
+export { lazyLoadComponent, lazyLoadSkeleton } from './lazy-load-client';

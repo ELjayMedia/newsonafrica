@@ -1,19 +1,19 @@
-import { HorizontalCard } from "./HorizontalCard"
+import { HorizontalCard } from './HorizontalCard';
 
 interface Post {
-  id: string
-  title: string
-  excerpt: string
-  slug: string
+  id: string;
+  title: string;
+  excerpt: string;
+  slug: string;
   featuredImage: {
     node: {
-      sourceUrl: string
-    }
-  }
+      sourceUrl: string;
+    };
+  };
 }
 
 interface PostListProps {
-  posts: Post[]
+  posts: Post[];
 }
 
 export function PostList({ posts }: PostListProps) {
@@ -22,7 +22,7 @@ export function PostList({ posts }: PostListProps) {
       <div className="text-center py-8">
         <p className="text-gray-500">No posts available at the moment.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -36,5 +36,5 @@ export function PostList({ posts }: PostListProps) {
         />
       ))}
     </div>
-  )
+  );
 }

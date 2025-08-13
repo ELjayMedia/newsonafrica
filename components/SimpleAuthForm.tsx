@@ -1,86 +1,88 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle } from "lucide-react"
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth"
+import { Loader2, AlertCircle } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 
 interface SimpleAuthFormProps {
-  defaultTab?: "signin" | "signup"
-  onSuccess?: () => void
+  defaultTab?: 'signin' | 'signup';
+  onSuccess?: () => void;
 }
 
-export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthFormProps) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [username, setUsername] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [isResetMode, setIsResetMode] = useState(false)
+export function SimpleAuthForm({ defaultTab = 'signin', onSuccess }: SimpleAuthFormProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isResetMode, setIsResetMode] = useState(false);
 
-  const { loading, error, signIn, signUp, resetPassword, signInWithOAuth, clearError } = useSupabaseAuth()
+  const { loading, error, signIn, signUp, resetPassword, signInWithOAuth, clearError } =
+    useSupabaseAuth();
 
   // Handle sign in
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    clearError()
-    const result = await signIn(email, password)
+    e.preventDefault();
+    clearError();
+    const result = await signIn(email, password);
     if (result.success && onSuccess) {
-      onSuccess()
+      onSuccess();
     }
-  }
+  };
 
   // Handle sign up
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    clearError()
+    e.preventDefault();
+    clearError();
 
     // Client-side validation
     if (password !== confirmPassword) {
-      return
+      return;
     }
 
     if (password.length < 6) {
-      return
+      return;
     }
 
     if (!username || username.length < 3) {
-      return
+      return;
     }
 
-    const result = await signUp(email, password, username)
+    const result = await signUp(email, password, username);
     if (result.success && onSuccess) {
-      onSuccess()
+      onSuccess();
     }
-  }
+  };
 
   // Handle password reset
   const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault()
-    clearError()
+    e.preventDefault();
+    clearError();
 
     if (!email) {
-      return
+      return;
     }
 
-    const result = await resetPassword(email)
+    const result = await resetPassword(email);
     if (result.success) {
-      setIsResetMode(false)
+      setIsResetMode(false);
     }
-  }
+  };
 
   // Handle OAuth sign in
-  const handleOAuthSignIn = async (provider: "google" | "facebook") => {
-    clearError()
-    const result = await signInWithOAuth(provider)
+  const handleOAuthSignIn = async (provider: 'google' | 'facebook') => {
+    clearError();
+    const result = await signInWithOAuth(provider);
     if (result.success && onSuccess) {
-      onSuccess()
+      onSuccess();
     }
-  }
+  };
 
   // Reset password form
   if (isResetMode) {
@@ -123,12 +125,12 @@ export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthF
                 Sending...
               </>
             ) : (
-              "Send Reset Link"
+              'Send Reset Link'
             )}
           </Button>
         </form>
       </div>
-    )
+    );
   }
 
   // Main auth form
@@ -179,7 +181,7 @@ export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthF
                 Signing In...
               </>
             ) : (
-              "Sign In"
+              'Sign In'
             )}
           </Button>
 
@@ -193,11 +195,21 @@ export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthF
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline" onClick={() => handleOAuthSignIn("google")} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Google"}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOAuthSignIn('google')}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Google'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => handleOAuthSignIn("facebook")} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Facebook"}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOAuthSignIn('facebook')}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Facebook'}
             </Button>
           </div>
 
@@ -274,7 +286,7 @@ export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthF
                 Signing Up...
               </>
             ) : (
-              "Sign Up"
+              'Sign Up'
             )}
           </Button>
 
@@ -288,15 +300,25 @@ export function SimpleAuthForm({ defaultTab = "signin", onSuccess }: SimpleAuthF
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline" onClick={() => handleOAuthSignIn("google")} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Google"}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOAuthSignIn('google')}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Google'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => handleOAuthSignIn("facebook")} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Facebook"}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOAuthSignIn('facebook')}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Facebook'}
             </Button>
           </div>
         </form>
       </TabsContent>
     </Tabs>
-  )
+  );
 }

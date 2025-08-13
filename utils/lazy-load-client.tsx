@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import dynamic from "next/dynamic"
-import type { ComponentType } from "react"
+import dynamic from 'next/dynamic';
+import type { ComponentType } from 'react';
 
 /**
  * Lazily loads a component with a loading fallback
@@ -13,7 +13,7 @@ export function lazyLoadComponent(
   return dynamic(importFunc, {
     loading: LoadingComponent ? () => <LoadingComponent /> : undefined,
     ssr: false,
-  })
+  });
 }
 
 /**
@@ -26,5 +26,5 @@ export function lazyLoadSkeleton(
   return dynamic(importFunc, {
     loading: () => <SkeletonComponent />,
     ssr: false,
-  })
+  });
 }

@@ -14,5 +14,5 @@ export function SidebarFallback() {
         ))}
       </div>
     </div>
-  )
+  );
 }

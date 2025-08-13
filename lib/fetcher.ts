@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from 'zod';
 
 /** Cache entry for ETag based caching */
 interface CacheEntry<T> {
@@ -28,7 +28,7 @@ export class FetchError extends Error {
   status?: number;
   constructor(message: string, status?: number, cause?: unknown) {
     super(message);
-    this.name = "FetchError";
+    this.name = 'FetchError';
     this.status = status;
     if (cause) {
       // @ts-ignore - Node <18 does not have cause in ErrorOptions type
@@ -42,26 +42,20 @@ const metrics = {
   misses: 0,
   logHit(url: string) {
     this.hits++;
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV !== 'production') {
       console.log(`[cache hit] ${url}`);
     }
   },
   logMiss(url: string) {
     this.misses++;
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV !== 'production') {
       console.log(`[cache miss] ${url}`);
     }
   },
 };
 
 async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> {
-  const {
-    init = {},
-    timeoutMs = 8000,
-    retries = 2,
-    cacheTtl = 5 * 60 * 1000,
-    schema,
-  } = options;
+  const { init = {}, timeoutMs = 8000, retries = 2, cacheTtl = 5 * 60 * 1000, schema } = options;
 
   const key = url + JSON.stringify(init);
 
@@ -78,12 +72,12 @@ async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
         const headers: Record<string, string> = {
-          "Accept-Encoding": "gzip, br",
-          Connection: "keep-alive",
+          'Accept-Encoding': 'gzip, br',
+          Connection: 'keep-alive',
           ...(init.headers as any),
         };
         if (cached?.etag) {
-          headers["If-None-Match"] = cached.etag;
+          headers['If-None-Match'] = cached.etag;
         }
 
         const resp = await fetch(url, { ...init, headers, signal: controller.signal });
@@ -101,7 +95,7 @@ async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> 
           throw new FetchError(`HTTP error ${resp.status}`, resp.status);
         }
 
-        const etag = resp.headers.get("etag") || undefined;
+        const etag = resp.headers.get('etag') || undefined;
         const data: T = await resp.json();
         if (schema) {
           schema.parse(data);
@@ -115,11 +109,11 @@ async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> 
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
-        throw new FetchError("Fetch failed", undefined, err);
+        throw new FetchError('Fetch failed', undefined, err);
       }
     }
     // should not reach here
-    throw new FetchError("Exhausted retries");
+    throw new FetchError('Exhausted retries');
   })();
 
   inflight.set(key, promise);

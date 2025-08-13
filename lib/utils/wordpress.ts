@@ -1,4 +1,4 @@
-import type { WordPressPost, WordPressCategory } from "@/lib/api/wordpress"
+import type { WordPressPost, WordPressCategory } from '@/lib/api/wordpress';
 
 export function transformRestPostToGraphQL(post: any): WordPressPost {
   return {
@@ -9,28 +9,28 @@ export function transformRestPostToGraphQL(post: any): WordPressPost {
     slug: post.slug,
     date: post.date,
     modified: post.modified,
-    featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+    featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
       ? {
           node: {
-            sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-            altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+            sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
+            altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
           },
         }
       : undefined,
     author: {
       node: {
-        id: post._embedded?.author?.[0]?.id?.toString() || "0",
-        name: post._embedded?.author?.[0]?.name || "Unknown Author",
-        slug: post._embedded?.author?.[0]?.slug || "unknown-author",
-        description: post._embedded?.author?.[0]?.description || "",
+        id: post._embedded?.author?.[0]?.id?.toString() || '0',
+        name: post._embedded?.author?.[0]?.name || 'Unknown Author',
+        slug: post._embedded?.author?.[0]?.slug || 'unknown-author',
+        description: post._embedded?.author?.[0]?.description || '',
         avatar: {
-          url: post._embedded?.author?.[0]?.avatar_urls?.["96"] || "",
+          url: post._embedded?.author?.[0]?.avatar_urls?.['96'] || '',
         },
       },
     },
     categories: {
       nodes:
-        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+        post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
           id: cat.id.toString(),
           name: cat.name,
           slug: cat.slug,
@@ -38,7 +38,7 @@ export function transformRestPostToGraphQL(post: any): WordPressPost {
     },
     tags: {
       nodes:
-        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+        post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
           id: tag.id.toString(),
           name: tag.name,
           slug: tag.slug,
@@ -46,10 +46,9 @@ export function transformRestPostToGraphQL(post: any): WordPressPost {
     },
     seo: {
       title: post.yoast_title || post.title.rendered,
-      metaDesc:
-        post.yoast_meta?.description || post.excerpt.rendered.replace(/<[^>]*>/g, ""),
+      metaDesc: post.yoast_meta?.description || post.excerpt.rendered.replace(/<[^>]*>/g, ''),
     },
-  }
+  };
 }
 
 export function transformRestCategoryToGraphQL(category: any): WordPressCategory {
@@ -57,8 +56,7 @@ export function transformRestCategoryToGraphQL(category: any): WordPressCategory
     id: category.id.toString(),
     name: category.name,
     slug: category.slug,
-    description: category.description || "",
+    description: category.description || '',
     count: category.count,
-  }
+  };
 }
-

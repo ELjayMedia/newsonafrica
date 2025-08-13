@@ -1,9 +1,10 @@
-'use client'
-import React from 'react'
-import type { MarketItem } from '@/lib/api/wordpress'
+'use client';
+import React from 'react';
+
+import type { MarketItem } from '@/lib/api/wordpress';
 
 interface Props {
-  items: MarketItem[]
+  items: MarketItem[];
 }
 
 export function MarketTicker({ items }: Props) {
@@ -21,5 +22,5 @@ export function MarketTicker({ items }: Props) {
         ))}
       </div>
     </div>
-  )
+  );
 }

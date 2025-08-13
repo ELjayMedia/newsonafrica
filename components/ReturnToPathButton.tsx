@@ -1,5 +1,5 @@
-import ServerSafeReturnButton from "./ServerSafeReturnButton"
+import ServerSafeReturnButton from './ServerSafeReturnButton';
 
 export default function ReturnToPathButton() {
-  return <ServerSafeReturnButton />
+  return <ServerSafeReturnButton />;
 }

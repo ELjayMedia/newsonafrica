@@ -1,43 +1,45 @@
-"use client"
+'use client';
 
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { fetchAuthorData } from "@/lib/wordpress-api"
-import Image from "next/image"
-import { NewsGrid } from "@/components/NewsGrid"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useEffect } from "react"
-import { useInView } from "react-intersection-observer"
-import { Button } from "@/components/ui/button"
+import { useInfiniteQuery } from '@tanstack/react-query';
+import Image from 'next/image';
+import { useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
+
+import { NewsGrid } from '@/components/NewsGrid';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchAuthorData } from '@/lib/wordpress-api';
 
 interface AuthorContentProps {
-  slug: string
+  slug: string;
 }
 
 export function AuthorContent({ slug }: AuthorContentProps) {
-  const { ref, inView } = useInView()
+  const { ref, inView } = useInView();
 
-  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["author", slug],
-    queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
-    getNextPageParam: (lastPage) => lastPage?.posts.pageInfo.endCursor ?? undefined,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    onError: (error) => {
-      console.error(`Error fetching author data for ${slug}:`, error)
-    },
-  })
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ['author', slug],
+      queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
+      getNextPageParam: (lastPage) => lastPage?.posts.pageInfo.endCursor ?? undefined,
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      onError: (error) => {
+        console.error(`Error fetching author data for ${slug}:`, error);
+      },
+    });
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage()
+      fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading) return <AuthorSkeleton />
+  if (isLoading) return <AuthorSkeleton />;
 
   // Improved error handling
   if (error) {
-    console.error("Author content error:", error)
+    console.error('Author content error:', error);
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Unable to load author data</h2>
@@ -48,7 +50,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
           Retry
         </Button>
       </div>
-    )
+    );
   }
 
   if (!data || !data.pages[0]) {
@@ -59,18 +61,18 @@ export function AuthorContent({ slug }: AuthorContentProps) {
           We couldn't find an author with this name. They may have been removed or renamed.
         </p>
       </div>
-    )
+    );
   }
 
-  const author = data.pages[0]
-  const posts = data.pages.flatMap((page) => page?.posts.nodes ?? [])
+  const author = data.pages[0];
+  const posts = data.pages.flatMap((page) => page?.posts.nodes ?? []);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center mb-8">
         <div className="mr-6">
           <Image
-            src={author.avatar.url || "/placeholder.svg?height=100&width=100&query=avatar"}
+            src={author.avatar.url || '/placeholder.svg?height=100&width=100&query=avatar'}
             alt={author.name}
             width={100}
             height={100}
@@ -90,7 +92,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
             {hasNextPage && (
               <div ref={ref} className="flex justify-center mt-8">
                 <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-                  {isFetchingNextPage ? "Loading..." : "Load More"}
+                  {isFetchingNextPage ? 'Loading...' : 'Load More'}
                 </Button>
               </div>
             )}
@@ -100,7 +102,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function AuthorSkeleton() {
@@ -120,5 +122,5 @@ function AuthorSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

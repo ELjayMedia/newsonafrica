@@ -1,16 +1,16 @@
-"use client"
+'use client';
 
-import { UnifiedCard } from "./ui/unified-card"
+import { UnifiedCard } from './ui/unified-card';
 
 interface VerticalCardProps {
   post: {
-    title: string
-    slug: string
-    date: string
-    type?: string
-    featuredImage?: { sourceUrl: string } | { node: { sourceUrl: string } }
-  }
-  className?: string
+    title: string;
+    slug: string;
+    date: string;
+    type?: string;
+    featuredImage?: { sourceUrl: string } | { node: { sourceUrl: string } };
+  };
+  className?: string;
 }
 
 export function VerticalCard(props: VerticalCardProps) {
@@ -22,5 +22,5 @@ export function VerticalCard(props: VerticalCardProps) {
       showExcerpt={false}
       showAuthor={false}
     />
-  )
+  );
 }

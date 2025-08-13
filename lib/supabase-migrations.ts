@@ -60,7 +60,7 @@ CREATE POLICY "Users can delete their own reactions"
   TO authenticated
   USING (auth.uid() = user_id);
 
-`
+`;
 
 export const COMMENT_SYSTEM_MIGRATION = `
 -- Add comment system related migrations
@@ -80,4 +80,4 @@ ALTER TABLE public.comments
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS notify_on_comment_reply BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS notify_on_comment_like BOOLEAN NOT NULL DEFAULT true;
-`
+`;

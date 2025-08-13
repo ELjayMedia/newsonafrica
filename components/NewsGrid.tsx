@@ -1,42 +1,43 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { Clock } from "lucide-react"
-import { memo, useMemo, useEffect, useCallback } from "react"
-import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { Clock } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { memo, useMemo, useEffect, useCallback } from 'react';
+
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { formatDate } from '@/lib/utils';
+import { generateBlurDataURL } from '@/utils/lazyLoad';
 
 interface Post {
-  id: string
-  title: string
-  excerpt: string
-  slug: string
-  date: string
-  type?: string
+  id: string;
+  title: string;
+  excerpt: string;
+  slug: string;
+  date: string;
+  type?: string;
   featuredImage?: {
     node: {
-      sourceUrl: string
-    }
-  }
+      sourceUrl: string;
+    };
+  };
 }
 
 interface NewsGridProps {
-  posts: Post[]
-  layout?: "vertical" | "horizontal" | "mixed"
-  className?: string
-  sportCategoryPosts?: Post[]
-  showSportCategory?: boolean
-  isAuthorPage?: boolean
-  onLoadMore?: () => void
-  hasMorePosts?: boolean
+  posts: Post[];
+  layout?: 'vertical' | 'horizontal' | 'mixed';
+  className?: string;
+  sportCategoryPosts?: Post[];
+  showSportCategory?: boolean;
+  isAuthorPage?: boolean;
+  onLoadMore?: () => void;
+  hasMorePosts?: boolean;
 }
 
 export const NewsGrid = memo(function NewsGrid({
   posts,
-  layout = "mixed",
-  className = "",
+  layout = 'mixed',
+  className = '',
   sportCategoryPosts = [],
   showSportCategory = false,
   isAuthorPage = false,
@@ -46,38 +47,38 @@ export const NewsGrid = memo(function NewsGrid({
   // Memoize the load more callback
   const handleLoadMore = useCallback(() => {
     if (onLoadMore && isAuthorPage) {
-      onLoadMore()
-      setTimeout(() => setIsFetching(false), 500)
+      onLoadMore();
+      setTimeout(() => setIsFetching(false), 500);
     }
-  }, [onLoadMore, isAuthorPage])
+  }, [onLoadMore, isAuthorPage]);
 
   // Use the infinite scroll hook with the memoized callback
-  const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
+  const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore);
 
   // Generate blur placeholders once
-  const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
+  const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), []);
   const secondaryPostsBlurURLs = useMemo(() => {
-    const maxLength = Math.max(posts?.length || 0, sportCategoryPosts?.length || 0)
-    return Array.from({ length: maxLength }, () => generateBlurDataURL(70, 70))
-  }, [posts?.length, sportCategoryPosts?.length])
+    const maxLength = Math.max(posts?.length || 0, sportCategoryPosts?.length || 0);
+    return Array.from({ length: maxLength }, () => generateBlurDataURL(70, 70));
+  }, [posts?.length, sportCategoryPosts?.length]);
 
   // Check if we have posts
-  const hasPosts = posts?.length > 0
-  const hasSportCategoryPosts = sportCategoryPosts?.length > 0
+  const hasPosts = posts?.length > 0;
+  const hasSportCategoryPosts = sportCategoryPosts?.length > 0;
 
   // Update fetching state when hasMorePosts changes
   useEffect(() => {
     if (!hasMorePosts) {
-      setIsFetching(false)
+      setIsFetching(false);
     }
-  }, [hasMorePosts, setIsFetching])
+  }, [hasMorePosts, setIsFetching]);
 
   // Early return if no posts and not showing sport category
-  if (!hasPosts && !showSportCategory) return null
+  if (!hasPosts && !showSportCategory) return null;
 
   // Extract main and secondary posts
-  const mainPost = posts?.[0]
-  const secondaryPosts = posts?.slice(1, 4) || []
+  const mainPost = posts?.[0];
+  const secondaryPosts = posts?.slice(1, 4) || [];
 
   // If using for author page, render horizontal cards with infinite scroll
   if (isAuthorPage) {
@@ -92,7 +93,7 @@ export const NewsGrid = memo(function NewsGrid({
             {post.featuredImage && (
               <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage.node.sourceUrl || '/placeholder.svg'}
                   alt={post.title}
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
@@ -132,7 +133,7 @@ export const NewsGrid = memo(function NewsGrid({
           <div className="py-3 text-center text-gray-500">No more articles to load</div>
         )}
       </div>
-    )
+    );
   }
 
   // Original grid layout for non-author pages
@@ -151,23 +152,26 @@ export const NewsGrid = memo(function NewsGrid({
         />
       )}
     </div>
-  )
-})
+  );
+});
 
 // Extract SportCategorySection as a separate component for better code organization
 const SportCategorySection = memo(function SportCategorySection({
   sportCategoryPosts,
   blurURLs,
 }: {
-  sportCategoryPosts: Post[]
-  blurURLs: { main: string; secondary: string[] }
+  sportCategoryPosts: Post[];
+  blurURLs: { main: string; secondary: string[] };
 }) {
   return (
     <>
       {/* Sport Category Header */}
       <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
         <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
-        <Link href="/category/sport" className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
+        <Link
+          href="/category/sport"
+          className="ml-auto text-xs md:text-sm text-blue-500 hover:underline"
+        >
           View all
         </Link>
       </div>
@@ -180,7 +184,7 @@ const SportCategorySection = memo(function SportCategorySection({
         {sportCategoryPosts[0]?.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={sportCategoryPosts[0].featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={sportCategoryPosts[0].featuredImage.node.sourceUrl || '/placeholder.svg'}
               alt={sportCategoryPosts[0].title}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -199,7 +203,9 @@ const SportCategorySection = memo(function SportCategorySection({
           </div>
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-            <time dateTime={sportCategoryPosts[0]?.date}>{formatDate(sportCategoryPosts[0]?.date)}</time>
+            <time dateTime={sportCategoryPosts[0]?.date}>
+              {formatDate(sportCategoryPosts[0]?.date)}
+            </time>
           </div>
         </div>
       </Link>
@@ -226,7 +232,7 @@ const SportCategorySection = memo(function SportCategorySection({
             {post.featuredImage && (
               <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage.node.sourceUrl || '/placeholder.svg'}
                   alt={post.title}
                   fill
                   sizes="(max-width: 640px) 70px, 84px"
@@ -240,8 +246,8 @@ const SportCategorySection = memo(function SportCategorySection({
         ))}
       </div>
     </>
-  )
-})
+  );
+});
 
 // Extract RegularCategorySection as a separate component for better code organization
 const RegularCategorySection = memo(function RegularCategorySection({
@@ -249,11 +255,11 @@ const RegularCategorySection = memo(function RegularCategorySection({
   secondaryPosts,
   blurURLs,
 }: {
-  mainPost: Post | undefined
-  secondaryPosts: Post[]
-  blurURLs: { main: string; secondary: string[] }
+  mainPost: Post | undefined;
+  secondaryPosts: Post[];
+  blurURLs: { main: string; secondary: string[] };
 }) {
-  if (!mainPost) return null
+  if (!mainPost) return null;
 
   return (
     <>
@@ -265,7 +271,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
         {mainPost?.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={mainPost.featuredImage.node.sourceUrl || '/placeholder.svg'}
               alt={mainPost.title}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -313,7 +319,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
             {post.featuredImage && (
               <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage.node.sourceUrl || '/placeholder.svg'}
                   alt={post.title}
                   fill
                   sizes="(max-width: 640px) 80px, 85px"
@@ -327,5 +333,5 @@ const RegularCategorySection = memo(function RegularCategorySection({
         ))}
       </div>
     </>
-  )
-})
+  );
+});
