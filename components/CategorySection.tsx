@@ -2,14 +2,13 @@ import React from "react"
 import Link from "next/link"
 
 import { NewsGrid } from "@/components/NewsGrid"
-import { HomeMidContentAd } from "@/components/HomeMidContentAd"
 import type { CategoryConfig } from "@/config/homeConfig"
 
 interface CategorySectionProps extends CategoryConfig {
   posts: any[]
 }
 
-export function CategorySection({ name, slug, layout, typeOverride, showAdAfter, posts }: CategorySectionProps) {
+export function CategorySection({ name, slug, layout, typeOverride, posts }: CategorySectionProps) {
   if (posts.length === 0) return null
 
   return (
@@ -29,7 +28,6 @@ export function CategorySection({ name, slug, layout, typeOverride, showAdAfter,
           className="compact-grid"
         />
       </section>
-      {showAdAfter && <HomeMidContentAd />}
     </React.Fragment>
   )
 }

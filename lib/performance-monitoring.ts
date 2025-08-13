@@ -1,5 +1,7 @@
-import { isBrowser } from "@/lib/ad-utils"
 import type { Metric } from "web-vitals"
+
+// Utility to detect browser environment without relying on ad utilities
+const isBrowser = typeof window !== "undefined"
 
 // Send web vitals to Vercel Analytics
 export function sendWebVitalToVercel(metric: Metric) {
