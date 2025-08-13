@@ -2,6 +2,45 @@ import { getRelatedPosts } from "@/lib/api/wordpress"
 import { relatedPostsCache } from "./related-posts-cache"
 import type { WordPressPost } from "@/lib/api/wordpress"
 
+/**
+ * Simple concurrency limiter that ensures no more than a set number of
+ * promises run at the same time. Each task is queued and executed when a
+ * slot becomes available.
+ */
+class ConcurrencyLimiter {
+  private active = 0
+  private readonly queue: Array<() => void> = []
+
+  constructor(private readonly maxConcurrent: number) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.active >= this.maxConcurrent) {
+      await new Promise<void>((resolve) => this.queue.push(resolve))
+    }
+
+    this.active++
+    console.debug(
+      `[CachePreloader] Active preload tasks: ${this.active}/${this.maxConcurrent}`,
+    )
+
+    if (this.active > this.maxConcurrent) {
+      console.warn(
+        `[CachePreloader] Concurrency exceeded ${this.maxConcurrent}: ${this.active}`,
+      )
+    }
+
+    try {
+      return await fn()
+    } finally {
+      this.active--
+      console.debug(
+        `[CachePreloader] Active preload tasks: ${this.active}/${this.maxConcurrent}`,
+      )
+      this.queue.shift()?.()
+    }
+  }
+}
+
 interface PreloadConfig {
   batchSize?: number
   delayBetweenBatches?: number
@@ -67,14 +106,20 @@ class CachePreloader {
       for (let i = 0; i < posts.length; i += batchSize) {
         const batch = posts.slice(i, i + batchSize)
 
-        // Process batch with limited concurrency
-        const semaphore = new Array(maxConcurrent).fill(null)
-        const promises = batch.map(async (post, index) => {
-          // Wait for semaphore slot
-          await semaphore[index % maxConcurrent]
+        // Process batch with limited concurrency using a queue-based limiter
+        const limiter = new ConcurrencyLimiter(maxConcurrent)
 
-          return this.preloadPost(post.id, post.categories, post.tags, post.limit || 6, post.countryCode)
-        })
+        const promises = batch.map((post) =>
+          limiter.run(() =>
+            this.preloadPost(
+              post.id,
+              post.categories,
+              post.tags,
+              post.limit || 6,
+              post.countryCode,
+            ),
+          ),
+        )
 
         await Promise.allSettled(promises)
 
