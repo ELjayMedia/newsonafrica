@@ -1,10 +1,16 @@
 import { wp } from '@/lib/wp-client/rest';
 import { tag } from '@/lib/cache/revalidate';
+import { ArticleList, type ArticleCardPost } from '~/features/articles/components/ArticleList';
 
 export default async function CategoryHome({ params }: { params: { country: string; category: string } }) {
-  const posts = await wp.list(params.country, params.category, {
+  const posts = (await wp.list(params.country, params.category, {
     tags: [tag.list(params.country, params.category)],
-  });
-  return <main className="max-w-4xl mx-auto">{/* map posts into ArticleCard */}</main>;
+  })) as ArticleCardPost[];
+
+  return (
+    <main className="max-w-4xl mx-auto">
+      <ArticleList posts={posts} />
+    </main>
+  );
 }
 
