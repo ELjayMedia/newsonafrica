@@ -1,7 +1,10 @@
 import { jfetch } from '@/lib/http/fetcher';
 import { wpRestBase } from './base';
 import { tag } from '@/lib/cache/tags';
-import type { WPPost, WPCategory } from './types';
+import type { WPCategory } from './types';
+import { Article } from '@/features/articles/schema';
+import { cleanHtml } from '@/features/articles/clean';
+import { validateArticle } from '@/features/articles/constraints';
 
 const cacheCats = new Map<string, WPCategory[]>(); // process memory memo
 
@@ -21,7 +24,7 @@ async function categoryIdBySlug(country: string, slug: string): Promise<number |
   return cats.find(c => c.slug === slug)?.id ?? null;
 }
 
-function mapEmbedded(post: any): WPPost {
+function mapEmbedded(country: string, post: any): Article {
   const media = post._embedded?.['wp:featuredmedia']?.[0];
   const img = media
     ? {
@@ -31,20 +34,23 @@ function mapEmbedded(post: any): WPPost {
         height: media.media_details?.height,
       }
     : undefined;
-  return {
+  const article: Article = {
     id: post.id,
     slug: post.slug,
+    country,
+    categorySlugs:
+      post._embedded?.['wp:term']?.[0]?.map((c: any) => c.slug) ?? post.categories ?? [],
     title: (post.title?.rendered ?? '').replace(/<[^>]+>/g, ''),
     excerpt: (post.excerpt?.rendered ?? '').replace(/<[^>]+>/g, ''),
-    content: post.content?.rendered,
-    date: post.date,
-    modified: post.modified,
-    featured_image: img,
-    author: post._embedded?.author?.[0]
-      ? { id: post._embedded.author[0].id, name: post._embedded.author[0].name }
-      : undefined,
-    categories: post.categories,
+    html: cleanHtml(post.content?.rendered || ''),
+    authorName: post._embedded?.author?.[0]?.name,
+    authorId: post._embedded?.author?.[0]?.id,
+    publishedAt: post.date,
+    updatedAt: post.modified,
+    image: img,
   };
+  validateArticle(article);
+  return article;
 }
 
 export const WPR = {
@@ -69,7 +75,7 @@ export const WPR = {
       revalidate,
       tags: [tag.list(country, categorySlug)],
     });
-    return raw.map(mapEmbedded);
+    return raw.map(p => mapEmbedded(country, p));
   },
 
   async article(params: { country: string; slug: string; revalidate?: number }) {
@@ -82,7 +88,7 @@ export const WPR = {
       revalidate,
       tags: [tag.article(slug)],
     });
-    return raw?.[0] ? mapEmbedded(raw[0]) : null;
+    return raw?.[0] ? mapEmbedded(country, raw[0]) : null;
   },
 
   async latest(params: { country: string; limit?: number; revalidate?: number }) {
@@ -95,23 +101,27 @@ export const WPR = {
       revalidate,
       tags: [tag.list(country)],
     });
-    return raw.map(mapEmbedded);
+    return raw.map(p => mapEmbedded(country, p));
   },
 
   async related(params: { country: string; slug: string; revalidate?: number; limit?: number }) {
     const { country, slug, revalidate = 300, limit = 5 } = params;
     const article = await WPR.article({ country, slug, revalidate });
-    if (!article?.categories?.length) return [] as WPPost[];
+    if (!article?.categorySlugs?.length) return [] as Article[];
     const base = wpRestBase(country);
     const u = new URL(`${base}/posts`);
     u.searchParams.set('per_page', String(limit));
     u.searchParams.set('_embed', 'true');
-    u.searchParams.set('categories', String(article.categories[0]));
+    const firstCat = article.categorySlugs[0];
+    if (firstCat) {
+      const cid = await categoryIdBySlug(country, firstCat);
+      if (cid) u.searchParams.set('categories', String(cid));
+    }
     u.searchParams.set('exclude', String(article.id));
     const raw = await jfetch<any[]>(u.toString(), {
       revalidate,
       tags: [tag.list(country)],
     });
-    return raw.map(mapEmbedded);
+    return raw.map(p => mapEmbedded(country, p));
   },
 };

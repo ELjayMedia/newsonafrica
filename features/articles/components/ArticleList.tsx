@@ -1,7 +1,8 @@
-import { ArticleCard, type ArticleCardPost } from './ArticleCard';
+import { ArticleCard } from './ArticleCard';
+import type { Article } from '@/features/articles/schema';
 
 interface ArticleListProps {
-  posts: ArticleCardPost[];
+  posts: Article[];
   as?: 'ol' | 'ul';
 }
 
