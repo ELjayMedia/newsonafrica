@@ -27,6 +27,7 @@ import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 
 import './globals.css';
 import '@/styles/prose.css';
+import '@/styles/tokens.css';
 
 // Load Inter font from Google Fonts
 const inter = Inter({

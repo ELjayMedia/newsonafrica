@@ -1,6 +1,26 @@
-/* Additional typography styles */
+/* Article typography defaults */
 
 .prose {
-  @apply prose prose-slate dark:prose-invert;
+  @apply prose prose-slate dark:prose-invert max-w-none;
+}
+
+.prose :where(p):not(:where([class~="not-prose"] *)) {
+  @apply leading-relaxed;
+}
+
+.prose :where(h1, h2, h3, h4):not(:where([class~="not-prose"] *)) {
+  @apply scroll-m-20 font-bold tracking-tight;
+}
+
+.prose :where(ul, ol):not(:where([class~="not-prose"] *)) {
+  @apply my-6 ml-6 list-disc;
+}
+
+.prose :where(blockquote):not(:where([class~="not-prose"] *)) {
+  @apply border-l-4 pl-4 italic;
+}
+
+.prose figcaption {
+  @apply mt-2 text-sm text-muted-foreground;
 }
 
