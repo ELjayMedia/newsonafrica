@@ -5,10 +5,11 @@ export const metadata = {
   description: "Sign in or create an account to access personalized features on News on Africa",
 }
 
-export default function AuthPage({
+export default async function AuthPage({
   searchParams,
 }: {
-  searchParams: { redirectTo?: string; error?: string }
+  searchParams: Promise<{ redirectTo?: string; error?: string }>
 }) {
-  return <AuthPageClient searchParams={searchParams} />
+  const params = await searchParams
+  return <AuthPageClient searchParams={params} />
 }
