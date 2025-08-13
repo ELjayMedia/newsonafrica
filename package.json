@@ -9,7 +9,7 @@
     "ci:verify": "pnpm -v && node -v",
     "clean": "rimraf .next out node_modules && pnpm store prune",
     "dev": "next dev",
-    "lint": "next lint",
+    "lint": "eslint .",
     "prepare": "husky install",
     "start": "next start",
     "test": "vitest run",
