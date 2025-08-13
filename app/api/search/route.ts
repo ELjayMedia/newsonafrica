@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
+import { getSuggestions } from "@/lib/suggestion-index"
 
 // WordPress API configuration
 const WORDPRESS_API_URL = WORDPRESS_REST_API_URL
@@ -89,47 +90,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
   }
 }
 
-// Get search suggestions from WordPress
-async function getSearchSuggestions(query: string): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "NewsOnAfrica/1.0",
-        },
-      },
-    )
-
-    if (!response.ok) {
-      return []
-    }
-
-    const posts = await response.json()
-    const suggestions = new Set<string>()
-
-    posts.forEach((post: any) => {
-      // Extract words from titles
-      const titleWords = post.title.rendered
-        .toLowerCase()
-        .replace(/[^\w\s]/g, " ")
-        .split(/\s+/)
-        .filter((word: string) => word.length > 2 && word.includes(query.toLowerCase()))
-
-      titleWords.forEach((word: string) => {
-        if (suggestions.size < 8) {
-          suggestions.add(word)
-        }
-      })
-    })
-
-    return Array.from(suggestions)
-  } catch (error) {
-    console.error("Error getting suggestions:", error)
-    return []
-  }
-}
+// Suggestions are served from a prebuilt index
 
 // Fallback search data
 const FALLBACK_POSTS = [
@@ -201,12 +162,13 @@ export async function GET(request: NextRequest) {
     // Handle suggestions request
     if (suggestions) {
       try {
-        const suggestionResults = await getSearchSuggestions(queryParam)
+        const { suggestions: suggestionResults, cacheHit } = await getSuggestions(queryParam)
         return NextResponse.json({
           suggestions: suggestionResults,
           performance: {
             responseTime: Date.now() - startTime,
-            source: "wordpress-suggestions",
+            source: "suggestion-index",
+            cacheHit,
           },
         })
       } catch (error) {
