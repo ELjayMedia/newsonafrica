@@ -6,6 +6,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env
+data/search-index.json
+tsconfig.tsbuildinfo
 
 # macOS
 .DS_Store
