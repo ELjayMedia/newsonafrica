@@ -8,7 +8,7 @@ import {
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
-} from '@/lib/graphql/queries';
+} from '@/graphql/queries';
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
