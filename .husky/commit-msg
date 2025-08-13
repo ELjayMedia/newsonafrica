@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname "$0")/_/husky.sh"
 
-ESLINT_USE_FLAT_CONFIG=false pnpm lint-staged
+pnpm commitlint --edit "$1"
