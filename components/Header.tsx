@@ -1,43 +1,44 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
-import Image from "next/image"
-import { useUser } from "@/contexts/UserContext"
-import { WeatherWidget } from "@/components/WeatherWidget"
-import ErrorBoundary from "@/components/ErrorBoundary"
-import { SearchBox } from "@/components/SearchBox"
-import { SocialLinks } from "@/components/SocialLinks"
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { SearchBox } from '@/components/SearchBox';
+import { SocialLinks } from '@/components/SocialLinks';
+import { WeatherWidget } from '@/components/WeatherWidget';
+import { useUser } from '@/contexts/UserContext';
 
 const categories = [
-  { name: "NEWS", href: "/category/news" },
-  { name: "BUSINESS", href: "/category/business" },
-  { name: "SPORT", href: "/category/sport" },
-  { name: "HEALTH", href: "/category/health" },
-  { name: "POLITICS", href: "/category/politics" },
-  { name: "OPINION", href: "/category/editorial" },
-  { name: "ENTERTAINMENT", href: "/category/entertainment" },
-  { name: "FOOD", href: "/category/food" },
-  { name: "SPECIAL PROJECTS", href: "/special-projects" },
-]
+  { name: 'NEWS', href: '/category/news' },
+  { name: 'BUSINESS', href: '/category/business' },
+  { name: 'SPORT', href: '/category/sport' },
+  { name: 'HEALTH', href: '/category/health' },
+  { name: 'POLITICS', href: '/category/politics' },
+  { name: 'OPINION', href: '/category/editorial' },
+  { name: 'ENTERTAINMENT', href: '/category/entertainment' },
+  { name: 'FOOD', href: '/category/food' },
+  { name: 'SPECIAL PROJECTS', href: '/special-projects' },
+];
 
 export function Header() {
-  const router = useRouter()
-  const { user, signOut } = useUser()
-  const pathname = usePathname()
-  const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+  const router = useRouter();
+  const { user, signOut } = useUser();
+  const pathname = usePathname();
+  const hideOnMobile = ['/bookmarks', '/profile', '/subscribe'].includes(pathname);
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  })
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+  });
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <header
         className={`bg-white mx-auto max-w-[980px] shadow-md z-10 ${
-          hideOnMobile ? "hidden md:block" : pathname === "/search" ? "hidden sm:block" : ""
+          hideOnMobile ? 'hidden md:block' : pathname === '/search' ? 'hidden sm:block' : ''
         }`}
       >
         <div className="w-full md:mx-auto -mb-4">
@@ -59,7 +60,9 @@ export function Header() {
                 <SearchBox
                   placeholder="Search"
                   className="w-[200px]"
-                  onSearch={(query) => router.push(`/search?q=${encodeURIComponent(query)}&source=wp`)}
+                  onSearch={(query) =>
+                    router.push(`/search?q=${encodeURIComponent(query)}&source=wp`)
+                  }
                   showSuggestions={false}
                   size="compact"
                 />
@@ -68,7 +71,7 @@ export function Header() {
               <SocialLinks />
 
               <div className="flex items-center gap-2 text-sm ml-4">
-                {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
+                {typeof WeatherWidget !== 'undefined' && <WeatherWidget />}
                 <div className="hidden md:flex flex-col items-start text-gray-600 text-sm">
                   <span>{currentDate}</span>
                 </div>
@@ -86,8 +89,8 @@ export function Header() {
                       href={category.href}
                       className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
                         pathname === category.href
-                          ? "text-blue-600 border-b-2 border-blue-600"
-                          : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                          ? 'text-blue-600 border-b-2 border-blue-600'
+                          : 'text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600'
                       }`}
                     >
                       {category.name}
@@ -100,5 +103,5 @@ export function Header() {
         </div>
       </header>
     </ErrorBoundary>
-  )
+  );
 }

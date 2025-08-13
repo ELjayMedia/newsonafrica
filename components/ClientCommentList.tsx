@@ -1,58 +1,59 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useUser } from "@/contexts/UserContext"
-import { Button } from "@/components/ui/button"
-import { Trash2, Reply, ThumbsUp } from "lucide-react"
-import { deleteComment } from "@/lib/wordpress-api"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Trash2, Reply, ThumbsUp } from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/contexts/UserContext';
+import { deleteComment } from '@/lib/wordpress-api';
 
 interface Comment {
-  id: number
-  author_name: string
-  content: { rendered: string }
-  date: string
-  status: string
+  id: number;
+  author_name: string;
+  content: { rendered: string };
+  date: string;
+  status: string;
 }
 
 interface ClientCommentListProps {
-  postId: number
-  initialComments: Comment[]
+  postId: number;
+  initialComments: Comment[];
 }
 
 export function ClientCommentList({ postId, initialComments }: ClientCommentListProps) {
-  const [comments, setComments] = useState<Comment[]>(initialComments)
-  const [error, setError] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState<number | null>(null)
-  const [showReplyForm, setShowReplyForm] = useState<number | null>(null)
-  const [replyText, setReplyText] = useState("")
-  const { user } = useUser()
+  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [showReplyForm, setShowReplyForm] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const { user } = useUser();
 
   const handleDeleteComment = async (commentId: number) => {
     try {
-      setIsDeleting(commentId)
-      await deleteComment(commentId)
-      setComments(comments.filter((comment) => comment.id !== commentId))
-      setIsDeleting(null)
+      setIsDeleting(commentId);
+      await deleteComment(commentId);
+      setComments(comments.filter((comment) => comment.id !== commentId));
+      setIsDeleting(null);
     } catch (error) {
-      console.error("Failed to delete comment:", error)
-      setError("Failed to delete comment. Please try again.")
-      setIsDeleting(null)
+      console.error('Failed to delete comment:', error);
+      setError('Failed to delete comment. Please try again.');
+      setIsDeleting(null);
     }
-  }
+  };
 
   const handleReply = (commentId: number) => {
-    setShowReplyForm(showReplyForm === commentId ? null : commentId)
-    setReplyText("")
-  }
+    setShowReplyForm(showReplyForm === commentId ? null : commentId);
+    setReplyText('');
+  };
 
   const submitReply = async (parentId: number) => {
     // Implementation for submitting reply would go here
     // This is a placeholder
-    console.log(`Replying to comment ${parentId}: ${replyText}`)
-    setShowReplyForm(null)
-    setReplyText("")
-  }
+    console.log(`Replying to comment ${parentId}: ${replyText}`);
+    setShowReplyForm(null);
+    setReplyText('');
+  };
 
   if (error) {
     return (
@@ -62,7 +63,7 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
           Dismiss
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -85,11 +86,11 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
                   <p className="font-semibold">{comment.author_name}</p>
                   <p className="text-sm text-gray-500">
                     {new Date(comment.date).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </p>
                 </div>
@@ -112,7 +113,12 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
                   </Button>
                 )}
 
-                <Button variant="ghost" size="sm" onClick={() => handleReply(comment.id)} aria-label="Reply to comment">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleReply(comment.id)}
+                  aria-label="Reply to comment"
+                >
                   <Reply className="h-4 w-4 mr-1" />
                   Reply
                 </Button>
@@ -142,7 +148,11 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
                   <Button variant="outline" size="sm" onClick={() => setShowReplyForm(null)}>
                     Cancel
                   </Button>
-                  <Button size="sm" onClick={() => submitReply(comment.id)} disabled={!replyText.trim()}>
+                  <Button
+                    size="sm"
+                    onClick={() => submitReply(comment.id)}
+                    disabled={!replyText.trim()}
+                  >
                     Submit Reply
                   </Button>
                 </div>
@@ -152,5 +162,5 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
         ))
       )}
     </div>
-  )
+  );
 }

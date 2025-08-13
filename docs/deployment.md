@@ -9,11 +9,13 @@ This project uses GitHub Actions for automated deployment of both web and mobile
 Add these secrets to your GitHub repository settings:
 
 #### Web Deployment (Vercel)
+
 - `VERCEL_TOKEN` - Your Vercel deployment token
 - `VERCEL_ORG_ID` - Your Vercel organization ID
 - `VERCEL_PROJECT_ID` - Your Vercel project ID
 
 #### Expo/Mobile Deployment
+
 - `EXPO_TOKEN` - Your Expo access token
 - `APPLE_ID` - Apple ID for iOS submissions
 - `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password for Apple ID
@@ -21,6 +23,7 @@ Add these secrets to your GitHub repository settings:
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
 
 #### Environment Variables
+
 - `NEXT_PUBLIC_WORDPRESS_API_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
@@ -43,27 +46,35 @@ Add these secrets to your GitHub repository settings:
 ### Manual Deployment
 
 #### Web
+
 \`\`\`bash
 npm run build
 vercel --prod
 \`\`\`
 
 #### Mobile
+
 \`\`\`bash
+
 # Install EAS CLI
+
 npm install -g @expo/eas-cli
 
 # Build for iOS
+
 eas build --platform ios
 
 # Build for Android
+
 eas build --platform android
 
 # Submit to stores
+
 eas submit --platform ios
 eas submit --platform android
 
 # Publish OTA update
+
 eas update --branch production
 \`\`\`
 

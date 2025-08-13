@@ -1,52 +1,55 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { getRelatedPostsCacheStats } from "@/lib/api/wordpress"
-import type { CacheStats } from "@/lib/cache/related-posts-cache"
+import { useState, useEffect } from 'react';
+
+import { getRelatedPostsCacheStats } from '@/lib/api/wordpress';
+import type { CacheStats } from '@/lib/cache/related-posts-cache';
 
 interface CacheMonitorProps {
-  showInProduction?: boolean
+  showInProduction?: boolean;
 }
 
 export function CacheMonitor({ showInProduction = false }: CacheMonitorProps) {
-  const [stats, setStats] = useState<(CacheStats & { hitRate: number; avgEntrySize: number }) | null>(null)
-  const [isVisible, setIsVisible] = useState(false)
+  const [stats, setStats] = useState<
+    (CacheStats & { hitRate: number; avgEntrySize: number }) | null
+  >(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Only show in development unless explicitly enabled for production
-  const shouldShow = showInProduction || process.env.NODE_ENV === "development"
+  const shouldShow = showInProduction || process.env.NODE_ENV === 'development';
 
   useEffect(() => {
-    if (!shouldShow) return
+    if (!shouldShow) return;
 
     const updateStats = () => {
       try {
-        const cacheStats = getRelatedPostsCacheStats()
-        setStats(cacheStats)
+        const cacheStats = getRelatedPostsCacheStats();
+        setStats(cacheStats);
       } catch (error) {
-        console.error("Failed to get cache stats:", error)
+        console.error('Failed to get cache stats:', error);
       }
-    }
+    };
 
     // Update stats immediately and then every 5 seconds
-    updateStats()
-    const interval = setInterval(updateStats, 5000)
+    updateStats();
+    const interval = setInterval(updateStats, 5000);
 
-    return () => clearInterval(interval)
-  }, [shouldShow])
+    return () => clearInterval(interval);
+  }, [shouldShow]);
 
-  if (!shouldShow || !stats) return null
+  if (!shouldShow || !stats) return null;
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 B"
-    const k = 1024
-    const sizes = ["B", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const formatPercentage = (value: number) => {
-    return (value * 100).toFixed(1) + "%"
-  }
+    return (value * 100).toFixed(1) + '%';
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -72,7 +75,9 @@ export function CacheMonitor({ showInProduction = false }: CacheMonitorProps) {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-300">Hit Rate:</span>
-              <span className="font-medium text-green-600 dark:text-green-400">{formatPercentage(stats.hitRate)}</span>
+              <span className="font-medium text-green-600 dark:text-green-400">
+                {formatPercentage(stats.hitRate)}
+              </span>
             </div>
 
             <div className="flex justify-between">
@@ -109,10 +114,12 @@ export function CacheMonitor({ showInProduction = false }: CacheMonitorProps) {
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-            <div className="text-xs text-gray-500 dark:text-gray-400">Cache updates every 5 seconds</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Cache updates every 5 seconds
+            </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

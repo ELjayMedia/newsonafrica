@@ -14,40 +14,52 @@ This guide will help you create an Android Trusted Web Activity (TWA) wrapper fo
 ### 1. Install Dependencies
 
 \`\`\`bash
+
 # Install Bubblewrap CLI globally
+
 npm install -g @bubblewrap/cli
 
 # Initialize Bubblewrap (downloads Android SDK)
+
 bubblewrap init
 \`\`\`
 
 ### 2. Generate Keystore
 
 \`\`\`bash
+
 # Make the script executable
+
 chmod +x generate-keystore.sh
 
 # Run the keystore generation
+
 ./generate-keystore.sh
 \`\`\`
 
 ### 3. Build the TWA
 
 \`\`\`bash
+
 # Make the setup script executable
+
 chmod +x setup-twa.sh
 
 # Run the setup
+
 ./setup-twa.sh
 \`\`\`
 
 ### 4. Build for Production
 
 \`\`\`bash
+
 # Make the build script executable
+
 chmod +x build-twa.sh
 
 # Build the signed AAB
+
 ./build-twa.sh
 \`\`\`
 
@@ -77,6 +89,7 @@ bubblewrap build
 ### 4. Generate AAB
 
 In Android Studio:
+
 1. Go to `Build` → `Generate Signed Bundle / APK`
 2. Select `Android App Bundle`
 3. Use the keystore you generated
@@ -88,6 +101,7 @@ In Android Studio:
 ### App Shortcuts
 
 The TWA includes three app shortcuts:
+
 - **Home**: Direct link to the homepage
 - **Explore**: Quick access to search functionality
 - **Bookmarks**: Direct access to saved articles
@@ -125,12 +139,12 @@ Add this to your PWA's `/.well-known/assetlinks.json`:
 
 \`\`\`json
 [{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.newsonafrica.twa",
-    "sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
-  }
+"relation": ["delegate_permission/common.handle_all_urls"],
+"target": {
+"namespace": "android_app",
+"package_name": "com.newsonafrica.twa",
+"sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
+}
 }]
 \`\`\`
 
@@ -157,9 +171,10 @@ keytool -list -v -keystore android.keystore -alias android
 ## Support
 
 For issues with:
+
 - **Bubblewrap**: Check the [official documentation](https://github.com/GoogleChromeLabs/bubblewrap)
 - **Android Development**: Refer to [Android Developer Docs](https://developer.android.com/)
 - **Play Store**: Visit [Play Console Help](https://support.google.com/googleplay/android-developer/)
-\`\`\`
+  \`\`\`
 
 Finally, let's create a validation script:

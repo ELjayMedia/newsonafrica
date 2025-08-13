@@ -1,5 +1,6 @@
-import { cache } from "react"
-import { fetchCategoryPosts } from "./wordpress-api"
+import { cache } from 'react';
+
+import { fetchCategoryPosts } from './wordpress-api';
 
 // GraphQL query to fetch posts from both 'sport' and 'sports' categories
 const SPORTS_QUERY = `
@@ -77,21 +78,21 @@ const SPORTS_QUERY = `
       }
     }
   }
-`
+`;
 
 export const fetchSportPosts = cache(async (count = 5) => {
   try {
     // Try to fetch posts from the "sport" category
-    let posts = await fetchCategoryPosts("sport", count)
+    let posts = await fetchCategoryPosts('sport', count);
 
     // If no posts found, try the "sports" category (plural)
     if (!posts || posts.length === 0) {
-      posts = await fetchCategoryPosts("sports", count)
+      posts = await fetchCategoryPosts('sports', count);
     }
 
-    return posts || []
+    return posts || [];
   } catch (error) {
-    console.error("Error fetching sport posts:", error)
-    return []
+    console.error('Error fetching sport posts:', error);
+    return [];
   }
-})
+});

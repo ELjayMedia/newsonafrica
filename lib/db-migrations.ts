@@ -1,18 +1,18 @@
-import { createAdminClient } from "./supabase"
+import { createAdminClient } from './supabase';
 
 export type Migration = {
-  id: string
-  name: string
-  sql: string
-  description?: string
-}
+  id: string;
+  name: string;
+  sql: string;
+  description?: string;
+};
 
 // List of all migrations
 export const migrations: Migration[] = [
   {
-    id: "001_initial_schema",
-    name: "Initial Schema",
-    description: "Creates the initial database schema",
+    id: '001_initial_schema',
+    name: 'Initial Schema',
+    description: 'Creates the initial database schema',
     sql: `
       -- Create profiles table if it doesn't exist
       CREATE TABLE IF NOT EXISTS public.profiles (
@@ -57,9 +57,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "002_bookmarks",
-    name: "Bookmarks",
-    description: "Creates the bookmarks table",
+    id: '002_bookmarks',
+    name: 'Bookmarks',
+    description: 'Creates the bookmarks table',
     sql: `
       -- Create bookmarks table
       CREATE TABLE IF NOT EXISTS public.bookmarks (
@@ -109,9 +109,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "003_comments",
-    name: "Comments",
-    description: "Creates the comments table",
+    id: '003_comments',
+    name: 'Comments',
+    description: 'Creates the comments table',
     sql: `
       -- Create comments table
       CREATE TABLE IF NOT EXISTS public.comments (
@@ -176,9 +176,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "004_comment_reactions",
-    name: "Comment Reactions",
-    description: "Creates the comment reactions table",
+    id: '004_comment_reactions',
+    name: 'Comment Reactions',
+    description: 'Creates the comment reactions table',
     sql: `
       -- Create comment_reactions table
       CREATE TABLE IF NOT EXISTS public.comment_reactions (
@@ -256,9 +256,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "005_notifications",
-    name: "Notifications",
-    description: "Creates the notifications table",
+    id: '005_notifications',
+    name: 'Notifications',
+    description: 'Creates the notifications table',
     sql: `
       -- Create notifications table
       CREATE TABLE IF NOT EXISTS public.notifications (
@@ -314,9 +314,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "006_user_settings",
-    name: "User Settings",
-    description: "Creates the user settings table",
+    id: '006_user_settings',
+    name: 'User Settings',
+    description: 'Creates the user settings table',
     sql: `
       -- Create user_settings table
       CREATE TABLE IF NOT EXISTS public.user_settings (
@@ -378,9 +378,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "007_performance_optimizations",
-    name: "Performance Optimizations",
-    description: "Adds performance optimizations",
+    id: '007_performance_optimizations',
+    name: 'Performance Optimizations',
+    description: 'Adds performance optimizations',
     sql: `
       -- Add indexes for common queries
       CREATE INDEX IF NOT EXISTS profiles_username_idx ON public.profiles(username);
@@ -433,9 +433,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "008_bookmark_collections",
-    name: "Bookmark Collections",
-    description: "Creates bookmark collections table and links bookmarks",
+    id: '008_bookmark_collections',
+    name: 'Bookmark Collections',
+    description: 'Creates bookmark collections table and links bookmarks',
     sql: `
       -- Create bookmark collections table
       CREATE TABLE IF NOT EXISTS public.bookmark_collections (
@@ -490,9 +490,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "009_subscriptions_table",
-    name: "Subscriptions Table",
-    description: "Creates subscriptions table with paystack support",
+    id: '009_subscriptions_table',
+    name: 'Subscriptions Table',
+    description: 'Creates subscriptions table with paystack support',
     sql: `
       -- Recreate subscriptions table
       DROP TABLE IF EXISTS public.subscriptions;
@@ -545,9 +545,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "010_plans_table",
-    name: "Plans Table",
-    description: "Creates plans table for subscription offerings",
+    id: '010_plans_table',
+    name: 'Plans Table',
+    description: 'Creates plans table for subscription offerings',
     sql: `
       -- Create plans table
       CREATE TABLE IF NOT EXISTS public.plans (
@@ -577,9 +577,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "011_payments_table",
-    name: "Payments Table",
-    description: "Creates payments table linked to subscriptions",
+    id: '011_payments_table',
+    name: 'Payments Table',
+    description: 'Creates payments table linked to subscriptions',
     sql: `
       -- Recreate payments table
       DROP TABLE IF EXISTS public.payments;
@@ -620,9 +620,9 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "012_read_history",
-    name: "Read History",
-    description: "Creates read history table",
+    id: '012_read_history',
+    name: 'Read History',
+    description: 'Creates read history table',
     sql: `
       -- Create read_history table
       CREATE TABLE IF NOT EXISTS public.read_history (
@@ -668,162 +668,164 @@ export const migrations: Migration[] = [
       $$;
     `,
   },
-]
+];
 
 // Function to apply a single migration
 export async function applyMigration(migration: Migration, userId?: string) {
-  const supabase = createAdminClient()
+  const supabase = createAdminClient();
 
   try {
     // Check if migration has already been applied
     const { data: existingMigration, error: checkError } = await supabase
-      .from("migrations")
-      .select("id")
-      .eq("id", migration.id)
-      .maybeSingle()
+      .from('migrations')
+      .select('id')
+      .eq('id', migration.id)
+      .maybeSingle();
 
     if (checkError) {
-      console.error(`Error checking migration ${migration.id}:`, checkError)
-      throw checkError
+      console.error(`Error checking migration ${migration.id}:`, checkError);
+      throw checkError;
     }
 
     // If migration already exists, skip it
     if (existingMigration) {
-      console.log(`Migration ${migration.id} already applied, skipping`)
-      return { success: true, skipped: true }
+      console.log(`Migration ${migration.id} already applied, skipping`);
+      return { success: true, skipped: true };
     }
 
     // Apply the migration
-    const { error: sqlError } = await supabase.rpc("exec_sql", { sql: migration.sql })
+    const { error: sqlError } = await supabase.rpc('exec_sql', { sql: migration.sql });
 
     if (sqlError) {
-      console.error(`Error applying migration ${migration.id}:`, sqlError)
-      throw sqlError
+      console.error(`Error applying migration ${migration.id}:`, sqlError);
+      throw sqlError;
     }
 
     // Record the migration
-    const { error: recordError } = await supabase.from("migrations").insert({
+    const { error: recordError } = await supabase.from('migrations').insert({
       id: migration.id,
       name: migration.name,
       applied_by: userId,
-    })
+    });
 
     if (recordError) {
-      console.error(`Error recording migration ${migration.id}:`, recordError)
-      throw recordError
+      console.error(`Error recording migration ${migration.id}:`, recordError);
+      throw recordError;
     }
 
-    console.log(`Successfully applied migration ${migration.id}`)
-    return { success: true, skipped: false }
+    console.log(`Successfully applied migration ${migration.id}`);
+    return { success: true, skipped: false };
   } catch (error) {
-    console.error(`Failed to apply migration ${migration.id}:`, error)
-    throw error
+    console.error(`Failed to apply migration ${migration.id}:`, error);
+    throw error;
   }
 }
 
 // Function to apply all pending migrations
 export async function applyPendingMigrations(userId?: string) {
-  const supabase = createAdminClient()
-  const results: Record<string, { success: boolean; skipped: boolean; error?: any }> = {}
+  const supabase = createAdminClient();
+  const results: Record<string, { success: boolean; skipped: boolean; error?: any }> = {};
 
   try {
     // Check if migrations table exists
-    const { error: tableCheckError } = await supabase.from("migrations").select("id").limit(1)
+    const { error: tableCheckError } = await supabase.from('migrations').select('id').limit(1);
 
     // If migrations table doesn't exist, apply the first migration manually
-    if (tableCheckError && tableCheckError.code === "PGRST116") {
-      console.log("Migrations table doesn't exist, applying initial migration")
+    if (tableCheckError && tableCheckError.code === 'PGRST116') {
+      console.log("Migrations table doesn't exist, applying initial migration");
 
-      const initialMigration = migrations[0]
-      const { error: sqlError } = await supabase.rpc("exec_sql", { sql: initialMigration.sql })
+      const initialMigration = migrations[0];
+      const { error: sqlError } = await supabase.rpc('exec_sql', { sql: initialMigration.sql });
 
       if (sqlError) {
-        console.error(`Error applying initial migration:`, sqlError)
-        results[initialMigration.id] = { success: false, skipped: false, error: sqlError }
-        return results
+        console.error(`Error applying initial migration:`, sqlError);
+        results[initialMigration.id] = { success: false, skipped: false, error: sqlError };
+        return results;
       }
 
       // Record the migration
-      const { error: recordError } = await supabase.from("migrations").insert({
+      const { error: recordError } = await supabase.from('migrations').insert({
         id: initialMigration.id,
         name: initialMigration.name,
         applied_by: userId,
-      })
+      });
 
       if (recordError) {
-        console.error(`Error recording initial migration:`, recordError)
-        results[initialMigration.id] = { success: false, skipped: false, error: recordError }
-        return results
+        console.error(`Error recording initial migration:`, recordError);
+        results[initialMigration.id] = { success: false, skipped: false, error: recordError };
+        return results;
       }
 
-      results[initialMigration.id] = { success: true, skipped: false }
+      results[initialMigration.id] = { success: true, skipped: false };
     }
 
     // Get list of applied migrations
-    const { data: appliedMigrations, error: fetchError } = await supabase.from("migrations").select("id")
+    const { data: appliedMigrations, error: fetchError } = await supabase
+      .from('migrations')
+      .select('id');
 
     if (fetchError) {
-      console.error("Error fetching applied migrations:", fetchError)
-      throw fetchError
+      console.error('Error fetching applied migrations:', fetchError);
+      throw fetchError;
     }
 
-    const appliedMigrationIds = new Set((appliedMigrations || []).map((m) => m.id))
+    const appliedMigrationIds = new Set((appliedMigrations || []).map((m) => m.id));
 
     // Apply each pending migration in order
     for (const migration of migrations) {
       if (!appliedMigrationIds.has(migration.id)) {
         try {
-          const result = await applyMigration(migration, userId)
-          results[migration.id] = result
+          const result = await applyMigration(migration, userId);
+          results[migration.id] = result;
         } catch (error) {
-          results[migration.id] = { success: false, skipped: false, error }
+          results[migration.id] = { success: false, skipped: false, error };
           // Don't break on error, continue with next migration
-          console.error(`Error applying migration ${migration.id}, continuing with next`)
+          console.error(`Error applying migration ${migration.id}, continuing with next`);
         }
       } else {
-        results[migration.id] = { success: true, skipped: true }
+        results[migration.id] = { success: true, skipped: true };
       }
     }
 
-    return results
+    return results;
   } catch (error) {
-    console.error("Error applying migrations:", error)
-    throw error
+    console.error('Error applying migrations:', error);
+    throw error;
   }
 }
 
 // Function to get migration status
 export async function getMigrationStatus() {
-  const supabase = createAdminClient()
+  const supabase = createAdminClient();
 
   try {
     // Check if migrations table exists
-    const { error: tableCheckError } = await supabase.from("migrations").select("id").limit(1)
+    const { error: tableCheckError } = await supabase.from('migrations').select('id').limit(1);
 
     // If migrations table doesn't exist, return empty list
-    if (tableCheckError && tableCheckError.code === "PGRST116") {
+    if (tableCheckError && tableCheckError.code === 'PGRST116') {
       return {
         applied: [],
         pending: migrations.map((m) => m.id),
         total: migrations.length,
         appliedCount: 0,
         pendingCount: migrations.length,
-      }
+      };
     }
 
     // Get list of applied migrations
     const { data: appliedMigrations, error: fetchError } = await supabase
-      .from("migrations")
-      .select("id, name, applied_at, applied_by")
-      .order("applied_at", { ascending: true })
+      .from('migrations')
+      .select('id, name, applied_at, applied_by')
+      .order('applied_at', { ascending: true });
 
     if (fetchError) {
-      console.error("Error fetching applied migrations:", fetchError)
-      throw fetchError
+      console.error('Error fetching applied migrations:', fetchError);
+      throw fetchError;
     }
 
-    const appliedMigrationIds = new Set((appliedMigrations || []).map((m) => m.id))
-    const pendingMigrations = migrations.filter((m) => !appliedMigrationIds.has(m.id))
+    const appliedMigrationIds = new Set((appliedMigrations || []).map((m) => m.id));
+    const pendingMigrations = migrations.filter((m) => !appliedMigrationIds.has(m.id));
 
     return {
       applied: appliedMigrations || [],
@@ -831,20 +833,20 @@ export async function getMigrationStatus() {
       total: migrations.length,
       appliedCount: appliedMigrations?.length || 0,
       pendingCount: pendingMigrations.length,
-    }
+    };
   } catch (error) {
-    console.error("Error getting migration status:", error)
-    throw error
+    console.error('Error getting migration status:', error);
+    throw error;
   }
 }
 
 // Function to create the exec_sql function if it doesn't exist
 export async function createExecSqlFunction() {
-  const supabase = createAdminClient()
+  const supabase = createAdminClient();
 
   try {
     // Create the exec_sql function
-    const { error } = await supabase.rpc("exec_sql", {
+    const { error } = await supabase.rpc('exec_sql', {
       sql: `
         CREATE OR REPLACE FUNCTION exec_sql(sql text)
         RETURNS void AS $$
@@ -853,28 +855,31 @@ export async function createExecSqlFunction() {
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
       `,
-    })
+    });
 
     if (error) {
       // If the function doesn't exist yet, create it directly
-      if (error.message.includes("function exec_sql(text) does not exist")) {
-        const { error: directError } = await supabase.from("_rpc").select("*").eq("name", "exec_sql")
+      if (error.message.includes('function exec_sql(text) does not exist')) {
+        const { error: directError } = await supabase
+          .from('_rpc')
+          .select('*')
+          .eq('name', 'exec_sql');
 
         if (directError) {
-          console.error("Error creating exec_sql function:", directError)
-          throw directError
+          console.error('Error creating exec_sql function:', directError);
+          throw directError;
         }
 
-        return { success: true }
+        return { success: true };
       }
 
-      console.error("Error creating exec_sql function:", error)
-      throw error
+      console.error('Error creating exec_sql function:', error);
+      throw error;
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error("Error creating exec_sql function:", error)
-    throw error
+    console.error('Error creating exec_sql function:', error);
+    throw error;
   }
 }

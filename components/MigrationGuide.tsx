@@ -1,19 +1,20 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Copy, Check } from "lucide-react"
-import { COMMENT_SYSTEM_MIGRATION } from "@/lib/supabase-migrations"
+import { AlertCircle, Copy, Check } from 'lucide-react';
+import { useState } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { COMMENT_SYSTEM_MIGRATION } from '@/lib/supabase-migrations';
 
 export function MigrationGuide() {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(COMMENT_SYSTEM_MIGRATION)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    navigator.clipboard.writeText(COMMENT_SYSTEM_MIGRATION);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-4">
@@ -22,8 +23,8 @@ export function MigrationGuide() {
         <AlertDescription>
           <p className="font-medium">Database Migration Required</p>
           <p className="text-sm mt-1">
-            The enhanced comment system requires a database update. Please run the following SQL in your Supabase SQL
-            Editor:
+            The enhanced comment system requires a database update. Please run the following SQL in
+            your Supabase SQL Editor:
           </p>
         </AlertDescription>
       </Alert>
@@ -34,7 +35,7 @@ export function MigrationGuide() {
         </pre>
         <Button size="sm" variant="outline" className="absolute top-2 right-2" onClick={handleCopy}>
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
+          <span className="ml-1">{copied ? 'Copied' : 'Copy'}</span>
         </Button>
       </div>
 
@@ -49,5 +50,5 @@ export function MigrationGuide() {
         </ol>
       </div>
     </div>
-  )
+  );
 }

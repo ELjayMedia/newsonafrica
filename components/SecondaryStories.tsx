@@ -1,51 +1,55 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { Clock } from "lucide-react"
-import { memo, useMemo } from "react"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { Clock } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { memo, useMemo } from 'react';
+
+import { generateBlurDataURL } from '@/utils/lazyLoad';
 
 interface SecondaryStoriesProps {
   posts: Array<{
-    id: string
-    title: string
-    slug: string
-    date: string
+    id: string;
+    title: string;
+    slug: string;
+    date: string;
     featuredImage?: {
       node: {
-        sourceUrl: string
-      }
-    }
-  }>
-  layout?: "horizontal" | "vertical"
+        sourceUrl: string;
+      };
+    };
+  }>;
+  layout?: 'horizontal' | 'vertical';
 }
 
 const formatDate = (date: string) => {
-  const now = new Date()
-  const postDate = new Date(date)
-  const diffInHours = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60))
+  const now = new Date();
+  const postDate = new Date(date);
+  const diffInHours = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60));
   return diffInHours < 24
     ? `${diffInHours}h ago`
-    : postDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
+    : postDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
-export const SecondaryStories = memo(function SecondaryStories({ posts, layout = "vertical" }: SecondaryStoriesProps) {
+export const SecondaryStories = memo(function SecondaryStories({
+  posts,
+  layout = 'vertical',
+}: SecondaryStoriesProps) {
   const formattedPosts = useMemo(() => {
-    if (!posts?.length) return []
+    if (!posts?.length) return [];
 
     return posts.slice(0, 3).map((post) => ({
       ...post,
       formattedDate: formatDate(post.date),
       blurDataURL: generateBlurDataURL(400, 225),
-    }))
-  }, [posts])
+    }));
+  }, [posts]);
 
-  if (!posts?.length) return null
+  if (!posts?.length) return null;
 
   return (
     <div
-      className={`grid gap-2 md:gap-4 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-2 lg:grid-cols-3"}`}
+      className={`grid gap-2 md:gap-4 ${layout === 'horizontal' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-2 lg:grid-cols-3'}`}
     >
       {formattedPosts.map((post, index) => (
         <Link
@@ -55,22 +59,24 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
         >
           {post.featuredImage && (
             <div
-              className={`relative ${layout === "horizontal" ? "w-24 md:w-full h-20 md:h-auto md:aspect-video" : "w-full aspect-video"} overflow-hidden`}
+              className={`relative ${layout === 'horizontal' ? 'w-24 md:w-full h-20 md:h-auto md:aspect-video' : 'w-full aspect-video'} overflow-hidden`}
             >
               <Image
-                src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                src={post.featuredImage.node.sourceUrl || '/placeholder.svg'}
                 alt={post.title}
                 layout="fill"
                 objectFit="cover"
                 className="rounded-md transition-transform duration-300 group-hover:scale-105"
                 priority={index === 0}
-                loading={index === 0 ? "eager" : "lazy"}
+                loading={index === 0 ? 'eager' : 'lazy'}
                 placeholder="blur"
                 blurDataURL={post.blurDataURL}
               />
             </div>
           )}
-          <div className={`p-2 md:p-3 flex-1 flex flex-col ${layout === "horizontal" ? "ml-2 md:ml-0" : ""}`}>
+          <div
+            className={`p-2 md:p-3 flex-1 flex flex-col ${layout === 'horizontal' ? 'ml-2 md:ml-0' : ''}`}
+          >
             <h3 className="text-xs md:text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200">
               {post.title}
             </h3>
@@ -82,5 +88,5 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
         </Link>
       ))}
     </div>
-  )
-})
+  );
+});

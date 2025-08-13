@@ -1,15 +1,15 @@
-import React from "react"
-import Link from "next/link"
+import Link from 'next/link';
+import React from 'react';
 
-import { NewsGrid } from "@/components/NewsGrid"
-import type { CategoryConfig } from "@/config/homeConfig"
+import { NewsGrid } from '@/components/NewsGrid';
+import type { CategoryConfig } from '@/config/homeConfig';
 
 interface CategorySectionProps extends CategoryConfig {
-  posts: any[]
+  posts: any[];
 }
 
 export function CategorySection({ name, slug, layout, typeOverride, posts }: CategorySectionProps) {
-  if (posts.length === 0) return null
+  if (posts.length === 0) return null;
 
   return (
     <React.Fragment>
@@ -29,5 +29,5 @@ export function CategorySection({ name, slug, layout, typeOverride, posts }: Cat
         />
       </section>
     </React.Fragment>
-  )
+  );
 }

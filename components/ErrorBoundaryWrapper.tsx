@@ -1,12 +1,13 @@
-"use client"
+'use client';
 
-import ErrorBoundary from "./ErrorBoundary"
-import type { ReactNode } from "react"
+import type { ReactNode } from 'react';
+
+import ErrorBoundary from './ErrorBoundary';
 
 interface ErrorBoundaryWrapperProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function ErrorBoundaryWrapper({ children }: ErrorBoundaryWrapperProps) {
-  return <ErrorBoundary fallback={<div>Something went wrong</div>}>{children}</ErrorBoundary>
+  return <ErrorBoundary fallback={<div>Something went wrong</div>}>{children}</ErrorBoundary>;
 }

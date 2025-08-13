@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
-import { siteConfig } from "@/config/site"
+import { NextResponse } from 'next/server';
+
+import { siteConfig } from '@/config/site';
+import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from '@/lib/wordpress-api';
 
 export async function GET() {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || 'https://newsonafrica.com';
 
   try {
     // Fetch all necessary data in parallel
@@ -12,17 +13,17 @@ export async function GET() {
       fetchCategories(),
       fetchTags(),
       fetchAuthors(),
-    ])
+    ]);
 
     // Build the sitemap
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-`
+`;
 
     // Add posts
     posts.forEach((post) => {
-      const postDate = new Date(post.modified || post.date).toISOString()
+      const postDate = new Date(post.modified || post.date).toISOString();
 
       sitemap += `
   <url>
@@ -35,12 +36,12 @@ export async function GET() {
         ? `
     <image:image>
       <image:loc>${post.featuredImage.node.sourceUrl}</image:loc>
-      <image:title>${post.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</image:title>
+      <image:title>${post.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')}</image:title>
     </image:image>`
-        : ""
+        : ''
     }
-  </url>`
-    })
+  </url>`;
+    });
 
     // Add categories
     categories.forEach((category) => {
@@ -50,8 +51,8 @@ export async function GET() {
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
-  </url>`
-    })
+  </url>`;
+    });
 
     // Add tags
     tags.forEach((tag) => {
@@ -61,8 +62,8 @@ export async function GET() {
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>`
-    })
+  </url>`;
+    });
 
     // Add authors
     authors.forEach((author) => {
@@ -72,20 +73,20 @@ export async function GET() {
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>`
-    })
+  </url>`;
+    });
 
     sitemap += `
-</urlset>`
+</urlset>`;
 
     return new NextResponse(sitemap, {
       headers: {
-        "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        'Content-Type': 'application/xml',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
-    })
+    });
   } catch (error) {
-    console.error("Error generating server sitemap:", error)
-    return new NextResponse("Error generating server sitemap", { status: 500 })
+    console.error('Error generating server sitemap:', error);
+    return new NextResponse('Error generating server sitemap', { status: 500 });
   }
 }

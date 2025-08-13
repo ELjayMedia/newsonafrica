@@ -1,22 +1,22 @@
-import Image from "next/image"
-import Link from "next/link"
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface FeaturedStoryProps {
   post: {
-    title: string
-    excerpt: string
-    slug: string
+    title: string;
+    excerpt: string;
+    slug: string;
     featuredImage: {
       node: {
-        sourceUrl: string
-      }
-    }
-  }
+        sourceUrl: string;
+      };
+    };
+  };
 }
 
 export function FeaturedStory({ post }: FeaturedStoryProps) {
   if (!post) {
-    return null
+    return null;
   }
 
   return (
@@ -26,7 +26,8 @@ export function FeaturedStory({ post }: FeaturedStoryProps) {
           <div className="relative h-48 md:h-72 rounded-lg overflow-hidden">
             <Image
               src={
-                post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=600&width=800&query=featured news story"
+                post.featuredImage?.node?.sourceUrl ||
+                '/placeholder.svg?height=600&width=800&query=featured news story'
               }
               alt={post.title}
               fill
@@ -44,11 +45,13 @@ export function FeaturedStory({ post }: FeaturedStoryProps) {
               dangerouslySetInnerHTML={{ __html: post.excerpt }}
             />
             <div className="mt-4">
-              <span className="inline-block text-blue-600 font-medium group-hover:underline">Read full story</span>
+              <span className="inline-block text-blue-600 font-medium group-hover:underline">
+                Read full story
+              </span>
             </div>
           </div>
         </div>
       </Link>
     </article>
-  )
+  );
 }

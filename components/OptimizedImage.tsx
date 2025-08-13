@@ -1,53 +1,54 @@
-"use client"
+'use client';
 
-import { useState, useEffect, memo } from "react"
-import Image, { type ImageProps } from "next/image"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import Image, { type ImageProps } from 'next/image';
+import { useState, useEffect, memo } from 'react';
 
-interface OptimizedImageProps extends Omit<ImageProps, "onError"> {
-  fallbackSrc?: string
-  aspectRatio?: string
-  priority?: boolean
+import { generateBlurDataURL } from '@/utils/lazyLoad';
+
+interface OptimizedImageProps extends Omit<ImageProps, 'onError'> {
+  fallbackSrc?: string;
+  aspectRatio?: string;
+  priority?: boolean;
 }
 
 export const OptimizedImage = memo(function OptimizedImage({
   src,
   alt,
-  fallbackSrc = "/placeholder.svg",
+  fallbackSrc = '/placeholder.svg',
   blurDataURL,
-  aspectRatio = "16/9",
-  className = "",
+  aspectRatio = '16/9',
+  className = '',
   priority = false,
   ...props
 }: OptimizedImageProps) {
-  const [imgSrc, setImgSrc] = useState<string | null>(null)
-  const [error, setError] = useState(false)
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   // Defer image loading until component is mounted
   useEffect(() => {
-    setImgSrc(src)
-  }, [src])
+    setImgSrc(src);
+  }, [src]);
 
   // Generate blur data URL if not provided
-  const blur = blurDataURL || generateBlurDataURL(700, 475)
+  const blur = blurDataURL || generateBlurDataURL(700, 475);
 
   const handleError = () => {
     if (!error) {
-      setImgSrc(fallbackSrc)
-      setError(true)
+      setImgSrc(fallbackSrc);
+      setError(true);
     }
-  }
+  };
 
   // Don't render anything until we have a source
-  if (!imgSrc) return null
+  if (!imgSrc) return null;
 
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ aspectRatio }}>
       <Image
-        src={imgSrc || "/placeholder.svg"}
+        src={imgSrc || '/placeholder.svg'}
         alt={alt}
         fill
-        className={`object-cover transition-opacity duration-300 ${error ? "opacity-70" : ""}`}
+        className={`object-cover transition-opacity duration-300 ${error ? 'opacity-70' : ''}`}
         onError={handleError}
         placeholder="blur"
         blurDataURL={blur}
@@ -57,7 +58,7 @@ export const OptimizedImage = memo(function OptimizedImage({
         {...props}
       />
     </div>
-  )
-})
+  );
+});
 
-export default OptimizedImage
+export default OptimizedImage;

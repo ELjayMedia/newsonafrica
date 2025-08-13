@@ -1,9 +1,10 @@
-"use client"
+'use client';
 
-import { useQuery } from "@tanstack/react-query"
-import { fetchTaggedPosts } from "@/lib/wordpress-api"
-import { NewsGrid } from "@/components/NewsGrid"
-import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
+import { useQuery } from '@tanstack/react-query';
+
+import { NewsGrid } from '@/components/NewsGrid';
+import { NewsGridSkeleton } from '@/components/NewsGridSkeleton';
+import { fetchTaggedPosts } from '@/lib/wordpress-api';
 
 export function SpecialProjectsContent() {
   const {
@@ -11,13 +12,17 @@ export function SpecialProjectsContent() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["specialProjects"],
-    queryFn: () => fetchTaggedPosts("special-project", 10),
-  })
+    queryKey: ['specialProjects'],
+    queryFn: () => fetchTaggedPosts('special-project', 10),
+  });
 
-  if (isLoading) return <NewsGridSkeleton />
-  if (error) return <p className="text-center text-red-500">An error occurred while fetching special projects.</p>
-  if (!projects || projects.length === 0) return <p className="text-center">No special projects found.</p>
+  if (isLoading) return <NewsGridSkeleton />;
+  if (error)
+    return (
+      <p className="text-center text-red-500">An error occurred while fetching special projects.</p>
+    );
+  if (!projects || projects.length === 0)
+    return <p className="text-center">No special projects found.</p>;
 
   return (
     <div className="space-y-8">
@@ -26,5 +31,5 @@ export function SpecialProjectsContent() {
         <NewsGrid posts={projects} layout="vertical" />
       </section>
     </div>
-  )
+  );
 }

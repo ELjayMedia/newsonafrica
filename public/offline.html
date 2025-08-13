@@ -1,200 +1,215 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>You're Offline - News On Africa</title>
     <link rel="icon" href="/favicon.ico" />
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: #f5f5f5;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            padding: 2rem;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        header {
-            background-color: #000;
-            color: white;
-            padding: 1rem;
-            text-align: center;
-        }
-        main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            text-align: center;
-        }
-        .logo {
-            width: 150px;
-            height: auto;
-            margin-bottom: 2rem;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 1rem;
-        }
-        p {
-            color: #666;
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
-        }
-        .button {
-            display: inline-block;
-            background-color: #3b82f6;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        .button:hover {
-            background-color: #2563eb;
-        }
-        .icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #3b82f6;
-        }
-        .cached-content {
-            margin-top: 2rem;
-            width: 100%;
-            max-width: 800px;
-        }
-        .cached-title {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.5rem;
-        }
-        .cached-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            text-align: left;
-        }
-        .cached-item {
-            padding: 0.75rem;
-            border-bottom: 1px solid #eee;
-        }
-        .cached-item a {
-            color: #000;
-            text-decoration: none;
-        }
-        .cached-item a:hover {
-            text-decoration: underline;
-        }
-        footer {
-            padding: 1rem;
-            text-align: center;
-            font-size: 0.875rem;
-            color: #666;
-            background-color: #f0f0f0;
-        }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+          'Open Sans', 'Helvetica Neue', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f5f5f5;
+        text-align: center;
+      }
+      .container {
+        max-width: 600px;
+        padding: 2rem;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      header {
+        background-color: #000;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+      }
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+      }
+      .logo {
+        width: 150px;
+        height: auto;
+        margin-bottom: 2rem;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 1rem;
+      }
+      p {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+      }
+      .button {
+        display: inline-block;
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.2s;
+      }
+      .button:hover {
+        background-color: #2563eb;
+      }
+      .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #3b82f6;
+      }
+      .cached-content {
+        margin-top: 2rem;
+        width: 100%;
+        max-width: 800px;
+      }
+      .cached-title {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 0.5rem;
+      }
+      .cached-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+      }
+      .cached-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #eee;
+      }
+      .cached-item a {
+        color: #000;
+        text-decoration: none;
+      }
+      .cached-item a:hover {
+        text-decoration: underline;
+      }
+      footer {
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #666;
+        background-color: #f0f0f0;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="icon">📶</div>
-        <h1>You're Offline</h1>
-        <p>It looks like you've lost your internet connection. Please check your network settings and try again.</p>
-        <p>News On Africa requires an internet connection to show you the latest news and updates from across the continent.</p>
-        <a href="/" class="button">Try Again</a>
-        
-        <div class="cached-content" id="cached-content">
-            <h2 class="cached-title">Available Offline Content</h2>
-            <ul class="cached-list" id="cached-list">
-                <li class="cached-item">Loading cached content...</li>
-            </ul>
-        </div>
+      <div class="icon">📶</div>
+      <h1>You're Offline</h1>
+      <p>
+        It looks like you've lost your internet connection. Please check your network settings and
+        try again.
+      </p>
+      <p>
+        News On Africa requires an internet connection to show you the latest news and updates from
+        across the continent.
+      </p>
+      <a href="/" class="button">Try Again</a>
+
+      <div class="cached-content" id="cached-content">
+        <h2 class="cached-title">Available Offline Content</h2>
+        <ul class="cached-list" id="cached-list">
+          <li class="cached-item">Loading cached content...</li>
+        </ul>
+      </div>
     </div>
     <footer>
-        <p>&copy; 2023 News On Africa. All rights reserved.</p>
+      <p>&copy; 2023 News On Africa. All rights reserved.</p>
     </footer>
 
     <script>
-        // Check if we're online when the page loads
-        if (navigator.onLine) {
-            window.location.href = '/';
+      // Check if we're online when the page loads
+      if (navigator.onLine) {
+        window.location.href = '/';
+      }
+
+      // Check if we're back online
+      window.addEventListener('online', () => {
+        window.location.reload();
+      });
+
+      // Add event listener for the Try Again button
+      document.querySelector('.button').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.reload();
+      });
+
+      // Display cached pages
+      async function displayCachedPages() {
+        try {
+          const cache = await caches.open('news-on-africa-v1.0.1');
+          const cachedRequests = await cache.keys();
+          const cachedPages = cachedRequests.filter((request) => {
+            const url = new URL(request.url);
+            return (
+              url.origin === location.origin &&
+              !url.pathname.startsWith('/api/') &&
+              !url.pathname.includes('.') &&
+              url.pathname !== '/offline.html'
+            );
+          });
+
+          const cachedList = document.getElementById('cached-list');
+
+          if (cachedPages.length === 0) {
+            cachedList.innerHTML = '<li class="cached-item">No cached content available</li>';
+            return;
+          }
+
+          cachedList.innerHTML = cachedPages
+            .map((request) => {
+              const url = new URL(request.url);
+              let title = url.pathname;
+
+              // Format the pathname for display
+              if (title === '/') {
+                title = 'Home Page';
+              } else {
+                // Remove leading slash and replace remaining slashes with ' > '
+                title = title.substring(1).replace(/\//g, ' > ');
+                // Capitalize first letter of each word
+                title = title
+                  .split(' > ')
+                  .map((word) =>
+                    word
+                      .split('-')
+                      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                      .join(' '),
+                  )
+                  .join(' > ');
+              }
+
+              return `<li class="cached-item"><a href="${url.pathname}">${title}</a></li>`;
+            })
+            .join('');
+        } catch (error) {
+          console.error('Error displaying cached pages:', error);
+          document.getElementById('cached-list').innerHTML =
+            '<li class="cached-item">Error loading cached content</li>';
         }
+      }
 
-        // Check if we're back online
-        window.addEventListener('online', () => {
-            window.location.reload();
-        });
-        
-        // Add event listener for the Try Again button
-        document.querySelector('.button').addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.reload();
-        });
-
-        // Display cached pages
-        async function displayCachedPages() {
-            try {
-                const cache = await caches.open('news-on-africa-v1.0.1');
-                const cachedRequests = await cache.keys();
-                const cachedPages = cachedRequests.filter(request => {
-                    const url = new URL(request.url);
-                    return url.origin === location.origin && 
-                           !url.pathname.startsWith('/api/') && 
-                           !url.pathname.includes('.') &&
-                           url.pathname !== '/offline.html';
-                });
-
-                const cachedList = document.getElementById('cached-list');
-                
-                if (cachedPages.length === 0) {
-                    cachedList.innerHTML = '<li class="cached-item">No cached content available</li>';
-                    return;
-                }
-
-                cachedList.innerHTML = cachedPages.map(request => {
-                    const url = new URL(request.url);
-                    let title = url.pathname;
-                    
-                    // Format the pathname for display
-                    if (title === '/') {
-                        title = 'Home Page';
-                    } else {
-                        // Remove leading slash and replace remaining slashes with ' > '
-                        title = title.substring(1).replace(/\//g, ' > ');
-                        // Capitalize first letter of each word
-                        title = title.split(' > ').map(word => 
-                            word.split('-').map(part => 
-                                part.charAt(0).toUpperCase() + part.slice(1)
-                            ).join(' ')
-                        ).join(' > ');
-                    }
-                    
-                    return `<li class="cached-item"><a href="${url.pathname}">${title}</a></li>`;
-                }).join('');
-                
-            } catch (error) {
-                console.error('Error displaying cached pages:', error);
-                document.getElementById('cached-list').innerHTML = 
-                    '<li class="cached-item">Error loading cached content</li>';
-            }
-        }
-
-        // Run when the page loads
-        displayCachedPages();
+      // Run when the page loads
+      displayCachedPages();
     </script>
-</body>
+  </body>
 </html>

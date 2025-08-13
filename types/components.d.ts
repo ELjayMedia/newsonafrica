@@ -1,18 +1,19 @@
-import type { ReactNode } from "react"
-import type { Post, Category } from "./wordpress"
+import type { ReactNode } from 'react';
+
+import type { Post, Category } from './wordpress';
 
 /**
  * Common props shared across multiple components
  */
 export interface BaseComponentProps {
-  className?: string
+  className?: string;
 }
 
 /**
  * Props for components that can have children
  */
 export interface WithChildrenProps extends BaseComponentProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 /**
@@ -22,15 +23,15 @@ export interface AuthFormProps extends BaseComponentProps {
   /**
    * Initial mode of the form (login or register)
    */
-  initialMode?: "login" | "register"
+  initialMode?: 'login' | 'register';
   /**
    * Callback function when authentication is successful
    */
-  onSuccess?: () => void
+  onSuccess?: () => void;
   /**
    * Callback function when authentication fails
    */
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -40,31 +41,31 @@ export interface PostListProps extends BaseComponentProps {
   /**
    * Array of posts to display
    */
-  posts: Post[]
+  posts: Post[];
   /**
    * Number of columns to display posts in
    */
-  columns?: 1 | 2 | 3 | 4
+  columns?: 1 | 2 | 3 | 4;
   /**
    * Whether to show the featured image
    */
-  showFeaturedImage?: boolean
+  showFeaturedImage?: boolean;
   /**
    * Whether to show the excerpt
    */
-  showExcerpt?: boolean
+  showExcerpt?: boolean;
   /**
    * Whether to show the author
    */
-  showAuthor?: boolean
+  showAuthor?: boolean;
   /**
    * Whether to show the date
    */
-  showDate?: boolean
+  showDate?: boolean;
   /**
    * Whether to show the category
    */
-  showCategory?: boolean
+  showCategory?: boolean;
 }
 
 /**
@@ -74,15 +75,15 @@ export interface FeaturedStoryProps extends BaseComponentProps {
   /**
    * The post to display as featured
    */
-  post: Post
+  post: Post;
   /**
    * Whether to show the excerpt
    */
-  showExcerpt?: boolean
+  showExcerpt?: boolean;
   /**
    * Whether to use a large layout
    */
-  isLarge?: boolean
+  isLarge?: boolean;
 }
 
 /**
@@ -92,15 +93,15 @@ export interface CategoryMenuProps extends BaseComponentProps {
   /**
    * Array of categories to display
    */
-  categories: Category[]
+  categories: Category[];
   /**
    * Currently active category slug
    */
-  activeCategory?: string
+  activeCategory?: string;
   /**
    * Callback when a category is selected
    */
-  onCategorySelect?: (category: Category) => void
+  onCategorySelect?: (category: Category) => void;
 }
 
 /**
@@ -110,23 +111,23 @@ export interface CommentFormProps extends BaseComponentProps {
   /**
    * ID of the post to comment on
    */
-  postId: number | string
+  postId: number | string;
   /**
    * ID of the parent comment (for replies)
    */
-  parentId?: number | string
+  parentId?: number | string;
   /**
    * Callback when comment is submitted successfully
    */
-  onSuccess?: () => void
+  onSuccess?: () => void;
   /**
    * Whether the form is in reply mode
    */
-  isReply?: boolean
+  isReply?: boolean;
   /**
    * Callback to cancel reply mode
    */
-  onCancelReply?: () => void
+  onCancelReply?: () => void;
 }
 
 /**
@@ -136,18 +137,17 @@ export interface SearchFormProps extends BaseComponentProps {
   /**
    * Initial search query
    */
-  initialQuery?: string
+  initialQuery?: string;
   /**
    * Callback when search is submitted
    */
-  onSearch?: (query: string) => void
+  onSearch?: (query: string) => void;
   /**
    * Whether to show the search button
    */
-  showButton?: boolean
+  showButton?: boolean;
   /**
    * Placeholder text for the search input
    */
-  placeholder?: string
+  placeholder?: string;
 }
-

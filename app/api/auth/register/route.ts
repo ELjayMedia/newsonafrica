@@ -1,35 +1,36 @@
-import type { NextRequest } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
-import { z } from "zod"
-import { createProfile, ProfileServiceError } from "@/services/profile-service"
-import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 
-export const runtime = "nodejs"
+import { applyRateLimit, handleApiError, successResponse } from '@/lib/api-utils';
+import { createProfile, ProfileServiceError } from '@/services/profile-service';
+
+export const runtime = 'nodejs';
 
 // Input validation schema
 const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   username: z
     .string()
-    .min(3, "Username must be at least 3 characters")
-    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
-})
+    .min(3, 'Username must be at least 3 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+});
 
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 3, "REGISTER_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    const rateLimitResponse = await applyRateLimit(request, 3, 'REGISTER_API_CACHE_TOKEN');
+    if (rateLimitResponse) return rateLimitResponse;
 
-    const body = await request.json()
+    const body = await request.json();
 
     // Validate request body
-    const { email, password, username } = registerSchema.parse(body)
+    const { email, password, username } = registerSchema.parse(body);
 
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Create the user
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -40,10 +41,10 @@ export async function POST(request: NextRequest) {
           username,
         },
       },
-    })
+    });
 
     if (authError) {
-      return handleApiError(new Error(authError.message))
+      return handleApiError(new Error(authError.message));
     }
 
     // Create the profile
@@ -52,20 +53,20 @@ export async function POST(request: NextRequest) {
         await createProfile(authData.user.id, {
           username,
           email,
-        })
+        });
       } catch (error) {
         if (error instanceof ProfileServiceError) {
-          return handleApiError(error)
+          return handleApiError(error);
         }
-        throw error
+        throw error;
       }
     }
 
     return successResponse({
       user: authData.user,
       session: authData.session,
-    })
+    });
   } catch (error) {
-    return handleApiError(error)
+    return handleApiError(error);
   }
 }

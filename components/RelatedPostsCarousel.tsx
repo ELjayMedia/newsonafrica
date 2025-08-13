@@ -1,74 +1,77 @@
-"use client"
+'use client';
 
-import { useState, useRef, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState, useRef, useEffect } from 'react';
+
+import { cn } from '@/lib/utils';
 
 interface Post {
-  id: string
-  title: string
-  slug: string
-  date: string
-  excerpt?: string
+  id: string;
+  title: string;
+  slug: string;
+  date: string;
+  excerpt?: string;
   featuredImage?: {
     node: {
-      sourceUrl: string
-    }
-  }
+      sourceUrl: string;
+    };
+  };
 }
 
 interface RelatedPostsCarouselProps {
-  posts: Post[]
-  title?: string
-  loading?: boolean
-  className?: string
+  posts: Post[];
+  title?: string;
+  loading?: boolean;
+  className?: string;
 }
 
 export function RelatedPostsCarousel({
   posts,
-  title = "Related Articles",
+  title = 'Related Articles',
   loading = false,
   className,
 }: RelatedPostsCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Check scroll position to update navigation buttons
   const checkScrollPosition = () => {
-    if (!scrollContainerRef.current) return
+    if (!scrollContainerRef.current) return;
 
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-    setCanScrollLeft(scrollLeft > 0)
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
-  }
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+  };
 
   useEffect(() => {
-    checkScrollPosition()
-  }, [posts])
+    checkScrollPosition();
+  }, [posts]);
 
-  const scrollTo = (direction: "left" | "right") => {
-    if (!scrollContainerRef.current) return
+  const scrollTo = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
 
-    const container = scrollContainerRef.current
-    const cardWidth = 280 // Approximate card width including gap
-    const scrollAmount = cardWidth * 2 // Scroll 2 cards at a time
+    const container = scrollContainerRef.current;
+    const cardWidth = 280; // Approximate card width including gap
+    const scrollAmount = cardWidth * 2; // Scroll 2 cards at a time
 
     const newScrollLeft =
-      direction === "left" ? container.scrollLeft - scrollAmount : container.scrollLeft + scrollAmount
+      direction === 'left'
+        ? container.scrollLeft - scrollAmount
+        : container.scrollLeft + scrollAmount;
 
     container.scrollTo({
       left: newScrollLeft,
-      behavior: "smooth",
-    })
-  }
+      behavior: 'smooth',
+    });
+  };
 
   // Always show the section, even if loading or no posts
   return (
-    <section className={cn("my-8", className)}>
+    <section className={cn('my-8', className)}>
       <h2 className="text-2xl font-bold mb-6">{title}</h2>
 
       {loading ? (
@@ -91,7 +94,7 @@ export function RelatedPostsCarousel({
           {/* Navigation Buttons */}
           {canScrollLeft && (
             <button
-              onClick={() => scrollTo("left")}
+              onClick={() => scrollTo('left')}
               className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all duration-200 opacity-0 group-hover:opacity-100"
               aria-label="Scroll left"
             >
@@ -101,7 +104,7 @@ export function RelatedPostsCarousel({
 
           {canScrollRight && (
             <button
-              onClick={() => scrollTo("right")}
+              onClick={() => scrollTo('right')}
               className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all duration-200 opacity-0 group-hover:opacity-100"
               aria-label="Scroll right"
             >
@@ -115,20 +118,24 @@ export function RelatedPostsCarousel({
             className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
             onScroll={checkScrollPosition}
             style={{
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
             }}
           >
             {posts.map((post) => (
-              <Link key={post.id} href={`/post/${post.slug}`} className="flex-shrink-0 w-64 group/card">
+              <Link
+                key={post.id}
+                href={`/post/${post.slug}`}
+                className="flex-shrink-0 w-64 group/card"
+              >
                 <article className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 h-full">
                   {/* Image */}
                   <div className="relative aspect-[16/10] overflow-hidden">
                     <Image
                       src={
                         post.featuredImage?.node?.sourceUrl ||
-                        "/placeholder.svg?height=200&width=320&text=Related+Article" ||
-                        "/placeholder.svg"
+                        '/placeholder.svg?height=200&width=320&text=Related+Article' ||
+                        '/placeholder.svg'
                       }
                       alt={post.title}
                       fill
@@ -147,17 +154,17 @@ export function RelatedPostsCarousel({
 
                     {post.excerpt && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {post.excerpt.replace(/<[^>]*>/g, "").substring(0, 100)}...
+                        {post.excerpt.replace(/<[^>]*>/g, '').substring(0, 100)}...
                       </p>
                     )}
 
                     <div className="flex items-center text-xs text-gray-500">
                       <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
                       <time dateTime={post.date}>
-                        {new Date(post.date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
+                        {new Date(post.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
                         })}
                       </time>
                     </div>
@@ -174,8 +181,8 @@ export function RelatedPostsCarousel({
                 <div
                   key={index}
                   className={cn(
-                    "w-2 h-2 rounded-full transition-colors duration-200",
-                    Math.floor(currentIndex / 2) === index ? "bg-blue-600" : "bg-gray-300",
+                    'w-2 h-2 rounded-full transition-colors duration-200',
+                    Math.floor(currentIndex / 2) === index ? 'bg-blue-600' : 'bg-gray-300',
                   )}
                 />
               ))}
@@ -201,5 +208,5 @@ export function RelatedPostsCarousel({
         }
       `}</style>
     </section>
-  )
+  );
 }

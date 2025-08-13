@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import Script from "next/script"
+import Script from 'next/script';
 
 export function GoogleAnalyticsScript() {
   return (
@@ -19,5 +19,5 @@ export function GoogleAnalyticsScript() {
         `}
       </Script>
     </>
-  )
+  );
 }

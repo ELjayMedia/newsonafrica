@@ -1,9 +1,10 @@
-import { Skeleton } from "@/components/Skeleton"
-import { memo } from "react"
+import { memo } from 'react';
+
+import { Skeleton } from '@/components/Skeleton';
 
 export const PostSkeleton = memo(function PostSkeleton() {
   // Create an array of delays for staggered animation effect
-  const getStaggeredDelay = (index: number, baseDelay = 50) => index * baseDelay
+  const getStaggeredDelay = (index: number, baseDelay = 50) => index * baseDelay;
 
   return (
     <div className="max-w-3xl mx-auto px-1 sm:px-2 md:px-4">
@@ -29,20 +30,38 @@ export const PostSkeleton = memo(function PostSkeleton() {
       </div>
 
       {/* Featured image skeleton */}
-      <Skeleton className="w-full aspect-[16/9] mb-6" animation="shimmer" delay={getStaggeredDelay(9)} />
+      <Skeleton
+        className="w-full aspect-[16/9] mb-6"
+        animation="shimmer"
+        delay={getStaggeredDelay(9)}
+      />
 
       {/* Content skeleton - reduced number of elements */}
       <div className="space-y-4 mb-8">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-4 w-full" animation="shimmer" delay={getStaggeredDelay(i + 10)} />
+          <Skeleton
+            key={i}
+            className="h-4 w-full"
+            animation="shimmer"
+            delay={getStaggeredDelay(i + 10)}
+          />
         ))}
         <Skeleton className="h-4 w-3/4" animation="shimmer" delay={getStaggeredDelay(13)} />
 
         {/* Ad skeleton */}
-        <Skeleton className="h-[250px] w-full my-6" animation="shimmer" delay={getStaggeredDelay(14)} />
+        <Skeleton
+          className="h-[250px] w-full my-6"
+          animation="shimmer"
+          delay={getStaggeredDelay(14)}
+        />
 
         {Array.from({ length: 2 }).map((_, i) => (
-          <Skeleton key={i} className="h-4 w-full" animation="shimmer" delay={getStaggeredDelay(i + 15)} />
+          <Skeleton
+            key={i}
+            className="h-4 w-full"
+            animation="shimmer"
+            delay={getStaggeredDelay(i + 15)}
+          />
         ))}
         <Skeleton className="h-4 w-2/3" animation="shimmer" delay={getStaggeredDelay(17)} />
       </div>
@@ -68,15 +87,31 @@ export const PostSkeleton = memo(function PostSkeleton() {
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="p-4 bg-gray-50 rounded-lg">
               <div className="flex justify-between mb-2">
-                <Skeleton className="h-4 w-32" animation="shimmer" delay={getStaggeredDelay(i * 3 + 23)} />
-                <Skeleton className="h-4 w-16" animation="shimmer" delay={getStaggeredDelay(i * 3 + 24)} />
+                <Skeleton
+                  className="h-4 w-32"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i * 3 + 23)}
+                />
+                <Skeleton
+                  className="h-4 w-16"
+                  animation="shimmer"
+                  delay={getStaggeredDelay(i * 3 + 24)}
+                />
               </div>
-              <Skeleton className="h-4 w-full mb-1" animation="shimmer" delay={getStaggeredDelay(i * 3 + 25)} />
-              <Skeleton className="h-4 w-5/6" animation="shimmer" delay={getStaggeredDelay(i * 3 + 26)} />
+              <Skeleton
+                className="h-4 w-full mb-1"
+                animation="shimmer"
+                delay={getStaggeredDelay(i * 3 + 25)}
+              />
+              <Skeleton
+                className="h-4 w-5/6"
+                animation="shimmer"
+                delay={getStaggeredDelay(i * 3 + 26)}
+              />
             </div>
           ))}
         </div>
       </div>
     </div>
-  )
-})
+  );
+});

@@ -1,5 +1,5 @@
-import ClientDynamicReturnLink from "./ClientDynamicReturnLink"
+import ClientDynamicReturnLink from './ClientDynamicReturnLink';
 
 export default function DynamicSafeReturnLink() {
-  return <ClientDynamicReturnLink />
+  return <ClientDynamicReturnLink />;
 }

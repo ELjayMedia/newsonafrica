@@ -1,31 +1,26 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
-import { useEffect, useState } from "react"
-
-export default function GlobalErrorBoundary({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [hasError, setHasError] = useState(false)
+export default function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     // Add a global error handler
     const errorHandler = (event: ErrorEvent) => {
-      console.error("Global error caught:", event.error)
+      console.error('Global error caught:', event.error);
       // Prevent the error from showing in the console
-      event.preventDefault()
-      setHasError(true)
-    }
+      event.preventDefault();
+      setHasError(true);
+    };
 
-    window.addEventListener("error", errorHandler)
+    window.addEventListener('error', errorHandler);
 
     return () => {
-      window.removeEventListener("error", errorHandler)
-    }
-  }, [])
+      window.removeEventListener('error', errorHandler);
+    };
+  }, []);
 
   if (hasError) {
     return (
@@ -37,8 +32,8 @@ export default function GlobalErrorBoundary({
           </p>
           <button
             onClick={() => {
-              setHasError(false)
-              window.location.reload()
+              setHasError(false);
+              window.location.reload();
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
           >
@@ -46,8 +41,8 @@ export default function GlobalErrorBoundary({
           </button>
         </div>
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

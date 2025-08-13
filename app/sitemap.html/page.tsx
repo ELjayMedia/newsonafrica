@@ -1,11 +1,12 @@
-import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress-api"
-import Link from "next/link"
-import type { Metadata } from "next"
+import type { Metadata } from 'next';
+import Link from 'next/link';
+
+import { fetchCategories, fetchTags, fetchRecentPosts } from '@/lib/wordpress-api';
 
 export const metadata: Metadata = {
-  title: "Sitemap | News On Africa",
-  description: "Complete sitemap of News On Africa website",
-}
+  title: 'Sitemap | News On Africa',
+  description: 'Complete sitemap of News On Africa website',
+};
 
 export default async function SitemapPage() {
   // Fetch data
@@ -13,9 +14,9 @@ export default async function SitemapPage() {
     fetchCategories(),
     fetchTags(),
     fetchRecentPosts(50), // Get the 50 most recent posts
-  ])
+  ]);
 
-  const recentPosts = recentData.posts
+  const recentPosts = recentData.posts;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -137,5 +138,5 @@ export default async function SitemapPage() {
         </ul>
       </div>
     </div>
-  )
+  );
 }

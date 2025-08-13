@@ -1,30 +1,37 @@
-import { createServerClient } from "@supabase/ssr"
-import type { cookies } from "next/headers"
-import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/lib/migrations"
+import { createServerClient } from '@supabase/ssr';
+import type { cookies } from 'next/headers';
+
+import {
+  type Migration,
+  migrations,
+  generateChecksum,
+  sortMigrations,
+  compareVersions,
+} from '@/lib/migrations';
 
 export interface MigrationResult {
-  version: string
-  description: string
-  status: "success" | "error" | "skipped"
-  executionTime?: number
-  error?: string
+  version: string;
+  description: string;
+  status: 'success' | 'error' | 'skipped';
+  executionTime?: number;
+  error?: string;
 }
 
 export interface MigrationStatus {
-  currentVersion: string
-  availableVersion: string
-  pendingMigrations: string[]
+  currentVersion: string;
+  availableVersion: string;
+  pendingMigrations: string[];
   appliedMigrations: {
-    version: string
-    description: string
-    appliedAt: string
-    status: string
-  }[]
-  isUpToDate: boolean
+    version: string;
+    description: string;
+    appliedAt: string;
+    status: string;
+  }[];
+  isUpToDate: boolean;
 }
 
 export class MigrationService {
-  private supabase: ReturnType<typeof createServerClient>
+  private supabase: ReturnType<typeof createServerClient>;
 
   constructor(cookieStore: ReturnType<typeof cookies>) {
     this.supabase = createServerClient(
@@ -33,13 +40,13 @@ export class MigrationService {
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value
+            return cookieStore.get(name)?.value;
           },
           set() {},
           remove() {},
         },
       },
-    )
+    );
   }
 
   // Initialize the schema_versions table and functions
@@ -174,54 +181,56 @@ export class MigrationService {
           ORDER BY a.version;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
-      `
+      `;
 
       // Execute the SQL
-      const { error } = await this.supabase.rpc("exec_sql", { sql })
+      const { error } = await this.supabase.rpc('exec_sql', { sql });
 
       if (error) {
-        console.error("Error initializing schema versioning:", error)
-        return false
+        console.error('Error initializing schema versioning:', error);
+        return false;
       }
 
-      return true
+      return true;
     } catch (error) {
-      console.error("Error initializing schema versioning:", error)
-      return false
+      console.error('Error initializing schema versioning:', error);
+      return false;
     }
   }
 
   // Get the current schema version
   async getCurrentVersion(): Promise<string> {
     try {
-      const { data, error } = await this.supabase.rpc("get_current_schema_version")
+      const { data, error } = await this.supabase.rpc('get_current_schema_version');
 
       if (error) {
-        console.error("Error getting current schema version:", error)
-        return "0.0.0"
+        console.error('Error getting current schema version:', error);
+        return '0.0.0';
       }
 
-      return data || "0.0.0"
+      return data || '0.0.0';
     } catch (error) {
-      console.error("Error getting current schema version:", error)
-      return "0.0.0"
+      console.error('Error getting current schema version:', error);
+      return '0.0.0';
     }
   }
 
   // Check if a specific version has been applied
   async isVersionApplied(version: string): Promise<boolean> {
     try {
-      const { data, error } = await this.supabase.rpc("is_version_applied", { version_to_check: version })
+      const { data, error } = await this.supabase.rpc('is_version_applied', {
+        version_to_check: version,
+      });
 
       if (error) {
-        console.error(`Error checking if version ${version} is applied:`, error)
-        return false
+        console.error(`Error checking if version ${version} is applied:`, error);
+        return false;
       }
 
-      return data || false
+      return data || false;
     } catch (error) {
-      console.error(`Error checking if version ${version} is applied:`, error)
-      return false
+      console.error(`Error checking if version ${version} is applied:`, error);
+      return false;
     }
   }
 
@@ -229,52 +238,52 @@ export class MigrationService {
   async getAppliedMigrations(): Promise<any[]> {
     try {
       const { data, error } = await this.supabase
-        .from("schema_versions")
-        .select("*")
-        .order("applied_at", { ascending: false })
+        .from('schema_versions')
+        .select('*')
+        .order('applied_at', { ascending: false });
 
       if (error) {
-        console.error("Error getting applied migrations:", error)
-        return []
+        console.error('Error getting applied migrations:', error);
+        return [];
       }
 
-      return data || []
+      return data || [];
     } catch (error) {
-      console.error("Error getting applied migrations:", error)
-      return []
+      console.error('Error getting applied migrations:', error);
+      return [];
     }
   }
 
   // Get pending migrations
   async getPendingMigrations(): Promise<string[]> {
     try {
-      const availableVersions = migrations.map((m) => m.version)
+      const availableVersions = migrations.map((m) => m.version);
 
-      const { data, error } = await this.supabase.rpc("get_pending_migrations", {
+      const { data, error } = await this.supabase.rpc('get_pending_migrations', {
         available_versions: availableVersions,
-      })
+      });
 
       if (error) {
-        console.error("Error getting pending migrations:", error)
-        return []
+        console.error('Error getting pending migrations:', error);
+        return [];
       }
 
-      return data || []
+      return data || [];
     } catch (error) {
-      console.error("Error getting pending migrations:", error)
-      return []
+      console.error('Error getting pending migrations:', error);
+      return [];
     }
   }
 
   // Get migration status
   async getMigrationStatus(): Promise<MigrationStatus> {
-    const currentVersion = await this.getCurrentVersion()
-    const appliedMigrations = await this.getAppliedMigrations()
-    const pendingMigrations = await this.getPendingMigrations()
+    const currentVersion = await this.getCurrentVersion();
+    const appliedMigrations = await this.getAppliedMigrations();
+    const pendingMigrations = await this.getPendingMigrations();
 
     // Get the highest available version
-    const availableVersions = migrations.map((m) => m.version)
-    const availableVersion = availableVersions.sort((a, b) => compareVersions(b, a))[0] || "0.0.0"
+    const availableVersions = migrations.map((m) => m.version);
+    const availableVersion = availableVersions.sort((a, b) => compareVersions(b, a))[0] || '0.0.0';
 
     return {
       currentVersion,
@@ -287,97 +296,97 @@ export class MigrationService {
         status: m.status,
       })),
       isUpToDate: compareVersions(currentVersion, availableVersion) >= 0,
-    }
+    };
   }
 
   // Apply a single migration
   async applyMigration(migration: Migration, userId: string): Promise<MigrationResult> {
-    const startTime = Date.now()
+    const startTime = Date.now();
 
     try {
       // Check if migration has already been applied
-      const isApplied = await this.isVersionApplied(migration.version)
+      const isApplied = await this.isVersionApplied(migration.version);
 
       if (isApplied) {
         return {
           version: migration.version,
           description: migration.description,
-          status: "skipped",
-        }
+          status: 'skipped',
+        };
       }
 
       // Generate checksum
-      const checksum = generateChecksum(migration.sql)
+      const checksum = generateChecksum(migration.sql);
 
       // Execute the migration
-      const { error } = await this.supabase.rpc("exec_sql", { sql: migration.sql })
+      const { error } = await this.supabase.rpc('exec_sql', { sql: migration.sql });
 
       if (error) {
-        console.error(`Error applying migration ${migration.version}:`, error)
+        console.error(`Error applying migration ${migration.version}:`, error);
 
         // Register failed migration
-        await this.supabase.rpc("register_schema_version", {
+        await this.supabase.rpc('register_schema_version', {
           p_version: migration.version,
           p_description: migration.description,
           p_applied_by: userId,
           p_script_name: migration.scriptName,
           p_checksum: checksum,
           p_execution_time: Date.now() - startTime,
-          p_status: "error",
+          p_status: 'error',
           p_error_message: error.message,
-        })
+        });
 
         return {
           version: migration.version,
           description: migration.description,
-          status: "error",
+          status: 'error',
           executionTime: Date.now() - startTime,
           error: error.message,
-        }
+        };
       }
 
       // Register successful migration
-      await this.supabase.rpc("register_schema_version", {
+      await this.supabase.rpc('register_schema_version', {
         p_version: migration.version,
         p_description: migration.description,
         p_applied_by: userId,
         p_script_name: migration.scriptName,
         p_checksum: checksum,
         p_execution_time: Date.now() - startTime,
-        p_status: "success",
+        p_status: 'success',
         p_error_message: null,
-      })
+      });
 
       return {
         version: migration.version,
         description: migration.description,
-        status: "success",
+        status: 'success',
         executionTime: Date.now() - startTime,
-      }
+      };
     } catch (error: any) {
-      console.error(`Error applying migration ${migration.version}:`, error)
+      console.error(`Error applying migration ${migration.version}:`, error);
 
       // Register failed migration
       await this.supabase
-        .rpc("register_schema_version", {
+        .rpc('register_schema_version', {
           p_version: migration.version,
           p_description: migration.description,
           p_applied_by: userId,
           p_script_name: migration.scriptName,
           p_checksum: generateChecksum(migration.sql),
           p_execution_time: Date.now() - startTime,
-          p_status: "error",
-          p_error_message: error.message || "Unknown error",
+          p_status: 'error',
+          p_error_message: error.message || 'Unknown error',
         })
-        .catch((e: unknown) => console.error("Error registering failed migration:", e))
+        .catch((e: unknown) => console.error('Error registering failed migration:', e));
 
       return {
         version: migration.version,
         description: migration.description,
-        status: "error",
+        status: 'error',
         executionTime: Date.now() - startTime,
-        error: error.message || "Unknown error",
-      }
+        error: error.message || 'Unknown error',
+      };
     }
   }
 
@@ -385,40 +394,40 @@ export class MigrationService {
   async applyPendingMigrations(userId: string): Promise<MigrationResult[]> {
     try {
       // Initialize versioning if needed
-      await this.initializeVersioning()
+      await this.initializeVersioning();
 
       // Get pending migrations
-      const pendingVersions = await this.getPendingMigrations()
+      const pendingVersions = await this.getPendingMigrations();
 
       if (pendingVersions.length === 0) {
-        return []
+        return [];
       }
 
       // Get migration objects
       const pendingMigrations = pendingVersions
         .map((version) => migrations.find((m: Migration) => m.version === version))
-        .filter((m): m is Migration => m !== undefined)
+        .filter((m): m is Migration => m !== undefined);
 
       // Sort migrations based on dependencies
-      const sortedMigrations = sortMigrations(pendingMigrations)
+      const sortedMigrations = sortMigrations(pendingMigrations);
 
       // Apply migrations in order
-      const results: MigrationResult[] = []
+      const results: MigrationResult[] = [];
 
       for (const migration of sortedMigrations) {
-        const result = await this.applyMigration(migration, userId)
-        results.push(result)
+        const result = await this.applyMigration(migration, userId);
+        results.push(result);
 
         // Stop on error
-        if (result.status === "error") {
-          break
+        if (result.status === 'error') {
+          break;
         }
       }
 
-      return results
+      return results;
     } catch (error) {
-      console.error("Error applying pending migrations:", error)
-      throw error
+      console.error('Error applying pending migrations:', error);
+      throw error;
     }
   }
 }

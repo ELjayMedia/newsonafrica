@@ -1,5 +1,5 @@
-import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
+import { CategoryPageSkeleton } from '@/components/CategoryPageSkeleton';
 
 export default function CategoryLoading() {
-  return <CategoryPageSkeleton />
+  return <CategoryPageSkeleton />;
 }

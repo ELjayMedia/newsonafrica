@@ -1,54 +1,62 @@
-"use client"
+'use client';
 
-import type React from "react"
+import Image from 'next/image';
+import Link from 'next/link';
+import type React from 'react';
+import { useState } from 'react';
 
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import Image from "next/image"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function RegisterForm() {
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-  })
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState("")
+    username: '',
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Registration failed")
+        throw new Error(data.message || 'Registration failed');
       }
 
-      setSuccessMessage("Registration successful! Please check your email to activate your account.")
-      setFormData({ username: "", email: "", password: "" })
+      setSuccessMessage(
+        'Registration successful! Please check your email to activate your account.',
+      );
+      setFormData({ username: '', email: '', password: '' });
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex justify-center mb-6">
-        <Image src="/images/news-on-africa-logo.png" alt="News On Africa" width={200} height={80} priority />
+        <Image
+          src="/images/news-on-africa-logo.png"
+          alt="News On Africa"
+          width={200}
+          height={80}
+          priority
+        />
       </div>
 
       <div className="space-y-2">
@@ -88,7 +96,7 @@ export function RegisterForm() {
       {successMessage && <p className="text-green-500 text-sm">{successMessage}</p>}
 
       <Button type="submit" className="w-full bg-[#2271b1] hover:bg-[#135e96]" disabled={isLoading}>
-        {isLoading ? "Registering..." : "Register"}
+        {isLoading ? 'Registering...' : 'Register'}
       </Button>
 
       <div className="mt-6 text-center space-y-4">
@@ -100,5 +108,5 @@ export function RegisterForm() {
         </Link>
       </div>
     </form>
-  )
+  );
 }

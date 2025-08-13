@@ -1,10 +1,10 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 // Use a singleton pattern to ensure we only create one client instance
-let clientInstance: ReturnType<typeof createSupabaseClient> | null = null
+let clientInstance: ReturnType<typeof createSupabaseClient> | null = null;
 
 export const createClient = () => {
-  if (clientInstance) return clientInstance
+  if (clientInstance) return clientInstance;
 
   clientInstance = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,15 +14,15 @@ export const createClient = () => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "noa_supabase_auth",
+        storageKey: 'noa_supabase_auth',
       },
       global: {
         headers: {
-          "x-application-name": "news-on-africa",
+          'x-application-name': 'news-on-africa',
         },
       },
     },
-  )
+  );
 
-  return clientInstance
-}
+  return clientInstance;
+};

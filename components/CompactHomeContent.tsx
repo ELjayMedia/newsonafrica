@@ -1,17 +1,17 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react';
 
 interface Post {
-  id: number
-  title: { rendered: string }
-  link: string
-  date: string
+  id: number;
+  title: { rendered: string };
+  link: string;
+  date: string;
 }
 
 export default function CompactHomeContent() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -19,27 +19,27 @@ export default function CompactHomeContent() {
         const mockPosts: Post[] = [
           {
             id: 1,
-            title: { rendered: "Breaking: African Union Summit Updates" },
-            link: "/post/au-summit",
+            title: { rendered: 'Breaking: African Union Summit Updates' },
+            link: '/post/au-summit',
             date: new Date().toISOString(),
           },
           {
             id: 2,
-            title: { rendered: "Economic Growth Across West Africa" },
-            link: "/post/west-africa-economy",
+            title: { rendered: 'Economic Growth Across West Africa' },
+            link: '/post/west-africa-economy',
             date: new Date().toISOString(),
           },
-        ]
-        setPosts(mockPosts)
+        ];
+        setPosts(mockPosts);
       } catch (error) {
-        console.error("Error fetching posts:", error)
+        console.error('Error fetching posts:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchPosts()
-  }, [])
+    fetchPosts();
+  }, []);
 
   if (loading) {
     return (
@@ -51,7 +51,7 @@ export default function CompactHomeContent() {
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -65,10 +65,12 @@ export default function CompactHomeContent() {
                 {post.title.rendered}
               </a>
             </h3>
-            <time className="text-xs text-gray-500">{new Date(post.date).toLocaleDateString()}</time>
+            <time className="text-xs text-gray-500">
+              {new Date(post.date).toLocaleDateString()}
+            </time>
           </article>
         ))}
       </div>
     </div>
-  )
+  );
 }

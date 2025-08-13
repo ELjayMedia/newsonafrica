@@ -47,7 +47,7 @@ export const LATEST_POSTS_QUERY = `
       }
     }
   }
-`
+`;
 
 export const POST_BY_SLUG_QUERY = `
   query GetPostBySlug($slug: ID!) {
@@ -99,7 +99,7 @@ export const POST_BY_SLUG_QUERY = `
       }
     }
   }
-`
+`;
 
 export const CATEGORIES_QUERY = `
   query GetCategories($first: Int = 100) {
@@ -119,7 +119,7 @@ export const CATEGORIES_QUERY = `
       }
     }
   }
-`
+`;
 
 export const POSTS_BY_CATEGORY_QUERY = `
   query GetPostsByCategory($slug: ID!, $first: Int = 20, $after: String) {
@@ -170,7 +170,7 @@ export const POSTS_BY_CATEGORY_QUERY = `
       }
     }
   }
-`
+`;
 
 export const SEARCH_POSTS_QUERY = `
   query SearchPosts($search: String!, $first: Int = 20, $after: String) {
@@ -215,7 +215,7 @@ export const SEARCH_POSTS_QUERY = `
       }
     }
   }
-`
+`;
 
 export const FEATURED_POSTS_QUERY = `
   query GetFeaturedPosts($first: Int = 10) {
@@ -256,4 +256,4 @@ export const FEATURED_POSTS_QUERY = `
       }
     }
   }
-`
+`;

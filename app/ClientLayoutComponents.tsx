@@ -1,28 +1,34 @@
-"use client"
+'use client';
 
-import dynamic from "next/dynamic"
-import { Suspense, type ReactNode } from "react"
+import dynamic from 'next/dynamic';
+import { Suspense, type ReactNode } from 'react';
 
 // Dynamically import components that might use useMediaQuery
-const Header = dynamic(() => import("@/components/Header").then((mod) => ({ default: mod.Header })), {
-  ssr: false,
-  loading: () => <div className="h-16 bg-white shadow-md animate-pulse" />,
-})
+const Header = dynamic(
+  () => import('@/components/Header').then((mod) => ({ default: mod.Header })),
+  {
+    ssr: false,
+    loading: () => <div className="h-16 bg-white shadow-md animate-pulse" />,
+  },
+);
 
 const BottomNavigation = dynamic(
-  () => import("@/components/BottomNavigation").then((mod) => ({ default: mod.BottomNavigation })),
+  () => import('@/components/BottomNavigation').then((mod) => ({ default: mod.BottomNavigation })),
   {
     ssr: false,
   },
-)
+);
 
-const Sidebar = dynamic(() => import("@/components/Sidebar").then((mod) => ({ default: mod.Sidebar })), {
-  ssr: false,
-  loading: () => <div className="w-80 bg-white shadow-md animate-pulse h-96" />,
-})
+const Sidebar = dynamic(
+  () => import('@/components/Sidebar').then((mod) => ({ default: mod.Sidebar })),
+  {
+    ssr: false,
+    loading: () => <div className="w-80 bg-white shadow-md animate-pulse h-96" />,
+  },
+);
 
 interface ClientLayoutComponentsProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export default function ClientLayoutComponents({ children }: ClientLayoutComponentsProps) {
@@ -53,5 +59,5 @@ export default function ClientLayoutComponents({ children }: ClientLayoutCompone
       </div>
       <BottomNavigation />
     </>
-  )
+  );
 }

@@ -1,19 +1,19 @@
-"use client"
+'use client';
 
-import dynamic from "next/dynamic"
-import type { ReactNode } from "react"
+import dynamic from 'next/dynamic';
+import type { ReactNode } from 'react';
 
-const ResponsiveWrapper = dynamic(() => import("./ResponsiveWrapper"), {
+const ResponsiveWrapper = dynamic(() => import('./ResponsiveWrapper'), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-200 h-4 w-full rounded" />,
-})
+});
 
 interface DynamicResponsiveWrapperProps {
-  children: ReactNode
-  mobileContent?: ReactNode
-  desktopContent?: ReactNode
-  breakpoint?: string
-  fallback?: ReactNode
+  children: ReactNode;
+  mobileContent?: ReactNode;
+  desktopContent?: ReactNode;
+  breakpoint?: string;
+  fallback?: ReactNode;
 }
 
 export default function DynamicResponsiveWrapper({
@@ -24,8 +24,12 @@ export default function DynamicResponsiveWrapper({
   fallback,
 }: DynamicResponsiveWrapperProps) {
   return (
-    <ResponsiveWrapper mobileContent={mobileContent} desktopContent={desktopContent} breakpoint={breakpoint}>
+    <ResponsiveWrapper
+      mobileContent={mobileContent}
+      desktopContent={desktopContent}
+      breakpoint={breakpoint}
+    >
       {children}
     </ResponsiveWrapper>
-  )
+  );
 }

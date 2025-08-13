@@ -1,61 +1,64 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useUser } from "@/contexts/UserContext"
-import type { Session } from "@supabase/supabase-js"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useToast } from "@/hooks/use-toast"
-import { MobileProfileMenu } from "@/components/MobileProfileMenu"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { ProfileEditor } from "@/components/ProfileEditor"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare } from "lucide-react"
-import Link from "next/link"
-import ErrorBoundary from "@/components/ErrorBoundary"
+import type { Session } from '@supabase/supabase-js';
+import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { MobileProfileMenu } from '@/components/MobileProfileMenu';
+import { ProfileEditor } from '@/components/ProfileEditor';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/contexts/UserContext';
+
+
+import { useToast } from '@/hooks/use-toast';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ProfileContentProps {
-  initialSession?: Session | null
+  initialSession?: Session | null;
 }
 
 export default function ProfileContent({ initialSession }: ProfileContentProps) {
-  const router = useRouter()
-  const { user, profile, loading, isAuthenticated, signOut } = useUser()
-  const isMobile = useMediaQuery("(max-width: 768px)")
-  const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("profile")
+  const router = useRouter();
+  const { user, profile, loading, isAuthenticated, signOut } = useUser();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('profile');
 
   // Check if user is authenticated
   useEffect(() => {
     // If we have initial session data and user context has loaded but no user
     if (initialSession === null && !loading && !isAuthenticated) {
-      router.push("/auth?redirectTo=/profile")
+      router.push('/auth?redirectTo=/profile');
     }
-  }, [initialSession, loading, isAuthenticated, router])
+  }, [initialSession, loading, isAuthenticated, router]);
 
   // Handle logout
   const handleLogout = async () => {
     try {
-      await signOut()
-      router.push("/")
+      await signOut();
+      router.push('/');
       toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
-      })
+        title: 'Logged out',
+        description: 'You have been logged out successfully.',
+      });
     } catch (error: any) {
       toast({
-        title: "Error logging out",
-        description: error.message || "Failed to log out",
-        variant: "destructive",
-      })
+        title: 'Error logging out',
+        description: error.message || 'Failed to log out',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   // Show loading state
   if (loading) {
-    return <ProfileLoadingState />
+    return <ProfileLoadingState />;
   }
 
   // Show login prompt if not authenticated
@@ -64,20 +67,25 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
       <div className="text-center py-8">
         <h2 className="text-2xl font-bold mb-4">Please log in</h2>
         <p className="mb-6">You need to be logged in to view your profile.</p>
-        <Button onClick={() => router.push("/auth?redirectTo=/profile")}>Log in</Button>
+        <Button onClick={() => router.push('/auth?redirectTo=/profile')}>Log in</Button>
       </div>
-    )
+    );
   }
 
   // Show mobile profile menu on mobile devices
   if (isMobile && user) {
-    return <MobileProfileMenu />
+    return <MobileProfileMenu />;
   }
 
   return (
     <ErrorBoundary>
       <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          defaultValue="profile"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
           <TabsList className="grid grid-cols-4 mb-8">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCircle className="h-4 w-4" />
@@ -127,10 +135,10 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Email Preferences</h3>
                   <p>
-                    Manage your email preferences in the{" "}
+                    Manage your email preferences in the{' '}
                     <Link href="/newsletters" className="text-blue-600 hover:underline">
                       Newsletters
-                    </Link>{" "}
+                    </Link>{' '}
                     section.
                   </p>
 
@@ -142,10 +150,16 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
                     <Button variant="outline" asChild>
                       <Link href="/reset-password">Change Password</Link>
                     </Button>
-                    <Button variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
+                    <Button
+                      variant="outline"
+                      className="text-amber-600 border-amber-600 hover:bg-amber-50"
+                    >
                       Download My Data
                     </Button>
-                    <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50">
+                    <Button
+                      variant="outline"
+                      className="text-red-600 border-red-600 hover:bg-red-50"
+                    >
                       Delete Account
                     </Button>
                   </div>
@@ -198,7 +212,7 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
         </Tabs>
       </div>
     </ErrorBoundary>
-  )
+  );
 }
 
 function ProfileLoadingState() {
@@ -227,5 +241,5 @@ function ProfileLoadingState() {
         <Skeleton className="h-10 w-24" />
       </div>
     </div>
-  )
+  );
 }

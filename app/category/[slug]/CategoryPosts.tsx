@@ -1,78 +1,84 @@
-"use client"
+'use client';
 
-import type React from "react"
+import { Loader2, AlertCircle } from 'lucide-react';
+import { ShareIcon } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import type React from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
 
-import { useState, useCallback, useRef, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { fetchCategoryPosts } from "@/lib/wordpress-api"
-import { useInView } from "react-intersection-observer"
-import { Loader2, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ShareIcon } from "lucide-react"
+import { Button } from '@/components/ui/button';
+import { fetchCategoryPosts } from '@/lib/wordpress-api';
+
+
 
 interface CategoryPostsProps {
-  initialPosts: any[]
+  initialPosts: any[];
   pageInfo: {
-    hasNextPage: boolean
-    endCursor: string
-  }
-  categorySlug: string
+    hasNextPage: boolean;
+    endCursor: string;
+  };
+  categorySlug: string;
 }
 
-export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo, categorySlug }: CategoryPostsProps) {
-  const [posts, setPosts] = useState(initialPosts)
-  const [pageInfo, setPageInfo] = useState(initialPageInfo)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasManuallyTriggered, setHasManuallyTriggered] = useState(false)
-  const loadingRef = useRef<HTMLDivElement>(null)
+export default function CategoryPosts({
+  initialPosts,
+  pageInfo: initialPageInfo,
+  categorySlug,
+}: CategoryPostsProps) {
+  const [posts, setPosts] = useState(initialPosts);
+  const [pageInfo, setPageInfo] = useState(initialPageInfo);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasManuallyTriggered, setHasManuallyTriggered] = useState(false);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   // Use react-intersection-observer for better infinite scroll detection
   const { ref: inViewRef, inView } = useInView({
     threshold: 0.1,
-    rootMargin: "200px 0px",
-  })
+    rootMargin: '200px 0px',
+  });
 
   const loadMorePosts = useCallback(async () => {
-    if (!pageInfo.hasNextPage || isLoading) return
+    if (!pageInfo.hasNextPage || isLoading) return;
 
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const data = await fetchCategoryPosts(categorySlug, pageInfo.endCursor)
+      const data = await fetchCategoryPosts(categorySlug, pageInfo.endCursor);
       if (data && data.posts) {
         // Use a functional update to ensure we're working with the latest state
-        setPosts((prevPosts) => [...prevPosts, ...data.posts.nodes])
-        setPageInfo(data.posts.pageInfo)
+        setPosts((prevPosts) => [...prevPosts, ...data.posts.nodes]);
+        setPageInfo(data.posts.pageInfo);
       }
     } catch (err) {
-      console.error("Error loading more posts:", err)
-      setError("Failed to load more posts. Please try again.")
+      console.error('Error loading more posts:', err);
+      setError('Failed to load more posts. Please try again.');
     } finally {
-      setIsLoading(false)
-      setHasManuallyTriggered(false)
+      setIsLoading(false);
+      setHasManuallyTriggered(false);
     }
-  }, [categorySlug, pageInfo.endCursor, pageInfo.hasNextPage, isLoading])
+  }, [categorySlug, pageInfo.endCursor, pageInfo.hasNextPage, isLoading]);
 
   // Handle automatic loading when scrolled into view
   useEffect(() => {
     if (inView && !isLoading && pageInfo.hasNextPage && !hasManuallyTriggered) {
-      loadMorePosts()
+      loadMorePosts();
     }
-  }, [inView, loadMorePosts, isLoading, pageInfo.hasNextPage, hasManuallyTriggered])
+  }, [inView, loadMorePosts, isLoading, pageInfo.hasNextPage, hasManuallyTriggered]);
 
   // Handle manual "Load More" button click
   const handleLoadMore = () => {
-    setHasManuallyTriggered(true)
-    loadMorePosts()
-  }
+    setHasManuallyTriggered(true);
+    loadMorePosts();
+  };
 
   // Function to share a post
   const sharePost = (post: any, event: React.MouseEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
+    event.preventDefault();
+    event.stopPropagation();
 
     if (navigator.share) {
       navigator
@@ -80,13 +86,13 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
           title: post.title,
           url: `/post/${post.slug}`,
         })
-        .catch((err) => console.error("Error sharing:", err))
+        .catch((err) => console.error('Error sharing:', err));
     } else {
       // Fallback for browsers that don't support navigator.share
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post.slug}`)
-      alert("Link copied to clipboard!")
+      navigator.clipboard.writeText(`${window.location.origin}/post/${post.slug}`);
+      alert('Link copied to clipboard!');
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -107,7 +113,10 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
               >
                 <div className="relative w-full sm:w-20 h-40 sm:h-20 flex-shrink-0 mb-3 sm:mb-0 sm:mr-3">
                   <Image
-                    src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg?height=80&width=80&query=news"}
+                    src={
+                      post.featuredImage?.node?.sourceUrl ||
+                      '/placeholder.svg?height=80&width=80&query=news'
+                    }
                     alt={post.title}
                     fill
                     sizes="(max-width: 640px) 100vw, 80px"
@@ -118,19 +127,21 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
                   />
                 </div>
                 <div className="flex-grow flex flex-col justify-between w-full">
-                  <h2 className="text-sm font-semibold leading-tight line-clamp-2 mb-2">{post.title}</h2>
+                  <h2 className="text-sm font-semibold leading-tight line-clamp-2 mb-2">
+                    {post.title}
+                  </h2>
                   {post.excerpt && (
                     <p
                       className="text-xs text-gray-600 line-clamp-2 mb-2"
-                      dangerouslySetInnerHTML={{ __html: post.excerpt.replace(/<[^>]*>/g, "") }}
+                      dangerouslySetInnerHTML={{ __html: post.excerpt.replace(/<[^>]*>/g, '') }}
                     />
                   )}
                   <div className="flex justify-between items-center text-xs mt-auto">
                     <p className="text-gray-500">
-                      {new Date(post.date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
+                      {new Date(post.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
                       })}
                     </p>
                     <button
@@ -181,7 +192,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
                   Loading...
                 </>
               ) : (
-                "Load More Articles"
+                'Load More Articles'
               )}
             </Button>
           </div>
@@ -194,5 +205,5 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
         )}
       </div>
     </div>
-  )
+  );
 }

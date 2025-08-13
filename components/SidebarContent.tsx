@@ -1,13 +1,10 @@
-import {
-  getMostRead,
-  getPoll,
-  getMarketSnapshot,
-} from "@/lib/api/wordpress"
-import { MostRead } from "./aside/MostRead"
-import { PollWidget } from "./aside/PollWidget"
-import { GamesPromo } from "./aside/GamesPromo"
-import { MarketTicker } from "./home/MarketTicker"
-import { SponsoredPromo } from "./aside/SponsoredPromo"
+import { GamesPromo } from './aside/GamesPromo';
+import { MostRead } from './aside/MostRead';
+import { PollWidget } from './aside/PollWidget';
+import { SponsoredPromo } from './aside/SponsoredPromo';
+import { MarketTicker } from './home/MarketTicker';
+
+import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress';
 
 /**
  * SidebarContent
@@ -20,7 +17,7 @@ export async function SidebarContent() {
     getMostRead(5),
     getPoll(),
     getMarketSnapshot(),
-  ])
+  ]);
 
   return (
     <aside className="space-y-6">
@@ -30,7 +27,7 @@ export async function SidebarContent() {
       {markets.length > 0 && <MarketTicker items={markets} />}
       <SponsoredPromo />
     </aside>
-  )
+  );
 }
 
-export default SidebarContent
+export default SidebarContent;

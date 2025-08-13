@@ -1,21 +1,23 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
-import { stripHtml, highlightSearchTerms } from "@/lib/search"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistanceToNow } from 'date-fns';
+import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { stripHtml, highlightSearchTerms } from '@/lib/search';
+
 
 interface SearchResultsProps {
-  results: any[]
-  query: string
-  total: number
-  currentPage: number
-  totalPages: number
-  hasMore: boolean
-  isLoading: boolean
-  onLoadMore: () => void
+  results: any[];
+  query: string;
+  total: number;
+  currentPage: number;
+  totalPages: number;
+  hasMore: boolean;
+  isLoading: boolean;
+  onLoadMore: () => void;
 }
 
 export function SearchResults({
@@ -28,11 +30,11 @@ export function SearchResults({
   isLoading,
   onLoadMore,
 }: SearchResultsProps) {
-  const [isClient, setIsClient] = useState(false)
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
 
   if (isLoading && results.length === 0) {
     return (
@@ -40,7 +42,7 @@ export function SearchResults({
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         <p className="mt-4 text-gray-500">Searching...</p>
       </div>
-    )
+    );
   }
 
   if (results.length === 0 && !isLoading) {
@@ -48,16 +50,17 @@ export function SearchResults({
       <div className="text-center py-12">
         <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
         <p className="text-gray-500">
-          We couldn't find any matches for "{query}". Please try a different search term or check your spelling.
+          We couldn't find any matches for "{query}". Please try a different search term or check
+          your spelling.
         </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-8">
       <div className="text-sm text-gray-500">
-        Found {total} {total === 1 ? "result" : "results"} for "{query}"
+        Found {total} {total === 1 ? 'result' : 'results'} for "{query}"
       </div>
 
       <div className="space-y-4">
@@ -77,7 +80,9 @@ export function SearchResults({
               </h3>
               <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                 <span>
-                  {result.date ? formatDistanceToNow(new Date(result.date), { addSuffix: true }) : "Unknown date"}
+                  {result.date
+                    ? formatDistanceToNow(new Date(result.date), { addSuffix: true })
+                    : 'Unknown date'}
                 </span>
                 {result._embedded?.author && <span>• {result._embedded.author[0]?.name}</span>}
               </div>
@@ -85,13 +90,16 @@ export function SearchResults({
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{
-                      __html: highlightSearchTerms(stripHtml(result.excerpt.rendered).slice(0, 200), query),
+                      __html: highlightSearchTerms(
+                        stripHtml(result.excerpt.rendered).slice(0, 200),
+                        query,
+                      ),
                     }}
                   />
                 ) : (
                   stripHtml(result.excerpt.rendered).slice(0, 200)
                 )}
-                {stripHtml(result.excerpt.rendered).length > 200 ? "..." : ""}
+                {stripHtml(result.excerpt.rendered).length > 200 ? '...' : ''}
               </p>
             </Link>
           </div>
@@ -100,9 +108,14 @@ export function SearchResults({
 
       {hasMore && (
         <div className="flex justify-center pt-4">
-          <Button onClick={onLoadMore} disabled={isLoading} variant="outline" className="min-w-[120px]">
+          <Button
+            onClick={onLoadMore}
+            disabled={isLoading}
+            variant="outline"
+            className="min-w-[120px]"
+          >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            {isLoading ? "Loading..." : "Load more"}
+            {isLoading ? 'Loading...' : 'Load more'}
           </Button>
         </div>
       )}
@@ -113,5 +126,5 @@ export function SearchResults({
         </div>
       )}
     </div>
-  )
+  );
 }

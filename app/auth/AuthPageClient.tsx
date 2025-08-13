@@ -1,149 +1,151 @@
-"use client"
+'use client';
 
-import { useEffect, useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react"
-import { AuthForm } from "@/components/AuthForm"
-import { toast } from "@/hooks/use-toast"
-import { createClient } from "@/utils/supabase/client"
-import type { User } from "@supabase/supabase-js"
+import type { User } from '@supabase/supabase-js';
+import { Loader2, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+
+import { AuthForm } from '@/components/AuthForm';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { createClient } from '@/utils/supabase/client';
+
 
 interface AuthPageClientProps {
-  searchParams: { redirectTo?: string; error?: string; message?: string }
+  searchParams: { redirectTo?: string; error?: string; message?: string };
 }
 
 function AuthPageContent({ searchParams }: AuthPageClientProps) {
-  const router = useRouter()
-  const urlSearchParams = useSearchParams()
-  const supabase = createClient()
-  const [user, setUser] = useState<User | null>(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter();
+  const urlSearchParams = useSearchParams();
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [authMessage, setAuthMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   // Handle URL parameters and auth state
   useEffect(() => {
-    const error = searchParams.error || urlSearchParams.get("error")
-    const message = searchParams.message || urlSearchParams.get("message")
-    const code = urlSearchParams.get("code")
+    const error = searchParams.error || urlSearchParams.get('error');
+    const message = searchParams.message || urlSearchParams.get('message');
+    const code = urlSearchParams.get('code');
 
     // Handle OAuth callback errors
     if (error) {
       switch (error) {
-        case "access_denied":
-          setAuthError("Authentication was cancelled. Please try again.")
-          break
-        case "callback_error":
-          setAuthError("There was an error during authentication. Please try again.")
-          break
-        case "session_error":
-          setAuthError("Session could not be established. Please try signing in again.")
-          break
-        case "no_code":
-          setAuthError("Authentication failed. Please try again.")
-          break
+        case 'access_denied':
+          setAuthError('Authentication was cancelled. Please try again.');
+          break;
+        case 'callback_error':
+          setAuthError('There was an error during authentication. Please try again.');
+          break;
+        case 'session_error':
+          setAuthError('Session could not be established. Please try signing in again.');
+          break;
+        case 'no_code':
+          setAuthError('Authentication failed. Please try again.');
+          break;
         default:
-          setAuthError("An authentication error occurred. Please try again.")
+          setAuthError('An authentication error occurred. Please try again.');
       }
     }
 
     // Handle success messages
     if (message) {
       switch (message) {
-        case "email_confirmed":
-          setAuthMessage("Your email has been confirmed! You can now sign in.")
+        case 'email_confirmed':
+          setAuthMessage('Your email has been confirmed! You can now sign in.');
           toast({
-            title: "Email Confirmed",
-            description: "Your account is now active. Please sign in.",
-          })
-          break
-        case "password_updated":
-          setAuthMessage("Your password has been updated successfully!")
+            title: 'Email Confirmed',
+            description: 'Your account is now active. Please sign in.',
+          });
+          break;
+        case 'password_updated':
+          setAuthMessage('Your password has been updated successfully!');
           toast({
-            title: "Password Updated",
-            description: "You can now sign in with your new password.",
-          })
-          break
+            title: 'Password Updated',
+            description: 'You can now sign in with your new password.',
+          });
+          break;
         default:
-          setAuthMessage(message)
+          setAuthMessage(message);
       }
     }
 
     // Handle OAuth callback with code
     if (code && !error) {
-      setAuthMessage("Processing authentication...")
+      setAuthMessage('Processing authentication...');
       // The `/auth/callback` route handler processes the code exchange
     }
 
-    setIsLoading(false)
-  }, [searchParams, urlSearchParams])
+    setIsLoading(false);
+  }, [searchParams, urlSearchParams]);
 
   // Initialize and listen for auth state changes
   useEffect(() => {
     const getInitialUser = async () => {
       try {
-        const { data } = await supabase.auth.getUser()
-        setUser(data.user ?? null)
+        const { data } = await supabase.auth.getUser();
+        setUser(data.user ?? null);
       } finally {
-        setAuthLoading(false)
+        setAuthLoading(false);
       }
-    }
+    };
 
-    getInitialUser()
+    getInitialUser();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
+      setUser(session?.user ?? null);
+    });
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase])
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   // Redirect authenticated users
   useEffect(() => {
     if (!authLoading && user) {
-      const redirectTo = searchParams.redirectTo || urlSearchParams.get("redirectTo") || "/"
+      const redirectTo = searchParams.redirectTo || urlSearchParams.get('redirectTo') || '/';
 
       toast({
-        title: "Welcome back!",
+        title: 'Welcome back!',
         description: "You're now signed in.",
-      })
+      });
 
       // Small delay to show the toast
       setTimeout(() => {
-        if (redirectTo === "back") {
-          router.back()
+        if (redirectTo === 'back') {
+          router.back();
         } else {
-          router.push(redirectTo)
+          router.push(redirectTo);
         }
-      }, 1000)
+      }, 1000);
     }
-  }, [user, authLoading, router, searchParams, urlSearchParams])
+  }, [user, authLoading, router, searchParams, urlSearchParams]);
 
   // Handle successful authentication
   const handleAuthSuccess = () => {
-    const redirectTo = searchParams.redirectTo || urlSearchParams.get("redirectTo") || "/"
+    const redirectTo = searchParams.redirectTo || urlSearchParams.get('redirectTo') || '/';
 
     toast({
-      title: "Welcome!",
+      title: 'Welcome!',
       description: "You've successfully signed in.",
-    })
+    });
 
     setTimeout(() => {
-      if (redirectTo === "back") {
-        router.back()
+      if (redirectTo === 'back') {
+        router.back();
       } else {
-        router.push(redirectTo)
+        router.push(redirectTo);
       }
-    }, 1000)
-  }
+    }, 1000);
+  };
 
   // Show loading state while checking auth
   if (isLoading || authLoading) {
@@ -156,7 +158,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   // Show success state for authenticated users
@@ -172,14 +174,16 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-gray-900">Welcome to News on Africa</CardTitle>
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            Welcome to News on Africa
+          </CardTitle>
           <CardDescription className="text-gray-600">
             Sign in to your account or create a new one to get started
           </CardDescription>
@@ -211,7 +215,7 @@ function AuthPageContent({ searchParams }: AuthPageClientProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export default function AuthPageClient({ searchParams }: AuthPageClientProps) {
@@ -230,5 +234,5 @@ export default function AuthPageClient({ searchParams }: AuthPageClientProps) {
     >
       <AuthPageContent searchParams={searchParams} />
     </Suspense>
-  )
+  );
 }

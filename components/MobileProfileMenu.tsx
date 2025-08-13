@@ -1,48 +1,57 @@
-"use client"
+'use client';
 
-import { useUser } from "@/contexts/UserContext"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, UserCircle, Settings, BookmarkIcon, Bell, MessageSquare, LogOut } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
+import {
+  ArrowLeft,
+  UserCircle,
+  Settings,
+  BookmarkIcon,
+  Bell,
+  MessageSquare,
+  LogOut,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/use-toast';
 
 export function MobileProfileMenu() {
-  const router = useRouter()
-  const { user, profile, signOut } = useUser()
-  const { toast } = useToast()
+  const router = useRouter();
+  const { user, profile, signOut } = useUser();
+  const { toast } = useToast();
 
-  if (!user) return null
+  if (!user) return null;
 
   const handleLogout = async () => {
     try {
-      await signOut()
+      await signOut();
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      })
-      router.push("/")
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/');
     } catch (error) {
-      console.error("Error signing out:", error)
+      console.error('Error signing out:', error);
       toast({
-        title: "Error",
-        description: "Failed to log out. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((part) => part[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .substring(0, 2)
-  }
+      .substring(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -57,7 +66,7 @@ export function MobileProfileMenu() {
         {/* User Profile Header */}
         <div className="flex items-center space-x-4 mb-6 p-4 bg-white rounded-lg shadow-sm">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.username || "User"} />
+            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.username || 'User'} />
             <AvatarFallback className="text-lg">
               {profile?.full_name
                 ? getInitials(profile.full_name)
@@ -65,11 +74,11 @@ export function MobileProfileMenu() {
                   ? getInitials(profile.username)
                   : user?.email
                     ? user.email.charAt(0).toUpperCase()
-                    : "U"}
+                    : 'U'}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="font-semibold">{profile?.full_name || profile?.username || "User"}</h2>
+            <h2 className="font-semibold">{profile?.full_name || profile?.username || 'User'}</h2>
             <p className="text-sm text-gray-500">{user.email}</p>
           </div>
         </div>
@@ -79,7 +88,10 @@ export function MobileProfileMenu() {
           <section>
             <h2 className="text-xs font-medium text-gray-500 mb-2 px-1">PROFILE</h2>
             <div className="space-y-1">
-              <Link href="/profile" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
+              <Link
+                href="/profile"
+                className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium"
+              >
                 <UserCircle className="h-5 w-5 mr-3 text-blue-600" />
                 Edit Profile
               </Link>
@@ -97,11 +109,17 @@ export function MobileProfileMenu() {
           <section>
             <h2 className="text-xs font-medium text-gray-500 mb-2 px-1">MY CONTENT</h2>
             <div className="space-y-1">
-              <Link href="/bookmarks" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
+              <Link
+                href="/bookmarks"
+                className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium"
+              >
                 <BookmarkIcon className="h-5 w-5 mr-3 text-blue-600" />
                 My Bookmarks
               </Link>
-              <Link href="/comments" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
+              <Link
+                href="/comments"
+                className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium"
+              >
                 <MessageSquare className="h-5 w-5 mr-3 text-blue-600" />
                 My Comments
               </Link>
@@ -112,7 +130,10 @@ export function MobileProfileMenu() {
           <section>
             <h2 className="text-xs font-medium text-gray-500 mb-2 px-1">NOTIFICATIONS</h2>
             <div className="space-y-1">
-              <Link href="/newsletters" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
+              <Link
+                href="/newsletters"
+                className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium"
+              >
                 <Bell className="h-5 w-5 mr-3 text-blue-600" />
                 Newsletter Preferences
               </Link>
@@ -137,5 +158,5 @@ export function MobileProfileMenu() {
         </div>
       </div>
     </div>
-  )
+  );
 }

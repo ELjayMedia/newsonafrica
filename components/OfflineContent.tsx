@@ -1,117 +1,123 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
+import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 
 interface CachedArticle {
-  title: string
-  url: string
-  excerpt?: string
-  date?: string
-  category?: string
+  title: string;
+  url: string;
+  excerpt?: string;
+  date?: string;
+  category?: string;
 }
 
 export default function OfflineContent() {
-  const [isOnline, setIsOnline] = useState(true)
-  const [cachedArticles, setCachedArticles] = useState<CachedArticle[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isOnline, setIsOnline] = useState(true);
+  const [cachedArticles, setCachedArticles] = useState<CachedArticle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check initial online status
-    setIsOnline(navigator.onLine)
+    setIsOnline(navigator.onLine);
 
     // Listen for online/offline events
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     // Load cached content
-    loadCachedContent()
+    loadCachedContent();
 
     return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const loadCachedContent = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
       // Check if caches API is available
-      if (!("caches" in window)) {
-        console.log("Cache API not available")
-        setIsLoading(false)
-        return
+      if (!('caches' in window)) {
+        console.log('Cache API not available');
+        setIsLoading(false);
+        return;
       }
 
-      const cacheNames = await caches.keys()
-      const newsCache = cacheNames.find((name) => name.includes("news-on-africa"))
+      const cacheNames = await caches.keys();
+      const newsCache = cacheNames.find((name) => name.includes('news-on-africa'));
 
       if (!newsCache) {
-        console.log("No news cache found")
-        setIsLoading(false)
-        return
+        console.log('No news cache found');
+        setIsLoading(false);
+        return;
       }
 
-      const cache = await caches.open(newsCache)
-      const cachedRequests = await cache.keys()
+      const cache = await caches.open(newsCache);
+      const cachedRequests = await cache.keys();
 
       // Filter for article pages
       const articleRequests = cachedRequests.filter((request) => {
-        const url = new URL(request.url)
-        return url.pathname.startsWith("/post/") || url.pathname.startsWith("/category/") || url.pathname === "/"
-      })
+        const url = new URL(request.url);
+        return (
+          url.pathname.startsWith('/post/') ||
+          url.pathname.startsWith('/category/') ||
+          url.pathname === '/'
+        );
+      });
 
       // Create cached articles list
       const articles: CachedArticle[] = articleRequests.map((request) => {
-        const url = new URL(request.url)
-        let title = url.pathname
-        let category = "General"
+        const url = new URL(request.url);
+        let title = url.pathname;
+        let category = 'General';
 
         // Format title based on URL
-        if (title === "/") {
-          title = "News On Africa - Homepage"
-          category = "Home"
-        } else if (title.startsWith("/post/")) {
-          title = title.replace("/post/", "").replace(/-/g, " ")
-          title = title.charAt(0).toUpperCase() + title.slice(1)
-          category = "Article"
-        } else if (title.startsWith("/category/")) {
-          const categoryName = title.replace("/category/", "").replace(/-/g, " ")
-          title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`
-          category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
+        if (title === '/') {
+          title = 'News On Africa - Homepage';
+          category = 'Home';
+        } else if (title.startsWith('/post/')) {
+          title = title.replace('/post/', '').replace(/-/g, ' ');
+          title = title.charAt(0).toUpperCase() + title.slice(1);
+          category = 'Article';
+        } else if (title.startsWith('/category/')) {
+          const categoryName = title.replace('/category/', '').replace(/-/g, ' ');
+          title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`;
+          category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1);
         }
 
         return {
           title,
           url: url.pathname,
           category,
-          date: "Cached content",
-        }
-      })
+          date: 'Cached content',
+        };
+      });
 
-      setCachedArticles(articles.slice(0, 10)) // Limit to 10 items
+      setCachedArticles(articles.slice(0, 10)); // Limit to 10 items
     } catch (error) {
-      console.error("Error loading cached content:", error)
+      console.error('Error loading cached content:', error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleRetry = () => {
     if (navigator.onLine) {
-      window.location.href = "/"
+      window.location.href = '/';
     } else {
       // Reload the page to check connection
-      window.location.reload()
+      window.location.reload();
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -119,7 +125,11 @@ export default function OfflineContent() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            {isOnline ? <Wifi className="h-16 w-16 text-green-500" /> : <WifiOff className="h-16 w-16 text-red-500" />}
+            {isOnline ? (
+              <Wifi className="h-16 w-16 text-green-500" />
+            ) : (
+              <WifiOff className="h-16 w-16 text-red-500" />
+            )}
           </div>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -128,14 +138,14 @@ export default function OfflineContent() {
 
           <p className="text-lg text-gray-600 mb-6">
             {isOnline
-              ? "Your internet connection has been restored. You can now access the latest news."
-              : "No internet connection detected. You can still browse previously viewed content below."}
+              ? 'Your internet connection has been restored. You can now access the latest news.'
+              : 'No internet connection detected. You can still browse previously viewed content below.'}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button onClick={handleRetry} className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
-              {isOnline ? "Go to Homepage" : "Try Again"}
+              {isOnline ? 'Go to Homepage' : 'Try Again'}
             </Button>
 
             <Link href="/">
@@ -151,21 +161,25 @@ export default function OfflineContent() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isOnline ? <Wifi className="h-5 w-5 text-green-500" /> : <WifiOff className="h-5 w-5 text-red-500" />}
+              {isOnline ? (
+                <Wifi className="h-5 w-5 text-green-500" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-red-500" />
+              )}
               Connection Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div
-              className={`p-4 rounded-lg ${isOnline ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}
+              className={`p-4 rounded-lg ${isOnline ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
             >
-              <p className={`font-medium ${isOnline ? "text-green-800" : "text-red-800"}`}>
-                {isOnline ? "✓ Connected to the internet" : "✗ No internet connection"}
+              <p className={`font-medium ${isOnline ? 'text-green-800' : 'text-red-800'}`}>
+                {isOnline ? '✓ Connected to the internet' : '✗ No internet connection'}
               </p>
-              <p className={`text-sm mt-1 ${isOnline ? "text-green-600" : "text-red-600"}`}>
+              <p className={`text-sm mt-1 ${isOnline ? 'text-green-600' : 'text-red-600'}`}>
                 {isOnline
-                  ? "You can access all features and the latest news updates."
-                  : "Some features may be limited. Cached content is available below."}
+                  ? 'You can access all features and the latest news updates.'
+                  : 'Some features may be limited. Cached content is available below.'}
               </p>
             </div>
           </CardContent>
@@ -204,7 +218,9 @@ export default function OfflineContent() {
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900 mb-1">{article.title}</h3>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">{article.category}</span>
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                            {article.category}
+                          </span>
                           <span>{article.date}</span>
                         </div>
                       </div>
@@ -258,5 +274,5 @@ export default function OfflineContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,43 +1,55 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Facebook, Linkedin, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
+import {
+  Facebook,
+  Linkedin,
+  Mail,
+  LinkIcon,
+  PhoneIcon as WhatsApp,
+  Share2,
+  X,
+  Check,
+} from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 interface ShareButtonsProps {
-  title: string
-  url: string
-  description?: string
-  variant?: "default" | "outline" | "ghost"
-  size?: "default" | "sm" | "lg" | "icon"
-  className?: string
-  showLabel?: boolean
+  title: string;
+  url: string;
+  description?: string;
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  className?: string;
+  showLabel?: boolean;
 }
 
 export function ShareButtons({
   title,
   url,
-  description = "",
-  variant = "outline",
-  size = "sm",
-  className = "",
+  description = '',
+  variant = 'outline',
+  size = 'sm',
+  className = '',
   showLabel = true,
 }: ShareButtonsProps) {
-  const { toast } = useToast()
-  const [isOpen, setIsOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Ensure we have the full URL
-  const fullUrl = url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}${url}`
+  const fullUrl = url.startsWith('http')
+    ? url
+    : `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}${url}`;
 
   // Encode components for sharing
-  const encodedUrl = encodeURIComponent(fullUrl)
-  const encodedTitle = encodeURIComponent(title)
-  const encodedDescription = encodeURIComponent(description || title)
+  const encodedUrl = encodeURIComponent(fullUrl);
+  const encodedTitle = encodeURIComponent(title);
+  const encodedDescription = encodeURIComponent(description || title);
 
   // Share URLs for different platforms
   const shareUrls = {
@@ -46,7 +58,7 @@ export function ShareButtons({
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
     whatsapp: `https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`,
     email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
-  }
+  };
 
   // Handle native sharing if available
   const handleNativeShare = async () => {
@@ -56,38 +68,38 @@ export function ShareButtons({
           title,
           text: description,
           url: fullUrl,
-        })
+        });
 
         toast({
-          title: "Shared successfully",
-          description: "The article has been shared",
-        })
+          title: 'Shared successfully',
+          description: 'The article has been shared',
+        });
       } catch (error) {
-        console.error("Error sharing:", error)
+        console.error('Error sharing:', error);
       }
     } else {
-      setIsOpen(true)
+      setIsOpen(true);
     }
-  }
+  };
 
   // Handle copy to clipboard
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(fullUrl)
-    setCopied(true)
+    navigator.clipboard.writeText(fullUrl);
+    setCopied(true);
 
     toast({
-      title: "Link copied",
-      description: "Article link copied to clipboard",
-    })
+      title: 'Link copied',
+      description: 'Article link copied to clipboard',
+    });
 
-    setTimeout(() => setCopied(false), 2000)
-  }
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Handle platform-specific sharing
   const handleShare = (platform: keyof typeof shareUrls) => {
-    window.open(shareUrls[platform], "_blank", "noopener,noreferrer")
-    setIsOpen(false)
-  }
+    window.open(shareUrls[platform], '_blank', 'noopener,noreferrer');
+    setIsOpen(false);
+  };
 
   // If native sharing is available on mobile, use that
   if (isMobile && navigator.share) {
@@ -100,9 +112,9 @@ export function ShareButtons({
         aria-label="Share article"
       >
         <Share2 className="h-4 w-4 mr-2" />
-        {showLabel && "Share"}
+        {showLabel && 'Share'}
       </Button>
-    )
+    );
   }
 
   // Otherwise use the popover
@@ -111,7 +123,7 @@ export function ShareButtons({
       <PopoverTrigger asChild>
         <Button variant={variant} size={size} className={className} aria-label="Share article">
           <Share2 className="h-4 w-4 mr-2" />
-          {showLabel && "Share"}
+          {showLabel && 'Share'}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-3" align="end">
@@ -123,7 +135,7 @@ export function ShareButtons({
               variant="outline"
               size="icon"
               className="rounded-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white border-none transition-all duration-200"
-              onClick={() => handleShare("facebook")}
+              onClick={() => handleShare('facebook')}
               aria-label="Share on Facebook"
             >
               <Facebook className="h-4 w-4" />
@@ -133,7 +145,7 @@ export function ShareButtons({
               variant="outline"
               size="icon"
               className="rounded-full bg-black hover:bg-black/90 text-white border-none transition-all duration-200"
-              onClick={() => handleShare("twitter")}
+              onClick={() => handleShare('twitter')}
               aria-label="Share on Twitter/X"
             >
               <X className="h-4 w-4" />
@@ -143,7 +155,7 @@ export function ShareButtons({
               variant="outline"
               size="icon"
               className="rounded-full bg-[#0077B5] hover:bg-[#0077B5]/90 text-white border-none transition-all duration-200"
-              onClick={() => handleShare("linkedin")}
+              onClick={() => handleShare('linkedin')}
               aria-label="Share on LinkedIn"
             >
               <Linkedin className="h-4 w-4" />
@@ -153,7 +165,7 @@ export function ShareButtons({
               variant="outline"
               size="icon"
               className="rounded-full bg-[#25D366] hover:bg-[#25D366]/90 text-white border-none transition-all duration-200"
-              onClick={() => handleShare("whatsapp")}
+              onClick={() => handleShare('whatsapp')}
               aria-label="Share on WhatsApp"
             >
               <WhatsApp className="h-4 w-4" />
@@ -165,7 +177,7 @@ export function ShareButtons({
               variant="outline"
               size="icon"
               className="rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 border-none transition-all duration-200"
-              onClick={() => handleShare("email")}
+              onClick={() => handleShare('email')}
               aria-label="Share via Email"
             >
               <Mail className="h-4 w-4" />
@@ -184,14 +196,18 @@ export function ShareButtons({
                 size="icon"
                 className="absolute right-0 top-0 h-full rounded-l-none"
                 onClick={handleCopyLink}
-                aria-label={copied ? "Copied" : "Copy link"}
+                aria-label={copied ? 'Copied' : 'Copy link'}
               >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <LinkIcon className="h-4 w-4" />}
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <LinkIcon className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

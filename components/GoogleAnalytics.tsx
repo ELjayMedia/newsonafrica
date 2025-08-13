@@ -1,16 +1,17 @@
-"use client"
+'use client';
 
-import { useEffect } from "react"
-import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics"
+import { useEffect } from 'react';
+
+import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics';
 
 export default function GoogleAnalytics() {
-  useGoogleAnalytics()
+  useGoogleAnalytics();
 
   useEffect(() => {
-    if (typeof window.gtag !== "function") {
-      console.warn("Google Analytics not loaded")
+    if (typeof window.gtag !== 'function') {
+      console.warn('Google Analytics not loaded');
     }
-  }, [])
+  }, []);
 
-  return null
+  return null;
 }

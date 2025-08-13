@@ -28,17 +28,17 @@ The new design token system provides:
 import { designTokens, componentStyles, combineTokens } from "@/components/ui/design-tokens"
 
 function ExampleCard() {
-  return (
-    <div className={componentStyles.cardInteractive}>
-      <h2 className={designTokens.typography.headline.large}>Title</h2>
-      <p className={combineTokens(
-        designTokens.typography.body.medium,
-        designTokens.colors.text.muted
-      )}>
-        Body text with consistent styling
-      </p>
-    </div>
-  )
+return (
+<div className={componentStyles.cardInteractive}>
+<h2 className={designTokens.typography.headline.large}>Title</h2>
+<p className={combineTokens(
+designTokens.typography.body.medium,
+designTokens.colors.text.muted
+)}>
+Body text with consistent styling
+</p>
+</div>
+)
 }
 \`\`\`
 
@@ -51,12 +51,14 @@ function ExampleCard() {
 Replaces three separate card components (CompactCard, HorizontalCard, VerticalCard) with a single, flexible component:
 
 **Variants:**
+
 - `horizontal` - Side-by-side image and content layout
-- `vertical` - Stacked image-over-content layout  
+- `vertical` - Stacked image-over-content layout
 - `minimal` - Compact list-style layout
 - `featured` - Large hero-style layout
 
 **Props:**
+
 - `variant` - Layout style
 - `showExcerpt` - Display post excerpt
 - `showAuthor` - Display author information
@@ -72,7 +74,7 @@ The original components now act as thin wrappers around UnifiedCard:
 \`\`\`tsx
 // CompactCard.tsx - maintains backward compatibility
 export function CompactCard({ layout = "horizontal", ...props }: CompactCardProps) {
-  return <UnifiedCard {...props} variant={layout} />
+return <UnifiedCard {...props} variant={layout} />
 }
 \`\`\`
 
@@ -85,6 +87,7 @@ This ensures **zero breaking changes** while enabling the new unified system.
 **Location:** `components/ui/sidebar-widget.tsx`
 
 Standardized container for sidebar sections with:
+
 - Consistent card styling and shadows
 - Centered title with blue accent underline
 - Proper spacing and mobile responsiveness
@@ -94,6 +97,7 @@ Standardized container for sidebar sections with:
 **Location:** `components/ui/headline-list.tsx`
 
 Reusable numbered list component featuring:
+
 - Large, muted numbers in left column
 - Multi-line headline links in right column
 - Configurable item limits and numbering
@@ -104,6 +108,7 @@ Reusable numbered list component featuring:
 **Location:** `components/most-read.tsx`
 
 Enhanced with:
+
 - Resilient data fetching (tries multiple endpoints)
 - Consistent loading skeleton using design tokens
 - Graceful error handling and fallbacks
@@ -130,14 +135,16 @@ className={designTokens.layout.grid.responsive} // grid-cols-1 sm:grid-cols-2 lg
 ## Import Optimization
 
 ### Before (Problematic):
+
 \`\`\`tsx
 import { CompactCard } from "@/components/CompactCard"
-import { HorizontalCard } from "@/components/HorizontalCard" 
+import { HorizontalCard } from "@/components/HorizontalCard"
 import { VerticalCard } from "@/components/VerticalCard"
 // Multiple similar components with overlapping functionality
 \`\`\`
 
 ### After (Optimized):
+
 \`\`\`tsx
 import { UnifiedCard } from "@/components/ui/unified-card"
 // Single component handles all card layouts
@@ -151,7 +158,7 @@ import { UnifiedCard } from "@/components/ui/unified-card"
    \`\`\`tsx
    // Before
    className="bg-white border border-gray-200 rounded-lg shadow-sm"
-   
+
    // After  
    className={componentStyles.cardBase}
    \`\`\`
@@ -160,7 +167,7 @@ import { UnifiedCard } from "@/components/ui/unified-card"
    \`\`\`tsx
    // Before
    className="text-gray-600"
-   
+
    // After
    className={designTokens.colors.text.muted}
    \`\`\`
@@ -181,11 +188,13 @@ import { UnifiedCard } from "@/components/ui/unified-card"
 ## Testing and Quality Assurance
 
 ### Responsive Testing:
+
 - Test at 320px, 768px, 1024px, and 1440px widths
 - Verify touch targets are 44px minimum
 - Ensure text remains readable at all sizes
 
 ### Accessibility Testing:
+
 - Keyboard navigation works properly
 - Focus states are visible and consistent
 - Screen reader compatibility maintained
@@ -201,12 +210,14 @@ import { UnifiedCard } from "@/components/ui/unified-card"
 ## Future Enhancements
 
 ### Planned Additions:
+
 - **ArticleCard** component for article listings
-- **SectionHeader** component for content areas  
+- **SectionHeader** component for content areas
 - **NavigationMenu** unified component
 - **FormField** standardized form inputs
 
 ### Storybook Integration:
+
 - Component documentation and examples
 - Interactive prop testing
 - Visual regression testing
@@ -222,6 +233,6 @@ This refactor delivers:
 ✅ **Mobile-first responsiveness** across all components  
 ✅ **Backward compatibility** through wrapper components  
 ✅ **Optimized imports** and reduced code duplication  
-✅ **Comprehensive documentation** for future scaling  
+✅ **Comprehensive documentation** for future scaling
 
 **Result:** Maintainable, scalable UI system with zero breaking changes and improved developer experience.

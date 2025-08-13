@@ -1,43 +1,43 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react';
 
 interface Post {
-  id: number
-  title: { rendered: string }
-  excerpt: { rendered: string }
-  slug: string
-  date: string
-  featured_media?: number
+  id: number;
+  title: { rendered: string };
+  excerpt: { rendered: string };
+  slug: string;
+  date: string;
+  featured_media?: number;
   _embedded?: {
-    "wp:featuredmedia"?: Array<{
-      source_url: string
-      alt_text: string
-    }>
-  }
+    'wp:featuredmedia'?: Array<{
+      source_url: string;
+      alt_text: string;
+    }>;
+  };
 }
 
 export function HomeContent() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch("/api/posts?limit=10")
+        const response = await fetch('/api/posts?limit=10');
         if (response.ok) {
-          const data = await response.json()
-          setPosts(data)
+          const data = await response.json();
+          setPosts(data);
         }
       } catch (error) {
-        console.error("Error fetching posts:", error)
+        console.error('Error fetching posts:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchPosts()
-  }, [])
+    fetchPosts();
+  }, []);
 
   if (loading) {
     return (
@@ -52,7 +52,7 @@ export function HomeContent() {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -60,10 +60,10 @@ export function HomeContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map((post) => (
           <article key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            {post._embedded?.["wp:featuredmedia"]?.[0] && (
+            {post._embedded?.['wp:featuredmedia']?.[0] && (
               <img
-                src={post._embedded["wp:featuredmedia"][0].source_url || "/placeholder.svg"}
-                alt={post._embedded["wp:featuredmedia"][0].alt_text || post.title.rendered}
+                src={post._embedded['wp:featuredmedia'][0].source_url || '/placeholder.svg'}
+                alt={post._embedded['wp:featuredmedia'][0].alt_text || post.title.rendered}
                 className="w-full h-48 object-cover"
               />
             )}
@@ -77,11 +77,13 @@ export function HomeContent() {
                 className="text-gray-600 text-sm line-clamp-3"
                 dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }}
               />
-              <time className="text-gray-400 text-xs mt-2 block">{new Date(post.date).toLocaleDateString()}</time>
+              <time className="text-gray-400 text-xs mt-2 block">
+                {new Date(post.date).toLocaleDateString()}
+              </time>
             </div>
           </article>
         ))}
       </div>
     </div>
-  )
+  );
 }

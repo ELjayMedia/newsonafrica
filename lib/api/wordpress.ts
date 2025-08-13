@@ -1,297 +1,297 @@
+import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from '../wordpress-api';
+
+import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from '@/config/wordpress';
+import { relatedPostsCache } from '@/lib/cache/related-posts-cache';
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
-} from "@/lib/graphql/queries"
-import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
-import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
-import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from "@/config/wordpress"
-
+} from '@/lib/graphql/queries';
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
-  sourceUrl: string
-  altText?: string
-  title?: string
+  sourceUrl: string;
+  altText?: string;
+  title?: string;
 }
 
 export interface WordPressAuthor {
-  id: string
-  name: string
-  slug: string
-  description?: string
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
   avatar?: {
-    url: string
-  }
+    url: string;
+  };
 }
 
 export interface WordPressCategory {
-  id: string
-  name: string
-  slug: string
-  description?: string
-  count?: number
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  count?: number;
   parent?: {
     node: {
-      name: string
-      slug: string
-    }
-  }
+      name: string;
+      slug: string;
+    };
+  };
 }
 
 export interface WordPressTag {
-  id: string
-  name: string
-  slug: string
-  description?: string
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
 }
 
 export interface WordPressPost {
-  id: string
-  title: string
-  content?: string
-  excerpt: string
-  slug: string
-  date: string
-  modified?: string
-  status?: string
+  id: string;
+  title: string;
+  content?: string;
+  excerpt: string;
+  slug: string;
+  date: string;
+  modified?: string;
+  status?: string;
   featuredImage?: {
-    node: WordPressImage
-  }
+    node: WordPressImage;
+  };
   author: {
-    node: WordPressAuthor
-  }
+    node: WordPressAuthor;
+  };
   categories: {
-    nodes: WordPressCategory[]
-  }
+    nodes: WordPressCategory[];
+  };
   tags: {
-    nodes: WordPressTag[]
-  }
+    nodes: WordPressTag[];
+  };
   seo?: {
-    title: string
-    metaDesc: string
+    title: string;
+    metaDesc: string;
     opengraphImage?: {
-      sourceUrl: string
-    }
-  }
+      sourceUrl: string;
+    };
+  };
 }
 
 export interface WordPressPostsResponse {
   posts: {
-    nodes: WordPressPost[]
+    nodes: WordPressPost[];
     pageInfo: {
-      hasNextPage: boolean
-      endCursor: string | null
-    }
-  }
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
 }
 
 export interface WordPressCategoriesResponse {
   categories: {
-    nodes: WordPressCategory[]
-  }
+    nodes: WordPressCategory[];
+  };
 }
 
 export interface WordPressSinglePostResponse {
-  post: WordPressPost | null
+  post: WordPressPost | null;
 }
 
 // Country configuration
 export interface CountryConfig {
-  code: string
-  name: string
-  flag: string
-  currency: string
-  timezone: string
-  languages: string[]
-  apiEndpoint: string
-  restEndpoint: string
+  code: string;
+  name: string;
+  flag: string;
+  currency: string;
+  timezone: string;
+  languages: string[];
+  apiEndpoint: string;
+  restEndpoint: string;
 }
 
 export const COUNTRIES: Record<string, CountryConfig> = {
   sz: {
-    code: "sz",
-    name: "Eswatini",
-    flag: "🇸🇿",
-    currency: "SZL",
-    timezone: "Africa/Mbabane",
-    languages: ["en", "ss"],
-    apiEndpoint: "https://newsonafrica.com/sz/graphql",
-    restEndpoint: "https://newsonafrica.com/sz/wp-json/wp/v2",
+    code: 'sz',
+    name: 'Eswatini',
+    flag: '🇸🇿',
+    currency: 'SZL',
+    timezone: 'Africa/Mbabane',
+    languages: ['en', 'ss'],
+    apiEndpoint: 'https://newsonafrica.com/sz/graphql',
+    restEndpoint: 'https://newsonafrica.com/sz/wp-json/wp/v2',
   },
   ng: {
-    code: "ng",
-    name: "Nigeria",
-    flag: "🇳🇬",
-    currency: "NGN",
-    timezone: "Africa/Lagos",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ng/graphql",
-    restEndpoint: "https://newsonafrica.com/ng/wp-json/wp/v2",
+    code: 'ng',
+    name: 'Nigeria',
+    flag: '🇳🇬',
+    currency: 'NGN',
+    timezone: 'Africa/Lagos',
+    languages: ['en'],
+    apiEndpoint: 'https://newsonafrica.com/ng/graphql',
+    restEndpoint: 'https://newsonafrica.com/ng/wp-json/wp/v2',
   },
   ke: {
-    code: "ke",
-    name: "Kenya",
-    flag: "🇰🇪",
-    currency: "KES",
-    timezone: "Africa/Nairobi",
-    languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/ke/graphql",
-    restEndpoint: "https://newsonafrica.com/ke/wp-json/wp/v2",
+    code: 'ke',
+    name: 'Kenya',
+    flag: '🇰🇪',
+    currency: 'KES',
+    timezone: 'Africa/Nairobi',
+    languages: ['en', 'sw'],
+    apiEndpoint: 'https://newsonafrica.com/ke/graphql',
+    restEndpoint: 'https://newsonafrica.com/ke/wp-json/wp/v2',
   },
   za: {
-    code: "za",
-    name: "South Africa",
-    flag: "🇿🇦",
-    currency: "ZAR",
-    timezone: "Africa/Johannesburg",
-    languages: ["en", "af", "zu", "xh"],
-    apiEndpoint: "https://newsonafrica.com/za/graphql",
-    restEndpoint: "https://newsonafrica.com/za/wp-json/wp/v2",
+    code: 'za',
+    name: 'South Africa',
+    flag: '🇿🇦',
+    currency: 'ZAR',
+    timezone: 'Africa/Johannesburg',
+    languages: ['en', 'af', 'zu', 'xh'],
+    apiEndpoint: 'https://newsonafrica.com/za/graphql',
+    restEndpoint: 'https://newsonafrica.com/za/wp-json/wp/v2',
   },
   gh: {
-    code: "gh",
-    name: "Ghana",
-    flag: "🇬🇭",
-    currency: "GHS",
-    timezone: "Africa/Accra",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/gh/graphql",
-    restEndpoint: "https://newsonafrica.com/gh/wp-json/wp/v2",
+    code: 'gh',
+    name: 'Ghana',
+    flag: '🇬🇭',
+    currency: 'GHS',
+    timezone: 'Africa/Accra',
+    languages: ['en'],
+    apiEndpoint: 'https://newsonafrica.com/gh/graphql',
+    restEndpoint: 'https://newsonafrica.com/gh/wp-json/wp/v2',
   },
   ug: {
-    code: "ug",
-    name: "Uganda",
-    flag: "🇺🇬",
-    currency: "UGX",
-    timezone: "Africa/Kampala",
-    languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ug/graphql",
-    restEndpoint: "https://newsonafrica.com/ug/wp-json/wp/v2",
+    code: 'ug',
+    name: 'Uganda',
+    flag: '🇺🇬',
+    currency: 'UGX',
+    timezone: 'Africa/Kampala',
+    languages: ['en'],
+    apiEndpoint: 'https://newsonafrica.com/ug/graphql',
+    restEndpoint: 'https://newsonafrica.com/ug/wp-json/wp/v2',
   },
   tz: {
-    code: "tz",
-    name: "Tanzania",
-    flag: "🇹🇿",
-    currency: "TZS",
-    timezone: "Africa/Dar_es_Salaam",
-    languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/tz/graphql",
-    restEndpoint: "https://newsonafrica.com/tz/wp-json/wp/v2",
+    code: 'tz',
+    name: 'Tanzania',
+    flag: '🇹🇿',
+    currency: 'TZS',
+    timezone: 'Africa/Dar_es_Salaam',
+    languages: ['en', 'sw'],
+    apiEndpoint: 'https://newsonafrica.com/tz/graphql',
+    restEndpoint: 'https://newsonafrica.com/tz/wp-json/wp/v2',
   },
   rw: {
-    code: "rw",
-    name: "Rwanda",
-    flag: "🇷🇼",
-    currency: "RWF",
-    timezone: "Africa/Kigali",
-    languages: ["en", "rw", "fr"],
-    apiEndpoint: "https://newsonafrica.com/rw/graphql",
-    restEndpoint: "https://newsonafrica.com/rw/wp-json/wp/v2",
+    code: 'rw',
+    name: 'Rwanda',
+    flag: '🇷🇼',
+    currency: 'RWF',
+    timezone: 'Africa/Kigali',
+    languages: ['en', 'rw', 'fr'],
+    apiEndpoint: 'https://newsonafrica.com/rw/graphql',
+    restEndpoint: 'https://newsonafrica.com/rw/wp-json/wp/v2',
   },
-}
+};
 
 // Utility function to get country-specific endpoints
 function getCountryEndpoints(countryCode: string) {
-  const country = COUNTRIES[countryCode]
+  const country = COUNTRIES[countryCode];
   if (!country) {
     // Fallback to default (sz)
     return {
       graphql: COUNTRIES.sz.apiEndpoint,
       rest: COUNTRIES.sz.restEndpoint,
-    }
+    };
   }
   return {
     graphql: country.apiEndpoint,
     rest: country.restEndpoint,
-  }
+  };
 }
 
 // Enhanced cache with LRU-like behavior
-const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const MAX_CACHE_SIZE = 50
+const categoryCache = new Map<string, { data: any; timestamp: number; hits: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 50;
 
 // Cache cleanup function
 function cleanupCache() {
-  if (categoryCache.size <= MAX_CACHE_SIZE) return
+  if (categoryCache.size <= MAX_CACHE_SIZE) return;
 
   // Sort by hits and timestamp, remove least used entries
   const entries = Array.from(categoryCache.entries()).sort((a, b) => {
-    const aScore = a[1].hits + (Date.now() - a[1].timestamp) / 1000
-    const bScore = b[1].hits + (Date.now() - b[1].timestamp) / 1000
-    return aScore - bScore
-  })
+    const aScore = a[1].hits + (Date.now() - a[1].timestamp) / 1000;
+    const bScore = b[1].hits + (Date.now() - b[1].timestamp) / 1000;
+    return aScore - bScore;
+  });
 
   // Remove oldest 25% of entries
-  const toRemove = Math.floor(entries.length * 0.25)
+  const toRemove = Math.floor(entries.length * 0.25);
   for (let i = 0; i < toRemove; i++) {
-    categoryCache.delete(entries[i][0])
+    categoryCache.delete(entries[i][0]);
   }
 }
 
 // Generic API cache used by legacy helpers
-const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 // Online/offline helpers
 const isOnline = () => {
-  if (typeof navigator !== "undefined" && "onLine" in navigator) {
-    return navigator.onLine
+  if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
+    return navigator.onLine;
   }
-  return true
-}
+  return true;
+};
 
-const isServer = () => typeof window === "undefined"
+const isServer = () => typeof window === 'undefined';
 
 // Fetch data from WordPress REST API with retry logic
 async function fetchFromRestApi(endpoint: string, params: Record<string, any> = {}) {
   const queryParams = new URLSearchParams(
     Object.entries(params).map(([key, value]) => [key, String(value)]),
-  ).toString()
+  ).toString();
 
-  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
 
-  const MAX_RETRIES = 3
-  let lastError: any
+  const MAX_RETRIES = 3;
+  let lastError: any;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(url, {
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "User-Agent": "NewsOnAfrica/1.0",
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'User-Agent': 'NewsOnAfrica/1.0',
         },
         signal: controller.signal,
         next: { revalidate: 300 },
-      })
+      });
 
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`REST API error: ${response.status} ${response.statusText}`)
+        throw new Error(`REST API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json()
+      return await response.json();
     } catch (error) {
-      console.error(`REST API request attempt ${attempt + 1} failed:`, error)
-      lastError = error
+      console.error(`REST API request attempt ${attempt + 1} failed:`, error);
+      lastError = error;
 
       if (attempt === MAX_RETRIES - 1) {
-        throw error
+        throw error;
       }
 
-      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000)
-      await new Promise((resolve) => setTimeout(resolve, backoffTime))
+      const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000);
+      await new Promise((resolve) => setTimeout(resolve, backoffTime));
     }
   }
 
-  throw lastError
+  throw lastError;
 }
 
 // Fetch with GraphQL first then fallback to REST API
@@ -301,33 +301,32 @@ async function fetchWithFallback(
   cacheKey: string,
   restFallback: () => Promise<any>,
 ) {
-  const cached = apiCache.get(cacheKey)
+  const cached = apiCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data
+    return cached.data;
   }
 
   if (!isServer() && !isOnline()) {
-    console.log("Device is offline, using cache or returning empty data")
-    return cached?.data || []
+    console.log('Device is offline, using cache or returning empty data');
+    return cached?.data || [];
   }
 
   try {
-    const data = await graphqlRequest<any>(query, variables)
-    apiCache.set(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL })
-    return data
+    const data = await graphqlRequest<any>(query, variables);
+    apiCache.set(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });
+    return data;
   } catch (error) {
-    console.error("GraphQL request failed, falling back to REST API:", error)
+    console.error('GraphQL request failed, falling back to REST API:', error);
     try {
-      const restData = await restFallback()
-      apiCache.set(cacheKey, { data: restData, timestamp: Date.now(), ttl: CACHE_TTL })
-      return restData
+      const restData = await restFallback();
+      apiCache.set(cacheKey, { data: restData, timestamp: Date.now(), ttl: CACHE_TTL });
+      return restData;
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return cached?.data || []
+      console.error('Both GraphQL and REST API failed:', restError);
+      return cached?.data || [];
     }
   }
 }
-
 
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
@@ -337,16 +336,16 @@ async function graphqlRequest<T>(
   retries = 3,
   tags?: string[],
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || "sz")
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  const endpoints = getCountryEndpoints(countryCode || 'sz');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
     const response = await fetch(endpoints.graphql, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Connection: "keep-alive",
+        'Content-Type': 'application/json',
+        Connection: 'keep-alive',
       },
       body: JSON.stringify({
         query,
@@ -354,32 +353,32 @@ async function graphqlRequest<T>(
       }),
       signal: controller.signal,
       next: { revalidate: 300, tags }, // Cache for 5 minutes with tags
-    })
+    });
 
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`)
+      throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      console.error("GraphQL errors:", result.errors)
-      throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(", ")}`)
+      console.error('GraphQL errors:', result.errors);
+      throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(', ')}`);
     }
 
-    return result.data
+    return result.data;
   } catch (error) {
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
 
     if (retries > 0 && error instanceof Error) {
-      console.warn(`GraphQL request failed, retrying... (${retries} attempts left)`)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      return graphqlRequest<T>(query, variables, countryCode, retries - 1)
+      console.warn(`GraphQL request failed, retrying... (${retries} attempts left)`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return graphqlRequest<T>(query, variables, countryCode, retries - 1);
     }
 
-    throw error
+    throw error;
   }
 }
 
@@ -390,28 +389,30 @@ async function restApiFallback<T>(
   transform: (data: any) => T,
   countryCode?: string,
 ): Promise<T> {
-  const endpoints = getCountryEndpoints(countryCode || "sz")
-  const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
+  const endpoints = getCountryEndpoints(countryCode || 'sz');
+  const queryParams = new URLSearchParams(
+    Object.entries(params).map(([key, value]) => [key, String(value)]),
+  ).toString();
 
-  const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
 
   try {
     const response = await fetch(url, {
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       next: { revalidate: 300 },
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`REST API request failed: ${response.status} ${response.statusText}`)
+      throw new Error(`REST API request failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json()
-    return transform(data)
+    const data = await response.json();
+    return transform(data);
   } catch (error) {
-    console.error("REST API fallback failed:", error)
-    throw error
+    console.error('REST API fallback failed:', error);
+    throw error;
   }
 }
 
@@ -421,14 +422,14 @@ async function fetchWithGraphQLFallback<T>(
   defaultValue: T,
 ): Promise<T> {
   try {
-    return await graphqlFetch()
+    return await graphqlFetch();
   } catch (error) {
-    console.error("GraphQL request failed, trying REST API:", error)
+    console.error('GraphQL request failed, trying REST API:', error);
     try {
-      return await restFetch()
+      return await restFetch();
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return defaultValue
+      console.error('Both GraphQL and REST API failed:', restError);
+      return defaultValue;
     }
   }
 }
@@ -457,7 +458,7 @@ export async function getLatestPostsForCountry(
       })),
     () =>
       restApiFallback(
-        "posts",
+        'posts',
         { per_page: limit, _embed: 1 },
         (posts: any[]) => ({
           posts: posts.map(transformRestPostToGraphQL),
@@ -467,7 +468,7 @@ export async function getLatestPostsForCountry(
         countryCode,
       ),
     { posts: [], hasNextPage: false, endCursor: null },
-  )
+  );
 }
 
 /**
@@ -479,10 +480,10 @@ export async function getPostsByCategoryForCountry(
   limit = 20,
   after?: string,
 ): Promise<{
-  category: WordPressCategory | null
-  posts: WordPressPost[]
-  hasNextPage: boolean
-  endCursor: string | null
+  category: WordPressCategory | null;
+  posts: WordPressPost[];
+  hasNextPage: boolean;
+  endCursor: string | null;
 }> {
   return fetchWithGraphQLFallback(
     () =>
@@ -496,7 +497,7 @@ export async function getPostsByCategoryForCountry(
         countryCode,
       ).then((data) => {
         if (!data.category) {
-          return { category: null, posts: [], hasNextPage: false, endCursor: null }
+          return { category: null, posts: [], hasNextPage: false, endCursor: null };
         }
         return {
           category: {
@@ -508,7 +509,7 @@ export async function getPostsByCategoryForCountry(
           posts: data.category.posts.nodes,
           hasNextPage: data.category.posts.pageInfo.hasNextPage,
           endCursor: data.category.posts.pageInfo.endCursor,
-        }
+        };
       }),
     async () => {
       const categories = await restApiFallback(
@@ -516,29 +517,29 @@ export async function getPostsByCategoryForCountry(
         {},
         (cats: any[]) => cats,
         countryCode,
-      )
+      );
 
       if (!categories || categories.length === 0) {
-        return { category: null, posts: [], hasNextPage: false, endCursor: null }
+        return { category: null, posts: [], hasNextPage: false, endCursor: null };
       }
 
-      const category = categories[0]
+      const category = categories[0];
       const posts = await restApiFallback(
-        "posts",
+        'posts',
         { categories: category.id, per_page: limit, _embed: 1 },
         (posts: any[]) => posts.map(transformRestPostToGraphQL),
         countryCode,
-      )
+      );
 
       return {
         category: transformRestCategoryToGraphQL(category),
         posts,
         hasNextPage: posts.length === limit,
         endCursor: null,
-      }
+      };
     },
     { category: null, posts: [], hasNextPage: false, endCursor: null },
-  )
+  );
 }
 
 /**
@@ -547,20 +548,18 @@ export async function getPostsByCategoryForCountry(
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
   return fetchWithGraphQLFallback(
     () =>
-      graphqlRequest<WordPressCategoriesResponse>(
-        CATEGORIES_QUERY,
-        {},
-        countryCode,
-      ).then((data) => data.categories.nodes),
+      graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode).then(
+        (data) => data.categories.nodes,
+      ),
     () =>
       restApiFallback(
-        "categories",
+        'categories',
         { per_page: 100 },
         (categories: any[]) => categories.map(transformRestCategoryToGraphQL),
         countryCode,
       ),
     [],
-  )
+  );
 }
 
 /**
@@ -568,27 +567,24 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
  */
 export async function getLatestPosts(limit = 20, after?: string) {
   try {
-    const { posts } = await fetchRecentPosts(limit)
+    const { posts } = await fetchRecentPosts(limit);
     return {
       posts: posts || [],
       error: null,
-    }
+    };
   } catch (error) {
-    console.error("Failed to fetch latest posts:", error)
+    console.error('Failed to fetch latest posts:', error);
     return {
       posts: [],
-      error: error instanceof Error ? error.message : "Failed to fetch posts",
-    }
+      error: error instanceof Error ? error.message : 'Failed to fetch posts',
+    };
   }
 }
 
 /**
  * Get a single post by slug
  */
-export async function getPostBySlug(
-  slug: string,
-  tags?: string[],
-): Promise<WordPressPost | null> {
+export async function getPostBySlug(slug: string, tags?: string[]): Promise<WordPressPost | null> {
   return fetchWithGraphQLFallback(
     () =>
       graphqlRequest<WordPressSinglePostResponse>(
@@ -602,18 +598,18 @@ export async function getPostBySlug(
       ).then((data) => data.post),
     () =>
       restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
-        if (!posts || posts.length === 0) return null
-        return transformRestPostToGraphQL(posts[0])
+        if (!posts || posts.length === 0) return null;
+        return transformRestPostToGraphQL(posts[0]);
       }),
     null,
-  )
+  );
 }
 
 /**
  * Get all categories
  */
 export async function getCategories(): Promise<WordPressCategory[]> {
-  return getCategoriesForCountry("sz")
+  return getCategoriesForCountry('sz');
 }
 
 /**
@@ -624,44 +620,44 @@ export async function getPostsByCategory(
   limit = 20,
   after?: string | null,
 ): Promise<{
-  category: WordPressCategory | null
-  posts: WordPressPost[]
-  hasNextPage: boolean
-  endCursor: string | null
+  category: WordPressCategory | null;
+  posts: WordPressPost[];
+  hasNextPage: boolean;
+  endCursor: string | null;
 }> {
   // Create cache key
-  const cacheKey = `category:${categorySlug}:${limit}:${after || "null"}`
+  const cacheKey = `category:${categorySlug}:${limit}:${after || 'null'}`;
 
   // Check cache first
-  const cached = categoryCache.get(cacheKey)
+  const cached = categoryCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     // Increment hit counter
-    cached.hits++
-    return cached.data
+    cached.hits++;
+    return cached.data;
   }
 
   try {
     // If not in cache, fetch from API
-    const result = await getPostsByCategoryForCountry("sz", categorySlug, limit, after || null)
+    const result = await getPostsByCategoryForCountry('sz', categorySlug, limit, after || null);
 
     // Cache the result
     categoryCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
       hits: 1,
-    })
+    });
 
     // Cleanup cache if needed
-    cleanupCache()
+    cleanupCache();
 
-    return result
+    return result;
   } catch (error) {
     // If we have stale cached data, return it as fallback
     if (cached) {
-      console.warn("Using stale cache data due to API error:", error)
-      return cached.data
+      console.warn('Using stale cache data due to API error:', error);
+      return cached.data;
     }
-    throw error
+    throw error;
   }
 }
 
@@ -675,13 +671,11 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
         first: limit,
       }).then((data) => data.posts.nodes),
     () =>
-      restApiFallback(
-        "posts",
-        { sticky: true, per_page: limit, _embed: 1 },
-        (posts: any[]) => posts.map(transformRestPostToGraphQL),
+      restApiFallback('posts', { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
+        posts.map(transformRestPostToGraphQL),
       ),
     [],
-  )
+  );
 }
 
 /**
@@ -689,25 +683,25 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
  */
 export async function getCategoryPosts(slug: string, after?: string) {
   try {
-    const category = await fetchCategoryPosts(slug, after)
+    const category = await fetchCategoryPosts(slug, after);
     return {
       category,
       error: null,
-    }
+    };
   } catch (error) {
-    console.error(`Failed to fetch category posts for ${slug}:`, error)
+    console.error(`Failed to fetch category posts for ${slug}:`, error);
     return {
       category: {
-        id: "",
+        id: '',
         name: slug,
-        description: "",
+        description: '',
         posts: {
           pageInfo: { hasNextPage: false, endCursor: null },
           nodes: [],
         },
       },
-      error: error instanceof Error ? error.message : "Failed to fetch category posts",
-    }
+      error: error instanceof Error ? error.message : 'Failed to fetch category posts',
+    };
   }
 }
 
@@ -716,17 +710,17 @@ export async function getCategoryPosts(slug: string, after?: string) {
  */
 export async function getPost(slug: string) {
   try {
-    const post = await fetchSinglePost(slug)
+    const post = await fetchSinglePost(slug);
     return {
       post,
       error: null,
-    }
+    };
   } catch (error) {
-    console.error(`Failed to fetch post ${slug}:`, error)
+    console.error(`Failed to fetch post ${slug}:`, error);
     return {
       post: null,
-      error: error instanceof Error ? error.message : "Failed to fetch post",
-    }
+      error: error instanceof Error ? error.message : 'Failed to fetch post',
+    };
   }
 }
 
@@ -741,9 +735,9 @@ export async function getRelatedPosts(
   countryCode?: string,
 ): Promise<WordPressPost[]> {
   // Check cache first
-  const cached = relatedPostsCache.get(postId, categories, tags, limit, countryCode)
+  const cached = relatedPostsCache.get(postId, categories, tags, limit, countryCode);
   if (cached) {
-    return cached
+    return cached;
   }
   const graphqlFetch = async () => {
     const RELATED_POSTS_QUERY = `
@@ -807,8 +801,8 @@ export async function getRelatedPosts(
           }
         }
       }
-    `
-    let relatedPosts: WordPressPost[] = []
+    `;
+    let relatedPosts: WordPressPost[] = [];
 
     if (categories.length > 0) {
       const categoryData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
@@ -819,12 +813,12 @@ export async function getRelatedPosts(
           first: limit,
         },
         countryCode,
-      )
-      relatedPosts = categoryData.posts.nodes
+      );
+      relatedPosts = categoryData.posts.nodes;
     }
 
     if (relatedPosts.length < limit && tags.length > 0) {
-      const remainingLimit = limit - relatedPosts.length
+      const remainingLimit = limit - relatedPosts.length;
       const tagData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
         RELATED_POSTS_QUERY,
         {
@@ -833,12 +827,12 @@ export async function getRelatedPosts(
           first: remainingLimit,
         },
         countryCode,
-      )
-      relatedPosts = [...relatedPosts, ...tagData.posts.nodes]
+      );
+      relatedPosts = [...relatedPosts, ...tagData.posts.nodes];
     }
 
     if (relatedPosts.length < 3 && categories.length > 0) {
-      const remainingLimit = Math.max(3 - relatedPosts.length, 0)
+      const remainingLimit = Math.max(3 - relatedPosts.length, 0);
       const latestData = await graphqlRequest<{ posts: { nodes: WordPressPost[] } }>(
         RELATED_POSTS_QUERY,
         {
@@ -847,71 +841,71 @@ export async function getRelatedPosts(
           first: remainingLimit,
         },
         countryCode,
-      )
-      relatedPosts = [...relatedPosts, ...latestData.posts.nodes]
+      );
+      relatedPosts = [...relatedPosts, ...latestData.posts.nodes];
     }
 
-    const finalPosts = relatedPosts.slice(0, limit)
-    relatedPostsCache.set(postId, categories, tags, limit, finalPosts, countryCode)
-    return finalPosts
-  }
+    const finalPosts = relatedPosts.slice(0, limit);
+    relatedPostsCache.set(postId, categories, tags, limit, finalPosts, countryCode);
+    return finalPosts;
+  };
 
   const restFetch = async () => {
-    const endpoints = getCountryEndpoints(countryCode || "sz")
+    const endpoints = getCountryEndpoints(countryCode || 'sz');
     const params = new URLSearchParams({
       per_page: limit.toString(),
       exclude: postId,
-      _embed: "1",
-    })
+      _embed: '1',
+    });
 
     if (categories.length > 0) {
-      params.append("categories", categories.join(","))
+      params.append('categories', categories.join(','));
     }
 
     const response = await fetch(`${endpoints.rest}/posts?${params.toString()}`, {
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 300 },
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`REST API request failed: ${response.status}`)
+      throw new Error(`REST API request failed: ${response.status}`);
     }
 
-    const posts = await response.json()
-    const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit)
-    relatedPostsCache.set(postId, categories, tags, limit, transformedPosts, countryCode)
-    return transformedPosts
-  }
+    const posts = await response.json();
+    const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit);
+    relatedPostsCache.set(postId, categories, tags, limit, transformedPosts, countryCode);
+    return transformedPosts;
+  };
 
-  return fetchWithGraphQLFallback(graphqlFetch, restFetch, [])
+  return fetchWithGraphQLFallback(graphqlFetch, restFetch, []);
 }
 
 /**
  * Invalidate related posts cache for a specific post
  */
 export function invalidateRelatedPostsCache(postId: string): void {
-  relatedPostsCache.invalidatePost(postId)
+  relatedPostsCache.invalidatePost(postId);
 }
 
 /**
  * Invalidate related posts cache for a specific category
  */
 export function invalidateRelatedPostsCacheByCategory(categorySlug: string): void {
-  relatedPostsCache.invalidateCategory(categorySlug)
+  relatedPostsCache.invalidateCategory(categorySlug);
 }
 
 /**
  * Get related posts cache statistics
  */
 export function getRelatedPostsCacheStats() {
-  return relatedPostsCache.getStats()
+  return relatedPostsCache.getStats();
 }
 
 /**
  * Clear all related posts cache
  */
 export function clearRelatedPostsCache(): void {
-  relatedPostsCache.clear()
+  relatedPostsCache.clear();
 }
 
 /**
@@ -966,67 +960,67 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
     const params = new URLSearchParams({
       per_page: String(limit),
       offset: String(offset),
-      _embed: "1",
-      orderby: "date",
-      order: "desc",
-    })
+      _embed: '1',
+      orderby: 'date',
+      order: 'desc',
+    });
 
-    const url = `${WORDPRESS_REST_API_URL}/posts?${params.toString()}`
+    const url = `${WORDPRESS_REST_API_URL}/posts?${params.toString()}`;
 
     const response = await fetch(url, {
       headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "NewsOnAfrica/1.0",
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': 'NewsOnAfrica/1.0',
       },
       next: { revalidate: 300 },
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`REST API error: ${response.status} ${response.statusText}`)
+      throw new Error(`REST API error: ${response.status} ${response.statusText}`);
     }
 
-    const total = parseInt(response.headers.get("X-WP-Total") || "0", 10)
-    const posts = await response.json()
+    const total = parseInt(response.headers.get('X-WP-Total') || '0', 10);
+    const posts = await response.json();
 
     return {
       posts: {
         nodes: posts.map((post: any) => ({
           id: post.id.toString(),
-          title: post.title?.rendered || "",
-          slug: post.slug || "",
-          date: post.date || "",
-          excerpt: post.excerpt?.rendered || "",
-          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+          title: post.title?.rendered || '',
+          slug: post.slug || '',
+          date: post.date || '',
+          excerpt: post.excerpt?.rendered || '',
+          featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
             ? {
                 node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                  sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
+                  altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
                 },
               }
             : null,
           author: {
             node: {
-              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-              slug: post._embedded?.["author"]?.[0]?.slug || "",
+              name: post._embedded?.['author']?.[0]?.name || 'Unknown',
+              slug: post._embedded?.['author']?.[0]?.slug || '',
             },
           },
           categories: {
             nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+              post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
                 name: cat.name,
                 slug: cat.slug,
               })) || [],
           },
           tags: {
             nodes:
-              post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+              post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
                 name: tag.name,
                 slug: tag.slug,
               })) || [],
@@ -1038,21 +1032,21 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
           },
         },
       },
-    }
-  }
+    };
+  };
 
   const data = await fetchWithFallback(
     query,
     { limit, offset },
     `recent-posts-${limit}-${offset}`,
     restFallback,
-  )
+  );
 
   return {
     posts: data.posts?.nodes || [],
     total: data.posts?.pageInfo?.offsetPagination?.total || 0,
-  }
-})
+  };
+});
 
 /**
  * Fetches posts by category
@@ -1103,29 +1097,29 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
     try {
-      const categories = await fetchFromRestApi("categories", { slug })
+      const categories = await fetchFromRestApi('categories', { slug });
       if (!categories || categories.length === 0) {
-        throw new Error(`Category not found: ${slug}`)
+        throw new Error(`Category not found: ${slug}`);
       }
 
-      const categoryId = categories[0].id
-      const categoryData = categories[0]
+      const categoryId = categories[0].id;
+      const categoryData = categories[0];
 
-      const posts = await fetchFromRestApi("posts", {
+      const posts = await fetchFromRestApi('posts', {
         categories: categoryId,
         per_page: 20,
         _embed: 1,
-      })
+      });
 
       return {
         category: {
           id: categoryData.id.toString(),
           name: categoryData.name,
-          description: categoryData.description || "",
+          description: categoryData.description || '',
           posts: {
             pageInfo: {
               hasNextPage: posts.length >= 20,
@@ -1133,34 +1127,34 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
             },
             nodes: posts.map((post: any) => ({
               id: post.id.toString(),
-              title: post.title?.rendered || "",
-              slug: post.slug || "",
-              date: post.date || "",
-              excerpt: post.excerpt?.rendered || "",
-              featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+              title: post.title?.rendered || '',
+              slug: post.slug || '',
+              date: post.date || '',
+              excerpt: post.excerpt?.rendered || '',
+              featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
                 ? {
                     node: {
-                      sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                      altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                      sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
+                      altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
                     },
                   }
                 : null,
               author: {
                 node: {
-                  name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-                  slug: post._embedded?.["author"]?.[0]?.slug || "",
+                  name: post._embedded?.['author']?.[0]?.name || 'Unknown',
+                  slug: post._embedded?.['author']?.[0]?.slug || '',
                 },
               },
               categories: {
                 nodes:
-                  post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+                  post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
                     name: cat.name,
                     slug: cat.slug,
                   })) || [],
               },
               tags: {
                 nodes:
-                  post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+                  post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
                     name: tag.name,
                     slug: tag.slug,
                   })) || [],
@@ -1168,31 +1162,31 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
             })),
           },
         },
-      }
+      };
     } catch (error) {
-      console.error(`Failed to fetch category ${slug}:`, error)
+      console.error(`Failed to fetch category ${slug}:`, error);
       return {
         category: {
-          id: "",
+          id: '',
           name: slug,
-          description: "",
+          description: '',
           posts: {
             pageInfo: { hasNextPage: false, endCursor: null },
             nodes: [],
           },
         },
-      }
+      };
     }
-  }
+  };
 
   const data = await fetchWithFallback(
     query,
     { slug, after },
-    `category-${slug}-${after || "first"}`,
+    `category-${slug}-${after || 'first'}`,
     restFallback,
-  )
-  return data.category
-})
+  );
+  return data.category;
+});
 
 /**
  * Fetches all categories
@@ -1210,26 +1204,26 @@ export const fetchAllCategories = cache(async () => {
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
-    const categories = await fetchFromRestApi("categories", { per_page: 100, hide_empty: true })
+    const categories = await fetchFromRestApi('categories', { per_page: 100, hide_empty: true });
     return {
       categories: {
         nodes: categories.map((cat: any) => ({
           id: cat.id.toString(),
           name: cat.name,
           slug: cat.slug,
-          description: cat.description || "",
+          description: cat.description || '',
           count: cat.count || 0,
         })),
       },
-    }
-  }
+    };
+  };
 
-  const data = await fetchWithFallback(query, {}, "all-categories", restFallback)
-  return data.categories?.nodes || []
-})
+  const data = await fetchWithFallback(query, {}, 'all-categories', restFallback);
+  return data.categories?.nodes || [];
+});
 
 /**
  * Fetches a single post
@@ -1279,68 +1273,68 @@ export const fetchSinglePost = async (slug: string) => {
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
-    const posts = await fetchFromRestApi(`posts?slug=${slug}&_embed=1`)
+    const posts = await fetchFromRestApi(`posts?slug=${slug}&_embed=1`);
 
     if (!posts || posts.length === 0) {
-      return { post: null }
+      return { post: null };
     }
 
-    const post = posts[0]
+    const post = posts[0];
     return {
       post: {
         id: post.id.toString(),
-        title: post.title?.rendered || "",
-        content: post.content?.rendered || "",
-        excerpt: post.excerpt?.rendered || "",
-        slug: post.slug || "",
-        date: post.date || "",
-        modified: post.modified || "",
-        featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+        title: post.title?.rendered || '',
+        content: post.content?.rendered || '',
+        excerpt: post.excerpt?.rendered || '',
+        slug: post.slug || '',
+        date: post.date || '',
+        modified: post.modified || '',
+        featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
           ? {
               node: {
-                sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
+                altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
               },
             }
           : null,
         author: {
           node: {
-            name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-            slug: post._embedded?.["author"]?.[0]?.slug || "",
-            description: post._embedded?.["author"]?.[0]?.description || "",
+            name: post._embedded?.['author']?.[0]?.name || 'Unknown',
+            slug: post._embedded?.['author']?.[0]?.slug || '',
+            description: post._embedded?.['author']?.[0]?.description || '',
             avatar: {
-              url: post._embedded?.["author"]?.[0]?.avatar_urls?.["96"] || "",
+              url: post._embedded?.['author']?.[0]?.avatar_urls?.['96'] || '',
             },
           },
         },
         categories: {
           nodes:
-            post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+            post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
               name: cat.name,
               slug: cat.slug,
             })) || [],
         },
         tags: {
           nodes:
-            post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+            post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
               name: tag.name,
               slug: tag.slug,
             })) || [],
         },
         seo: {
-          title: post.title?.rendered || "",
-          metaDesc: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "",
+          title: post.title?.rendered || '',
+          metaDesc: post.excerpt?.rendered?.replace(/<[^>]*>/g, '') || '',
         },
       },
-    }
-  }
+    };
+  };
 
-  const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback)
-  return data.post
-}
+  const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback);
+  return data.post;
+};
 
 /**
  * Search posts
@@ -1384,15 +1378,15 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
-    const posts = await fetchFromRestApi("posts", {
+    const posts = await fetchFromRestApi('posts', {
       search: query,
       per_page: perPage,
       page,
       _embed: 1,
-    })
+    });
 
     return {
       posts: {
@@ -1402,134 +1396,134 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
         },
         nodes: posts.map((post: any) => ({
           id: post.id.toString(),
-          title: post.title?.rendered || "",
-          slug: post.slug || "",
-          date: post.date || "",
-          excerpt: post.excerpt?.rendered || "",
-          featuredImage: post._embedded?.["wp:featuredmedia"]?.[0]
+          title: post.title?.rendered || '',
+          slug: post.slug || '',
+          date: post.date || '',
+          excerpt: post.excerpt?.rendered || '',
+          featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
             ? {
                 node: {
-                  sourceUrl: post._embedded["wp:featuredmedia"][0].source_url,
-                  altText: post._embedded["wp:featuredmedia"][0].alt_text || "",
+                  sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
+                  altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
                 },
               }
             : null,
           author: {
             node: {
-              name: post._embedded?.["author"]?.[0]?.name || "Unknown",
-              slug: post._embedded?.["author"]?.[0]?.slug || "",
+              name: post._embedded?.['author']?.[0]?.name || 'Unknown',
+              slug: post._embedded?.['author']?.[0]?.slug || '',
             },
           },
           categories: {
             nodes:
-              post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+              post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
                 name: cat.name,
                 slug: cat.slug,
               })) || [],
           },
         })),
       },
-    }
-  }
+    };
+  };
 
-  const after = page > 1 ? btoa(`arrayconnection:${(page - 1) * perPage - 1}`) : null
+  const after = page > 1 ? btoa(`arrayconnection:${(page - 1) * perPage - 1}`) : null;
   const data = await fetchWithFallback(
     graphqlQuery,
     { search: query, first: perPage, after },
     `search-${query}-${page}`,
     restFallback,
-  )
+  );
 
-  return data.posts
-}
+  return data.posts;
+};
 
 // Convenience exports matching legacy API
-export const fetchFeaturedPosts = fetchRecentPosts
-export const fetchCategorizedPosts = async () => ({})
-export const fetchAllPosts = fetchRecentPosts
-export const fetchAllTags = async () => []
-export const fetchAllAuthors = async () => []
+export const fetchFeaturedPosts = fetchRecentPosts;
+export const fetchCategorizedPosts = async () => ({});
+export const fetchAllPosts = fetchRecentPosts;
+export const fetchAllTags = async () => [];
+export const fetchAllAuthors = async () => [];
 export const fetchPosts = async (options?: any) => {
-  if (typeof options === "number") {
-    const result = await fetchRecentPosts(options)
-    return { data: result.posts, total: result.total }
+  if (typeof options === 'number') {
+    const result = await fetchRecentPosts(options);
+    return { data: result.posts, total: result.total };
   }
 
-  const limit = options?.perPage || options?.limit || 20
-  const page = options?.page || 1
-  const offset = (page - 1) * limit
+  const limit = options?.perPage || options?.limit || 20;
+  const page = options?.page || 1;
+  const offset = (page - 1) * limit;
 
   // For now we ignore category, tag, search filters and just return recent posts
-  const result = await fetchRecentPosts(limit, offset)
-  return { data: result.posts, total: result.total }
-}
-export const fetchCategories = fetchAllCategories
-export const fetchTags = fetchAllTags
-export const fetchAuthors = fetchAllAuthors
+  const result = await fetchRecentPosts(limit, offset);
+  return { data: result.posts, total: result.total };
+};
+export const fetchCategories = fetchAllCategories;
+export const fetchTags = fetchAllTags;
+export const fetchAuthors = fetchAllAuthors;
 
 export const clearApiCache = () => {
-  apiCache.clear()
-}
+  apiCache.clear();
+};
 
 export const getCacheStats = () => {
   return {
     size: apiCache.size,
-  }
-}
+  };
+};
 
 /**
  * Fetch author data
  */
 export const fetchAuthorData = cache(async (slug: string, _after: string | null = null) => {
-  const author = await fetchFromRestApi("users", { slug })
-  if (!author || author.length === 0) return null
-  const posts = await fetchFromRestApi("posts", { author: author[0].id, _embed: 1 })
+  const author = await fetchFromRestApi('users', { slug });
+  if (!author || author.length === 0) return null;
+  const posts = await fetchFromRestApi('posts', { author: author[0].id, _embed: 1 });
   return {
     author: author[0],
     posts,
-  }
-})
+  };
+});
 
 /**
  * Delete a comment
  */
 export const deleteComment = async (commentId: string) => {
   const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+      Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ''}`,
     },
-  })
+  });
   if (!response.ok) {
-    throw new Error(`Failed to delete comment: ${response.statusText}`)
+    throw new Error(`Failed to delete comment: ${response.statusText}`);
   }
-  return true
-}
+  return true;
+};
 
 /**
  * Fetch pending comments
  */
 export const fetchPendingComments = async () => {
-  return fetchFromRestApi("comments", { status: "hold", per_page: 100 })
-}
+  return fetchFromRestApi('comments', { status: 'hold', per_page: 100 });
+};
 
 /**
  * Approve a comment
  */
 export const approveComment = async (commentId: string) => {
   const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ''}`,
     },
-    body: JSON.stringify({ status: "approve" }),
-  })
+    body: JSON.stringify({ status: 'approve' }),
+  });
   if (!response.ok) {
-    throw new Error(`Failed to approve comment: ${response.statusText}`)
+    throw new Error(`Failed to approve comment: ${response.statusText}`);
   }
-  return response.json()
-}
+  return response.json();
+};
 
 /**
  * Fetch posts by tag
@@ -1565,63 +1559,62 @@ export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
         }
       }
     }
-  `
+  `;
 
   const restFallback = async () => {
-    const tag = await fetchFromRestApi("tags", { slug: tagSlug })
+    const tag = await fetchFromRestApi('tags', { slug: tagSlug });
     if (!tag || tag.length === 0) {
-      return { posts: { nodes: [] } }
+      return { posts: { nodes: [] } };
     }
-    const posts = await fetchFromRestApi("posts", { tags: tag[0].id, per_page: limit, _embed: 1 })
+    const posts = await fetchFromRestApi('posts', { tags: tag[0].id, per_page: limit, _embed: 1 });
     return {
       posts: {
         nodes: posts.map(transformRestPostToGraphQL),
       },
-    }
-  }
+    };
+  };
 
   const data = await fetchWithFallback(
     query,
     { slug: tagSlug, first: limit },
     `tagged-posts-${tagSlug}-${limit}`,
     restFallback,
-  )
-  return data.posts.nodes
-})
+  );
+  return data.posts.nodes;
+});
 
-export const fetchPostsByTag = fetchTaggedPosts
+export const fetchPostsByTag = fetchTaggedPosts;
 
 /**
  * Fetch a single category
  */
 export const fetchSingleCategory = cache(async (slug: string) => {
-  const categories = await fetchAllCategories()
-  return categories.find((c: any) => c.slug === slug) || null
-})
+  const categories = await fetchAllCategories();
+  return categories.find((c: any) => c.slug === slug) || null;
+});
 
 /**
  * Fetch a single tag
  */
 export const fetchSingleTag = cache(async (slug: string) => {
-  const tag = await fetchFromRestApi("tags", { slug })
-  return tag && tag.length ? tag[0] : null
-})
+  const tag = await fetchFromRestApi('tags', { slug });
+  return tag && tag.length ? tag[0] : null;
+});
 
 /**
  * Fetch comments for a post
  */
 export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
-  return fetchFromRestApi("comments", { post: postId, page, per_page: perPage })
-}
+  return fetchFromRestApi('comments', { post: postId, page, per_page: perPage });
+};
 
 export const client = {
-  query: (query: string, variables?: Record<string, any>) =>
-    graphqlRequest<any>(query, variables),
+  query: (query: string, variables?: Record<string, any>) => graphqlRequest<any>(query, variables),
   request: (query: string, variables?: Record<string, any>) =>
     graphqlRequest<any>(query, variables),
   endpoint: WORDPRESS_GRAPHQL_URL,
   restEndpoint: WORDPRESS_REST_API_URL,
-}
+};
 
 /**
  * Update user profile
@@ -1629,52 +1622,50 @@ export const client = {
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
     const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ''}`,
       },
       body: JSON.stringify(profileData),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`Failed to update user profile: ${response.statusText}`)
+      throw new Error(`Failed to update user profile: ${response.statusText}`);
     }
 
-    return await response.json()
+    return await response.json();
   } catch (error) {
-    console.error("Error updating user profile:", error)
-    throw error
+    console.error('Error updating user profile:', error);
+    throw error;
   }
-}
+};
 
 /**
 
  * Pick top story preferring posts tagged with "fp"
  */
 export function pickTopStory(posts: WordPressPost[]): WordPressPost | null {
-  if (!posts.length) return null
+  if (!posts.length) return null;
   const featured = posts.find((p) =>
-    p.tags?.nodes?.some((t) => t.slug === "fp" || t.name?.toLowerCase() === "fp"),
-  )
-  return featured || posts[0]
+    p.tags?.nodes?.some((t) => t.slug === 'fp' || t.name?.toLowerCase() === 'fp'),
+  );
+  return featured || posts[0];
 }
 
 /**
  * Get the top story from latest posts
  */
 export async function getTopStory(): Promise<WordPressPost | null> {
-  const { posts } = await getLatestPosts(10)
-  return pickTopStory(posts)
+  const { posts } = await getLatestPosts(10);
+  return pickTopStory(posts);
 }
 
 /**
  * Sort posts by date descending
  */
 export function sortPostsByDate(posts: WordPressPost[]): WordPressPost[] {
-  return [...posts].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  )
+  return [...posts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 /**
@@ -1682,49 +1673,56 @@ export function sortPostsByDate(posts: WordPressPost[]): WordPressPost[] {
  * TODO: Replace with analytics-driven endpoint
  */
 export async function getMostRead(limit = 10): Promise<WordPressPost[]> {
-  const { posts } = await getLatestPosts(limit)
-  return sortPostsByDate(posts).slice(0, limit)
+  const { posts } = await getLatestPosts(limit);
+  return sortPostsByDate(posts).slice(0, limit);
 }
 
 export type MarketItem = {
-  symbol: string
-  label: string
-  price: number
-  change: number
-  changePct: number
-}
+  symbol: string;
+  label: string;
+  price: number;
+  change: number;
+  changePct: number;
+};
 
 export async function getMarketSnapshot(): Promise<MarketItem[]> {
-  const res = await fetch("/markets.json", { next: { revalidate: 60 } })
-  return res.json()
+  const res = await fetch('/markets.json', { next: { revalidate: 60 } });
+  return res.json();
 }
 
-export type PollOption = { id: string; label: string; votes: number }
+export type PollOption = { id: string; label: string; votes: number };
 
 export type Poll = {
-  id: string
-  question: string
-  options: PollOption[]
-  userHasVoted?: boolean
-}
+  id: string;
+  question: string;
+  options: PollOption[];
+  userHasVoted?: boolean;
+};
 
 // Temporary static poll implementation
 export async function getPoll(): Promise<Poll> {
   return {
-    id: "static",
-    question: "Do you like the new homepage?",
+    id: 'static',
+    question: 'Do you like the new homepage?',
     options: [
-      { id: "yes", label: "Yes", votes: 0 },
-      { id: "no", label: "No", votes: 0 },
+      { id: 'yes', label: 'Yes', votes: 0 },
+      { id: 'no', label: 'No', votes: 0 },
     ],
-  }
+  };
 }
 
 export async function votePoll(_optionId: string): Promise<void> {
   // TODO: wire up real poll voting
-  return
+  return;
 }
 
 // Transform functions for REST API data
 // Export types for use in other files
-export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }
+export type {
+  WordPressPost,
+  WordPressCategory,
+  WordPressAuthor,
+  WordPressTag,
+  WordPressImage,
+  CountryConfig,
+};

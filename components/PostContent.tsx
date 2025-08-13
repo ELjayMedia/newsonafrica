@@ -1,23 +1,24 @@
-import { CommentList } from "@/components/CommentList"
-import type { WordPressPost } from "@/lib/api/wordpress"
-import type { Category } from "@/types/category"
-import Image from "next/image"
-import Link from "next/link"
-import { RelatedPosts } from "@/components/RelatedPosts"
-import { SocialShare } from "@/components/SocialShare"
-import { BookmarkButton } from "@/components/BookmarkButton"
-import { Clock, MessageSquare, Gift } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { formatDate } from "@/utils/date-utils"
-import { ReadLogger } from "@/components/ReadLogger"
+import { Clock, MessageSquare, Gift } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+
+import { BookmarkButton } from '@/components/BookmarkButton';
+import { CommentList } from '@/components/CommentList';
+import { ReadLogger } from '@/components/ReadLogger';
+import { RelatedPosts } from '@/components/RelatedPosts';
+import { SocialShare } from '@/components/SocialShare';
+import { Button } from '@/components/ui/button';
+import type { WordPressPost } from '@/lib/api/wordpress';
+import type { Category } from '@/types/category';
+import { formatDate } from '@/utils/date-utils';
 
 interface PostContentProps {
-  post: WordPressPost
+  post: WordPressPost;
 }
 
 export function PostContent({ post }: PostContentProps) {
   if (!post) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   return (
@@ -32,13 +33,15 @@ export function PostContent({ post }: PostContentProps) {
         <div className="flex justify-between items-center mb-4 text-sm">
           <div className="flex items-center text-gray-500">
             <Clock className="w-3 h-3 mr-1" />
-            <time dateTime={post.date}>{post.date ? formatDate(post.date, false) : "Unknown date"}</time>
+            <time dateTime={post.date}>
+              {post.date ? formatDate(post.date, false) : 'Unknown date'}
+            </time>
           </div>
 
           <div className="flex items-center gap-1">
             <span className="text-gray-500 text-xs">Share</span>
             <SocialShare
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}/post/${post.slug}`}
+              url={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://newsonafrica.com'}/post/${post.slug}`}
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center gap-1"
@@ -88,7 +91,7 @@ export function PostContent({ post }: PostContentProps) {
         {post.featuredImage && post.featuredImage.node.sourceUrl && (
           <div className="mb-6">
             <Image
-              src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={post.featuredImage.node.sourceUrl || '/placeholder.svg'}
               alt={post.featuredImage.node.altText || post.title}
               width={1200}
               height={675}
@@ -126,9 +129,11 @@ export function PostContent({ post }: PostContentProps) {
         {/* Bottom Social Sharing */}
         <div className="flex items-center justify-center py-6 border-t border-gray-200 mt-6">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-3">Found this article helpful? Share it with others!</p>
+            <p className="text-sm text-gray-600 mb-3">
+              Found this article helpful? Share it with others!
+            </p>
             <SocialShare
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}/post/${post.slug}`}
+              url={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://newsonafrica.com'}/post/${post.slug}`}
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center justify-center gap-2"
@@ -145,5 +150,5 @@ export function PostContent({ post }: PostContentProps) {
         <RelatedPosts categories={post.categories?.nodes || []} currentPostId={post.id} />
       </article>
     </div>
-  )
+  );
 }

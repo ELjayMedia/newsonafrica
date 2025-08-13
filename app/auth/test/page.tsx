@@ -1,9 +1,9 @@
-import { OAuthTest } from "@/components/OAuthTest"
+import { OAuthTest } from '@/components/OAuthTest';
 
 export const metadata = {
-  title: "OAuth Test - News on Africa",
-  description: "Test the OAuth login flow",
-}
+  title: 'OAuth Test - News on Africa',
+  description: 'Test the OAuth login flow',
+};
 
 export default function OAuthTestPage() {
   return (
@@ -11,5 +11,5 @@ export default function OAuthTestPage() {
       <h1 className="text-2xl font-bold text-center mb-6">OAuth Login Test</h1>
       <OAuthTest />
     </div>
-  )
+  );
 }

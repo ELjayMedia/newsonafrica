@@ -1,4 +1,4 @@
-import React from "react"
+import React from 'react';
 
 export function OfflineNotice() {
   return (
@@ -14,9 +14,11 @@ export function OfflineNotice() {
           </svg>
         </div>
         <div className="ml-3">
-          <p className="text-sm text-yellow-700">You are currently offline. Some content may not be up to date.</p>
+          <p className="text-sm text-yellow-700">
+            You are currently offline. Some content may not be up to date.
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

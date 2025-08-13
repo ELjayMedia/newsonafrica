@@ -1,8 +1,9 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { fetchGraphQLClient } from "@/lib/graphql-client"
-import { useAuth } from "@/hooks/useAuth"
+import { useState, useEffect } from 'react';
+
+import { useAuth } from '@/hooks/useAuth';
+import { fetchGraphQLClient } from '@/lib/graphql-client';
 
 const GET_POSTS = `
   query GetPosts($limit: Int, $offset: Int, $category: String) {
@@ -34,24 +35,24 @@ const GET_POSTS = `
       totalCount
     }
   }
-`
+`;
 
 interface PostListProps {
-  initialLimit?: number
-  category?: string
+  initialLimit?: number;
+  category?: string;
 }
 
 export default function GraphQLPostList({ initialLimit = 10, category }: PostListProps) {
-  const [posts, setPosts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(false)
-  const [offset, setOffset] = useState(0)
-  const { token } = useAuth()
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const { token } = useAuth();
 
   const fetchPosts = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const data = await fetchGraphQLClient(
         GET_POSTS,
         {
@@ -60,29 +61,29 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
           category,
         },
         token,
-      )
+      );
 
-      setPosts((prev) => [...prev, ...data.posts.edges])
-      setHasMore(data.posts.pageInfo.hasNextPage)
-      setOffset((prev) => prev + initialLimit)
+      setPosts((prev) => [...prev, ...data.posts.edges]);
+      setHasMore(data.posts.pageInfo.hasNextPage);
+      setOffset((prev) => prev + initialLimit);
     } catch (err) {
-      setError("Failed to load posts")
-      console.error(err)
+      setError('Failed to load posts');
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchPosts()
-  }, [])
+    fetchPosts();
+  }, []);
 
   const handleLoadMore = () => {
-    fetchPosts()
-  }
+    fetchPosts();
+  };
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>
+    return <div className="text-red-500">Error: {error}</div>;
   }
 
   return (
@@ -94,7 +95,7 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
           <div key={post.id} className="border rounded-lg overflow-hidden shadow-sm">
             {post.featuredImage && (
               <img
-                src={post.featuredImage.sourceUrl || "/placeholder.svg"}
+                src={post.featuredImage.sourceUrl || '/placeholder.svg'}
                 alt={post.featuredImage.altText || post.title}
                 className="w-full h-48 object-cover"
               />
@@ -124,11 +125,14 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
 
       {hasMore && !loading && (
         <div className="text-center py-4">
-          <button onClick={handleLoadMore} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <button
+            onClick={handleLoadMore}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
             Load More
           </button>
         </div>
       )}
     </div>
-  )
+  );
 }

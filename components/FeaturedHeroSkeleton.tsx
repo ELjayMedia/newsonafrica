@@ -1,4 +1,4 @@
-import { Skeleton } from "./Skeleton"
+import { Skeleton } from './Skeleton';
 
 export function FeaturedHeroSkeleton() {
   return (
@@ -11,5 +11,5 @@ export function FeaturedHeroSkeleton() {
         <Skeleton className="h-4 w-3/4" />
       </div>
     </div>
-  )
+  );
 }

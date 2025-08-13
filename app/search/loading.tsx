@@ -1,4 +1,4 @@
-import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
+import { NewsGridSkeleton } from '@/components/NewsGridSkeleton';
 
 export default function SearchLoading() {
   return (
@@ -15,5 +15,5 @@ export default function SearchLoading() {
         </section>
       </div>
     </div>
-  )
+  );
 }

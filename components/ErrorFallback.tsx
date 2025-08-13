@@ -1,9 +1,9 @@
-"use client"
-import Link from "next/link"
+'use client';
+import Link from 'next/link';
 
 interface ErrorFallbackProps {
-  error: Error
-  resetErrorBoundary: () => void
+  error: Error;
+  resetErrorBoundary: () => void;
 }
 
 export default function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
@@ -13,7 +13,7 @@ export default function ErrorFallback({ error, resetErrorBoundary }: ErrorFallba
         <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
         <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-md">
           <p className="text-sm text-gray-700">
-            {error.message || "An unexpected error occurred. Please try again later."}
+            {error.message || 'An unexpected error occurred. Please try again later.'}
           </p>
         </div>
         <div className="flex flex-col space-y-3">
@@ -32,5 +32,5 @@ export default function ErrorFallback({ error, resetErrorBoundary }: ErrorFallba
         </div>
       </div>
     </div>
-  )
+  );
 }

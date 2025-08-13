@@ -10,16 +10,16 @@ News On Africa is a Progressive Web App built with Next.js that serves as a pan-
 
 \`\`\`mermaid
 graph TD
-    User[User] --> FE[Frontend - Next.js PWA]
-    FE --> WPAPI[WordPress REST API]
-    FE --> SupabaseAuth[Supabase Auth]
-    FE --> SupabaseDB[Supabase Database]
-    FE --> CDN[Vercel CDN]
-    WPAPI --> WP[WordPress CMS]
-    SupabaseAuth --> SupabaseDB
-    WP --> Webhook[Webhooks]
-    Webhook --> Revalidation[Next.js Revalidation]
-    Revalidation --> CDN
+User[User] --> FE[Frontend - Next.js PWA]
+FE --> WPAPI[WordPress REST API]
+FE --> SupabaseAuth[Supabase Auth]
+FE --> SupabaseDB[Supabase Database]
+FE --> CDN[Vercel CDN]
+WPAPI --> WP[WordPress CMS]
+SupabaseAuth --> SupabaseDB
+WP --> Webhook[Webhooks]
+Webhook --> Revalidation[Next.js Revalidation]
+Revalidation --> CDN
 \`\`\`
 
 ## Key Components

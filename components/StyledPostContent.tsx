@@ -1,11 +1,11 @@
 interface StyledPostContentProps {
-  content: string
-  className?: string
+  content: string;
+  className?: string;
 }
 
-export function StyledPostContent({ content, className = "" }: StyledPostContentProps) {
+export function StyledPostContent({ content, className = '' }: StyledPostContentProps) {
   if (!content) {
-    return null
+    return null;
   }
 
   return (
@@ -13,5 +13,5 @@ export function StyledPostContent({ content, className = "" }: StyledPostContent
       className={`prose prose-lg max-w-none mb-8 dark:prose-invert ${className}`}
       dangerouslySetInnerHTML={{ __html: content }}
     />
-  )
+  );
 }

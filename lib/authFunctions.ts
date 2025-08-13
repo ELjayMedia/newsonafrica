@@ -1,42 +1,42 @@
-import { WORDPRESS_REST_API_URL } from "@/config/wordpress"
+import { WORDPRESS_REST_API_URL } from '@/config/wordpress';
 
-const WORDPRESS_API_BASE = WORDPRESS_REST_API_URL.replace(/\/wp\/v2$/, "")
+const WORDPRESS_API_BASE = WORDPRESS_REST_API_URL.replace(/\/wp\/v2$/, '');
 
 if (!WORDPRESS_API_BASE) {
-  console.error("WordPress API URL is not configured.")
+  console.error('WordPress API URL is not configured.');
 }
 
 export async function signIn(username: string, password: string) {
   try {
     // Check if API URL is defined
     if (!WORDPRESS_API_BASE) {
-      console.error("WORDPRESS_API_BASE is not defined in environment variables")
-      throw new Error("API configuration error")
+      console.error('WORDPRESS_API_BASE is not defined in environment variables');
+      throw new Error('API configuration error');
     }
 
-    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_API_BASE)
+    console.log('Attempting to sign in with WordPress API URL:', WORDPRESS_API_BASE);
 
     const response = await fetch(`${WORDPRESS_API_BASE}/jwt-auth/v1/token`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         username,
         password,
       }),
-    })
+    });
 
     // Log response status to help with debugging
-    console.log("Authentication response status:", response.status)
+    console.log('Authentication response status:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      console.error("Authentication error details:", errorData)
-      throw new Error(errorData?.message || "Authentication failed")
+      const errorData = await response.json().catch(() => null);
+      console.error('Authentication error details:', errorData);
+      throw new Error(errorData?.message || 'Authentication failed');
     }
 
-    const data = await response.json()
+    const data = await response.json();
     return {
       authToken: data.token,
       user: {
@@ -44,16 +44,18 @@ export async function signIn(username: string, password: string) {
         name: data.user_display_name,
         email: data.user_email,
       },
-    }
+    };
   } catch (error) {
-    console.error("Login error:", error)
+    console.error('Login error:', error);
 
     // Provide more specific error messages based on the error type
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new Error("Unable to connect to authentication service. Please check your network connection.")
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(
+        'Unable to connect to authentication service. Please check your network connection.',
+      );
     }
 
-    throw new Error(error instanceof Error ? error.message : "Authentication failed")
+    throw new Error(error instanceof Error ? error.message : 'Authentication failed');
   }
 }
 
@@ -63,30 +65,30 @@ export async function getCurrentUser(token: string) {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    })
+    });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch user data")
+      throw new Error('Failed to fetch user data');
     }
 
-    const userData = await response.json()
+    const userData = await response.json();
     return {
       id: userData.id,
       name: userData.name,
       email: userData.email,
-    }
+    };
   } catch (error) {
-    console.error("Error fetching current user:", error)
-    throw error
+    console.error('Error fetching current user:', error);
+    throw error;
   }
 }
 
 export async function signUp(username: string, email: string, password: string) {
   try {
     const response = await fetch(`${WORDPRESS_REST_API_URL}/users`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Basic ${btoa(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`)}`,
       },
       body: JSON.stringify({
@@ -94,69 +96,69 @@ export async function signUp(username: string, email: string, password: string) 
         email,
         password,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error("Registration failed")
+      throw new Error('Registration failed');
     }
 
-    const userData = await response.json()
+    const userData = await response.json();
     return {
       user: {
         id: userData.id,
         name: userData.name,
         email: userData.email,
       },
-    }
+    };
   } catch (error) {
-    console.error("Registration error:", error)
-    throw new Error("Registration failed")
+    console.error('Registration error:', error);
+    throw new Error('Registration failed');
   }
 }
 
 export async function resetPassword(email: string) {
   try {
     const response = await fetch(`${WORDPRESS_REST_API_URL}/users/lost-password`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         user_login: email,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error("Failed to send reset password email")
+      throw new Error('Failed to send reset password email');
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error("Reset password error:", error)
-    throw new Error("Reset password request failed")
+    console.error('Reset password error:', error);
+    throw new Error('Reset password request failed');
   }
 }
 
 export async function getAuthToken(request: Request) {
-  const cookieHeader = request.headers.get("cookie")
-  if (!cookieHeader) return null
+  const cookieHeader = request.headers.get('cookie');
+  if (!cookieHeader) return null;
 
-  const cookies = cookieHeader.split(";").reduce(
+  const cookies = cookieHeader.split(';').reduce(
     (acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
     },
     {} as Record<string, string>,
-  )
+  );
 
-  return cookies.auth_token || null
+  return cookies.auth_token || null;
 }
 
 export async function signOut() {
   // Clear auth token from cookies
-  if (typeof document !== "undefined") {
-    document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+  if (typeof document !== 'undefined') {
+    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }
-  return { success: true }
+  return { success: true };
 }

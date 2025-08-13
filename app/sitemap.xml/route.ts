@@ -1,18 +1,19 @@
 // Fixed imports to use correct file paths and exports
-import { siteConfig } from "@/config/site"
-import { fetchRecentPosts } from "@/lib/wordpress-api"
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
+
+import { siteConfig } from '@/config/site';
+import { fetchRecentPosts } from '@/lib/wordpress-api';
 
 export async function GET() {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || 'https://newsonafrica.com';
 
   try {
     // Fetch recent posts (last 2 days) for news sitemap
-    const twoDaysAgo = new Date()
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const { posts: recentPosts } = await fetchRecentPosts(200)
-    const filteredPosts = recentPosts.filter((post) => new Date(post.date) > twoDaysAgo)
+    const { posts: recentPosts } = await fetchRecentPosts(200);
+    const filteredPosts = recentPosts.filter((post) => new Date(post.date) > twoDaysAgo);
 
     // Generate static URLs inline instead of importing from missing file
     const staticUrls = `
@@ -33,7 +34,7 @@ export async function GET() {
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>`
+  </url>`;
 
     // Generate category URLs inline
     const categoryUrls = `
@@ -60,21 +61,21 @@ export async function GET() {
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
-  </url>`
+  </url>`;
 
     // Add news sitemap entries
     const newsSitemapEntries = filteredPosts
       .map((post) => {
-        const postDate = new Date(post.date)
-        const categories = post.categories?.nodes || []
-        const keywords = categories.map((cat) => cat.name).join(", ")
+        const postDate = new Date(post.date);
+        const categories = post.categories?.nodes || [];
+        const keywords = categories.map((cat) => cat.name).join(', ');
 
         const escapedTitle = post.title
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&apos;")
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
 
         return `
   <url>
@@ -86,7 +87,7 @@ export async function GET() {
       </news:publication>
       <news:publication_date>${postDate.toISOString()}</news:publication_date>
       <news:title>${escapedTitle}</news:title>
-      ${keywords ? `<news:keywords>${keywords}</news:keywords>` : ""}
+      ${keywords ? `<news:keywords>${keywords}</news:keywords>` : ''}
     </news:news>
     ${
       post.featuredImage?.node?.sourceUrl
@@ -95,11 +96,11 @@ export async function GET() {
       <image:loc>${post.featuredImage.node.sourceUrl}</image:loc>
       <image:title>${escapedTitle}</image:title>
     </image:image>`
-        : ""
+        : ''
     }
-  </url>`
+  </url>`;
       })
-      .join("")
+      .join('');
 
     // Build the complete sitemap with news namespace
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -109,16 +110,16 @@ export async function GET() {
   ${staticUrls}
   ${categoryUrls}
   ${newsSitemapEntries}
-</urlset>`
+</urlset>`;
 
     return new NextResponse(sitemap, {
       headers: {
-        "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        'Content-Type': 'application/xml',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
-    })
+    });
   } catch (error) {
-    console.error("Error generating sitemap:", error)
-    return new NextResponse("Error generating sitemap", { status: 500 })
+    console.error('Error generating sitemap:', error);
+    return new NextResponse('Error generating sitemap', { status: 500 });
   }
 }

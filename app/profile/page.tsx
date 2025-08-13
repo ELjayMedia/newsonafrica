@@ -1,25 +1,27 @@
-import { Suspense } from "react"
-import { cookies } from "next/headers"
-import { createClient } from "@/utils/supabase/server"
-import ProfileContent from "@/components/ProfileContent"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ProfileDropdown } from "@/components/ProfileDropdown"
-import type { Metadata } from "next"
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { Suspense } from 'react';
+
+import ProfileContent from '@/components/ProfileContent';
+import { ProfileDropdown } from '@/components/ProfileDropdown';
+import { Skeleton } from '@/components/ui/skeleton';
+import { createClient } from '@/utils/supabase/server';
+
 
 export const metadata: Metadata = {
-  title: "My Profile - News On Africa",
-  description: "View and edit your News On Africa profile",
-}
+  title: 'My Profile - News On Africa',
+  description: 'View and edit your News On Africa profile',
+};
 
-export const dynamic = "force-dynamic"
+export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
-  const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   const {
     data: { session },
-  } = await supabase.auth.getSession()
+  } = await supabase.auth.getSession();
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -37,7 +39,7 @@ export default async function ProfilePage() {
         <ProfileContent initialSession={session} />
       </Suspense>
     </main>
-  )
+  );
 }
 
 function ProfileSkeleton() {
@@ -62,5 +64,5 @@ function ProfileSkeleton() {
 
       <Skeleton className="h-10 w-32 mt-4" />
     </div>
-  )
+  );
 }

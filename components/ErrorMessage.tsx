@@ -1,8 +1,8 @@
-import Link from "next/link"
+import Link from 'next/link';
 
 interface ErrorMessageProps {
-  message: string
-  showHomeLink?: boolean
+  message: string;
+  showHomeLink?: boolean;
 }
 
 export function ErrorMessage({ message, showHomeLink = true }: ErrorMessageProps) {
@@ -18,5 +18,5 @@ export function ErrorMessage({ message, showHomeLink = true }: ErrorMessageProps
         )}
       </div>
     </div>
-  )
+  );
 }

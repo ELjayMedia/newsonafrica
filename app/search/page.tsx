@@ -1,15 +1,16 @@
-import { Suspense } from "react"
-import { SearchContent } from "@/components/SearchContent"
-import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
-import { SearchDebugger } from "@/components/SearchDebugger"
+import { Suspense } from 'react';
+
+import { SearchContent } from '@/components/SearchContent';
+import { SearchDebugger } from '@/components/SearchDebugger';
+import { SearchPageSkeleton } from '@/components/SearchPageSkeleton';
 
 interface SearchPageProps {
-  searchParams: { q?: string; page?: string }
+  searchParams: { q?: string; page?: string };
 }
 
 export default function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams.q || ""
-  const page = Number.parseInt(searchParams.page || "1", 10)
+  const query = searchParams.q || '';
+  const page = Number.parseInt(searchParams.page || '1', 10);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -17,7 +18,7 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
         <h1 className="text-3xl font-bold mb-8">Search News On Africa</h1>
 
         {/* Temporary debugger - remove after fixing */}
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === 'development' && (
           <div className="mb-8">
             <SearchDebugger />
           </div>
@@ -28,10 +29,10 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
         </Suspense>
       </div>
     </div>
-  )
+  );
 }
 
 export const metadata = {
-  title: "Search - News On Africa",
-  description: "Search for news, articles, and stories from across Africa",
-}
+  title: 'Search - News On Africa',
+  description: 'Search for news, articles, and stories from across Africa',
+};
