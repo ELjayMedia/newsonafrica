@@ -13,7 +13,7 @@ import {
   fetchAllTags,
   searchPosts,
   fetchComments,
-} from '../lib/wordpress-api';
+} from '@/lib/wordpress-api';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
