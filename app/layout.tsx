@@ -22,6 +22,7 @@ import { BookmarksProvider } from '@/contexts/BookmarksContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { getMarketSnapshot } from '@/lib/api/wordpress';
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
+import { ConsentManager } from '@/features/consent/ConsentManager';
 
 
 
@@ -72,45 +73,47 @@ export default async function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <UserProvider>
-            <BookmarksProvider>
-              <ClientWrapper>
-                <ScrollToTop />
-                <ClientDynamicComponents />
-                <UtilityBar />
-                <TopBar />
-                <MegaNav />
-                <MarketTicker items={marketItems} />
-                <div className="flex-grow">
-                  <div className="mx-auto max-w-full md:max-w-[980px]">
-                    <ClientLayoutComponents>
-                      <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                        <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                      </main>
-                    </ClientLayoutComponents>
+        <ConsentManager>
+          <ThemeProvider attribute="class" defaultTheme="light">
+            <UserProvider>
+              <BookmarksProvider>
+                <ClientWrapper>
+                  <ScrollToTop />
+                  <ClientDynamicComponents />
+                  <UtilityBar />
+                  <TopBar />
+                  <MegaNav />
+                  <MarketTicker items={marketItems} />
+                  <div className="flex-grow">
+                    <div className="mx-auto max-w-full md:max-w-[980px]">
+                      <ClientLayoutComponents>
+                        <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                          <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                        </main>
+                      </ClientLayoutComponents>
+                    </div>
                   </div>
-                </div>
-                <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-                  <Link href="/privacy-policy" className="hover:underline">
-                    Privacy Policy
-                  </Link>
-                  {' | '}
-                  <Link href="/terms-of-service" className="hover:underline">
-                    Terms of Service
-                  </Link>
-                  {' | '}
-                  <Link href="/sitemap.xml" className="hover:underline">
-                    Sitemap
-                  </Link>
-                </footer>
-                <NetworkStatus />
-                <Toaster />
-                <NetworkStatusHandler />
-              </ClientWrapper>
-            </BookmarksProvider>
-          </UserProvider>
-        </ThemeProvider>
+                  <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+                    <Link href="/privacy-policy" className="hover:underline">
+                      Privacy Policy
+                    </Link>
+                    {' | '}
+                    <Link href="/terms-of-service" className="hover:underline">
+                      Terms of Service
+                    </Link>
+                    {' | '}
+                    <Link href="/sitemap.xml" className="hover:underline">
+                      Sitemap
+                    </Link>
+                  </footer>
+                  <NetworkStatus />
+                  <Toaster />
+                  <NetworkStatusHandler />
+                </ClientWrapper>
+              </BookmarksProvider>
+            </UserProvider>
+          </ThemeProvider>
+        </ConsentManager>
       </body>
     </html>
   );
