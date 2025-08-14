@@ -1,4 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+});
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
@@ -50,24 +54,17 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     },
   ],
 });
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-  openAnalyzer: false,
-});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Many legacy files still trigger lint errors; skip them during builds.
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // Allow production builds even if the type checker finds issues.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  // Use a Node-compatible output rather than static export so dynamic routes work.
-  output: 'standalone',
+  output: 'export',
   images: {
     unoptimized: true,
     loader: 'custom',
