@@ -172,12 +172,13 @@ const fetchWithFallback = async (
 /**
  * Fetches recent posts
  */
-export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
+export const fetchRecentPosts = cache(async (limit = 20, after: string | null = null) => {
   const query = `
-    query RecentPosts($limit: Int!, $offset: Int!) {
+    query RecentPosts($limit: Int!, $after: String) {
       posts(
+        first: $limit,
+        after: $after,
         where: {
-          offsetPagination: { offset: $offset, size: $limit }
           orderby: { field: DATE, order: DESC }
           status: PUBLISH
         }
@@ -214,15 +215,18 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
           }
         }
         pageInfo {
-          offsetPagination {
-            total
-          }
+          hasNextPage
+          endCursor
         }
       }
     }
   `;
 
   const restFallback = async () => {
+    const offset = after
+      ? parseInt(Buffer.from(after, 'base64').toString('utf8').split(':')[1], 10) + 1
+      : 0;
+
     const params = new URLSearchParams({
       per_page: String(limit),
       offset: String(offset),
@@ -246,16 +250,18 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
       throw new Error(`REST API error: ${response.status} ${response.statusText}`);
     }
 
-    const total = parseInt(response.headers.get('X-WP-Total') || '0', 10);
     const posts = await response.json();
+    const endCursor =
+      posts.length > 0
+        ? Buffer.from(`arrayconnection:${offset + posts.length - 1}`).toString('base64')
+        : null;
 
     return {
       posts: {
         nodes: posts.map(transformRestPostToGraphQL),
         pageInfo: {
-          offsetPagination: {
-            total,
-          },
+          hasNextPage: posts.length === limit,
+          endCursor,
         },
       },
     };
@@ -263,14 +269,15 @@ export const fetchRecentPosts = cache(async (limit = 20, offset = 0) => {
 
   const data = await fetchWithFallback(
     query,
-    { limit, offset },
-    `recent-posts-${limit}-${offset}`,
+    { limit, after },
+    `recent-posts-${limit}-${after || 'start'}`,
     restFallback,
   );
 
   return {
     posts: data.posts?.nodes || [],
-    total: data.posts?.pageInfo?.offsetPagination?.total || 0,
+    hasNextPage: data.posts?.pageInfo?.hasNextPage || false,
+    endCursor: data.posts?.pageInfo?.endCursor || null,
   };
 });
 
@@ -1092,7 +1099,23 @@ export const fetchCategorizedPosts = async () => {
 export const fetchAllPosts = fetchRecentPosts;
 export const fetchAllTags = async () => [];
 export const fetchAllAuthors = async () => [];
-export const fetchPosts = fetchRecentPosts;
+export const fetchPosts = async (options?: any) => {
+  if (typeof options === 'number') {
+    const { posts } = await fetchRecentPosts(options);
+    return posts;
+  }
+
+  const limit = options?.perPage || options?.limit || 20;
+  const page = options?.page || 1;
+  const offset = (page - 1) * limit;
+  const after = offset > 0 ? Buffer.from(`arrayconnection:${offset - 1}`).toString('base64') : null;
+
+  const result = await fetchRecentPosts(limit, after);
+  return {
+    data: result.posts,
+    pageInfo: { hasNextPage: result.hasNextPage, endCursor: result.endCursor },
+  };
+};
 export const fetchCategories = fetchAllCategories;
 export const fetchTags = fetchAllTags;
 export const fetchAuthors = fetchAllAuthors;
