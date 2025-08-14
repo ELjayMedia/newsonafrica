@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { WPR } from '@/lib/wp-client/rest';
 import { canonicalUrl } from '@/lib/seo/meta';
 
-export const revalidate = 60 * 60;
+export const revalidate = 3600;
 
 export async function GET(request: Request, { params }: { params: { country: string; category: string } }) {
   const posts = await WPR.list({ country: params.country, categorySlug: params.category, perPage: 20 });
