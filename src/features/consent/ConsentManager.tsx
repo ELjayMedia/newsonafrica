@@ -1,134 +1,87 @@
 'use client';
 
-import Link from 'next/link';
-import React, { createContext, useContext, useEffect, useState } from 'react';
-
-export type ConsentState = {
-  canServeAds: boolean;
-  gdprApplies: boolean;
-};
-
-type ConsentContextValue = ConsentState & {
-  setConsent: (next: ConsentState) => void;
-};
-
-const ConsentContext = createContext<ConsentContextValue | undefined>(undefined);
+import type React from 'react';
+import { useEffect } from 'react';
 
 declare global {
   interface Window {
-    __geoEea?: number;
-    __noaConsent?: {
-      get: () => ConsentState;
-      set: (next: ConsentState) => void;
-    };
+    __tcfapi?: (
+      command: string,
+      version: number,
+      callback: (...args: unknown[]) => void,
+      parameter?: unknown,
+    ) => void;
   }
 }
 
-function detectEea(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const lang = navigator.language || '';
-  const region = lang.split('-')[1]?.toUpperCase();
-  const eea = [
-    'AT',
-    'BE',
-    'BG',
-    'HR',
-    'CY',
-    'CZ',
-    'DK',
-    'EE',
-    'FI',
-    'FR',
-    'DE',
-    'GR',
-    'HU',
-    'IS',
-    'IE',
-    'IT',
-    'LV',
-    'LI',
-    'LT',
-    'LU',
-    'MT',
-    'NL',
-    'NO',
-    'PL',
-    'PT',
-    'RO',
-    'SK',
-    'SI',
-    'ES',
-    'SE',
-  ];
-  if (region && eea.includes(region)) return true;
-  if (typeof window !== 'undefined') {
-    if (window.__geoEea === 1) return true;
-    const attr = document.documentElement.getAttribute('data-geo-eea');
-    if (attr === '1') return true;
-  }
-  return false;
+type TcfApi = (
+  command: string,
+  version: number,
+  callback: (...args: unknown[]) => void,
+  parameter?: unknown,
+) => void;
+
+type TcfApiStub = TcfApi & { queue: unknown[][] };
+
+interface TCData {
+  eventStatus: string;
+  listenerId: number;
+  gdprApplies: boolean;
+  purpose?: { consents?: Record<string, boolean> };
 }
 
 export function ConsentManager({ children }: { children: React.ReactNode }) {
-  const [consent, setConsent] = useState<ConsentState>(() => {
-    if (typeof window === 'undefined') {
-      return { gdprApplies: false, canServeAds: true };
-    }
-    try {
-      const stored = localStorage.getItem('noa.consent.tcf');
-      if (stored) return JSON.parse(stored) as ConsentState;
-    } catch {}
-    const eea = detectEea();
-    return { gdprApplies: eea, canServeAds: eea ? false : true };
-  });
-
-  const value: ConsentContextValue = {
-    ...consent,
-    setConsent: (next) => setConsent(next),
-  };
-
-  const showBanner = consent.gdprApplies && !consent.canServeAds;
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('noa.consent.tcf', JSON.stringify(consent));
-    } catch {}
-    const evt = new CustomEvent('__noaConsent', { detail: consent });
-    window.dispatchEvent(evt);
-    window.__noaConsent = {
-      get: () => consent,
-      set: (next: ConsentState) => setConsent(next),
-    };
-  }, [consent]);
 
-  return (
-    <ConsentContext.Provider value={value}>
-      {children}
-      {showBanner && (
-        <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 bg-white p-4 text-center shadow-md">
-          <p className="text-sm">
-            We use cookies to personalize content and ads. Manage your consent.
-          </p>
-          <div className="flex gap-4">
-            <button
-              className="rounded bg-black px-4 py-2 text-white"
-              onClick={() => setConsent({ ...consent, canServeAds: true })}
-            >
-              Accept
-            </button>
-            <Link href="/privacy/consent" className="rounded border px-4 py-2">
-              Manage
-            </Link>
-          </div>
-        </div>
-      )}
-    </ConsentContext.Provider>
-  );
+    if (typeof window.__tcfapi !== 'function') {
+      const queue: unknown[][] = [];
+      const tcfapi = ((...args: unknown[]) => {
+        queue.push(args);
+      }) as TcfApiStub;
+      tcfapi.queue = queue;
+      window.__tcfapi = tcfapi;
+    }
+
+    const src = process.env.NEXT_PUBLIC_CMP_SRC;
+    if (src && !document.querySelector(`script[src="${src}"]`)) {
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = src;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  return <>{children}</>;
 }
 
-export function useConsent() {
-  const ctx = useContext(ConsentContext);
-  if (!ctx) throw new Error('useConsent must be used within ConsentManager');
-  return ctx;
+export function waitForTcfConsent(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 5000);
+
+    const check = () => {
+      const api = window.__tcfapi as TcfApi | undefined;
+      if (typeof api !== 'function') {
+        setTimeout(check, 50);
+        return;
+      }
+      api('addEventListener', 2, (tcData: TCData, success: boolean) => {
+        if (!success) {
+          clearTimeout(timer);
+          resolve(false);
+          return;
+        }
+        const status = tcData.eventStatus;
+        if (status === 'tcloaded' || status === 'useractioncomplete') {
+          api('removeEventListener', 2, () => {}, tcData.listenerId);
+          clearTimeout(timer);
+          const gdprApplies = tcData.gdprApplies;
+          const consent = tcData.purpose?.consents?.[1] === true;
+          resolve(!gdprApplies || consent);
+        }
+      });
+    };
+
+    check();
+  });
 }
