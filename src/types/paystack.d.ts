@@ -24,7 +24,7 @@ export interface PaystackOptions {
       variable_name: string;
       value: string;
     }>;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   plan?: string;
   quantity?: number;
@@ -63,10 +63,10 @@ export interface PaystackVerifyResponse {
     channel: string;
     currency: string;
     ip_address: string;
-    metadata: any;
-    log: any;
+    metadata: unknown;
+    log: unknown;
     fees: number;
-    fees_split: any;
+    fees_split: unknown;
     authorization: {
       authorization_code: string;
       bin: string;
@@ -89,13 +89,13 @@ export interface PaystackVerifyResponse {
       email: string;
       customer_code: string;
       phone: string | null;
-      metadata: any;
+      metadata: unknown;
       risk_action: string;
       international_format_phone: string | null;
     };
-    plan: any;
-    subaccount: any;
-    split: any;
+    plan: unknown;
+    subaccount: unknown;
+    split: unknown;
     order_id: string | null;
     paidAt: string;
     requested_amount: number;
@@ -115,3 +115,79 @@ export interface SubscriptionPlan {
   savePercentage?: number;
   trial?: string;
 }
+
+export interface PaystackMetadata {
+  user_id?: string;
+  type?: string;
+  plan_id?: string;
+  plan_name?: string;
+  interval?: string;
+  description?: string;
+  article_id?: string;
+  recipient_email?: string;
+}
+
+export interface PaystackCustomer {
+  customer_code?: string;
+  metadata?: PaystackMetadata;
+}
+
+export interface PaystackPlanDetails {
+  plan_code?: string;
+  name?: string;
+}
+
+export interface ChargeSuccessPayload {
+  reference: string;
+  amount: number;
+  currency?: string;
+  status: string;
+  metadata?: PaystackMetadata;
+  customer?: PaystackCustomer;
+}
+
+export interface SubscriptionCreatePayload {
+  subscription_code: string;
+  customer?: PaystackCustomer;
+  plan?: PaystackPlanDetails;
+  status?: string;
+  next_payment_date?: string;
+}
+
+export interface SubscriptionDisablePayload {
+  subscription_code: string;
+  customer?: PaystackCustomer;
+}
+
+export interface InvoicePaymentFailedPayload {
+  reference: string;
+  amount: number;
+  currency?: string;
+  metadata?: PaystackMetadata;
+}
+
+export interface InvoiceUpdatePayload {
+  invoice_code: string;
+  status?: string;
+  next_payment_date?: string;
+  subscription?: {
+    customer?: PaystackCustomer;
+  };
+}
+
+export interface TransferSuccessPayload {
+  reference: string;
+}
+
+export interface TransferFailedPayload {
+  reference: string;
+}
+
+export type PaystackWebhookEvent =
+  | { event: 'charge.success'; data: ChargeSuccessPayload }
+  | { event: 'subscription.create'; data: SubscriptionCreatePayload }
+  | { event: 'subscription.disable'; data: SubscriptionDisablePayload }
+  | { event: 'invoice.payment_failed'; data: InvoicePaymentFailedPayload }
+  | { event: 'invoice.update'; data: InvoiceUpdatePayload }
+  | { event: 'transfer.success'; data: TransferSuccessPayload }
+  | { event: 'transfer.failed'; data: TransferFailedPayload };
