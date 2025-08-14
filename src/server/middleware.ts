@@ -39,7 +39,3 @@ export function middleware(req: NextRequest) {
   res.headers.set('x-nonce', nonce);
   return res;
 }
-
-export const config = {
-  matcher: ['/((?!_next/|icons/|manifest|favicon|.*\\.(?:png|jpg|jpeg|webp|avif|svg)).*)'],
-};
