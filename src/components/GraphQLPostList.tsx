@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -42,8 +43,20 @@ interface PostListProps {
   category?: string;
 }
 
+interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  date: string;
+  featuredImage?: { sourceUrl?: string; altText?: string };
+  author: { name: string; slug: string };
+  categories: { name: string; slug: string }[];
+  isBookmarked: boolean;
+}
+
 export default function GraphQLPostList({ initialLimit = 10, category }: PostListProps) {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -94,9 +107,11 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
         {posts.map((post) => (
           <div key={post.id} className="border rounded-lg overflow-hidden shadow-sm">
             {post.featuredImage && (
-              <img
+              <Image
                 src={post.featuredImage.sourceUrl || '/placeholder.svg'}
                 alt={post.featuredImage.altText || post.title}
+                width={500}
+                height={300}
                 className="w-full h-48 object-cover"
               />
             )}
