@@ -25,7 +25,7 @@ export default function GlobalNotFound() {
             404 - Page Not Found
           </h2>
           <p style={{ marginBottom: '32px', color: '#6B7280', lineHeight: '1.5' }}>
-            Sorry, we couldn't find the page you're looking for.
+            Sorry, we couldn&apos;t find the page you&apos;re looking for.
           </p>
           <Link
             href="/"

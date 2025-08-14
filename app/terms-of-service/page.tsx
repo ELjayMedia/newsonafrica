@@ -6,18 +6,18 @@ export default function TermsOfService() {
       <h1 className="text-3xl font-bold mb-4">Terms of Service</h1>
       <p className="mb-4">Last updated: {new Date().toLocaleDateString()}</p>
       <p className="mb-4">
-        These Terms of Service ("Terms") govern your use of the News On Africa website and services.
+        These Terms of Service (&quot;Terms&quot;) govern your use of the News On Africa website and services.
         By using our services, you agree to these Terms.
       </p>
       <h2 className="text-2xl font-bold mt-6 mb-2">Use of Our Services</h2>
       <p className="mb-4">
-        You must follow any policies made available to you within the Services. Don't misuse our
-        Services. For example, don't interfere with our Services or try to access them using a
+        You must follow any policies made available to you within the Services. Don&apos;t misuse our
+        Services. For example, don&apos;t interfere with our Services or try to access them using a
         method other than the interface and the instructions that we provide.
       </p>
       <h2 className="text-2xl font-bold mt-6 mb-2">Privacy</h2>
       <p className="mb-4">
-        News On Africa's privacy policies explain how we treat your personal data and protect your
+        News On Africa&apos;s privacy policies explain how we treat your personal data and protect your
         privacy when you use our Services. By using our Services, you agree that News On Africa can
         use such data in accordance with our privacy policies.
       </p>

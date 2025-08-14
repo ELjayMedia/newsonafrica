@@ -192,9 +192,9 @@ export default function OfflineContent() {
               <Bookmark className="h-5 w-5" />
               Available Offline Content
             </CardTitle>
-            <p className="text-sm text-gray-600">
-              Articles and pages you've previously visited are cached and available offline.
-            </p>
+              <p className="text-sm text-gray-600">
+                Articles and pages you&apos;ve previously visited are cached and available offline.
+              </p>
           </CardHeader>
           <CardContent>
             {isLoading ? (

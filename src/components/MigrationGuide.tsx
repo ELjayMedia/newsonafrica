@@ -43,10 +43,10 @@ export function MigrationGuide() {
         <p className="font-medium">Instructions:</p>
         <ol className="list-decimal pl-5 space-y-1 mt-2">
           <li>Go to your Supabase project dashboard</li>
-          <li>Click on "SQL Editor" in the left sidebar</li>
-          <li>Create a "New Query"</li>
-          <li>Paste the SQL commands above</li>
-          <li>Click "Run" to execute the migration</li>
+            <li>Click on &quot;SQL Editor&quot; in the left sidebar</li>
+            <li>Create a &quot;New Query&quot;</li>
+            <li>Paste the SQL commands above</li>
+            <li>Click &quot;Run&quot; to execute the migration</li>
         </ol>
       </div>
     </div>

@@ -19,10 +19,10 @@ export default function PrivacyPolicy() {
         <div className="space-y-6">
           <section>
             <p className="mb-4">
-              Welcome to News On Africa ("we," "us," or "our"). This Privacy Policy explains how we
+              Welcome to News On Africa (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). This Privacy Policy explains how we
               collect, use, disclose, and safeguard your personal information when you visit or
               interact with our services, including our website, progressive web app (PWA), and any
-              other related offerings (collectively, the "Services").
+              other related offerings (collectively, the &quot;Services&quot;).
             </p>
           </section>
 
