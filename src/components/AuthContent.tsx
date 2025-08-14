@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { AuthForm } from '@/components/AuthForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -22,13 +24,13 @@ export function AuthContent() {
       <div className="mt-6 text-center text-sm text-gray-500">
         <p>
           By signing in, you agree to our{' '}
-          <a href="/terms" className="text-blue-600 hover:underline">
+          <Link href="/terms" className="text-blue-600 hover:underline">
             Terms of Service
-          </a>{' '}
+          </Link>{' '}
           and{' '}
-          <a href="/privacy" className="text-blue-600 hover:underline">
+          <Link href="/privacy" className="text-blue-600 hover:underline">
             Privacy Policy
-          </a>
+          </Link>
           .
         </p>
       </div>
