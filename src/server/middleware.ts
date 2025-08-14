@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -8,7 +10,7 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const country = resolveCountry(req.headers.get('host') ?? '', url.pathname);
   const res = NextResponse.next();
-  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const nonce = randomUUID().replace(/-/g, '');
   const prod = process.env.NODE_ENV === 'production';
   res.headers.set('Content-Security-Policy', buildCsp({ nonce, prod }));
   res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
