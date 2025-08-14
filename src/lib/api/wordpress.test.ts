@@ -19,6 +19,12 @@ function makePost(id: string, date: string, tags: string[] = []): WordPressPost 
     author: { node: { id: 'a', name: 'a', slug: 'a' } },
     categories: { nodes: [] },
     tags: { nodes: tags.map((t, i) => ({ id: String(i), name: t, slug: t })) },
+    post_type: 'news_article',
+    published_at: date,
+    updated_at: date,
+    country: 'sz',
+    featured_image: null,
+    source_links: [],
   } as any;
 }
 
