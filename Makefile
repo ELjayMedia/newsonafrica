@@ -1,4 +1,4 @@
-.PHONY: dev build test typecheck lint format perf
+.PHONY: dev build test typecheck lint format
 
 dev:
 	pnpm dev
@@ -19,7 +19,4 @@ lint:
 	pnpm lint
 
 format:
-	pnpm format
-
-perf:
-	pnpm lhci
+        pnpm format
