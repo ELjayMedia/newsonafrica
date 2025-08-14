@@ -1,0 +1,3 @@
+Contact: mailto:security@newsonafrica.com
+Policy: https://newsonafrica.com/security
+Preferred-Languages: en

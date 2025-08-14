@@ -1,9 +1,11 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { applyRateLimit, handleApiError, successResponse } from '@/lib/api-utils';
+import { handleApiError, successResponse } from '@/lib/api-utils';
+import { logAudit } from '@/server/audit';
+import { guard } from '@/server/security/ratelimit';
 
 export const runtime = 'nodejs';
 
@@ -15,9 +17,10 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 5, 'LOGIN_API_CACHE_TOKEN');
-    if (rateLimitResponse) return rateLimitResponse;
+    const g = await guard(request, 'otp');
+    if (!g.ok) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
 
     const body = await request.json();
 
@@ -36,6 +39,7 @@ export async function POST(request: NextRequest) {
       return handleApiError(new Error(error.message));
     }
 
+    await logAudit(request, 'auth.login');
     return successResponse({
       user: data.user,
       session: data.session,

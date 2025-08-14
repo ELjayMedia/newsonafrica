@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { WORDPRESS_REST_API_URL } from '@/config/wordpress';
 import { getSuggestions } from '@/lib/suggestion-index';
@@ -152,17 +153,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Parse search parameters
+    // Parse and validate search parameters
     const { searchParams } = new URL(request.url);
-    const queryParam = searchParams.get('q') || searchParams.get('query');
-
-    if (!queryParam) {
-      return NextResponse.json({ error: 'Missing search query' }, { status: 400 });
+    const ParamsSchema = z.object({
+      q: z.string().min(1).max(100),
+      page: z.coerce.number().int().min(1).max(100).optional(),
+      per_page: z.coerce.number().int().min(1).max(100).optional(),
+      suggestions: z.enum(['true']).optional(),
+    });
+    const parsed = ParamsSchema.safeParse(Object.fromEntries(searchParams.entries()));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
     }
-
-    const page = Number.parseInt(searchParams.get('page') || '1', 10);
-    const perPage = Number.parseInt(searchParams.get('per_page') || '20', 10);
-    const suggestions = searchParams.get('suggestions') === 'true';
+    const queryParam = parsed.data.q;
+    const page = parsed.data.page ?? 1;
+    const perPage = parsed.data.per_page ?? 20;
+    const suggestions = parsed.data.suggestions === 'true';
 
     // Handle suggestions request
     if (suggestions) {
@@ -176,7 +182,7 @@ export async function GET(request: NextRequest) {
             cacheHit,
           },
         });
-      } catch (error) {
+      } catch {
         return NextResponse.json({ suggestions: [] });
       }
     }
@@ -194,7 +200,7 @@ export async function GET(request: NextRequest) {
           source: 'wordpress',
         },
       });
-    } catch (wpError) {
+    } catch {
       // Fallback to mock data
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
