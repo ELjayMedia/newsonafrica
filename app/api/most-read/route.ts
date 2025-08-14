@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { WORDPRESS_REST_API_URL } from '@/config/wordpress';
 
 export const runtime = 'nodejs';
+
+export const dynamic = 'force-dynamic';
 
 export const revalidate = 300; // ISR-like cache hint for this route (5 minutes)
 
@@ -53,9 +56,10 @@ async function fetchFromSupabase(limit: number): Promise<Item[] | null> {
 
   const counts = new Map<string, { slug: string; title: string; count: number }>();
   for (const row of data || []) {
-    const slug = (row as any)?.slug as string | undefined;
+    const rowData = row as { slug?: string; title?: string };
+    const slug = rowData.slug;
     if (!slug) continue;
-    const title = cleanTitle(((row as any)?.title as string | undefined) || slug);
+    const title = cleanTitle(rowData.title ?? slug);
     const existing = counts.get(slug);
     if (existing) {
       existing.count += 1;
@@ -104,9 +108,9 @@ async function fetchFromWordPress(limit: number): Promise<Item[] | null> {
     .slice(0, limit);
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const limitParam = searchParams.get('limit');
     const limit = Math.max(1, Math.min(Number(limitParam) || 5, 20));
 
