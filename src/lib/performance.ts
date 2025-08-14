@@ -18,7 +18,7 @@ export function measureRenderTime(componentName: string) {
 }
 
 // Debounce function to limit function calls
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
 ): (...args: Parameters<T>) => void {
@@ -36,7 +36,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle function to limit function calls by time
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number,
 ): (...args: Parameters<T>) => void {
@@ -54,7 +54,7 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 // Memoize function results
-export function memoize<T extends (...args: any[]) => any>(
+export function memoize<T extends (...args: unknown[]) => unknown>(
   func: T,
 ): (...args: Parameters<T>) => ReturnType<T> {
   const cache = new Map<string, ReturnType<T>>();
@@ -77,10 +77,11 @@ export function detectSlowRenders(threshold = 16) {
   if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
     const originalCreateElement = React.createElement;
 
-    // @ts-ignore - Monkey patching for development only
-    React.createElement = function (...args) {
+    (React as unknown as { createElement: typeof React.createElement }).createElement = function (
+      ...args: Parameters<typeof React.createElement>
+    ) {
       const start = performance.now();
-      const element = originalCreateElement.apply(this, args);
+      const element = originalCreateElement(...args);
       const end = performance.now();
 
       const renderTime = end - start;
