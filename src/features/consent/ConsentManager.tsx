@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ConsentState = {
@@ -13,16 +14,55 @@ type ConsentContextValue = ConsentState & {
 
 const ConsentContext = createContext<ConsentContextValue | undefined>(undefined);
 
+declare global {
+  interface Window {
+    __geoEea?: number;
+    __noaConsent?: {
+      get: () => ConsentState;
+      set: (next: ConsentState) => void;
+    };
+  }
+}
+
 function detectEea(): boolean {
   if (typeof navigator === 'undefined') return false;
   const lang = navigator.language || '';
   const region = lang.split('-')[1]?.toUpperCase();
   const eea = [
-    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LI', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
+    'AT',
+    'BE',
+    'BG',
+    'HR',
+    'CY',
+    'CZ',
+    'DK',
+    'EE',
+    'FI',
+    'FR',
+    'DE',
+    'GR',
+    'HU',
+    'IS',
+    'IE',
+    'IT',
+    'LV',
+    'LI',
+    'LT',
+    'LU',
+    'MT',
+    'NL',
+    'NO',
+    'PL',
+    'PT',
+    'RO',
+    'SK',
+    'SI',
+    'ES',
+    'SE',
   ];
   if (region && eea.includes(region)) return true;
   if (typeof window !== 'undefined') {
-    if ((window as any).__geoEea === 1) return true;
+    if (window.__geoEea === 1) return true;
     const attr = document.documentElement.getAttribute('data-geo-eea');
     if (attr === '1') return true;
   }
@@ -56,7 +96,7 @@ export function ConsentManager({ children }: { children: React.ReactNode }) {
     } catch {}
     const evt = new CustomEvent('__noaConsent', { detail: consent });
     window.dispatchEvent(evt);
-    (window as any).__noaConsent = {
+    window.__noaConsent = {
       get: () => consent,
       set: (next: ConsentState) => setConsent(next),
     };
@@ -67,7 +107,9 @@ export function ConsentManager({ children }: { children: React.ReactNode }) {
       {children}
       {showBanner && (
         <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 bg-white p-4 text-center shadow-md">
-          <p className="text-sm">We use cookies to personalize content and ads. Manage your consent.</p>
+          <p className="text-sm">
+            We use cookies to personalize content and ads. Manage your consent.
+          </p>
           <div className="flex gap-4">
             <button
               className="rounded bg-black px-4 py-2 text-white"
@@ -75,9 +117,9 @@ export function ConsentManager({ children }: { children: React.ReactNode }) {
             >
               Accept
             </button>
-            <a href="/privacy/consent" className="rounded border px-4 py-2">
+            <Link href="/privacy/consent" className="rounded border px-4 py-2">
               Manage
-            </a>
+            </Link>
           </div>
         </div>
       )}

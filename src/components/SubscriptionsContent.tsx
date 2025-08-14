@@ -1,6 +1,7 @@
 'use client';
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -104,13 +105,13 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
         <CardHeader>
           <CardTitle>No Active Subscriptions</CardTitle>
           <CardDescription>
-            You don't have any active subscriptions. Subscribe to get premium access to News On
+            You do not have any active subscriptions. Subscribe to get premium access to News On
             Africa.
           </CardDescription>
         </CardHeader>
         <CardFooter>
           <Button asChild>
-            <a href="/subscribe">View Subscription Plans</a>
+            <Link href="/subscribe">View Subscription Plans</Link>
           </Button>
         </CardFooter>
       </Card>
