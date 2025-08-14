@@ -8,8 +8,8 @@ interface CacheEntry<T> {
   ttl: number;
 }
 
-const inflight = new Map<string, Promise<any>>();
-const cache = new Map<string, CacheEntry<any>>();
+const inflight = new Map<string, Promise<unknown>>();
+const cache = new Map<string, CacheEntry<unknown>>();
 
 export interface FetcherOptions<T> {
   /** Request init options forwarded to fetch */
@@ -26,12 +26,13 @@ export interface FetcherOptions<T> {
 
 export class FetchError extends Error {
   status?: number;
+  cause?: unknown;
+
   constructor(message: string, status?: number, cause?: unknown) {
     super(message);
     this.name = 'FetchError';
     this.status = status;
-    if (cause) {
-      // @ts-ignore - Node <18 does not have cause in ErrorOptions type
+    if (cause !== undefined) {
       this.cause = cause;
     }
   }
@@ -74,7 +75,7 @@ async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> 
         const headers: Record<string, string> = {
           'Accept-Encoding': 'gzip, br',
           Connection: 'keep-alive',
-          ...(init.headers as any),
+          ...(init.headers as Record<string, string>),
         };
         if (cached?.etag) {
           headers['If-None-Match'] = cached.etag;
@@ -121,7 +122,10 @@ async function runFetch<T>(url: string, options: FetcherOptions<T>): Promise<T> 
   return promise;
 }
 
-export async function fetcher<T = any>(url: string, options: FetcherOptions<T> = {}): Promise<T> {
+export async function fetcher<T = unknown>(
+  url: string,
+  options: FetcherOptions<T> = {},
+): Promise<T> {
   return runFetch<T>(url, options);
 }
 

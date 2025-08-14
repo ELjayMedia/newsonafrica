@@ -1,5 +1,13 @@
 import type { Metric } from 'web-vitals';
 
+import type { NetworkInformation } from './network-information';
+
+declare global {
+  interface Navigator {
+    connection?: NetworkInformation;
+  }
+}
+
 // Utility to detect browser environment without relying on ad utilities
 const isBrowser = typeof window !== 'undefined';
 
@@ -46,7 +54,7 @@ export function sendWebVitalToVercel(metric: Metric) {
 }
 
 // Legacy function for backward compatibility
-export function reportWebVitals(metric: any) {
+export function reportWebVitals(metric: Metric) {
   try {
     sendWebVitalToVercel(metric);
   } catch (error) {
@@ -59,7 +67,6 @@ function getConnectionSpeed() {
   if (!isBrowser || !('connection' in navigator)) return 'unknown';
 
   try {
-    // @ts-ignore - TypeScript doesn't know about navigator.connection
     const connection = navigator.connection;
 
     if (!connection) return 'unknown';
