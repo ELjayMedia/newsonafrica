@@ -318,6 +318,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.1)(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      '@types/google-publisher-tag':
+        specifier: ^1.20250811.0
+        version: 1.20250811.0
       '@types/node':
         specifier: ^22
         version: 22.17.1
@@ -2905,6 +2908,9 @@ packages:
 
   '@types/fs-extra@8.1.5':
     resolution: {integrity: sha512-0dzKcwO+S8s2kuF5Z9oUWatQJj5Uq/iqphEtE3GQJVRRYm/tD1LglU2UnXi2A8jLq5umkGouOXOR9y0n613ZwQ==}
+
+  '@types/google-publisher-tag@1.20250811.0':
+    resolution: {integrity: sha512-miINDr/2XSYJzaSs7qK+7Utz4TC6SMwUIN/1oCSzweYbWNq/LOeFxkRZRHvn6XP/xaQ4GzXkESMnEYuvsCvQLg==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -10329,6 +10335,8 @@ snapshots:
   '@types/fs-extra@8.1.5':
     dependencies:
       '@types/node': 22.17.1
+
+  '@types/google-publisher-tag@1.20250811.0': {}
 
   '@types/json-schema@7.0.15': {}
 

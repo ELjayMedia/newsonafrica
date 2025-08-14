@@ -1,15 +1,6 @@
-export {};
-
-declare global {
-  interface Window {
-    googletag?: any;
-    __noaConsent?: any;
-  }
-}
-
 let loaded = false;
 
-export function ensureGPTLoaded() {
+export function ensureGPTLoaded(): void {
   if (loaded || typeof window === 'undefined') return;
   const s = document.createElement('script');
   s.async = true;
@@ -18,5 +9,6 @@ export function ensureGPTLoaded() {
     loaded = true;
   };
   document.head.appendChild(s);
-  window.googletag = window.googletag || { cmd: [] };
+  window.googletag =
+    window.googletag || ({ cmd: [] as googletag.CommandArray } as googletag.Googletag);
 }
