@@ -7,10 +7,13 @@ build:
 	pnpm build
 
 test:
-	pnpm test
+        pnpm test
+
+test\:e2e:
+        pnpm test:e2e
 
 typecheck:
-	pnpm typecheck
+        pnpm typecheck
 
 lint:
 	pnpm lint
