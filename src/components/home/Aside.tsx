@@ -4,7 +4,8 @@ import { GamesPromo } from '@/components/aside/GamesPromo';
 import { MostRead } from '@/components/aside/MostRead';
 import { PollWidget } from '@/components/aside/PollWidget';
 import { SponsoredPromo } from '@/components/aside/SponsoredPromo';
-import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress';
+import { getMostRead, getPoll } from '@/lib/api/wordpress';
+import { getMarketSnapshot } from '@/lib/api/market';
 
 
 export async function Aside() {

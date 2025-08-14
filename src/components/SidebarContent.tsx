@@ -4,7 +4,8 @@ import { PollWidget } from './aside/PollWidget';
 import { SponsoredPromo } from './aside/SponsoredPromo';
 import { MarketTicker } from './home/MarketTicker';
 
-import { getMostRead, getPoll, getMarketSnapshot } from '@/lib/api/wordpress';
+import { getMostRead, getPoll } from '@/lib/api/wordpress';
+import { getMarketSnapshot } from '@/lib/api/market';
 
 /**
  * SidebarContent
