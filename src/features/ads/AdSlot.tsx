@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+
 import { ensureGPTLoaded } from './gpt';
-import { useConsent } from '@/features/consent/ConsentManager';
 import { useAdsEnabled, isAdDebug } from './policy';
+
+import { useConsent } from '@/features/consent/ConsentManager';
 
 export type AdProps = {
   id: string;
   slot: string;
-  sizes: any;
-  sizeMapping?: any;
+  sizes: googletag.GeneralSize | googletag.GeneralSize[];
+  sizeMapping?: googletag.SizeMappingArray;
   kv?: Record<string, string | string[]>;
   lazy?: boolean;
   collapseEmpty?: 'never' | 'after';
@@ -36,10 +38,9 @@ export default function AdSlot({
 
   useEffect(() => {
     if (!lazy || !ref.current) return;
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setInView(true),
-      { rootMargin: '300px' }
-    );
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setInView(true), {
+      rootMargin: '300px',
+    });
     io.observe(ref.current);
     return () => io.disconnect();
   }, [lazy]);
@@ -47,14 +48,14 @@ export default function AdSlot({
   useEffect(() => {
     if (!inView || !canServeAds || !adsEnabled) return;
     ensureGPTLoaded();
-    const g = (window as any).googletag;
+    const g = (window as Window & { googletag: googletag.Googletag }).googletag;
     g.cmd.push(() => {
       const ad = g.defineSlot(slot, sizes, id);
       if (!ad) return;
       if (sizeMapping) ad.defineSizeMapping(sizeMapping);
       ad.addService(g.pubads());
       Object.entries(kv).forEach(([k, v]) =>
-        g.pubads().setTargeting(k, Array.isArray(v) ? v : [v])
+        g.pubads().setTargeting(k, Array.isArray(v) ? v : [v]),
       );
       if (collapseEmpty === 'after') g.pubads().collapseEmptyDivs(true);
       g.enableServices();
@@ -67,7 +68,7 @@ export default function AdSlot({
           const slots = g
             .pubads()
             .getSlots()
-            .filter((s: any) => s.getSlotElementId() === id);
+            .filter((s: googletag.Slot) => s.getSlotElementId() === id);
           if (slots.length) g.destroySlots(slots);
           if (debug) console.log('Destroyed ad slot', id);
         } catch {}
@@ -75,5 +76,7 @@ export default function AdSlot({
     };
   }, [inView, canServeAds, adsEnabled, id, slot, sizes, sizeMapping, collapseEmpty, kv, debug]);
 
-  return <div id={id} ref={ref} className={className} style={{ minHeight }} aria-label="advertisement" />;
+  return (
+    <div id={id} ref={ref} className={className} style={{ minHeight }} aria-label="advertisement" />
+  );
 }

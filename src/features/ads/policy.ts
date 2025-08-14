@@ -1,17 +1,26 @@
 'use client';
 
+interface NetworkInformation {
+  saveData?: boolean;
+  effectiveType?: string;
+}
+
+interface NavigatorConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
 export function shouldLoadAds() {
-  const c: any = (navigator as any).connection;
-  if (c?.saveData) return false;
-  if (typeof c?.effectiveType === 'string' && c.effectiveType.includes('2g')) return false;
+  const connection = (navigator as NavigatorConnection).connection;
+  if (connection?.saveData) return false;
+  if (typeof connection?.effectiveType === 'string' && connection.effectiveType.includes('2g'))
+    return false;
   return true;
 }
 
 export function useAdsEnabled() {
   if (typeof window === 'undefined') return false;
   const qs = new URLSearchParams(window.location.search);
-  const kill =
-    qs.get('ads') === 'off' || process.env.NEXT_PUBLIC_ADS_ENABLED === 'false';
+  const kill = qs.get('ads') === 'off' || process.env.NEXT_PUBLIC_ADS_ENABLED === 'false';
   return !kill && shouldLoadAds();
 }
 

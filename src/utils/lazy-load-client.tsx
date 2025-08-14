@@ -6,12 +6,12 @@ import type { ComponentType } from 'react';
 /**
  * Lazily loads a component with a loading fallback
  */
-export function lazyLoadComponent(
-  importFunc: () => Promise<{ default: ComponentType<any> }>,
-  LoadingComponent: ComponentType<any> | null = null,
+export function lazyLoadComponent<P = unknown>(
+  importFunc: () => Promise<{ default: ComponentType<P> }>,
+  LoadingComponent: ComponentType<unknown> | null = null,
 ) {
   return dynamic(importFunc, {
-    loading: LoadingComponent ? () => <LoadingComponent /> : undefined,
+    ...(LoadingComponent ? { loading: () => <LoadingComponent /> } : {}),
     ssr: false,
   });
 }
@@ -19,9 +19,9 @@ export function lazyLoadComponent(
 /**
  * Lazily loads a component with a skeleton loading state
  */
-export function lazyLoadSkeleton(
-  importFunc: () => Promise<{ default: ComponentType<any> }>,
-  SkeletonComponent: ComponentType<any>,
+export function lazyLoadSkeleton<P = unknown>(
+  importFunc: () => Promise<{ default: ComponentType<P> }>,
+  SkeletonComponent: ComponentType<unknown>,
 ) {
   return dynamic(importFunc, {
     loading: () => <SkeletonComponent />,

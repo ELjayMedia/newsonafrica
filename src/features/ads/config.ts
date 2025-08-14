@@ -8,12 +8,39 @@ export const SLOTS = {
   inarticle: `${AD_UNIT_ROOT}/inarticle`,
 };
 
-export function makeSizeMapping(googletag: any) {
+export function makeSizeMapping(googletag: googletag.Googletag): googletag.SizeMappingArray {
   return googletag
     .sizeMapping()
-    .addSize([0, 0], [[320, 50], [320, 100], [300, 250]])
-    .addSize([480, 0], [[468, 60], [300, 250]])
-    .addSize([768, 0], [[728, 90], [300, 250]])
-    .addSize([1024, 0], [[970, 250], [728, 90], [300, 250], [300, 600]])
+    .addSize(
+      [0, 0],
+      [
+        [320, 50],
+        [320, 100],
+        [300, 250],
+      ],
+    )
+    .addSize(
+      [480, 0],
+      [
+        [468, 60],
+        [300, 250],
+      ],
+    )
+    .addSize(
+      [768, 0],
+      [
+        [728, 90],
+        [300, 250],
+      ],
+    )
+    .addSize(
+      [1024, 0],
+      [
+        [970, 250],
+        [728, 90],
+        [300, 250],
+        [300, 600],
+      ],
+    )
     .build();
 }
