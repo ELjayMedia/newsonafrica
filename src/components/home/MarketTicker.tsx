@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import type { MarketItem } from '@/lib/api/wordpress';
+import type { MarketItem } from '@/lib/api/market';
 
 interface Props {
   items: MarketItem[];

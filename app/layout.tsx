@@ -20,7 +20,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { BookmarksProvider } from '@/contexts/BookmarksContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { ConsentManager } from '@/features/consent/ConsentManager';
-import { getMarketSnapshot } from '@/lib/api/wordpress';
+import { getMarketSnapshot } from '@/lib/api/market';
 import { initAuth } from '@/lib/initAuth';
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 

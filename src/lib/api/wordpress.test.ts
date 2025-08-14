@@ -38,7 +38,7 @@ test('sortPostsByDate orders descending', async () => {
 
 test('getMarketSnapshot reads local file when no site url', async () => {
   vi.unstubAllEnvs();
-  const { getMarketSnapshot } = await import('./wordpress');
+  const { getMarketSnapshot } = await import('./market');
   const data = await getMarketSnapshot();
   expect(data.length).toBeGreaterThan(0);
 });
@@ -47,7 +47,7 @@ test('getMarketSnapshot returns empty array on fetch error', async () => {
   vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://example.com');
   const originalFetch = global.fetch;
   global.fetch = vi.fn().mockRejectedValue(new Error('fail'));
-  const { getMarketSnapshot } = await import('./wordpress');
+  const { getMarketSnapshot } = await import('./market');
   const data = await getMarketSnapshot();
   expect(data).toEqual([]);
   global.fetch = originalFetch;
