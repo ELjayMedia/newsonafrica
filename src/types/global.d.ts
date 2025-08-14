@@ -1,15 +1,12 @@
-import type { ConsentState } from '@/features/consent/ConsentManager';
-
-interface NoaConsentAPI {
-  get: () => ConsentState;
-  set: (next: ConsentState) => void;
-}
-
 declare global {
   interface Window {
     googletag?: googletag.Googletag;
-    __noaConsent?: NoaConsentAPI;
-    __geoEea?: number;
+    __tcfapi?: (
+      command: string,
+      version: number,
+      callback: (...args: unknown[]) => void,
+      parameter?: unknown,
+    ) => void;
   }
 }
 

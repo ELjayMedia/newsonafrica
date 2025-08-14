@@ -4,10 +4,9 @@ This document outlines how advertising and consent management are integrated in 
 
 ## Consent Flow
 
-- Consent state is stored under `localStorage['noa.consent.tcf']`.
-- `ConsentManager` provides a context and banner prompting users in the EEA.
-- The state exposes `{ canServeAds, gdprApplies }` via the `useConsent()` hook.
-- When consent changes a `__noaConsent` event is dispatched on `window`.
+- A TCF v2 compliant CMP exposes consent via `window.__tcfapi`.
+- `ConsentManager` injects the CMP script and stubs the API.
+- Use `waitForTcfConsent()` to defer ad loading until consent is resolved.
 
 ## Slot Naming and Size Maps
 
@@ -28,6 +27,7 @@ This document outlines how advertising and consent management are integrated in 
 ## Targeting Keys
 
 `buildAdTargeting()` produces flat key/value pairs for:
+
 - `country`
 - `category`
 - `article` id

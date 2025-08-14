@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ensureGPTLoaded } from './gpt';
 import { useAdsEnabled, isAdDebug } from './policy';
 
-import { useConsent } from '@/features/consent/ConsentManager';
+import { waitForTcfConsent } from '@/features/consent/ConsentManager';
 
 export type AdProps = {
   id: string;
@@ -32,7 +32,6 @@ export default function AdSlot({
 }: AdProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(!lazy);
-  const { canServeAds } = useConsent();
   const adsEnabled = useAdsEnabled();
   const debug = isAdDebug();
 
@@ -46,23 +45,29 @@ export default function AdSlot({
   }, [lazy]);
 
   useEffect(() => {
-    if (!inView || !canServeAds || !adsEnabled) return;
-    ensureGPTLoaded();
-    const g = (window as Window & { googletag: googletag.Googletag }).googletag;
-    g.cmd.push(() => {
-      const ad = g.defineSlot(slot, sizes, id);
-      if (!ad) return;
-      if (sizeMapping) ad.defineSizeMapping(sizeMapping);
-      ad.addService(g.pubads());
-      Object.entries(kv).forEach(([k, v]) =>
-        g.pubads().setTargeting(k, Array.isArray(v) ? v : [v]),
-      );
-      if (collapseEmpty === 'after') g.pubads().collapseEmptyDivs(true);
-      g.enableServices();
-      if (debug) console.log('Defining ad slot', id, slot, kv);
-      g.display(id);
+    if (!inView || !adsEnabled) return;
+    let cancelled = false;
+    waitForTcfConsent().then((canServeAds) => {
+      if (!canServeAds || cancelled) return;
+      ensureGPTLoaded();
+      const g = (window as Window & { googletag: googletag.Googletag }).googletag;
+      g.cmd.push(() => {
+        const ad = g.defineSlot(slot, sizes, id);
+        if (!ad) return;
+        if (sizeMapping) ad.defineSizeMapping(sizeMapping);
+        ad.addService(g.pubads());
+        Object.entries(kv).forEach(([k, v]) =>
+          g.pubads().setTargeting(k, Array.isArray(v) ? v : [v]),
+        );
+        if (collapseEmpty === 'after') g.pubads().collapseEmptyDivs(true);
+        g.enableServices();
+        if (debug) console.log('Defining ad slot', id, slot, kv);
+        g.display(id);
+      });
     });
     return () => {
+      cancelled = true;
+      const g = (window as Window & { googletag?: googletag.Googletag }).googletag;
       g?.cmd?.push(() => {
         try {
           const slots = g
@@ -74,7 +79,7 @@ export default function AdSlot({
         } catch {}
       });
     };
-  }, [inView, canServeAds, adsEnabled, id, slot, sizes, sizeMapping, collapseEmpty, kv, debug]);
+  }, [inView, adsEnabled, id, slot, sizes, sizeMapping, collapseEmpty, kv, debug]);
 
   return (
     <div id={id} ref={ref} className={className} style={{ minHeight }} aria-label="advertisement" />
