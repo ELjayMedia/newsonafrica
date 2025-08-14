@@ -9,12 +9,11 @@ This project uses modern tooling and conventions to keep development consistent.
 
 ## Common Scripts
 
-| Command | Description |
-| --- | --- |
+| Command          | Description                            |
+| ---------------- | -------------------------------------- |
 | `pnpm typecheck` | Run TypeScript compiler in check mode. |
-| `pnpm lint` | Lint the codebase with ESLint. |
-| `pnpm format` | Format code using Prettier. |
-| `pnpm lhci` | Run Lighthouse CI performance checks. |
+| `pnpm lint`      | Lint the codebase with ESLint.         |
+| `pnpm format`    | Format code using Prettier.            |
 
 These commands are also available via the [Makefile](../Makefile) (e.g. `make lint`).
 
@@ -31,4 +30,3 @@ Create a `.env.local` file for local development. See [README.md](../README.md#e
 1. Install dependencies: `pnpm install`
 2. Start the dev server: `pnpm dev`
    - Alternatively, use `make dev` with the provided Makefile.
-
