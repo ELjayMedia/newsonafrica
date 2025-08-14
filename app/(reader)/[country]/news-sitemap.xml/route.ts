@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { jfetch } from '@/lib/http/fetcher';
 import { wpRestBase } from '@/lib/wp-client/base';
 
-export const revalidate = 60 * 60; // 1h
+export const revalidate = 3600; // 1h
 
 export async function GET(request: Request, { params }: { params: { country: string } }) {
   const base = `https://newsonafrica.com/${params.country}`;
