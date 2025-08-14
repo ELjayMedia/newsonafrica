@@ -1,11 +1,26 @@
 import { supabase } from './supabase';
 import type { Profile } from './supabase';
 
+interface FacebookUserData {
+  name?: string;
+  email?: string;
+  picture?: {
+    data?: {
+      url?: string;
+    };
+  };
+}
+
 // Function to get Facebook user data from the access token
 export async function getFacebookUserData(accessToken: string) {
   try {
     const response = await fetch(
-      `https://graph.facebook.com/me?fields=id,name,email,picture.type(large),first_name,last_name,link&access_token=${accessToken}`,
+      'https://graph.facebook.com/me?fields=id,name,email,picture.type(large),first_name,last_name,link',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
     );
 
     if (!response.ok) {
@@ -22,11 +37,11 @@ export async function getFacebookUserData(accessToken: string) {
 // Function to update user profile with Facebook data
 export async function updateProfileWithFacebookData(
   userId: string,
-  facebookData: any,
+  facebookData: FacebookUserData,
 ): Promise<Profile> {
   try {
     // Extract relevant data from Facebook response
-    const { name, email, picture, first_name, last_name } = facebookData;
+    const { name, email, picture } = facebookData;
     const avatarUrl = picture?.data?.url;
 
     // Check if profile exists
