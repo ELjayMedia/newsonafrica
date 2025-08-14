@@ -333,9 +333,9 @@ export function SearchForm({
 
       {/* Search tips for empty state */}
       {!query && !showSuggestionsList && (
-        <div className="mt-2 text-xs text-gray-500">
-          Try searching for topics like "politics", "business", "sports", or specific countries
-        </div>
+          <div className="mt-2 text-xs text-gray-500">
+            Try searching for topics like &quot;politics&quot;, &quot;business&quot;, &quot;sports&quot;, or specific countries
+          </div>
       )}
     </div>
   );

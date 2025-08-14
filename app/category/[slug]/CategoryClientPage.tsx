@@ -93,7 +93,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       <div className="p-6 bg-white rounded-lg shadow-sm max-w-2xl mx-auto mt-8">
         <h1 className="text-2xl font-bold mb-4 text-red-600">Error Loading Category</h1>
         <p className="text-gray-700 mb-4">
-          We encountered a problem loading the "{params.slug}" category: {error.message}
+          We encountered a problem loading the &quot;{params.slug}&quot; category: {error.message}
         </p>
         <div className="flex gap-4">
           <button

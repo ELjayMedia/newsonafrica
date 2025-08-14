@@ -198,7 +198,7 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
               <CardContent>
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Coming Soon</h3>
-                  <p>Notification settings will be available soon. You'll be able to control:</p>
+                    <p>Notification settings will be available soon. You&apos;ll be able to control:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Breaking news alerts</li>
                     <li>Comment notifications</li>

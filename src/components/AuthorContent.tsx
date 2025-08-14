@@ -44,7 +44,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Unable to load author data</h2>
         <p className="text-gray-600 mb-6">
-          We're having trouble connecting to our content server. Please try again later.
+          We&apos;re having trouble connecting to our content server. Please try again later.
         </p>
         <Button onClick={() => window.location.reload()} className="mt-4">
           Retry
@@ -57,9 +57,9 @@ export function AuthorContent({ slug }: AuthorContentProps) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Author not found</h2>
-        <p className="text-gray-600">
-          We couldn't find an author with this name. They may have been removed or renamed.
-        </p>
+          <p className="text-gray-600">
+            We couldn&apos;t find an author with this name. They may have been removed or renamed.
+          </p>
       </div>
     );
   }

@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
       <h1 className="text-3xl font-bold mb-4">Privacy Policy</h1>
       <p className="mb-4">Last updated: {new Date().toLocaleDateString()}</p>
       <p className="mb-4">
-        This Privacy Policy describes how News On Africa ("we", "us", or "our") collects, uses, and
+        This Privacy Policy describes how News On Africa (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) collects, uses, and
         shares your personal information when you use our website and services.
       </p>
       <h2 className="text-2xl font-bold mt-6 mb-2">Information We Collect</h2>

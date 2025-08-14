@@ -211,8 +211,8 @@ export function SubscribeContent() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h3 className="font-medium flex items-center mb-2">
-                            <Check className="h-5 w-5 text-green-500 mr-2" />
-                            What's included:
+                              <Check className="h-5 w-5 text-green-500 mr-2" />
+                              What&apos;s included:
                           </h3>
                           <ul className="space-y-2">
                             {plan.features?.map((feature, index) => (
@@ -276,8 +276,8 @@ export function SubscribeContent() {
                 <div>
                   <h3 className="font-semibold">How does the free trial work?</h3>
                   <p className="text-sm text-gray-600">
-                    Your free trial begins immediately. You won't be charged until the trial period
-                    ends, and you can cancel anytime.
+                      Your free trial begins immediately. You won&apos;t be charged until the trial period
+                      ends, and you can cancel anytime.
                   </p>
                 </div>
                 <div>
@@ -335,9 +335,9 @@ export function SubscribeContent() {
                   required
                   disabled={!!user?.email}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  We'll send your receipt and subscription details to this email
-                </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    We&apos;ll send your receipt and subscription details to this email
+                  </p>
               </div>
             </div>
 

@@ -16,10 +16,10 @@ export default function TermsAndConditions() {
 
       <div className="prose prose-sm sm:prose lg:prose-lg mx-auto">
         <p>
-          Welcome to News On Africa (referred to in these Terms and Conditions as "we," "us," or
-          "our"). These Terms and Conditions ("Terms") govern your use of the News On Africa
+          Welcome to News On Africa (referred to in these Terms and Conditions as &quot;we,&quot; &quot;us,&quot; or
+          &quot;our&quot;). These Terms and Conditions (&quot;Terms&quot;) govern your use of the News On Africa
           website, progressive web app, and any associated services or platforms (collectively, the
-          "Platform"). By accessing, browsing, or using our Platform, you acknowledge that you have
+          &quot;Platform&quot;). By accessing, browsing, or using our Platform, you acknowledge that you have
           read, understood, and agree to be bound by these Terms.
         </p>
 
@@ -71,7 +71,7 @@ export default function TermsAndConditions() {
 
         <h3 className="text-xl font-semibold mt-4 mb-2">3.3 Trademark Notice</h3>
         <p>
-          "News On Africa," and all related names, logos, product and service names, designs, and
+          &quot;News On Africa,&quot; and all related names, logos, product and service names, designs, and
           slogans are trademarks of News On Africa or its affiliates or licensors. You must not use
           such marks without the prior written permission of News On Africa.
         </p>

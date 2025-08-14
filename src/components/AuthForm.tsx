@@ -388,7 +388,7 @@ export function AuthForm({
               className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">
-              We'll send you a link to reset your password.
+              We&apos;ll send you a link to reset your password.
             </p>
           </div>
           <Button

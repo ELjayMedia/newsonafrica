@@ -27,9 +27,9 @@ export default function GlobalErrorBoundary({ children }: { children: React.Reac
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
-          <p className="text-gray-700 mb-4">
-            We're sorry, but there was an error loading the page. Please try refreshing the browser.
-          </p>
+            <p className="text-gray-700 mb-4">
+              We&apos;re sorry, but there was an error loading the page. Please try refreshing the browser.
+            </p>
           <button
             onClick={() => {
               setHasError(false);

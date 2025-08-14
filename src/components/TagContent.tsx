@@ -43,12 +43,12 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Articles tagged with "{tag.name}"</h1>
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-6">Articles tagged with &quot;{tag.name}&quot;</h1>
         {tag.description && <p className="text-gray-600 mb-6">{tag.description}</p>}
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div key={post.id} className="border rounded-lg overflow-hidden shadow-md">
+              <div className="space-y-4">
+                {posts.map((post) => (
+                  <div key={post.id} className="border rounded-lg overflow-hidden shadow-md">
               <Link
                 href={`/post/${post.slug}`}
                 className="flex items-start p-3 hover:bg-gray-50 transition-colors duration-200"

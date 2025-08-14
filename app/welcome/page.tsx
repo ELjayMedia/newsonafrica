@@ -24,7 +24,7 @@ export default function WelcomePage() {
         </p>
 
         <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <h2 className="font-semibold text-blue-800 mb-2">What's Next?</h2>
+            <h2 className="font-semibold text-blue-800 mb-2">What&apos;s Next?</h2>
           <ul className="text-sm text-blue-700 text-left space-y-2">
             <li>• Enjoy unlimited access to all articles</li>
             <li>• Bookmark articles to read later</li>
@@ -45,7 +45,7 @@ export default function WelcomePage() {
 
         <div className="mt-8 text-sm text-gray-500">
           <p>
-            We've sent a confirmation email with your subscription details. If you have any
+              We&apos;ve sent a confirmation email with your subscription details. If you have any
             questions, please{' '}
             <Link href="/contact" className="text-blue-600 hover:underline">
               contact us

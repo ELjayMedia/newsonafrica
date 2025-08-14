@@ -153,7 +153,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
       <div className="p-6 bg-white rounded-lg shadow-sm max-w-2xl mx-auto mt-8">
         <h1 className="text-2xl font-bold mb-4">Category Not Found</h1>
         <p className="text-gray-700 mb-4">
-          The category "{slug}" could not be found or has no posts.
+          The category &quot;{slug}&quot; could not be found or has no posts.
         </p>
         <Link
           href="/"
@@ -271,7 +271,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         {/* End of content message */}
         {!hasNextPage && !isFetchingNextPage && allPostsSorted.length > 0 && (
           <p className="text-center text-gray-600 mt-8 py-4">
-            You've reached the end of the {category.name} category
+            You&apos;ve reached the end of the {category.name} category
           </p>
         )}
 
