@@ -4,6 +4,16 @@ import { NextResponse } from 'next/server';
 
 import { startWebhookTunnel } from '@/lib/paystack-utils';
 import { createAdminClient } from '@/lib/supabase';
+import type {
+  PaystackWebhookEvent,
+  ChargeSuccessPayload,
+  SubscriptionCreatePayload,
+  SubscriptionDisablePayload,
+  InvoicePaymentFailedPayload,
+  InvoiceUpdatePayload,
+  TransferSuccessPayload,
+  TransferFailedPayload,
+} from '@/types/paystack';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // Parse the body
-    const event = JSON.parse(body);
+    const event = JSON.parse(body) as PaystackWebhookEvent;
     console.log(`Received Paystack webhook: ${event.event}`);
 
     // Log webhook event
@@ -107,13 +117,13 @@ export async function POST(request: Request) {
 }
 
 // Event handlers
-async function handleChargeSuccess(data: any) {
+async function handleChargeSuccess(data: ChargeSuccessPayload) {
   console.log('Processing successful charge:', data.reference);
   try {
     const admin = createAdminClient();
-    const metadata = data.metadata || {};
-    const userId = metadata.user_id as string | undefined;
-    const type = (metadata.type as string) || 'subscription';
+    const metadata = data.metadata ?? {};
+    const userId = metadata.user_id;
+    const type = metadata.type ?? 'subscription';
 
     let subscriptionId: string | null = null;
     if (type === 'subscription' && userId) {
@@ -135,7 +145,7 @@ async function handleChargeSuccess(data: any) {
       subscriptionId = sub?.id ?? null;
     } else if (type === 'gift') {
       await admin.from('article_gifts').insert({
-        user_id: userId || null,
+        user_id: userId ?? null,
         article_id: metadata.article_id,
         recipient_email: metadata.recipient_email,
         reference: data.reference,
@@ -158,19 +168,19 @@ async function handleChargeSuccess(data: any) {
   }
 }
 
-async function handleSubscriptionCreated(data: any) {
+async function handleSubscriptionCreated(data: SubscriptionCreatePayload) {
   console.log('Processing subscription creation:', data.subscription_code);
   try {
     const admin = createAdminClient();
-    const metadata = data.customer?.metadata || {};
-    const userId = metadata.user_id as string | undefined;
+    const metadata = data.customer?.metadata ?? {};
+    const userId = metadata.user_id;
 
     await admin.from('subscriptions').upsert(
       {
-        user_id: userId || null,
-        paystack_customer_id: data.customer?.customer_code || null,
+        user_id: userId ?? null,
+        paystack_customer_id: data.customer?.customer_code ?? null,
         plan: data.plan?.plan_code || data.plan?.name || 'plan',
-        status: data.status || 'active',
+        status: data.status ?? 'active',
         current_period_end: data.next_payment_date
           ? new Date(data.next_payment_date).toISOString()
           : null,
@@ -183,7 +193,7 @@ async function handleSubscriptionCreated(data: any) {
   }
 }
 
-async function handleSubscriptionDisabled(data: any) {
+async function handleSubscriptionDisabled(data: SubscriptionDisablePayload) {
   console.log('Processing subscription cancellation:', data.subscription_code);
   try {
     const admin = createAdminClient();
@@ -193,18 +203,18 @@ async function handleSubscriptionDisabled(data: any) {
         status: 'cancelled',
         updated_at: new Date().toISOString(),
       })
-      .eq('paystack_customer_id', data.customer?.customer_code || '');
+      .eq('paystack_customer_id', data.customer?.customer_code ?? '');
   } catch (error) {
     console.error('Error cancelling subscription:', error);
   }
 }
 
-async function handlePaymentFailed(data: any) {
+async function handlePaymentFailed(data: InvoicePaymentFailedPayload) {
   console.log('Processing failed payment:', data.reference);
   try {
     const admin = createAdminClient();
-    const metadata = data.metadata || {};
-    const userId = metadata.user_id as string | undefined;
+    const metadata = data.metadata ?? {};
+    const userId = metadata.user_id;
     let subscriptionId: string | null = null;
     if (userId) {
       const { data: sub } = await admin
@@ -219,16 +229,16 @@ async function handlePaymentFailed(data: any) {
       subscription_id: subscriptionId,
       reference: data.reference,
       amount: data.amount,
-      currency: data.currency || 'NGN',
+      currency: data.currency ?? 'NGN',
       status: 'failed',
-      description: metadata.description || null,
+      description: metadata.description ?? null,
     });
   } catch (error) {
     console.error('Error storing failed payment:', error);
   }
 }
 
-async function handleInvoiceUpdate(data: any) {
+async function handleInvoiceUpdate(data: InvoiceUpdatePayload) {
   console.log('Processing invoice update:', data.invoice_code);
   try {
     const admin = createAdminClient();
@@ -248,13 +258,13 @@ async function handleInvoiceUpdate(data: any) {
   }
 }
 
-async function handleTransferSuccess(data: any) {
+async function handleTransferSuccess(data: TransferSuccessPayload) {
   console.log('Processing successful transfer:', data.reference);
 
   // TODO: Implement your business logic
 }
 
-async function handleTransferFailed(data: any) {
+async function handleTransferFailed(data: TransferFailedPayload) {
   console.log('Processing failed transfer:', data.reference);
 
   // TODO: Implement your business logic
