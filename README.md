@@ -84,6 +84,11 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
+# Sentry
+
+SENTRY_DSN=your_sentry_dsn
+NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
+
 # Site
 
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
