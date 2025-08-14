@@ -1,6 +1,9 @@
+@reference "tailwindcss";
+@config "../tailwind.config.js";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@plugin "@tailwindcss/typography";
 
 @layer base {
   :root {
