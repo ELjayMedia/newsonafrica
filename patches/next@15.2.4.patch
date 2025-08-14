@@ -6,10 +6,12 @@ index f34aceea90d8f21b6aabab1201be8472b9443590..5060f3561f9c53c234197c3f55ac46ec
      const filePathWithoutExt = filePath.replace(/\.[^.]+$/, '');
      const cssChunks = new Set();
      const jsChunks = new Set();
+
 -    const entryCSSFiles = clientReferenceManifest.entryCSSFiles[filePathWithoutExt];
 -    const entryJSFiles = ((_clientReferenceManifest_entryJSFiles = clientReferenceManifest.entryJSFiles) == null ? void 0 : _clientReferenceManifest_entryJSFiles[filePathWithoutExt]) ?? [];
 +    const entryCSSFiles = clientReferenceManifest?.entryCSSFiles?.[filePathWithoutExt] ?? [];
 +    const entryJSFiles = clientReferenceManifest?.entryJSFiles?.[filePathWithoutExt] ?? [];
+
      if (entryCSSFiles) {
          for (const css of entryCSSFiles){
              if (!injectedCSS.has(css.path)) {
@@ -21,10 +23,12 @@ index fba82f83274b3e7f9c935666727e822be758fe16..fa4d503d293f98288e7f7fe00184224b
      const filePathWithoutExt = filePath.replace(/\.[^.]+$/, '');
      const cssChunks = new Set();
      const jsChunks = new Set();
+
 -    const entryCSSFiles = clientReferenceManifest.entryCSSFiles[filePathWithoutExt];
 -    const entryJSFiles = ((_clientReferenceManifest_entryJSFiles = clientReferenceManifest.entryJSFiles) == null ? void 0 : _clientReferenceManifest_entryJSFiles[filePathWithoutExt]) ?? [];
 +    const entryCSSFiles = clientReferenceManifest?.entryCSSFiles?.[filePathWithoutExt] ?? [];
 +    const entryJSFiles = clientReferenceManifest?.entryJSFiles?.[filePathWithoutExt] ?? [];
+
      if (entryCSSFiles) {
          for (const css of entryCSSFiles){
              if (!injectedCSS.has(css.path)) {
@@ -70,3 +74,4 @@ diff --git a/dist/compiled/next-server/app-page-turbo-experimental.runtime.prod.
 index 6d66d0db62d291a2b7aa306a680303c3e3277db0..6d66d0db62d291a2b7aa306a680303c3e3277db0 100644
 --- a/dist/compiled/next-server/app-page-turbo-experimental.runtime.prod.js
 +++ b/dist/compiled/next-server/app-page-turbo-experimental.runtime.prod.js
+
