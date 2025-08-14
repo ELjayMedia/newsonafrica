@@ -10,6 +10,7 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from '@/graphql/queries';
+import { cache } from 'react';
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
