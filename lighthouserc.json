@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "startServerCommand": "pnpm start",
+      "startServerCommand": "pnpm build && pnpm start",
       "url": ["/", "/explore", "/articles/example-article"],
       "numberOfRuns": 1
     },
