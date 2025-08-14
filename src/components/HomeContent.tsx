@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 interface Post {
@@ -61,9 +62,11 @@ export function HomeContent() {
         {posts.map((post) => (
           <article key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden">
             {post._embedded?.['wp:featuredmedia']?.[0] && (
-              <img
+              <Image
                 src={post._embedded['wp:featuredmedia'][0].source_url || '/placeholder.svg'}
                 alt={post._embedded['wp:featuredmedia'][0].alt_text || post.title.rendered}
+                width={500}
+                height={300}
                 className="w-full h-48 object-cover"
               />
             )}
