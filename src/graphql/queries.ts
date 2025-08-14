@@ -83,8 +83,6 @@ export const LATEST_POSTS_QUERY = gql`
         published_at: date
         updated_at: modified
         post_type: contentTypeName
-        country
-        source_links: sourceLinks
         featuredImage {
           node {
             sourceUrl
@@ -144,8 +142,6 @@ export const POST_BY_SLUG_QUERY = gql`
       published_at: date
       updated_at: modified
       post_type: contentTypeName
-      country
-      source_links: sourceLinks
       featuredImage {
         node {
           sourceUrl
@@ -231,8 +227,6 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           featuredImage {
             node {
               sourceUrl
@@ -288,8 +282,6 @@ export const FEATURED_POSTS_QUERY = gql`
         published_at: date
         updated_at: modified
         post_type: contentTypeName
-        country
-        source_links: sourceLinks
         featuredImage {
           node {
             sourceUrl

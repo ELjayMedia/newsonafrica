@@ -57,7 +57,6 @@ export function transformRestPostToGraphQL(post: any): WordPressPost {
     post_type: (post.post_type || 'news_article') as WordPressPostType,
     published_at: post.date,
     updated_at: post.modified,
-    country: post.country || 'unknown',
     featured_image: post._embedded?.['wp:featuredmedia']?.[0]
       ? {
           node: {
@@ -67,7 +66,6 @@ export function transformRestPostToGraphQL(post: any): WordPressPost {
           },
         }
       : null,
-    source_links: post.source_links || [],
   };
 
   return WordPressPostSchema.parse(transformed);

@@ -17,8 +17,6 @@ export const queries = {
             published_at: date
             updated_at: modified
             post_type: contentTypeName
-            country
-            source_links: sourceLinks
             excerpt
             featuredImage {
               node {
@@ -96,8 +94,6 @@ export const queries = {
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           featuredImage {
             node {
               sourceUrl
@@ -150,8 +146,6 @@ export const queries = {
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           excerpt
           featuredImage {
             node {
@@ -178,8 +172,6 @@ export const queries = {
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           excerpt
           featuredImage {
             node {
@@ -216,8 +208,6 @@ export const queries = {
             published_at: date
             updated_at: modified
             post_type: contentTypeName
-            country
-            source_links: sourceLinks
             excerpt
             featuredImage {
               node {
@@ -245,8 +235,6 @@ export const queries = {
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           excerpt
           featuredImage {
             node {
