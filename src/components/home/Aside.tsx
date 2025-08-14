@@ -18,7 +18,7 @@ export async function Aside() {
       <MostRead posts={mostRead} />
       <PollWidget poll={poll} />
       <GamesPromo />
-      <MarketTicker items={markets} />
+      {markets.length > 0 && <MarketTicker items={markets} />}
       <SponsoredPromo />
     </div>
   );

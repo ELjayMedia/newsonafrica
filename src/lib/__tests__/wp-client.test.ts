@@ -1,5 +1,7 @@
 import { expect, test, vi } from 'vitest';
 
+vi.mock('@/config/wordpress', () => ({ WORDPRESS_REST_API_URL: '' }));
+
 import { getPostBySlug } from '../wp-client';
 
 declare const global: any;

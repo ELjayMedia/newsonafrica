@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
+vi.mock('@/config/site', () => ({ siteConfig: { wordpress: { apiUrl: 'https://example.com' } } }));
 
 import * as searchModule from '../searchPosts';
 
