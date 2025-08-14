@@ -70,7 +70,6 @@ export const WordPressPostSchema = z
     post_type: WordPressPostTypeEnum,
     published_at: z.string(),
     updated_at: z.string(),
-    country: z.string(),
     featured_image: z
       .object({
         node: z.object({
@@ -80,7 +79,6 @@ export const WordPressPostSchema = z
         }),
       })
       .nullable(),
-    source_links: z.array(z.string()),
   })
   .passthrough();
 
@@ -115,11 +113,9 @@ export interface WordPressPost {
   post_type: WordPressPostType;
   published_at: string;
   updated_at: string;
-  country: string;
   featured_image: {
     node: WordPressImage;
   } | null;
-  source_links: string[];
 }
 
 export interface WordPressPostsResponse {
@@ -980,8 +976,6 @@ export const fetchRecentPosts = cache(async (limit = 20, after: string | null = 
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           excerpt
           featuredImage {
             node {
@@ -1142,8 +1136,6 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
             published_at: date
             updated_at: modified
             post_type: contentTypeName
-            country
-            source_links: sourceLinks
             excerpt
             featuredImage {
               node {
@@ -1296,8 +1288,6 @@ export const fetchSinglePost = async (slug: string) => {
         published_at: date
         updated_at: modified
         post_type: contentTypeName
-        country
-        source_links: sourceLinks
         featuredImage {
           node {
             sourceUrl
@@ -1378,8 +1368,6 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
           published_at: date
           updated_at: modified
           post_type: contentTypeName
-          country
-          source_links: sourceLinks
           excerpt
           featuredImage {
             node {

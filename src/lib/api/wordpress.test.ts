@@ -22,9 +22,7 @@ function makePost(id: string, date: string, tags: string[] = []): WordPressPost 
     post_type: 'news_article',
     published_at: date,
     updated_at: date,
-    country: 'sz',
     featured_image: null,
-    source_links: [],
   } as any;
 }
 
