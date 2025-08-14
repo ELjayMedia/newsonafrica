@@ -84,7 +84,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
-    "crypto": "1.0.1",
     "crypto-browserify": "^3.12.1",
     "csrf": "3.1.0",
     "cssnano": "7.1.0",
