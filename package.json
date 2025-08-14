@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "lint:fix": "eslint . --fix",
-    "lhci": "npx @lhci/cli autorun"
+    "lhci": "lhci autorun"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
