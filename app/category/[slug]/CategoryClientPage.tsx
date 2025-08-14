@@ -4,7 +4,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 
-
 import { CategoryPage } from './CategoryPage';
 
 import { CategoryPageSkeleton } from '@/components/CategoryPageSkeleton';
@@ -17,6 +16,11 @@ interface CategoryData {
   posts: WordPressPost[];
   hasNextPage: boolean;
   endCursor: string | null;
+}
+
+interface CategoryPageData {
+  pages: CategoryData[];
+  pageParams: unknown[];
 }
 
 interface CategoryClientPageProps {
@@ -45,7 +49,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       setCategoryData(data);
 
       // Cache the data in React Query for future use
-      queryClient.setQueryData(['category', params.slug], {
+      queryClient.setQueryData<CategoryPageData>(['category', params.slug], {
         pages: [data],
         pageParams: [null],
       });
@@ -59,11 +63,11 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
 
   useEffect(() => {
     // Check if we have cached data first
-    const cachedData = queryClient.getQueryData(['category', params.slug]);
+    const cachedData = queryClient.getQueryData<CategoryPageData>(['category', params.slug]);
 
     if (cachedData && !initialData) {
       // Use cached data if available
-      const firstPage = (cachedData as any)?.pages?.[0];
+      const firstPage = cachedData.pages[0];
       if (firstPage) {
         setCategoryData(firstPage);
         setIsLoading(false);

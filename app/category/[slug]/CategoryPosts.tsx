@@ -10,11 +10,10 @@ import { useInView } from 'react-intersection-observer';
 
 import { Button } from '@/components/ui/button';
 import { fetchCategoryPosts } from '@/lib/wordpress-api';
-
-
+import type { Post } from '@/types/wordpress';
 
 interface CategoryPostsProps {
-  initialPosts: any[];
+  initialPosts: Post[];
   pageInfo: {
     hasNextPage: boolean;
     endCursor: string;
@@ -27,7 +26,7 @@ export default function CategoryPosts({
   pageInfo: initialPageInfo,
   categorySlug,
 }: CategoryPostsProps) {
-  const [posts, setPosts] = useState(initialPosts);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [pageInfo, setPageInfo] = useState(initialPageInfo);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +49,7 @@ export default function CategoryPosts({
       const data = await fetchCategoryPosts(categorySlug, pageInfo.endCursor);
       if (data && data.posts) {
         // Use a functional update to ensure we're working with the latest state
-        setPosts((prevPosts) => [...prevPosts, ...data.posts.nodes]);
+        setPosts((prevPosts) => [...prevPosts, ...(data.posts.nodes as Post[])]);
         setPageInfo(data.posts.pageInfo);
       }
     } catch (err) {
@@ -76,14 +75,14 @@ export default function CategoryPosts({
   };
 
   // Function to share a post
-  const sharePost = (post: any, event: React.MouseEvent) => {
+  const sharePost = (post: Post, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
     if (navigator.share) {
       navigator
         .share({
-          title: post.title,
+          title: post.title.rendered,
           url: `/post/${post.slug}`,
         })
         .catch((err) => console.error('Error sharing:', err));
@@ -94,6 +93,18 @@ export default function CategoryPosts({
     }
   };
 
+  const getFeaturedImageUrl = (post: Post) => {
+    const extended = post as {
+      featuredImage?: { node?: { sourceUrl?: string } };
+      featured_image_url?: string;
+    };
+    return (
+      extended.featuredImage?.node?.sourceUrl ||
+      extended.featured_image_url ||
+      '/placeholder.svg?height=80&width=80&query=news'
+    );
+  };
+
   return (
     <div className="space-y-4">
       {posts.length === 0 && !isLoading ? (
@@ -102,7 +113,7 @@ export default function CategoryPosts({
         </div>
       ) : (
         <>
-          {posts.map((post: any) => (
+          {posts.map((post: Post) => (
             <div
               key={post.id}
               className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200"
@@ -113,11 +124,8 @@ export default function CategoryPosts({
               >
                 <div className="relative w-full sm:w-20 h-40 sm:h-20 flex-shrink-0 mb-3 sm:mb-0 sm:mr-3">
                   <Image
-                    src={
-                      post.featuredImage?.node?.sourceUrl ||
-                      '/placeholder.svg?height=80&width=80&query=news'
-                    }
-                    alt={post.title}
+                    src={getFeaturedImageUrl(post)}
+                    alt={post.title.rendered}
                     fill
                     sizes="(max-width: 640px) 100vw, 80px"
                     className="rounded-lg object-cover"
@@ -128,12 +136,14 @@ export default function CategoryPosts({
                 </div>
                 <div className="flex-grow flex flex-col justify-between w-full">
                   <h2 className="text-sm font-semibold leading-tight line-clamp-2 mb-2">
-                    {post.title}
+                    {post.title.rendered}
                   </h2>
-                  {post.excerpt && (
+                  {post.excerpt.rendered && (
                     <p
                       className="text-xs text-gray-600 line-clamp-2 mb-2"
-                      dangerouslySetInnerHTML={{ __html: post.excerpt.replace(/<[^>]*>/g, '') }}
+                      dangerouslySetInnerHTML={{
+                        __html: post.excerpt.rendered.replace(/<[^>]*>/g, ''),
+                      }}
                     />
                   )}
                   <div className="flex justify-between items-center text-xs mt-auto">
