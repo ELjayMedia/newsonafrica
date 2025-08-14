@@ -26,6 +26,11 @@ export async function generateStaticParams() {
     console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`);
     console.log(`📄 Has more pages: ${hasNextPage}`);
 
+    if (!posts || posts.length === 0) {
+      console.warn('⚠️ No posts returned from API. Skipping static generation.');
+      return [];
+    }
+
     const validPosts = posts.filter((post) => {
       if (!post.slug) {
         console.warn(`⚠️ Post missing slug: ${post.title || post.id}`);
@@ -261,7 +266,7 @@ function PostWrapper({
   slug,
   decodedSlug,
 }: {
-  post: any;
+  post: WordPressPost;
   slug: string;
   decodedSlug: string;
 }) {
@@ -305,8 +310,8 @@ function PostWrapper({
             },
             articleSection: post.categories?.nodes?.[0]?.name || 'News',
             keywords: [
-              ...(post.categories?.nodes?.map((cat: any) => cat.name) || []),
-              ...(post.tags?.nodes?.map((tag: any) => tag.name) || []),
+              ...(post.categories?.nodes?.map((cat: { name: string }) => cat.name) || []),
+              ...(post.tags?.nodes?.map((tag: { name: string }) => tag.name) || []),
             ].join(', '),
             wordCount: post.content?.replace(/<[^>]*>/g, '').split(' ').length || 0,
             inLanguage: 'en-US',
