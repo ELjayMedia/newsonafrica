@@ -41,18 +41,14 @@ export async function GET(request: NextRequest) {
       featured: validatedParams.featured,
     });
 
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(posts.total / validatedParams.per_page);
-
     // Return successful response with pagination metadata
     return successResponse(posts.data, {
       pagination: {
         page: validatedParams.page,
         perPage: validatedParams.per_page,
-        total: posts.total,
-        totalPages,
-        hasNextPage: validatedParams.page < totalPages,
+        hasNextPage: posts.pageInfo?.hasNextPage ?? false,
         hasPrevPage: validatedParams.page > 1,
+        endCursor: posts.pageInfo?.endCursor ?? null,
       },
     });
   } catch (error) {

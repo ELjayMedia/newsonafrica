@@ -42,28 +42,31 @@ export const resolvers = {
   Query: {
     posts: async (_, { limit = 10, offset = 0, category }) => {
       if (category) {
-        const categoryData = await fetchCategoryPosts(category);
+        const after = offset > 0 ? Buffer.from(`arrayconnection:${offset - 1}`).toString('base64') : null;
+        const categoryData = await fetchCategoryPosts(category, after);
         const posts = categoryData?.posts?.nodes || [];
+        const pageInfo = categoryData?.posts?.pageInfo || {
+          hasNextPage: false,
+          endCursor: null,
+        };
 
         return {
-          edges: posts.slice(offset, offset + limit),
-          pageInfo: {
-            hasNextPage: posts.length > offset + limit,
-            endCursor: offset + limit < posts.length ? String(offset + limit) : null,
-          },
-          totalCount: posts.length,
+          edges: posts,
+          pageInfo,
+          totalCount: offset + posts.length + (pageInfo.hasNextPage ? 1 : 0),
         };
       }
 
-      const { posts, total } = await fetchRecentPosts(limit, offset);
+      const after = offset > 0 ? Buffer.from(`arrayconnection:${offset - 1}`).toString('base64') : null;
+      const { posts, hasNextPage, endCursor } = await fetchRecentPosts(limit, after);
 
       return {
         edges: posts,
         pageInfo: {
-          hasNextPage: offset + limit < total,
-          endCursor: offset + limit < total ? String(offset + limit) : null,
+          hasNextPage,
+          endCursor,
         },
-        totalCount: total,
+        totalCount: offset + posts.length + (hasNextPage ? 1 : 0),
       };
     },
 
