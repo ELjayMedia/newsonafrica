@@ -80,7 +80,18 @@ export const LATEST_POSTS_QUERY = gql`
         excerpt
         date
         modified
+        published_at: date
+        updated_at: modified
+        post_type: contentTypeName
+        country
+        source_links: sourceLinks
         featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        featured_image: featuredImage {
           node {
             sourceUrl
             altText
@@ -130,7 +141,18 @@ export const POST_BY_SLUG_QUERY = gql`
       slug
       date
       modified
+      published_at: date
+      updated_at: modified
+      post_type: contentTypeName
+      country
+      source_links: sourceLinks
       featuredImage {
+        node {
+          sourceUrl
+          altText
+        }
+      }
+      featured_image: featuredImage {
         node {
           sourceUrl
           altText
@@ -206,7 +228,18 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
           excerpt
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
               altText
@@ -252,7 +285,18 @@ export const FEATURED_POSTS_QUERY = gql`
         excerpt
         slug
         date
+        published_at: date
+        updated_at: modified
+        post_type: contentTypeName
+        country
+        source_links: sourceLinks
         featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        featured_image: featuredImage {
           node {
             sourceUrl
             altText

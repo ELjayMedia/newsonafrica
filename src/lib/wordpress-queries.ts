@@ -14,8 +14,18 @@ export const queries = {
             title
             slug
             date
+            published_at: date
+            updated_at: modified
+            post_type: contentTypeName
+            country
+            source_links: sourceLinks
             excerpt
             featuredImage {
+              node {
+                sourceUrl
+              }
+            }
+            featured_image: featuredImage {
               node {
                 sourceUrl
               }
@@ -83,7 +93,18 @@ export const queries = {
           excerpt
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
               altText
@@ -126,8 +147,18 @@ export const queries = {
           title
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           excerpt
           featuredImage {
+            node {
+              sourceUrl
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
             }
@@ -144,8 +175,18 @@ export const queries = {
           title
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           excerpt
           featuredImage {
+            node {
+              sourceUrl
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
             }
@@ -172,8 +213,18 @@ export const queries = {
             title
             slug
             date
+            published_at: date
+            updated_at: modified
+            post_type: contentTypeName
+            country
+            source_links: sourceLinks
             excerpt
             featuredImage {
+              node {
+                sourceUrl
+              }
+            }
+            featured_image: featuredImage {
               node {
                 sourceUrl
               }
@@ -191,8 +242,18 @@ export const queries = {
           title
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           excerpt
           featuredImage {
+            node {
+              sourceUrl
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
             }

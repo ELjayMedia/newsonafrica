@@ -10,6 +10,8 @@ import {
   FEATURED_POSTS_QUERY,
 } from '@/graphql/queries';
 import { cache } from 'react';
+import { z } from 'zod';
+import { transformRestPostToGraphQL, transformRestCategoryToGraphQL } from '@/lib/utils/wordpress';
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -49,6 +51,39 @@ export interface WordPressTag {
   description?: string;
 }
 
+export const WordPressPostTypeEnum = z.enum([
+  'news_article',
+  'opinion',
+  'feature',
+  'live_blog',
+]);
+export type WordPressPostType = z.infer<typeof WordPressPostTypeEnum>;
+
+export const WordPressPostSchema = z
+  .object({
+    id: z.string(),
+    title: z.any(),
+    excerpt: z.any(),
+    slug: z.string(),
+    date: z.string(),
+    modified: z.string().optional(),
+    post_type: WordPressPostTypeEnum,
+    published_at: z.string(),
+    updated_at: z.string(),
+    country: z.string(),
+    featured_image: z
+      .object({
+        node: z.object({
+          sourceUrl: z.string(),
+          altText: z.string().optional(),
+          title: z.string().optional(),
+        }),
+      })
+      .nullable(),
+    source_links: z.array(z.string()),
+  })
+  .passthrough();
+
 export interface WordPressPost {
   id: string;
   title: string;
@@ -77,6 +112,14 @@ export interface WordPressPost {
       sourceUrl: string;
     };
   };
+  post_type: WordPressPostType;
+  published_at: string;
+  updated_at: string;
+  country: string;
+  featured_image: {
+    node: WordPressImage;
+  } | null;
+  source_links: string[];
 }
 
 export interface WordPressPostsResponse {
@@ -454,7 +497,7 @@ export async function getLatestPostsForCountry(
         },
         countryCode,
       ).then((data) => ({
-        posts: data.posts.nodes,
+        posts: data.posts.nodes.map((p) => WordPressPostSchema.parse(p)),
         hasNextPage: data.posts.pageInfo.hasNextPage,
         endCursor: data.posts.pageInfo.endCursor,
       })),
@@ -601,7 +644,7 @@ export async function getPostBySlug(slug: string, tags?: string[]): Promise<Word
         undefined,
         3,
         tags,
-      ).then((data) => data.post),
+      ).then((data) => (data.post ? WordPressPostSchema.parse(data.post) : null)),
     () =>
       restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
         if (!posts || posts.length === 0) return null;
@@ -675,7 +718,7 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
     () =>
       graphqlRequest<WordPressPostsResponse>(FEATURED_POSTS_QUERY, {
         first: limit,
-      }).then((data) => data.posts.nodes),
+      }).then((data) => data.posts.nodes.map((p) => WordPressPostSchema.parse(p))),
     () =>
       restApiFallback('posts', { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
         posts.map(transformRestPostToGraphQL),
@@ -934,8 +977,19 @@ export const fetchRecentPosts = cache(async (limit = 20, after: string | null = 
           title
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           excerpt
           featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
               altText
@@ -1054,8 +1108,12 @@ export const fetchRecentPosts = cache(async (limit = 20, after: string | null = 
     restFallback,
   );
 
+  const posts = (data.posts?.nodes || []).map((p: any) =>
+    WordPressPostSchema.parse(p),
+  );
+
   return {
-    posts: data.posts?.nodes || [],
+    posts,
     hasNextPage: data.posts?.pageInfo?.hasNextPage || false,
     endCursor: data.posts?.pageInfo?.endCursor || null,
   };
@@ -1081,8 +1139,19 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
             title
             slug
             date
+            published_at: date
+            updated_at: modified
+            post_type: contentTypeName
+            country
+            source_links: sourceLinks
             excerpt
             featuredImage {
+              node {
+                sourceUrl
+                altText
+              }
+            }
+            featured_image: featuredImage {
               node {
                 sourceUrl
                 altText
@@ -1138,41 +1207,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
               hasNextPage: posts.length >= 20,
               endCursor: null,
             },
-            nodes: posts.map((post: any) => ({
-              id: post.id.toString(),
-              title: post.title?.rendered || '',
-              slug: post.slug || '',
-              date: post.date || '',
-              excerpt: post.excerpt?.rendered || '',
-              featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
-                ? {
-                    node: {
-                      sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
-                      altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
-                    },
-                  }
-                : null,
-              author: {
-                node: {
-                  name: post._embedded?.['author']?.[0]?.name || 'Unknown',
-                  slug: post._embedded?.['author']?.[0]?.slug || '',
-                },
-              },
-              categories: {
-                nodes:
-                  post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
-                    name: cat.name,
-                    slug: cat.slug,
-                  })) || [],
-              },
-              tags: {
-                nodes:
-                  post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
-                    name: tag.name,
-                    slug: tag.slug,
-                  })) || [],
-              },
-            })),
+            nodes: posts.map((post: any) => transformRestPostToGraphQL(post)),
           },
         },
       };
@@ -1198,7 +1233,13 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
     `category-${slug}-${after || 'first'}`,
     restFallback,
   );
-  return data.category;
+  const category = data.category;
+  if (category?.posts?.nodes) {
+    category.posts.nodes = category.posts.nodes.map((p: any) =>
+      WordPressPostSchema.parse(p),
+    );
+  }
+  return category;
 });
 
 /**
@@ -1252,7 +1293,18 @@ export const fetchSinglePost = async (slug: string) => {
         slug
         date
         modified
+        published_at: date
+        updated_at: modified
+        post_type: contentTypeName
+        country
+        source_links: sourceLinks
         featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        featured_image: featuredImage {
           node {
             sourceUrl
             altText
@@ -1296,57 +1348,11 @@ export const fetchSinglePost = async (slug: string) => {
     }
 
     const post = posts[0];
-    return {
-      post: {
-        id: post.id.toString(),
-        title: post.title?.rendered || '',
-        content: post.content?.rendered || '',
-        excerpt: post.excerpt?.rendered || '',
-        slug: post.slug || '',
-        date: post.date || '',
-        modified: post.modified || '',
-        featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
-          ? {
-              node: {
-                sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
-                altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
-              },
-            }
-          : null,
-        author: {
-          node: {
-            name: post._embedded?.['author']?.[0]?.name || 'Unknown',
-            slug: post._embedded?.['author']?.[0]?.slug || '',
-            description: post._embedded?.['author']?.[0]?.description || '',
-            avatar: {
-              url: post._embedded?.['author']?.[0]?.avatar_urls?.['96'] || '',
-            },
-          },
-        },
-        categories: {
-          nodes:
-            post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
-              name: cat.name,
-              slug: cat.slug,
-            })) || [],
-        },
-        tags: {
-          nodes:
-            post._embedded?.['wp:term']?.[1]?.map((tag: any) => ({
-              name: tag.name,
-              slug: tag.slug,
-            })) || [],
-        },
-        seo: {
-          title: post.title?.rendered || '',
-          metaDesc: post.excerpt?.rendered?.replace(/<[^>]*>/g, '') || '',
-        },
-      },
-    };
+    return { post: transformRestPostToGraphQL(post) };
   };
 
   const data = await fetchWithFallback(query, { slug }, `single-post-${slug}`, restFallback);
-  return data.post;
+  return data.post ? WordPressPostSchema.parse(data.post) : null;
 };
 
 /**
@@ -1369,8 +1375,19 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
           title
           slug
           date
+          published_at: date
+          updated_at: modified
+          post_type: contentTypeName
+          country
+          source_links: sourceLinks
           excerpt
           featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+          featured_image: featuredImage {
             node {
               sourceUrl
               altText
@@ -1407,34 +1424,7 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
           hasNextPage: posts.length >= perPage,
           endCursor: null,
         },
-        nodes: posts.map((post: any) => ({
-          id: post.id.toString(),
-          title: post.title?.rendered || '',
-          slug: post.slug || '',
-          date: post.date || '',
-          excerpt: post.excerpt?.rendered || '',
-          featuredImage: post._embedded?.['wp:featuredmedia']?.[0]
-            ? {
-                node: {
-                  sourceUrl: post._embedded['wp:featuredmedia'][0].source_url,
-                  altText: post._embedded['wp:featuredmedia'][0].alt_text || '',
-                },
-              }
-            : null,
-          author: {
-            node: {
-              name: post._embedded?.['author']?.[0]?.name || 'Unknown',
-              slug: post._embedded?.['author']?.[0]?.slug || '',
-            },
-          },
-          categories: {
-            nodes:
-              post._embedded?.['wp:term']?.[0]?.map((cat: any) => ({
-                name: cat.name,
-                slug: cat.slug,
-              })) || [],
-          },
-        })),
+        nodes: posts.map((post: any) => transformRestPostToGraphQL(post)),
       },
     };
   };
@@ -1447,7 +1437,10 @@ export const searchPosts = async (query: string, page = 1, perPage = 20) => {
     restFallback,
   );
 
-  return data.posts;
+  return {
+    ...data.posts,
+    nodes: (data.posts?.nodes || []).map((p: any) => WordPressPostSchema.parse(p)),
+  };
 };
 
 // Convenience exports matching legacy API
