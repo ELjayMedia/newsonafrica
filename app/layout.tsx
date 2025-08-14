@@ -11,6 +11,7 @@ import NetworkStatus from '@/components/NetworkStatus';
 import { NetworkStatusHandler } from '@/components/NetworkStatusHandler';
 import { SchemaOrg } from '@/components/SchemaOrg';
 import { ScrollToTop } from '@/components/ScrollToTop';
+import { SkipToContent } from '@/components/SkipToContent';
 import { TopBar } from '@/components/TopBar';
 import { MegaNav } from '@/components/header/MegaNav';
 import { UtilityBar } from '@/components/header/UtilityBar';
@@ -63,6 +64,7 @@ export default async function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body>
+        <SkipToContent />
         <ConsentManager>
           <ThemeProvider attribute="class" defaultTheme="light">
             <UserProvider>
@@ -77,7 +79,10 @@ export default async function RootLayout({
                   <div className="flex-grow">
                     <div className="mx-auto max-w-full md:max-w-[980px]">
                       <ClientLayoutComponents>
-                        <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                        <main
+                          id="main-content"
+                          className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]"
+                        >
                           <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
                         </main>
                       </ClientLayoutComponents>
