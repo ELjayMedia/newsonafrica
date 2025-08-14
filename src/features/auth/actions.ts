@@ -1,25 +1,29 @@
 'use server';
 
-import { createSupabaseServer } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { checkRateLimit, formatRetryMessage } from '@/lib/rate-limit-utils';
+import { redirect } from 'next/navigation';
+
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { logAudit } from '@/server/audit';
+import { guard } from '@/server/security/ratelimit';
+import { email as emailSchema } from '@/server/validation';
 
 export async function signInWithEmail(email: string) {
-  const ip = headers().get('x-forwarded-for') ?? 'unknown';
-  const key = `otp:${email}:${ip}`;
-  const { isLimited, retryAfter } = checkRateLimit(key, 5, 15 * 60 * 1000);
-  if (isLimited) {
-    throw new Error(formatRetryMessage(retryAfter));
-  }
+  const parsed = emailSchema.safeParse(email);
+  if (!parsed.success) throw new Error('Invalid email');
+  const req = new Request('http://local', { headers: headers() });
+  const g = await guard(req, 'otp');
+  if (!g.ok) throw new Error('Too many requests');
   const s = createSupabaseServer();
+  await logAudit(req, 'auth.signin_start');
   const { error } = await s.auth.signInWithOtp({
-    email,
+    email: parsed.data,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
   });
   if (error) throw error;
+  await logAudit(req, 'auth.signin_success');
   redirect('/check-email');
 }
 
