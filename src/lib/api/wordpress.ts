@@ -3,6 +3,8 @@ import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from '../wordpr
 import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from '@/config/wordpress';
 import { relatedPostsCache } from '@/lib/cache/related-posts-cache';
 import { DocumentNode, print } from 'graphql';
+import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
@@ -1689,8 +1691,24 @@ export type MarketItem = {
 };
 
 export async function getMarketSnapshot(): Promise<MarketItem[]> {
-  const res = await fetch('/markets.json', { next: { revalidate: 60 } });
-  return res.json();
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (baseUrl) {
+      const url = `${baseUrl.replace(/\/$/, '')}/markets.json`;
+      const res = await fetch(url, { next: { revalidate: 60 } });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch market snapshot: ${res.status}`);
+      }
+      return await res.json();
+    }
+
+    const filePath = path.join(process.cwd(), 'public', 'markets.json');
+    const data = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(data) as MarketItem[];
+  } catch (error) {
+    console.error('Error loading market snapshot:', error);
+    return [];
+  }
 }
 
 export type PollOption = { id: string; label: string; votes: number };

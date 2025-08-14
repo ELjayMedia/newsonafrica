@@ -73,7 +73,7 @@ export default async function RootLayout({
                   <UtilityBar />
                   <TopBar />
                   <MegaNav />
-                  <MarketTicker items={marketItems} />
+                  {marketItems.length > 0 && <MarketTicker items={marketItems} />}
                   <div className="flex-grow">
                     <div className="mx-auto max-w-full md:max-w-[980px]">
                       <ClientLayoutComponents>
