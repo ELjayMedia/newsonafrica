@@ -1,0 +1,16 @@
+diff --git a/dist/esm/server/app-render/get-css-inlined-link-tags.js b/dist/esm/server/app-render/get-css-inlined-link-tags.js
+--- a/dist/esm/server/app-render/get-css-inlined-link-tags.js
++++ b/dist/esm/server/app-render/get-css-inlined-link-tags.js
+@@
+-    const entryCSSFiles = clientReferenceManifest.entryCSSFiles[filePathWithoutExt];
+-    const entryJSFiles = ((_clientReferenceManifest_entryJSFiles = clientReferenceManifest.entryJSFiles) == null ? void 0 : _clientReferenceManifest_entryJSFiles[filePathWithoutExt]) ?? [];
++    const entryCSSFiles = clientReferenceManifest?.entryCSSFiles?.[filePathWithoutExt] ?? [];
++    const entryJSFiles = clientReferenceManifest?.entryJSFiles?.[filePathWithoutExt] ?? [];
+diff --git a/dist/server/app-render/get-css-inlined-link-tags.js b/dist/server/app-render/get-css-inlined-link-tags.js
+--- a/dist/server/app-render/get-css-inlined-link-tags.js
++++ b/dist/server/app-render/get-css-inlined-link-tags.js
+@@
+-    const entryCSSFiles = clientReferenceManifest.entryCSSFiles[filePathWithoutExt];
+-    const entryJSFiles = ((_clientReferenceManifest_entryJSFiles = clientReferenceManifest.entryJSFiles) == null ? void 0 : _clientReferenceManifest_entryJSFiles[filePathWithoutExt]) ?? [];
++    const entryCSSFiles = clientReferenceManifest?.entryCSSFiles?.[filePathWithoutExt] ?? [];
++    const entryJSFiles = clientReferenceManifest?.entryJSFiles?.[filePathWithoutExt] ?? [];

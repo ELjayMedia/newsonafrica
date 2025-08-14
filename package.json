@@ -158,5 +158,10 @@
   "engines": {
     "node": ">=22 <23",
     "pnpm": ">=9 <10"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "next@15.2.4": "patches/next@15.2.4.patch"
+    }
   }
 }
