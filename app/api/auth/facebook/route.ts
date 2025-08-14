@@ -5,16 +5,12 @@ import { NextResponse } from 'next/server';
 import { WORDPRESS_GRAPHQL_URL } from '@/config/wordpress';
 
 const WORDPRESS_API_URL = WORDPRESS_GRAPHQL_URL;
+const JWT_SECRET = process.env.JWT_SECRET;
+const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
 
-// Defer environment variable validation until runtime to avoid build-time failures.
-function getSecrets() {
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
-  const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
-  if (!JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-    throw new Error('Missing required environment variables');
-  }
-  return { JWT_SECRET, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET } as const;
+if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+  throw new Error('Missing required environment variables');
 }
 
 const client = new GraphQLClient(WORDPRESS_API_URL);
@@ -33,7 +29,6 @@ const FACEBOOK_LOGIN_MUTATION = `
 `;
 
 async function verifyFacebookToken(accessToken: string, userID: string) {
-  const { FACEBOOK_APP_ID, FACEBOOK_APP_SECRET } = getSecrets();
   const response = await fetch(
     `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`,
   );
@@ -53,8 +48,6 @@ export async function POST(request: Request) {
     if (!isValidToken) {
       return NextResponse.json({ error: 'Invalid Facebook token' }, { status: 401 });
     }
-
-    const { JWT_SECRET } = getSecrets();
 
     const variables = {
       input: {
