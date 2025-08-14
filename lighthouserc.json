@@ -1,7 +1,6 @@
 {
   "ci": {
     "collect": {
-      "staticDistDir": ".next",
       "startServerCommand": "pnpm start",
       "url": ["/", "/explore", "/articles/example-article"],
       "numberOfRuns": 1

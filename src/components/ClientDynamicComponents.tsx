@@ -6,15 +6,12 @@ import dynamic from 'next/dynamic';
 const ServiceWorkerRegistration = dynamic(() => import('@/components/ServiceWorkerRegistration'), {
   ssr: false,
 });
-const WebVitals = dynamic(() => import('@/components/WebVitals'), { ssr: false });
-const VercelSpeedInsights = dynamic(() => import('@/components/SpeedInsights'), { ssr: false });
 
 export function ClientDynamicComponents() {
   return (
     <>
       <ServiceWorkerRegistration />
-      <WebVitals />
-      <VercelSpeedInsights />
+      {/* WebVitals and SpeedInsights temporarily disabled */}
     </>
   );
 }

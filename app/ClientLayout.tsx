@@ -1,18 +1,15 @@
 'use client';
 
 import './globals.css';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
-import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import type React from 'react';
-
 import { useEffect } from 'react';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import { ErrorFallback } from '@/components/ErrorFallback';
+
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { CameraFeature } from '@/components/CameraFeature'; // New import
 import { ClientWrapper } from '@/components/ClientWrapper';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { ErrorFallback } from '@/components/ErrorFallback';
 import { Footer } from '@/components/Footer';
 import { GeolocationFeature } from '@/components/GeolocationFeature'; // New import
 import { GoogleAnalyticsScript } from '@/components/GoogleAnalyticsScript';
@@ -22,14 +19,6 @@ import { ScrollToTop } from '@/components/ScrollToTop';
 import { Sidebar } from '@/components/Sidebar';
 import { TopBar } from '@/components/TopBar';
 import { UserProvider } from '@/contexts/UserContext';
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'sans-serif'],
-});
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -53,7 +42,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
@@ -114,8 +103,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </UserProvider>
         </ErrorBoundary>
         <GoogleAnalyticsScript />
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );
