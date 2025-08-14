@@ -2,6 +2,7 @@ import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from '../wordpr
 
 import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from '@/config/wordpress';
 import { relatedPostsCache } from '@/lib/cache/related-posts-cache';
+import { DocumentNode, print } from 'graphql';
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
@@ -330,12 +331,13 @@ async function fetchWithFallback(
 
 // Utility function to make GraphQL requests
 async function graphqlRequest<T>(
-  query: string,
+  query: string | DocumentNode,
   variables: Record<string, any> = {},
   countryCode?: string,
   retries = 3,
   tags?: string[],
 ): Promise<T> {
+  const queryString = typeof query === 'string' ? query : print(query);
   const endpoints = getCountryEndpoints(countryCode || 'sz');
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -348,7 +350,7 @@ async function graphqlRequest<T>(
         Connection: 'keep-alive',
       },
       body: JSON.stringify({
-        query,
+        query: queryString,
         variables,
       }),
       signal: controller.signal,
