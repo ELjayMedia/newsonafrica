@@ -1,6 +1,5 @@
 import '@/config/env';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import type React from 'react';
 
@@ -20,25 +19,14 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { BookmarksProvider } from '@/contexts/BookmarksContext';
 import { UserProvider } from '@/contexts/UserContext';
-import { getMarketSnapshot } from '@/lib/api/wordpress';
-import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 import { ConsentManager } from '@/features/consent/ConsentManager';
+import { getMarketSnapshot } from '@/lib/api/wordpress';
 import { initAuth } from '@/lib/initAuth';
-
-
+import { getNewsMediaOrganizationSchema, getWebSiteSchema } from '@/lib/schema';
 
 import './globals.css';
 import '@/styles/prose.css';
 import '@/styles/tokens.css';
-
-// Load Inter font from Google Fonts
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'sans-serif'],
-});
 
 export const metadata: Metadata = {
   title: 'News On Africa',
@@ -68,13 +56,13 @@ export default async function RootLayout({
   const marketItems = await getMarketSnapshot();
 
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className={inter.className}>
+      <body>
         <ConsentManager>
           <ThemeProvider attribute="class" defaultTheme="light">
             <UserProvider>
