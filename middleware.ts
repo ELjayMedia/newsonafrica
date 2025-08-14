@@ -1,6 +1,9 @@
 import { wrapMiddlewareWithSentry } from '@sentry/nextjs';
 
-import { middleware as baseMiddleware, config } from './src/server/middleware';
+import { middleware as baseMiddleware } from './src/server/middleware';
 
 export const middleware = wrapMiddlewareWithSentry(baseMiddleware);
-export { config };
+
+export const config = {
+  matcher: ['/((?!_next/|icons/|manifest|favicon|.*\\.(?:png|jpg|jpeg|webp|avif|svg)).*)'],
+};
