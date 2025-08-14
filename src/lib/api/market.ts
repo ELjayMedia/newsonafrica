@@ -6,23 +6,21 @@ export type MarketItem = {
   changePct: number;
 };
 
-export async function getMarketSnapshot(): Promise<MarketItem[]> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (baseUrl) {
-      const url = `${baseUrl.replace(/\/$/, '')}/markets.json`;
-      const res = await fetch(url, { next: { revalidate: 60 } });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch market snapshot: ${res.status}`);
-      }
-      return await res.json();
-    }
+import localMarkets from './markets.json';
 
-    const { readFile } = await import('fs/promises');
-    const filePath = `${process.cwd()}/public/markets.json`;
-    const data = await readFile(filePath, 'utf-8');
-    return JSON.parse(data) as MarketItem[];
+export async function getMarketSnapshot(): Promise<MarketItem[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const url = baseUrl ? `${baseUrl.replace(/\/$/, '')}/markets.json` : '/markets.json';
+  try {
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch market snapshot: ${res.status}`);
+    }
+    return (await res.json()) as MarketItem[];
   } catch (error) {
+    if (!baseUrl) {
+      return localMarkets as MarketItem[];
+    }
     console.error('Error loading market snapshot:', error);
     return [];
   }

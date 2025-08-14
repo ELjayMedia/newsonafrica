@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 
@@ -17,7 +18,10 @@ const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>(
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Revalidation interval for category fetching (defaults to 1 hour)
-const CATEGORY_REVALIDATE = Number(process.env.CATEGORIES_REVALIDATE || 3600);
+const CATEGORY_REVALIDATE = (() => {
+  const value = Number(process.env.CATEGORIES_REVALIDATE);
+  return Number.isFinite(value) && value >= 0 ? value : 3600;
+})();
 
 // Check if we're in a browser environment and if we're online
 const isOnline = () => {
