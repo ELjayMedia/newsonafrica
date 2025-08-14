@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+function getEnvVar(name: string) {
+  const value = process.env[name];
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid environment variable: ${name} must be a string`);
+  }
+  return value;
+}
+
 export const Env = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url(),
   WP_API_URL: z.string().url(),
@@ -9,11 +17,11 @@ export const Env = z.object({
 });
 
 const parsed = Env.safeParse({
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  WP_API_URL: process.env.WP_API_URL,
-  WP_BASE_URL: process.env.WP_BASE_URL,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SITE_URL: getEnvVar('NEXT_PUBLIC_SITE_URL'),
+  WP_API_URL: getEnvVar('WP_API_URL'),
+  WP_BASE_URL: getEnvVar('WP_BASE_URL'),
+  NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
 });
 
 if (!parsed.success) {
