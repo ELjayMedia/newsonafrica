@@ -14,6 +14,11 @@ export const Env = z.object({
   WP_BASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  ALGOLIA_APP_ID: z.string().optional(),
+  ALGOLIA_SEARCH_KEY: z.string().optional(),
+  ALGOLIA_ADMIN_KEY: z.string().optional(),
 });
 
 const parsed = Env.safeParse({
@@ -22,6 +27,11 @@ const parsed = Env.safeParse({
   WP_BASE_URL: getEnvVar('WP_BASE_URL'),
   NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  SUPABASE_URL: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ALGOLIA_APP_ID: process.env.ALGOLIA_APP_ID,
+  ALGOLIA_SEARCH_KEY: process.env.ALGOLIA_SEARCH_KEY,
+  ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
 });
 
 if (!parsed.success) {
