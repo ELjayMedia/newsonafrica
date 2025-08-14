@@ -1,0 +1,12 @@
+[
+  { "symbol": "USDZAR", "label": "USD/ZAR", "price": 18.5, "change": 0.1, "changePct": 0.54 },
+  {
+    "symbol": "JSETOP40",
+    "label": "JSE Top40",
+    "price": 71000,
+    "change": -150,
+    "changePct": -0.21
+  },
+  { "symbol": "GOLD", "label": "Gold", "price": 1920, "change": 5, "changePct": 0.26 },
+  { "symbol": "BRENT", "label": "Brent", "price": 85, "change": -1.2, "changePct": -1.39 }
+]
