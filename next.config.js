@@ -59,14 +59,6 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    // Many legacy files still trigger lint errors; skip them during builds.
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // Allow production builds even if the type checker finds issues.
-    ignoreBuildErrors: true,
-  },
   // Use a Node-compatible output rather than static export so dynamic routes work.
   output: 'standalone',
   images: {

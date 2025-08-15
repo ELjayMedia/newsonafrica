@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import type { cookies } from 'next/headers';
 
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
+
 import {
   type Migration,
   migrations,
@@ -33,7 +35,7 @@ export interface MigrationStatus {
 export class MigrationService {
   private supabase: ReturnType<typeof createServerClient>;
 
-  constructor(cookieStore: ReturnType<typeof cookies>) {
+  constructor(cookieStore: CookieStore) {
     this.supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key for migrations

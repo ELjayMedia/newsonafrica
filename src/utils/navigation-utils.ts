@@ -11,7 +11,8 @@ export function isUsingBrowserNavigation(): boolean {
   if (performance.getEntriesByType && 'navigation' in performance) {
     const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
     if (navEntries.length > 0) {
-      return navEntries[0].type === 'back_forward';
+      const entry = navEntries[0];
+      return entry ? entry.type === 'back_forward' : false;
     }
   }
 
@@ -30,7 +31,8 @@ export function isPageReload(): boolean {
   if (performance.getEntriesByType && 'navigation' in performance) {
     const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
     if (navEntries.length > 0) {
-      return navEntries[0].type === 'reload';
+      const entry = navEntries[0];
+      return entry ? entry.type === 'reload' : false;
     }
   }
 
