@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { isAllowedSrc } from '../../../app/api/img/route';
+import { isAllowedSrc } from '../img-route';
 
 test('allows whitelisted domains', () => {
   expect(isAllowedSrc('https://newsonafrica.com/image.jpg')).toBe(true);

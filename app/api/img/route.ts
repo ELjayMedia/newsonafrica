@@ -3,17 +3,8 @@ import type { ReadableStream } from 'node:stream/web';
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
-
-const ALLOW = [
-  /^https:\/\/newsonafrica\.com\//,
-  /^https:\/\/.*\.newsonafrica\.com\//,
-  /^https:\/\/[^/]+\.supabase\.co\//,
-];
+import { isAllowedSrc } from '@/lib/img-route';
 const MAX = 5 * 1024 * 1024;
-
-export function isAllowedSrc(src: string): boolean {
-  return ALLOW.some((rx) => rx.test(src));
-}
 
 export async function GET(req: Request) {
   const u = new URL(req.url);
