@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import AuthorContent from './AuthorContent';
 
 import { getLatestPosts } from '@/lib/api/wordpress';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('author-page');
 
 interface AuthorPageProps {
   params: { slug: string };
@@ -13,7 +16,7 @@ export const revalidate = 600; // Revalidate every 10 minutes
 
 // Enhanced metadata generation for author pages
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for author: ${params.slug}`);
+  logger.debug(`🔍 Generating metadata for author: ${params.slug}`);
 
   try {
     // Get latest posts to find author information
@@ -23,7 +26,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
     const authorPosts = posts.filter((post) => post.author.node.slug === params.slug);
 
     if (authorPosts.length === 0) {
-      console.warn(`⚠️ Author not found: ${params.slug}`);
+      logger.warn(`⚠️ Author not found: ${params.slug}`);
       return {
         title: 'Author Not Found - News On Africa',
         description: 'The requested author could not be found.',
@@ -35,7 +38,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
     }
 
     const author = authorPosts[0].author.node;
-    console.log(`✅ Generated metadata for author: "${author.name}"`);
+    logger.debug(`✅ Generated metadata for author: "${author.name}"`);
 
     // Create dynamic description
     const postCount = authorPosts.length;

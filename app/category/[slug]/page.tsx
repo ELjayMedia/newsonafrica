@@ -5,6 +5,9 @@ import CategoryClientPage from './CategoryClientPage';
 
 import { getCategories, getPostsByCategory } from '@/lib/api/wordpress';
 import type { WordPressCategory, WordPressPost } from '@/lib/api/wordpress';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('category-page');
 
 interface CategoryPageProps {
   params: { slug: string };
@@ -134,13 +137,13 @@ function buildCategoryMetadata(
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for category: ${params.slug}`);
+  logger.debug(`🔍 Generating metadata for category: ${params.slug}`);
 
   try {
     const { category, posts } = await getPostsByCategory(params.slug, 10);
 
     if (!category) {
-      console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`);
+      logger.warn(`⚠️ Category not found for metadata generation: ${params.slug}`);
       return {
         title: 'Category Not Found - News On Africa',
         description: 'The requested category could not be found.',
@@ -155,7 +158,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       };
     }
 
-    console.log(`✅ Generated metadata for category: "${category.name}"`);
+    logger.debug(`✅ Generated metadata for category: "${category.name}"`);
     return buildCategoryMetadata(category, posts, params.slug);
   } catch (error) {
     console.error(`❌ Error generating metadata for category ${params.slug}:`, error);
