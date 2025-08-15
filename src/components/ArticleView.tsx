@@ -2,7 +2,7 @@
 import { CalendarIcon, Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import AudioPlayer from './AudioPlayer';
@@ -59,8 +59,6 @@ interface ArticleViewProps {
 export default function ArticleView({ post }: ArticleViewProps) {
   const { isAuthenticated } = useUser();
   const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const {
     id,
     title,
@@ -367,15 +365,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
             postId={id}
             title={title}
             slug={slug}
-            featuredImage={
-              featuredImage?.node?.sourceUrl
-                ? {
-                    url: featuredImage.node.sourceUrl,
-                    width: featuredImage.node.mediaDetails?.width || 1200,
-                    height: featuredImage.node.mediaDetails?.height || 800,
-                  }
-                : undefined
-            }
             variant="outline"
             size="sm"
             className="flex items-center"
@@ -429,15 +418,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
               postId={id}
               title={title}
               slug={slug}
-              featuredImage={
-                featuredImage?.node?.sourceUrl
-                  ? {
-                      url: featuredImage.node.sourceUrl,
-                      width: featuredImage.node.mediaDetails?.width || 1200,
-                      height: featuredImage.node.mediaDetails?.height || 800,
-                    }
-                  : undefined
-              }
               variant="outline"
               size="sm"
               className="flex items-center"

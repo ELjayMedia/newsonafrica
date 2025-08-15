@@ -1,16 +1,32 @@
 'use client';
 import { useOptimistic, useTransition } from 'react';
+
 import { toggleBookmark } from './actions';
+
+import { useToast } from '@/hooks/use-toast';
+
 export function BookmarkButton({ slug, initial }: { slug: string; initial: boolean }) {
   const [pending, start] = useTransition();
-  const [saved, setSaved] = useOptimistic(initial, (s) => !s);
+  const [saved, setSaved] = useOptimistic(initial, (_: boolean, v: boolean) => v);
+  const { toast } = useToast();
   return (
     <button
       aria-pressed={saved}
       onClick={() =>
         start(async () => {
-          setSaved(null as any);
-          await toggleBookmark(slug);
+          const next = !saved;
+          setSaved(next);
+          try {
+            await toggleBookmark(slug);
+          } catch (error) {
+            console.error('Error toggling bookmark:', error);
+            setSaved(!next);
+            toast({
+              title: 'Error',
+              description: 'Failed to update bookmark. Please try again.',
+              variant: 'destructive',
+            });
+          }
         })
       }
       disabled={pending}
