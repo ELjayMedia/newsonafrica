@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+import type { DocumentNode } from 'graphql';
+import { print } from 'graphql';
+import { cache } from 'react';
+import { z } from 'zod';
 
 import { WORDPRESS_GRAPHQL_URL, WORDPRESS_REST_API_URL } from '@/config/wordpress';
-import { relatedPostsCache } from '@/lib/cache/related-posts-cache';
-import { DocumentNode, print } from 'graphql';
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
@@ -9,8 +12,7 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   FEATURED_POSTS_QUERY,
 } from '@/graphql/queries';
-import { cache } from 'react';
-import { z } from 'zod';
+import { relatedPostsCache } from '@/lib/cache/related-posts-cache';
 import { transformRestPostToGraphQL, transformRestCategoryToGraphQL } from '@/lib/utils/wordpress';
 
 // TypeScript interfaces for WordPress data
@@ -51,12 +53,7 @@ export interface WordPressTag {
   description?: string;
 }
 
-export const WordPressPostTypeEnum = z.enum([
-  'news_article',
-  'opinion',
-  'feature',
-  'live_blog',
-]);
+export const WordPressPostTypeEnum = z.enum(['news_article', 'opinion', 'feature', 'live_blog']);
 export type WordPressPostType = z.infer<typeof WordPressPostTypeEnum>;
 
 export const WordPressPostSchema = z
@@ -1102,9 +1099,7 @@ export const fetchRecentPosts = cache(async (limit = 20, after: string | null = 
     restFallback,
   );
 
-  const posts = (data.posts?.nodes || []).map((p: any) =>
-    WordPressPostSchema.parse(p),
-  );
+  const posts = (data.posts?.nodes || []).map((p: any) => WordPressPostSchema.parse(p));
 
   return {
     posts,
@@ -1227,9 +1222,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
   );
   const category = data.category;
   if (category?.posts?.nodes) {
-    category.posts.nodes = category.posts.nodes.map((p: any) =>
-      WordPressPostSchema.parse(p),
-    );
+    category.posts.nodes = category.posts.nodes.map((p: any) => WordPressPostSchema.parse(p));
   }
   return category;
 });
@@ -1440,7 +1433,10 @@ export const fetchAllAuthors = async () => [];
 export const fetchPosts = async (options?: any) => {
   if (typeof options === 'number') {
     const result = await fetchRecentPosts(options);
-    return { data: result.posts, pageInfo: { hasNextPage: result.hasNextPage, endCursor: result.endCursor } };
+    return {
+      data: result.posts,
+      pageInfo: { hasNextPage: result.hasNextPage, endCursor: result.endCursor },
+    };
   }
 
   const limit = options?.perPage || options?.limit || 20;
@@ -1667,12 +1663,77 @@ export function sortPostsByDate(posts: WordPressPost[]): WordPressPost[] {
 }
 
 /**
- * Temporary Most Read implementation using latest posts
- * TODO: Replace with analytics-driven endpoint
+ * Get most read posts using analytics-backed metrics.
+ * Supports simple pagination and caches results for performance.
  */
-export async function getMostRead(limit = 10): Promise<WordPressPost[]> {
-  const { posts } = await getLatestPosts(limit);
-  return sortPostsByDate(posts).slice(0, limit);
+export async function getMostRead(limit = 10, page = 1): Promise<WordPressPost[]> {
+  const cacheKey = `most-read:${limit}:${page}`;
+  const cached = apiCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+
+    const offset = (page - 1) * limit;
+    const analyticsUrl = new URL(`${supabaseUrl}/rest/v1/read_history`);
+    analyticsUrl.searchParams.set('select', 'post_id,count:count()');
+    analyticsUrl.searchParams.set('group', 'post_id');
+    analyticsUrl.searchParams.set('order', 'count.desc');
+    analyticsUrl.searchParams.set('limit', String(limit));
+    analyticsUrl.searchParams.set('offset', String(offset));
+
+    const analyticsResp = await fetch(analyticsUrl.toString(), {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!analyticsResp.ok) {
+      throw new Error(`Analytics request failed: ${analyticsResp.status}`);
+    }
+
+    const analyticsData = (await analyticsResp.json()) as {
+      post_id: string;
+      count: number;
+    }[];
+
+    if (analyticsData.length === 0) {
+      apiCache.set(cacheKey, { data: [], timestamp: Date.now(), ttl: CACHE_TTL });
+      return [];
+    }
+
+    const ids = analyticsData.map((a) => a.post_id).join(',');
+    const posts = await restApiFallback(
+      'posts',
+      { include: ids, per_page: analyticsData.length, _embed: 1 },
+      (posts: any[]) =>
+        posts.map((p: any) => WordPressPostSchema.parse(transformRestPostToGraphQL(p))),
+    );
+
+    const postsMap = new Map(posts.map((p: any) => [String(p.id), p]));
+    const ordered = analyticsData
+      .map((a) => postsMap.get(String(a.post_id)))
+      .filter(Boolean) as WordPressPost[];
+
+    apiCache.set(cacheKey, {
+      data: ordered,
+      timestamp: Date.now(),
+      ttl: CACHE_TTL,
+    });
+
+    return ordered;
+  } catch (error) {
+    console.error('Failed to fetch most read posts:', error);
+    return [];
+  }
 }
 
 export type PollOption = { id: string; label: string; votes: number };
