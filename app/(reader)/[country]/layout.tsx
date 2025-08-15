@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { use, useEffect } from 'react';
 
 import CountryNav from './CountryNav';
 
@@ -14,9 +14,10 @@ export default function CountryLayout({
   params,
   children,
 }: {
-  params: { country: string };
+  params: Promise<{ country: string }>;
   children: ReactNode;
 }) {
+  const { country } = use(params);
   const adsEnabled = useAdsEnabled();
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function CountryLayout({
       ensureGPTLoaded();
       const g = (window as Window & { googletag: googletag.Googletag }).googletag;
       g.cmd.push(() => {
-        const kv = buildAdTargeting({ country: params.country });
+        const kv = buildAdTargeting({ country });
         Object.entries(kv).forEach(([k, v]) =>
           g.pubads().setTargeting(k, Array.isArray(v) ? v : [v]),
         );
@@ -38,12 +39,12 @@ export default function CountryLayout({
     return () => {
       cancelled = true;
     };
-  }, [adsEnabled, params.country]);
+  }, [adsEnabled, country]);
 
   return (
     <div>
       <nav className="p-4 border-b mb-4">
-        <CountryNav country={params.country} />
+        <CountryNav country={country} />
       </nav>
       {children}
     </div>
