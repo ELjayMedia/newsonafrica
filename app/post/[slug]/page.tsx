@@ -7,6 +7,9 @@ import { PostSkeleton } from '@/components/PostSkeleton';
 import Comments from '@/features/comments/Comments';
 import { getPostBySlug, getLatestPosts } from '@/lib/api/wordpress';
 import type { WordPressPost } from '@/lib/api/wordpress';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('post-page');
 
 export const revalidate = 300; // Revalidate every 5 minutes
 
@@ -16,43 +19,43 @@ interface PostPageProps {
 
 // Generate static paths for posts at build time
 export async function generateStaticParams() {
-  console.log('🚀 Starting generateStaticParams for posts...');
+  logger.debug('🚀 Starting generateStaticParams for posts...');
 
   try {
     const startTime = Date.now();
     const { posts, hasNextPage } = await getLatestPosts(1000);
 
     const fetchTime = Date.now() - startTime;
-    console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`);
-    console.log(`📄 Has more pages: ${hasNextPage}`);
+    logger.debug(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`);
+    logger.debug(`📄 Has more pages: ${hasNextPage}`);
 
     if (!posts || posts.length === 0) {
-      console.warn('⚠️ No posts returned from API. Skipping static generation.');
+      logger.warn('⚠️ No posts returned from API. Skipping static generation.');
       return [];
     }
 
     const validPosts = posts.filter((post) => {
       if (!post.slug) {
-        console.warn(`⚠️ Post missing slug: ${post.title || post.id}`);
+        logger.warn(`⚠️ Post missing slug: ${post.title || post.id}`);
         return false;
       }
       if (typeof post.slug !== 'string') {
-        console.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`);
+        logger.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`);
         return false;
       }
       return true;
     });
 
-    console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`);
+    logger.debug(`✅ ${validPosts.length} valid posts out of ${posts.length} total`);
 
     if (validPosts.length > 0) {
-      console.log('📝 Sample posts being pre-generated:');
+      logger.debug('📝 Sample posts being pre-generated:');
       validPosts.slice(0, 5).forEach((post, index) => {
-        console.log(`  ${index + 1}. ${post.slug} - "${post.title}"`);
+        logger.debug(`  ${index + 1}. ${post.slug} - "${post.title}"`);
       });
 
       if (validPosts.length > 5) {
-        console.log(`  ... and ${validPosts.length - 5} more posts`);
+        logger.debug(`  ... and ${validPosts.length - 5} more posts`);
       }
     }
 
@@ -60,7 +63,7 @@ export async function generateStaticParams() {
       slug: post.slug,
     }));
 
-    console.log(`🎯 Generating static params for ${staticParams.length} posts`);
+    logger.debug(`🎯 Generating static params for ${staticParams.length} posts`);
     return staticParams;
   } catch (error) {
     console.error('❌ Error in generateStaticParams for posts:', error);
@@ -70,7 +73,7 @@ export async function generateStaticParams() {
       console.error('Error stack:', error.stack);
     }
 
-    console.log('🔄 Falling back to on-demand generation');
+    logger.debug('🔄 Falling back to on-demand generation');
     return [];
   }
 }
@@ -190,13 +193,13 @@ function buildPostMetadata(post: WordPressPost, slug: string): Metadata {
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for post: ${params.slug}`);
+  logger.debug(`🔍 Generating metadata for post: ${params.slug}`);
 
   try {
     const post = await getPostBySlug(params.slug, ['post', params.slug]);
 
     if (!post) {
-      console.warn(`⚠️ Post not found for metadata generation: ${params.slug}`);
+      logger.warn(`⚠️ Post not found for metadata generation: ${params.slug}`);
       return {
         title: 'Article Not Found - News On Africa',
         description: 'The requested article could not be found.',
@@ -212,7 +215,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       };
     }
 
-    console.log(`✅ Generated metadata for: "${post.title}"`);
+    logger.debug(`✅ Generated metadata for: "${post.title}"`);
     return buildPostMetadata(post, params.slug);
   } catch (error) {
     console.error(`❌ Error generating metadata for post ${params.slug}:`, error);
@@ -233,7 +236,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
   const decodedSlug = decodeURIComponent(params.slug);
-  console.log(`📖 Rendering post page: ${params.slug} (decoded: ${decodedSlug})`);
+  logger.debug(`📖 Rendering post page: ${params.slug} (decoded: ${decodedSlug})`);
 
   try {
     // Fetch post data server-side
@@ -242,11 +245,11 @@ export default async function PostPage({ params }: PostPageProps) {
     const fetchTime = Date.now() - startTime;
 
     if (!post) {
-      console.warn(`⚠️ Post not found: ${params.slug} (decoded: ${decodedSlug})`);
+      logger.warn(`⚠️ Post not found: ${params.slug} (decoded: ${decodedSlug})`);
       notFound();
     }
 
-    console.log(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`);
+    logger.debug(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`);
 
     return (
       <Suspense fallback={<PostSkeleton />}>
