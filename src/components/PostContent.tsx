@@ -26,7 +26,7 @@ export function PostContent({ post }: PostContentProps) {
       <ReadLogger
         postId={post.id}
         category={post.categories?.nodes?.[0]?.name}
-        tags={post.tags?.nodes?.map((tag: any) => tag.name)}
+        tags={post.tags?.nodes?.map((tag: { name: string }) => tag.name)}
       />
       <article className="mb-8">
         {/* Top date and share section */}
@@ -83,7 +83,14 @@ export function PostContent({ post }: PostContentProps) {
               <span className="hidden sm:inline">Gift article</span>
             </Button>
 
-            <BookmarkButton post={post} />
+            <BookmarkButton
+              postId={post.id}
+              title={post.title}
+              slug={post.slug}
+              variant="outline"
+              size="sm"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            />
           </div>
         </div>
 
