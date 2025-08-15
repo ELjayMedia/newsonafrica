@@ -361,7 +361,7 @@ export async function refreshSession(): Promise<{
         logAuthError(parsedError);
 
         // If the error is network-related, don't invalidate the session yet
-        if (parsedError.category === AuthErrorCategory.NETWORK) {
+        if (parsedError.category === AuthErrorCategory.Network) {
           console.log('Network error during refresh, keeping existing session');
           return {
             success: true,

@@ -2,9 +2,11 @@ import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 import type { cookies } from 'next/headers';
 
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
+
 import type { Database } from '@/types/supabase';
 
-export function createClient(cookieStore: ReturnType<typeof cookies>) {
+export function createClient(cookieStore: CookieStore) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     throw new Error('Missing Supabase environment variables');
   }
@@ -40,7 +42,7 @@ export function createClient(cookieStore: ReturnType<typeof cookies>) {
 
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
-export function createAdminClient(cookieStore: ReturnType<typeof cookies>) {
+export function createAdminClient(cookieStore: CookieStore) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
   }

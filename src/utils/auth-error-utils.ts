@@ -65,10 +65,12 @@ export function parseAuthError(error: unknown): AuthErrorInfo {
   // Supabase-style errors
   if (isObject(error) && ('status' in error || 'code' in error) && 'message' in error) {
     const e = error as { status?: number; code?: string; message?: string; cause?: unknown };
+    const code = toStringOrUndefined(e.code);
+    const status = toNumberOrUndefined(e.status);
     return {
-      code: toStringOrUndefined(e.code),
+      ...(code ? { code } : {}),
       message: e.message || 'Authentication error',
-      status: toNumberOrUndefined(e.status),
+      ...(status !== undefined ? { status } : {}),
       cause: e.cause,
       raw: error,
     };
@@ -76,8 +78,9 @@ export function parseAuthError(error: unknown): AuthErrorInfo {
 
   // Fetch Response errors (when thrown manually with Response or similar)
   if (isResponseLike(error)) {
+    const code = httpStatusToCode(error.status);
     return {
-      code: httpStatusToCode(error.status),
+      ...(code ? { code } : {}),
       message: `Request failed with status ${error.status}`,
       status: error.status,
       raw: error,
@@ -87,10 +90,12 @@ export function parseAuthError(error: unknown): AuthErrorInfo {
   // Error with cause (Node/JS native)
   if (error instanceof Error) {
     const anyErr = error as Error & { code?: string; status?: number };
+    const code = toStringOrUndefined(anyErr.code);
+    const status = toNumberOrUndefined(anyErr.status);
     return {
-      code: toStringOrUndefined(anyErr.code),
+      ...(code ? { code } : {}),
       message: anyErr.message || 'Authentication error',
-      status: toNumberOrUndefined(anyErr.status),
+      ...(status !== undefined ? { status } : {}),
       cause: anyErr.cause,
       raw: error,
     };
