@@ -10,7 +10,7 @@ import { createLogger } from '@/lib/logger';
 const logger = createLogger('category-page');
 
 interface CategoryPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Static generation configuration
@@ -137,13 +137,14 @@ function buildCategoryMetadata(
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  logger.debug(`🔍 Generating metadata for category: ${params.slug}`);
+  const { slug } = await params;
+  logger.debug(`🔍 Generating metadata for category: ${slug}`);
 
   try {
-    const { category, posts } = await getPostsByCategory(params.slug, 10);
+    const { category, posts } = await getPostsByCategory(slug, 10);
 
     if (!category) {
-      logger.warn(`⚠️ Category not found for metadata generation: ${params.slug}`);
+      logger.warn(`⚠️ Category not found for metadata generation: ${slug}`);
       return {
         title: 'Category Not Found - News On Africa',
         description: 'The requested category could not be found.',
@@ -153,24 +154,24 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
           noarchive: true,
         },
         alternates: {
-          canonical: `https://newsonafrica.com/category/${params.slug}`,
+          canonical: `https://newsonafrica.com/category/${slug}`,
         },
       };
     }
 
     logger.debug(`✅ Generated metadata for category: "${category.name}"`);
-    return buildCategoryMetadata(category, posts, params.slug);
+    return buildCategoryMetadata(category, posts, slug);
   } catch (error) {
-    console.error(`❌ Error generating metadata for category ${params.slug}:`, error);
+    console.error(`❌ Error generating metadata for category ${slug}:`, error);
     return {
-      title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
-      description: `Latest articles in the ${params.slug} category from News On Africa`,
+      title: `${slug.charAt(0).toUpperCase() + slug.slice(1)} - News On Africa`,
+      description: `Latest articles in the ${slug} category from News On Africa`,
       robots: {
         index: false,
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com/category/${params.slug}`,
+        canonical: `https://newsonafrica.com/category/${slug}`,
       },
     };
   }
@@ -178,9 +179,10 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 // Server component that fetches data and renders the page
 export default async function CategoryPage({ params }: CategoryPageProps) {
+  const { slug } = await params;
   try {
     // Fetch category data and initial posts
-    const categoryData = await getPostsByCategory(params.slug, 20);
+    const categoryData = await getPostsByCategory(slug, 20);
 
     // If category doesn't exist, show 404
     if (!categoryData.category) {
@@ -188,12 +190,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     }
 
     // Pass the fetched data to the client component
-    return <CategoryClientPage params={params} initialData={categoryData} />;
+    return <CategoryClientPage params={{ slug }} initialData={categoryData} />;
   } catch (error) {
-    console.error(`Error loading category page for ${params.slug}:`, error);
+    console.error(`Error loading category page for ${slug}:`, error);
 
     // For build-time errors, still try to render with empty data
     // The client component will handle the error state
-    return <CategoryClientPage params={params} initialData={null} />;
+    return <CategoryClientPage params={{ slug }} initialData={null} />;
   }
 }

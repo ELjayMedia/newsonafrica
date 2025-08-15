@@ -5,14 +5,19 @@ import { titleTemplate, canonicalUrl, ogImageUrl, hreflangLinks } from '@/lib/se
 import ForYouSlot from '@/features/personalization/ForYouSlot';
 import { Suspense } from 'react';
 
-export async function generateMetadata({ params }: { params: { country: string } }): Promise<Metadata> {
+interface CountryPageProps {
+  params: Promise<{ country: string }>;
+}
+
+export async function generateMetadata({ params }: CountryPageProps): Promise<Metadata> {
+  const { country } = await params;
   const path = '/';
-  const canonical = canonicalUrl(params.country, path);
+  const canonical = canonicalUrl(country, path);
   const languages = Object.fromEntries(
-    hreflangLinks(params.country, path).map(l => [l.hrefLang, l.href])
+    hreflangLinks(country, path).map((l) => [l.hrefLang, l.href]),
   );
   return {
-    title: titleTemplate('Latest News', params.country),
+    title: titleTemplate('Latest News', country),
     alternates: { canonical, languages },
     openGraph: {
       type: 'website',
@@ -23,16 +28,16 @@ export async function generateMetadata({ params }: { params: { country: string }
   };
 }
 
-export default async function CountryHome({ params }: { params: { country: string } }) {
-  const posts = await WPR.list({ country: params.country });
+export default async function CountryHome({ params }: CountryPageProps) {
+  const { country } = await params;
+  const posts = await WPR.list({ country });
 
   return (
     <main className="max-w-4xl mx-auto">
       <ArticleList posts={posts} />
       <Suspense fallback={null}>
-        <ForYouSlot country={params.country} />
+        <ForYouSlot country={country} />
       </Suspense>
     </main>
   );
 }
-

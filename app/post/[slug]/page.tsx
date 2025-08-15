@@ -14,7 +14,7 @@ const logger = createLogger('post-page');
 export const revalidate = 300; // Revalidate every 5 minutes
 
 interface PostPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Generate static paths for posts at build time
@@ -193,13 +193,14 @@ function buildPostMetadata(post: WordPressPost, slug: string): Metadata {
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  logger.debug(`🔍 Generating metadata for post: ${params.slug}`);
+  const { slug } = await params;
+  logger.debug(`🔍 Generating metadata for post: ${slug}`);
 
   try {
-    const post = await getPostBySlug(params.slug, ['post', params.slug]);
+    const post = await getPostBySlug(slug, ['post', slug]);
 
     if (!post) {
-      logger.warn(`⚠️ Post not found for metadata generation: ${params.slug}`);
+      logger.warn(`⚠️ Post not found for metadata generation: ${slug}`);
       return {
         title: 'Article Not Found - News On Africa',
         description: 'The requested article could not be found.',
@@ -210,15 +211,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
           nosnippet: true,
         },
         alternates: {
-          canonical: `https://newsonafrica.com/post/${params.slug}`,
+          canonical: `https://newsonafrica.com/post/${slug}`,
         },
       };
     }
 
     logger.debug(`✅ Generated metadata for: "${post.title}"`);
-    return buildPostMetadata(post, params.slug);
+    return buildPostMetadata(post, slug);
   } catch (error) {
-    console.error(`❌ Error generating metadata for post ${params.slug}:`, error);
+    console.error(`❌ Error generating metadata for post ${slug}:`, error);
     return {
       title: 'Article - News On Africa',
       description: 'Read the latest news and articles from across Africa.',
@@ -227,7 +228,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com/post/${params.slug}`,
+        canonical: `https://newsonafrica.com/post/${slug}`,
       },
     };
   }
@@ -235,8 +236,9 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  const decodedSlug = decodeURIComponent(params.slug);
-  logger.debug(`📖 Rendering post page: ${params.slug} (decoded: ${decodedSlug})`);
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
+  logger.debug(`📖 Rendering post page: ${slug} (decoded: ${decodedSlug})`);
 
   try {
     // Fetch post data server-side
@@ -245,7 +247,7 @@ export default async function PostPage({ params }: PostPageProps) {
     const fetchTime = Date.now() - startTime;
 
     if (!post) {
-      logger.warn(`⚠️ Post not found: ${params.slug} (decoded: ${decodedSlug})`);
+      logger.warn(`⚠️ Post not found: ${slug} (decoded: ${decodedSlug})`);
       notFound();
     }
 
@@ -253,11 +255,11 @@ export default async function PostPage({ params }: PostPageProps) {
 
     return (
       <Suspense fallback={<PostSkeleton />}>
-        <PostWrapper post={post} slug={params.slug} decodedSlug={decodedSlug} />
+        <PostWrapper post={post} slug={slug} decodedSlug={decodedSlug} />
       </Suspense>
     );
   } catch (error) {
-    console.error(`❌ Error fetching post ${params.slug} (decoded: ${decodedSlug}):`, error);
+    console.error(`❌ Error fetching post ${slug} (decoded: ${decodedSlug}):`, error);
     // Let error boundary handle this
     throw error;
   }

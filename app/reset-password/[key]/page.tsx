@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   description: 'Reset your News On Africa password',
 };
 
-export default function ResetPasswordPage({ params }: { params: { key: string } }) {
+interface ResetPasswordPageProps {
+  params: Promise<{ key: string }>;
+}
+
+export default async function ResetPasswordPage({ params }: ResetPasswordPageProps) {
+  const { key } = await params;
   // After successful password reset, redirect to the auth page
   const onSuccess = () => {
     redirect('/auth');
@@ -17,7 +22,7 @@ export default function ResetPasswordPage({ params }: { params: { key: string } 
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <ResetPasswordClient resetKey={params.key} onSuccess={onSuccess} />
+      <ResetPasswordClient resetKey={key} onSuccess={onSuccess} />
     </Suspense>
   );
 }

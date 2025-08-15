@@ -1,23 +1,25 @@
-import type { Metadata } from 'next';
+import type { Metadata, PageProps } from 'next';
 import { GQL } from '@/lib/wp-client/graphql';
 import { NewsArticleJsonLd } from '@/lib/seo/jsonld';
 import { titleTemplate, canonicalUrl, ogImageUrl, hreflangLinks } from '@/lib/seo/meta';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { country: string; category: string; slug: string };
-}): Promise<Metadata> {
-  const article = await GQL.article({ country: params.country, slug: params.slug });
-  if (!article)
-    return { title: titleTemplate('Article', params.country) };
-  const path = `/${params.category}/${article.slug}`;
-  const canonical = canonicalUrl(params.country, path);
+type ArticlePageProps = PageProps<{
+  country: string;
+  category: string;
+  slug: string;
+}>;
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { country, category, slug } = await params;
+  const article = await GQL.article({ country, slug });
+  if (!article) return { title: titleTemplate('Article', country) };
+  const path = `/${category}/${article.slug}`;
+  const canonical = canonicalUrl(country, path);
   const languages = Object.fromEntries(
-    hreflangLinks(params.country, path).map(l => [l.hrefLang, l.href])
+    hreflangLinks(country, path).map((l) => [l.hrefLang, l.href]),
   );
   return {
-    title: titleTemplate(article.title, params.country),
+    title: titleTemplate(article.title, country),
     description: article.excerpt,
     alternates: { canonical, languages },
     openGraph: {
@@ -36,15 +38,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function ArticlePage({
-  params,
-}: {
-  params: { country: string; category: string; slug: string };
-}) {
-  const article = await GQL.article({ country: params.country, slug: params.slug });
+export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { country, category, slug } = await params;
+  const article = await GQL.article({ country, slug });
   if (!article) return null;
-  const path = `/${params.category}/${article.slug}`;
-  const canonical = canonicalUrl(params.country, path);
+  const path = `/${category}/${article.slug}`;
+  const canonical = canonicalUrl(country, path);
   return (
     <article className="max-w-4xl mx-auto">
       <NewsArticleJsonLd
@@ -56,10 +55,7 @@ export default async function ArticlePage({
         authorName={article.authorName || ''}
         publisherName="News On Africa"
       />
-      {article.html && (
-        <div dangerouslySetInnerHTML={{ __html: article.html }} />
-      )}
+      {article.html && <div dangerouslySetInnerHTML={{ __html: article.html }} />}
     </article>
   );
 }
-
