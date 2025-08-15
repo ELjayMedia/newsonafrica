@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 
+import CountryNav from './CountryNav';
+
 import { ensureGPTLoaded } from '@/features/ads/gpt';
 import { useAdsEnabled } from '@/features/ads/policy';
 import { buildAdTargeting } from '@/features/ads/targeting';
@@ -41,7 +43,7 @@ export default function CountryLayout({
   return (
     <div>
       <nav className="p-4 border-b mb-4">
-        {/* TODO: country-specific nav for {params.country} */}
+        <CountryNav country={params.country} />
       </nav>
       {children}
     </div>
