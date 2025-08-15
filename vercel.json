@@ -12,10 +12,6 @@
     {
       "path": "/api/webhooks/wordpress",
       "schedule": "@daily"
-    },
-    {
-      "path": "/api/cron/suggestions",
-      "schedule": "@daily"
     }
   ],
   "headers": [
