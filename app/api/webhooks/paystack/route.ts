@@ -260,12 +260,92 @@ async function handleInvoiceUpdate(data: InvoiceUpdatePayload) {
 
 async function handleTransferSuccess(data: TransferSuccessPayload) {
   console.log('Processing successful transfer:', data.reference);
+  try {
+    const admin = createAdminClient();
 
-  // TODO: Implement your business logic
+    // Check if we've already processed this transfer
+    const { data: payment } = await admin
+      .from('payments')
+      .select('id, status, subscription_id')
+      .eq('reference', data.reference)
+      .maybeSingle();
+
+    if (!payment) {
+      console.warn('No payment found for transfer reference:', data.reference);
+      return;
+    }
+
+    if (payment.status === 'success') {
+      console.log('Transfer already reconciled:', data.reference);
+      return;
+    }
+
+    await admin.from('payments').update({ status: 'success' }).eq('id', payment.id);
+
+    if (payment.subscription_id) {
+      const { data: subscription } = await admin
+        .from('subscriptions')
+        .select('user_id')
+        .eq('id', payment.subscription_id)
+        .maybeSingle();
+
+      if (subscription?.user_id) {
+        await admin.from('notifications').insert({
+          user_id: subscription.user_id,
+          type: 'payment',
+          title: 'Transfer Successful',
+          message: `Your transfer with reference ${data.reference} was successful.`,
+          read: false,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error processing transfer.success webhook:', error);
+  }
 }
 
 async function handleTransferFailed(data: TransferFailedPayload) {
   console.log('Processing failed transfer:', data.reference);
+  try {
+    const admin = createAdminClient();
 
-  // TODO: Implement your business logic
+    // Check if we've already processed this failure
+    const { data: payment } = await admin
+      .from('payments')
+      .select('id, status, subscription_id')
+      .eq('reference', data.reference)
+      .maybeSingle();
+
+    if (!payment) {
+      console.warn('No payment found for transfer reference:', data.reference);
+      return;
+    }
+
+    if (payment.status === 'failed') {
+      console.log('Transfer failure already recorded:', data.reference);
+      return;
+    }
+
+    await admin.from('payments').update({ status: 'failed' }).eq('id', payment.id);
+
+    if (payment.subscription_id) {
+      const { data: subscription } = await admin
+        .from('subscriptions')
+        .select('user_id')
+        .eq('id', payment.subscription_id)
+        .maybeSingle();
+
+      if (subscription?.user_id) {
+        await admin.from('notifications').insert({
+          user_id: subscription.user_id,
+          type: 'payment',
+          title: 'Transfer Failed',
+          message: `Your transfer with reference ${data.reference} failed. Please contact support.`,
+          read: false,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error processing transfer.failed webhook:', error);
+  }
 }
