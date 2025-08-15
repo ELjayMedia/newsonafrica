@@ -1,11 +1,13 @@
-import type { Metadata } from 'next';
+import type { Metadata, PageProps } from 'next';
 import { GQL } from '@/lib/wp-client/graphql';
 import { NewsArticleJsonLd } from '@/lib/seo/jsonld';
 import { titleTemplate, canonicalUrl, ogImageUrl, hreflangLinks } from '@/lib/seo/meta';
 
-interface ArticlePageProps {
-  params: Promise<{ country: string; category: string; slug: string }>;
-}
+type ArticlePageProps = PageProps<{
+  country: string;
+  category: string;
+  slug: string;
+}>;
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { country, category, slug } = await params;
