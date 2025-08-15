@@ -1685,20 +1685,39 @@ export type Poll = {
 };
 
 // Temporary static poll implementation
+/**
+ * Fetches the active poll from the backend API
+ */
 export async function getPoll(): Promise<Poll> {
-  return {
-    id: 'static',
-    question: 'Do you like the new homepage?',
-    options: [
-      { id: 'yes', label: 'Yes', votes: 0 },
-      { id: 'no', label: 'No', votes: 0 },
-    ],
-  };
+  const res = await fetch('/api/poll', {
+    // Poll data changes infrequently but shouldn't be aggressively cached
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch poll');
+  }
+
+  return (await res.json()) as Poll;
 }
 
-export async function votePoll(_optionId: string): Promise<void> {
-  // TODO: wire up real poll voting
-  return;
+/**
+ * Casts a vote for the given option and returns the updated poll
+ */
+export async function votePoll(optionId: string): Promise<Poll> {
+  const res = await fetch('/api/poll', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ optionId }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to submit vote');
+  }
+
+  return (await res.json()) as Poll;
 }
 
 // Transform functions for REST API data
