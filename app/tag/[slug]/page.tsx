@@ -9,11 +9,12 @@ import { fetchPostsByTag, fetchSingleTag } from '@/lib/wordpress-api';
 export const revalidate = 60; // Revalidate every 60 seconds
 
 interface TagPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
-  const tag = await fetchSingleTag(params.slug);
+  const { slug } = await params;
+  const tag = await fetchSingleTag(slug);
   if (!tag) return { title: 'Tag Not Found' };
 
   return {
@@ -22,10 +23,11 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   };
 }
 
-export default function TagPage({ params }: TagPageProps) {
+export default async function TagPage({ params }: TagPageProps) {
+  const { slug } = await params;
   return (
     <Suspense fallback={<TagPageSkeleton />}>
-      <TagWrapper slug={params.slug} />
+      <TagWrapper slug={slug} />
     </Suspense>
   );
 }
