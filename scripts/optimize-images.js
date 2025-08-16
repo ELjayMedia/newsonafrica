@@ -19,13 +19,23 @@ async function getImageFiles(dir) {
 
   for (const file of files) {
     const filePath = path.join(dir, file)
-    const stats = await stat(filePath)
 
-    if (stats.isDirectory()) {
-      const subDirImages = await getImageFiles(filePath)
-      imageFiles.push(...subDirImages)
-    } else if (/\.(jpe?g|png)$/i.test(file)) {
-      imageFiles.push(filePath)
+    try {
+      const stats = await stat(filePath)
+
+      if (stats.isDirectory()) {
+        try {
+          const subDirImages = await getImageFiles(filePath)
+          imageFiles.push(...subDirImages)
+        } catch (error) {
+          console.warn(`Warning: Could not process directory ${filePath}:`, error.message)
+        }
+      } else if (stats.isFile() && /\.(jpe?g|png)$/i.test(file)) {
+        imageFiles.push(filePath)
+      }
+    } catch (error) {
+      console.warn(`Warning: Could not stat ${filePath}:`, error.message)
+      continue
     }
   }
 
@@ -58,19 +68,24 @@ async function optimizeImages() {
     for (const [dir, files] of Object.entries(imagesByDir)) {
       console.log(`Processing ${files.length} images in ${dir}...`)
 
-      // Optimize JPEG and PNG
-      await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
-        destination: dir,
-        plugins: [imageminMozjpeg({ quality: 80 }), imageminPngquant({ quality: [0.65, 0.8] })],
-      })
+      try {
+        // Optimize JPEG and PNG
+        await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
+          destination: dir,
+          plugins: [imageminMozjpeg({ quality: 80 }), imageminPngquant({ quality: [0.65, 0.8] })],
+        })
 
-      // Convert to WebP
-      await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
-        destination: dir,
-        plugins: [imageminWebp({ quality: 75 })],
-      })
+        // Convert to WebP
+        await imagemin([`${dir}/*.{jpg,jpeg,png}`], {
+          destination: dir,
+          plugins: [imageminWebp({ quality: 75 })],
+        })
 
-      console.log(`Finished processing images in ${dir}`)
+        console.log(`Finished processing images in ${dir}`)
+      } catch (error) {
+        console.error(`Error processing images in ${dir}:`, error.message)
+        continue
+      }
     }
 
     console.log("Image optimization complete!")
