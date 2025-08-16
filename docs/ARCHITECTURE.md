@@ -141,3 +141,17 @@ Vercel serves as the hosting and CDN platform:
 - **Content Translation**: Automated translation between languages
 - **Audio Articles**: Text-to-speech functionality
 - **Enhanced Offline Mode**: Better offline reading experience
+
+## Project Structure
+
+```
+/src
+  /app
+  /components
+  /features
+  /lib
+  /styles
+  /types
+/public
+/scripts
+```

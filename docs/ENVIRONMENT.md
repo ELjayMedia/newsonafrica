@@ -1,0 +1,19 @@
+# Environment Setup
+
+Configure the following variables on Vercel and Appflow:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_WORDPRESS_BASE_URL=https://newsonafrica.com
+NEXT_PUBLIC_WORDPRESS_COUNTRY_CODE=sz
+NEXT_PUBLIC_GRAPHQL_ROOT=/graphql
+NEXT_PUBLIC_REST_ROOT=/wp-json/v2
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+Vercel: set all server and client variables via the project dashboard.
+
+Appflow: set mobile-specific variables in the build environment settings.
