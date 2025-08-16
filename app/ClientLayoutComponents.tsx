@@ -1,41 +1,59 @@
-'use client';
+"use client"
 
-import dynamic from 'next/dynamic';
-import { Suspense, type ReactNode } from 'react';
+import dynamic from "next/dynamic"
+import { Suspense, type ReactNode } from "react"
 
 // Dynamically import components that might use useMediaQuery
-const Header = dynamic(
-  () => import('@/components/Header').then((mod) => ({ default: mod.Header })),
-  {
-    ssr: false,
-    loading: () => <div className="h-16 bg-white shadow-md animate-pulse" />,
-  },
-);
+const Header = dynamic(() => import("@/components/Header").then((mod) => ({ default: mod.Header })), {
+  ssr: false,
+  loading: () => <div className="h-16 bg-white shadow-md animate-pulse" />,
+})
 
 const BottomNavigation = dynamic(
-  () => import('@/components/BottomNavigation').then((mod) => ({ default: mod.BottomNavigation })),
+  () => import("@/components/BottomNavigation").then((mod) => ({ default: mod.BottomNavigation })),
   {
     ssr: false,
   },
-);
+)
 
-const Sidebar = dynamic(
-  () => import('@/components/Sidebar').then((mod) => ({ default: mod.Sidebar })),
+const Sidebar = dynamic(() => import("@/components/Sidebar").then((mod) => ({ default: mod.Sidebar })), {
+  ssr: false,
+  loading: () => <div className="w-80 bg-white shadow-md animate-pulse h-96" />,
+})
+
+const TopBannerAd = dynamic(() => import("@/components/TopBannerAd").then((mod) => ({ default: mod.TopBannerAd })), {
+  ssr: false,
+})
+
+const BelowHeaderAd = dynamic(
+  () => import("@/components/BelowHeaderAd").then((mod) => ({ default: mod.BelowHeaderAd })),
   {
     ssr: false,
-    loading: () => <div className="w-80 bg-white shadow-md animate-pulse h-96" />,
   },
-);
+)
+
+const FooterBannerAd = dynamic(
+  () => import("@/components/FooterBannerAd").then((mod) => ({ default: mod.FooterBannerAd })),
+  {
+    ssr: false,
+  },
+)
 
 interface ClientLayoutComponentsProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export default function ClientLayoutComponents({ children }: ClientLayoutComponentsProps) {
   return (
     <>
+      <Suspense fallback={null}>
+        <TopBannerAd />
+      </Suspense>
       <Suspense fallback={<div className="h-16 bg-white shadow-md animate-pulse" />}>
         <Header />
+      </Suspense>
+      <Suspense fallback={null}>
+        <BelowHeaderAd />
       </Suspense>
       <div className="mt-4 md:mt-6">
         <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
@@ -57,7 +75,10 @@ export default function ClientLayoutComponents({ children }: ClientLayoutCompone
           </aside>
         </div>
       </div>
+      <Suspense fallback={null}>
+        <FooterBannerAd />
+      </Suspense>
       <BottomNavigation />
     </>
-  );
+  )
 }

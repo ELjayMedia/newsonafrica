@@ -1,28 +1,143 @@
-# Architecture & Contribution Guide
+# News On Africa Architecture
 
-This document describes how News on Africa is structured and how to extend it.
+This document outlines the architecture of the News On Africa Progressive Web App, explaining the key components, data flow, and design decisions.
 
-## Feature‑first layout and code organization
+## System Overview
 
-The repository is organized by feature. Every unit of functionality lives in `src/features/<name>` alongside its UI components, server actions, and tests. Route definitions live in the top‑level `app/` directory and import these feature modules. Shared UI elements stay in `src/components`, utilities and data fetching helpers in `src/lib`, and server‑only files, like middleware, in `src/server`.
+News On Africa is a Progressive Web App built with Next.js that serves as a pan-African news platform. The application connects to a headless WordPress CMS for content and uses Supabase for authentication, user data storage, and real-time features.
 
-## RSC + cache tags strategy
+## Architecture Diagram
 
-We rely on React Server Components and the Next.js caching layer. The `jfetch` helper wraps `fetch` and sets a `revalidate` interval and cache `tags` on every request. Tag generators in `src/lib/cache/revalidate.ts` produce consistent tag names for articles and lists, and `bust.byTag` calls `revalidateTag` to invalidate caches. WordPress webhooks trigger the `revalidateTags` function so updated content is served immediately.
+\`\`\`mermaid
+graph TD
+    User[User] --> FE[Frontend - Next.js PWA]
+    FE --> WPAPI[WordPress REST API]
+    FE --> SupabaseAuth[Supabase Auth]
+    FE --> SupabaseDB[Supabase Database]
+    FE --> CDN[Vercel CDN]
+    WPAPI --> WP[WordPress CMS]
+    SupabaseAuth --> SupabaseDB
+    WP --> Webhook[Webhooks]
+    Webhook --> Revalidation[Next.js Revalidation]
+    Revalidation --> CDN
+\`\`\`
 
-## Country resolution via middleware
+## Key Components
 
-Incoming requests pass through `src/server/middleware.ts`. The middleware uses `resolveCountry` to extract the country from the URL path or subdomain, then stores the result in the `x-noa-country` response header. If no country is found, `sz` (Eswatini) is used. Features can read this header to tailor data fetches and UI.
+### 1. Frontend (Next.js PWA)
 
-## Adding a new feature
+The frontend is built with Next.js using the App Router, providing a fast, responsive user interface with the following features:
 
-1. Create `src/features/<name>` and scaffold any components, server actions, and tests inside it.
-2. Export any public components or helpers from an `index.ts` file.
-3. Use the new feature in pages under `app/` or other features.
-4. Keep feature code isolated; move shared logic to `src/lib` or `src/components`.
+- **Progressive Web App**: Service worker for offline capabilities
+- **Server Components**: For improved performance and SEO
+- **Client Components**: For interactive elements
+- **Incremental Static Regeneration**: For efficient content updates
 
-## Fetching WordPress data and when to use Supabase server actions
+### 2. Content Management (WordPress)
 
-Content is fetched from the WordPress REST API using the `wp` client (`src/lib/wp-client/rest.ts`). Calls like `wp.list` and `wp.article` run in server components or server actions and use `jfetch` so cache tags are applied automatically.
+WordPress serves as the content management system with the following setup:
 
-Use Supabase server actions for authenticated reads or mutations—saving bookmarks, managing profiles, etc. Implement a `'use server'` function within a feature, create a Supabase client with `createSupabaseServer` (`src/lib/supabase/server.ts`), perform the database work, and optionally revalidate related cache tags to update cached pages.
+- **Multisite Architecture**: Supports multiple country editions
+- **REST API**: Provides content to the frontend
+- **Custom Post Types**: For different content categories
+- **Webhooks**: Trigger revalidation on content updates
+
+### 3. Authentication & User Data (Supabase)
+
+Supabase provides authentication and database services:
+
+- **Auth Providers**: Email/password, Google, Facebook
+- **PostgreSQL Database**: Stores user profiles, bookmarks, comments
+- **Row-Level Security**: For data protection
+- **Real-time Subscriptions**: For live updates
+
+### 4. Content Delivery (Vercel)
+
+Vercel serves as the hosting and CDN platform:
+
+- **Edge Network**: Global content delivery
+- **Serverless Functions**: For API routes
+- **Automatic Deployments**: CI/CD pipeline
+- **Preview Environments**: For testing changes
+
+## Data Flow
+
+### Content Retrieval Flow
+
+1. User requests a page
+2. Next.js checks if the page is in the cache
+3. If cached and valid, serves from cache
+4. If not cached or stale, fetches from WordPress API
+5. Renders the page and caches the result
+6. Returns the page to the user
+
+### Authentication Flow
+
+1. User submits login credentials
+2. Frontend sends credentials to Supabase Auth
+3. Supabase validates and returns JWT token
+4. Frontend stores token in secure cookie
+5. User profile is fetched from Supabase database
+6. User state is updated in the application
+
+### Content Update Flow
+
+1. Editor updates content in WordPress
+2. WordPress triggers webhook to Next.js API route
+3. API route triggers revalidation of affected pages
+4. Next.js regenerates the pages in the background
+5. CDN cache is updated with new content
+
+## Design Decisions
+
+### Why Next.js?
+
+- **Performance**: Server components reduce client-side JavaScript
+- **SEO**: Server-side rendering improves search engine visibility
+- **Developer Experience**: Strong TypeScript support and ecosystem
+- **Scalability**: Efficient rendering and caching strategies
+
+### Why WordPress as CMS?
+
+- **Editorial Familiarity**: Well-known interface for content teams
+- **Flexibility**: Extensive plugin ecosystem
+- **Multisite Support**: Built-in support for multiple country editions
+- **REST API**: Robust API for headless implementation
+
+### Why Supabase?
+
+- **Authentication**: Built-in support for multiple providers
+- **PostgreSQL**: Powerful, open-source database
+- **Real-time**: Subscription capabilities for live features
+- **Row-Level Security**: Fine-grained access control
+
+## Performance Considerations
+
+- **Image Optimization**: Next.js Image component for responsive images
+- **Code Splitting**: Automatic code splitting for faster page loads
+- **Caching Strategy**: ISR for optimal balance of freshness and performance
+- **Service Worker**: Offline capabilities and asset caching
+- **Core Web Vitals**: Optimized for LCP, FID, and CLS metrics
+
+## Security Considerations
+
+- **Authentication**: JWT-based with secure HTTP-only cookies
+- **API Protection**: Rate limiting and CSRF protection
+- **Database Security**: Row-level security policies
+- **Content Security Policy**: Strict CSP headers
+- **Input Validation**: Server-side validation for all user inputs
+
+## Monitoring and Analytics
+
+- **Error Tracking**: Sentry integration
+- **Performance Monitoring**: Web Vitals reporting
+- **User Analytics**: Google Analytics
+- **Server Monitoring**: Vercel Analytics
+
+## Future Enhancements
+
+- **AI-Powered Recommendations**: Personalized content suggestions
+- **Push Notifications**: Browser-based push notifications
+- **Content Translation**: Automated translation between languages
+- **Audio Articles**: Text-to-speech functionality
+- **Enhanced Offline Mode**: Better offline reading experience

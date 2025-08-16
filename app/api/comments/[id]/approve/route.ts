@@ -1,28 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server"
+import { getAuthTokenFromCookies } from "@/lib/cookies"
 
-import { WORDPRESS_REST_API_URL } from '@/config/wordpress';
-import { getAuthTokenFromCookies } from '@/lib/cookies';
+const WP_API_URL = process.env.WORDPRESS_API_URL
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const token = getAuthTokenFromCookies();
+export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const token = getAuthTokenFromCookies()
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { id: commentId } = await params;
+  const commentId = params.id
 
-  const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
-    method: 'POST',
+  const response = await fetch(`${WP_API_URL}/wp/v2/comments/${commentId}`, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ status: 'approved' }),
-  });
+    body: JSON.stringify({ status: "approved" }),
+  })
 
   if (response.ok) {
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true })
   } else {
-    return NextResponse.json({ error: 'Failed to approve comment' }, { status: 500 });
+    return NextResponse.json({ error: "Failed to approve comment" }, { status: 500 })
   }
 }

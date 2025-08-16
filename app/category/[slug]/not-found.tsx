@@ -1,7 +1,7 @@
-'use client';
+"use client"
 
-import { ArrowLeft, Home } from 'lucide-react';
-import Link from 'next/link';
+import Link from "next/link"
+import { ArrowLeft, Home } from "lucide-react"
 
 export default function CategoryNotFound() {
   return (
@@ -10,9 +10,7 @@ export default function CategoryNotFound() {
         <div className="mb-8">
           <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Category Not Found</h2>
-          <p className="text-gray-600">
-            The category you&apos;re looking for doesn&apos;t exist or has been moved.
-          </p>
+          <p className="text-gray-600">The category you're looking for doesn't exist or has been moved.</p>
         </div>
 
         <div className="space-y-4">
@@ -36,7 +34,7 @@ export default function CategoryNotFound() {
         <div className="mt-8 pt-8 border-t border-gray-200">
           <p className="text-sm text-gray-500">Browse our popular categories:</p>
           <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {['news', 'business', 'sports', 'entertainment', 'politics'].map((category) => (
+            {["news", "business", "sports", "entertainment", "politics"].map((category) => (
               <Link
                 key={category}
                 href={`/category/${category}`}
@@ -49,5 +47,5 @@ export default function CategoryNotFound() {
         </div>
       </div>
     </div>
-  );
+  )
 }

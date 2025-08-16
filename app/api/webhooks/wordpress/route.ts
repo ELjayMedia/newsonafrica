@@ -1,122 +1,106 @@
-import crypto from 'crypto';
+import { type NextRequest, NextResponse } from "next/server"
+import { revalidateTag, revalidatePath } from "next/cache"
+import crypto from "crypto"
 
-import { revalidatePath } from 'next/cache';
-import { type NextRequest, NextResponse } from 'next/server';
-
-import { revalidateTags } from '@/lib/revalidate';
-import { createAdminClient } from '@/lib/supabase';
-
-
-const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET;
+const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
-    console.warn('WORDPRESS_WEBHOOK_SECRET not configured');
-    return false;
+    console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
+    return false
   }
 
-  const expectedSignature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex');
+  const expectedSignature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature, 'hex'),
-    Buffer.from(expectedSignature, 'hex'),
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text();
-    const signature = request.headers.get('x-wp-signature');
+    const body = await request.text()
+    const signature = request.headers.get("x-wp-signature")
 
     // Verify webhook signature if secret is configured
     if (WEBHOOK_SECRET && signature) {
-      const isValid = verifyWebhookSignature(body, signature.replace('sha256=', ''));
+      const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
       if (!isValid) {
-        console.error('Invalid webhook signature');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        console.error("Invalid webhook signature")
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
       }
     }
 
-    const data = JSON.parse(body);
-    const { action, post } = data;
-
-    try {
-      const admin = createAdminClient();
-      await admin.from('webhook_events').insert({
-        event_type: action,
-        payload: data,
-        received_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error('Failed to log WordPress webhook:', err);
-    }
+    const data = JSON.parse(body)
+    const { action, post } = data
 
     console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
       postTitle: post?.title?.rendered,
       postSlug: post?.slug,
-    });
+    })
 
     // Handle different webhook actions
     switch (action) {
-      case 'post_published':
-      case 'post_updated':
+      case "post_published":
+      case "post_updated":
         if (post?.slug) {
           // Revalidate the specific post page
-          revalidatePath(`/post/${post.slug}`);
-          revalidatePath('/');
+          revalidatePath(`/post/${post.slug}`)
+          revalidateTag(`post-${post.id}`)
 
-          const tags = ['post', post.slug, 'posts'];
+          // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
-            tags.push(...post.categories.map((categoryId: number) => `category-${categoryId}`));
+            for (const categoryId of post.categories) {
+              revalidateTag(`category-${categoryId}`)
+            }
           }
 
-          await revalidateTags(tags);
+          // Revalidate home page to show latest posts
+          revalidatePath("/")
+          revalidateTag("posts")
 
-          console.log(`Revalidated post: ${post.slug}`);
+          console.log(`Revalidated post: ${post.slug}`)
         }
-        break;
+        break
 
-      case 'post_deleted':
+      case "post_deleted":
         if (post?.slug) {
           // Revalidate pages that might have referenced this post
-          revalidatePath(`/post/${post.slug}`);
-          revalidatePath('/');
+          revalidatePath(`/post/${post.slug}`)
+          revalidatePath("/")
+          revalidateTag("posts")
 
-          await revalidateTags(['post', post.slug, 'posts']);
-
-          console.log(`Revalidated after deletion: ${post.slug}`);
+          console.log(`Revalidated after deletion: ${post.slug}`)
         }
-        break;
+        break
 
-      case 'category_updated':
+      case "category_updated":
         if (post?.slug) {
-          revalidatePath(`/category/${post.slug}`);
-          await revalidateTags([`category-${post.id}`]);
+          revalidatePath(`/category/${post.slug}`)
+          revalidateTag(`category-${post.id}`)
 
-          console.log(`Revalidated category: ${post.slug}`);
+          console.log(`Revalidated category: ${post.slug}`)
         }
-        break;
+        break
 
       default:
-        console.log(`Unhandled webhook action: ${action}`);
+        console.log(`Unhandled webhook action: ${action}`)
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Webhook processed successfully',
+      message: "Webhook processed successfully",
       action,
       postId: post?.id,
-    });
+    })
   } catch (error) {
-    console.error('Webhook processing error:', error);
-    return NextResponse.json({ error: 'Failed to process webhook' }, { status: 500 });
+    console.error("Webhook processing error:", error)
+    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
   }
 }
 
 export async function GET() {
   return NextResponse.json({
-    message: 'WordPress webhook endpoint is active',
+    message: "WordPress webhook endpoint is active",
     timestamp: new Date().toISOString(),
-  });
+  })
 }

@@ -1,24 +1,23 @@
-'use client';
+"use client"
 
-import { useRouter } from 'next/navigation';
-import type React from 'react';
-import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { supabase } from "@/lib/supabase"
 
 interface ResetPasswordClientProps {
-  key: string;
-  onSuccess?: () => void;
+  key: string
+  onSuccess?: () => void
 }
 
 export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordClientProps) {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const router = useRouter();
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
+  const router = useRouter()
 
   // Check if the reset key is valid
   useEffect(() => {
@@ -26,50 +25,50 @@ export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordCli
       try {
         // Verify the key is valid by checking the hash in the URL
         const { data, error } = await supabase.auth.verifyOtp({
-          type: 'recovery',
+          type: "recovery",
           token_hash: key,
-        });
+        })
 
         if (error) {
-          setError('Invalid or expired password reset link. Please request a new one.');
+          setError("Invalid or expired password reset link. Please request a new one.")
         }
       } catch (err) {
-        setError('Failed to verify reset link. Please try again.');
+        setError("Failed to verify reset link. Please try again.")
       }
-    };
+    }
 
-    checkResetKey();
-  }, [key]);
+    checkResetKey()
+  }, [key])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError("")
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+      setError("Passwords do not match")
+      return
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password })
 
-      if (error) throw error;
+      if (error) throw error
 
-      setSuccess(true);
+      setSuccess(true)
       setTimeout(() => {
         if (onSuccess) {
-          onSuccess();
+          onSuccess()
         } else {
-          router.push('/auth');
+          router.push("/auth")
         }
-      }, 3000);
+      }, 3000)
     } catch (err) {
-      setError('Failed to reset password. Please try again.');
+      setError("Failed to reset password. Please try again.")
     }
-  };
+  }
 
   if (success) {
-    return <p>Password reset successfully. Redirecting to login page...</p>;
+    return <p>Password reset successfully. Redirecting to login page...</p>
   }
 
   return (
@@ -105,5 +104,5 @@ export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordCli
         Reset Password
       </Button>
     </form>
-  );
+  )
 }

@@ -1,8 +1,7 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-
-import { fetchGraphQLClient } from '@/lib/graphql-client';
+import { useState } from "react"
+import { fetchGraphQLClient } from "@/lib/graphql-client"
 
 export default function GraphQLPlayground() {
   const [query, setQuery] = useState(`# Welcome to the News On Africa GraphQL API Playground
@@ -22,23 +21,23 @@ query {
     totalCount
   }
 }
-`);
-  const [variables, setVariables] = useState('{}');
-  const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
+`)
+  const [variables, setVariables] = useState("{}")
+  const [result, setResult] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleRunQuery = async () => {
     try {
-      setLoading(true);
-      const parsedVariables = variables ? JSON.parse(variables) : {};
-      const data = await fetchGraphQLClient(query, parsedVariables);
-      setResult(JSON.stringify(data, null, 2));
+      setLoading(true)
+      const parsedVariables = variables ? JSON.parse(variables) : {}
+      const data = await fetchGraphQLClient(query, parsedVariables)
+      setResult(JSON.stringify(data, null, 2))
     } catch (error) {
-      setResult(JSON.stringify({ error: error.message }, null, 2));
+      setResult(JSON.stringify({ error: error.message }, null, 2))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -69,14 +68,14 @@ query {
             onClick={handleRunQuery}
             disabled={loading}
           >
-            {loading ? 'Running...' : 'Run Query'}
+            {loading ? "Running..." : "Run Query"}
           </button>
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-2">Result</h2>
           <pre className="w-full h-[32rem] p-2 font-mono text-sm border rounded overflow-auto bg-gray-50">
-            {result || 'Run a query to see results'}
+            {result || "Run a query to see results"}
           </pre>
         </div>
       </div>
@@ -87,14 +86,14 @@ query {
         <div className="prose max-w-none">
           <h3>Getting Started</h3>
           <p>
-            The News On Africa GraphQL API provides a flexible way to query our content. You can
-            request exactly the data you need, reducing bandwidth usage and improving performance.
+            The News On Africa GraphQL API provides a flexible way to query our content. You can request exactly the
+            data you need, reducing bandwidth usage and improving performance.
           </p>
 
           <h3>Authentication</h3>
           <p>
-            Some queries and mutations require authentication. To authenticate, include an
-            Authorization header with a Bearer token:
+            Some queries and mutations require authentication. To authenticate, include an Authorization header with a
+            Bearer token:
           </p>
           <pre className="bg-gray-100 p-2 rounded">{`Authorization: Bearer your-token-here`}</pre>
 
@@ -160,5 +159,5 @@ query {
         </div>
       </div>
     </div>
-  );
+  )
 }

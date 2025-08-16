@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export default function GlobalNotFound() {
   return (
     <html lang="en">
@@ -10,35 +8,35 @@ export default function GlobalNotFound() {
       <body>
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            padding: '16px',
-            textAlign: 'center',
-            fontFamily: 'system-ui, sans-serif',
-            background: '#f9fafb',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            padding: "16px",
+            textAlign: "center",
+            fontFamily: "system-ui, sans-serif",
+            background: "#f9fafb",
           }}
         >
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '16px', color: '#111' }}>
+          <h2 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "16px", color: "#111" }}>
             404 - Page Not Found
           </h2>
-          <p style={{ marginBottom: '32px', color: '#6B7280', lineHeight: '1.5' }}>
-            Sorry, we couldn&apos;t find the page you&apos;re looking for.
+          <p style={{ marginBottom: "32px", color: "#6B7280", lineHeight: "1.5" }}>
+            Sorry, we couldn't find the page you're looking for.
           </p>
-          <Link
+          <a
             href="/"
             style={{
-              color: '#2563eb',
-              textDecoration: 'underline',
-              fontSize: '1rem',
+              color: "#2563eb",
+              textDecoration: "underline",
+              fontSize: "1rem",
             }}
           >
             Return to Homepage
-          </Link>
+          </a>
         </div>
       </body>
     </html>
-  );
+  )
 }

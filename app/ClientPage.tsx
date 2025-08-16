@@ -1,9 +1,9 @@
-'use client';
+"use client"
 
-import { Suspense } from 'react';
+import { Suspense } from "react"
 
 interface ClientPageProps {
-  initialPosts?: any[];
+  initialPosts?: any[]
 }
 
 export default function ClientPage({ initialPosts = [] }: ClientPageProps) {
@@ -15,5 +15,5 @@ export default function ClientPage({ initialPosts = [] }: ClientPageProps) {
         <div>Content would go here</div>
       </Suspense>
     </div>
-  );
+  )
 }

@@ -1,20 +1,19 @@
-'use client';
+"use client"
 
-import { AlertCircle, Home, RefreshCw } from 'lucide-react';
-import { useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
+import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, Home, RefreshCw } from "lucide-react"
 
 interface PostErrorProps {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }
 
 export default function PostError({ error, reset }: PostErrorProps) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error('Post page error:', error);
-  }, [error]);
+    console.error("Post page error:", error)
+  }, [error])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -33,13 +32,13 @@ export default function PostError({ error, reset }: PostErrorProps) {
             Try again
           </Button>
 
-          <Button onClick={() => (window.location.href = '/')} variant="outline" className="w-full">
+          <Button onClick={() => (window.location.href = "/")} variant="outline" className="w-full">
             <Home className="mr-2 h-4 w-4" />
             Return to homepage
           </Button>
         </div>
 
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === "development" && (
           <details className="mt-6 text-left">
             <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
               Error details (development only)
@@ -52,5 +51,5 @@ export default function PostError({ error, reset }: PostErrorProps) {
         )}
       </div>
     </div>
-  );
+  )
 }

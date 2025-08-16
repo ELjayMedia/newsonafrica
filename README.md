@@ -22,22 +22,22 @@ The application follows a feature-based architecture with the following structur
 
 \`\`\`
 news-on-africa/
-├── app/ # Next.js App Router pages and layouts
-│ ├── api/ # API routes
-│ ├── auth/ # Authentication pages
-│ ├── category/ # Category pages
-│ ├── post/ # Post pages
-│ └── ... # Other page routes
-├── components/ # Shared React components
-│ ├── ui/ # UI components (buttons, inputs, etc.)
-│ ├── layout/ # Layout components
-│ └── features/ # Feature-specific components
-├── contexts/ # React context providers
-├── hooks/ # Custom React hooks
-├── lib/ # Utility libraries
-├── services/ # API service modules
-├── types/ # TypeScript type definitions
-└── utils/ # Utility functions
+├── app/                  # Next.js App Router pages and layouts
+│   ├── api/              # API routes
+│   ├── auth/             # Authentication pages
+│   ├── category/         # Category pages
+│   ├── post/             # Post pages
+│   └── ...               # Other page routes
+├── components/           # Shared React components
+│   ├── ui/               # UI components (buttons, inputs, etc.)
+│   ├── layout/           # Layout components
+│   └── features/         # Feature-specific components
+├── contexts/             # React context providers
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility libraries
+├── services/             # API service modules
+├── types/                # TypeScript type definitions
+└── utils/                # Utility functions
 \`\`\`
 
 ### Data Flow
@@ -61,54 +61,39 @@ news-on-africa/
 Create a `.env.local` file with the following variables:
 
 \`\`\`
-
 # WordPress
-
-NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/graphql
-WORDPRESS_REST_API_URL=https://your-wordpress-api.com/wp-json/wp/v2
+WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
 
 # Supabase
-
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Authentication
-
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Analytics
-
 NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
-# Sentry
-
-SENTRY_DSN=your_sentry_dsn
-NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
-
 # Site
-
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 \`\`\`
 
 ### Installation
 
 \`\`\`bash
-
 # Clone the repository
-
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-
 npm install
 
 # Run the development server
-
 npm run dev
 \`\`\`
 
@@ -123,17 +108,13 @@ The application is deployed on Vercel with the following configuration:
 ## 🧪 Testing
 
 \`\`\`bash
-
 # Run unit tests
-
 npm test
 
 # Run end-to-end tests
-
 npm run test:e2e
 
 # Run linting
-
 npm run lint
 \`\`\`
 
@@ -146,10 +127,6 @@ Additional documentation:
 - [Authentication Flow](./docs/auth.md)
 - [Deployment Guide](./docs/deployment.md)
 
-## 💰 Funding
-
-The development of News On Africa is funded by PJA Media. We appreciate their support.
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -161,22 +138,3 @@ The development of News On Africa is funded by PJA Media. We appreciate their su
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 📡 Data fetching & caching
-
-The app uses a small data layer built around [`lib/fetcher.ts`](./lib/fetcher.ts) and [`lib/wp-client.ts`](./lib/wp-client.ts).
-
-- Requests are deduplicated and retried with exponential backoff.
-- Responses are cached using HTTP ETags and validated with Zod at the boundary.
-- Server components leverage ISR (`revalidate` + `force-cache`) to keep data fresh.
-- Client components can use React Query/SWR with a `staleTime` of 60–300s.
-
-### On‑demand revalidation
-
-WordPress can trigger incremental static regeneration by calling:
-
-\`\`\`
-POST https://<your-vercel-app>/api/revalidate?secret=MY_SECRET&path=/updated-path
-\`\`\`
-
-Configure the secret via `REVALIDATION_SECRET` and see [`app/api/revalidate/route.ts`](./app/api/revalidate/route.ts).

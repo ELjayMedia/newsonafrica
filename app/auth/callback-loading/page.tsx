@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react"
 
 export default function AuthCallbackLoading() {
   return (
@@ -9,5 +9,5 @@ export default function AuthCallbackLoading() {
         <p className="mt-2 text-gray-600">Please wait while we authenticate your account.</p>
       </div>
     </div>
-  );
+  )
 }

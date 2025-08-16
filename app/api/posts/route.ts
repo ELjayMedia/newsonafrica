@@ -1,8 +1,7 @@
-import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-import { applyRateLimit, handleApiError, successResponse } from '@/lib/api-utils';
-import { fetchPosts } from '@/lib/wordpress-api';
+import type { NextRequest } from "next/server"
+import { z } from "zod"
+import { fetchPosts } from "@/lib/wordpress-api"
+import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
 
 // Input validation schema
 const querySchema = z.object({
@@ -13,22 +12,22 @@ const querySchema = z.object({
   search: z.string().optional(),
   author: z.string().optional(),
   featured: z
-    .enum(['true', 'false'])
+    .enum(["true", "false"])
     .optional()
-    .transform((val) => val === 'true'),
-});
+    .transform((val) => val === "true"),
+})
 
 export async function GET(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 20, 'POSTS_API_CACHE_TOKEN');
-    if (rateLimitResponse) return rateLimitResponse;
+    const rateLimitResponse = await applyRateLimit(request, 20, "POSTS_API_CACHE_TOKEN")
+    if (rateLimitResponse) return rateLimitResponse
 
     // Parse and validate query parameters
-    const { searchParams } = new URL(request.url);
-    const params = Object.fromEntries(searchParams.entries());
+    const { searchParams } = new URL(request.url)
+    const params = Object.fromEntries(searchParams.entries())
 
-    const validatedParams = querySchema.parse(params);
+    const validatedParams = querySchema.parse(params)
 
     // Fetch posts with validated parameters
     const posts = await fetchPosts({
@@ -39,19 +38,23 @@ export async function GET(request: NextRequest) {
       search: validatedParams.search,
       author: validatedParams.author,
       featured: validatedParams.featured,
-    });
+    })
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(posts.total / validatedParams.per_page)
 
     // Return successful response with pagination metadata
     return successResponse(posts.data, {
       pagination: {
         page: validatedParams.page,
         perPage: validatedParams.per_page,
-        hasNextPage: posts.pageInfo?.hasNextPage ?? false,
+        total: posts.total,
+        totalPages,
+        hasNextPage: validatedParams.page < totalPages,
         hasPrevPage: validatedParams.page > 1,
-        endCursor: posts.pageInfo?.endCursor ?? null,
       },
-    });
+    })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }

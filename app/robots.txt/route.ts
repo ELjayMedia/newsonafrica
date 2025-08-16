@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
-
-import { siteConfig } from '@/config/site';
+import { siteConfig } from "@/config/site"
+import { NextResponse } from "next/server"
 
 export async function GET() {
-  const baseUrl = siteConfig.url || 'https://newsonafrica.com';
+  const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
   const robotsTxt = `
 # News on Africa Robots.txt
@@ -20,12 +19,12 @@ Sitemap: ${baseUrl}/news-sitemap.xml
 Sitemap: ${baseUrl}/server-sitemap.xml
 
 Host: ${baseUrl}
-  `.trim();
+  `.trim()
 
   return new NextResponse(robotsTxt, {
     headers: {
-      'Content-Type': 'text/plain',
-      'Cache-Control': 'public, max-age=3600',
+      "Content-Type": "text/plain",
+      "Cache-Control": "public, max-age=3600",
     },
-  });
+  })
 }

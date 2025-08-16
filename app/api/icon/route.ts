@@ -1,9 +1,9 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import sharp from 'sharp';
+import { type NextRequest, NextResponse } from "next/server"
+import sharp from "sharp"
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const size = Number.parseInt(searchParams.get('size') || '192', 10);
+  const searchParams = request.nextUrl.searchParams
+  const size = Number.parseInt(searchParams.get("size") || "192", 10)
 
   // Create a simple icon with text
   const svgBuffer = Buffer.from(`
@@ -11,16 +11,16 @@ export async function GET(request: NextRequest) {
       <rect width="${size}" height="${size}" fill="#000000"/>
       <text x="50%" y="50%" font-family="Arial" font-size="${size / 4}" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">NoA</text>
     </svg>
-  `);
+  `)
 
   // Convert SVG to PNG
-  const pngBuffer = await sharp(svgBuffer).resize(size, size).png().toBuffer();
+  const pngBuffer = await sharp(svgBuffer).resize(size, size).png().toBuffer()
 
   // Return the PNG image
   return new NextResponse(pngBuffer, {
     headers: {
-      'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
-  });
+  })
 }

@@ -7,16 +7,11 @@
   "crons": [
     {
       "path": "/api/revalidate?type=all",
-
-      "schedule": "0 05 * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/webhooks/wordpress",
-      "schedule": "0 06 * * *"
-    },
-    {
-      "path": "/api/cron/suggestions",
-      "schedule": "0 07 * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [

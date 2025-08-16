@@ -1,26 +1,25 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
-
-import { SubscriptionsContent } from '@/components/SubscriptionsContent';
+import type { Metadata } from "next"
+import { Suspense } from "react"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
+import { SubscriptionsContent } from "@/components/SubscriptionsContent"
 
 export const metadata: Metadata = {
-  title: 'Manage Subscriptions',
-  description: 'Manage your News On Africa subscriptions and payment methods.',
-};
+  title: "Manage Subscriptions",
+  description: "Manage your News On Africa subscriptions and payment methods.",
+}
 
 export default async function SubscriptionsPage() {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect('/auth?redirectTo=/subscriptions');
+    redirect("/auth?redirectTo=/subscriptions")
   }
 
   return (
@@ -31,5 +30,5 @@ export default async function SubscriptionsPage() {
         <SubscriptionsContent userId={session.user.id} />
       </Suspense>
     </div>
-  );
+  )
 }

@@ -1,19 +1,18 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-
-import { OptimizedImage } from '@/components/OptimizedImage';
-import { PostList } from '@/components/PostList';
-import { Skeleton } from '@/components/Skeleton';
-import type { WordPressPost, WordPressAuthor } from '@/lib/api/wordpress';
+import { useState } from "react"
+import { OptimizedImage } from "@/components/OptimizedImage"
+import { PostList } from "@/components/PostList"
+import { Skeleton } from "@/components/Skeleton"
+import type { WordPressPost, WordPressAuthor } from "@/lib/api/wordpress"
 
 interface AuthorContentProps {
-  author: WordPressAuthor;
-  posts: WordPressPost[];
+  author: WordPressAuthor
+  posts: WordPressPost[]
 }
 
 export default function AuthorContent({ author, posts }: AuthorContentProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false)
 
   if (!author) {
     return (
@@ -23,7 +22,7 @@ export default function AuthorContent({ author, posts }: AuthorContentProps) {
           <p>The requested author could not be found.</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -43,9 +42,7 @@ export default function AuthorContent({ author, posts }: AuthorContentProps) {
               />
             ) : (
               <div className="w-30 h-30 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-bold text-gray-500">
-                  {author.name.charAt(0).toUpperCase()}
-                </span>
+                <span className="text-2xl font-bold text-gray-500">{author.name.charAt(0).toUpperCase()}</span>
               </div>
             )}
           </div>
@@ -53,9 +50,7 @@ export default function AuthorContent({ author, posts }: AuthorContentProps) {
           {/* Author Info */}
           <div className="flex-1">
             <h1 className="text-3xl font-bold mb-2">{author.name}</h1>
-            {author.description && (
-              <p className="text-gray-600 mb-4 leading-relaxed">{author.description}</p>
-            )}
+            {author.description && <p className="text-gray-600 mb-4 leading-relaxed">{author.description}</p>}
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <span>{posts.length} articles published</span>
             </div>
@@ -86,5 +81,5 @@ export default function AuthorContent({ author, posts }: AuthorContentProps) {
         )}
       </div>
     </div>
-  );
+  )
 }

@@ -1,71 +1,61 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-
-import AuthorContent from './AuthorContent';
-
-import { getLatestPosts } from '@/lib/api/wordpress';
-import { createLogger } from '@/lib/logger';
-
-const logger = createLogger('author-page');
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
+import { getLatestPosts } from "@/lib/api/wordpress"
+import AuthorContent from "./AuthorContent"
 
 interface AuthorPageProps {
-  params: Promise<{ slug: string }>;
+  params: { slug: string }
 }
 
-export const revalidate = 600; // Revalidate every 10 minutes
+export const revalidate = 600 // Revalidate every 10 minutes
 
 // Enhanced metadata generation for author pages
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  logger.debug(`🔍 Generating metadata for author: ${slug}`);
+  console.log(`🔍 Generating metadata for author: ${params.slug}`)
 
   try {
     // Get latest posts to find author information
-    const { posts } = await getLatestPosts(100);
+    const { posts } = await getLatestPosts(100)
 
     // Find posts by this author
-    const authorPosts = posts.filter((post) => post.author.node.slug === slug);
+    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
 
     if (authorPosts.length === 0) {
-      logger.warn(`⚠️ Author not found: ${slug}`);
+      console.warn(`⚠️ Author not found: ${params.slug}`)
       return {
-        title: 'Author Not Found - News On Africa',
-        description: 'The requested author could not be found.',
+        title: "Author Not Found - News On Africa",
+        description: "The requested author could not be found.",
         robots: {
           index: false,
           follow: false,
         },
-      };
+      }
     }
 
-    const author = authorPosts[0].author.node;
-    logger.debug(`✅ Generated metadata for author: "${author.name}"`);
+    const author = authorPosts[0].author.node
+    console.log(`✅ Generated metadata for author: "${author.name}"`)
 
     // Create dynamic description
-    const postCount = authorPosts.length;
+    const postCount = authorPosts.length
     const description =
       author.description ||
-      `Read ${postCount} articles by ${author.name} on News On Africa. ${author.name} covers news and stories from across the African continent.`;
+      `Read ${postCount} articles by ${author.name} on News On Africa. ${author.name} covers news and stories from across the African continent.`
 
     // Get author avatar or featured image from their latest post
     const avatarUrl =
-      author.avatar?.url ||
-      authorPosts[0]?.featuredImage?.node?.sourceUrl ||
-      '/default-author-image.jpg';
+      author.avatar?.url || authorPosts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
 
     // Create canonical URL
-    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/author/${slug}`;
+    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`
 
     // Generate keywords from author's articles
     const keywords = [
       author.name,
       `${author.name} Articles`,
-      'African Journalist',
-      'News On Africa',
-      ...authorPosts
-        .slice(0, 3)
-        .flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
-    ].join(', ');
+      "African Journalist",
+      "News On Africa",
+      ...authorPosts.slice(0, 3).flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
+    ].join(", ")
 
     return {
       title: `${author.name} - News On Africa`,
@@ -75,27 +65,27 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
 
       // Open Graph metadata
       openGraph: {
-        type: 'profile',
+        type: "profile",
         title: `${author.name} - News On Africa`,
         description,
         url: canonicalUrl,
-        siteName: 'News On Africa',
-        locale: 'en_US',
+        siteName: "News On Africa",
+        locale: "en_US",
         images: [
           {
             url: avatarUrl,
             width: 400,
             height: 400,
             alt: `${author.name} - Author at News On Africa`,
-            type: 'image/jpeg',
+            type: "image/jpeg",
           },
         ],
       },
 
       // Twitter metadata
       twitter: {
-        card: 'summary',
-        site: '@newsonafrica',
+        card: "summary",
+        site: "@newsonafrica",
         title: `${author.name} - News On Africa`,
         description,
         images: [
@@ -110,7 +100,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       alternates: {
         canonical: canonicalUrl,
         languages: {
-          'en-US': canonicalUrl,
+          "en-US": canonicalUrl,
         },
       },
 
@@ -123,52 +113,51 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
           index: true,
           follow: true,
           noimageindex: false,
-          'max-video-preview': -1,
-          'max-image-preview': 'large',
-          'max-snippet': -1,
+          "max-video-preview": -1,
+          "max-image-preview": "large",
+          "max-snippet": -1,
         },
       },
 
       // Additional SEO metadata
       other: {
-        'profile:first_name': author.name.split(' ')[0] || '',
-        'profile:last_name': author.name.split(' ').slice(1).join(' ') || '',
-        'profile:username': author.slug,
-        'article:author': author.name,
+        "profile:first_name": author.name.split(" ")[0] || "",
+        "profile:last_name": author.name.split(" ").slice(1).join(" ") || "",
+        "profile:username": author.slug,
+        "article:author": author.name,
       },
-    };
+    }
   } catch (error) {
-    console.error(`❌ Error generating metadata for author ${slug}:`, error);
+    console.error(`❌ Error generating metadata for author ${params.slug}:`, error)
     return {
-      title: `${slug.charAt(0).toUpperCase() + slug.slice(1)} - News On Africa`,
-      description: `Articles and stories by ${slug} on News On Africa`,
+      title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
+      description: `Articles and stories by ${params.slug} on News On Africa`,
       robots: {
         index: false,
         follow: true,
       },
-    };
+    }
   }
 }
 
 // Server component that fetches data and renders the page
 export default async function AuthorPage({ params }: AuthorPageProps) {
-  const { slug } = await params;
   try {
     // Get latest posts to find author and their articles
-    const { posts } = await getLatestPosts(200);
+    const { posts } = await getLatestPosts(200)
 
     // Find posts by this author
-    const authorPosts = posts.filter((post) => post.author.node.slug === slug);
+    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
 
     if (authorPosts.length === 0) {
-      notFound();
+      notFound()
     }
 
-    const author = authorPosts[0].author.node;
+    const author = authorPosts[0].author.node
 
-    return <AuthorContent author={author} posts={authorPosts} />;
+    return <AuthorContent author={author} posts={authorPosts} />
   } catch (error) {
-    console.error(`Error loading author page for ${slug}:`, error);
-    throw error;
+    console.error(`Error loading author page for ${params.slug}:`, error)
+    throw error
   }
 }

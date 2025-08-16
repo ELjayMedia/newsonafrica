@@ -7,7 +7,6 @@
 **Problem**: Service account email not recognized in Play Console
 
 **Solutions**:
-
 - Ensure the Google Cloud project is linked to Play Console
 - Check that the service account email is exactly correct
 - Wait 10-15 minutes after creating the service account
@@ -17,7 +16,6 @@
 **Problem**: Service account lacks required permissions
 
 **Solutions**:
-
 - Grant "Release manager" role in Play Console
 - Add "View app information" permission
 - Ensure the service account is invited as a user
@@ -36,7 +34,6 @@ gcloud services enable androidpublisher.googleapis.com
 **Problem**: Google Cloud project not linked to Play Console
 
 **Solutions**:
-
 1. Go to Play Console → Setup → API access
 2. Click "Link Google Cloud project"
 3. Select your project and confirm
@@ -47,17 +44,13 @@ gcloud services enable androidpublisher.googleapis.com
 
 **Solutions**:
 \`\`\`bash
-
 # Test authentication
-
 gcloud auth activate-service-account --key-file=google-play-service-account.json
 
 # List authenticated accounts
-
 gcloud auth list
 
 # Set project
-
 gcloud config set project YOUR_PROJECT_ID
 \`\`\`
 
@@ -66,7 +59,6 @@ gcloud config set project YOUR_PROJECT_ID
 **Problem**: Fastlane can't upload to Play Store
 
 **Solutions**:
-
 - Check AAB file exists and is valid
 - Verify service account has correct permissions
 - Ensure app exists in Play Console
@@ -77,7 +69,6 @@ gcloud config set project YOUR_PROJECT_ID
 **Problem**: Automated deployment fails
 
 **Solutions**:
-
 - Verify all secrets are set correctly
 - Check service account JSON is valid
 - Ensure keystore is properly encoded
@@ -86,21 +77,16 @@ gcloud config set project YOUR_PROJECT_ID
 ## Verification Commands
 
 \`\`\`bash
-
 # Check service account
-
 gcloud iam service-accounts list
 
 # Test API access
-
 gcloud auth activate-service-account --key-file=google-play-service-account.json
 
 # Verify API is enabled
-
 gcloud services list --enabled | grep androidpublisher
 
 # Test fastlane
-
 fastlane android internal --verbose
 \`\`\`
 
