@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+pnpm lint-staged
+pnpm lint
+pnpm typecheck
+prettier --check .
