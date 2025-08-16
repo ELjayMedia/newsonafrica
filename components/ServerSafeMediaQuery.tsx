@@ -1,0 +1,17 @@
+import ClientMediaQueryWrapper from "./client/ClientMediaQueryWrapper"
+import type { ReactNode } from "react"
+
+interface ServerSafeMediaQueryProps {
+  query: string
+  children: (matches: boolean) => ReactNode
+  fallback?: ReactNode
+}
+
+export default function ServerSafeMediaQuery({ query, children, fallback }: ServerSafeMediaQueryProps) {
+  return (
+    <>
+      {fallback && <noscript>{fallback}</noscript>}
+      <ClientMediaQueryWrapper type="mediaQuery" query={query} children={children} />
+    </>
+  )
+}

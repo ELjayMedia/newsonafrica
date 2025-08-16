@@ -1,0 +1,52 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// Alternative implementation using require
+// @ts-ignore
+const algoliasearch = require('algoliasearch');
+
+// Initialize the Algolia client on the server side
+const client = algoliasearch(
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '',
+  process.env.ALGOLIA_SEARCH_API_KEY || '' // Use server-side env variable
+);
+
+const index = client.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || '');
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('query') || '';
+    const page = parseInt(searchParams.get('page') || '0', 10);
+    const hitsPerPage = parseInt(searchParams.get('hitsPerPage') || '10', 10);
+    
+    // Validate the query
+    if (!query) {
+      return NextResponse.json({ hits: [], nbHits: 0, page, nbPages: 0 });
+    }
+
+    // Perform the search
+    const { hits, nbHits, nbPages } = await index.search(query, {
+      page,
+      hitsPerPage,
+      attributesToRetrieve: [
+        'title',
+        'excerpt',
+        'slug',
+        'date',
+        'modified',
+        'featuredImage',
+        'categories',
+        'author'
+      ],
+      attributesToHighlight: ['title', 'excerpt'],
+    });
+
+    return NextResponse.json({ hits, nbHits, page, nbPages });
+  } catch (error) {
+    console.error('Search API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to perform search' },
+      { status: 500 }
+    );
+  }
+}
