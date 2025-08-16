@@ -184,7 +184,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         {/* Featured Posts Grid */}
         {featuredPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold mb-6">Featured Stories</h2>
+            <h2 className="text-2xl font-bold mb-6">Latest Stories</h2>
             <NewsGrid
               posts={featuredPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
               layout="vertical"
