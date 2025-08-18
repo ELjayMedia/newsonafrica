@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import type React from "react"
@@ -37,7 +38,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setNotifications(result.notifications)
         setNotificationCount(result.count)
       } catch (error) {
-        console.error("Error fetching notifications:", error)
+        logger.error("Error fetching notifications:", error)
       } finally {
         setLoading(false)
       }
@@ -61,7 +62,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }))
       }
     } catch (error) {
-      console.error("Error marking notification as read:", error)
+      logger.error("Error marking notification as read:", error)
     }
   }
 
@@ -83,7 +84,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         })
       }
     } catch (error) {
-      console.error("Error marking all notifications as read:", error)
+      logger.error("Error marking all notifications as read:", error)
       toast({
         title: "Error",
         description: "Failed to mark notifications as read",
@@ -105,7 +106,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }))
       }
     } catch (error) {
-      console.error("Error deleting notification:", error)
+      logger.error("Error deleting notification:", error)
     }
   }
 
@@ -124,7 +125,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         })
       }
     } catch (error) {
-      console.error("Error deleting all notifications:", error)
+      logger.error("Error deleting all notifications:", error)
       toast({
         title: "Error",
         description: "Failed to delete notifications",

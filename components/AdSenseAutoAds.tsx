@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -24,14 +25,14 @@ export function AdSenseAutoAds({ publisherId = "ca-pub-6089753674605524" }: AdSe
 
       // Add event listeners for script load/error
       script.addEventListener("load", () => {
-        console.log("AdSense Auto Ads script loaded successfully")
+        logger.info("AdSense Auto Ads script loaded successfully")
       })
 
       script.addEventListener("error", (error) => {
-        console.error("Error loading AdSense Auto Ads script:", error)
+        logger.error("Error loading AdSense Auto Ads script:", error)
       })
     } catch (error) {
-      console.error("Error setting up AdSense Auto Ads:", error)
+      logger.error("Error setting up AdSense Auto Ads:", error)
     }
 
     // Cleanup function

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { cache } from "react"
 import { fetchCategoryPosts } from "./wordpress-api"
 
@@ -91,7 +92,7 @@ export const fetchSportPosts = cache(async (count = 5) => {
 
     return posts || []
   } catch (error) {
-    console.error("Error fetching sport posts:", error)
+    logger.error("Error fetching sport posts:", error)
     return []
   }
 })

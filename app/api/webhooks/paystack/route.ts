@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { startWebhookTunnel } from "@/lib/paystack-utils"
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-paystack-signature")
 
     if (!signature) {
-      console.error("No Paystack signature provided")
+      logger.error("No Paystack signature provided")
       return NextResponse.json({ error: "No signature provided" }, { status: 400 })
     }
 
@@ -25,13 +26,13 @@ export async function POST(request: Request) {
     const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
 
     if (hash !== signature) {
-      console.error("Invalid Paystack signature")
+      logger.error("Invalid Paystack signature")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the body
     const event = JSON.parse(body)
-    console.log(`Received Paystack webhook: ${event.event}`)
+    logger.info(`Received Paystack webhook: ${event.event}`)
 
     // Handle different event types
     switch (event.event) {
@@ -64,19 +65,19 @@ export async function POST(request: Request) {
         break
 
       default:
-        console.log(`Unhandled Paystack event: ${event.event}`, event.data)
+        logger.info(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error("Webhook processing error:", error)
+    logger.error("Webhook processing error:", error)
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
 
 // Event handlers
 async function handleChargeSuccess(data: any) {
-  console.log("Processing successful charge:", data.reference)
+  logger.info("Processing successful charge:", data.reference)
 
   // TODO: Implement your business logic
   // 1. Verify the transaction (optional, as Paystack already verified it)
@@ -96,7 +97,7 @@ async function handleChargeSuccess(data: any) {
 }
 
 async function handleSubscriptionCreated(data: any) {
-  console.log("Processing subscription creation:", data.subscription_code)
+  logger.info("Processing subscription creation:", data.subscription_code)
 
   // TODO: Implement your business logic
   // 1. Update your database with subscription information
@@ -116,7 +117,7 @@ async function handleSubscriptionCreated(data: any) {
 }
 
 async function handleSubscriptionDisabled(data: any) {
-  console.log("Processing subscription cancellation:", data.subscription_code)
+  logger.info("Processing subscription cancellation:", data.subscription_code)
 
   // TODO: Implement your business logic
   // 1. Update your database with subscription status
@@ -130,7 +131,7 @@ async function handleSubscriptionDisabled(data: any) {
 }
 
 async function handlePaymentFailed(data: any) {
-  console.log("Processing failed payment:", data.reference)
+  logger.info("Processing failed payment:", data.reference)
 
   // TODO: Implement your business logic
   // 1. Update your database with payment status
@@ -150,19 +151,19 @@ async function handlePaymentFailed(data: any) {
 }
 
 async function handleInvoiceUpdate(data: any) {
-  console.log("Processing invoice update:", data.invoice_code)
+  logger.info("Processing invoice update:", data.invoice_code)
 
   // TODO: Implement your business logic
 }
 
 async function handleTransferSuccess(data: any) {
-  console.log("Processing successful transfer:", data.reference)
+  logger.info("Processing successful transfer:", data.reference)
 
   // TODO: Implement your business logic
 }
 
 async function handleTransferFailed(data: any) {
-  console.log("Processing failed transfer:", data.reference)
+  logger.info("Processing failed transfer:", data.reference)
 
   // TODO: Implement your business logic
 }

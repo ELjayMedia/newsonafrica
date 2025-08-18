@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect, useRef, useState, memo } from "react"
@@ -71,7 +72,7 @@ export const AdSense = memo(function AdSense({
 
     // If container is too small for the ad format
     if (width < minWidth) {
-      console.log(`Container too small for ad: ${width}px < ${minWidth}px minimum`)
+      logger.info(`Container too small for ad: ${width}px < ${minWidth}px minimum`)
       setContainerTooSmall(true)
       return false
     }
@@ -139,7 +140,7 @@ export const AdSense = memo(function AdSense({
 
     // Check if this ad ID has already been initialized
     if (initializedAds.has(id)) {
-      console.log(`Ad ${id} already initialized, skipping`)
+      logger.info(`Ad ${id} already initialized, skipping`)
       setIsLoading(false)
       return
     }
@@ -187,7 +188,7 @@ export const AdSense = memo(function AdSense({
           }
         }, 500)
       } catch (err) {
-        console.error("Error initializing ad:", err)
+        logger.error("Error initializing ad:", err)
         setIsLoading(false)
       }
     }

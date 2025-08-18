@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect, useState } from "react"
@@ -19,7 +20,7 @@ export function NotificationBadge() {
           setCount(data.count)
         }
       } catch (error) {
-        console.error("Error fetching notification count:", error)
+        logger.error("Error fetching notification count:", error)
       }
     }
 

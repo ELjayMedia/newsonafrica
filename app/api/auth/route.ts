@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { signUp, signIn } from "@/lib/auth"
 import { cookies } from "next/headers"
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
         const user = await signUp(username, email, password)
         return NextResponse.json({ success: true, user })
       } catch (error) {
-        console.error("Signup error:", error)
+        logger.error("Signup error:", error)
         return NextResponse.json({ error: error.message || "Failed to create user" }, { status: 400 })
       }
     }
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         })
         return NextResponse.json({ success: true })
       } catch (error) {
-        console.error("Signin error:", error)
+        logger.error("Signin error:", error)
         return NextResponse.json({ error: error.message || "Authentication failed" }, { status: 401 })
       }
     }
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   } catch (error) {
-    console.error("API route error:", error)
+    logger.error("API route error:", error)
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error creating subscription:", error)
+    logger.error("Error creating subscription:", error)
     return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
   }
 }

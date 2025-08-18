@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "./supabase"
 
 export class AuthStateManager {
@@ -17,7 +18,7 @@ export class AuthStateManager {
 
   private initializeAuthListener() {
     supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email)
+      logger.info("Auth state changed:", event, session?.user?.email)
 
       if (event === "SIGNED_IN" && session?.user) {
         // Ensure user profile exists
@@ -64,7 +65,7 @@ export class AuthStateManager {
         })
       }
     } catch (error) {
-      console.error("Error ensuring user profile:", error)
+      logger.error("Error ensuring user profile:", error)
     }
   }
 
@@ -79,7 +80,7 @@ export class AuthStateManager {
   async signOut() {
     const { error } = await supabase.auth.signOut()
     if (error) {
-      console.error("Sign out error:", error)
+      logger.error("Sign out error:", error)
       throw error
     }
   }

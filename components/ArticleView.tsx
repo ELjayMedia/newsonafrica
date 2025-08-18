@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
@@ -69,7 +70,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
 
   // Debug logging
-  console.log("ArticleView Debug:", {
+  logger.info("ArticleView Debug:", {
     postId: id,
     categories: categoryIds,
     categoriesLength: categoryIds.length,
@@ -88,7 +89,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   })
 
   // Debug related posts
-  console.log("Related Posts Debug:", {
+  logger.info("Related Posts Debug:", {
     relatedPosts,
     loading: loadingRelated,
     error: relatedError,

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 
@@ -32,7 +33,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error("Session error:", error)
+    logger.error("Session error:", error)
     return NextResponse.json({ user: null })
   }
 }

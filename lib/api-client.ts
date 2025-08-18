@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { cache } from "react"
 import { client } from "./wordpress-api"
 import { queries } from "./wordpress-queries"
@@ -22,7 +23,7 @@ const isOnline = () => {
 export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
   // If we're offline, don't even try to fetch
   if (!isOnline()) {
-    console.log("Device is offline, skipping API request")
+    logger.info("Device is offline, skipping API request")
     throw new Error("Device is offline")
   }
 
@@ -41,7 +42,7 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
       clearTimeout(timeoutId)
       return response
     } catch (error) {
-      console.error(`API request attempt ${attempt + 1} failed:`, error)
+      logger.error(`API request attempt ${attempt + 1} failed:`, error)
       lastError = error
 
       // Check if it's a network error or timeout
@@ -52,7 +53,7 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
           error.message.includes("aborted"))
 
       if (isNetworkError) {
-        console.log("Network error detected, may be offline")
+        logger.info("Network error detected, may be offline")
         // If it's a network error, don't retry too many times
         if (attempt >= 1) break
       }
@@ -72,7 +73,7 @@ export async function fetchAPI(query: string, variables = {}, maxRetries = 3) {
 export const fetchHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using mock data")
+      logger.info("Device is offline, using mock data")
       return {
         featuredPosts: MOCK_HOMEPAGE_DATA.secondaryPosts,
         categories: MOCK_HOMEPAGE_DATA.categories.map((cat) => ({
@@ -98,7 +99,7 @@ export const fetchHomepageData = cache(async () => {
         taggedPosts: tagged.status === "fulfilled" ? tagged.value.posts.nodes : FALLBACK_POSTS,
       }
     } catch (error) {
-      console.error("Error fetching homepage data, using fallback data:", error)
+      logger.error("Error fetching homepage data, using fallback data:", error)
       return {
         featuredPosts: FALLBACK_POSTS,
         categories: MOCK_HOMEPAGE_DATA.categories,
@@ -106,7 +107,7 @@ export const fetchHomepageData = cache(async () => {
       }
     }
   } catch (error) {
-    console.error("Error in fetchHomepageData, using fallback data:", error)
+    logger.error("Error in fetchHomepageData, using fallback data:", error)
     return {
       featuredPosts: FALLBACK_POSTS,
       categories: MOCK_HOMEPAGE_DATA.categories,
@@ -119,7 +120,7 @@ export const fetchHomepageData = cache(async () => {
 export const fetchCompleteHomepageData = cache(async () => {
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using mock data")
+      logger.info("Device is offline, using mock data")
       return {
         featuredPosts: MOCK_HOMEPAGE_DATA.secondaryPosts,
         categories: MOCK_HOMEPAGE_DATA.categories.map((cat) => ({
@@ -143,14 +144,14 @@ export const fetchCompleteHomepageData = cache(async () => {
         recentPosts,
       }
     } catch (error) {
-      console.error("Error fetching recent posts, using fallback data:", error)
+      logger.error("Error fetching recent posts, using fallback data:", error)
       return {
         ...baseData,
         recentPosts: FALLBACK_POSTS,
       }
     }
   } catch (error) {
-    console.error("Error fetching complete homepage data, using fallback data:", error)
+    logger.error("Error fetching complete homepage data, using fallback data:", error)
     return {
       featuredPosts: FALLBACK_POSTS,
       categories: MOCK_HOMEPAGE_DATA.categories,

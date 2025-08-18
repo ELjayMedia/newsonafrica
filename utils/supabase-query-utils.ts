@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
 import { createClient } from "./supabase/client"
 
@@ -60,7 +61,7 @@ export async function executeWithCache<T>(
     const { data, error } = await queryBuilder
 
     if (error) {
-      console.error("Supabase query error:", error)
+      logger.error("Supabase query error:", error)
       throw error
     }
 
@@ -73,7 +74,7 @@ export async function executeWithCache<T>(
 
     return data as T[]
   } catch (error) {
-    console.error("Error executing query:", error)
+    logger.error("Error executing query:", error)
     throw error
   }
 }
@@ -135,7 +136,7 @@ export async function fetchById<T>(
       // Record not found
       return null
     }
-    console.error(`Error fetching ${table} by ID:`, error)
+    logger.error(`Error fetching ${table} by ID:`, error)
     throw error
   }
 
@@ -184,7 +185,7 @@ export async function fetchByIds<T>(
   const { data, error } = await supabase.from(table).select(columns).in("id", ids)
 
   if (error) {
-    console.error(`Error fetching ${table} by IDs:`, error)
+    logger.error(`Error fetching ${table} by IDs:`, error)
     throw error
   }
 
@@ -221,7 +222,7 @@ export async function insertRecords<T>(
   const { data, error } = await supabase.from(table).insert(records).select(returning)
 
   if (error) {
-    console.error(`Error inserting into ${table}:`, error)
+    logger.error(`Error inserting into ${table}:`, error)
     throw error
   }
 
@@ -259,7 +260,7 @@ export async function updateRecord<T>(
   const { data, error } = await supabase.from(table).update(updates).eq("id", id).select(returning).single()
 
   if (error) {
-    console.error(`Error updating ${table}:`, error)
+    logger.error(`Error updating ${table}:`, error)
     throw error
   }
 
@@ -295,7 +296,7 @@ export async function deleteRecord(
   const { error } = await supabase.from(table).delete().eq("id", id)
 
   if (error) {
-    console.error(`Error deleting from ${table}:`, error)
+    logger.error(`Error deleting from ${table}:`, error)
     throw error
   }
 
@@ -348,7 +349,7 @@ export async function countRecords(
   const { count, error } = await query
 
   if (error) {
-    console.error(`Error counting ${table} records:`, error)
+    logger.error(`Error counting ${table} records:`, error)
     throw error
   }
 
@@ -428,7 +429,7 @@ export async function fetchPaginated<T>(
   const { data, error, count } = await query
 
   if (error) {
-    console.error(`Error fetching paginated ${table}:`, error)
+    logger.error(`Error fetching paginated ${table}:`, error)
     throw error
   }
 
@@ -479,7 +480,7 @@ export async function upsertRecords<T>(
   const { data, error } = await query.select(returning)
 
   if (error) {
-    console.error(`Error upserting into ${table}:`, error)
+    logger.error(`Error upserting into ${table}:`, error)
     throw error
   }
 
@@ -519,7 +520,7 @@ export async function columnExists(table: string, column: string): Promise<boole
       return false
     }
   } catch (error) {
-    console.error(`Error checking if column ${column} exists in table ${table}:`, error)
+    logger.error(`Error checking if column ${column} exists in table ${table}:`, error)
     return false
   }
 }

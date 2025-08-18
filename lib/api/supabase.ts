@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { createClient } from "@supabase/supabase-js"
 import type { User, Session, AuthError } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
@@ -124,7 +125,7 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
       .single()
 
     if (profileError) {
-      console.error("Error fetching user profile:", profileError)
+      logger.error("Error fetching user profile:", profileError)
       // Return user without profile if profile fetch fails
       return {
         user,
@@ -143,7 +144,7 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
       success: true,
     }
   } catch (error) {
-    console.error("Error getting user session:", error)
+    logger.error("Error getting user session:", error)
     return {
       user: null,
       session: null,
@@ -195,7 +196,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
       success: true,
     }
   } catch (error) {
-    console.error("Error signing in:", error)
+    logger.error("Error signing in:", error)
     return {
       user: null,
       session: null,
@@ -273,7 +274,7 @@ export async function signUpWithEmail(email: string, password: string, username:
       })
 
       if (profileError) {
-        console.error("Error creating user profile:", profileError)
+        logger.error("Error creating user profile:", profileError)
         // Don't fail the signup if profile creation fails
       }
     }
@@ -286,7 +287,7 @@ export async function signUpWithEmail(email: string, password: string, username:
       success: true,
     }
   } catch (error) {
-    console.error("Error signing up:", error)
+    logger.error("Error signing up:", error)
     return {
       user: null,
       session: null,
@@ -319,7 +320,7 @@ export async function signOutUser(): Promise<SupabaseResponse<null>> {
       success: true,
     }
   } catch (error) {
-    console.error("Error signing out:", error)
+    logger.error("Error signing out:", error)
     return {
       data: null,
       error: "Failed to sign out. Please try again.",
@@ -396,7 +397,7 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
     })
 
     if (uploadError) {
-      console.error("Upload error:", uploadError)
+      logger.error("Upload error:", uploadError)
       return {
         url: null,
         path: null,
@@ -427,7 +428,7 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
       .eq("id", currentUserId)
 
     if (updateError) {
-      console.error("Error updating profile:", updateError)
+      logger.error("Error updating profile:", updateError)
       // Don't fail the upload if profile update fails
     }
 
@@ -438,7 +439,7 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
       success: true,
     }
   } catch (error) {
-    console.error("Error uploading avatar:", error)
+    logger.error("Error uploading avatar:", error)
     return {
       url: null,
       path: null,
@@ -479,7 +480,7 @@ export async function getUserProfile(userId: string): Promise<SupabaseResponse<U
       success: true,
     }
   } catch (error) {
-    console.error("Error getting user profile:", error)
+    logger.error("Error getting user profile:", error)
     return {
       data: null,
       error: "Failed to fetch user profile",
@@ -531,7 +532,7 @@ export async function updateUserProfile(
       success: true,
     }
   } catch (error) {
-    console.error("Error updating user profile:", error)
+    logger.error("Error updating user profile:", error)
     return {
       data: null,
       error: "Failed to update profile",
@@ -573,7 +574,7 @@ export async function resetUserPassword(email: string): Promise<SupabaseResponse
       success: true,
     }
   } catch (error) {
-    console.error("Error resetting password:", error)
+    logger.error("Error resetting password:", error)
     return {
       data: null,
       error: "Failed to send reset email. Please try again.",
@@ -610,7 +611,7 @@ export async function signInWithOAuth(provider: "google" | "facebook"): Promise<
       success: true,
     }
   } catch (error) {
-    console.error(`Error signing in with ${provider}:`, error)
+    logger.error(`Error signing in with ${provider}:`, error)
     return {
       data: null,
       error: `Failed to sign in with ${provider}. Please try again.`,

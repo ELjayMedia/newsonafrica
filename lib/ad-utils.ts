@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 // Ad configuration and utilities
@@ -138,7 +139,7 @@ export function initializeAd(adElement: HTMLElement) {
     ;(window.adsbygoogle = window.adsbygoogle || []).push({})
     return true
   } catch (error) {
-    console.error("Error initializing ad:", error)
+    logger.error("Error initializing ad:", error)
     return false
   }
 }

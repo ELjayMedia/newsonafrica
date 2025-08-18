@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { GraphQLClient } from "graphql-request"
 import jwt from "jsonwebtoken"
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Facebook login failed" }, { status: 401 })
     }
   } catch (error) {
-    console.error("Facebook login error:", error)
+    logger.error("Facebook login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

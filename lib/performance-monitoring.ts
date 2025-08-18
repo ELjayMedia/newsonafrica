@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { isBrowser } from "@/lib/ad-utils"
 import type { Metric } from "web-vitals"
 
@@ -6,7 +7,7 @@ export function sendWebVitalToVercel(metric: Metric) {
   try {
     // Log in development for debugging
     if (process.env.NODE_ENV === "development") {
-      console.log(`Web Vital: ${metric.name} = ${metric.value}`)
+      logger.info(`Web Vital: ${metric.name} = ${metric.value}`)
     }
 
     // Ensure we're in a browser environment with the required APIs
@@ -35,11 +36,11 @@ export function sendWebVitalToVercel(metric: Metric) {
         keepalive: true,
         headers: { "Content-Type": "application/json" },
       }).catch((err) => {
-        console.error("Failed to send web vital:", err)
+        logger.error("Failed to send web vital:", err)
       })
     }
   } catch (error) {
-    console.error("Error sending web vital:", error)
+    logger.error("Error sending web vital:", error)
   }
 }
 
@@ -48,7 +49,7 @@ export function reportWebVitals(metric: any) {
   try {
     sendWebVitalToVercel(metric)
   } catch (error) {
-    console.error("Error in reportWebVitals:", error)
+    logger.error("Error in reportWebVitals:", error)
   }
 }
 
@@ -64,7 +65,7 @@ function getConnectionSpeed() {
     if (connection.saveData) return "saveData"
     if (connection.effectiveType) return connection.effectiveType
   } catch (error) {
-    console.error("Error getting connection speed:", error)
+    logger.error("Error getting connection speed:", error)
   }
 
   return "unknown"
@@ -99,10 +100,10 @@ export function analyzeResourceTiming() {
         }),
         keepalive: true,
       }).catch((err) => {
-        console.error("Failed to send resource timing data:", err)
+        logger.error("Failed to send resource timing data:", err)
       })
     }
   } catch (error) {
-    console.error("Error analyzing resource timing:", error)
+    logger.error("Error analyzing resource timing:", error)
   }
 }
