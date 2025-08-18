@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import React from "react"
 // Performance monitoring and optimization utilities
 
@@ -8,7 +9,7 @@ export function measureRenderTime(componentName: string) {
 
     return () => {
       const endTime = performance.now()
-      console.log(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
+      logger.info(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
     }
   }
 
@@ -75,7 +76,7 @@ export function detectSlowRenders(threshold = 16) {
 
       const renderTime = end - start
       if (renderTime > threshold) {
-        console.warn(
+        logger.warn(
           `[Performance Warning] Slow render detected: ${args[0]?.displayName || args[0]} took ${renderTime.toFixed(2)}ms`,
         )
       }

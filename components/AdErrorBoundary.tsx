@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { Component, type ErrorInfo, type ReactNode } from "react"
@@ -23,7 +24,7 @@ export class AdErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("AdErrorBoundary caught an error:", error, errorInfo)
+    logger.error("AdErrorBoundary caught an error:", error, errorInfo)
   }
 
   render() {

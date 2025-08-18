@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rateLimit"
 
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
     // In production, you would store this data in a database
     // For now, we'll just log it in development
     if (process.env.NODE_ENV === "development") {
-      console.log("Resource timing data:", body)
+      logger.info("Resource timing data:", body)
     }
 
     // Return success
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("Error processing resource analytics:", error)
+    logger.error("Error processing resource analytics:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextRequest, NextResponse } from 'next/server';
 
 // This is a fallback implementation that doesn't use Algolia
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       nbPages: 1 
     });
   } catch (error) {
-    console.error('Search API error:', error);
+    logger.error('Search API error:', error);
     return NextResponse.json(
       { error: 'Failed to perform search', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

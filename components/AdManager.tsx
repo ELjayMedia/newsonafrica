@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import type React from "react"
@@ -47,11 +48,11 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
         // Set up GPT event listeners
         window.googletag.cmd.push(() => {
           window.googletag.pubads().addEventListener("slotOnload", (event) => {
-            console.log("📺 Ad loaded:", event.slot.getSlotElementId())
+            logger.info("📺 Ad loaded:", event.slot.getSlotElementId())
           })
 
           window.googletag.pubads().addEventListener("slotRenderEnded", (event) => {
-            console.log("🎨 Ad rendered:", event.slot.getSlotElementId(), "Empty:", event.isEmpty)
+            logger.info("🎨 Ad rendered:", event.slot.getSlotElementId(), "Empty:", event.isEmpty)
           })
         })
       } else {
@@ -63,12 +64,12 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
 
   const registerAdSlot = (slotId: string) => {
     activeSlots.current.add(slotId)
-    console.log("📝 Registered ad slot:", slotId)
+    logger.info("📝 Registered ad slot:", slotId)
   }
 
   const unregisterAdSlot = (slotId: string) => {
     activeSlots.current.delete(slotId)
-    console.log("🗑️ Unregistered ad slot:", slotId)
+    logger.info("🗑️ Unregistered ad slot:", slotId)
   }
 
   const getActiveSlots = () => {
@@ -80,12 +81,12 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
 
     // Prevent too frequent refreshes
     if (now - lastRefreshTime.current < refreshCooldown) {
-      console.log("⏳ Ad refresh skipped - too frequent")
+      logger.info("⏳ Ad refresh skipped - too frequent")
       return
     }
 
     if (typeof window !== "undefined" && window.googletag) {
-      console.log("🔄 Refreshing all ads, active slots:", getActiveSlots())
+      logger.info("🔄 Refreshing all ads, active slots:", getActiveSlots())
 
       window.googletag.cmd.push(() => {
         // Only refresh if we have active slots
@@ -102,12 +103,12 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
 
     // Prevent too frequent refreshes
     if (now - lastRefreshTime.current < refreshCooldown) {
-      console.log("⏳ Route-based ad refresh skipped - too frequent")
+      logger.info("⏳ Route-based ad refresh skipped - too frequent")
       return
     }
 
     if (typeof window !== "undefined" && window.googletag) {
-      console.log("🛣️ Refreshing ads for route:", route, "Active slots:", getActiveSlots())
+      logger.info("🛣️ Refreshing ads for route:", route, "Active slots:", getActiveSlots())
 
       window.googletag.cmd.push(() => {
         if (activeSlots.current.size > 0) {
@@ -119,7 +120,7 @@ export function AdManagerProvider({ children }: AdManagerProviderProps) {
           window.googletag.pubads().refresh()
           lastRefreshTime.current = now
 
-          console.log("✅ Ads refreshed for route:", route)
+          logger.info("✅ Ads refreshed for route:", route)
         }
       })
     }

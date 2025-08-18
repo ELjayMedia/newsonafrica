@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { createServerClient } from "@supabase/ssr"
 import type { cookies } from "next/headers"
 import { type Migration, migrations, generateChecksum, sortMigrations, compareVersions } from "@/data/migrations"
@@ -177,13 +178,13 @@ export class MigrationService {
       const { error } = await this.supabase.rpc("exec_sql", { sql })
 
       if (error) {
-        console.error("Error initializing schema versioning:", error)
+        logger.error("Error initializing schema versioning:", error)
         return false
       }
 
       return true
     } catch (error) {
-      console.error("Error initializing schema versioning:", error)
+      logger.error("Error initializing schema versioning:", error)
       return false
     }
   }
@@ -194,13 +195,13 @@ export class MigrationService {
       const { data, error } = await this.supabase.rpc("get_current_schema_version")
 
       if (error) {
-        console.error("Error getting current schema version:", error)
+        logger.error("Error getting current schema version:", error)
         return "0.0.0"
       }
 
       return data || "0.0.0"
     } catch (error) {
-      console.error("Error getting current schema version:", error)
+      logger.error("Error getting current schema version:", error)
       return "0.0.0"
     }
   }
@@ -211,13 +212,13 @@ export class MigrationService {
       const { data, error } = await this.supabase.rpc("is_version_applied", { version_to_check: version })
 
       if (error) {
-        console.error(`Error checking if version ${version} is applied:`, error)
+        logger.error(`Error checking if version ${version} is applied:`, error)
         return false
       }
 
       return data || false
     } catch (error) {
-      console.error(`Error checking if version ${version} is applied:`, error)
+      logger.error(`Error checking if version ${version} is applied:`, error)
       return false
     }
   }
@@ -231,13 +232,13 @@ export class MigrationService {
         .order("applied_at", { ascending: false })
 
       if (error) {
-        console.error("Error getting applied migrations:", error)
+        logger.error("Error getting applied migrations:", error)
         return []
       }
 
       return data || []
     } catch (error) {
-      console.error("Error getting applied migrations:", error)
+      logger.error("Error getting applied migrations:", error)
       return []
     }
   }
@@ -252,13 +253,13 @@ export class MigrationService {
       })
 
       if (error) {
-        console.error("Error getting pending migrations:", error)
+        logger.error("Error getting pending migrations:", error)
         return []
       }
 
       return data || []
     } catch (error) {
-      console.error("Error getting pending migrations:", error)
+      logger.error("Error getting pending migrations:", error)
       return []
     }
   }
@@ -310,7 +311,7 @@ export class MigrationService {
       const { error } = await this.supabase.rpc("exec_sql", { sql: migration.sql })
 
       if (error) {
-        console.error(`Error applying migration ${migration.version}:`, error)
+        logger.error(`Error applying migration ${migration.version}:`, error)
 
         // Register failed migration
         await this.supabase.rpc("register_schema_version", {
@@ -352,7 +353,7 @@ export class MigrationService {
         executionTime: Date.now() - startTime,
       }
     } catch (error: any) {
-      console.error(`Error applying migration ${migration.version}:`, error)
+      logger.error(`Error applying migration ${migration.version}:`, error)
 
       // Register failed migration
       await this.supabase
@@ -366,7 +367,7 @@ export class MigrationService {
           p_status: "error",
           p_error_message: error.message || "Unknown error",
         })
-        .catch((e) => console.error("Error registering failed migration:", e))
+        .catch((e) => logger.error("Error registering failed migration:", e))
 
       return {
         version: migration.version,
@@ -414,7 +415,7 @@ export class MigrationService {
 
       return results
     } catch (error) {
-      console.error("Error applying pending migrations:", error)
+      logger.error("Error applying pending migrations:", error)
       throw error
     }
   }

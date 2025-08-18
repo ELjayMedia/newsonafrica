@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 // WordPress API configuration
@@ -86,7 +87,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       hasMore: page < totalPages,
     }
   } catch (error) {
-    console.error("WordPress search error:", error)
+    logger.error("WordPress search error:", error)
     throw error
   }
 }
@@ -128,7 +129,7 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
 
     return Array.from(suggestions)
   } catch (error) {
-    console.error("Error getting suggestions:", error)
+    logger.error("Error getting suggestions:", error)
     return []
   }
 }

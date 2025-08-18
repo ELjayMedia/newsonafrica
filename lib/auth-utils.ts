@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { client } from "@/lib/wordpress-api"
 import { gql } from "graphql-request"
 
@@ -33,7 +34,7 @@ export async function createOrUpdateUser(userData: { id: string; name: string; e
     const response = await client.request(mutation, variables)
     return response.createUser.user
   } catch (error) {
-    console.error("Error creating or updating user:", error)
+    logger.error("Error creating or updating user:", error)
     throw new Error("Failed to create or update user")
   }
 }

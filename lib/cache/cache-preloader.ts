@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { getRelatedPosts } from "@/lib/api/wordpress"
 import { relatedPostsCache } from "./related-posts-cache"
 import type { WordPressPost } from "@/lib/api/wordpress"
@@ -36,7 +37,7 @@ class CachePreloader {
       // Fetch and cache
       await getRelatedPosts(postId, categories, tags, limit, countryCode)
     } catch (error) {
-      console.warn(`Failed to preload related posts for ${postId}:`, error)
+      logger.warn(`Failed to preload related posts for ${postId}:`, error)
     }
   }
 
@@ -56,7 +57,7 @@ class CachePreloader {
     const { batchSize = 5, delayBetweenBatches = 100, maxConcurrent = 3 } = config
 
     if (this.isPreloading) {
-      console.warn("Preloading already in progress")
+      logger.warn("Preloading already in progress")
       return
     }
 

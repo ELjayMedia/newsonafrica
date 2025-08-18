@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useState } from "react"
@@ -63,7 +64,7 @@ export function ShareButtons({
           description: "The article has been shared",
         })
       } catch (error) {
-        console.error("Error sharing:", error)
+        logger.error("Error sharing:", error)
       }
     } else {
       setIsOpen(true)

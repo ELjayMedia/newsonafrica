@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import type React from "react"
@@ -64,7 +65,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
         if (error) {
-          console.error("Error fetching profile:", error)
+          logger.error("Error fetching profile:", error)
           return
         }
 
@@ -72,7 +73,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setProfile(data)
         }
       } catch (error) {
-        console.error("Error in fetchProfile:", error)
+        logger.error("Error in fetchProfile:", error)
       } finally {
         setLoading(false)
       }
@@ -91,7 +92,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // If refresh failed but we still have a user in state,
         // we'll keep them signed in until they explicitly sign out
         if (user) {
-          console.log("Session refresh failed, but keeping existing user state")
+          logger.info("Session refresh failed, but keeping existing user state")
           return true
         }
 
@@ -113,7 +114,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       return true
     } catch (error) {
-      console.error("Error refreshing session:", error)
+      logger.error("Error refreshing session:", error)
       return !!user
     }
   }, [user, fetchProfile, supabase])
@@ -131,7 +132,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     // If session will expire within the buffer time, refresh it
     if (timeUntilExpiry > 0 && timeUntilExpiry < SESSION_REFRESH_BUFFER) {
-      console.log("Session expiring soon, refreshing...")
+      logger.info("Session expiring soon, refreshing...")
       await refreshSession()
     }
   }, [session, refreshSession])
@@ -162,7 +163,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-          console.log("Auth state changed:", event)
+          logger.info("Auth state changed:", event)
 
           setSession(newSession)
           setUser(newSession?.user ?? null)
@@ -180,7 +181,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           authListener.subscription.unsubscribe()
         }
       } catch (error) {
-        console.error("Error initializing auth:", error)
+        logger.error("Error initializing auth:", error)
         setLoading(false)
         setInitialAuthCheckComplete(true)
       }
@@ -235,7 +236,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       return data
     } catch (error) {
-      console.error("Error signing in:", error)
+      logger.error("Error signing in:", error)
       throw error
     } finally {
       setLoading(false)
@@ -285,7 +286,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         ])
 
         if (profileError) {
-          console.error("Error creating profile:", profileError)
+          logger.error("Error creating profile:", profileError)
         } else {
           await fetchProfile(data.user.id)
         }
@@ -293,7 +294,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       return data
     } catch (error) {
-      console.error("Error signing up:", error)
+      logger.error("Error signing up:", error)
       throw error
     } finally {
       setLoading(false)
@@ -321,7 +322,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         router.push(redirectTo)
       }
     } catch (error) {
-      console.error("Error signing out:", error)
+      logger.error("Error signing out:", error)
       throw error
     } finally {
       setLoading(false)
@@ -343,7 +344,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setProfile(data)
       return data
     } catch (error) {
-      console.error("Error updating profile:", error)
+      logger.error("Error updating profile:", error)
       throw error
     } finally {
       setLoading(false)
@@ -362,7 +363,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
     } catch (error) {
-      console.error("Error resetting password:", error)
+      logger.error("Error resetting password:", error)
       throw error
     } finally {
       setLoading(false)
@@ -385,7 +386,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
       return data
     } catch (error) {
-      console.error("Error signing in with Google:", error)
+      logger.error("Error signing in with Google:", error)
       throw error
     } finally {
       setLoading(false)
@@ -408,7 +409,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
       return data
     } catch (error) {
-      console.error("Error signing in with Facebook:", error)
+      logger.error("Error signing in with Facebook:", error)
       throw error
     } finally {
       setLoading(false)
