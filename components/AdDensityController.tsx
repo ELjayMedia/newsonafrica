@@ -2,7 +2,11 @@
 
 import { useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { shouldReduceAds, getRecommendedAdDensity, adExclusionSelectors } from "@/lib/adOptimization"
+import {
+  shouldReduceAds,
+  getRecommendedAdDensity,
+  adExclusionSelectors,
+} from "@/lib/ad-utils"
 
 export function AdDensityController() {
   const pathname = usePathname()
