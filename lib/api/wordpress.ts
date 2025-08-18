@@ -99,6 +99,44 @@ export interface WordPressSinglePostResponse {
   post: WordPressPost | null
 }
 
+export interface WordPressRestPost {
+  id: number
+  title: {
+    rendered: string
+  }
+  content?: {
+    rendered: string
+  }
+  excerpt: {
+    rendered: string
+  }
+  slug: string
+  date: string
+  modified: string
+  _embedded?: {
+    "wp:featuredmedia"?: {
+      source_url: string
+      alt_text?: string
+    }[]
+    author?: {
+      id: number
+      name: string
+      slug: string
+      description?: string
+      avatar_urls?: Record<string, string>
+    }[]
+    "wp:term"?: {
+      id: number
+      name: string
+      slug: string
+    }[][]
+  }
+  yoast_title?: string
+  yoast_meta?: {
+    description?: string
+  }
+}
+
 // Country configuration
 export interface CountryConfig {
   code: string
@@ -348,7 +386,7 @@ export async function getLatestPostsForCountry(
       return await restApiFallback(
         "posts",
         { per_page: limit, _embed: 1 },
-        (posts: any[]) => ({
+        (posts: WordPressRestPost[]) => ({
           posts: posts.map(transformRestPostToGraphQL),
           hasNextPage: posts.length === limit,
           endCursor: null,
@@ -424,7 +462,7 @@ export async function getPostsByCategoryForCountry(
       const posts = await restApiFallback(
         "posts",
         { categories: category.id, per_page: limit, _embed: 1 },
-        (posts: any[]) => posts.map(transformRestPostToGraphQL),
+        (posts: WordPressRestPost[]) => posts.map(transformRestPostToGraphQL),
         countryCode,
       )
 
@@ -498,7 +536,7 @@ export async function getPostBySlug(slug: string): Promise<WordPressPost | null>
     console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
 
     try {
-      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: any[]) => {
+      return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: WordPressRestPost[]) => {
         if (!posts || posts.length === 0) return null
         return transformRestPostToGraphQL(posts[0])
       })
@@ -579,8 +617,10 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
     console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
 
     try {
-      return await restApiFallback("posts", { sticky: true, per_page: limit, _embed: 1 }, (posts: any[]) =>
-        posts.map(transformRestPostToGraphQL),
+      return await restApiFallback(
+        "posts",
+        { sticky: true, per_page: limit, _embed: 1 },
+        (posts: WordPressRestPost[]) => posts.map(transformRestPostToGraphQL),
       )
     } catch (restError) {
       console.error("Both GraphQL and REST API failed:", restError)
@@ -795,7 +835,7 @@ export async function getRelatedPosts(
         throw new Error(`REST API request failed: ${response.status}`)
       }
 
-      const posts = await response.json()
+      const posts: WordPressRestPost[] = await response.json()
       const transformedPosts = posts.map(transformRestPostToGraphQL).slice(0, limit)
 
       // Cache the REST API result too
@@ -838,7 +878,7 @@ export function clearRelatedPostsCache(): void {
 }
 
 // Transform functions for REST API data
-function transformRestPostToGraphQL(post: any): WordPressPost {
+function transformRestPostToGraphQL(post: WordPressRestPost): WordPressPost {
   return {
     id: post.id.toString(),
     title: post.title.rendered,
@@ -868,7 +908,7 @@ function transformRestPostToGraphQL(post: any): WordPressPost {
     },
     categories: {
       nodes:
-        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+        post._embedded?.["wp:term"]?.[0]?.map((cat) => ({
           id: cat.id.toString(),
           name: cat.name,
           slug: cat.slug,
@@ -876,7 +916,7 @@ function transformRestPostToGraphQL(post: any): WordPressPost {
     },
     tags: {
       nodes:
-        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+        post._embedded?.["wp:term"]?.[1]?.map((tag) => ({
           id: tag.id.toString(),
           name: tag.name,
           slug: tag.slug,
@@ -900,4 +940,12 @@ function transformRestCategoryToGraphQL(category: any): WordPressCategory {
 }
 
 // Export types for use in other files
-export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }
+export type {
+  WordPressPost,
+  WordPressCategory,
+  WordPressAuthor,
+  WordPressTag,
+  WordPressImage,
+  WordPressRestPost,
+  CountryConfig,
+}
