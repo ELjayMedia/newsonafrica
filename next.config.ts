@@ -1,4 +1,10 @@
-const withPWA = require("@ducanh2912/next-pwa").default({
+import { createRequire } from "module"
+import withPWAInit from "@ducanh2912/next-pwa"
+import type { NextConfig } from "next"
+
+const require = createRequire(import.meta.url)
+
+const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   register: true,
@@ -68,8 +74,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   ],
 })
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -177,4 +182,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withPWA(nextConfig)
+export default withPWA(nextConfig)
