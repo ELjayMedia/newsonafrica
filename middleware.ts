@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
@@ -19,7 +20,7 @@ const LEGACY_ROUTES_MAP = {
 
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
-  if (process.env.NODE_ENV === "development") {
+  if (env.NODE_ENV === "development") {
     const { pathname, search } = request.nextUrl
     console.log(`[${request.method}] ${pathname}${search}`)
   }
@@ -65,8 +66,8 @@ export async function middleware(request: NextRequest) {
 
     // Define allowed origins based on environment
     const allowedOrigins =
-      process.env.NODE_ENV === "production"
-        ? [process.env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
+      env.NODE_ENV === "production"
+        ? [env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
         : ["http://localhost:3000"]
 
     const origin = request.headers.get("origin") || ""

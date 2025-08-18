@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
@@ -30,7 +31,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
+  metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],

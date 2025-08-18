@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Alternative implementation using require
@@ -6,11 +7,11 @@ const algoliasearch = require('algoliasearch');
 
 // Initialize the Algolia client on the server side
 const client = algoliasearch(
-  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '',
-  process.env.ALGOLIA_SEARCH_API_KEY || '' // Use server-side env variable
+  env.NEXT_PUBLIC_ALGOLIA_APP_ID || '',
+  env.ALGOLIA_SEARCH_API_KEY || '' // Use server-side env variable
 );
 
-const index = client.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || '');
+const index = client.initIndex(env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || '');
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { NextRequest, NextResponse } from 'next/server';
 
 // This is a fallback implementation that doesn't use Algolia
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use WordPress REST API for search instead
-    const wpApiUrl = process.env.WORDPRESS_API_URL || 'https://example.com/wp-json';
+    const wpApiUrl = env.WORDPRESS_API_URL || 'https://example.com/wp-json';
     const searchUrl = `${wpApiUrl}/wp/v2/posts?search=${encodeURIComponent(query)}&_embed=true`;
     
     const response = await fetch(searchUrl);

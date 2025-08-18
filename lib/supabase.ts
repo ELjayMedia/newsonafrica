@@ -1,9 +1,10 @@
+import { env } from '@/lib/config/env';
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Missing Supabase environment variables. Please check your .env file.")
@@ -17,7 +18,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storageKey: "noa_supabase_auth",
     flowType: "pkce", // Better security for OAuth
-    debug: process.env.NODE_ENV === "development", // Enable debug logs in development
+    debug: env.NODE_ENV === "development", // Enable debug logs in development
     // Define OAuth providers we're using
     providers: ["facebook", "google"],
   },
@@ -39,7 +40,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
 export const createAdminClient = () => {
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseServiceKey) {
     throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")

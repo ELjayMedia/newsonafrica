@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getLatestPosts } from "@/lib/api/wordpress"
@@ -46,7 +47,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       author.avatar?.url || authorPosts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
 
     // Create canonical URL
-    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`
+    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`
 
     // Generate keywords from author's articles
     const keywords = [

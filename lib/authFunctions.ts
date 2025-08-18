@@ -1,4 +1,5 @@
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+import { env } from '@/lib/config/env';
+const WORDPRESS_API_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL
 
 if (!WORDPRESS_API_URL) {
   console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
@@ -85,7 +86,7 @@ export async function signUp(username: string, email: string, password: string) 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`)}`,
+        Authorization: `Basic ${btoa(`${env.WP_APP_USERNAME}:${env.WP_APP_PASSWORD}`)}`,
       },
       body: JSON.stringify({
         username,

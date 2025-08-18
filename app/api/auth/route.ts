@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { NextResponse } from "next/server"
 import { signUp, signIn } from "@/lib/auth"
 import { cookies } from "next/headers"
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
         const token = await signIn(username, password)
         cookies().set("auth_token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: env.NODE_ENV === "production",
           sameSite: "strict",
           maxAge: 60 * 60 * 24 * 7, // 1 week
         })

@@ -1,4 +1,5 @@
 "use client"
+import { env } from '@/lib/config/env';
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -38,7 +39,7 @@ export default function PostError({ error, reset }: PostErrorProps) {
           </Button>
         </div>
 
-        {process.env.NODE_ENV === "development" && (
+        {env.NODE_ENV === "development" && (
           <details className="mt-6 text-left">
             <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
               Error details (development only)

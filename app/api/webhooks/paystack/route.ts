@@ -1,9 +1,10 @@
+import { env } from '@/lib/config/env';
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { startWebhookTunnel } from "@/lib/paystack-utils"
 
 // Start webhook tunnel in development
-if (process.env.NODE_ENV === "development") {
+if (env.NODE_ENV === "development") {
   startWebhookTunnel()
 }
 
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const body = await request.text()
 
     // Verify the signature
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+    const secretKey = env.PAYSTACK_SECRET_KEY || ""
     const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
 
     if (hash !== signature) {

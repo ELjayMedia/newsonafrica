@@ -1,7 +1,8 @@
+import { env } from '@/lib/config/env';
 import { signIn, signUp, resetPassword, getCurrentUser, getAuthToken, signOut } from "./authFunctions"
 
 export const getLinkedInAuthUrl = () => {
-  const clientId = process.env.LINKEDIN_API_KEY
+  const clientId = env.LINKEDIN_API_KEY
   if (!clientId) {
     throw new Error("LinkedIn API key not configured")
   }

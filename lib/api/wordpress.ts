@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
@@ -8,8 +9,8 @@ import {
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 
-const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_GRAPHQL_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {

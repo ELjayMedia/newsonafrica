@@ -1,9 +1,10 @@
+import { env } from '@/lib/config/env';
 import React from "react"
 // Performance monitoring and optimization utilities
 
 // Measure component render time
 export function measureRenderTime(componentName: string) {
-  if (process.env.NODE_ENV !== "production") {
+  if (env.NODE_ENV !== "production") {
     const startTime = performance.now()
 
     return () => {
@@ -64,7 +65,7 @@ export function memoize<T extends (...args: any[]) => any>(func: T): (...args: P
 
 // Detect slow renders and report them
 export function detectSlowRenders(threshold = 16) {
-  if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  if (typeof window !== "undefined" && env.NODE_ENV !== "production") {
     const originalCreateElement = React.createElement
 
     // @ts-ignore - Monkey patching for development only

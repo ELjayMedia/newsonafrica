@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Use a singleton pattern to ensure we only create one client instance
@@ -7,8 +8,8 @@ export const createClient = () => {
   if (clientInstance) return clientInstance
 
   clientInstance = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL!,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
         persistSession: true,

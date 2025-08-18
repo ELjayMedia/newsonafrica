@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { client } from "@/lib/wordpress-api"
 import { gql } from "graphql-request"
 
@@ -42,6 +43,6 @@ export async function createUserSession(user: User): Promise<string> {
   // In a real-world scenario, you'd create a session in your database
   // and return a session token. For this example, we'll use a simple JWT.
   const jwt = require("jsonwebtoken")
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" })
+  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: "1d" })
   return token
 }

@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { isBrowser } from "@/lib/ad-utils"
 import type { Metric } from "web-vitals"
 
@@ -5,7 +6,7 @@ import type { Metric } from "web-vitals"
 export function sendWebVitalToVercel(metric: Metric) {
   try {
     // Log in development for debugging
-    if (process.env.NODE_ENV === "development") {
+    if (env.NODE_ENV === "development") {
       console.log(`Web Vital: ${metric.name} = ${metric.value}`)
     }
 
@@ -14,7 +15,7 @@ export function sendWebVitalToVercel(metric: Metric) {
 
     // Send to Vercel Analytics
     const body = {
-      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || "", // Use Sentry DSN as identifier
+      dsn: env.NEXT_PUBLIC_SENTRY_DSN || "", // Use Sentry DSN as identifier
       id: metric.id,
       page: window.location.pathname,
       href: window.location.href,

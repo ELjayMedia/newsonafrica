@@ -1,3 +1,4 @@
+import { env } from '@/lib/config/env';
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rateLimit"
 
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
 
     // In production, you would store this data in a database
     // For now, we'll just log it in development
-    if (process.env.NODE_ENV === "development") {
+    if (env.NODE_ENV === "development") {
       console.log("Resource timing data:", body)
     }
 
