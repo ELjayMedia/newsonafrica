@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
       state = JSON.parse(decodeURIComponent(stateParam))
     }
   } catch (e) {
-    console.error("Error parsing state parameter:", e)
+    logger.error("Error parsing state parameter:", e)
   }
 
   if (!code) {
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error("LinkedIn OAuth error:", error)
+    logger.error("LinkedIn OAuth error:", error)
 
     if (state.popupMode) {
       return NextResponse.html(

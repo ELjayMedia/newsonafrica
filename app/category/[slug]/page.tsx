@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
@@ -22,7 +23,7 @@ export async function generateStaticParams() {
       slug: category.slug,
     }))
   } catch (error) {
-    console.error("Error generating static params for categories:", error)
+    logger.error("Error generating static params for categories:", error)
     // Return empty array to allow all pages to be generated on-demand
     return []
   }
@@ -30,13 +31,13 @@ export async function generateStaticParams() {
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for category: ${params.slug}`)
+  logger.info(`🔍 Generating metadata for category: ${params.slug}`)
 
   try {
     const { category, posts } = await getPostsByCategory(params.slug, 10)
 
     if (!category) {
-      console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
+      logger.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
       return {
         title: "Category Not Found - News On Africa",
         description: "The requested category could not be found.",
@@ -51,7 +52,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       }
     }
 
-    console.log(`✅ Generated metadata for category: "${category.name}"`)
+    logger.info(`✅ Generated metadata for category: "${category.name}"`)
 
     // Create dynamic description
     const baseDescription = category.description || `Latest articles in the ${category.name} category`
@@ -160,7 +161,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       },
     }
   } catch (error) {
-    console.error(`❌ Error generating metadata for category ${params.slug}:`, error)
+    logger.error(`❌ Error generating metadata for category ${params.slug}:`, error)
     return {
       title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
       description: `Latest articles in the ${params.slug} category from News On Africa`,
@@ -189,7 +190,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
     // Pass the fetched data to the client component
     return <CategoryClientPage params={params} initialData={categoryData} />
   } catch (error) {
-    console.error(`Error loading category page for ${params.slug}:`, error)
+    logger.error(`Error loading category page for ${params.slug}:`, error)
 
     // For build-time errors, still try to render with empty data
     // The client component will handle the error state

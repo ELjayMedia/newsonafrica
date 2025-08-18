@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
@@ -58,7 +59,7 @@ export function useInfiniteScroll(callback: () => Promise<void> | void, options:
       try {
         await callback()
       } catch (err) {
-        console.error("Error in infinite scroll:", err)
+        logger.error("Error in infinite scroll:", err)
         setError(err instanceof Error ? err : new Error(String(err)))
       } finally {
         setIsFetching(false)

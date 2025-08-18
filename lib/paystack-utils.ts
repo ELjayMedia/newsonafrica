@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import type { PaystackVerifyResponse } from "@/config/paystack"
 
 /**
@@ -5,7 +6,7 @@ import type { PaystackVerifyResponse } from "@/config/paystack"
  */
 export async function verifyPaystackTransaction(reference: string): Promise<PaystackVerifyResponse> {
   try {
-    console.log("Verifying transaction with reference:", reference)
+    logger.info("Verifying transaction with reference:", reference)
 
     const response = await fetch(`/api/paystack/verify-transaction?reference=${encodeURIComponent(reference)}`, {
       method: "GET",
@@ -14,19 +15,19 @@ export async function verifyPaystackTransaction(reference: string): Promise<Pays
       },
     })
 
-    console.log("Verification response status:", response.status)
+    logger.info("Verification response status:", response.status)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      console.error("Verification failed:", errorData)
+      logger.error("Verification failed:", errorData)
       throw new Error(errorData.message || `Failed to verify transaction: ${response.status}`)
     }
 
     const data = await response.json()
-    console.log("Verification successful:", data.status)
+    logger.info("Verification successful:", data.status)
     return data
   } catch (error) {
-    console.error("Error verifying transaction:", error)
+    logger.error("Error verifying transaction:", error)
     // Return a default response to prevent the UI from getting stuck
     return {
       status: false,
@@ -117,7 +118,7 @@ export function startWebhookTunnel() {
     return
   }
 
-  console.log("Starting webhook tunnel for Paystack...")
+  logger.info("Starting webhook tunnel for Paystack...")
 
   // In a real implementation, you might use a package like localtunnel or ngrok
   // to create a public URL that forwards to your local server
@@ -126,11 +127,11 @@ export function startWebhookTunnel() {
   // const localtunnel = require('localtunnel');
   // const tunnel = localtunnel({ port: 3000, subdomain: 'newsonafrica-paystack' });
   // tunnel.then(tunnel => {
-  //   console.log(`Webhook tunnel started at: ${tunnel.url}/api/webhooks/paystack`);
+  //   logger.info(`Webhook tunnel started at: ${tunnel.url}/api/webhooks/paystack`);
   // });
 
   // For now, we'll just log a message
-  console.log("Webhook tunnel simulation: In production, use a real webhook URL")
+  logger.info("Webhook tunnel simulation: In production, use a real webhook URL")
 }
 
 // Add the missing export for paystackClient

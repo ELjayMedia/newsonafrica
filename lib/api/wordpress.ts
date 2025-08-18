@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import {
   LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
@@ -306,7 +307,7 @@ async function graphqlRequest<T>(
     const result = await response.json()
 
     if (result.errors) {
-      console.error("GraphQL errors:", result.errors)
+      logger.error("GraphQL errors:", result.errors)
       throw new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(", ")}`)
     }
 
@@ -315,7 +316,7 @@ async function graphqlRequest<T>(
     clearTimeout(timeoutId)
 
     if (retries > 0 && error instanceof Error) {
-      console.warn(`GraphQL request failed, retrying... (${retries} attempts left)`)
+      logger.warn(`GraphQL request failed, retrying... (${retries} attempts left)`)
       await new Promise((resolve) => setTimeout(resolve, 1000))
       return graphqlRequest<T>(query, variables, countryCode, retries - 1)
     }
@@ -351,7 +352,7 @@ async function restApiFallback<T>(
     const data = await response.json()
     return transform(data)
   } catch (error) {
-    console.error("REST API fallback failed:", error)
+    logger.error("REST API fallback failed:", error)
     throw error
   }
 }
@@ -380,7 +381,7 @@ export async function getLatestPostsForCountry(
       endCursor: data.posts.pageInfo.endCursor,
     }
   } catch (error) {
-    console.error(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API:`, error)
+    logger.error(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
       return await restApiFallback(
@@ -394,7 +395,7 @@ export async function getLatestPostsForCountry(
         countryCode,
       )
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
+      logger.error("Both GraphQL and REST API failed:", restError)
       return { posts: [], hasNextPage: false, endCursor: null }
     }
   }
@@ -441,7 +442,7 @@ export async function getPostsByCategoryForCountry(
       endCursor: data.category.posts.pageInfo.endCursor,
     }
   } catch (error) {
-    console.error(`Failed to fetch category "${categorySlug}" for ${countryCode} via GraphQL, trying REST API:`, error)
+    logger.error(`Failed to fetch category "${categorySlug}" for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
       // First get category info
@@ -473,7 +474,7 @@ export async function getPostsByCategoryForCountry(
         endCursor: null,
       }
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
+      logger.error("Both GraphQL and REST API failed:", restError)
       return { category: null, posts: [], hasNextPage: false, endCursor: null }
     }
   }
@@ -487,7 +488,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
     const data = await graphqlRequest<WordPressCategoriesResponse>(CATEGORIES_QUERY, {}, countryCode)
     return data.categories.nodes
   } catch (error) {
-    console.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
+    logger.error(`Failed to fetch categories for ${countryCode} via GraphQL, trying REST API:`, error)
 
     try {
       return await restApiFallback(
@@ -497,7 +498,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
         countryCode,
       )
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
+      logger.error("Both GraphQL and REST API failed:", restError)
       return []
     }
   }
@@ -514,7 +515,7 @@ export async function getLatestPosts(limit = 20, after?: string) {
       error: null,
     }
   } catch (error) {
-    console.error("Failed to fetch latest posts:", error)
+    logger.error("Failed to fetch latest posts:", error)
     return {
       posts: [],
       error: error instanceof Error ? error.message : "Failed to fetch posts",
@@ -533,7 +534,7 @@ export async function getPostBySlug(slug: string): Promise<WordPressPost | null>
 
     return data.post
   } catch (error) {
-    console.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
+    logger.error(`Failed to fetch post "${slug}" via GraphQL, trying REST API:`, error)
 
     try {
       return await restApiFallback(`posts?slug=${slug}&_embed=1`, {}, (posts: WordPressRestPost[]) => {
@@ -541,7 +542,7 @@ export async function getPostBySlug(slug: string): Promise<WordPressPost | null>
         return transformRestPostToGraphQL(posts[0])
       })
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
+      logger.error("Both GraphQL and REST API failed:", restError)
       return null
     }
   }
@@ -596,7 +597,7 @@ export async function getPostsByCategory(
   } catch (error) {
     // If we have stale cached data, return it as fallback
     if (cached) {
-      console.warn("Using stale cache data due to API error:", error)
+      logger.warn("Using stale cache data due to API error:", error)
       return cached.data
     }
     throw error
@@ -614,7 +615,7 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
 
     return data.posts.nodes
   } catch (error) {
-    console.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
+    logger.error("Failed to fetch featured posts via GraphQL, trying REST API:", error)
 
     try {
       return await restApiFallback(
@@ -623,7 +624,7 @@ export async function getFeaturedPosts(limit = 10): Promise<WordPressPost[]> {
         (posts: WordPressRestPost[]) => posts.map(transformRestPostToGraphQL),
       )
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
+      logger.error("Both GraphQL and REST API failed:", restError)
       return []
     }
   }
@@ -640,7 +641,7 @@ export async function getCategoryPosts(slug: string, after?: string) {
       error: null,
     }
   } catch (error) {
-    console.error(`Failed to fetch category posts for ${slug}:`, error)
+    logger.error(`Failed to fetch category posts for ${slug}:`, error)
     return {
       category: {
         id: "",
@@ -667,7 +668,7 @@ export async function getPost(slug: string) {
       error: null,
     }
   } catch (error) {
-    console.error(`Failed to fetch post ${slug}:`, error)
+    logger.error(`Failed to fetch post ${slug}:`, error)
     return {
       post: null,
       error: error instanceof Error ? error.message : "Failed to fetch post",
@@ -809,7 +810,7 @@ export async function getRelatedPosts(
 
     return finalPosts
   } catch (error) {
-    console.error("Failed to fetch related posts via GraphQL, trying REST API:", error)
+    logger.error("Failed to fetch related posts via GraphQL, trying REST API:", error)
 
     try {
       // REST API fallback
@@ -843,7 +844,7 @@ export async function getRelatedPosts(
 
       return transformedPosts
     } catch (restError) {
-      console.error("Both GraphQL and REST API failed for related posts:", restError)
+      logger.error("Both GraphQL and REST API failed for related posts:", restError)
       return []
     }
   }

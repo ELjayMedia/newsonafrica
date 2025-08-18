@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -38,7 +39,7 @@ export function AdDensityController() {
           })
         })
       } catch (error) {
-        console.error("Error setting ad exclusion zones:", error)
+        logger.error("Error setting ad exclusion zones:", error)
       }
     }
   }, [pathname])

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -80,13 +81,13 @@ export default function WebVitals() {
               })
             }
 
-            console.log("Web Vitals monitoring initialized")
+            logger.info("Web Vitals monitoring initialized")
           } catch (error) {
-            console.error("Failed to initialize web vitals:", error)
+            logger.error("Failed to initialize web vitals:", error)
           }
         })
         .catch((error) => {
-          console.error("Failed to load web-vitals library:", error)
+          logger.error("Failed to load web-vitals library:", error)
         })
     }
   }, [])

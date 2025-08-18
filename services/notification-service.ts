@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/lib/supabase"
 import type { Notification, NotificationType, NotificationCount } from "@/lib/notification-schema"
 import {
@@ -49,7 +50,7 @@ export async function createNotification({
 
     return notifications[0] || null
   } catch (error) {
-    console.error("Error in createNotification:", error)
+    logger.error("Error in createNotification:", error)
     return null
   }
 }
@@ -151,7 +152,7 @@ export async function getNotifications(
       },
     }
   } catch (error) {
-    console.error("Error in getNotifications:", error)
+    logger.error("Error in getNotifications:", error)
     return { notifications: [], count: { total: 0, unread: 0 } }
   }
 }
@@ -183,7 +184,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
 
     return !!updated
   } catch (error) {
-    console.error("Error in markNotificationAsRead:", error)
+    logger.error("Error in markNotificationAsRead:", error)
     return false
   }
 }
@@ -200,7 +201,7 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
       .eq("is_read", false)
 
     if (error) {
-      console.error("Error marking all notifications as read:", error)
+      logger.error("Error marking all notifications as read:", error)
       return false
     }
 
@@ -209,7 +210,7 @@ export async function markAllNotificationsAsRead(userId: string): Promise<boolea
 
     return true
   } catch (error) {
-    console.error("Error in markAllNotificationsAsRead:", error)
+    logger.error("Error in markAllNotificationsAsRead:", error)
     return false
   }
 }
@@ -234,7 +235,7 @@ export async function deleteNotification(notificationId: string): Promise<boolea
       clearCache: new RegExp(`^notifications:.*${notification.user_id}`),
     })
   } catch (error) {
-    console.error("Error in deleteNotification:", error)
+    logger.error("Error in deleteNotification:", error)
     return false
   }
 }
@@ -247,7 +248,7 @@ export async function deleteAllNotifications(userId: string): Promise<boolean> {
     const { error } = await supabase.from("notifications").delete().eq("user_id", userId)
 
     if (error) {
-      console.error("Error deleting all notifications:", error)
+      logger.error("Error deleting all notifications:", error)
       return false
     }
 
@@ -256,7 +257,7 @@ export async function deleteAllNotifications(userId: string): Promise<boolean> {
 
     return true
   } catch (error) {
-    console.error("Error in deleteAllNotifications:", error)
+    logger.error("Error in deleteAllNotifications:", error)
     return false
   }
 }
@@ -304,7 +305,7 @@ export async function getNotificationCount(userId: string): Promise<Notification
       unread: unreadCount,
     }
   } catch (error) {
-    console.error("Error in getNotificationCount:", error)
+    logger.error("Error in getNotificationCount:", error)
     return { total: 0, unread: 0 }
   }
 }

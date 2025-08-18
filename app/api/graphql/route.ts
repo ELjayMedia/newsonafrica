@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { ApolloServer } from "@apollo/server"
 import { startServerAndCreateNextHandler } from "@as-integrations/next"
 import type { NextRequest } from "next/server"
@@ -50,7 +51,7 @@ async function createContext({ req }: { req: NextRequest }) {
 
     return { user }
   } catch (error) {
-    console.error("Error verifying token:", error)
+    logger.error("Error verifying token:", error)
     return { user: null }
   }
 }

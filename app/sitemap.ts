@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
@@ -148,7 +149,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       (page) => !page.url.includes("/video-analysis") && !page.url.includes("/video-dashboard"),
     )
   } catch (error) {
-    console.error("Error generating sitemap:", error)
+    logger.error("Error generating sitemap:", error)
 
     // Return minimal sitemap in case of error
     return [

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(config)
   } catch (error) {
-    console.error("LinkedIn config error:", error)
+    logger.error("LinkedIn config error:", error)
     return NextResponse.json({ error: "Failed to get LinkedIn configuration" }, { status: 500 })
   }
 }
