@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest) {
     const secret = request.nextUrl.searchParams.get("secret")
 
     // Check for valid secret
-    if (secret !== process.env.REVALIDATION_SECRET) {
+    if (secret !== env.REVALIDATION_SECRET) {
       return NextResponse.json({ message: "Invalid secret" }, { status: 401 })
     }
 

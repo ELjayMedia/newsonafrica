@@ -1,5 +1,6 @@
 import logger from "@/utils/logger";
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+import env from "@/lib/config/env";
+const WORDPRESS_REST_API_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Search result interface
 export interface WordPressSearchResult {

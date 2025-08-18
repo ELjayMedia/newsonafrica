@@ -1,5 +1,6 @@
 "use client"
 
+import env from "@/lib/config/env"
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/lib/supabase"
 
@@ -9,13 +10,13 @@ let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = nu
 export const createClient = () => {
   if (clientInstance) return clientInstance
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     throw new Error("Missing Supabase environment variables")
   }
 
   clientInstance = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       auth: {
         persistSession: true,

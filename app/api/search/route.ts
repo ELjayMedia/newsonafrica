@@ -1,10 +1,11 @@
-import logger from "@/utils/logger";
+import logger from "@/utils/logger"
+import env from "@/lib/config/env"
 import { type NextRequest, NextResponse } from "next/server"
 
 // WordPress API configuration
 const WORDPRESS_API_URL =
-  process.env.WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  env.WORDPRESS_REST_API_URL ||
+  env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Rate limiting
@@ -18,7 +19,7 @@ function getRateLimitKey(request: NextRequest): string {
 }
 
 function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: number } {
-  if (process.env.NODE_ENV === "development") {
+  if (env.NODE_ENV === "development") {
     return { limited: false }
   }
 

@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ status: false, error: "Transaction reference is required" }, { status: 400 })
   }
 
-  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
+  const paystackSecretKey = env.PAYSTACK_SECRET_KEY
 
   if (!paystackSecretKey) {
     logger.error("PAYSTACK_SECRET_KEY is not defined")

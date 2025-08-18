@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import {
   fetchSinglePost,
   fetchRecentPosts,
@@ -16,8 +17,8 @@ import { createClient } from "@supabase/supabase-js"
 import DataLoader from "dataloader"
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Create DataLoaders for batching and caching

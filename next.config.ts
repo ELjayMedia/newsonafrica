@@ -1,4 +1,5 @@
 import { createRequire } from "module"
+import env from "@/lib/config/env";
 import withPWAInit from "@ducanh2912/next-pwa"
 import type { NextConfig } from "next"
 
@@ -6,7 +7,7 @@ const require = createRequire(import.meta.url)
 
 const withPWA = withPWAInit({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  disable: env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
   dynamicStartUrl: true,
@@ -144,7 +145,7 @@ const nextConfig: NextConfig = {
     ]
   },
   webpack: (config, { isServer }) => {
-    if (process.env.INCLUDE_RN_WEB === "true") {
+    if (env.INCLUDE_RN_WEB === "true") {
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
         "react-native$": "react-native-web",

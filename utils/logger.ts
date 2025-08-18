@@ -1,6 +1,7 @@
 import pino from "pino";
+import env from "@/lib/config/env";
 
-const level = process.env.LOG_LEVEL || "info";
+const level = env.LOG_LEVEL || "info";
 
 const logger = pino({ level });
 

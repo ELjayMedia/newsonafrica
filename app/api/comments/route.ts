@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server"
+import env from "@/lib/config/env";
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { z } from "zod"
@@ -28,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     const cookieStore = cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      env.NEXT_PUBLIC_SUPABASE_URL!,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
@@ -157,8 +158,8 @@ export async function POST(request: NextRequest) {
 
     const cookieStore = cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      env.NEXT_PUBLIC_SUPABASE_URL!,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
@@ -257,8 +258,8 @@ export async function PATCH(request: NextRequest) {
 
     const cookieStore = cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      env.NEXT_PUBLIC_SUPABASE_URL!,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {

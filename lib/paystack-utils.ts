@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import type { PaystackVerifyResponse } from "@/config/paystack"
 
 /**
@@ -114,7 +115,7 @@ export function formatNextBillingDate(interval: string): string {
  */
 export function startWebhookTunnel() {
   // Only run in development mode
-  if (process.env.NODE_ENV !== "development") {
+  if (env.NODE_ENV !== "development") {
     return
   }
 
