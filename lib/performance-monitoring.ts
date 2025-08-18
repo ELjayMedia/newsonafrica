@@ -1,4 +1,4 @@
-import { isBrowser } from "@/lib/adUtils"
+import { isBrowser } from "@/lib/ad-utils"
 import type { Metric } from "web-vitals"
 
 // Send web vitals to Vercel Analytics
