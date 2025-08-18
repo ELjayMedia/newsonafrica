@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -12,7 +13,7 @@ interface PostErrorProps {
 export default function PostError({ error, reset }: PostErrorProps) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error("Post page error:", error)
+    logger.error("Post page error:", error)
   }, [error])
 
   return (

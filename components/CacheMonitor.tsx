@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -23,7 +24,7 @@ export function CacheMonitor({ showInProduction = false }: CacheMonitorProps) {
         const cacheStats = getRelatedPostsCacheStats()
         setStats(cacheStats)
       } catch (error) {
-        console.error("Failed to get cache stats:", error)
+        logger.error("Failed to get cache stats:", error)
       }
     }
 

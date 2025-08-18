@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 // Types for fetch responses and error handling
 export interface FetchResponse<T> {
   data: T | null
@@ -81,7 +82,7 @@ export async function fetchWithErrorHandling<T>(url: string, options: FetchOptio
     clearTimeout(timeoutId)
 
     const errorMessage = getErrorMessage(error)
-    console.error(`Fetch error for ${fullUrl}:`, errorMessage)
+    logger.error(`Fetch error for ${fullUrl}:`, errorMessage)
 
     return {
       data: null,
@@ -101,12 +102,12 @@ export async function simpleFetch<T>(url: string, options?: RequestInit): Promis
   try {
     const res = await fetch(url, options)
     if (!res.ok) {
-      console.error(`Fetch failed: ${res.status} ${res.statusText}`)
+      logger.error(`Fetch failed: ${res.status} ${res.statusText}`)
       return null
     }
     return await res.json()
   } catch (error) {
-    console.error("Fetch error:", error)
+    logger.error("Fetch error:", error)
     return null
   }
 }
@@ -128,7 +129,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retryConfig: Re
 
       // Server errors (5xx) should be retried
       if (attempt < retries) {
-        console.warn(`Fetch attempt ${attempt + 1} failed with status ${response.status}, retrying...`)
+        logger.warn(`Fetch attempt ${attempt + 1} failed with status ${response.status}, retrying...`)
         await delay(retryDelay * Math.pow(2, attempt)) // Exponential backoff
         continue
       }
@@ -140,7 +141,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retryConfig: Re
         : attempt < retries && isRetryableError(error as Error)
 
       if (shouldRetry) {
-        console.warn(`Fetch attempt ${attempt + 1} failed, retrying...`, error)
+        logger.warn(`Fetch attempt ${attempt + 1} failed, retrying...`, error)
         await delay(retryDelay * Math.pow(2, attempt))
         continue
       }

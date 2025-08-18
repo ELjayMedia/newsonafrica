@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("LinkedIn status check error:", error)
+    logger.error("LinkedIn status check error:", error)
     return NextResponse.json({ authenticated: false })
   }
 }

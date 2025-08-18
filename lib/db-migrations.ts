@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { createAdminClient } from "./supabase"
 
 export type Migration = {
@@ -442,13 +443,13 @@ export async function applyMigration(migration: Migration, userId?: string) {
       .maybeSingle()
 
     if (checkError) {
-      console.error(`Error checking migration ${migration.id}:`, checkError)
+      logger.error(`Error checking migration ${migration.id}:`, checkError)
       throw checkError
     }
 
     // If migration already exists, skip it
     if (existingMigration) {
-      console.log(`Migration ${migration.id} already applied, skipping`)
+      logger.info(`Migration ${migration.id} already applied, skipping`)
       return { success: true, skipped: true }
     }
 
@@ -456,7 +457,7 @@ export async function applyMigration(migration: Migration, userId?: string) {
     const { error: sqlError } = await supabase.rpc("exec_sql", { sql: migration.sql })
 
     if (sqlError) {
-      console.error(`Error applying migration ${migration.id}:`, sqlError)
+      logger.error(`Error applying migration ${migration.id}:`, sqlError)
       throw sqlError
     }
 
@@ -468,14 +469,14 @@ export async function applyMigration(migration: Migration, userId?: string) {
     })
 
     if (recordError) {
-      console.error(`Error recording migration ${migration.id}:`, recordError)
+      logger.error(`Error recording migration ${migration.id}:`, recordError)
       throw recordError
     }
 
-    console.log(`Successfully applied migration ${migration.id}`)
+    logger.info(`Successfully applied migration ${migration.id}`)
     return { success: true, skipped: false }
   } catch (error) {
-    console.error(`Failed to apply migration ${migration.id}:`, error)
+    logger.error(`Failed to apply migration ${migration.id}:`, error)
     throw error
   }
 }
@@ -491,13 +492,13 @@ export async function applyPendingMigrations(userId?: string) {
 
     // If migrations table doesn't exist, apply the first migration manually
     if (tableCheckError && tableCheckError.code === "PGRST116") {
-      console.log("Migrations table doesn't exist, applying initial migration")
+      logger.info("Migrations table doesn't exist, applying initial migration")
 
       const initialMigration = migrations[0]
       const { error: sqlError } = await supabase.rpc("exec_sql", { sql: initialMigration.sql })
 
       if (sqlError) {
-        console.error(`Error applying initial migration:`, sqlError)
+        logger.error(`Error applying initial migration:`, sqlError)
         results[initialMigration.id] = { success: false, skipped: false, error: sqlError }
         return results
       }
@@ -510,7 +511,7 @@ export async function applyPendingMigrations(userId?: string) {
       })
 
       if (recordError) {
-        console.error(`Error recording initial migration:`, recordError)
+        logger.error(`Error recording initial migration:`, recordError)
         results[initialMigration.id] = { success: false, skipped: false, error: recordError }
         return results
       }
@@ -522,7 +523,7 @@ export async function applyPendingMigrations(userId?: string) {
     const { data: appliedMigrations, error: fetchError } = await supabase.from("migrations").select("id")
 
     if (fetchError) {
-      console.error("Error fetching applied migrations:", fetchError)
+      logger.error("Error fetching applied migrations:", fetchError)
       throw fetchError
     }
 
@@ -537,7 +538,7 @@ export async function applyPendingMigrations(userId?: string) {
         } catch (error) {
           results[migration.id] = { success: false, skipped: false, error }
           // Don't break on error, continue with next migration
-          console.error(`Error applying migration ${migration.id}, continuing with next`)
+          logger.error(`Error applying migration ${migration.id}, continuing with next`)
         }
       } else {
         results[migration.id] = { success: true, skipped: true }
@@ -546,7 +547,7 @@ export async function applyPendingMigrations(userId?: string) {
 
     return results
   } catch (error) {
-    console.error("Error applying migrations:", error)
+    logger.error("Error applying migrations:", error)
     throw error
   }
 }
@@ -577,7 +578,7 @@ export async function getMigrationStatus() {
       .order("applied_at", { ascending: true })
 
     if (fetchError) {
-      console.error("Error fetching applied migrations:", fetchError)
+      logger.error("Error fetching applied migrations:", fetchError)
       throw fetchError
     }
 
@@ -592,7 +593,7 @@ export async function getMigrationStatus() {
       pendingCount: pendingMigrations.length,
     }
   } catch (error) {
-    console.error("Error getting migration status:", error)
+    logger.error("Error getting migration status:", error)
     throw error
   }
 }
@@ -620,20 +621,20 @@ export async function createExecSqlFunction() {
         const { error: directError } = await supabase.from("_rpc").select("*").eq("name", "exec_sql")
 
         if (directError) {
-          console.error("Error creating exec_sql function:", directError)
+          logger.error("Error creating exec_sql function:", directError)
           throw directError
         }
 
         return { success: true }
       }
 
-      console.error("Error creating exec_sql function:", error)
+      logger.error("Error creating exec_sql function:", error)
       throw error
     }
 
     return { success: true }
   } catch (error) {
-    console.error("Error creating exec_sql function:", error)
+    logger.error("Error creating exec_sql function:", error)
     throw error
   }
 }

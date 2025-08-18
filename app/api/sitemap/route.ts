@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
@@ -50,7 +51,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error("Error generating sitemap:", error)
+    logger.error("Error generating sitemap:", error)
     return new NextResponse("Error generating sitemap", { status: 500 })
   }
 }

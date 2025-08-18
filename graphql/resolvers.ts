@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import {
   fetchSinglePost,
   fetchRecentPosts,
@@ -115,7 +116,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
       if (error) {
-        console.error("Error fetching user profile:", error)
+        logger.error("Error fetching user profile:", error)
         return null
       }
 
@@ -140,7 +141,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("bookmarks").insert({ user_id: user.id, post_id: postId }).single()
 
       if (error) {
-        console.error("Error creating bookmark:", error)
+        logger.error("Error creating bookmark:", error)
         return {
           success: false,
           message: "Failed to bookmark post",
@@ -165,7 +166,7 @@ export const resolvers = {
       const { error } = await supabase.from("bookmarks").delete().match({ user_id: user.id, post_id: postId })
 
       if (error) {
-        console.error("Error removing bookmark:", error)
+        logger.error("Error removing bookmark:", error)
         return {
           success: false,
           message: "Failed to remove bookmark",
@@ -187,7 +188,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("profiles").update(input).eq("id", user.id).single()
 
       if (error) {
-        console.error("Error updating profile:", error)
+        logger.error("Error updating profile:", error)
         throw new Error("Failed to update profile")
       }
 
@@ -324,7 +325,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("bookmarks").select("post_id").eq("user_id", user.id)
 
       if (error || !data) {
-        console.error("Error fetching bookmarks:", error)
+        logger.error("Error fetching bookmarks:", error)
         return []
       }
 

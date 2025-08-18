@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -43,7 +44,7 @@ export function PostClientContent({ slug, initialData }: PostClientContentProps)
 
         setPost(fetchedPost)
       } catch (err) {
-        console.error("Error fetching post:", err)
+        logger.error("Error fetching post:", err)
         setError("Failed to load article. Please try again.")
       } finally {
         setLoading(false)

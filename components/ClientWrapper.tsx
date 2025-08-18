@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 "use client"
 
 import type React from "react"
@@ -41,7 +42,7 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
       const startTime = performance.now()
       return () => {
         const endTime = performance.now()
-        console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
+        logger.info(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
       }
     }
   }, [])

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -66,14 +67,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (!shareResponse.ok) {
-      console.error("LinkedIn API error:", await shareResponse.text())
+      logger.error("LinkedIn API error:", await shareResponse.text())
       throw new Error("Failed to share content on LinkedIn")
     }
 
     const shareData = await shareResponse.json()
     return NextResponse.json({ success: true, data: shareData })
   } catch (error) {
-    console.error("LinkedIn sharing error:", error)
+    logger.error("LinkedIn sharing error:", error)
     return NextResponse.json({ error: "Failed to share content on LinkedIn" }, { status: 500 })
   }
 }

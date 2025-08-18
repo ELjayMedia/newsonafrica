@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { getCurrentUser } from "@/lib/auth"
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Session error:", error)
+    logger.error("Session error:", error)
     return NextResponse.json({ user: null }, { status: 500 })
   }
 }
@@ -50,7 +51,7 @@ export async function PUT(request: Request) {
     const updatedUser = await response.json()
     return NextResponse.json(updatedUser)
   } catch (error) {
-    console.error("Error updating user profile:", error)
+    logger.error("Error updating user profile:", error)
     return NextResponse.json({ error: "Failed to update user profile" }, { status: 500 })
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
@@ -21,7 +22,7 @@ const LEGACY_ROUTES_MAP = {
 function logApiRequest(request: NextRequest) {
   if (process.env.NODE_ENV === "development") {
     const { pathname, search } = request.nextUrl
-    console.log(`[${request.method}] ${pathname}${search}`)
+    logger.info(`[${request.method}] ${pathname}${search}`)
   }
 }
 
