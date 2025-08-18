@@ -1,0 +1,5 @@
+declare module "imagemin"
+declare module "imagemin-mozjpeg"
+declare module "imagemin-pngquant"
+declare module "imagemin-webp"
+declare module "@tailwindcss/typography"
