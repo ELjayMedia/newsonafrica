@@ -1,8 +1,9 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { cache } from "react"
 
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_API_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_API_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 if (!WORDPRESS_API_URL) {
   logger.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
@@ -1326,7 +1327,7 @@ export const deleteComment = async (commentId: string) => {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
       },
     })
 
@@ -1379,7 +1380,7 @@ export const approveComment = async (commentId: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
       },
       body: JSON.stringify({
         status: "approved",
@@ -1635,7 +1636,7 @@ export const updateUserProfile = async (userId: string, profileData: any) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
       },
       body: JSON.stringify(profileData),
     })

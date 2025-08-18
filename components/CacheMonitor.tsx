@@ -1,6 +1,7 @@
-import logger from "@/utils/logger";
 "use client"
 
+import env from "@/lib/config/env"
+import logger from "@/utils/logger"
 import { useState, useEffect } from "react"
 import { getRelatedPostsCacheStats } from "@/lib/api/wordpress"
 import type { CacheStats } from "@/lib/cache/related-posts-cache"
@@ -14,7 +15,7 @@ export function CacheMonitor({ showInProduction = false }: CacheMonitorProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   // Only show in development unless explicitly enabled for production
-  const shouldShow = showInProduction || process.env.NODE_ENV === "development"
+  const shouldShow = showInProduction || env.NODE_ENV === "development"
 
   useEffect(() => {
     if (!shouldShow) return

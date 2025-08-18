@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
@@ -59,7 +60,7 @@ export function handleApiError(error: unknown): NextResponse<ApiResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: process.env.NODE_ENV === "production" ? "An unexpected error occurred" : error.message,
+        error: env.NODE_ENV === "production" ? "An unexpected error occurred" : error.message,
       } as ApiResponse,
       { status: 500 },
     )

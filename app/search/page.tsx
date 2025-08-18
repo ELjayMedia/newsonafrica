@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import env from "@/lib/config/env";
 import { SearchContent } from "@/components/SearchContent"
 import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
 import { SearchDebugger } from "@/components/SearchDebugger"
@@ -17,7 +18,7 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
         <h1 className="text-3xl font-bold mb-8">Search News On Africa</h1>
 
         {/* Temporary debugger - remove after fixing */}
-        {process.env.NODE_ENV === "development" && (
+        {env.NODE_ENV === "development" && (
           <div className="mb-8">
             <SearchDebugger />
           </div>

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import env from "@/lib/config/env";
 import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
 import BookmarksContent from "@/components/BookmarksContent"
@@ -26,7 +27,7 @@ export default async function BookmarksPage() {
       <h1 className="text-3xl font-bold mb-6">Your Bookmarks</h1>
 
       {/* Add the debugger in development mode */}
-      {process.env.NODE_ENV === "development" && <BookmarkDebugger />}
+      {env.NODE_ENV === "development" && <BookmarkDebugger />}
 
       <Suspense fallback={<BookmarksSkeleton />}>
         <BookmarksContent initialSession={session} />

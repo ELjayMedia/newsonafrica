@@ -1,5 +1,7 @@
-import logger from "@/utils/logger";
 "use client"
+
+import env from "@/lib/config/env"
+import logger from "@/utils/logger"
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -425,7 +427,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
         />
 
         {/* Debug information - remove this in production */}
-        {process.env.NODE_ENV === "development" && (
+        {env.NODE_ENV === "development" && (
           <div className="mt-4 p-4 bg-gray-100 rounded text-sm">
             <p>
               <strong>Debug Info:</strong>

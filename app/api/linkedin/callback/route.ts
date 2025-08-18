@@ -1,4 +1,5 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -30,9 +31,9 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
-        client_id: process.env.LINKEDIN_API_KEY || "",
-        client_secret: process.env.LINKEDIN_API_SECRET || "",
+        redirect_uri: `${env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
+        client_id: env.LINKEDIN_API_KEY || "",
+        client_secret: env.LINKEDIN_API_SECRET || "",
       }).toString(),
     })
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     response.cookies.set("linkedin_token", tokenData.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: tokenData.expires_in,
       path: "/",

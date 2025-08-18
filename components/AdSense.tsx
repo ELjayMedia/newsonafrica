@@ -1,8 +1,9 @@
-import logger from "@/utils/logger";
 "use client"
 
+import env from "@/lib/config/env"
 import { useEffect, useRef, useState, memo } from "react"
 import { useInView } from "react-intersection-observer"
+import logger from "@/utils/logger"
 
 interface AdSenseProps {
   slot: string
@@ -253,7 +254,7 @@ export const AdSense = memo(function AdSense({
               minHeight: isLoading ? "0" : dimensions.minHeight,
               opacity: isLoading ? 0 : 1,
             }}
-            data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-6089753674605524"}
+            data-ad-client={env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-6089753674605524"}
             data-ad-slot={slot}
             data-ad-format={format}
             data-full-width-responsive={responsive}

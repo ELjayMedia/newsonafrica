@@ -1,9 +1,10 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
 
-const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
+const WEBHOOK_SECRET = env.WORDPRESS_WEBHOOK_SECRET
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {

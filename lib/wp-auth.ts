@@ -1,4 +1,5 @@
 import { createHmac } from "crypto"
+import env from "@/lib/config/env";
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 
 // Function to generate a WordPress authentication token
@@ -28,11 +29,11 @@ export function verifyWPAuthToken(token: string): boolean {
 
 // Function to create a WordPress user
 export async function createWPUser(username: string, email: string, password: string): Promise<any> {
-  const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/users`, {
+  const response = await fetch(`${env.WORDPRESS_API_URL}/wp/v2/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`).toString("base64")}`,
+      Authorization: `Basic ${Buffer.from(`${env.WP_APP_USERNAME}:${env.WP_APP_PASSWORD}`).toString("base64")}`,
     },
     body: JSON.stringify({
       username,
@@ -50,7 +51,7 @@ export async function createWPUser(username: string, email: string, password: st
 
 // Function to authenticate a WordPress user
 export async function authenticateWPUser(username: string, password: string): Promise<any> {
-  const response = await fetch(`${process.env.WORDPRESS_API_URL}/jwt-auth/v1/token`, {
+  const response = await fetch(`${env.WORDPRESS_API_URL}/jwt-auth/v1/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

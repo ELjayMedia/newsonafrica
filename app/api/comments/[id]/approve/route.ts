@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
+import env from "@/lib/config/env";
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 
-const WP_API_URL = process.env.WORDPRESS_API_URL
+const WP_API_URL = env.WORDPRESS_API_URL
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const token = getAuthTokenFromCookies()

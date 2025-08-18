@@ -1,11 +1,12 @@
 import logger from "@/utils/logger";
+import env from "@/lib/config/env";
 import { createClient } from "@supabase/supabase-js"
 import type { User, Session, AuthError } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables")
