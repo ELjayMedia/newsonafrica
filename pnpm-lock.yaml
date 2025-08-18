@@ -9,16 +9,16 @@ importers:
   .:
     dependencies:
       '@apollo/client':
-        specifier: latest
+        specifier: ^3.13.9
         version: 3.13.9(@types/react@19.1.10)(graphql-ws@6.0.5(graphql@16.11.0)(ws@8.18.3))(graphql@16.11.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(subscriptions-transport-ws@0.11.0(graphql@16.11.0))
       '@apollo/server':
-        specifier: latest
+        specifier: ^5.0.0
         version: 5.0.0(graphql@16.11.0)
       '@as-integrations/next':
-        specifier: latest
+        specifier: ^4.0.0
         version: 4.0.0(@apollo/server@5.0.0(graphql@16.11.0))(next@15.2.4(@babel/core@7.28.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
       '@ducanh2912/next-pwa':
-        specifier: latest
+        specifier: ^10.2.9
         version: 10.2.9(next@15.2.4(@babel/core@7.28.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(webpack@5.101.2)
       '@hookform/resolvers':
         specifier: ^3.9.1
@@ -48,7 +48,7 @@ importers:
         specifier: ^1.1.4
         version: 1.1.4(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@radix-ui/react-dropdown-menu':
-        specifier: latest
+        specifier: ^2.1.16
         version: 2.1.16(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@radix-ui/react-hover-card':
         specifier: ^1.1.4
@@ -104,41 +104,35 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.6
         version: 1.1.6(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@remix-run/react':
-        specifier: latest
-        version: 2.17.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.9.2)
       '@supabase/auth-helpers-nextjs':
-        specifier: latest
+        specifier: ^0.10.0
         version: 0.10.0(@supabase/supabase-js@2.55.0)
       '@supabase/postgrest-js':
-        specifier: latest
+        specifier: ^1.21.2
         version: 1.21.2
       '@supabase/ssr':
-        specifier: latest
+        specifier: ^0.6.1
         version: 0.6.1(@supabase/supabase-js@2.55.0)
       '@supabase/supabase-js':
-        specifier: latest
+        specifier: ^2.55.0
         version: 2.55.0
-      '@sveltejs/kit':
-        specifier: latest
-        version: 2.31.0(@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1))
       '@tailwindcss/typography':
-        specifier: latest
+        specifier: ^0.5.16
         version: 0.5.16(tailwindcss@3.4.17)
       '@tanstack/react-query':
-        specifier: latest
+        specifier: ^5.85.3
         version: 5.85.3(react@19.0.0)
       '@vercel/analytics':
-        specifier: latest
+        specifier: ^1.5.0
         version: 1.5.0(@remix-run/react@2.17.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.9.2))(@sveltejs/kit@2.31.0(@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(next@15.2.4(@babel/core@7.28.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(svelte@5.38.1)(vue-router@4.5.1(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))
       '@vercel/speed-insights':
-        specifier: latest
+        specifier: ^1.2.0
         version: 1.2.0(@sveltejs/kit@2.31.0(@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(next@15.2.4(@babel/core@7.28.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(svelte@5.38.1)(vue-router@4.5.1(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))
       algoliasearch:
         specifier: ^5.25.0
         version: 5.25.0
       autoprefixer:
-        specifier: latest
+        specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
       class-variance-authority:
         specifier: ^0.7.1
@@ -149,72 +143,63 @@ importers:
       cmdk:
         specifier: ^1.0.4
         version: 1.0.4(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      crypto:
-        specifier: latest
-        version: 1.0.1
       csrf:
-        specifier: latest
+        specifier: ^3.1.0
         version: 3.1.0
       cssnano:
-        specifier: latest
+        specifier: ^7.1.0
         version: 7.1.0(postcss@8.5.6)
       dataloader:
-        specifier: latest
+        specifier: ^2.2.3
         version: 2.2.3
       date-fns:
-        specifier: latest
+        specifier: ^4.1.0
         version: 4.1.0
       embla-carousel-react:
         specifier: ^8.5.1
         version: 8.5.1(react@19.0.0)
-      fs:
-        specifier: latest
-        version: 0.0.1-security
       fuse.js:
-        specifier: latest
+        specifier: ^7.1.0
         version: 7.1.0
       graphql:
         specifier: ^16.11.0
         version: 16.11.0
       graphql-request:
-        specifier: latest
+        specifier: ^7.2.0
         version: 7.2.0(graphql@16.11.0)
       graphql-tag:
-        specifier: latest
+        specifier: ^2.12.6
         version: 2.12.6(graphql@16.11.0)
       graphql-ws:
         specifier: ^6.0.5
         version: 6.0.5(graphql@16.11.0)(ws@8.18.3)
       imagemin:
-        specifier: latest
+        specifier: ^9.0.1
         version: 9.0.1
       imagemin-mozjpeg:
-        specifier: latest
+        specifier: ^10.0.0
         version: 10.0.0
       imagemin-pngquant:
-        specifier: latest
+        specifier: ^10.0.0
         version: 10.0.0
       imagemin-webp:
-        specifier: latest
+        specifier: ^8.0.0
         version: 8.0.0
       input-otp:
         specifier: ^1.4.1
         version: 1.4.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       jsonwebtoken:
-        specifier: latest
+        specifier: ^9.0.2
         version: 9.0.2
       lucide-react:
         specifier: ^0.454.0
         version: 0.454.0(react@19.0.0)
       next:
-        specifier: 15.2.4
+        specifier: ^15.2.4
         version: 15.2.4(@babel/core@7.28.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-themes:
         specifier: ^0.4.4
         version: 0.4.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      path:
-        specifier: latest
-        version: 0.12.7
       react:
         specifier: ^19
         version: 19.0.0
@@ -228,7 +213,7 @@ importers:
         specifier: ^7.54.1
         version: 7.54.1(react@19.0.0)
       react-intersection-observer:
-        specifier: latest
+        specifier: ^9.16.0
         version: 9.16.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react-resizable-panels:
         specifier: ^2.1.7
@@ -237,7 +222,7 @@ importers:
         specifier: ^2.15.0
         version: 2.15.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       sharp:
-        specifier: latest
+        specifier: ^0.34.3
         version: 0.34.3
       sonner:
         specifier: ^1.7.1
@@ -245,11 +230,8 @@ importers:
       subscriptions-transport-ws:
         specifier: ^0.11.0
         version: 0.11.0(graphql@16.11.0)
-      svelte:
-        specifier: latest
-        version: 5.38.1
       swr:
-        specifier: latest
+        specifier: ^2.3.6
         version: 2.3.6(react@19.0.0)
       tailwind-merge:
         specifier: ^2.5.5
@@ -257,23 +239,14 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
-      util:
-        specifier: latest
-        version: 0.12.5
       uuid:
-        specifier: latest
+        specifier: ^11.1.0
         version: 11.1.0
       vaul:
         specifier: ^0.9.6
         version: 0.9.6(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      vue:
-        specifier: latest
-        version: 3.5.18(typescript@5.9.2)
-      vue-router:
-        specifier: latest
-        version: 4.5.1(vue@3.5.18(typescript@5.9.2))
       web-vitals:
-        specifier: latest
+        specifier: ^5.1.0
         version: 5.1.0
       webpack:
         specifier: ^5.99.9
@@ -3285,10 +3258,6 @@ packages:
     resolution: {integrity: sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==}
     engines: {node: '>=8'}
 
-  crypto@1.0.1:
-    resolution: {integrity: sha512-VxBKmeNcqQdiUQUW2Tzq0t377b54N2bMtXO/qiLa+6eRRmmC4qT3D4OnTGoT/U6O9aklQ/jTwbOtRMTTY8G0Ig==}
-    deprecated: This package is no longer supported. It's now a built-in Node module. If you've depended on crypto, you should switch to the one that's built-in.
-
   csrf@3.1.0:
     resolution: {integrity: sha512-uTqEnCvWRk042asU6JtapDTcJeeailFy4ydOQS28bj1hcLnYRiqi8SsD2jS412AY1I/4qdOwWZun774iqywf9w==}
     engines: {node: '>= 0.8'}
@@ -3809,9 +3778,6 @@ packages:
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
-  fs@0.0.1-security:
-    resolution: {integrity: sha512-3XY9e1pP0CVEUCdj5BmfIZxRBTSDycnbqhIOGec9QYtmVH2fbLpj86CFWkrNOkt/Fvty4KZG5lTglL9j/gJ87w==}
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -4060,9 +4026,6 @@ packages:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
     deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 
-  inherits@2.0.3:
-    resolution: {integrity: sha512-x00IRNXNy63jwGkJmzPigoySHbaqpNuzKbBOmzK+g2OdZpQ9w+sxCN+VSB3ja7IAge2OP2qpfxTjeNcyjmW1uw==}
-
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
@@ -4086,10 +4049,6 @@ packages:
   into-stream@3.1.0:
     resolution: {integrity: sha512-TcdjPibTksa1NQximqep2r17ISRiNE9fwlfbg3F8ANdvP5/yrFTew86VcO//jk4QTaMlbjypPBq76HN2zaKfZQ==}
     engines: {node: '>=4'}
-
-  is-arguments@1.2.0:
-    resolution: {integrity: sha512-7bVbi0huj/wrIAOzb8U1aszg9kdi3KN/CyU19CTI7tAoZYEZoL9yCDXpbXN+uPsuWnP02cyug1gleqq+TU+YCA==}
-    engines: {node: '>= 0.4'}
 
   is-array-buffer@3.0.5:
     resolution: {integrity: sha512-DDfANUiiG2wC1qawP66qlTugJeL5HyzMpfr8lLK+jMQirGzNod0B12cFB/9q838Ru27sBwfw78/rdoU7RERz6A==}
@@ -4740,9 +4699,6 @@ packages:
     resolution: {integrity: sha512-Vj7sf++t5pBD637NSfkxpHSMfWaeig5+DKWLhcqIYx6mWQz5hdJTGDVMQiJcw1ZYkhs7AazKDGpRVji1LJCZUQ==}
     engines: {node: '>=18'}
 
-  path@0.12.7:
-    resolution: {integrity: sha512-aXXC6s+1w7otVF9UletFkFcDsJeO7lSZBPUQhtb5O0xJe8LtYhj/GxldoL09bBj9+ZmE2hNoHqQSFMN5fikh4Q==}
-
   peek-readable@5.4.2:
     resolution: {integrity: sha512-peBp3qZyuS6cNIJ2akRNG1uo1WJ1d0wTxg/fxMdZ0BqCVhx242bSFHM9eNqflfJVS9SsgkzgT/1UgnsurBOTMg==}
     engines: {node: '>=14.16'}
@@ -5023,10 +4979,6 @@ packages:
 
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
-
-  process@0.11.10:
-    resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
-    engines: {node: '>= 0.6.0'}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -5873,12 +5825,6 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
-
-  util@0.10.4:
-    resolution: {integrity: sha512-0Pm9hTQ3se5ll1XihRic3FDIku70C+iHUdT/W926rSgHV5QgXsYbKZN8MSC3tJtSkhuROzvsQjAaFENRXr+19A==}
-
-  util@0.12.5:
-    resolution: {integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==}
 
   uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
@@ -7359,6 +7305,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
+    optional: true
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -7415,7 +7362,8 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@polka/url@1.0.0-next.29': {}
+  '@polka/url@1.0.0-next.29':
+    optional: true
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -8333,8 +8281,10 @@ snapshots:
       turbo-stream: 2.4.1
     optionalDependencies:
       typescript: 5.9.2
+    optional: true
 
-  '@remix-run/router@1.23.0': {}
+  '@remix-run/router@1.23.0':
+    optional: true
 
   '@remix-run/server-runtime@2.17.0(typescript@5.9.2)':
     dependencies:
@@ -8347,6 +8297,7 @@ snapshots:
       turbo-stream: 2.4.1
     optionalDependencies:
       typescript: 5.9.2
+    optional: true
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.28.3)(rollup@2.79.2)':
     dependencies:
@@ -8464,7 +8415,8 @@ snapshots:
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
-  '@standard-schema/spec@1.0.0': {}
+  '@standard-schema/spec@1.0.0':
+    optional: true
 
   '@supabase/auth-helpers-nextjs@0.10.0(@supabase/supabase-js@2.55.0)':
     dependencies:
@@ -8538,6 +8490,7 @@ snapshots:
   '@sveltejs/acorn-typescript@1.0.5(acorn@8.15.0)':
     dependencies:
       acorn: 8.15.0
+    optional: true
 
   '@sveltejs/kit@2.31.0(@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1))':
     dependencies:
@@ -8557,6 +8510,7 @@ snapshots:
       sirv: 3.0.1
       svelte: 5.38.1
       vite: 7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)
+    optional: true
 
   '@sveltejs/vite-plugin-svelte-inspector@5.0.0(@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)))(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1))':
     dependencies:
@@ -8566,6 +8520,7 @@ snapshots:
       vite: 7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@sveltejs/vite-plugin-svelte@6.1.2(svelte@5.38.1)(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1))':
     dependencies:
@@ -8579,6 +8534,7 @@ snapshots:
       vitefu: 1.1.1(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@swc/counter@0.1.3': {}
 
@@ -8603,7 +8559,8 @@ snapshots:
 
   '@tokenizer/token@0.3.0': {}
 
-  '@types/cookie@0.6.0': {}
+  '@types/cookie@0.6.0':
+    optional: true
 
   '@types/d3-array@3.2.1': {}
 
@@ -8703,11 +8660,13 @@ snapshots:
       entities: 4.5.0
       estree-walker: 2.0.2
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-dom@3.5.18':
     dependencies:
       '@vue/compiler-core': 3.5.18
       '@vue/shared': 3.5.18
+    optional: true
 
   '@vue/compiler-sfc@3.5.18':
     dependencies:
@@ -8720,22 +8679,27 @@ snapshots:
       magic-string: 0.30.17
       postcss: 8.5.6
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-ssr@3.5.18':
     dependencies:
       '@vue/compiler-dom': 3.5.18
       '@vue/shared': 3.5.18
+    optional: true
 
-  '@vue/devtools-api@6.6.4': {}
+  '@vue/devtools-api@6.6.4':
+    optional: true
 
   '@vue/reactivity@3.5.18':
     dependencies:
       '@vue/shared': 3.5.18
+    optional: true
 
   '@vue/runtime-core@3.5.18':
     dependencies:
       '@vue/reactivity': 3.5.18
       '@vue/shared': 3.5.18
+    optional: true
 
   '@vue/runtime-dom@3.5.18':
     dependencies:
@@ -8743,16 +8707,20 @@ snapshots:
       '@vue/runtime-core': 3.5.18
       '@vue/shared': 3.5.18
       csstype: 3.1.3
+    optional: true
 
   '@vue/server-renderer@3.5.18(vue@3.5.18(typescript@5.9.2))':
     dependencies:
       '@vue/compiler-ssr': 3.5.18
       '@vue/shared': 3.5.18
       vue: 3.5.18(typescript@5.9.2)
+    optional: true
 
-  '@vue/shared@3.5.18': {}
+  '@vue/shared@3.5.18':
+    optional: true
 
-  '@web3-storage/multipart-parser@1.0.0': {}
+  '@web3-storage/multipart-parser@1.0.0':
+    optional: true
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
@@ -8921,7 +8889,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  aria-query@5.3.2: {}
+  aria-query@5.3.2:
+    optional: true
 
   array-buffer-byte-length@1.0.2:
     dependencies:
@@ -8962,7 +8931,8 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axobject-query@4.1.0: {}
+  axobject-query@4.1.0:
+    optional: true
 
   babel-plugin-polyfill-corejs2@0.4.14(@babel/core@7.28.3):
     dependencies:
@@ -9226,9 +9196,11 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  cookie@0.6.0: {}
+  cookie@0.6.0:
+    optional: true
 
-  cookie@0.7.2: {}
+  cookie@0.7.2:
+    optional: true
 
   cookie@1.0.2: {}
 
@@ -9268,8 +9240,6 @@ snapshots:
       which: 2.0.2
 
   crypto-random-string@2.0.0: {}
-
-  crypto@1.0.1: {}
 
   csrf@3.1.0:
     dependencies:
@@ -9490,7 +9460,8 @@ snapshots:
 
   detect-node-es@1.1.0: {}
 
-  devalue@5.1.1: {}
+  devalue@5.1.1:
+    optional: true
 
   didyoumean@1.2.2: {}
 
@@ -9715,6 +9686,7 @@ snapshots:
       '@esbuild/win32-arm64': 0.25.9
       '@esbuild/win32-ia32': 0.25.9
       '@esbuild/win32-x64': 0.25.9
+    optional: true
 
   escalade@3.2.0: {}
 
@@ -9727,11 +9699,13 @@ snapshots:
       esrecurse: 4.3.0
       estraverse: 4.3.0
 
-  esm-env@1.2.2: {}
+  esm-env@1.2.2:
+    optional: true
 
   esrap@2.1.0:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+    optional: true
 
   esrecurse@4.3.0:
     dependencies:
@@ -9811,7 +9785,7 @@ snapshots:
 
   ext-list@2.2.2:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   ext-name@5.0.0:
     dependencies:
@@ -9853,6 +9827,7 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
+    optional: true
 
   file-type@10.11.0: {}
 
@@ -9930,8 +9905,6 @@ snapshots:
       universalify: 2.0.1
 
   fs.realpath@1.0.0: {}
-
-  fs@0.0.1-security: {}
 
   fsevents@2.3.3:
     optional: true
@@ -10215,8 +10188,6 @@ snapshots:
       once: 1.4.0
       wrappy: 1.0.2
 
-  inherits@2.0.3: {}
-
   inherits@2.0.4: {}
 
   ini@1.3.8: {}
@@ -10238,11 +10209,6 @@ snapshots:
     dependencies:
       from2: 2.3.0
       p-is-promise: 1.1.0
-
-  is-arguments@1.2.0:
-    dependencies:
-      call-bound: 1.0.4
-      has-tostringtag: 1.0.2
 
   is-array-buffer@3.0.5:
     dependencies:
@@ -10346,6 +10312,7 @@ snapshots:
   is-reference@3.0.3:
     dependencies:
       '@types/estree': 1.0.8
+    optional: true
 
   is-regex@1.2.1:
     dependencies:
@@ -10487,7 +10454,8 @@ snapshots:
     dependencies:
       json-buffer: 3.0.0
 
-  kleur@4.1.5: {}
+  kleur@4.1.5:
+    optional: true
 
   leven@3.1.0: {}
 
@@ -10497,7 +10465,8 @@ snapshots:
 
   loader-runner@4.3.0: {}
 
-  locate-character@3.0.0: {}
+  locate-character@3.0.0:
+    optional: true
 
   lodash.castarray@4.4.0: {}
 
@@ -10563,6 +10532,7 @@ snapshots:
   magic-string@0.30.17:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+    optional: true
 
   make-dir@1.3.0:
     dependencies:
@@ -10620,9 +10590,11 @@ snapshots:
       bin-build: 3.0.0
       bin-wrapper: 4.1.0
 
-  mri@1.2.0: {}
+  mri@1.2.0:
+    optional: true
 
-  mrmime@2.0.1: {}
+  mrmime@2.0.1:
+    optional: true
 
   ms@2.1.3: {}
 
@@ -10806,11 +10778,6 @@ snapshots:
       minipass: 7.1.2
 
   path-type@6.0.0: {}
-
-  path@0.12.7:
-    dependencies:
-      process: 0.11.10
-      util: 0.10.4
 
   peek-readable@5.4.2: {}
 
@@ -11054,8 +11021,6 @@ snapshots:
 
   process-nextick-args@2.0.1: {}
 
-  process@0.11.10: {}
-
   prop-types@15.8.1:
     dependencies:
       loose-envify: 1.4.0
@@ -11152,11 +11117,13 @@ snapshots:
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
       react-router: 6.30.0(react@19.0.0)
+    optional: true
 
   react-router@6.30.0(react@19.0.0):
     dependencies:
       '@remix-run/router': 1.23.0
       react: 19.0.0
+    optional: true
 
   react-smooth@4.0.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
@@ -11319,6 +11286,7 @@ snapshots:
       '@rollup/rollup-win32-ia32-msvc': 4.46.2
       '@rollup/rollup-win32-x64-msvc': 4.46.2
       fsevents: 2.3.3
+    optional: true
 
   run-parallel@1.2.0:
     dependencies:
@@ -11327,6 +11295,7 @@ snapshots:
   sade@1.8.1:
     dependencies:
       mri: 1.2.0
+    optional: true
 
   safe-array-concat@1.1.3:
     dependencies:
@@ -11527,6 +11496,7 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
+    optional: true
 
   slash@5.1.0: {}
 
@@ -11560,7 +11530,8 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  source-map@0.7.6: {}
+  source-map@0.7.6:
+    optional: true
 
   source-map@0.8.0-beta.0:
     dependencies:
@@ -11731,6 +11702,7 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.17
       zimmerframe: 1.1.2
+    optional: true
 
   svgo@4.0.0:
     dependencies:
@@ -11851,6 +11823,7 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
+    optional: true
 
   to-buffer@1.2.1:
     dependencies:
@@ -11870,7 +11843,8 @@ snapshots:
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
 
-  totalist@3.0.1: {}
+  totalist@3.0.1:
+    optional: true
 
   tr46@0.0.3: {}
 
@@ -11896,7 +11870,8 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  turbo-stream@2.4.1: {}
+  turbo-stream@2.4.1:
+    optional: true
 
   type-fest@0.16.0: {}
 
@@ -12023,18 +11998,6 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  util@0.10.4:
-    dependencies:
-      inherits: 2.0.3
-
-  util@0.12.5:
-    dependencies:
-      inherits: 2.0.4
-      is-arguments: 1.2.0
-      is-generator-function: 1.1.0
-      is-typed-array: 1.1.15
-      which-typed-array: 1.1.19
-
   uuid@11.1.0: {}
 
   uuid@3.4.0: {}
@@ -12081,15 +12044,18 @@ snapshots:
       jiti: 1.21.7
       terser: 5.43.1
       yaml: 2.8.1
+    optional: true
 
   vitefu@1.1.1(vite@7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)):
     optionalDependencies:
       vite: 7.1.2(@types/node@22.17.2)(jiti@1.21.7)(terser@5.43.1)(yaml@2.8.1)
+    optional: true
 
   vue-router@4.5.1(vue@3.5.18(typescript@5.9.2)):
     dependencies:
       '@vue/devtools-api': 6.6.4
       vue: 3.5.18(typescript@5.9.2)
+    optional: true
 
   vue@3.5.18(typescript@5.9.2):
     dependencies:
@@ -12100,6 +12066,7 @@ snapshots:
       '@vue/shared': 3.5.18
     optionalDependencies:
       typescript: 5.9.2
+    optional: true
 
   watchpack@2.4.4:
     dependencies:
@@ -12418,6 +12385,7 @@ snapshots:
 
   zen-observable@0.8.15: {}
 
-  zimmerframe@1.1.2: {}
+  zimmerframe@1.1.2:
+    optional: true
 
   zod@3.25.31: {}
