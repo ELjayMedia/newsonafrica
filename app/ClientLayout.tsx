@@ -22,6 +22,9 @@ import { useEffect } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { ErrorFallback } from "@/components/ErrorFallback"
 import Link from "next/link"
+import { CameraFeature } from "@/components/CameraFeature" // New import
+import { GeolocationFeature } from "@/components/GeolocationFeature" // New import
+import { NotificationFeature } from "@/components/NotificationFeature" // New import
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -78,6 +81,15 @@ export function ClientLayout({
                   <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
                     <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
                       <div className="p-1 md:p-2">{children}</div>
+                      {/* New section for Capacitor features */}
+                      <div className="p-4 md:p-6 mt-8 border-t border-gray-200">
+                        <h2 className="text-2xl font-bold mb-6 text-center">Capacitor Native Features</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <CameraFeature />
+                          <GeolocationFeature />
+                          <NotificationFeature />
+                        </div>
+                      </div>
                     </main>
                     <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
                       <Sidebar />

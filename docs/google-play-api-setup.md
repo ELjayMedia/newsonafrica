@@ -10,7 +10,7 @@
 ### 1.1 Create New Project
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click "Select a project" → "New Project"
-3. Project name: `news-on-africa`
+3. Project name: `news-on-africa-twa`
 4. Click "Create"
 
 ### 1.2 Enable Google Play Developer API
@@ -51,7 +51,7 @@
 
 ### 3.2 Link Google Cloud Project
 1. If not already linked, click "Link Google Cloud project"
-2. Select the project you created: `news-on-africa`
+2. Select the project you created: `news-on-africa-twa`
 3. Click "Link project"
 
 ### 3.3 Grant Permissions to Service Account
