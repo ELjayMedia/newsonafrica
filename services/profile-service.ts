@@ -170,7 +170,7 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
       USERNAME_CACHE_TTL,
     )
 
-    return result.length > 0
+    return (result?.length ?? 0) > 0
   } catch (error) {
     logger.error("Error in checkUsernameExists:", error)
     throw error
@@ -190,11 +190,12 @@ export async function searchProfiles(query: string, limit = 10): Promise<Profile
   try {
     const cacheKey = createQueryKey("profiles", { search: query, limit })
 
-    return await executeWithCache<Profile>(
+    const result = await executeWithCache<Profile>(
       supabase.from("profiles").select("*").or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(limit),
       cacheKey,
       60000, // 1 minute cache for searches
     )
+    return result ?? []
   } catch (error) {
     logger.error("Error in searchProfiles:", error)
     return []
