@@ -1,6 +1,9 @@
 import logger from "@/utils/logger";
 import env from "@/lib/config/env";
 import type { PaystackVerifyResponse } from "@/config/paystack"
+import localtunnel from "localtunnel";
+
+export let webhookTunnelUrl: string | null = null;
 
 /**
  * Verifies a Paystack transaction using the transaction reference
@@ -110,29 +113,34 @@ export function formatNextBillingDate(interval: string): string {
 
 /**
  * Starts a webhook tunnel for local development
- * This function is used to create a public URL that forwards to your local server
+ * This creates a public URL that forwards to your local server
  * for testing Paystack webhooks in development
  */
-export function startWebhookTunnel() {
-  // Only run in development mode
+export async function startWebhookTunnel(retries = 3): Promise<string | null> {
   if (env.NODE_ENV !== "development") {
-    return
+    return null
   }
 
-  logger.info("Starting webhook tunnel for Paystack...")
+  const port = Number(process.env.PORT) || 3000
 
-  // In a real implementation, you might use a package like localtunnel or ngrok
-  // to create a public URL that forwards to your local server
-  //
-  // Example with localtunnel (if it were installed):
-  // const localtunnel = require('localtunnel');
-  // const tunnel = localtunnel({ port: 3000, subdomain: 'newsonafrica-paystack' });
-  // tunnel.then(tunnel => {
-  //   logger.info(`Webhook tunnel started at: ${tunnel.url}/api/webhooks/paystack`);
-  // });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      logger.info(`Starting webhook tunnel for Paystack (attempt ${attempt})...`)
+      const tunnel = await localtunnel({ port })
+      webhookTunnelUrl = `${tunnel.url}/api/webhooks/paystack`
+      logger.info(`Webhook tunnel started at: ${webhookTunnelUrl}`)
+      tunnel.on("close", () => logger.info("Webhook tunnel closed"))
+      return webhookTunnelUrl
+    } catch (error) {
+      logger.error(`Failed to start webhook tunnel (attempt ${attempt}):`, error)
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
+      }
+    }
+  }
 
-  // For now, we'll just log a message
-  logger.info("Webhook tunnel simulation: In production, use a real webhook URL")
+  logger.error("Unable to start webhook tunnel after multiple attempts")
+  return null
 }
 
 // Add the missing export for paystackClient
