@@ -65,11 +65,17 @@ export async function middleware(request: NextRequest) {
     // Add CORS headers for API routes
     const response = NextResponse.next()
 
-    // Define allowed origins based on environment
-    const allowedOrigins =
+    // Determine allowed origins for CORS
+    const defaultAllowedOrigins =
       env.NODE_ENV === "production"
         ? [env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
         : ["http://localhost:3000"]
+
+    const allowedOrigins = env.CORS_ALLOWED_ORIGINS
+      ? env.CORS_ALLOWED_ORIGINS.split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean)
+      : defaultAllowedOrigins
 
     const origin = request.headers.get("origin") || ""
 

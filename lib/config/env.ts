@@ -8,6 +8,7 @@ const envSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     NEXT_PUBLIC_SITE_URL: z.string().url().default("https://newsonafrica.com"),
     LOG_LEVEL: z.string().default("info"),
+    CORS_ALLOWED_ORIGINS: z.string().optional(),
   })
   .passthrough();
 
