@@ -1,8 +1,4 @@
-import type { Config } from "tailwindcss"
-import tailwindcssAnimate from "tailwindcss-animate"
-import typography from "@tailwindcss/typography"
-
-const config: Config = {
+module.exports = {
   darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}", "*.{js,ts,jsx,tsx,mdx}"],
   theme: {
@@ -107,7 +103,5 @@ const config: Config = {
       },
     },
   },
-  plugins: [tailwindcssAnimate, typography],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 }
-
-export default config

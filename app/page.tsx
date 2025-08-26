@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
@@ -77,7 +76,7 @@ async function getHomePageData() {
     const { posts } = await getLatestPosts(20)
     return { posts: posts || [] }
   } catch (error) {
-    logger.error("Failed to fetch posts for homepage:", error)
+    console.error("Failed to fetch posts for homepage:", error)
     return { posts: [] }
   }
 }
@@ -87,7 +86,7 @@ export default async function Home() {
     const { posts } = await getHomePageData()
     return <HomeContent initialPosts={posts} />
   } catch (error) {
-    logger.error("Homepage data fetch failed:", error)
+    console.error("Homepage data fetch failed:", error)
     return <HomeContent initialPosts={[]} />
   }
 }

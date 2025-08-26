@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect, useState } from "react"
@@ -10,12 +9,12 @@ export function NetworkStatusHandler() {
     // Update network status
     const handleOnline = () => {
       setIsOnline(true)
-      logger.info("Application is online")
+      console.log("Application is online")
     }
 
     const handleOffline = () => {
       setIsOnline(false)
-      logger.info("Application is offline")
+      console.log("Application is offline")
     }
 
     // Add event listeners

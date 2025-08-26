@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState } from "react"
@@ -21,14 +20,14 @@ export function BookmarkDebugger() {
       const { data, error } = await supabase.from("bookmarks").select("*").limit(1)
 
       if (error) {
-        logger.error("Database error:", error)
+        console.error("Database error:", error)
         setDbStatus(`Error: ${error.message}`)
         return
       }
 
       setDbStatus("Connected successfully")
     } catch (error: any) {
-      logger.error("Error checking database:", error)
+      console.error("Error checking database:", error)
       setDbStatus(`Error: ${error.message}`)
     }
   }
@@ -40,14 +39,14 @@ export function BookmarkDebugger() {
       const { data, error } = await supabase.rpc("get_table_info", { table_name: "bookmarks" })
 
       if (error) {
-        logger.error("Table info error:", error)
+        console.error("Table info error:", error)
         setTableInfo(`Error: ${error.message}`)
         return
       }
 
       setTableInfo(data || "Table exists but couldn't get structure")
     } catch (error: any) {
-      logger.error("Error checking table structure:", error)
+      console.error("Error checking table structure:", error)
       setTableInfo(`Error: ${error.message}`)
     }
   }
@@ -71,7 +70,7 @@ export function BookmarkDebugger() {
       const { data, error } = await supabase.from("bookmarks").insert(testBookmark).select().single()
 
       if (error) {
-        logger.error("Test bookmark error:", error)
+        console.error("Test bookmark error:", error)
         alert(`Error: ${error.message}`)
         return
       }
@@ -79,7 +78,7 @@ export function BookmarkDebugger() {
       alert("Test bookmark added successfully!")
       refreshBookmarks()
     } catch (error: any) {
-      logger.error("Error adding test bookmark:", error)
+      console.error("Error adding test bookmark:", error)
       alert(`Error: ${error.message}`)
     }
   }

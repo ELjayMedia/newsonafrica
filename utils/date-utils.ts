@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 export function formatDate(dateString: string, includeTime = false): string {
   try {
     const date = new Date(dateString)
@@ -20,7 +19,7 @@ export function formatDate(dateString: string, includeTime = false): string {
 
     return date.toLocaleDateString("en-US", options)
   } catch (error) {
-    logger.error("Error formatting date:", error)
+    console.error("Error formatting date:", error)
     return dateString || "Unknown date"
   }
 }

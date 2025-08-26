@@ -81,12 +81,7 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
-
-# CORS
-CORS_ALLOWED_ORIGINS=https://your-site-url.com,https://news-on-africa.com
 \`\`\`
-
-`CORS_ALLOWED_ORIGINS` is a comma-separated list of origins allowed to access API routes. If not provided, the app defaults to the site URL in production and `http://localhost:3000` in development.
 
 ### Installation
 

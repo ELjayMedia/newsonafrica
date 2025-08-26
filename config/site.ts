@@ -1,8 +1,7 @@
-import env from "@/lib/config/env";
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
-  url: env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com",
   ogImage: "/news-on-africa-logo.png",
   links: {
     twitter: "https://twitter.com/newsonafrica",
@@ -37,12 +36,12 @@ export const siteConfig = {
   // WordPress API configuration
   wordpress: {
     apiUrl:
-      env.WORDPRESS_REST_API_URL ||
-      env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
+      process.env.WORDPRESS_REST_API_URL ||
+      process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
       "https://newsonafrica.com/sz/wp-json/wp/v2",
-    authToken: env.WORDPRESS_AUTH_TOKEN,
-    username: env.WP_APP_USERNAME,
-    password: env.WP_APP_PASSWORD,
+    authToken: process.env.WORDPRESS_AUTH_TOKEN,
+    username: process.env.WP_APP_USERNAME,
+    password: process.env.WP_APP_PASSWORD,
   },
   // Search configuration
   search: {
@@ -56,8 +55,8 @@ export const siteConfig = {
   },
   // Analytics
   analytics: {
-    googleAnalyticsId: env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
-    facebookPixelId: env.NEXT_PUBLIC_FACEBOOK_APP_ID,
+    googleAnalyticsId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
+    facebookPixelId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
   },
   // Social sharing
   social: {
@@ -78,7 +77,7 @@ export const siteConfig = {
   ads: {
     enabled: true,
     provider: "google", // Google Ad Manager
-    adsenseClientId: env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
+    adsenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
   },
 }
 

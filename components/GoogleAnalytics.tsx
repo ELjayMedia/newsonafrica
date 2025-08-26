@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -9,7 +8,7 @@ export default function GoogleAnalytics() {
 
   useEffect(() => {
     if (typeof window.gtag !== "function") {
-      logger.warn("Google Analytics not loaded")
+      console.warn("Google Analytics not loaded")
     }
   }, [])
 

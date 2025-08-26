@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { siteConfig } from "@/config/site"
 
 interface IndexedPost {
@@ -288,7 +287,7 @@ export class SearchIndexer {
     const maxMemoryMB = SEARCH_CONFIG.MEMORY.MAX_INDEX_SIZE_MB
 
     if (memoryUsage > maxMemoryMB * SEARCH_CONFIG.MEMORY.CLEANUP_THRESHOLD) {
-      logger.info(`Search index memory usage: ${memoryUsage}MB, performing cleanup...`)
+      console.log(`Search index memory usage: ${memoryUsage}MB, performing cleanup...`)
 
       // Remove least popular posts if memory is high
       const posts = Array.from(this.index.posts.values())
@@ -299,7 +298,7 @@ export class SearchIndexer {
         this.removePostFromIndex(posts[i].id)
       }
 
-      logger.info(`Removed ${toRemove} posts from search index`)
+      console.log(`Removed ${toRemove} posts from search index`)
     }
   }
 
@@ -346,7 +345,7 @@ export class SearchIndexer {
     }
 
     this.isBuilding = true
-    logger.info(`Building optimized search index for ${posts.length} posts...`)
+    console.log(`Building optimized search index for ${posts.length} posts...`)
     const startTime = Date.now()
 
     try {
@@ -375,19 +374,19 @@ export class SearchIndexer {
 
         // Check if we're exceeding time limit
         if (Date.now() - startTime > SEARCH_CONFIG.PERFORMANCE.MAX_INDEX_BUILD_TIME) {
-          logger.warn(`Index build taking too long, processing remaining ${posts.length - i} posts in background`)
+          console.warn(`Index build taking too long, processing remaining ${posts.length - i} posts in background`)
           setTimeout(() => this.processBatch(posts.slice(i)), 0)
           break
         }
       }
 
       const buildTime = Date.now() - startTime
-      logger.info(`Optimized search index built in ${buildTime}ms for ${this.index.posts.size} posts`)
-      logger.info(
+      console.log(`Optimized search index built in ${buildTime}ms for ${this.index.posts.size} posts`)
+      console.log(
         `Index stats: ${this.getStats().memoryUsage}MB, ${this.index.titleIndex.size} title words, ${this.index.contentIndex.size} content words`,
       )
     } catch (error) {
-      logger.error("Error building search index:", error)
+      console.error("Error building search index:", error)
     } finally {
       this.isBuilding = false
 
@@ -408,7 +407,7 @@ export class SearchIndexer {
         this.indexWords(indexedPost)
         this.indexNGrams(indexedPost)
       } catch (error) {
-        logger.error(`Error processing post ${post.id}:`, error)
+        console.error(`Error processing post ${post.id}:`, error)
       }
     })
   }
@@ -720,7 +719,7 @@ export class SearchIndexer {
 
     const searchTime = Date.now() - startTime
     if (searchTime > SEARCH_CONFIG.PERFORMANCE.MAX_SEARCH_TIME) {
-      logger.warn(`Slow search query: "${query}" took ${searchTime}ms`)
+      console.warn(`Slow search query: "${query}" took ${searchTime}ms`)
     }
 
     return results.slice(0, limit).map((result) => result.post)
@@ -1042,7 +1041,7 @@ export class SearchIndexer {
 
       return { posts: searchDocuments, total }
     } catch (error) {
-      logger.error("Search indexer error:", error)
+      console.error("Search indexer error:", error)
       return { posts: [], total: 0 }
     }
   }

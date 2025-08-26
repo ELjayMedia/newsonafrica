@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { ApolloServer } from "@apollo/server"
 import { startServerAndCreateNextHandler } from "@as-integrations/next"
 import type { NextRequest } from "next/server"
@@ -8,18 +6,18 @@ import { resolvers } from "@/graphql/resolvers"
 import { createClient } from "@supabase/supabase-js"
 
 // Initialize Supabase client
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Create Apollo Server
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  introspection: env.NODE_ENV !== "production",
+  introspection: process.env.NODE_ENV !== "production",
   formatError: (error) => {
     // Don't expose internal server errors to clients in production
-    if (env.NODE_ENV === "production" && error.extensions?.code === "INTERNAL_SERVER_ERROR") {
+    if (process.env.NODE_ENV === "production" && error.extensions?.code === "INTERNAL_SERVER_ERROR") {
       return {
         message: "Internal server error",
         extensions: { code: "INTERNAL_SERVER_ERROR" },
@@ -52,7 +50,7 @@ async function createContext({ req }: { req: NextRequest }) {
 
     return { user }
   } catch (error) {
-    logger.error("Error verifying token:", error)
+    console.error("Error verifying token:", error)
     return { user: null }
   }
 }

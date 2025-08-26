@@ -1,7 +1,4 @@
 "use client"
-
-import env from "@/lib/config/env"
-import logger from "@/utils/logger"
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -72,7 +69,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
 
   // Debug logging
-  logger.info("ArticleView Debug:", {
+  console.log("ArticleView Debug:", {
     postId: id,
     categories: categoryIds,
     categoriesLength: categoryIds.length,
@@ -91,7 +88,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   })
 
   // Debug related posts
-  logger.info("Related Posts Debug:", {
+  console.log("Related Posts Debug:", {
     relatedPosts,
     loading: loadingRelated,
     error: relatedError,
@@ -427,7 +424,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
         />
 
         {/* Debug information - remove this in production */}
-        {env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === "development" && (
           <div className="mt-4 p-4 bg-gray-100 rounded text-sm">
             <p>
               <strong>Debug Info:</strong>

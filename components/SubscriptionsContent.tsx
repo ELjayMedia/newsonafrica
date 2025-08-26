@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect, useState } from "react"
@@ -32,7 +31,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
         if (error) throw error
         setSubscriptions(data || [])
       } catch (error) {
-        logger.error("Error loading subscriptions:", error)
+        console.error("Error loading subscriptions:", error)
         toast({
           title: "Error",
           description: "Failed to load subscription data. Please try again.",
@@ -76,7 +75,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
       if (error) throw error
       setSubscriptions(data || [])
     } catch (error) {
-      logger.error("Error cancelling subscription:", error)
+      console.error("Error cancelling subscription:", error)
       toast({
         title: "Error",
         description: "Failed to cancel subscription. Please try again.",

@@ -1,12 +1,10 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const baseUrl = env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
@@ -52,7 +50,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    logger.error("Error generating sitemap:", error)
+    console.error("Error generating sitemap:", error)
     return new NextResponse("Error generating sitemap", { status: 500 })
   }
 }

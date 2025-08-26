@@ -1,6 +1,5 @@
-import env from "@/lib/config/env";
 export const PAYSTACK_PUBLIC_KEY =
-  env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 export const SUBSCRIPTION_PLANS = [
   {

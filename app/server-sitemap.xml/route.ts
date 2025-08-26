@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
@@ -86,7 +85,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    logger.error("Error generating server sitemap:", error)
+    console.error("Error generating server sitemap:", error)
     return new NextResponse("Error generating server sitemap", { status: 500 })
   }
 }

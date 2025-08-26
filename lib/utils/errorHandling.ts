@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 /**
  * Error handling utilities for the application
  */
@@ -53,10 +51,10 @@ export function logError(error: Error, context?: string): void {
     timestamp: new Date().toISOString(),
   }
 
-  logger.error("Application Error:", errorInfo)
+  console.error("Application Error:", errorInfo)
 
   // In production, you might want to send this to an error tracking service
-  if (env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production") {
     // Send to error tracking service (e.g., Sentry, LogRocket, etc.)
   }
 }
@@ -106,7 +104,7 @@ export async function safeAsync<T>(fn: () => Promise<T>, fallback: T, context?: 
  * Validate required environment variables
  */
 export function validateEnvVars(requiredVars: string[]): void {
-  const missing = requiredVars.filter((varName) => !env[varName])
+  const missing = requiredVars.filter((varName) => !process.env[varName])
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(", ")}`)

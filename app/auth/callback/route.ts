@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
       if (error) {
-        logger.error("Auth callback error:", error)
+        console.error("Auth callback error:", error)
         return NextResponse.redirect(`${requestUrl.origin}/auth?error=callback_error`)
       }
 
@@ -62,7 +61,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${requestUrl.origin}${next}`)
       }
     } catch (error) {
-      logger.error("Session exchange error:", error)
+      console.error("Session exchange error:", error)
       return NextResponse.redirect(`${requestUrl.origin}/auth?error=session_error`)
     }
   }

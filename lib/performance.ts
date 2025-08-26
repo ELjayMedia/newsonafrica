@@ -1,16 +1,14 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import React from "react"
 // Performance monitoring and optimization utilities
 
 // Measure component render time
 export function measureRenderTime(componentName: string) {
-  if (env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production") {
     const startTime = performance.now()
 
     return () => {
       const endTime = performance.now()
-      logger.info(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
+      console.log(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
     }
   }
 
@@ -66,7 +64,7 @@ export function memoize<T extends (...args: any[]) => any>(func: T): (...args: P
 
 // Detect slow renders and report them
 export function detectSlowRenders(threshold = 16) {
-  if (typeof window !== "undefined" && env.NODE_ENV !== "production") {
+  if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
     const originalCreateElement = React.createElement
 
     // @ts-ignore - Monkey patching for development only
@@ -77,7 +75,7 @@ export function detectSlowRenders(threshold = 16) {
 
       const renderTime = end - start
       if (renderTime > threshold) {
-        logger.warn(
+        console.warn(
           `[Performance Warning] Slow render detected: ${args[0]?.displayName || args[0]} took ${renderTime.toFixed(2)}ms`,
         )
       }

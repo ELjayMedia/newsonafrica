@@ -1,14 +1,12 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
-import { isBrowser } from "@/lib/ad-utils"
+import { isBrowser } from "@/lib/adUtils"
 import type { Metric } from "web-vitals"
 
 // Send web vitals to Vercel Analytics
 export function sendWebVitalToVercel(metric: Metric) {
   try {
     // Log in development for debugging
-    if (env.NODE_ENV === "development") {
-      logger.info(`Web Vital: ${metric.name} = ${metric.value}`)
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Web Vital: ${metric.name} = ${metric.value}`)
     }
 
     // Ensure we're in a browser environment with the required APIs
@@ -16,7 +14,7 @@ export function sendWebVitalToVercel(metric: Metric) {
 
     // Send to Vercel Analytics
     const body = {
-      dsn: env.NEXT_PUBLIC_SENTRY_DSN || "", // Use Sentry DSN as identifier
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || "", // Use Sentry DSN as identifier
       id: metric.id,
       page: window.location.pathname,
       href: window.location.href,
@@ -37,11 +35,11 @@ export function sendWebVitalToVercel(metric: Metric) {
         keepalive: true,
         headers: { "Content-Type": "application/json" },
       }).catch((err) => {
-        logger.error("Failed to send web vital:", err)
+        console.error("Failed to send web vital:", err)
       })
     }
   } catch (error) {
-    logger.error("Error sending web vital:", error)
+    console.error("Error sending web vital:", error)
   }
 }
 
@@ -50,7 +48,7 @@ export function reportWebVitals(metric: any) {
   try {
     sendWebVitalToVercel(metric)
   } catch (error) {
-    logger.error("Error in reportWebVitals:", error)
+    console.error("Error in reportWebVitals:", error)
   }
 }
 
@@ -66,7 +64,7 @@ function getConnectionSpeed() {
     if (connection.saveData) return "saveData"
     if (connection.effectiveType) return connection.effectiveType
   } catch (error) {
-    logger.error("Error getting connection speed:", error)
+    console.error("Error getting connection speed:", error)
   }
 
   return "unknown"
@@ -101,10 +99,10 @@ export function analyzeResourceTiming() {
         }),
         keepalive: true,
       }).catch((err) => {
-        logger.error("Failed to send resource timing data:", err)
+        console.error("Failed to send resource timing data:", err)
       })
     }
   } catch (error) {
-    logger.error("Error analyzing resource timing:", error)
+    console.error("Error analyzing resource timing:", error)
   }
 }

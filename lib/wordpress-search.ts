@@ -1,6 +1,4 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
-const WORDPRESS_REST_API_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Search result interface
 export interface WordPressSearchResult {
@@ -149,7 +147,7 @@ export async function searchWordPressPosts(
 
     return searchResponse
   } catch (error) {
-    logger.error("WordPress search error:", error)
+    console.error("WordPress search error:", error)
 
     // Return empty results on error
     return {
@@ -212,7 +210,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 
     return Array.from(suggestions).slice(0, limit)
   } catch (error) {
-    logger.error("Error getting search suggestions:", error)
+    console.error("Error getting search suggestions:", error)
     return []
   }
 }
@@ -234,7 +232,7 @@ export async function searchCategories(query: string): Promise<any[]> {
     if (!response.ok) return []
     return await response.json()
   } catch (error) {
-    logger.error("Error searching categories:", error)
+    console.error("Error searching categories:", error)
     return []
   }
 }
@@ -253,7 +251,7 @@ export async function searchTags(query: string): Promise<any[]> {
     if (!response.ok) return []
     return await response.json()
   } catch (error) {
-    logger.error("Error searching tags:", error)
+    console.error("Error searching tags:", error)
     return []
   }
 }

@@ -1,10 +1,10 @@
-import fs from "fs"
-import path from "path"
-import { promisify } from "util"
-import imagemin from "imagemin"
-import imageminMozjpeg from "imagemin-mozjpeg"
-import imageminPngquant from "imagemin-pngquant"
-import imageminWebp from "imagemin-webp"
+const fs = require("fs")
+const path = require("path")
+const { promisify } = require("util")
+const imagemin = require("imagemin")
+const imageminMozjpeg = require("imagemin-mozjpeg")
+const imageminPngquant = require("imagemin-pngquant")
+const imageminWebp = require("imagemin-webp")
 
 const readdir = promisify(fs.readdir)
 const stat = promisify(fs.stat)
@@ -13,9 +13,9 @@ const stat = promisify(fs.stat)
 const PUBLIC_DIR = path.join(process.cwd(), "public")
 
 // Function to get all image files recursively
-async function getImageFiles(dir: string): Promise<string[]> {
+async function getImageFiles(dir) {
   const files = await readdir(dir)
-  const imageFiles: string[] = []
+  const imageFiles = []
 
   for (const file of files) {
     const filePath = path.join(dir, file)
@@ -27,13 +27,13 @@ async function getImageFiles(dir: string): Promise<string[]> {
         try {
           const subDirImages = await getImageFiles(filePath)
           imageFiles.push(...subDirImages)
-        } catch (error: any) {
+        } catch (error) {
           console.warn(`Warning: Could not process directory ${filePath}:`, error.message)
         }
       } else if (stats.isFile() && /\.(jpe?g|png)$/i.test(file)) {
         imageFiles.push(filePath)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.warn(`Warning: Could not stat ${filePath}:`, error.message)
       continue
     }
@@ -55,7 +55,7 @@ async function optimizeImages() {
     }
 
     // Group images by directory for processing
-    const imagesByDir = imageFiles.reduce<Record<string, string[]>>((acc, file) => {
+    const imagesByDir = imageFiles.reduce((acc, file) => {
       const dir = path.dirname(file)
       if (!acc[dir]) {
         acc[dir] = []
@@ -82,7 +82,7 @@ async function optimizeImages() {
         })
 
         console.log(`Finished processing images in ${dir}`)
-      } catch (error: any) {
+      } catch (error) {
         console.error(`Error processing images in ${dir}:`, error.message)
         continue
       }

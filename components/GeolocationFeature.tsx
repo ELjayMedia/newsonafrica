@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -19,7 +18,7 @@ export function GeolocationFeature() {
       const coordinates = await Geolocation.getCurrentPosition()
       setPosition(coordinates)
     } catch (e: any) {
-      logger.error("Geolocation error:", e)
+      console.error("Geolocation error:", e)
       setError(`Failed to get location: ${e.message || "Unknown error"}`)
     } finally {
       setLoading(false)
@@ -30,7 +29,7 @@ export function GeolocationFeature() {
     // Watch for position changes (optional, for continuous updates)
     const watchId = Geolocation.watchPosition({}, (newPosition, err) => {
       if (err) {
-        logger.error("Geolocation watch error:", err)
+        console.error("Geolocation watch error:", err)
         setError(`Location watch error: ${err.message || "Unknown error"}`)
         return
       }

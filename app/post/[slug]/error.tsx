@@ -1,8 +1,5 @@
 "use client"
 
-import logger from "@/utils/logger"
-import env from "@/lib/config/env"
-
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Home, RefreshCw } from "lucide-react"
@@ -15,7 +12,7 @@ interface PostErrorProps {
 export default function PostError({ error, reset }: PostErrorProps) {
   useEffect(() => {
     // Log the error to an error reporting service
-    logger.error("Post page error:", error)
+    console.error("Post page error:", error)
   }, [error])
 
   return (
@@ -41,7 +38,7 @@ export default function PostError({ error, reset }: PostErrorProps) {
           </Button>
         </div>
 
-        {env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === "development" && (
           <details className="mt-6 text-left">
             <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
               Error details (development only)

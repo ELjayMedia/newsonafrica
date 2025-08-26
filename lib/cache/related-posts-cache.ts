@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import type { WordPressPost } from "@/lib/api/wordpress"
 
 interface CacheEntry<T> {
@@ -304,7 +303,7 @@ class RelatedPostsCache {
           const relatedPosts = await fetchFunction(post.id, post.categories, post.tags, limit)
           this.set(post.id, post.categories, post.tags, limit, relatedPosts)
         } catch (error) {
-          logger.warn(`Failed to preload related posts for ${post.id}:`, error)
+          console.warn(`Failed to preload related posts for ${post.id}:`, error)
         }
       }
     })

@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 const CACHE_DURATION = 5 * 60 * 1000
 let lastCheck = 0
 const cachedHealth = {
@@ -21,7 +19,7 @@ export async function checkGraphQLHealth(): Promise<boolean> {
   }
 
   try {
-    const WORDPRESS_API_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+    const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
@@ -47,7 +45,7 @@ export async function checkGraphQLHealth(): Promise<boolean> {
 
     return isHealthy
   } catch (error) {
-    logger.error("GraphQL health check failed:", error)
+    console.error("GraphQL health check failed:", error)
 
     // Update cache
     cachedHealth.graphql = false
@@ -71,7 +69,7 @@ export async function checkRESTHealth(): Promise<boolean> {
   }
 
   try {
-    const WORDPRESS_REST_API_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+    const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
@@ -90,7 +88,7 @@ export async function checkRESTHealth(): Promise<boolean> {
 
     return isHealthy
   } catch (error) {
-    logger.error("REST API health check failed:", error)
+    console.error("REST API health check failed:", error)
 
     // Update cache
     cachedHealth.rest = false

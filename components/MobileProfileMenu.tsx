@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useUser } from "@/contexts/UserContext"
@@ -26,7 +25,7 @@ export function MobileProfileMenu() {
       })
       router.push("/")
     } catch (error) {
-      logger.error("Error signing out:", error)
+      console.error("Error signing out:", error)
       toast({
         title: "Error",
         description: "Failed to log out. Please try again.",

@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { fetchPostsByTag } from "@/lib/wordpress-api"
 
@@ -11,7 +10,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
     const data = await fetchPostsByTag(slug, after)
     return NextResponse.json(data)
   } catch (error) {
-    logger.error("Error fetching posts by tag:", error)
+    console.error("Error fetching posts by tag:", error)
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 })
   }
 }

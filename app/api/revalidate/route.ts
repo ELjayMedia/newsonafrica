@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server"
-import env from "@/lib/config/env";
 import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Validate query parameters
     const { secret, path, tag, type } = revalidateSchema.parse(params)
 
-    if (secret !== env.REVALIDATION_SECRET) {
+    if (secret !== process.env.REVALIDATION_SECRET) {
       throw new Error("Invalid revalidation secret")
     }
 

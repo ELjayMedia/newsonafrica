@@ -1,13 +1,8 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
 import { usePathname } from "next/navigation"
-import {
-  shouldReduceAds,
-  getRecommendedAdDensity,
-  adExclusionSelectors,
-} from "@/lib/ad-utils"
+import { shouldReduceAds, getRecommendedAdDensity, adExclusionSelectors } from "@/lib/adOptimization"
 
 export function AdDensityController() {
   const pathname = usePathname()
@@ -39,7 +34,7 @@ export function AdDensityController() {
           })
         })
       } catch (error) {
-        logger.error("Error setting ad exclusion zones:", error)
+        console.error("Error setting ad exclusion zones:", error)
       }
     }
   }, [pathname])

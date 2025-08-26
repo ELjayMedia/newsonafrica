@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
@@ -21,9 +19,9 @@ const LEGACY_ROUTES_MAP = {
 
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
-  if (env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === "development") {
     const { pathname, search } = request.nextUrl
-    logger.info(`[${request.method}] ${pathname}${search}`)
+    console.log(`[${request.method}] ${pathname}${search}`)
   }
 }
 
@@ -65,17 +63,11 @@ export async function middleware(request: NextRequest) {
     // Add CORS headers for API routes
     const response = NextResponse.next()
 
-    // Determine allowed origins for CORS
-    const defaultAllowedOrigins =
-      env.NODE_ENV === "production"
-        ? [env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
+    // Define allowed origins based on environment
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? [process.env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
         : ["http://localhost:3000"]
-
-    const allowedOrigins = env.CORS_ALLOWED_ORIGINS
-      ? env.CORS_ALLOWED_ORIGINS.split(",")
-          .map((origin) => origin.trim())
-          .filter(Boolean)
-      : defaultAllowedOrigins
 
     const origin = request.headers.get("origin") || ""
 

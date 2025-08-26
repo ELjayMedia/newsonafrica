@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { GraphQLClient } from "graphql-request"
 import { cache } from "react"
 
@@ -25,7 +24,7 @@ export const fetchGraphQL = cache(async (query: string, variables = {}) => {
   try {
     return await graphqlClient.request(query, variables)
   } catch (error) {
-    logger.error("GraphQL request error:", error)
+    console.error("GraphQL request error:", error)
     throw error
   }
 })
@@ -58,7 +57,7 @@ export async function fetchGraphQLClient(query: string, variables = {}, token?: 
 
     return result.data
   } catch (error) {
-    logger.error("GraphQL client request error:", error)
+    console.error("GraphQL client request error:", error)
     throw error
   }
 }

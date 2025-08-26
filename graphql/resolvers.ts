@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import {
   fetchSinglePost,
   fetchRecentPosts,
@@ -17,8 +15,8 @@ import { createClient } from "@supabase/supabase-js"
 import DataLoader from "dataloader"
 
 // Initialize Supabase client
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Create DataLoaders for batching and caching
@@ -117,7 +115,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
       if (error) {
-        logger.error("Error fetching user profile:", error)
+        console.error("Error fetching user profile:", error)
         return null
       }
 
@@ -142,7 +140,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("bookmarks").insert({ user_id: user.id, post_id: postId }).single()
 
       if (error) {
-        logger.error("Error creating bookmark:", error)
+        console.error("Error creating bookmark:", error)
         return {
           success: false,
           message: "Failed to bookmark post",
@@ -167,7 +165,7 @@ export const resolvers = {
       const { error } = await supabase.from("bookmarks").delete().match({ user_id: user.id, post_id: postId })
 
       if (error) {
-        logger.error("Error removing bookmark:", error)
+        console.error("Error removing bookmark:", error)
         return {
           success: false,
           message: "Failed to remove bookmark",
@@ -189,7 +187,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("profiles").update(input).eq("id", user.id).single()
 
       if (error) {
-        logger.error("Error updating profile:", error)
+        console.error("Error updating profile:", error)
         throw new Error("Failed to update profile")
       }
 
@@ -326,7 +324,7 @@ export const resolvers = {
       const { data, error } = await supabase.from("bookmarks").select("post_id").eq("user_id", user.id)
 
       if (error || !data) {
-        logger.error("Error fetching bookmarks:", error)
+        console.error("Error fetching bookmarks:", error)
         return []
       }
 

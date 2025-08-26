@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useCallback, useEffect } from "react"
@@ -44,7 +43,7 @@ export function useAuth() {
 
         return { success: true }
       } catch (error) {
-        logger.error("Login failed:", error)
+        console.error("Login failed:", error)
         return { success: false, error }
       }
     },
@@ -69,7 +68,7 @@ export function useAuth() {
 
         return { success: true }
       } catch (error) {
-        logger.error("Registration failed:", error)
+        console.error("Registration failed:", error)
         return { success: false, error }
       }
     },
@@ -85,7 +84,7 @@ export function useAuth() {
         await signOut(redirectTo)
         return { success: true }
       } catch (error) {
-        logger.error("Logout failed:", error)
+        console.error("Logout failed:", error)
         return { success: false, error }
       }
     },
@@ -100,7 +99,7 @@ export function useAuth() {
       await signInWithGoogle()
       return { success: true }
     } catch (error) {
-      logger.error("Google login failed:", error)
+      console.error("Google login failed:", error)
       return { success: false, error }
     }
   }, [signInWithGoogle])
@@ -113,7 +112,7 @@ export function useAuth() {
       await signInWithFacebook()
       return { success: true }
     } catch (error) {
-      logger.error("Facebook login failed:", error)
+      console.error("Facebook login failed:", error)
       return { success: false, error }
     }
   }, [signInWithFacebook])

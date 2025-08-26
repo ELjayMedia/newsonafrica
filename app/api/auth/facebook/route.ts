@@ -1,13 +1,11 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { GraphQLClient } from "graphql-request"
 import jwt from "jsonwebtoken"
 
-const WORDPRESS_API_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL
-const JWT_SECRET = env.JWT_SECRET
-const FACEBOOK_APP_ID = env.NEXT_PUBLIC_FACEBOOK_APP_ID
-const FACEBOOK_APP_SECRET = env.FACEBOOK_APP_SECRET
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+const JWT_SECRET = process.env.JWT_SECRET
+const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
 
 if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
   throw new Error("Missing required environment variables")
@@ -66,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Facebook login failed" }, { status: 401 })
     }
   } catch (error) {
-    logger.error("Facebook login error:", error)
+    console.error("Facebook login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

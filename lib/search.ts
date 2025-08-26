@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { searchPosts as utilitySearchPosts } from "./searchPosts"
 
 // Types for search
@@ -175,7 +174,7 @@ async function fetchPosts(): Promise<SearchPost[]> {
     postsCache.set(cacheKey, processedPosts)
     return processedPosts
   } catch (error) {
-    logger.error("Error fetching posts:", error)
+    console.error("Error fetching posts:", error)
     return FALLBACK_POSTS
   }
 }
@@ -275,7 +274,7 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
 
       return searchResponse
     } catch (apiError) {
-      logger.error("WordPress API search failed, using utility search:", apiError)
+      console.error("WordPress API search failed, using utility search:", apiError)
 
       // Fallback to utility search
       const posts = await fetchPosts()
@@ -326,7 +325,7 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
       return searchResponse
     }
   } catch (error) {
-    logger.error("Search failed completely:", error)
+    console.error("Search failed completely:", error)
 
     return {
       results: FALLBACK_POSTS.slice(0, limit),
@@ -375,7 +374,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
     suggestionsCache.set(cacheKey, suggestions)
     return suggestions
   } catch (error) {
-    logger.error("Error getting search suggestions:", error)
+    console.error("Error getting search suggestions:", error)
     return []
   }
 }
@@ -406,7 +405,7 @@ export function createDebouncedSearch(delay = 250) {
         const searchResults = await searchPosts(query, options)
         callback(searchResults)
       } catch (error) {
-        logger.error("Debounced search error:", error)
+        console.error("Debounced search error:", error)
         callback({
           results: [],
           total: 0,

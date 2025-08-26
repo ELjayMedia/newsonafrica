@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -35,7 +34,7 @@ export function OAuthTest() {
 
       if (error) throw error
     } catch (err) {
-      logger.error(`${provider} sign in error:`, err)
+      console.error(`${provider} sign in error:`, err)
       setError(err instanceof Error ? err.message : `${provider} sign in failed`)
     } finally {
       setIsLoading({ ...isLoading, [provider]: false })

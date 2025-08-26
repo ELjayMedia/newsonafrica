@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect, useState } from "react"
@@ -44,7 +43,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
     const initializeAd = () => {
       try {
         if (!window.googletag) {
-          logger.warn("Google Ad Manager not loaded")
+          console.warn("Google Ad Manager not loaded")
           setHasError(true)
           return
         }
@@ -72,7 +71,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
               window.googletag.pubads().addEventListener("slotRenderEnded", (event: any) => {
                 if (event.slot === newSlot) {
                   if (event.isEmpty) {
-                    logger.warn(`Ad slot ${slotId} is empty`)
+                    console.warn(`Ad slot ${slotId} is empty`)
                     setHasError(true)
                   } else {
                     setIsLoaded(true)
@@ -84,7 +83,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
               setHasError(true)
             }
           } catch (error) {
-            logger.error("Error initializing ad slot:", error)
+            console.error("Error initializing ad slot:", error)
             setHasError(true)
           }
         })
@@ -92,12 +91,12 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
         // Set a timeout to detect if ad fails to load
         timeoutId = setTimeout(() => {
           if (!isLoaded) {
-            logger.warn(`Ad slot ${slotId} failed to load within timeout`)
+            console.warn(`Ad slot ${slotId} failed to load within timeout`)
             setHasError(true)
           }
         }, 10000) // 10 second timeout
       } catch (error) {
-        logger.error("Error in ad initialization:", error)
+        console.error("Error in ad initialization:", error)
         setHasError(true)
       }
     }

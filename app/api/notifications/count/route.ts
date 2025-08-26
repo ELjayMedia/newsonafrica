@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { NextResponse } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
@@ -23,13 +22,13 @@ export async function GET(request: Request) {
       .eq("read", false)
 
     if (error) {
-      logger.error("Error fetching notification count:", error)
+      console.error("Error fetching notification count:", error)
       return NextResponse.json({ count: 0 }, { status: 500 })
     }
 
     return NextResponse.json({ count: count || 0 })
   } catch (error) {
-    logger.error("Error in notification count route:", error)
+    console.error("Error in notification count route:", error)
     return NextResponse.json({ count: 0 }, { status: 500 })
   }
 }

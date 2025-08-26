@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useEffect } from "react"
@@ -15,7 +14,7 @@ export function AdPerformanceMonitor() {
         document.querySelectorAll("ins.adsbygoogle[data-ad-status='filled']").length === 0
 
       if (adBlockDetected) {
-        logger.info("Ad blocker may be active - no ads are being displayed")
+        console.log("Ad blocker may be active - no ads are being displayed")
       }
 
       // Monitor viewability

@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
@@ -33,7 +31,7 @@ export async function applyRateLimit(request: Request, limit: number, token: str
 }
 
 export function handleApiError(error: unknown): NextResponse<ApiResponse> {
-  logger.error("API Error:", error)
+  console.error("API Error:", error)
 
   if (error instanceof ZodError) {
     const fieldErrors: Record<string, string[]> = {}
@@ -60,7 +58,7 @@ export function handleApiError(error: unknown): NextResponse<ApiResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: env.NODE_ENV === "production" ? "An unexpected error occurred" : error.message,
+        error: process.env.NODE_ENV === "production" ? "An unexpected error occurred" : error.message,
       } as ApiResponse,
       { status: 500 },
     )

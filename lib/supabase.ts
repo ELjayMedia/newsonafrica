@@ -1,14 +1,12 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  logger.error("Missing Supabase environment variables. Please check your .env file.")
+  console.error("Missing Supabase environment variables. Please check your .env file.")
 }
 
 // Create a single instance of the Supabase client to be reused
@@ -19,7 +17,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storageKey: "noa_supabase_auth",
     flowType: "pkce", // Better security for OAuth
-    debug: env.NODE_ENV === "development", // Enable debug logs in development
+    debug: process.env.NODE_ENV === "development", // Enable debug logs in development
     // Define OAuth providers we're using
     providers: ["facebook", "google"],
   },
@@ -41,7 +39,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
 export const createAdminClient = () => {
-  const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseServiceKey) {
     throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
@@ -78,7 +76,7 @@ export async function getUserProfile(userId: string) {
     const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
     if (error) {
-      logger.error("Error fetching user profile:", error)
+      console.error("Error fetching user profile:", error)
       throw error
     }
 
@@ -87,7 +85,7 @@ export async function getUserProfile(userId: string) {
 
     return data
   } catch (error) {
-    logger.error("Error in getUserProfile:", error)
+    console.error("Error in getUserProfile:", error)
     throw error
   }
 }
@@ -98,7 +96,7 @@ export async function updateUserProfile(userId: string, updates: Partial<Profile
     const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single()
 
     if (error) {
-      logger.error("Error updating user profile:", error)
+      console.error("Error updating user profile:", error)
       throw error
     }
 
@@ -107,7 +105,7 @@ export async function updateUserProfile(userId: string, updates: Partial<Profile
 
     return data
   } catch (error) {
-    logger.error("Error in updateUserProfile:", error)
+    console.error("Error in updateUserProfile:", error)
     throw error
   }
 }
@@ -118,13 +116,13 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
     const { data, error } = await supabase.from("profiles").select("username").eq("username", username).maybeSingle()
 
     if (error) {
-      logger.error("Error checking username:", error)
+      console.error("Error checking username:", error)
       throw error
     }
 
     return !!data
   } catch (error) {
-    logger.error("Error in checkUsernameExists:", error)
+    console.error("Error in checkUsernameExists:", error)
     throw error
   }
 }
@@ -135,7 +133,7 @@ export async function checkAndRefreshSession() {
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {
-      logger.error("Error getting session:", error)
+      console.error("Error getting session:", error)
       return null
     }
 
@@ -153,7 +151,7 @@ export async function checkAndRefreshSession() {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
 
       if (refreshError) {
-        logger.error("Error refreshing session:", refreshError)
+        console.error("Error refreshing session:", refreshError)
         return null
       }
 
@@ -162,7 +160,7 @@ export async function checkAndRefreshSession() {
 
     return data.session
   } catch (error) {
-    logger.error("Error in checkAndRefreshSession:", error)
+    console.error("Error in checkAndRefreshSession:", error)
     return null
   }
 }
@@ -196,7 +194,7 @@ export async function handleSocialLoginProfile(user: any) {
 
     // If error is not "not found", log it
     if (fetchError && fetchError.code !== "PGRST116") {
-      logger.error("Error fetching profile:", fetchError)
+      console.error("Error fetching profile:", fetchError)
     }
 
     // Create a new profile
@@ -232,7 +230,7 @@ export async function handleSocialLoginProfile(user: any) {
     const { data, error } = await supabase.from("profiles").insert(newProfile).select().single()
 
     if (error) {
-      logger.error("Error creating profile:", error)
+      console.error("Error creating profile:", error)
       throw error
     }
 
@@ -241,7 +239,7 @@ export async function handleSocialLoginProfile(user: any) {
 
     return data
   } catch (error) {
-    logger.error("Error handling social login profile:", error)
+    console.error("Error handling social login profile:", error)
     throw error
   }
 }

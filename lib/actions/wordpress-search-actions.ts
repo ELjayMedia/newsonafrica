@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 /**
  * WordPress-based search actions
  */
@@ -99,7 +98,7 @@ export async function searchPosts(
       hasMore: page < totalPages,
     }
   } catch (error) {
-    logger.error("WordPress search error:", error)
+    console.error("WordPress search error:", error)
     return {
       results: [],
       total: 0,
@@ -157,7 +156,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 
     return Array.from(suggestions).slice(0, limit)
   } catch (error) {
-    logger.error("Error getting search suggestions:", error)
+    console.error("Error getting search suggestions:", error)
     return []
   }
 }
@@ -179,7 +178,7 @@ export async function searchCategories(query: string): Promise<any[]> {
     if (!response.ok) return []
     return await response.json()
   } catch (error) {
-    logger.error("Error searching categories:", error)
+    console.error("Error searching categories:", error)
     return []
   }
 }
@@ -201,7 +200,7 @@ export async function searchTags(query: string): Promise<any[]> {
     if (!response.ok) return []
     return await response.json()
   } catch (error) {
-    logger.error("Error searching tags:", error)
+    console.error("Error searching tags:", error)
     return []
   }
 }
@@ -211,5 +210,5 @@ export async function searchTags(query: string): Promise<any[]> {
  */
 export async function clearSearchCache(): Promise<void> {
   // Clear any local caches if needed
-  logger.info("WordPress search cache cleared")
+  console.log("WordPress search cache cleared")
 }

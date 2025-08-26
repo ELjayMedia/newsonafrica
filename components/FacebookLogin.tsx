@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState } from "react"
@@ -42,7 +41,7 @@ export function FacebookLogin({ onSuccess, onError, disabled = false, className 
         onSuccess()
       }
     } catch (error: any) {
-      logger.error("Facebook login error:", error)
+      console.error("Facebook login error:", error)
       const errorMessage = error.message || "Failed to sign in with Facebook"
 
       toast({

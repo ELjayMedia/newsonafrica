@@ -34,7 +34,7 @@ interface UseSupabaseQueryResult<T> {
  * @returns Query result with data, loading state, and refetch function
  */
 export function useSupabaseQuery<T = any>(
-  queryFn: () => PostgrestFilterBuilder<any, any, T[] | null>,
+  queryFn: () => PostgrestFilterBuilder<any, any, any[]>,
   queryKey: string | string[],
   options: UseSupabaseQueryOptions<T> = {},
 ): UseSupabaseQueryResult<T> {
@@ -66,9 +66,9 @@ export function useSupabaseQuery<T = any>(
 
     try {
       const query = queryFn()
-      const result = await executeWithCache<T>(query, cacheKey, cacheTime)
+      const result = await executeWithCache(query, cacheKey, cacheTime)
 
-      const processedData = select(result as any)
+      const processedData = select(result)
       setData(processedData)
       setIsSuccess(true)
 

@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
@@ -14,43 +13,43 @@ interface PostPageProps {
 
 // Generate static paths for posts at build time
 export async function generateStaticParams() {
-  logger.info("🚀 Starting generateStaticParams for posts...")
+  console.log("🚀 Starting generateStaticParams for posts...")
 
   try {
     // Get latest posts for static generation
-    logger.info("📡 Fetching posts from WordPress API...")
+    console.log("📡 Fetching posts from WordPress API...")
     const startTime = Date.now()
 
     const { posts, hasNextPage } = await getLatestPosts(1000)
 
     const fetchTime = Date.now() - startTime
-    logger.info(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
-    logger.info(`📄 Has more pages: ${hasNextPage}`)
+    console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
+    console.log(`📄 Has more pages: ${hasNextPage}`)
 
     // Validate posts data
     const validPosts = posts.filter((post) => {
       if (!post.slug) {
-        logger.warn(`⚠️ Post missing slug: ${post.title || post.id}`)
+        console.warn(`⚠️ Post missing slug: ${post.title || post.id}`)
         return false
       }
       if (typeof post.slug !== "string") {
-        logger.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`)
+        console.warn(`⚠️ Invalid slug type for post: ${post.title || post.id}`)
         return false
       }
       return true
     })
 
-    logger.info(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
+    console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
 
     // Log sample of posts being generated
     if (validPosts.length > 0) {
-      logger.info("📝 Sample posts being pre-generated:")
+      console.log("📝 Sample posts being pre-generated:")
       validPosts.slice(0, 5).forEach((post, index) => {
-        logger.info(`  ${index + 1}. ${post.slug} - "${post.title}"`)
+        console.log(`  ${index + 1}. ${post.slug} - "${post.title}"`)
       })
 
       if (validPosts.length > 5) {
-        logger.info(`  ... and ${validPosts.length - 5} more posts`)
+        console.log(`  ... and ${validPosts.length - 5} more posts`)
       }
     }
 
@@ -59,32 +58,32 @@ export async function generateStaticParams() {
       slug: post.slug,
     }))
 
-    logger.info(`🎯 Generating static params for ${staticParams.length} posts`)
+    console.log(`🎯 Generating static params for ${staticParams.length} posts`)
     return staticParams
   } catch (error) {
-    logger.error("❌ Error in generateStaticParams for posts:", error)
+    console.error("❌ Error in generateStaticParams for posts:", error)
 
     // Log detailed error information
     if (error instanceof Error) {
-      logger.error("Error message:", error.message)
-      logger.error("Error stack:", error.stack)
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
     }
 
     // Return empty array to allow fallback generation
-    logger.info("🔄 Falling back to on-demand generation")
+    console.log("🔄 Falling back to on-demand generation")
     return []
   }
 }
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  logger.info(`🔍 Generating metadata for post: ${params.slug}`)
+  console.log(`🔍 Generating metadata for post: ${params.slug}`)
 
   try {
     const post = await getPostBySlug(params.slug)
 
     if (!post) {
-      logger.warn(`⚠️ Post not found for metadata generation: ${params.slug}`)
+      console.warn(`⚠️ Post not found for metadata generation: ${params.slug}`)
       return {
         title: "Article Not Found - News On Africa",
         description: "The requested article could not be found.",
@@ -100,7 +99,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       }
     }
 
-    logger.info(`✅ Generated metadata for: "${post.title}"`)
+    console.log(`✅ Generated metadata for: "${post.title}"`)
 
     // Extract clean text from excerpt for description
     const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
@@ -226,7 +225,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       },
     }
   } catch (error) {
-    logger.error(`❌ Error generating metadata for post ${params.slug}:`, error)
+    console.error(`❌ Error generating metadata for post ${params.slug}:`, error)
     return {
       title: "Article - News On Africa",
       description: "Read the latest news and articles from across Africa.",
@@ -243,7 +242,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  logger.info(`📖 Rendering post page: ${params.slug}`)
+  console.log(`📖 Rendering post page: ${params.slug}`)
 
   try {
     // Fetch post data server-side
@@ -252,11 +251,11 @@ export default async function PostPage({ params }: PostPageProps) {
     const fetchTime = Date.now() - startTime
 
     if (!post) {
-      logger.warn(`⚠️ Post not found: ${params.slug}`)
+      console.warn(`⚠️ Post not found: ${params.slug}`)
       notFound()
     }
 
-    logger.info(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
+    console.log(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
 
     return (
       <Suspense fallback={<PostSkeleton />}>
@@ -264,7 +263,7 @@ export default async function PostPage({ params }: PostPageProps) {
       </Suspense>
     )
   } catch (error) {
-    logger.error(`❌ Error fetching post ${params.slug}:`, error)
+    console.error(`❌ Error fetching post ${params.slug}:`, error)
     // Let error boundary handle this
     throw error
   }

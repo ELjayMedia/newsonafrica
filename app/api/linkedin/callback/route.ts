@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -14,7 +12,7 @@ export async function GET(request: NextRequest) {
       state = JSON.parse(decodeURIComponent(stateParam))
     }
   } catch (e) {
-    logger.error("Error parsing state parameter:", e)
+    console.error("Error parsing state parameter:", e)
   }
 
   if (!code) {
@@ -31,9 +29,9 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
-        client_id: env.LINKEDIN_API_KEY || "",
-        client_secret: env.LINKEDIN_API_SECRET || "",
+        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`,
+        client_id: process.env.LINKEDIN_API_KEY || "",
+        client_secret: process.env.LINKEDIN_API_SECRET || "",
       }).toString(),
     })
 
@@ -52,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     response.cookies.set("linkedin_token", tokenData.access_token, {
       httpOnly: true,
-      secure: env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: tokenData.expires_in,
       path: "/",
@@ -60,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (error) {
-    logger.error("LinkedIn OAuth error:", error)
+    console.error("LinkedIn OAuth error:", error)
 
     if (state.popupMode) {
       return NextResponse.html(

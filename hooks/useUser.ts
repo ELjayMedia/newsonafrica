@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
@@ -60,7 +59,7 @@ export function useUser(): UseUserReturn {
       const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single()
 
       if (error) {
-        logger.error("Error fetching user profile:", error)
+        console.error("Error fetching user profile:", error)
         return null
       }
 
@@ -73,7 +72,7 @@ export function useUser(): UseUserReturn {
 
       return null
     } catch (error) {
-      logger.error("Error in fetchUserProfile:", error)
+      console.error("Error in fetchUserProfile:", error)
       return null
     }
   }, [])
@@ -83,7 +82,7 @@ export function useUser(): UseUserReturn {
    */
   const handleAuthStateChange = useCallback(
     async (event: string, newSession: Session | null) => {
-      logger.info("Auth state changed:", event)
+      console.log("Auth state changed:", event)
 
       try {
         setSession(newSession)
@@ -104,7 +103,7 @@ export function useUser(): UseUserReturn {
           }
         }
       } catch (error) {
-        logger.error("Error handling auth state change:", error)
+        console.error("Error handling auth state change:", error)
         setError("Failed to update user session")
       } finally {
         setLoading(false)
@@ -146,7 +145,7 @@ export function useUser(): UseUserReturn {
         setProfile(null)
       }
     } catch (error) {
-      logger.error("Error refreshing user:", error)
+      console.error("Error refreshing user:", error)
       setError("Failed to refresh user data")
     } finally {
       setLoading(false)
@@ -171,7 +170,7 @@ export function useUser(): UseUserReturn {
         if (!mounted) return
 
         if (sessionError) {
-          logger.error("Error getting initial session:", sessionError)
+          console.error("Error getting initial session:", sessionError)
           setError("Failed to initialize authentication")
           setLoading(false)
           return
@@ -198,7 +197,7 @@ export function useUser(): UseUserReturn {
           setInitialLoadComplete(true)
         }
       } catch (error) {
-        logger.error("Error initializing auth:", error)
+        console.error("Error initializing auth:", error)
         if (mounted) {
           setError("Failed to initialize authentication")
           setLoading(false)

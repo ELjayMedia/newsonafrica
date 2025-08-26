@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { signUp, signIn } from "@/lib/auth"
 import { cookies } from "next/headers"
@@ -13,7 +11,7 @@ export async function POST(request: Request) {
         const user = await signUp(username, email, password)
         return NextResponse.json({ success: true, user })
       } catch (error) {
-        logger.error("Signup error:", error)
+        console.error("Signup error:", error)
         return NextResponse.json({ error: error.message || "Failed to create user" }, { status: 400 })
       }
     }
@@ -23,13 +21,13 @@ export async function POST(request: Request) {
         const token = await signIn(username, password)
         cookies().set("auth_token", token, {
           httpOnly: true,
-          secure: env.NODE_ENV === "production",
+          secure: process.env.NODE_ENV === "production",
           sameSite: "strict",
           maxAge: 60 * 60 * 24 * 7, // 1 week
         })
         return NextResponse.json({ success: true })
       } catch (error) {
-        logger.error("Signin error:", error)
+        console.error("Signin error:", error)
         return NextResponse.json({ error: error.message || "Authentication failed" }, { status: 401 })
       }
     }
@@ -41,7 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   } catch (error) {
-    logger.error("API route error:", error)
+    console.error("API route error:", error)
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }

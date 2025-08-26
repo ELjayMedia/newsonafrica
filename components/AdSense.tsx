@@ -1,9 +1,7 @@
 "use client"
 
-import env from "@/lib/config/env"
 import { useEffect, useRef, useState, memo } from "react"
 import { useInView } from "react-intersection-observer"
-import logger from "@/utils/logger"
 
 interface AdSenseProps {
   slot: string
@@ -73,7 +71,7 @@ export const AdSense = memo(function AdSense({
 
     // If container is too small for the ad format
     if (width < minWidth) {
-      logger.info(`Container too small for ad: ${width}px < ${minWidth}px minimum`)
+      console.log(`Container too small for ad: ${width}px < ${minWidth}px minimum`)
       setContainerTooSmall(true)
       return false
     }
@@ -141,7 +139,7 @@ export const AdSense = memo(function AdSense({
 
     // Check if this ad ID has already been initialized
     if (initializedAds.has(id)) {
-      logger.info(`Ad ${id} already initialized, skipping`)
+      console.log(`Ad ${id} already initialized, skipping`)
       setIsLoading(false)
       return
     }
@@ -189,7 +187,7 @@ export const AdSense = memo(function AdSense({
           }
         }, 500)
       } catch (err) {
-        logger.error("Error initializing ad:", err)
+        console.error("Error initializing ad:", err)
         setIsLoading(false)
       }
     }
@@ -254,7 +252,7 @@ export const AdSense = memo(function AdSense({
               minHeight: isLoading ? "0" : dimensions.minHeight,
               opacity: isLoading ? 0 : 1,
             }}
-            data-ad-client={env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-6089753674605524"}
+            data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-6089753674605524"}
             data-ad-slot={slot}
             data-ad-format={format}
             data-full-width-responsive={responsive}

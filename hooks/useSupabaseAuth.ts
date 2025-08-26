@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -34,7 +33,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
 
   // Handle auth errors
   const handleAuthError = useCallback((error: AuthError | Error) => {
-    logger.error("Auth error:", error)
+    console.error("Auth error:", error)
 
     let errorMessage = "An unexpected error occurred"
 
@@ -103,7 +102,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
 
-      logger.info("Auth state changed:", event)
+      console.log("Auth state changed:", event)
 
       setSession(session)
       setUser(session?.user ?? null)
@@ -136,7 +135,7 @@ export function useSupabaseAuth(): AuthState & AuthActions {
                 })
               }
             } catch (profileError) {
-              logger.error("Error handling profile:", profileError)
+              console.error("Error handling profile:", profileError)
             }
 
             toast({

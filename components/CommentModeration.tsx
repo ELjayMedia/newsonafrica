@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -30,7 +29,7 @@ export function CommentModeration() {
       await approveComment(commentId)
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
-      logger.error("Failed to approve comment:", error)
+      console.error("Failed to approve comment:", error)
     }
   }
 
@@ -39,7 +38,7 @@ export function CommentModeration() {
       await deleteComment(commentId)
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
-      logger.error("Failed to delete comment:", error)
+      console.error("Failed to delete comment:", error)
     }
   }
 

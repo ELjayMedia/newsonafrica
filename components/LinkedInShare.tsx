@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import type React from "react"
@@ -21,7 +20,7 @@ export const LinkedInShare: React.FC = () => {
         const config = await response.json()
         setLinkedInConfig(config)
       } catch (error) {
-        logger.error("Failed to fetch LinkedIn config:", error)
+        console.error("Failed to fetch LinkedIn config:", error)
       }
     }
 

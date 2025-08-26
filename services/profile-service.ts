@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { supabase } from "@/lib/supabase"
 import {
   fetchById,
@@ -56,7 +55,7 @@ export async function createProfile(userId: string, profileData: Partial<Profile
 
     return profiles[0] || null
   } catch (error) {
-    logger.error("Error in createProfile:", error)
+    console.error("Error in createProfile:", error)
     return null
   }
 }
@@ -73,7 +72,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
       ttl: PROFILE_CACHE_TTL,
     })
   } catch (error) {
-    logger.error("Error in fetchProfile:", error)
+    console.error("Error in fetchProfile:", error)
     return null
   }
 }
@@ -92,7 +91,7 @@ export async function fetchProfiles(userIds: string[]): Promise<Profile[]> {
       ttl: PROFILE_CACHE_TTL,
     })
   } catch (error) {
-    logger.error("Error in fetchProfiles:", error)
+    console.error("Error in fetchProfiles:", error)
     return []
   }
 }
@@ -115,7 +114,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
       clearCache: new RegExp(`^profiles:.*${userId}`),
     })
   } catch (error) {
-    logger.error("Error in updateProfile:", error)
+    console.error("Error in updateProfile:", error)
     return null
   }
 }
@@ -136,7 +135,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
     const { error: uploadError } = await supabase.storage.from("profiles").upload(filePath, file)
 
     if (uploadError) {
-      logger.error("Error uploading avatar:", uploadError)
+      console.error("Error uploading avatar:", uploadError)
       return null
     }
 
@@ -149,7 +148,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
 
     return data.publicUrl
   } catch (error) {
-    logger.error("Error in uploadAvatar:", error)
+    console.error("Error in uploadAvatar:", error)
     return null
   }
 }
@@ -170,9 +169,9 @@ export async function checkUsernameExists(username: string): Promise<boolean> {
       USERNAME_CACHE_TTL,
     )
 
-    return (result?.length ?? 0) > 0
+    return result.length > 0
   } catch (error) {
-    logger.error("Error in checkUsernameExists:", error)
+    console.error("Error in checkUsernameExists:", error)
     throw error
   }
 }
@@ -190,14 +189,13 @@ export async function searchProfiles(query: string, limit = 10): Promise<Profile
   try {
     const cacheKey = createQueryKey("profiles", { search: query, limit })
 
-    const result = await executeWithCache<Profile>(
+    return await executeWithCache<Profile>(
       supabase.from("profiles").select("*").or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(limit),
       cacheKey,
       60000, // 1 minute cache for searches
     )
-    return result ?? []
   } catch (error) {
-    logger.error("Error in searchProfiles:", error)
+    console.error("Error in searchProfiles:", error)
     return []
   }
 }
@@ -231,7 +229,7 @@ export async function getPaginatedProfiles(
       hasMore: count ? from + pageSize < count : false,
     }
   } catch (error) {
-    logger.error("Error in getPaginatedProfiles:", error)
+    console.error("Error in getPaginatedProfiles:", error)
     return {
       profiles: [],
       totalCount: 0,

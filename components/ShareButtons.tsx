@@ -1,7 +1,5 @@
 "use client"
 
-import env from "@/lib/config/env"
-import logger from "@/utils/logger"
 import { useState } from "react"
 import { Facebook, Linkedin, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -34,7 +32,7 @@ export function ShareButtons({
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   // Ensure we have the full URL
-  const fullUrl = url.startsWith("http") ? url : `${env.NEXT_PUBLIC_SITE_URL || window.location.origin}${url}`
+  const fullUrl = url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}${url}`
 
   // Encode components for sharing
   const encodedUrl = encodeURIComponent(fullUrl)
@@ -65,7 +63,7 @@ export function ShareButtons({
           description: "The article has been shared",
         })
       } catch (error) {
-        logger.error("Error sharing:", error)
+        console.error("Error sharing:", error)
       }
     } else {
       setIsOpen(true)

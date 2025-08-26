@@ -1,7 +1,5 @@
 "use client"
 
-import env from "@/lib/config/env"
-import logger from "@/utils/logger"
 import type React from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useRef, useState, useEffect } from "react"
@@ -39,11 +37,11 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
     setMounted(true)
 
     // Add performance monitoring in development
-    if (env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development") {
       const startTime = performance.now()
       return () => {
         const endTime = performance.now()
-        logger.info(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
+        console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
       }
     }
   }, [])

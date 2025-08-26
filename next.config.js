@@ -1,13 +1,6 @@
-import { createRequire } from "module"
-import env from "@/lib/config/env";
-import withPWAInit from "@ducanh2912/next-pwa"
-import type { NextConfig } from "next"
-
-const require = createRequire(import.meta.url)
-
-const withPWA = withPWAInit({
+const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
-  disable: env.NODE_ENV === "development",
+  disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
   dynamicStartUrl: true,
@@ -75,7 +68,8 @@ const withPWA = withPWAInit({
   ],
 })
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -145,7 +139,7 @@ const nextConfig: NextConfig = {
     ]
   },
   webpack: (config, { isServer }) => {
-    if (env.INCLUDE_RN_WEB === "true") {
+    if (process.env.INCLUDE_RN_WEB === "true") {
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
         "react-native$": "react-native-web",
@@ -183,4 +177,4 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-export default withPWA(nextConfig)
+module.exports = withPWA(nextConfig)

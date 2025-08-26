@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
 import { createClient } from "./supabase/client"
 
@@ -10,7 +9,7 @@ interface QueryCacheEntry<T> {
 }
 
 // Global query cache with configurable TTL
-const queryCache = new Map<string, QueryCacheEntry<unknown>>()
+const queryCache = new Map<string, QueryCacheEntry<any>>()
 
 // Default cache TTL in milliseconds (5 minutes)
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000
@@ -44,16 +43,16 @@ export function clearQueryCache(key?: string, pattern?: RegExp): void {
  * @returns The query result
  */
 export async function executeWithCache<T>(
-  queryBuilder: PostgrestFilterBuilder<any, T, T[] | null>,
+  queryBuilder: PostgrestFilterBuilder<any, any, any[]>,
   cacheKey: string,
   ttl: number = DEFAULT_CACHE_TTL,
-): Promise<T[] | null> {
+): Promise<T[]> {
   const now = Date.now()
 
   // Check if we have a valid cached result
-  const cached = queryCache.get(cacheKey) as QueryCacheEntry<T[] | null> | undefined
+  const cached = queryCache.get(cacheKey)
   if (cached && now < cached.expiresAt) {
-    return cached.data
+    return cached.data as T[]
   }
 
   try {
@@ -61,7 +60,7 @@ export async function executeWithCache<T>(
     const { data, error } = await queryBuilder
 
     if (error) {
-      logger.error("Supabase query error:", error)
+      console.error("Supabase query error:", error)
       throw error
     }
 
@@ -70,11 +69,11 @@ export async function executeWithCache<T>(
       data,
       timestamp: now,
       expiresAt: now + ttl,
-    } as QueryCacheEntry<T[] | null>)
+    })
 
-    return data
+    return data as T[]
   } catch (error) {
-    logger.error("Error executing query:", error)
+    console.error("Error executing query:", error)
     throw error
   }
 }
@@ -136,7 +135,7 @@ export async function fetchById<T>(
       // Record not found
       return null
     }
-    logger.error(`Error fetching ${table} by ID:`, error)
+    console.error(`Error fetching ${table} by ID:`, error)
     throw error
   }
 
@@ -185,7 +184,7 @@ export async function fetchByIds<T>(
   const { data, error } = await supabase.from(table).select(columns).in("id", ids)
 
   if (error) {
-    logger.error(`Error fetching ${table} by IDs:`, error)
+    console.error(`Error fetching ${table} by IDs:`, error)
     throw error
   }
 
@@ -222,7 +221,7 @@ export async function insertRecords<T>(
   const { data, error } = await supabase.from(table).insert(records).select(returning)
 
   if (error) {
-    logger.error(`Error inserting into ${table}:`, error)
+    console.error(`Error inserting into ${table}:`, error)
     throw error
   }
 
@@ -260,7 +259,7 @@ export async function updateRecord<T>(
   const { data, error } = await supabase.from(table).update(updates).eq("id", id).select(returning).single()
 
   if (error) {
-    logger.error(`Error updating ${table}:`, error)
+    console.error(`Error updating ${table}:`, error)
     throw error
   }
 
@@ -296,7 +295,7 @@ export async function deleteRecord(
   const { error } = await supabase.from(table).delete().eq("id", id)
 
   if (error) {
-    logger.error(`Error deleting from ${table}:`, error)
+    console.error(`Error deleting from ${table}:`, error)
     throw error
   }
 
@@ -349,7 +348,7 @@ export async function countRecords(
   const { count, error } = await query
 
   if (error) {
-    logger.error(`Error counting ${table} records:`, error)
+    console.error(`Error counting ${table} records:`, error)
     throw error
   }
 
@@ -429,7 +428,7 @@ export async function fetchPaginated<T>(
   const { data, error, count } = await query
 
   if (error) {
-    logger.error(`Error fetching paginated ${table}:`, error)
+    console.error(`Error fetching paginated ${table}:`, error)
     throw error
   }
 
@@ -480,7 +479,7 @@ export async function upsertRecords<T>(
   const { data, error } = await query.select(returning)
 
   if (error) {
-    logger.error(`Error upserting into ${table}:`, error)
+    console.error(`Error upserting into ${table}:`, error)
     throw error
   }
 
@@ -520,7 +519,7 @@ export async function columnExists(table: string, column: string): Promise<boole
       return false
     }
   } catch (error) {
-    logger.error(`Error checking if column ${column} exists in table ${table}:`, error)
+    console.error(`Error checking if column ${column} exists in table ${table}:`, error)
     return false
   }
 }

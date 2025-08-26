@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -68,7 +67,7 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
       setOffset((prev) => prev + initialLimit)
     } catch (err) {
       setError("Failed to load posts")
-      logger.error(err)
+      console.error(err)
     } finally {
       setLoading(false)
     }

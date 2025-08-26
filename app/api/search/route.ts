@@ -1,11 +1,9 @@
-import logger from "@/utils/logger"
-import env from "@/lib/config/env"
 import { type NextRequest, NextResponse } from "next/server"
 
 // WordPress API configuration
 const WORDPRESS_API_URL =
-  env.WORDPRESS_REST_API_URL ||
-  env.NEXT_PUBLIC_WORDPRESS_API_URL ||
+  process.env.WORDPRESS_REST_API_URL ||
+  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
   "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 // Rate limiting
@@ -19,7 +17,7 @@ function getRateLimitKey(request: NextRequest): string {
 }
 
 function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: number } {
-  if (env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === "development") {
     return { limited: false }
   }
 
@@ -88,7 +86,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       hasMore: page < totalPages,
     }
   } catch (error) {
-    logger.error("WordPress search error:", error)
+    console.error("WordPress search error:", error)
     throw error
   }
 }
@@ -130,7 +128,7 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
 
     return Array.from(suggestions)
   } catch (error) {
-    logger.error("Error getting suggestions:", error)
+    console.error("Error getting suggestions:", error)
     return []
   }
 }

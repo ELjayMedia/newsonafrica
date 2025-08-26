@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { getCurrentUser } from "@/lib/auth"
@@ -22,7 +20,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    logger.error("Session error:", error)
+    console.error("Session error:", error)
     return NextResponse.json({ user: null }, { status: 500 })
   }
 }
@@ -36,7 +34,7 @@ export async function PUT(request: Request) {
 
   try {
     const userData = await request.json()
-    const response = await fetch(`${env.WORDPRESS_API_URL}/wp/v2/users/me`, {
+    const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/users/me`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -52,7 +50,7 @@ export async function PUT(request: Request) {
     const updatedUser = await response.json()
     return NextResponse.json(updatedUser)
   } catch (error) {
-    logger.error("Error updating user profile:", error)
+    console.error("Error updating user profile:", error)
     return NextResponse.json({ error: "Failed to update user profile" }, { status: 500 })
   }
 }

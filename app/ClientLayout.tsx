@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import "./globals.css"
@@ -36,14 +35,14 @@ export function ClientLayout({
 }) {
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      logger.error("Unhandled error:", event.error)
+      console.error("Unhandled error:", event.error)
       if (event.error instanceof Error) {
-        logger.error("Error message:", event.error.message)
-        logger.error("Error stack:", event.error.stack)
+        console.error("Error message:", event.error.message)
+        console.error("Error stack:", event.error.stack)
       } else if (event.error === null) {
-        logger.error("Unknown error object: null")
+        console.error("Unknown error object: null")
       } else {
-        logger.error("Unknown error object:", event.error)
+        console.error("Unknown error object:", event.error)
       }
     }
 
@@ -124,7 +123,7 @@ export function ClientLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6089753674605524"
           strategy="afterInteractive"
           onError={(e) => {
-            logger.error("Failed to load AdSense script", e)
+            console.error("Failed to load AdSense script", e)
           }}
         />
       </body>

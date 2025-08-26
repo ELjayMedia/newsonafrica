@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState } from "react"
@@ -25,7 +24,7 @@ export function CameraFeature() {
         setImageSrc(image.webPath)
       }
     } catch (e: any) {
-      logger.error("Camera error:", e)
+      console.error("Camera error:", e)
       setError(`Failed to take picture: ${e.message || "Unknown error"}`)
     }
   }

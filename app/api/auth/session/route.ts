@@ -1,9 +1,7 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 
-const WP_API_URL = env.WORDPRESS_API_URL
+const WP_API_URL = process.env.WORDPRESS_API_URL
 
 export async function GET() {
   const token = getAuthTokenFromCookies()
@@ -34,7 +32,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    logger.error("Session error:", error)
+    console.error("Session error:", error)
     return NextResponse.json({ user: null })
   }
 }

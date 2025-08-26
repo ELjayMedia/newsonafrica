@@ -1,12 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next"
-import env from "@/lib/config/env";
 import Tokens from "csrf"
 
 const tokens = new Tokens()
 
 export function csrf(req: NextApiRequest, res: NextApiResponse, next: () => void) {
   if (!req.cookies["csrf-token"]) {
-    const secret = env.CSRF_SECRET
+    const secret = process.env.CSRF_SECRET
     if (!secret) {
       throw new Error("CSRF_SECRET is not set in environment variables")
     }
@@ -19,7 +18,7 @@ export function csrf(req: NextApiRequest, res: NextApiResponse, next: () => void
 export function validateCsrf(req: NextApiRequest, res: NextApiResponse, next: () => void) {
   const token = req.cookies["csrf-token"]
   const csrfToken = req.headers["x-csrf-token"]
-  const secret = env.CSRF_SECRET
+  const secret = process.env.CSRF_SECRET
 
   if (!secret) {
     throw new Error("CSRF_SECRET is not set in environment variables")

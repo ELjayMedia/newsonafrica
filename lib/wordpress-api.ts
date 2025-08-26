@@ -1,12 +1,10 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { cache } from "react"
 
-const WORDPRESS_API_URL = env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_API_URL = env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
+const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
 
 if (!WORDPRESS_API_URL) {
-  logger.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
 }
 
 // Simple cache implementation
@@ -88,7 +86,7 @@ const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = 
 
       return await response.json()
     } catch (error) {
-      logger.error(`REST API request attempt ${attempt + 1} failed:`, error)
+      console.error(`REST API request attempt ${attempt + 1} failed:`, error)
       lastError = error
 
       if (attempt === MAX_RETRIES - 1) {
@@ -121,7 +119,7 @@ const fetchWithFallback = async (
 
   // If offline, try cache or return empty
   if (!isServer() && !isOnline()) {
-    logger.info("Device is offline, using cache or returning empty data")
+    console.log("Device is offline, using cache or returning empty data")
     return cached?.data || []
   }
 
@@ -138,7 +136,7 @@ const fetchWithFallback = async (
 
     return data
   } catch (error) {
-    logger.error("GraphQL request failed, falling back to REST API:", error)
+    console.error("GraphQL request failed, falling back to REST API:", error)
 
     try {
       // Fallback to REST API
@@ -153,7 +151,7 @@ const fetchWithFallback = async (
 
       return restData
     } catch (restError) {
-      logger.error("Both GraphQL and REST API failed:", restError)
+      console.error("Both GraphQL and REST API failed:", restError)
 
       // Return cached data if available, otherwise empty
       return cached?.data || []
@@ -374,7 +372,7 @@ export const fetchCategoryPosts = cache(async (slug: string, after: string | nul
         },
       }
     } catch (error) {
-      logger.error(`Failed to fetch category ${slug}:`, error)
+      console.error(`Failed to fetch category ${slug}:`, error)
       return {
         category: {
           id: "",
@@ -735,7 +733,7 @@ export async function optimizedWordPressSearch(query: string, options: SearchOpt
       },
     }
   } catch (error) {
-    logger.error("Optimized search failed:", error)
+    console.error("Optimized search failed:", error)
     throw error
   }
 }
@@ -806,7 +804,7 @@ async function executeParallelSearch(query: string, options: SearchOptions): Pro
       },
     }
   } catch (error) {
-    logger.error("Parallel search failed:", error)
+    console.error("Parallel search failed:", error)
     throw error
   }
 }
@@ -844,7 +842,7 @@ async function executeOptimizedSearch(query: string, options: SearchOptions): Pr
       },
     }
   } catch (error) {
-    logger.error("GraphQL search failed, falling back to REST:", error)
+    console.error("GraphQL search failed, falling back to REST:", error)
 
     // Fallback to REST API
     const posts = await searchViaREST(query, options)
@@ -1041,7 +1039,7 @@ async function searchByCategories(query: string, options: SearchOptions): Promis
 
       results.push(...matchingPosts)
     } catch (error) {
-      logger.error(`Failed to search in category ${categorySlug}:`, error)
+      console.error(`Failed to search in category ${categorySlug}:`, error)
     }
   }
 
@@ -1174,7 +1172,7 @@ export async function getWordPressSearchSuggestions(query: string, limit = 8): P
 
     return suggestionArray
   } catch (error) {
-    logger.error("Failed to get search suggestions:", error)
+    console.error("Failed to get search suggestions:", error)
     return []
   }
 }
@@ -1309,7 +1307,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
         },
       }
     } catch (error) {
-      logger.error(`Failed to fetch author ${slug}:`, error)
+      console.error(`Failed to fetch author ${slug}:`, error)
       return { user: null }
     }
   }
@@ -1327,7 +1325,7 @@ export const deleteComment = async (commentId: string) => {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
       },
     })
 
@@ -1337,7 +1335,7 @@ export const deleteComment = async (commentId: string) => {
 
     return await response.json()
   } catch (error) {
-    logger.error("Error deleting comment:", error)
+    console.error("Error deleting comment:", error)
     throw error
   }
 }
@@ -1366,7 +1364,7 @@ export const fetchPendingComments = async () => {
       },
     }))
   } catch (error) {
-    logger.error("Error fetching pending comments:", error)
+    console.error("Error fetching pending comments:", error)
     return []
   }
 }
@@ -1380,7 +1378,7 @@ export const approveComment = async (commentId: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
       },
       body: JSON.stringify({
         status: "approved",
@@ -1393,7 +1391,7 @@ export const approveComment = async (commentId: string) => {
 
     return await response.json()
   } catch (error) {
-    logger.error("Error approving comment:", error)
+    console.error("Error approving comment:", error)
     throw error
   }
 }
@@ -1489,7 +1487,7 @@ export const fetchTaggedPosts = cache(async (tagSlug: string, limit = 20) => {
         },
       }
     } catch (error) {
-      logger.error(`Failed to fetch tagged posts for ${tagSlug}:`, error)
+      console.error(`Failed to fetch tagged posts for ${tagSlug}:`, error)
       return { tag: { posts: { nodes: [] } } }
     }
   }
@@ -1537,7 +1535,7 @@ export const fetchSingleCategory = cache(async (slug: string) => {
         },
       }
     } catch (error) {
-      logger.error(`Failed to fetch category ${slug}:`, error)
+      console.error(`Failed to fetch category ${slug}:`, error)
       return { category: null }
     }
   }
@@ -1580,7 +1578,7 @@ export const fetchSingleTag = cache(async (slug: string) => {
         },
       }
     } catch (error) {
-      logger.error(`Failed to fetch tag ${slug}:`, error)
+      console.error(`Failed to fetch tag ${slug}:`, error)
       return { tag: null }
     }
   }
@@ -1613,7 +1611,7 @@ export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
       parent: comment.parent || 0,
     }))
   } catch (error) {
-    logger.error(`Error fetching comments for post ${postId}:`, error)
+    console.error(`Error fetching comments for post ${postId}:`, error)
     return []
   }
 }
@@ -1636,7 +1634,7 @@ export const updateUserProfile = async (userId: string, profileData: any) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.WP_JWT_TOKEN || ""}`,
+        Authorization: `Bearer ${process.env.WP_JWT_TOKEN || ""}`,
       },
       body: JSON.stringify(profileData),
     })
@@ -1647,7 +1645,7 @@ export const updateUserProfile = async (userId: string, profileData: any) => {
 
     return await response.json()
   } catch (error) {
-    logger.error("Error updating user profile:", error)
+    console.error("Error updating user profile:", error)
     throw error
   }
 }

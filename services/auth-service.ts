@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { supabase } from "@/lib/supabase"
 import type { Provider, User, Session } from "@supabase/supabase-js"
 import { getFacebookUserData, updateProfileWithFacebookData } from "@/lib/facebook-utils"
@@ -357,7 +356,7 @@ export async function refreshSession(): Promise<{ success: boolean; session: Ses
 
         // If the error is network-related, don't invalidate the session yet
         if (parsedError.category === AuthErrorCategory.NETWORK) {
-          logger.info("Network error during refresh, keeping existing session")
+          console.log("Network error during refresh, keeping existing session")
           return {
             success: true,
             session: sessionData.session,

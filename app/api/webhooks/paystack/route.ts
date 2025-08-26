@@ -1,77 +1,10 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { startWebhookTunnel } from "@/lib/paystack-utils"
-import { createAdminClient } from "@/lib/supabase"
 
 // Start webhook tunnel in development
-if (env.NODE_ENV === "development") {
+if (process.env.NODE_ENV === "development") {
   startWebhookTunnel()
-}
-
-// Common Paystack customer object
-interface PaystackCustomer {
-  email: string
-  [key: string]: any
-}
-
-export interface ChargeSuccessPayload {
-  reference: string
-  amount: number
-  status: string
-  paid_at: string
-  customer: PaystackCustomer
-  plan?: { name?: string; code?: string }
-  [key: string]: any
-}
-
-export interface SubscriptionCreatedPayload {
-  subscription_code: string
-  status: string
-  customer: PaystackCustomer
-  plan: { name: string; plan_code?: string }
-  createdAt: string
-  next_payment_date: string
-  [key: string]: any
-}
-
-export interface SubscriptionDisabledPayload {
-  subscription_code: string
-  status: string
-  customer: PaystackCustomer
-  disabled_on: string
-  [key: string]: any
-}
-
-export interface InvoicePaymentFailedPayload {
-  invoice_code: string
-  amount: number
-  customer: PaystackCustomer
-  subscription: { code: string }
-  status: string
-  [key: string]: any
-}
-
-export interface InvoiceUpdatePayload {
-  invoice_code: string
-  amount: number
-  customer: PaystackCustomer
-  subscription: { code: string }
-  status: string
-  [key: string]: any
-}
-
-export interface TransferSuccessPayload {
-  reference: string
-  amount: number
-  status: string
-  recipient: string
-  [key: string]: any
-}
-
-export interface TransferFailedPayload extends TransferSuccessPayload {
-  reason: string
 }
 
 export async function POST(request: Request) {
@@ -80,7 +13,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-paystack-signature")
 
     if (!signature) {
-      logger.error("No Paystack signature provided")
+      console.error("No Paystack signature provided")
       return NextResponse.json({ error: "No signature provided" }, { status: 400 })
     }
 
@@ -88,27 +21,17 @@ export async function POST(request: Request) {
     const body = await request.text()
 
     // Verify the signature
-    const secretKey = env.PAYSTACK_SECRET_KEY
-    if (!secretKey) {
-      logger.error("Paystack secret key not configured")
-      return NextResponse.json(
-        { error: "Server misconfigured: missing Paystack secret key" },
-        { status: 500 }
-      )
-    }
-    const hash = crypto
-      .createHmac("sha512", secretKey)
-      .update(body)
-      .digest("hex")
+    const secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+    const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
 
     if (hash !== signature) {
-      logger.error("Invalid Paystack signature")
+      console.error("Invalid Paystack signature")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the body
     const event = JSON.parse(body)
-    logger.info(`Received Paystack webhook: ${event.event}`)
+    console.log(`Received Paystack webhook: ${event.event}`)
 
     // Handle different event types
     switch (event.event) {
@@ -141,271 +64,105 @@ export async function POST(request: Request) {
         break
 
       default:
-        logger.info(`Unhandled Paystack event: ${event.event}`, event.data)
+        console.log(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    logger.error("Webhook processing error:", error)
+    console.error("Webhook processing error:", error)
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
 
 // Event handlers
-export async function handleChargeSuccess(
-  data: ChargeSuccessPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing successful charge:", data.reference)
-  try {
-    const { data: user, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", data.customer.email)
-      .single()
+async function handleChargeSuccess(data: any) {
+  console.log("Processing successful charge:", data.reference)
 
-    if (error || !user) {
-      throw error || new Error("User not found")
-    }
+  // TODO: Implement your business logic
+  // 1. Verify the transaction (optional, as Paystack already verified it)
+  // 2. Update your database with payment information
+  // 3. Provision access to the user
 
-    await db.from("subscriptions").insert({
-      user_id: user.id,
-      plan: data.plan?.name || "unknown",
-      status: data.status,
-      start_date: data.paid_at,
-      payment_provider: "paystack",
-      payment_id: data.reference,
-      metadata: data,
-    })
-
-    await db.from("notifications").insert({
-      user_id: user.id,
-      type: "system",
-      title: "Payment Successful",
-      message: `Your payment of ₦${(data.amount / 100).toFixed(2)} was successful`,
-      link: "/subscriptions",
-      is_read: false,
-      metadata: { reference: data.reference },
-    })
-  } catch (err) {
-    logger.error("Error handling charge.success:", err)
-  }
+  // Example:
+  // await db.transaction.create({
+  //   data: {
+  //     reference: data.reference,
+  //     amount: data.amount / 100, // Convert from kobo to naira
+  //     email: data.customer.email,
+  //     status: 'success',
+  //     metadata: data,
+  //   },
+  // })
 }
 
-export async function handleSubscriptionCreated(
-  data: SubscriptionCreatedPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing subscription creation:", data.subscription_code)
-  try {
-    const { data: user, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", data.customer.email)
-      .single()
+async function handleSubscriptionCreated(data: any) {
+  console.log("Processing subscription creation:", data.subscription_code)
 
-    if (error || !user) {
-      throw error || new Error("User not found")
-    }
+  // TODO: Implement your business logic
+  // 1. Update your database with subscription information
+  // 2. Provision access to the user
 
-    await db.from("subscriptions").insert({
-      user_id: user.id,
-      plan: data.plan.name,
-      status: data.status,
-      start_date: data.createdAt,
-      payment_provider: "paystack",
-      payment_id: data.subscription_code,
-      metadata: data,
-    })
-
-    await db.from("notifications").insert({
-      user_id: user.id,
-      type: "system",
-      title: "Subscription Created",
-      message: `Your subscription to ${data.plan.name} is active`,
-      link: "/subscriptions",
-      is_read: false,
-      metadata: { subscription_code: data.subscription_code },
-    })
-  } catch (err) {
-    logger.error("Error handling subscription.create:", err)
-  }
+  // Example:
+  // await db.subscription.create({
+  //   data: {
+  //     code: data.subscription_code,
+  //     customer: data.customer.email,
+  //     plan: data.plan.name,
+  //     status: data.status,
+  //     start_date: new Date(data.createdAt),
+  //     next_payment_date: new Date(data.next_payment_date),
+  //   },
+  // })
 }
 
-export async function handleSubscriptionDisabled(
-  data: SubscriptionDisabledPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing subscription cancellation:", data.subscription_code)
-  try {
-    const { data: user, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", data.customer.email)
-      .single()
+async function handleSubscriptionDisabled(data: any) {
+  console.log("Processing subscription cancellation:", data.subscription_code)
 
-    if (error || !user) {
-      throw error || new Error("User not found")
-    }
+  // TODO: Implement your business logic
+  // 1. Update your database with subscription status
+  // 2. Revoke access at the appropriate time
 
-    await db
-      .from("subscriptions")
-      .update({
-        status: "cancelled",
-        end_date: new Date().toISOString(),
-        metadata: data,
-      })
-      .eq("payment_id", data.subscription_code)
-      .eq("user_id", user.id)
-
-    await db.from("notifications").insert({
-      user_id: user.id,
-      type: "system",
-      title: "Subscription Cancelled",
-      message: "Your subscription has been cancelled",
-      link: "/subscriptions",
-      is_read: false,
-      metadata: { subscription_code: data.subscription_code },
-    })
-  } catch (err) {
-    logger.error("Error handling subscription.disable:", err)
-  }
+  // Example:
+  // await db.subscription.update({
+  //   where: { code: data.subscription_code },
+  //   data: { status: 'cancelled', cancelled_at: new Date() },
+  // })
 }
 
-export async function handlePaymentFailed(
-  data: InvoicePaymentFailedPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing failed payment:", data.invoice_code)
-  try {
-    const { data: user, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", data.customer.email)
-      .single()
+async function handlePaymentFailed(data: any) {
+  console.log("Processing failed payment:", data.reference)
 
-    if (error || !user) {
-      throw error || new Error("User not found")
-    }
+  // TODO: Implement your business logic
+  // 1. Update your database with payment status
+  // 2. Notify the user
+  // 3. Attempt recovery if appropriate
 
-    await db
-      .from("subscriptions")
-      .update({ status: "past_due", metadata: data })
-      .eq("payment_id", data.subscription.code)
-      .eq("user_id", user.id)
-
-    await db.from("notifications").insert({
-      user_id: user.id,
-      type: "system",
-      title: "Payment Failed",
-      message: `Payment for invoice ${data.invoice_code} failed`,
-      link: "/subscriptions",
-      is_read: false,
-      metadata: { invoice_code: data.invoice_code },
-    })
-  } catch (err) {
-    logger.error("Error handling invoice.payment_failed:", err)
-  }
+  // Example:
+  // await db.transaction.update({
+  //   where: { reference: data.reference },
+  //   data: { status: 'failed' },
+  // })
+  // await sendEmail({
+  //   to: data.customer.email,
+  //   subject: 'Payment Failed',
+  //   text: 'Your payment failed. Please update your payment method.',
+  // })
 }
 
-export async function handleInvoiceUpdate(
-  data: InvoiceUpdatePayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing invoice update:", data.invoice_code)
-  try {
-    const { data: user, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", data.customer.email)
-      .single()
+async function handleInvoiceUpdate(data: any) {
+  console.log("Processing invoice update:", data.invoice_code)
 
-    if (error || !user) {
-      throw error || new Error("User not found")
-    }
-
-    await db
-      .from("subscriptions")
-      .update({ metadata: data })
-      .eq("payment_id", data.subscription.code)
-      .eq("user_id", user.id)
-
-    await db.from("notifications").insert({
-      user_id: user.id,
-      type: "system",
-      title: "Invoice Updated",
-      message: `Your invoice ${data.invoice_code} was updated`,
-      link: "/subscriptions",
-      is_read: false,
-      metadata: { invoice_code: data.invoice_code },
-    })
-  } catch (err) {
-    logger.error("Error handling invoice.update:", err)
-  }
+  // TODO: Implement your business logic
 }
 
-export async function handleTransferSuccess(
-  data: TransferSuccessPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing successful transfer:", data.reference)
-  try {
-    const { data: admins, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("is_admin", true)
+async function handleTransferSuccess(data: any) {
+  console.log("Processing successful transfer:", data.reference)
 
-    if (error || !admins) {
-      throw error || new Error("No admins found")
-    }
-
-    await Promise.all(
-      admins.map((admin: any) =>
-        db.from("notifications").insert({
-          user_id: admin.id,
-          type: "system",
-          title: "Transfer Successful",
-          message: `Transfer ${data.reference} succeeded`,
-          link: "/admin/transfers",
-          is_read: false,
-          metadata: { reference: data.reference },
-        }),
-      ),
-    )
-  } catch (err) {
-    logger.error("Error handling transfer.success:", err)
-  }
+  // TODO: Implement your business logic
 }
 
-export async function handleTransferFailed(
-  data: TransferFailedPayload,
-  db = createAdminClient(),
-) {
-  logger.info("Processing failed transfer:", data.reference)
-  try {
-    const { data: admins, error } = await db
-      .from("profiles")
-      .select("id")
-      .eq("is_admin", true)
+async function handleTransferFailed(data: any) {
+  console.log("Processing failed transfer:", data.reference)
 
-    if (error || !admins) {
-      throw error || new Error("No admins found")
-    }
-
-    await Promise.all(
-      admins.map((admin: any) =>
-        db.from("notifications").insert({
-          user_id: admin.id,
-          type: "system",
-          title: "Transfer Failed",
-          message: `Transfer ${data.reference} failed: ${data.reason}`,
-          link: "/admin/transfers",
-          is_read: false,
-          metadata: { reference: data.reference },
-        }),
-      ),
-    )
-  } catch (err) {
-    logger.error("Error handling transfer.failed:", err)
-  }
+  // TODO: Implement your business logic
 }

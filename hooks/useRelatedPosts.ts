@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState, useEffect } from "react"
@@ -49,11 +48,11 @@ export function useRelatedPosts({
               maxConcurrent: 2,
             })
             .catch((err) => {
-              logger.warn("Failed to preload related posts:", err)
+              console.warn("Failed to preload related posts:", err)
             })
         }
       } catch (err) {
-        logger.error("Failed to fetch related posts:", err)
+        console.error("Failed to fetch related posts:", err)
         setError(err instanceof Error ? err.message : "Failed to fetch related posts")
         setRelatedPosts([])
       } finally {

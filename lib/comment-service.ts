@@ -1,5 +1,3 @@
-import logger from "@/utils/logger";
-import env from "@/lib/config/env";
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
@@ -88,7 +86,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
         }
       }
     } catch (error) {
-      logger.error("Error checking status column:", error)
+      console.error("Error checking status column:", error)
       hasStatusColumn = false
     }
 
@@ -120,7 +118,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
         }
       }
     } catch (error) {
-      logger.error("Error checking is_rich_text column:", error)
+      console.error("Error checking is_rich_text column:", error)
       hasRichTextColumn = false
     }
 
@@ -129,7 +127,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
       hasRichText: hasRichTextColumn,
     }
   } catch (error) {
-    logger.error("Error checking columns:", error)
+    console.error("Error checking columns:", error)
     hasStatusColumn = false
     hasRichTextColumn = false
     return { hasStatus: false, hasRichText: false }
@@ -166,13 +164,13 @@ export async function fetchComments(
       const { count: commentCount, error: countError } = await countQuery
 
       if (countError) {
-        logger.error("Error in count query:", countError)
+        console.error("Error in count query:", countError)
         // Continue with count = 0 instead of throwing
       } else {
         count = commentCount || 0
       }
     } catch (countErr) {
-      logger.error("Error counting comments:", countErr)
+      console.error("Error counting comments:", countErr)
       // Continue with count = 0 instead of throwing
     }
 
@@ -208,7 +206,7 @@ export async function fetchComments(
     const { data: comments, error } = await commentsQuery
 
     if (error) {
-      logger.error("Error fetching comments:", error)
+      console.error("Error fetching comments:", error)
       throw error
     }
 
@@ -229,7 +227,7 @@ export async function fetchComments(
     const { data: replies, error: repliesError } = await repliesQuery
 
     if (repliesError) {
-      logger.error("Error fetching replies:", repliesError)
+      console.error("Error fetching replies:", repliesError)
       throw repliesError
     }
 
@@ -256,7 +254,7 @@ export async function fetchComments(
         profiles = profileData
       }
     } catch (error) {
-      logger.error("Error fetching profiles:", error)
+      console.error("Error fetching profiles:", error)
       // Continue without profiles if there's an error
     }
 
@@ -320,7 +318,7 @@ export async function fetchComments(
       total: count,
     }
   } catch (error) {
-    logger.error("Error in fetchComments:", error)
+    console.error("Error in fetchComments:", error)
     throw error
   }
 }
@@ -383,14 +381,14 @@ export async function addComment(comment: NewComment): Promise<Comment> {
               postTitle = post.title
             } else {
               // Try to get the post title from WordPress
-              const response = await fetch(`${env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
+              const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/posts/${comment.post_id}`)
               if (response.ok) {
                 const wpPost = await response.json()
                 postTitle = wpPost.title.rendered || "a post"
               }
             }
           } catch (error) {
-            logger.error("Error fetching post:", error)
+            console.error("Error fetching post:", error)
           }
 
           // Create notification
@@ -406,7 +404,7 @@ export async function addComment(comment: NewComment): Promise<Comment> {
           })
         }
       } catch (notifError) {
-        logger.error("Error creating notification:", notifError)
+        console.error("Error creating notification:", notifError)
         // Don't throw here, we still want to return the comment
       }
     }
@@ -427,7 +425,7 @@ export async function addComment(comment: NewComment): Promise<Comment> {
       reactions: [],
     }
   } catch (error) {
-    logger.error("Error in addComment:", error)
+    console.error("Error in addComment:", error)
     throw error
   }
 }
@@ -477,7 +475,7 @@ export async function updateComment(id: string, content: string, isRichText?: bo
         : undefined,
     }
   } catch (error) {
-    logger.error("Error in updateComment:", error)
+    console.error("Error in updateComment:", error)
     throw error
   }
 }
@@ -511,7 +509,7 @@ export async function deleteComment(id: string): Promise<void> {
       })
     }
   } catch (error) {
-    logger.error("Error in deleteComment:", error)
+    console.error("Error in deleteComment:", error)
     throw error
   }
 }
@@ -537,7 +535,7 @@ export async function reportComment(data: ReportCommentData): Promise<void> {
     .eq("id", commentId)
 
   if (error) {
-    logger.error("Error reporting comment:", error)
+    console.error("Error reporting comment:", error)
     throw error
   }
 }

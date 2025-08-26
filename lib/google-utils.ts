@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 import { supabase } from "./supabase"
 import type { Profile } from "./supabase"
 
@@ -21,7 +20,7 @@ export async function getGoogleUserData(accessToken: string) {
 
     return await response.json()
   } catch (error) {
-    logger.error("Error fetching Google user data:", error)
+    console.error("Error fetching Google user data:", error)
     throw error
   }
 }
@@ -47,7 +46,7 @@ export async function updateProfileWithGoogleData(userId: string, googleData: an
 
     if (fetchError && fetchError.code !== "PGRST116") {
       // PGRST116 is "not found"
-      logger.error("Error fetching profile:", fetchError)
+      console.error("Error fetching profile:", fetchError)
       throw fetchError
     }
 
@@ -70,7 +69,7 @@ export async function updateProfileWithGoogleData(userId: string, googleData: an
       const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single()
 
       if (error) {
-        logger.error("Error updating profile with Google data:", error)
+        console.error("Error updating profile with Google data:", error)
         throw error
       }
 
@@ -105,14 +104,14 @@ export async function updateProfileWithGoogleData(userId: string, googleData: an
       const { data, error } = await supabase.from("profiles").insert(newProfile).select().single()
 
       if (error) {
-        logger.error("Error creating profile with Google data:", error)
+        console.error("Error creating profile with Google data:", error)
         throw error
       }
 
       return data
     }
   } catch (error) {
-    logger.error("Error in updateProfileWithGoogleData:", error)
+    console.error("Error in updateProfileWithGoogleData:", error)
     throw error
   }
 }

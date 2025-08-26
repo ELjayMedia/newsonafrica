@@ -1,4 +1,3 @@
-import logger from "@/utils/logger";
 "use client"
 
 import { useState } from "react"
@@ -49,7 +48,7 @@ export function NotificationFeature() {
         description: `Notification "${title}" scheduled for ${scheduleTime} seconds from now.`,
       })
     } catch (e: any) {
-      logger.error("Notification error:", e)
+      console.error("Notification error:", e)
       toast({
         title: "Notification Error",
         description: `Failed to schedule notification: ${e.message || "Unknown error"}`,
