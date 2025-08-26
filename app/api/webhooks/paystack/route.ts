@@ -23,8 +23,18 @@ export async function POST(request: Request) {
     const body = await request.text()
 
     // Verify the signature
-    const secretKey = env.PAYSTACK_SECRET_KEY || ""
-    const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
+    const secretKey = env.PAYSTACK_SECRET_KEY
+    if (!secretKey) {
+      logger.error("Paystack secret key not configured")
+      return NextResponse.json(
+        { error: "Server misconfigured: missing Paystack secret key" },
+        { status: 500 }
+      )
+    }
+    const hash = crypto
+      .createHmac("sha512", secretKey)
+      .update(body)
+      .digest("hex")
 
     if (hash !== signature) {
       logger.error("Invalid Paystack signature")
