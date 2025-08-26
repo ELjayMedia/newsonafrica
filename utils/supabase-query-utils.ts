@@ -10,7 +10,7 @@ interface QueryCacheEntry<T> {
 }
 
 // Global query cache with configurable TTL
-const queryCache = new Map<string, QueryCacheEntry<any>>()
+const queryCache = new Map<string, QueryCacheEntry<unknown>>()
 
 // Default cache TTL in milliseconds (5 minutes)
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000
@@ -44,16 +44,16 @@ export function clearQueryCache(key?: string, pattern?: RegExp): void {
  * @returns The query result
  */
 export async function executeWithCache<T>(
-  queryBuilder: PostgrestFilterBuilder<any, any, any[]>,
+  queryBuilder: PostgrestFilterBuilder<any, T, T[] | null>,
   cacheKey: string,
   ttl: number = DEFAULT_CACHE_TTL,
-): Promise<T[]> {
+): Promise<T[] | null> {
   const now = Date.now()
 
   // Check if we have a valid cached result
-  const cached = queryCache.get(cacheKey)
+  const cached = queryCache.get(cacheKey) as QueryCacheEntry<T[] | null> | undefined
   if (cached && now < cached.expiresAt) {
-    return cached.data as T[]
+    return cached.data
   }
 
   try {
@@ -70,9 +70,9 @@ export async function executeWithCache<T>(
       data,
       timestamp: now,
       expiresAt: now + ttl,
-    })
+    } as QueryCacheEntry<T[] | null>)
 
-    return data as T[]
+    return data
   } catch (error) {
     logger.error("Error executing query:", error)
     throw error
