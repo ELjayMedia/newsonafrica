@@ -11,15 +11,16 @@ import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs } from "@/config/homeConfig"
+import type { Post, Category } from "@/types/content"
 import { ChevronRight, TrendingUp } from "lucide-react"
 
 interface CompactHomeContentProps {
-  initialPosts?: any[]
+  initialPosts?: Post[]
   initialData?: {
-    taggedPosts: any[]
-    featuredPosts: any[]
-    categories: any[]
-    recentPosts: any[]
+    taggedPosts: Post[]
+    featuredPosts: Post[]
+    categories: Category[]
+    recentPosts: Post[]
   }
 }
 
@@ -30,7 +31,12 @@ const isOnline = () => {
   return true
 }
 
-const fetchHomeData = async () => {
+const fetchHomeData = async (): Promise<{
+  taggedPosts: Post[]
+  featuredPosts: Post[]
+  categories: Category[]
+  recentPosts: Post[]
+}> => {
   try {
     if (!isOnline()) {
       throw new Error("Device is offline")
@@ -63,7 +69,7 @@ const fetchHomeData = async () => {
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, Post[]>>({})
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -95,7 +101,12 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
           recentPosts: [],
         }
 
-  const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
+  const { data, error, isLoading } = useSWR<{
+    taggedPosts: Post[]
+    featuredPosts: Post[]
+    categories: Category[]
+    recentPosts: Post[]
+  }>("homepage-data", fetchHomeData, {
     fallbackData: initialData || fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length,
     revalidateOnFocus: false,
@@ -120,7 +131,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
       })
 
       const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, any[]> = {}
+      const newCategoryPosts: Record<string, Post[]> = {}
 
       results.forEach((result) => {
         if (result.status === "fulfilled") {

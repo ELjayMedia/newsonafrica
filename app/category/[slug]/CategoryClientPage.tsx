@@ -7,11 +7,11 @@ import { CategoryPage } from "./CategoryPage"
 import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { notFound } from "next/navigation"
-import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
+import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
-  category: WordPressCategory | null
-  posts: WordPressPost[]
+  category: Category | null
+  posts: Post[]
   hasNextPage: boolean
   endCursor: string | null
 }

@@ -3,9 +3,11 @@
 import { AdSlot } from "./AdSlot"
 import { HorizontalCard } from "./HorizontalCard"
 
+import type { Post } from "@/types/content"
+
 interface ReviveAdProps {
   className?: string
-  categoryPosts?: any[]
+  categoryPosts?: Post[]
   zoneId: string
 }
 
