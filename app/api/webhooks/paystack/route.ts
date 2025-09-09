@@ -1,6 +1,59 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { startWebhookTunnel } from "@/lib/paystack-utils"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient } from "../../../../lib/supabase"
+import { startWebhookTunnel } from "../../../../lib/paystack-utils"
+
+interface PaystackCustomer {
+  email: string
+  [key: string]: any
+}
+
+interface ChargeSuccessData {
+  reference: string
+  amount: number
+  status: string
+  customer: PaystackCustomer
+}
+
+interface SubscriptionCreatedData {
+  subscription_code: string
+  customer: PaystackCustomer
+  plan: { name: string }
+  status: string
+  createdAt: string
+  next_payment_date: string
+}
+
+interface SubscriptionDisabledData {
+  subscription_code: string
+}
+
+interface PaymentFailedData {
+  reference: string
+  customer: PaystackCustomer
+}
+
+interface InvoiceUpdateData {
+  invoice_code: string
+  customer: PaystackCustomer
+  status: string
+}
+
+interface TransferData {
+  reference: string
+  amount: number
+  customer?: PaystackCustomer
+  [key: string]: any
+}
+
+async function getUserIdByEmail(client: SupabaseClient, email: string) {
+  const { data, error } = await client.from("profiles").select("id").eq("email", email).single()
+  if (error || !data) {
+    throw new Error("User not found")
+  }
+  return data.id as string
+}
 
 // Start webhook tunnel in development
 if (process.env.NODE_ENV === "development") {
@@ -75,94 +128,154 @@ export async function POST(request: Request) {
 }
 
 // Event handlers
-async function handleChargeSuccess(data: any) {
+export async function handleChargeSuccess(
+  data: ChargeSuccessData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing successful charge:", data.reference)
-
-  // TODO: Implement your business logic
-  // 1. Verify the transaction (optional, as Paystack already verified it)
-  // 2. Update your database with payment information
-  // 3. Provision access to the user
-
-  // Example:
-  // await db.transaction.create({
-  //   data: {
-  //     reference: data.reference,
-  //     amount: data.amount / 100, // Convert from kobo to naira
-  //     email: data.customer.email,
-  //     status: 'success',
-  //     metadata: data,
-  //   },
-  // })
+  const userId = await getUserIdByEmail(client, data.customer.email)
+  const { error: txnError } = await (client as any)
+    .from("transactions")
+    .insert({
+      id: data.reference,
+      user_id: userId,
+      amount: data.amount / 100,
+      status: data.status,
+      metadata: data,
+    })
+  if (txnError) throw new Error("Failed to save transaction")
+  const { error: notifError } = await client.from("notifications").insert({
+    user_id: userId,
+    type: "payment",
+    content: `Payment ${data.status}`,
+    related_id: data.reference,
+    read: false,
+  })
+  if (notifError) {
+    console.error("Failed to create notification", notifError)
+  }
 }
 
-async function handleSubscriptionCreated(data: any) {
+export async function handleSubscriptionCreated(
+  data: SubscriptionCreatedData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing subscription creation:", data.subscription_code)
-
-  // TODO: Implement your business logic
-  // 1. Update your database with subscription information
-  // 2. Provision access to the user
-
-  // Example:
-  // await db.subscription.create({
-  //   data: {
-  //     code: data.subscription_code,
-  //     customer: data.customer.email,
-  //     plan: data.plan.name,
-  //     status: data.status,
-  //     start_date: new Date(data.createdAt),
-  //     next_payment_date: new Date(data.next_payment_date),
-  //   },
-  // })
+  const userId = await getUserIdByEmail(client, data.customer.email)
+  const { error } = await client.from("subscriptions").insert({
+    id: data.subscription_code,
+    user_id: userId,
+    plan: data.plan.name,
+    status: data.status,
+    start_date: new Date(data.createdAt).toISOString(),
+    end_date: null,
+    payment_provider: "paystack",
+    payment_id: data.subscription_code,
+    metadata: data,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+  if (error) throw new Error("Failed to create subscription")
+  await client.from("notifications").insert({
+    user_id: userId,
+    type: "subscription",
+    content: "Subscription created",
+    related_id: data.subscription_code,
+    read: false,
+  })
 }
 
-async function handleSubscriptionDisabled(data: any) {
+export async function handleSubscriptionDisabled(
+  data: SubscriptionDisabledData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing subscription cancellation:", data.subscription_code)
-
-  // TODO: Implement your business logic
-  // 1. Update your database with subscription status
-  // 2. Revoke access at the appropriate time
-
-  // Example:
-  // await db.subscription.update({
-  //   where: { code: data.subscription_code },
-  //   data: { status: 'cancelled', cancelled_at: new Date() },
-  // })
+  const { data: sub, error: fetchError } = await client
+    .from("subscriptions")
+    .select("user_id")
+    .eq("id", data.subscription_code)
+    .single()
+  if (fetchError || !sub) throw new Error("Subscription not found")
+  const { error } = await client
+    .from("subscriptions")
+    .update({
+      status: "cancelled",
+      end_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", data.subscription_code)
+  if (error) throw new Error("Failed to cancel subscription")
+  await client.from("notifications").insert({
+    user_id: sub.user_id,
+    type: "subscription",
+    content: "Subscription cancelled",
+    related_id: data.subscription_code,
+    read: false,
+  })
 }
 
-async function handlePaymentFailed(data: any) {
+export async function handlePaymentFailed(
+  data: PaymentFailedData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing failed payment:", data.reference)
-
-  // TODO: Implement your business logic
-  // 1. Update your database with payment status
-  // 2. Notify the user
-  // 3. Attempt recovery if appropriate
-
-  // Example:
-  // await db.transaction.update({
-  //   where: { reference: data.reference },
-  //   data: { status: 'failed' },
-  // })
-  // await sendEmail({
-  //   to: data.customer.email,
-  //   subject: 'Payment Failed',
-  //   text: 'Your payment failed. Please update your payment method.',
-  // })
+  const userId = await getUserIdByEmail(client, data.customer.email)
+  const { error } = await (client as any)
+    .from("transactions")
+    .update({ status: "failed" })
+    .eq("id", data.reference)
+  if (error) throw new Error("Failed to update transaction")
+  await client.from("notifications").insert({
+    user_id: userId,
+    type: "payment",
+    content: "Payment failed",
+    related_id: data.reference,
+    read: false,
+  })
 }
 
-async function handleInvoiceUpdate(data: any) {
+export async function handleInvoiceUpdate(
+  data: InvoiceUpdateData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing invoice update:", data.invoice_code)
-
-  // TODO: Implement your business logic
+  const userId = await getUserIdByEmail(client, data.customer.email)
+  const { error } = await client
+    .from("subscriptions")
+    .update({ metadata: data, updated_at: new Date().toISOString() })
+    .eq("payment_id", data.invoice_code)
+  if (error) throw new Error("Failed to update invoice")
+  await client.from("notifications").insert({
+    user_id: userId,
+    type: "invoice",
+    content: `Invoice ${data.status}`,
+    related_id: data.invoice_code,
+    read: false,
+  })
 }
 
-async function handleTransferSuccess(data: any) {
+export async function handleTransferSuccess(
+  data: TransferData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing successful transfer:", data.reference)
-
-  // TODO: Implement your business logic
+  const { error } = await (client as any).from("transfers").insert({
+    id: data.reference,
+    amount: data.amount / 100,
+    status: "success",
+    metadata: data,
+  })
+  if (error) throw new Error("Failed to save transfer")
 }
 
-async function handleTransferFailed(data: any) {
+export async function handleTransferFailed(
+  data: TransferData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing failed transfer:", data.reference)
-
-  // TODO: Implement your business logic
+  const { error } = await (client as any)
+    .from("transfers")
+    .update({ status: "failed", metadata: data })
+    .eq("id", data.reference)
+  if (error) throw new Error("Failed to update transfer")
 }
