@@ -11,7 +11,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, AlertCircle, Info, WifiOff, AlertTriangle, Ban } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
-import { AuthErrorCategory, type AuthError } from "@/utils/auth-error-utils"
+import {
+  AuthErrorCategory,
+  type AuthError,
+  parseAuthError,
+} from "@/utils/auth-error-utils"
+import type { SupabaseAuthError } from "@/types/auth"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AuthFormProps {
@@ -112,17 +117,9 @@ export function AuthForm({
       if (error) throw error
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
-        setError(error)
-      } else {
-        setError({
-          message: error.message || "Failed to sign in. Please check your credentials.",
-          category: AuthErrorCategory.UNKNOWN,
-          originalError: error,
-        })
-      }
+    } catch (error: SupabaseAuthError | AuthError | Error) {
+      const parsedError = "category" in error ? error : parseAuthError(error)
+      setError(parsedError)
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -201,23 +198,9 @@ export function AuthForm({
       })
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
-        setError(error)
-      } else if (error.message.includes("User already registered")) {
-        setError({
-          message: "Email already registered. Please use a different email or try signing in.",
-          category: AuthErrorCategory.VALIDATION,
-          suggestion: "If this is your email, try signing in instead or use the password reset option.",
-        })
-      } else {
-        setError({
-          message: error.message || "Failed to create account. Please try again.",
-          category: AuthErrorCategory.UNKNOWN,
-          originalError: error,
-        })
-      }
+    } catch (error: SupabaseAuthError | AuthError | Error) {
+      const parsedError = "category" in error ? error : parseAuthError(error)
+      setError(parsedError)
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -245,17 +228,9 @@ export function AuthForm({
 
       setResetSent(true)
       setError(null)
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
-        setError(error)
-      } else {
-        setError({
-          message: error.message || "Failed to send password reset email. Please try again.",
-          category: AuthErrorCategory.UNKNOWN,
-          originalError: error,
-        })
-      }
+    } catch (error: SupabaseAuthError | AuthError | Error) {
+      const parsedError = "category" in error ? error : parseAuthError(error)
+      setError(parsedError)
     } finally {
       setIsLoading(false)
     }
@@ -282,17 +257,9 @@ export function AuthForm({
       })
 
       if (error) throw error
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
-        setError(error)
-      } else {
-        setError({
-          message: error.message || `Failed to sign in with ${provider}. Please try again.`,
-          category: AuthErrorCategory.UNKNOWN,
-          originalError: error,
-        })
-      }
+    } catch (error: SupabaseAuthError | AuthError | Error) {
+      const parsedError = "category" in error ? error : parseAuthError(error)
+      setError(parsedError)
       setIsLoading(false)
     }
   }
