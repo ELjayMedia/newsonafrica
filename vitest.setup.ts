@@ -1,7 +1,10 @@
-import '@testing-library/jest-dom/vitest'
+import { expect } from 'vitest'
+import matchers from '@testing-library/jest-dom/matchers'
+expect.extend(matchers)
 class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
-(global as any).ResizeObserver = ResizeObserver
+(globalThis as any).ResizeObserver = ResizeObserver
+
