@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, AlertCircle, Info, WifiOff, AlertTriangle, Ban } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
-import { AuthErrorCategory, type AuthError } from "@/utils/auth-error-utils"
+import {
+  AuthErrorCategory,
+  type AuthError,
+  parseAuthError,
+} from "@/utils/auth-error-utils"
+import type { SupabaseAuthError } from "@/types/auth"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AuthFormProps {
@@ -20,6 +24,24 @@ interface AuthFormProps {
   defaultTab?: "signin" | "signup"
   inModal?: boolean
   onComplete?: () => void
+}
+
+function isAuthError(error: unknown): error is AuthError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "category" in error &&
+    "message" in error
+  )
+}
+
+function isSupabaseAuthError(error: unknown): error is SupabaseAuthError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    "message" in error
+  )
 }
 
 export function AuthForm({
@@ -112,13 +134,20 @@ export function AuthForm({
       if (error) throw error
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
         setError(error)
-      } else {
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
         setError({
           message: error.message || "Failed to sign in. Please check your credentials.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      } else {
+        setError({
+          message: "Failed to sign in. Please check your credentials.",
           category: AuthErrorCategory.UNKNOWN,
           originalError: error,
         })
@@ -201,19 +230,20 @@ export function AuthForm({
       })
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
         setError(error)
-      } else if (error.message.includes("User already registered")) {
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
         setError({
-          message: "Email already registered. Please use a different email or try signing in.",
-          category: AuthErrorCategory.VALIDATION,
-          suggestion: "If this is your email, try signing in instead or use the password reset option.",
+          message: error.message || "Failed to create account. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
         })
       } else {
         setError({
-          message: error.message || "Failed to create account. Please try again.",
+          message: "Failed to create account. Please try again.",
           category: AuthErrorCategory.UNKNOWN,
           originalError: error,
         })
@@ -245,13 +275,22 @@ export function AuthForm({
 
       setResetSent(true)
       setError(null)
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
         setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message:
+            error.message ||
+            "Failed to send password reset email. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
       } else {
         setError({
-          message: error.message || "Failed to send password reset email. Please try again.",
+          message: "Failed to send password reset email. Please try again.",
           category: AuthErrorCategory.UNKNOWN,
           originalError: error,
         })
@@ -282,13 +321,22 @@ export function AuthForm({
       })
 
       if (error) throw error
-    } catch (error: any) {
-      // Handle the error based on its category
-      if (error.category) {
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
         setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message:
+            error.message ||
+            `Failed to sign in with ${provider}. Please try again.`,
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
       } else {
         setError({
-          message: error.message || `Failed to sign in with ${provider}. Please try again.`,
+          message: `Failed to sign in with ${provider}. Please try again.`,
           category: AuthErrorCategory.UNKNOWN,
           originalError: error,
         })
