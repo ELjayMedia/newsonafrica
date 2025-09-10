@@ -44,7 +44,7 @@ export function Header() {
           <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
             <Link href="/" className="flex items-center">
               <Image
-                src="https://cdn-lfdfp.nitrocdn.com/tGnEpDbnzCtvjAvVZffQUmdjuAmWqNDQ/assets/images/optimized/rev-dc17211/newsonafrica.com/wp-content/uploads/2024/09/cropped-cropped-News-On-Africa.jpg"
+                src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
                 alt="News On Africa"
                 width={200}
                 height={50}

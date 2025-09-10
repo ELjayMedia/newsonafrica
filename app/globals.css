@@ -24,6 +24,27 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Added semantic color tokens */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-light: 142 69% 58%;
+    --success-dark: 142 72% 29%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 9%;
+    --warning-light: 43 96% 56%;
+    --warning-dark: 32 95% 44%;
+
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+    --info-light: 213 93% 68%;
+    --info-dark: 221 83% 53%;
+
+    --surface: var(--card);
+    --surface-foreground: var(--card-foreground);
+    --surface-elevated: var(--popover);
+    --surface-elevated-foreground: var(--popover-foreground);
   }
 
   .dark {
@@ -46,6 +67,27 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
+
+    /* Dark mode semantic colors */
+    --success: 142 69% 58%;
+    --success-foreground: 0 0% 9%;
+    --success-light: 142 76% 36%;
+    --success-dark: 142 72% 29%;
+
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 9%;
+    --warning-light: 38 92% 50%;
+    --warning-dark: 32 95% 44%;
+
+    --info: 213 93% 68%;
+    --info-foreground: 0 0% 9%;
+    --info-light: 217 91% 60%;
+    --info-dark: 221 83% 53%;
+
+    --surface: var(--card);
+    --surface-foreground: var(--card-foreground);
+    --surface-elevated: var(--popover);
+    --surface-elevated-foreground: var(--popover-foreground);
   }
 }
 

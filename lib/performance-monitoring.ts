@@ -57,7 +57,8 @@ function getConnectionSpeed() {
   if (!isBrowser || !("connection" in navigator)) return "unknown"
 
   try {
-    const connection = navigator.connection as NavigatorConnection | undefined
+    // @ts-ignore - TypeScript doesn't know about navigator.connection
+    const connection = navigator.connection
 
     if (!connection) return "unknown"
     if (connection.saveData) return "saveData"

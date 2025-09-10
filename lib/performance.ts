@@ -67,25 +67,20 @@ export function detectSlowRenders(threshold = 16) {
   if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
     const originalCreateElement = React.createElement
 
-    React.createElement = (
-      (
-        ...args: Parameters<typeof React.createElement>
-      ): ReturnType<typeof React.createElement> => {
-        const start = performance.now()
-        const element = originalCreateElement(...args)
-        const end = performance.now()
+    // @ts-ignore - Monkey patching for development only
+    React.createElement = function (...args) {
+      const start = performance.now()
+      const element = originalCreateElement.apply(this, args)
+      const end = performance.now()
 
-        const renderTime = end - start
-        if (renderTime > threshold) {
-          console.warn(
-            `[Performance Warning] Slow render detected: ${
-              (args[0] as any)?.displayName || args[0]
-            } took ${renderTime.toFixed(2)}ms`,
-          )
-        }
-
-        return element
+      const renderTime = end - start
+      if (renderTime > threshold) {
+        console.warn(
+          `[Performance Warning] Slow render detected: ${args[0]?.displayName || args[0]} took ${renderTime.toFixed(2)}ms`,
+        )
       }
-    ) as typeof React.createElement
+
+      return element
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Alternative implementation using require
+// @ts-ignore
 const algoliasearch = require('algoliasearch');
 
 // Initialize the Algolia client on the server side
