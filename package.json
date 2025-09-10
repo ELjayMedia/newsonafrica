@@ -128,9 +128,13 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.2",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-unicorn": "^48.0.1",
     "husky": "^9.1.7",
     "jsdom": "^24.0.0",
     "lint-staged": "^16.1.6",
@@ -143,6 +147,11 @@
   "engines": {
     "node": "22.x"
   },
-  "packageManager": "pnpm@9"
-
+  "packageManager": "pnpm@9",
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx,json,md,css}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  }
 }
