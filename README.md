@@ -53,7 +53,7 @@ news-on-africa/
 ### Prerequisites
 
 - Node.js 22.x
-- pnpm
+- pnpm 9.x
 - Supabase account
 - WordPress instance with REST API
 
@@ -78,6 +78,15 @@ pnpm install
 # Run the development server
 pnpm dev
 
+# Type check the codebase
+pnpm typecheck
+
+# Run linting
+pnpm lint
+
+# Run tests
+pnpm test
+
 # Build for production
 pnpm build
 
@@ -98,12 +107,6 @@ The application is deployed on Vercel with the following configuration:
 ```bash
 # Run unit tests
 pnpm test
-
-# Run end-to-end tests
-pnpm test:e2e
-
-# Run linting
-pnpm lint
 ```
 
 ## 📚 Documentation
