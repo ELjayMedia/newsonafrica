@@ -125,5 +125,4 @@
     "@testing-library/react": "^14.2.0",
     "@testing-library/jest-dom": "^6.1.5",
     "jsdom": "^24.0.0"
-  }
 }
