@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +24,24 @@ interface AuthFormProps {
   defaultTab?: "signin" | "signup"
   inModal?: boolean
   onComplete?: () => void
+}
+
+function isAuthError(error: unknown): error is AuthError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "category" in error &&
+    "message" in error
+  )
+}
+
+function isSupabaseAuthError(error: unknown): error is SupabaseAuthError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    "message" in error
+  )
 }
 
 export function AuthForm({
@@ -117,9 +134,26 @@ export function AuthForm({
       if (error) throw error
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: SupabaseAuthError | AuthError | Error) {
-      const parsedError = "category" in error ? error : parseAuthError(error)
-      setError(parsedError)
+
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
+        setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message: error.message || "Failed to sign in. Please check your credentials.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      } else {
+        setError({
+          message: "Failed to sign in. Please check your credentials.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
+
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -198,9 +232,26 @@ export function AuthForm({
       })
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: SupabaseAuthError | AuthError | Error) {
-      const parsedError = "category" in error ? error : parseAuthError(error)
-      setError(parsedError)
+
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
+        setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message: error.message || "Failed to create account. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      } else {
+        setError({
+          message: "Failed to create account. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
+
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -228,9 +279,27 @@ export function AuthForm({
 
       setResetSent(true)
       setError(null)
-    } catch (error: SupabaseAuthError | AuthError | Error) {
-      const parsedError = "category" in error ? error : parseAuthError(error)
-      setError(parsedError)
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
+        setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message:
+            error.message ||
+            "Failed to send password reset email. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      } else {
+        setError({
+          message: "Failed to send password reset email. Please try again.",
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
+
     } finally {
       setIsLoading(false)
     }
@@ -257,9 +326,28 @@ export function AuthForm({
       })
 
       if (error) throw error
-    } catch (error: SupabaseAuthError | AuthError | Error) {
-      const parsedError = "category" in error ? error : parseAuthError(error)
-      setError(parsedError)
+
+    } catch (error: unknown) {
+      if (isAuthError(error)) {
+        setError(error)
+      } else if (isSupabaseAuthError(error)) {
+        setError(parseAuthError(error))
+      } else if (error instanceof Error) {
+        setError({
+          message:
+            error.message ||
+            `Failed to sign in with ${provider}. Please try again.`,
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      } else {
+        setError({
+          message: `Failed to sign in with ${provider}. Please try again.`,
+          category: AuthErrorCategory.UNKNOWN,
+          originalError: error,
+        })
+      }
+
       setIsLoading(false)
     }
   }
