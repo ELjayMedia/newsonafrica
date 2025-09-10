@@ -9,7 +9,9 @@
     "format": "prettier --write .",
     "prepare": "husky install",
     "start": "next start",
+
     "test": "vitest run",
+
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -126,8 +128,9 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@typescript-eslint/eslint-plugin": "^8.43.0",
-    "@typescript-eslint/parser": "^8.43.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "c8": "^10.1.2",
+
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.2",
     "eslint-config-prettier": "^10.1.8",
@@ -155,4 +158,5 @@
       "prettier --write"
     ]
   }
+
 }
