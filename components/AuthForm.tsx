@@ -134,6 +134,7 @@ export function AuthForm({
       if (error) throw error
 
       // Success handling is now done in onAuthStateChange listener
+
     } catch (error: unknown) {
       if (isAuthError(error)) {
         setError(error)
@@ -152,6 +153,7 @@ export function AuthForm({
           originalError: error,
         })
       }
+
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -230,6 +232,7 @@ export function AuthForm({
       })
 
       // Success handling is now done in onAuthStateChange listener
+
     } catch (error: unknown) {
       if (isAuthError(error)) {
         setError(error)
@@ -248,6 +251,7 @@ export function AuthForm({
           originalError: error,
         })
       }
+
       setIsLoading(false) // Only set loading false on error
     }
   }
@@ -295,6 +299,7 @@ export function AuthForm({
           originalError: error,
         })
       }
+
     } finally {
       setIsLoading(false)
     }
@@ -321,6 +326,7 @@ export function AuthForm({
       })
 
       if (error) throw error
+
     } catch (error: unknown) {
       if (isAuthError(error)) {
         setError(error)
@@ -341,6 +347,7 @@ export function AuthForm({
           originalError: error,
         })
       }
+
       setIsLoading(false)
     }
   }
