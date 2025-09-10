@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
 import { Share, Bookmark, ChevronLeft, ChevronRight, Clock, User } from "lucide-react"
+import Image from "next/image"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/api/wordpress"
 
@@ -188,10 +189,17 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
           {/* Featured image */}
           {initialData.featuredImage?.node?.sourceUrl && (
             <div className="mb-8">
-              <img
+              <Image
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
                 alt={initialData.featuredImage.node.altText || initialData.title}
+                width={
+                  initialData.featuredImage.node.mediaDetails?.width || 1200
+                }
+                height={
+                  initialData.featuredImage.node.mediaDetails?.height || 630
+                }
                 className="w-full h-auto rounded-lg"
+                priority
               />
             </div>
           )}
