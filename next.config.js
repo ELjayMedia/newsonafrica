@@ -71,12 +71,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
     domains: [
@@ -88,6 +82,7 @@ const nextConfig = {
       "blob.v0.dev",
       "cdn-lfdfp.nitrocdn.com",
       "via.placeholder.com",
+      "media.newsonafrica.com",
     ],
     formats: ["image/avif", "image/webp"],
   },
