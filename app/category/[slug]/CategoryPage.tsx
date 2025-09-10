@@ -16,11 +16,11 @@ import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
-import type { WordPressCategory, WordPressPost } from "@/lib/api/wordpress"
+import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
-  category: WordPressCategory | null
-  posts: WordPressPost[]
+  category: Category | null
+  posts: Post[]
   hasNextPage: boolean
   endCursor: string | null
 }

@@ -16,14 +16,15 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
+import type { Post, Category } from "@/types/content"
 
 interface HomeContentProps {
-  initialPosts?: any[]
+  initialPosts?: Post[]
   initialData?: {
-    taggedPosts: any[]
-    featuredPosts: any[]
-    categories: any[]
-    recentPosts: any[]
+    taggedPosts: Post[]
+    featuredPosts: Post[]
+    categories: Category[]
+    recentPosts: Post[]
   }
 }
 
@@ -36,7 +37,12 @@ const isOnline = () => {
 }
 
 // Update the fetchHomeData function to use new WordPress API
-const fetchHomeData = async () => {
+const fetchHomeData = async (): Promise<{
+  taggedPosts: Post[]
+  featuredPosts: Post[]
+  categories: Category[]
+  recentPosts: Post[]
+}> => {
   try {
     if (!isOnline()) {
       console.log("Device is offline, using cached data")
@@ -77,7 +83,7 @@ const fetchHomeData = async () => {
 export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, any[]>>({})
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, Post[]>>({})
 
   // Listen for online/offline events
   useEffect(() => {
@@ -112,7 +118,12 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         }
 
   // Update the useSWR configuration for better error handling
-  const { data, error, isLoading } = useSWR("homepage-data", fetchHomeData, {
+  const { data, error, isLoading } = useSWR<{
+    taggedPosts: Post[]
+    featuredPosts: Post[]
+    categories: Category[]
+    recentPosts: Post[]
+  }>("homepage-data", fetchHomeData, {
     fallbackData: initialData || fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
     revalidateOnFocus: false,
@@ -145,7 +156,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
       })
 
       const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, any[]> = {}
+      const newCategoryPosts: Record<string, Post[]> = {}
 
       results.forEach((result) => {
         if (result.status === "fulfilled") {

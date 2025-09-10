@@ -7,6 +7,7 @@ import {
 } from "@/lib/graphql/queries"
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
+import type { Post, Category } from "@/types/content"
 
 const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
 const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
@@ -468,11 +469,14 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
 /**
  * Get the latest posts from WordPress
  */
-export async function getLatestPosts(limit = 20, after?: string) {
+export async function getLatestPosts(
+  limit = 20,
+  after?: string,
+): Promise<{ posts: Post[]; error: string | null }> {
   try {
     const posts = await fetchRecentPosts(limit)
     return {
-      posts: posts || [],
+      posts: (posts || []) as unknown as Post[],
       error: null,
     }
   } catch (error) {
@@ -512,8 +516,8 @@ export async function getPostBySlug(slug: string): Promise<WordPressPost | null>
 /**
  * Get all categories
  */
-export async function getCategories(): Promise<WordPressCategory[]> {
-  return getCategoriesForCountry("sz")
+export async function getCategories(): Promise<Category[]> {
+  return getCategoriesForCountry("sz") as unknown as Category[]
 }
 
 /**
@@ -524,8 +528,8 @@ export async function getPostsByCategory(
   limit = 20,
   after?: string | null,
 ): Promise<{
-  category: WordPressCategory | null
-  posts: WordPressPost[]
+  category: Category | null
+  posts: Post[]
   hasNextPage: boolean
   endCursor: string | null
 }> {
@@ -554,7 +558,12 @@ export async function getPostsByCategory(
     // Cleanup cache if needed
     cleanupCache()
 
-    return result
+    return result as unknown as {
+      category: Category | null
+      posts: Post[]
+      hasNextPage: boolean
+      endCursor: string | null
+    }
   } catch (error) {
     // If we have stale cached data, return it as fallback
     if (cached) {
@@ -900,4 +909,13 @@ function transformRestCategoryToGraphQL(category: any): WordPressCategory {
 }
 
 // Export types for use in other files
-export type { WordPressPost, WordPressCategory, WordPressAuthor, WordPressTag, WordPressImage, CountryConfig }
+export type {
+  WordPressPost,
+  WordPressCategory,
+  WordPressAuthor,
+  WordPressTag,
+  WordPressImage,
+  CountryConfig,
+};
+
+export type { Post, Category } from "@/types/content"
