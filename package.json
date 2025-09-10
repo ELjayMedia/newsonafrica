@@ -140,13 +140,9 @@
     "typescript": "^5",
     "vitest": "^1.6.0"
   },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,css,md}": [
-      "prettier --write"
-    ]
-  }
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "pnpm@9"
+
 }
