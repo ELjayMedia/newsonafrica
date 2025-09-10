@@ -11,12 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, AlertCircle, Info, WifiOff, AlertTriangle, Ban } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
-import {
-  AuthErrorCategory,
-  type AuthError,
-  parseAuthError,
-} from "@/utils/auth-error-utils"
-import type { SupabaseAuthError } from "@/types/auth"
+import { AuthErrorCategory, type AuthError, parseAuthError } from "@/utils/auth-error-utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AuthFormProps {
@@ -117,7 +112,7 @@ export function AuthForm({
       if (error) throw error
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: SupabaseAuthError | AuthError | Error) {
+    } catch (error: any) {
       const parsedError = "category" in error ? error : parseAuthError(error)
       setError(parsedError)
       setIsLoading(false) // Only set loading false on error
@@ -198,7 +193,7 @@ export function AuthForm({
       })
 
       // Success handling is now done in onAuthStateChange listener
-    } catch (error: SupabaseAuthError | AuthError | Error) {
+    } catch (error: any) {
       const parsedError = "category" in error ? error : parseAuthError(error)
       setError(parsedError)
       setIsLoading(false) // Only set loading false on error
@@ -228,7 +223,7 @@ export function AuthForm({
 
       setResetSent(true)
       setError(null)
-    } catch (error: SupabaseAuthError | AuthError | Error) {
+    } catch (error: any) {
       const parsedError = "category" in error ? error : parseAuthError(error)
       setError(parsedError)
     } finally {
@@ -257,7 +252,7 @@ export function AuthForm({
       })
 
       if (error) throw error
-    } catch (error: SupabaseAuthError | AuthError | Error) {
+    } catch (error: any) {
       const parsedError = "category" in error ? error : parseAuthError(error)
       setError(parsedError)
       setIsLoading(false)
@@ -436,7 +431,7 @@ export function AuthForm({
             <Button
               type="button"
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 bg-transparent"
               onClick={() => handleSocialSignIn("google")}
               disabled={isLoading}
             >
@@ -466,7 +461,7 @@ export function AuthForm({
             <Button
               type="button"
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 bg-transparent"
               onClick={() => handleSocialSignIn("facebook")}
               disabled={isLoading}
             >
@@ -566,7 +561,7 @@ export function AuthForm({
             <Button
               type="button"
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 bg-transparent"
               onClick={() => handleSocialSignIn("google")}
               disabled={isLoading}
             >
@@ -596,7 +591,7 @@ export function AuthForm({
             <Button
               type="button"
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 bg-transparent"
               onClick={() => handleSocialSignIn("facebook")}
               disabled={isLoading}
             >
@@ -613,3 +608,4 @@ export function AuthForm({
 }
 
 // Export as named export
+export default AuthForm
