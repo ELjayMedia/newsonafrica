@@ -13,7 +13,8 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   cacheOnFrontEndNav: true,
-  workboxOptions: {
-    navigateFallback: "/offline",
+  fallbacks: {
+    document: "/offline",
+    image: "/placeholder.png",
   },
 })(nextConfig)
