@@ -21,7 +21,10 @@ Add these secrets to your GitHub repository settings:
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
 
 #### Environment Variables
-- `NEXT_PUBLIC_WORDPRESS_API_URL`
+- `NEXT_PUBLIC_WORDPRESS_API_URL` - default GraphQL endpoint
+- `WORDPRESS_REST_API_URL` - default REST endpoint
+- `NEXT_PUBLIC_WORDPRESS_API_URL_<COUNTRY>` - optional site-specific GraphQL endpoint
+- `WORDPRESS_REST_API_URL_<COUNTRY>` - optional site-specific REST endpoint
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`

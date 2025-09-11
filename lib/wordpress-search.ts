@@ -1,4 +1,6 @@
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { getWpEndpoints } from "@/config/wp"
+
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 // Search result interface
 export interface WordPressSearchResult {
