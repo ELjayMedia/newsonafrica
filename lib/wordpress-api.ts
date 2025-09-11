@@ -1,4 +1,6 @@
 import { cache } from "react"
+import { getWpEndpoints } from "@/config/wp"
+
 
 const WP_GRAPHQL_BASE = process.env.WP_GRAPHQL_BASE || "https://newsonafrica.com"
 const WP_DEFAULT_SITE = process.env.WP_DEFAULT_SITE || "sz"

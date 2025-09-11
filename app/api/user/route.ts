@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { getCurrentUser } from "@/lib/auth"
+import { getWpEndpoints } from "@/config/wp"
 
 export async function GET(request: Request) {
   const token = getAuthTokenFromCookies()
@@ -34,7 +35,8 @@ export async function PUT(request: Request) {
 
   try {
     const userData = await request.json()
-    const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/users/me`, {
+    const { rest } = getWpEndpoints()
+    const response = await fetch(`${rest}/users/me`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
