@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
-import type { Database } from "@/types/supabase"
+import { createClient } from "@/utils/supabase/middleware"
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/category", "/search", "/auth/callback", "/auth/callback-loading"]
@@ -42,13 +41,12 @@ export async function middleware(request: NextRequest) {
   // Log API requests
   logApiRequest(request)
 
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient<Database>({ req: request, res })
+  const { supabase, response } = createClient(request)
 
-  // Check if the user is authenticated
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  if (!supabase) {
+    console.warn("[Middleware] Supabase client not available, skipping auth checks")
+    return response
+  }
 
   const url = request.nextUrl.clone()
   const { pathname } = url
@@ -73,13 +71,22 @@ export async function middleware(request: NextRequest) {
       (pathname.startsWith("/api/comments") &&
         (request.method === "POST" || request.method === "PATCH" || request.method === "DELETE"))
     ) {
-      if (!session) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+        }
+      } catch (error) {
+        console.error("[Middleware] Auth check failed:", error)
+        return NextResponse.json({ success: false, error: "Authentication error" }, { status: 500 })
       }
     }
 
     // Add CORS headers for API routes
-    const response = NextResponse.next()
+    const apiResponse = NextResponse.next()
 
     // Define allowed origins based on environment
     const allowedOrigins =
@@ -90,13 +97,24 @@ export async function middleware(request: NextRequest) {
     const origin = request.headers.get("origin") || ""
 
     if (allowedOrigins.includes(origin)) {
-      response.headers.set("Access-Control-Allow-Origin", origin)
-      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-      response.headers.set("Access-Control-Max-Age", "86400")
+      apiResponse.headers.set("Access-Control-Allow-Origin", origin)
+      apiResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      apiResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+      apiResponse.headers.set("Access-Control-Max-Age", "86400")
     }
 
-    return response
+    return apiResponse
+  }
+
+  let session = null
+  try {
+    const {
+      data: { session: userSession },
+    } = await supabase.auth.getSession()
+    session = userSession
+  } catch (error) {
+    console.error("[Middleware] Session check failed:", error)
+    // Continue without session if there's an error
   }
 
   // If user is on an auth page but already logged in, redirect to profile
@@ -121,7 +139,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/auth?returnTo=${returnTo}`, request.url))
   }
 
-  return res
+  return response
 }
 
 // Only run middleware on specific paths

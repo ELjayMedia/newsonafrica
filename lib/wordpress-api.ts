@@ -1,10 +1,24 @@
 import { cache } from "react"
 
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_API_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+const WP_GRAPHQL_BASE = process.env.WP_GRAPHQL_BASE || "https://newsonafrica.com"
+const WP_DEFAULT_SITE = process.env.WP_DEFAULT_SITE || "sz"
 
-if (!WORDPRESS_API_URL) {
-  console.error("NEXT_PUBLIC_WORDPRESS_API_URL is not set in the environment variables.")
+// Build site-aware URLs
+const buildGraphQLUrl = (site: string = WP_DEFAULT_SITE) => `${WP_GRAPHQL_BASE}/${site}/graphql`
+const buildRestUrl = (site: string = WP_DEFAULT_SITE) => `${WP_GRAPHQL_BASE}/${site}/wp-json/wp/v2`
+
+// Legacy environment variable support for backward compatibility
+const LEGACY_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL
+const LEGACY_REST_URL = process.env.WORDPRESS_REST_API_URL
+
+// Use legacy URLs if they exist, otherwise use the new centralized approach
+const FINAL_GRAPHQL_URL = LEGACY_GRAPHQL_URL || buildGraphQLUrl()
+const FINAL_REST_URL = LEGACY_REST_URL || buildRestUrl()
+
+if (!FINAL_GRAPHQL_URL) {
+  console.error(
+    "WordPress GraphQL URL is not configured. Set WP_GRAPHQL_BASE and WP_DEFAULT_SITE or NEXT_PUBLIC_WORDPRESS_API_URL.",
+  )
 }
 
 // Simple cache implementation
@@ -26,7 +40,7 @@ const isServer = () => typeof window === "undefined"
  * Simple GraphQL request function with proper headers
  */
 async function graphqlRequest(query: string, variables: Record<string, any> = {}) {
-  const response = await fetch(WORDPRESS_API_URL, {
+  const response = await fetch(FINAL_GRAPHQL_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -58,7 +72,7 @@ async function graphqlRequest(query: string, variables: Record<string, any> = {}
 const fetchFromRestApi = async (endpoint: string, params: Record<string, any> = {}) => {
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
-  const url = `${WORDPRESS_REST_API_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
+  const url = `${FINAL_REST_URL}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
 
   const MAX_RETRIES = 3
   let lastError
@@ -1321,7 +1335,7 @@ export const fetchAuthorData = cache(async (slug: string) => {
  */
 export const deleteComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${FINAL_REST_URL}/comments/${commentId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -1374,7 +1388,7 @@ export const fetchPendingComments = async () => {
  */
 export const approveComment = async (commentId: string) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/comments/${commentId}`, {
+    const response = await fetch(`${FINAL_REST_URL}/comments/${commentId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1621,8 +1635,10 @@ export const fetchComments = async (postId: string, page = 1, perPage = 20) => {
  */
 export const client = {
   query: graphqlRequest,
-  endpoint: WORDPRESS_API_URL,
-  restEndpoint: WORDPRESS_REST_API_URL,
+  endpoint: FINAL_GRAPHQL_URL,
+  restEndpoint: FINAL_REST_URL,
+  buildGraphQLUrl,
+  buildRestUrl,
 }
 
 /**
@@ -1630,7 +1646,7 @@ export const client = {
  */
 export const updateUserProfile = async (userId: string, profileData: any) => {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/users/${userId}`, {
+    const response = await fetch(`${FINAL_REST_URL}/users/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { z } from "zod"
 import { createProfile } from "@/services/profile-service"
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { email, password, username } = registerSchema.parse(body)
 
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createClient(cookieStore)
 
     // Create the user
     const { data: authData, error: authError } = await supabase.auth.signUp({
