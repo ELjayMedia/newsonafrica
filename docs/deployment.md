@@ -31,10 +31,10 @@ Ensure the following environment variables are configured in GitHub and Vercel:
 
 ## Manual Deployment
 
-```bash
+\`\`\`bash
 npm run build
 vercel --prod
-```
+\`\`\`
 
 ## Troubleshooting
 
@@ -45,4 +45,3 @@ vercel --prod
 
 - Web deployments are monitored via the Vercel dashboard
 - GitHub Actions provide build status and logs
-
