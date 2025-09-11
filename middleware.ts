@@ -4,13 +4,13 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/types/supabase"
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "/auth/callback-loading"]
+const PUBLIC_ROUTES = ["/", "/category", "/search", "/auth/callback", "/auth/callback-loading"]
 
 // Routes that should redirect to profile if already authenticated
 const AUTH_ROUTES = ["/auth", "/login", "/register"]
 
 // Legacy routes that should be redirected to their category equivalents
-const LEGACY_ROUTES_MAP: Record<string, string> = {
+const LEGACY_ROUTES_MAP = {
   "/news": "/category/news",
   "/business": "/category/business",
   "/sport": "/category/sport",
@@ -23,6 +23,19 @@ function logApiRequest(request: NextRequest) {
     const { pathname, search } = request.nextUrl
     console.log(`[${request.method}] ${pathname}${search}`)
   }
+}
+
+function handleLegacyPostRedirect(pathname: string, request: NextRequest): NextResponse | null {
+  // Check if it's a legacy /post/ route
+  if (pathname.startsWith("/post/")) {
+    const slug = pathname.replace("/post/", "")
+    const defaultCountry = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+    const newUrl = `/${defaultCountry}/article/${slug}`
+
+    console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
+    return NextResponse.redirect(new URL(newUrl, request.url))
+  }
+  return null
 }
 
 export async function middleware(request: NextRequest) {
@@ -39,6 +52,11 @@ export async function middleware(request: NextRequest) {
 
   const url = request.nextUrl.clone()
   const { pathname } = url
+
+  const legacyRedirect = handleLegacyPostRedirect(pathname, request)
+  if (legacyRedirect) {
+    return legacyRedirect
+  }
 
   // Handle legacy route redirects
   if (LEGACY_ROUTES_MAP[pathname]) {

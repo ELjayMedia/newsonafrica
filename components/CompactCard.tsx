@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface CompactCardProps {
   post: {
@@ -64,7 +65,7 @@ export const CompactCard = memo(function CompactCard({
 
   if (layout === "minimal") {
     return (
-      <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+      <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
         <article className="py-2 border-b border-gray-100 last:border-b-0">
           <div className="flex gap-2">
             <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
@@ -91,7 +92,7 @@ export const CompactCard = memo(function CompactCard({
 
   if (layout === "vertical") {
     return (
-      <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+      <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
         <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
           <div className="relative h-32 overflow-hidden">
             <Image
@@ -125,7 +126,7 @@ export const CompactCard = memo(function CompactCard({
 
   // Horizontal layout (default)
   return (
-    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+    <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
       <article className="flex gap-2 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow p-2">
         <div className="w-20 h-16 flex-shrink-0 relative rounded overflow-hidden">
           <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="80px" />

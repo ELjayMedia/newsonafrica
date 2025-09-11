@@ -17,9 +17,12 @@ import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Post, Category } from "@/types/content"
+import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 
 interface HomeContentProps {
   initialPosts?: Post[]
+  countryPosts?: Record<string, Post[]>
+  featuredPosts?: Post[]
   initialData?: {
     taggedPosts: Post[]
     featuredPosts: Post[]
@@ -80,7 +83,12 @@ const fetchHomeData = async (): Promise<{
   }
 }
 
-export function HomeContent({ initialPosts = [], initialData }: HomeContentProps) {
+export function HomeContent({
+  initialPosts = [],
+  countryPosts = {},
+  featuredPosts = [],
+  initialData,
+}: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, Post[]>>({})
@@ -198,10 +206,13 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   // Safely extract data with fallbacks
   const {
     taggedPosts = [],
-    featuredPosts = [],
+    featuredPosts: fetchedFeaturedPosts = [],
     categories = [],
     recentPosts = [],
   } = data || initialData || fallbackData
+
+  // Use provided featuredPosts if available
+  const finalFeaturedPosts = featuredPosts.length > 0 ? featuredPosts : fetchedFeaturedPosts
 
   // Show skeleton during initial loading
   if (isLoading && !initialData && !initialPosts.length) {
@@ -209,7 +220,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   }
 
   // Show error message if data fetch failed and we have no initial data
-  if (error && !featuredPosts.length && !isOffline) {
+  if (error && !finalFeaturedPosts.length && !isOffline) {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold mb-2">Unable to load content</h2>
@@ -225,7 +236,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
   }
 
   // Show empty state if no content is available
-  if (!taggedPosts.length && !featuredPosts.length && !recentPosts.length) {
+  if (!taggedPosts.length && !finalFeaturedPosts.length && !recentPosts.length) {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold mb-2">No Content Available</h2>
@@ -293,7 +304,7 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
       "@context": "https://schema.org",
       "@type": "ItemList",
       itemListElement:
-        featuredPosts?.map((post, index) => ({
+        finalFeaturedPosts?.map((post, index) => ({
           "@type": "ListItem",
           position: index + 1,
           url: `${siteConfig.url}/post/${post.slug}`,
@@ -324,6 +335,9 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
       <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
         {renderOfflineNotification()}
 
+        {/* Pan-African Country Navigation */}
+        <CountryNavigation />
+
         {/* Hero Section - Show the latest post */}
         {mainStory && (
           <section className="bg-gray-50 px-2 py-2 rounded-lg">
@@ -332,6 +346,9 @@ export function HomeContent({ initialPosts = [], initialData }: HomeContentProps
         )}
 
         <HomeAfterHeroAd />
+
+        {/* Country Spotlight - Show posts from different countries */}
+        {Object.keys(countryPosts).length > 0 && <CountrySpotlight countryPosts={countryPosts} />}
 
         {/* Secondary Stories - Show featured posts */}
         {secondaryStories.length > 0 && (

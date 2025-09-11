@@ -16,6 +16,7 @@ import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { getArticleUrl } from "@/lib/utils/routing"
 import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
@@ -205,7 +206,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
                 .map((post) => (
                   <Link
                     key={post.id}
-                    href={`/post/${post.slug}`}
+                    href={getArticleUrl(post.slug)}
                     className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
                   >
                     <div className="flex-grow py-3 px-4 flex flex-col justify-center">

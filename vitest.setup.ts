@@ -1,16 +1,12 @@
 import { expect } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
 
-// make expect available before importing jest-dom
-// @ts-ignore
-globalThis.expect = expect
-await import('@testing-library/jest-dom')
+expect.extend(matchers)
 
 class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
-
 // @ts-ignore
 global.ResizeObserver = ResizeObserver
-

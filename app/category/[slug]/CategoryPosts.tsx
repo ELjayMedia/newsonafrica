@@ -10,6 +10,7 @@ import { useInView } from "react-intersection-observer"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ShareIcon } from "lucide-react"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface CategoryPostsProps {
   initialPosts: any[]
@@ -78,12 +79,12 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
       navigator
         .share({
           title: post.title,
-          url: `/post/${post.slug}`,
+          url: getArticleUrl(post.slug),
         })
         .catch((err) => console.error("Error sharing:", err))
     } else {
       // Fallback for browsers that don't support navigator.share
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post.slug}`)
+      navigator.clipboard.writeText(`${window.location.origin}${getArticleUrl(post.slug)}`)
       alert("Link copied to clipboard!")
     }
   }
@@ -102,7 +103,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
               className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200"
             >
               <Link
-                href={`/post/${post.slug}`}
+                href={getArticleUrl(post.slug)}
                 className="flex flex-col sm:flex-row items-start p-3 hover:bg-gray-50 transition-colors duration-200"
               >
                 <div className="relative w-full sm:w-20 h-40 sm:h-20 flex-shrink-0 mb-3 sm:mb-0 sm:mr-3">
@@ -161,7 +162,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
           <div className="flex flex-col items-center justify-center py-4 text-center">
             <AlertCircle className="h-6 w-6 text-red-500 mb-2" />
             <p className="text-red-500 mb-2">{error}</p>
-            <Button onClick={handleLoadMore} variant="outline" size="sm" className="mt-2">
+            <Button onClick={handleLoadMore} variant="outline" size="sm" className="mt-2 bg-transparent">
               Try Again
             </Button>
           </div>
@@ -172,7 +173,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
             <Button
               onClick={handleLoadMore}
               variant="outline"
-              className="text-gray-600 hover:text-gray-800"
+              className="text-gray-600 hover:text-gray-800 bg-transparent"
               disabled={isLoading}
             >
               {isLoading ? (

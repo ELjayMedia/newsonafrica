@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { stripHtml, highlightSearchTerms } from "@/lib/search"
 import { formatDistanceToNow } from "date-fns"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface SearchResultsProps {
   results: any[]
@@ -63,7 +64,7 @@ export function SearchResults({
       <div className="space-y-4">
         {results.map((result) => (
           <div key={result.id} className="border-b border-gray-200 pb-4 last:border-0">
-            <Link href={`/post/${result.slug}`} className="block group">
+            <Link href={getArticleUrl(result.slug)} className="block group">
               <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {isClient ? (
                   <div
@@ -100,7 +101,7 @@ export function SearchResults({
 
       {hasMore && (
         <div className="flex justify-center pt-4">
-          <Button onClick={onLoadMore} disabled={isLoading} variant="outline" className="min-w-[120px]">
+          <Button onClick={onLoadMore} disabled={isLoading} variant="outline" className="min-w-[120px] bg-transparent">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {isLoading ? "Loading..." : "Load more"}
           </Button>

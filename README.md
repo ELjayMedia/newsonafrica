@@ -20,7 +20,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 
 The application follows a feature-based architecture with the following structure:
 
-```
+\`\`\`
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -38,7 +38,7 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-```
+\`\`\`
 
 ### Data Flow
 
@@ -52,62 +52,71 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 22.x
-- pnpm 9.x
+- Node.js 18+ and npm/yarn
 - Supabase account
 - WordPress instance with REST API
 
 ### Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in the values:
+Create a `.env.local` file with the following variables:
 
-```bash
-cp .env.example .env.local
-```
+\`\`\`
+# WordPress
+WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-api.com/wp-json
+WP_APP_USERNAME=your_app_username
+WP_APP_PASSWORD=your_app_password
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Authentication
+NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
+FACEBOOK_APP_SECRET=your_facebook_app_secret
+
+# Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
+
+# Site
+NEXT_PUBLIC_SITE_URL=https://your-site-url.com
+\`\`\`
 
 ### Installation
 
-```bash
+\`\`\`bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-pnpm install
+npm install
 
 # Run the development server
-pnpm dev
-
-# Type check the codebase
-pnpm typecheck
-
-# Run linting
-pnpm lint
-
-# Run tests
-pnpm test
-
-# Build for production
-pnpm build
-
-# Start the production server
-pnpm start
-```
+npm run dev
+\`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `pnpm build`
+1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
 ## 🧪 Testing
 
-```bash
+\`\`\`bash
 # Run unit tests
-pnpm test
-```
+npm test
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run linting
+npm run lint
+\`\`\`
 
 ## 📚 Documentation
 

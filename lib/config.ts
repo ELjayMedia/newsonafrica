@@ -1,0 +1,82 @@
+export const appConfig = {
+  // WordPress API Configuration
+  wordpress: {
+    baseUrl: process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com",
+    graphqlEndpoint: "/graphql",
+    restEndpoint: "/wp-json/wp/v2",
+    timeout: 30000,
+    retryAttempts: 3,
+    retryDelay: 1000,
+  },
+
+  // Supported African Countries
+  countries: {
+    supported: ["sz", "ng", "ke", "za", "gh", "ug", "tz", "rw", "mw", "zm"],
+    default: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz",
+    fallbacks: {
+      sz: ["za", "ng"],
+      ng: ["gh", "ke"],
+      ke: ["ug", "tz"],
+      za: ["sz", "ng"],
+      gh: ["ng", "ke"],
+      ug: ["ke", "tz"],
+      tz: ["ke", "ug"],
+      rw: ["ug", "ke"],
+      mw: ["zm", "za"],
+      zm: ["mw", "za"],
+    },
+  },
+
+  // Content Configuration
+  content: {
+    postsPerPage: 20,
+    relatedPostsCount: 6,
+    excerptLength: 150,
+    categories: ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"],
+  },
+
+  // Performance Configuration
+  performance: {
+    imageOptimization: true,
+    lazyLoading: true,
+    prefetchLinks: true,
+    cacheTimeout: 300000, // 5 minutes
+  },
+
+  // PWA Configuration
+  pwa: {
+    installPromptDelay: 3000,
+    updateCheckInterval: 60000, // 1 minute
+    offlinePages: ["/", "/offline"],
+  },
+
+  // Feature Flags
+  features: {
+    comments: process.env.FEATURE_COMMENTS === "true",
+    bookmarks: process.env.FEATURE_BOOKMARKS === "true",
+    notifications: process.env.FEATURE_NOTIFICATIONS === "true",
+    subscriptions: process.env.FEATURE_SUBSCRIPTIONS === "true",
+    advancedSearch: process.env.FEATURE_ADVANCED_SEARCH === "true",
+    i18n: process.env.FEATURE_I18N === "true",
+    aiRecommendations: process.env.FEATURE_AI_RECOMMENDATIONS === "true",
+    aiContent: process.env.FEATURE_AI_CONTENT === "true",
+  },
+
+  // SEO Configuration
+  seo: {
+    defaultTitle: "News On Africa - Pan-African News Platform",
+    titleTemplate: "%s | News On Africa",
+    defaultDescription: "Your trusted source for news across Africa with local relevance and continental context.",
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com",
+    twitterHandle: "@newsonafrica",
+    facebookAppId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
+  },
+
+  // Analytics Configuration
+  analytics: {
+    googleAnalytics: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
+    adsenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
+  },
+} as const
+
+export type AppConfig = typeof appConfig

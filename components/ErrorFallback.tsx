@@ -7,14 +7,25 @@ interface ErrorFallbackProps {
 }
 
 export default function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+  const getErrorMessage = (error: Error) => {
+    if (error.message.includes("403")) {
+      return "Access to content is currently restricted. This may be due to server maintenance or authentication issues."
+    }
+    if (error.message.includes("503")) {
+      return "The content server is temporarily unavailable. Please try again in a few minutes."
+    }
+    if (error.message.includes("Circuit breaker is open")) {
+      return "Content service is temporarily unavailable due to repeated failures. Please try again later."
+    }
+    return error.message || "An unexpected error occurred. Please try again later."
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
       <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
         <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
         <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-md">
-          <p className="text-sm text-gray-700">
-            {error.message || "An unexpected error occurred. Please try again later."}
-          </p>
+          <p className="text-sm text-gray-700">{getErrorMessage(error)}</p>
         </div>
         <div className="flex flex-col space-y-3">
           <button

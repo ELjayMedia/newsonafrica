@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface FeaturedStoryProps {
   post: {
@@ -21,7 +22,7 @@ export function FeaturedStory({ post }: FeaturedStoryProps) {
 
   return (
     <article className="mb-8">
-      <Link href={`/post/${post.slug}`} className="block group">
+      <Link href={getArticleUrl(post.slug)} className="block group">
         <div className="grid md:grid-cols-2 gap-4 items-center bg-white rounded-lg shadow-md overflow-hidden p-4">
           <div className="relative h-48 md:h-72 rounded-lg overflow-hidden">
             <Image

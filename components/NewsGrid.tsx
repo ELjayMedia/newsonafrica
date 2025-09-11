@@ -7,6 +7,7 @@ import { memo, useMemo, useEffect, useCallback } from "react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface Post {
   id: string
@@ -86,7 +87,7 @@ export const NewsGrid = memo(function NewsGrid({
         {posts.map((post) => (
           <Link
             key={post.id}
-            href={`/post/${post.slug}`}
+            href={getArticleUrl(post.slug)}
             className="flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden"
           >
             {post.featuredImage && (
@@ -174,7 +175,7 @@ const SportCategorySection = memo(function SportCategorySection({
 
       {/* Main Sport Article */}
       <Link
-        href={`/post/${sportCategoryPosts[0]?.slug}`}
+        href={getArticleUrl(sportCategoryPosts[0]?.slug)}
         className="md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200"
       >
         {sportCategoryPosts[0]?.featuredImage && (
@@ -209,7 +210,7 @@ const SportCategorySection = memo(function SportCategorySection({
         {sportCategoryPosts.slice(1, 4).map((post, index) => (
           <Link
             key={post.id}
-            href={`/post/${post.slug}`}
+            href={getArticleUrl(post.slug)}
             className="flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -259,7 +260,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
     <>
       {/* Main Featured Article */}
       <Link
-        href={`/post/${mainPost?.slug}`}
+        href={getArticleUrl(mainPost?.slug)}
         className="md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200"
       >
         {mainPost?.featuredImage && (
@@ -294,7 +295,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
         {secondaryPosts.map((post, index) => (
           <Link
             key={post.id}
-            href={`/post/${post.slug}`}
+            href={getArticleUrl(post.slug)}
             className="flex gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px]"
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">

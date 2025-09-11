@@ -3,74 +3,28 @@
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
-import {
-  COUNTRIES,
-  getCategoriesForCountry,
-  type WordPressCategory,
-} from "@/lib/api/wordpress"
 
-const DEFAULT_CATEGORIES = [
-  { name: "NEWS", slug: "news" },
-  { name: "BUSINESS", slug: "business" },
-  { name: "SPORT", slug: "sport" },
-  { name: "HEALTH", slug: "health" },
-  { name: "POLITICS", slug: "politics" },
-  { name: "OPINION", slug: "editorial" },
-  { name: "ENTERTAINMENT", slug: "entertainment" },
-  { name: "FOOD", slug: "food" },
-  { name: "SPECIAL PROJECTS", slug: "special-projects" },
+const categories = [
+  { name: "NEWS", href: "/category/news" },
+  { name: "BUSINESS", href: "/category/business" },
+  { name: "SPORT", href: "/category/sport" },
+  { name: "HEALTH", href: "/category/health" },
+  { name: "POLITICS", href: "/category/politics" },
+  { name: "OPINION", href: "/category/editorial" },
+  { name: "ENTERTAINMENT", href: "/category/entertainment" },
+  { name: "FOOD", href: "/category/food" },
+  { name: "SPECIAL PROJECTS", href: "/special-projects" },
 ]
 
 export function Header() {
   const router = useRouter()
+  const { user, signOut } = useUser()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
-
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
-  const [countryCode, setCountryCode] = useState<string | null>(null)
-
-  // Detect country code from pathname
-  useEffect(() => {
-    const segments = pathname.split("/").filter(Boolean)
-    const code = segments[0]
-    if (code && COUNTRIES[code]) {
-      setCountryCode(code)
-    } else {
-      setCountryCode(null)
-    }
-  }, [pathname])
-
-  // Load categories for the current country
-  useEffect(() => {
-    let isMounted = true
-    const load = async () => {
-      if (!countryCode) {
-        setCategories(DEFAULT_CATEGORIES)
-        return
-      }
-      try {
-        const cats: WordPressCategory[] = await getCategoriesForCountry(countryCode)
-        if (isMounted && cats.length > 0) {
-          setCategories(cats.map((c) => ({ name: c.name, slug: c.slug })))
-        } else if (isMounted) {
-          setCategories(DEFAULT_CATEGORIES)
-        }
-      } catch (error) {
-        console.error("Failed to load categories for", countryCode, error)
-        if (isMounted) setCategories(DEFAULT_CATEGORIES)
-      }
-    }
-    load()
-    return () => {
-      isMounted = false
-    }
-  }, [countryCode])
-
-  const country = countryCode ? COUNTRIES[countryCode] : null
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -149,14 +103,6 @@ export function Header() {
               </div>
 
               <div className="flex items-center gap-2 text-sm ml-4">
-                {country && (
-                  <div className="hidden md:flex items-center gap-1 text-gray-600">
-                    <span role="img" aria-label={country.name}>
-                      {country.flag}
-                    </span>
-                    <span>{country.name}</span>
-                  </div>
-                )}
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
                 <div className="hidden md:flex flex-col items-start text-gray-600 text-sm">
                   <span>{currentDate}</span>
@@ -169,26 +115,20 @@ export function Header() {
           <nav className="mt-4 md:mt-0 bg-white">
             <div className="overflow-x-auto">
               <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-                {categories.map((category) => {
-                  const href = countryCode
-                    ? `/${countryCode}/category/${category.slug}`
-                    : `/category/${category.slug}`
-                  const isActive = pathname === href
-                  return (
-                    <li key={category.slug}>
-                      <Link
-                        href={href}
-                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
-                          isActive
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
-                        }`}
-                      >
-                        {category.name.toUpperCase()}
-                      </Link>
-                    </li>
-                  )
-                })}
+                {categories.map((category) => (
+                  <li key={category.name}>
+                    <Link
+                      href={category.href}
+                      className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
+                        pathname === category.href
+                          ? "text-blue-600 border-b-2 border-blue-600"
+                          : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                      }`}
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </nav>

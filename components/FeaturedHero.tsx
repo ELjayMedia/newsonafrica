@@ -6,6 +6,7 @@ import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface FeaturedHeroProps {
   post: {
@@ -34,7 +35,7 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
   const blurDataURL = useMemo(() => generateBlurDataURL(800, 450), [])
 
   return (
-    <Link href={`/post/${post.slug}`} className="block group">
+    <Link href={getArticleUrl(post.slug)} className="block group">
       <div className="grid md:grid-cols-2 gap-3 md:gap-4">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image

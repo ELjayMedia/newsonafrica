@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface Post {
   id: string
@@ -29,7 +30,7 @@ export function RelatedPosts({ posts, title = "Related Posts" }: RelatedPostsPro
       <h2 className="text-xl font-bold mb-4">{title}</h2>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => (
-          <Link key={post.id} href={`/post/${post.slug}`} className="group">
+          <Link key={post.id} href={getArticleUrl(post.slug)} className="group">
             <article className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg h-full flex flex-col">
               <div className="relative h-40">
                 <Image
