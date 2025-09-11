@@ -19,14 +19,14 @@ export default function ServiceWorkerRegistration() {
     // Use a try-catch block to prevent uncaught errors
     try {
       // Check if the service worker file exists before trying to register it
-      fetch("/service-worker.js", { method: "HEAD" })
+      fetch("/sw.js", { method: "HEAD" })
         .then((response) => {
           if (!response.ok) {
             throw new Error(`Service Worker file not found: ${response.status}`)
           }
 
           // If the file exists, register the service worker
-          return navigator.serviceWorker.register("/service-worker.js").then((registration) => {
+          return navigator.serviceWorker.register("/sw.js").then((registration) => {
             console.log("Service Worker registered with scope:", registration.scope)
           })
         })
