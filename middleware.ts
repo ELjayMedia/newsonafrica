@@ -10,7 +10,7 @@ const PUBLIC_ROUTES = ["/", "/category", "/search", "/post", "/auth/callback", "
 const AUTH_ROUTES = ["/auth", "/login", "/register"]
 
 // Legacy routes that should be redirected to their category equivalents
-const LEGACY_ROUTES_MAP = {
+const LEGACY_ROUTES_MAP: Record<string, string> = {
   "/news": "/category/news",
   "/business": "/category/business",
   "/sport": "/category/sport",
