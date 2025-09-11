@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getWpEndpoints } from "@/config/wp"
 
-// WordPress API configuration
-const WORDPRESS_API_URL =
-  process.env.WORDPRESS_REST_API_URL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
-  "https://newsonafrica.com/sz/wp-json/wp/v2"
+// WordPress REST API configuration
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 // Rate limiting
 const RATE_LIMIT = 50
@@ -59,7 +57,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       status: "publish",
     })
 
-    const url = `${WORDPRESS_API_URL}/posts?${searchParams}`
+    const url = `${WORDPRESS_REST_API_URL}/posts?${searchParams}`
 
     const response = await fetch(url, {
       headers: {
@@ -95,7 +93,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
 async function getSearchSuggestions(query: string): Promise<string[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
+      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
       {
         headers: {
           "Content-Type": "application/json",

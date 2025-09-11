@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body)
 
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createClient(cookieStore)
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

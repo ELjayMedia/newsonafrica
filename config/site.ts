@@ -1,3 +1,7 @@
+import { getWpEndpoints } from "@/config/wp"
+
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
+
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
@@ -35,10 +39,7 @@ export const siteConfig = {
   ],
   // WordPress API configuration
   wordpress: {
-    apiUrl:
-      process.env.WORDPRESS_REST_API_URL ||
-      process.env.NEXT_PUBLIC_WORDPRESS_REST_API_URL ||
-      "https://newsonafrica.com/sz/wp-json/wp/v2",
+    apiUrl: WORDPRESS_REST_API_URL,
     authToken: process.env.WORDPRESS_AUTH_TOKEN,
     username: process.env.WP_APP_USERNAME,
     password: process.env.WP_APP_PASSWORD,

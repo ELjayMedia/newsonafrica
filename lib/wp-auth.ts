@@ -1,5 +1,6 @@
 import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
+import { getWpEndpoints } from "@/config/wp"
 
 // Function to generate a WordPress authentication token
 export function generateWPAuthToken(userId: string, expiration: number): string {
@@ -28,7 +29,8 @@ export function verifyWPAuthToken(token: string): boolean {
 
 // Function to create a WordPress user
 export async function createWPUser(username: string, email: string, password: string): Promise<any> {
-  const response = await fetch(`${process.env.WORDPRESS_API_URL}/wp/v2/users`, {
+  const { rest } = getWpEndpoints()
+  const response = await fetch(`${rest}/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -50,7 +52,9 @@ export async function createWPUser(username: string, email: string, password: st
 
 // Function to authenticate a WordPress user
 export async function authenticateWPUser(username: string, password: string): Promise<any> {
-  const response = await fetch(`${process.env.WORDPRESS_API_URL}/jwt-auth/v1/token`, {
+  const { rest } = getWpEndpoints()
+  const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
+  const response = await fetch(`${baseUrl}/jwt-auth/v1/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

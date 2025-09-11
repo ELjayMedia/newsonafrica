@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { paystackClient } from "@/lib/paystack-utils"
 
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createClient(cookieStore)
 
     // Check authentication
     const {

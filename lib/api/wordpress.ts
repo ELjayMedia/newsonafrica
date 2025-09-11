@@ -8,9 +8,7 @@ import {
 import { fetchRecentPosts, fetchCategoryPosts, fetchSinglePost } from "../wordpress-api"
 import { relatedPostsCache } from "@/lib/cache/related-posts-cache"
 import type { Post, Category } from "@/types/content"
-
-const WORDPRESS_GRAPHQL_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://newsonafrica.com/sz/graphql"
-const WORDPRESS_REST_URL = process.env.WORDPRESS_REST_API_URL || "https://newsonafrica.com/sz/wp-json/wp/v2"
+import { getWpEndpoints } from "@/config/wp"
 
 // TypeScript interfaces for WordPress data
 export interface WordPressImage {
@@ -120,8 +118,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "SZL",
     timezone: "Africa/Mbabane",
     languages: ["en", "ss"],
-    apiEndpoint: "https://newsonafrica.com/sz/graphql",
-    restEndpoint: "https://newsonafrica.com/sz/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("sz").graphql,
+    restEndpoint: getWpEndpoints("sz").rest,
   },
   ng: {
     code: "ng",
@@ -130,8 +128,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "NGN",
     timezone: "Africa/Lagos",
     languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ng/graphql",
-    restEndpoint: "https://newsonafrica.com/ng/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("ng").graphql,
+    restEndpoint: getWpEndpoints("ng").rest,
   },
   ke: {
     code: "ke",
@@ -140,8 +138,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "KES",
     timezone: "Africa/Nairobi",
     languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/ke/graphql",
-    restEndpoint: "https://newsonafrica.com/ke/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("ke").graphql,
+    restEndpoint: getWpEndpoints("ke").rest,
   },
   za: {
     code: "za",
@@ -150,8 +148,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "ZAR",
     timezone: "Africa/Johannesburg",
     languages: ["en", "af", "zu", "xh"],
-    apiEndpoint: "https://newsonafrica.com/za/graphql",
-    restEndpoint: "https://newsonafrica.com/za/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("za").graphql,
+    restEndpoint: getWpEndpoints("za").rest,
   },
   gh: {
     code: "gh",
@@ -160,8 +158,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "GHS",
     timezone: "Africa/Accra",
     languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/gh/graphql",
-    restEndpoint: "https://newsonafrica.com/gh/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("gh").graphql,
+    restEndpoint: getWpEndpoints("gh").rest,
   },
   ug: {
     code: "ug",
@@ -170,8 +168,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "UGX",
     timezone: "Africa/Kampala",
     languages: ["en"],
-    apiEndpoint: "https://newsonafrica.com/ug/graphql",
-    restEndpoint: "https://newsonafrica.com/ug/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("ug").graphql,
+    restEndpoint: getWpEndpoints("ug").rest,
   },
   tz: {
     code: "tz",
@@ -180,8 +178,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "TZS",
     timezone: "Africa/Dar_es_Salaam",
     languages: ["en", "sw"],
-    apiEndpoint: "https://newsonafrica.com/tz/graphql",
-    restEndpoint: "https://newsonafrica.com/tz/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("tz").graphql,
+    restEndpoint: getWpEndpoints("tz").rest,
   },
   rw: {
     code: "rw",
@@ -190,8 +188,8 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     currency: "RWF",
     timezone: "Africa/Kigali",
     languages: ["en", "rw", "fr"],
-    apiEndpoint: "https://newsonafrica.com/rw/graphql",
-    restEndpoint: "https://newsonafrica.com/rw/wp-json/wp/v2",
+    apiEndpoint: getWpEndpoints("rw").graphql,
+    restEndpoint: getWpEndpoints("rw").rest,
   },
 }
 
