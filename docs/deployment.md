@@ -1,30 +1,20 @@
 # Deployment Guide
 
-## GitHub Actions Deployment
+This project deploys the Next.js web application using GitHub Actions and Vercel.
 
-This project uses GitHub Actions for automated deployment of both web and mobile applications.
+## Required Secrets
 
-### Required Secrets
+Add these secrets to your repository settings:
 
-Add these secrets to your GitHub repository settings:
+- `VERCEL_TOKEN` – Vercel deployment token
+- `VERCEL_ORG_ID` – Vercel organization ID
+- `VERCEL_PROJECT_ID` – Vercel project ID
 
-#### Web Deployment (Vercel)
-- `VERCEL_TOKEN` - Your Vercel deployment token
-- `VERCEL_ORG_ID` - Your Vercel organization ID
-- `VERCEL_PROJECT_ID` - Your Vercel project ID
+## Environment Variables
 
-#### Expo/Mobile Deployment
-- `EXPO_TOKEN` - Your Expo access token
-- `APPLE_ID` - Apple ID for iOS submissions
-- `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password for Apple ID
-- `APPLE_TEAM_ID` - Apple Developer Team ID
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Google Play Console service account key
+Ensure the following environment variables are configured in GitHub and Vercel:
 
-#### Environment Variables
-- `NEXT_PUBLIC_WORDPRESS_API_URL` - default GraphQL endpoint
-- `WORDPRESS_REST_API_URL` - default REST endpoint
-- `NEXT_PUBLIC_WORDPRESS_API_URL_<COUNTRY>` - optional site-specific GraphQL endpoint
-- `WORDPRESS_REST_API_URL_<COUNTRY>` - optional site-specific REST endpoint
+- `NEXT_PUBLIC_WORDPRESS_API_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`
@@ -35,57 +25,24 @@ Add these secrets to your GitHub repository settings:
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
 
-### Workflow Overview
+## Workflow Overview
 
-1. **Web Deploy**: Builds and deploys the Next.js application to Vercel
-2. **Expo Build**: Creates iOS and Android builds using EAS Build
-3. **Expo Preview**: Creates preview builds for pull requests
-4. **Expo Submit**: Submits builds to App Store and Google Play (production only)
-5. **Expo Update**: Publishes OTA updates for existing app installations
+1. **Web Deploy** – builds and deploys the application to Vercel
 
-### Manual Deployment
+## Manual Deployment
 
-#### Web
-\`\`\`bash
+```bash
 npm run build
 vercel --prod
-\`\`\`
+```
 
-#### Mobile
-\`\`\`bash
-# Install EAS CLI
-npm install -g @expo/eas-cli
+## Troubleshooting
 
-# Build for iOS
-eas build --platform ios
+1. **Build Failures** – check the GitHub Actions logs for details
+2. **Missing Secrets** – ensure all required secrets and environment variables are set
 
-# Build for Android
-eas build --platform android
+## Monitoring
 
-# Submit to stores
-eas submit --platform ios
-eas submit --platform android
-
-# Publish OTA update
-eas update --branch production
-\`\`\`
-
-### Build Profiles
-
-- **Development**: For local development with Expo Dev Client
-- **Preview**: Internal distribution for testing
-- **Production**: App store releases
-
-### Troubleshooting
-
-1. **Build Failures**: Check the GitHub Actions logs for detailed error messages
-2. **Missing Secrets**: Ensure all required secrets are configured in repository settings
-3. **Expo Token**: Generate a new token from https://expo.dev/accounts/[account]/settings/access-tokens
-4. **Apple Certificates**: Ensure your Apple Developer account has valid certificates
-5. **Google Play**: Verify your Google Play Console service account has proper permissions
-
-### Monitoring
-
-- Web deployments are monitored via Vercel dashboard
-- Mobile builds are tracked in Expo dashboard
+- Web deployments are monitored via the Vercel dashboard
 - GitHub Actions provide build status and logs
+
