@@ -1,7 +1,19 @@
+import withPWA from "@ducanh2912/next-pwa"
+
 const nextConfig = {
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: false },
-  // runtime config gets added later
+  experimental: { typedRoutes: true }
 }
-export default nextConfig
+
+export default withPWA({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  cacheOnFrontEndNav: true,
+  workboxOptions: {
+    navigateFallback: "/offline",
+  },
+})(nextConfig)
