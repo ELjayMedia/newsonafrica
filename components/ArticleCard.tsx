@@ -66,22 +66,22 @@ export function ArticleCard({ article, layout = "standard", className, priority 
   if (layout === "compact") {
     return (
       <Card className={cn("group hover:shadow-md transition-shadow", className)}>
-        <CardContent className="p-4">
-          <div className="flex gap-4">
-            <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
+        <CardContent className="p-3">
+          <div className="flex gap-3">
+            <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
               <Image
                 src={imageUrl || "/placeholder.svg"}
                 alt={data.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-200"
                 placeholder="blur"
-                blurDataURL={generateBlurDataURL(80, 80)}
+                blurDataURL={generateBlurDataURL(64, 64)}
                 priority={priority}
               />
             </div>
             <div className="flex-1 min-w-0">
               {primaryCategory && (
-                <Badge variant="secondary" className="mb-2 text-xs">
+                <Badge variant="secondary" className="mb-1 text-xs">
                   {primaryCategory.name}
                 </Badge>
               )}
@@ -100,7 +100,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   if (layout === "featured") {
     return (
-      <Card className={cn("group hover:shadow-lg transition-all duration-300", className)}>
+      <Card className={cn("group hover:shadow-lg transition-all duration-300 max-w-md", className)}>
         <div className="relative aspect-[16/9] overflow-hidden rounded-t-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}
@@ -112,17 +112,18 @@ export function ArticleCard({ article, layout = "standard", className, priority 
             priority={priority}
           />
           {primaryCategory && (
-            <Badge className="absolute top-4 left-4 bg-primary/90 hover:bg-primary">{primaryCategory.name}</Badge>
+            <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-xs">
+              {primaryCategory.name}
+            </Badge>
           )}
         </div>
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <Link href={data.link} className="block">
-            <h2 className="text-2xl font-bold mb-3 line-clamp-2 group-hover:text-primary transition-colors">
+            <h2 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
               {data.title}
             </h2>
           </Link>
-          {data.excerpt && <p className="text-muted-foreground mb-4 line-clamp-3">{data.excerpt}</p>}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{formatDate(data.date)}</span>
             {data.author && <span>By {data.author}</span>}
           </div>
@@ -133,7 +134,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   // Standard layout
   return (
-    <Card className={cn("group hover:shadow-md transition-shadow", className)}>
+    <Card className={cn("group hover:shadow-md transition-shadow max-w-xs", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
         <Image
           src={imageUrl || "/placeholder.svg"}
@@ -145,16 +146,17 @@ export function ArticleCard({ article, layout = "standard", className, priority 
           priority={priority}
         />
         {primaryCategory && (
-          <Badge variant="secondary" className="absolute top-3 left-3">
+          <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
             {primaryCategory.name}
           </Badge>
         )}
       </div>
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         <Link href={data.link} className="block">
-          <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{data.title}</h3>
+          <h3 className="font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors text-sm">
+            {data.title}
+          </h3>
         </Link>
-        {data.excerpt && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{data.excerpt}</p>}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{formatDate(data.date)}</span>
           {data.author && <span>By {data.author}</span>}

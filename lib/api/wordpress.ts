@@ -1,5 +1,4 @@
 import {
-  LATEST_POSTS_QUERY,
   POST_BY_SLUG_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
@@ -339,6 +338,12 @@ async function graphqlRequest<T>(query: string, variables: Record<string, any> =
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
+  // Check circuit breaker first
+  if (isCircuitBreakerOpen(endpoints.graphql)) {
+    console.log(`[v0] Circuit breaker is open for ${endpoints.graphql}, skipping request`)
+    throw new Error("Circuit breaker is open")
+  }
+
   try {
     console.log(`[v0] Making GraphQL request to ${endpoints.graphql}`)
 
@@ -360,10 +365,22 @@ async function graphqlRequest<T>(query: string, variables: Record<string, any> =
       return { data: null, errors: [{ message: "Endpoint redirected, using fallback" }] } as unknown as T
     }
 
+    // Handle 503 Service Unavailable specifically
+    if (response.status === 503) {
+      recordCircuitBreakerFailure(endpoints.graphql)
+      const errorText = await response.text().catch(() => "Service Unavailable")
+      console.warn(`[v0] WordPress backend is temporarily unavailable (503): ${errorText}`)
+      throw new Error(`WordPress backend temporarily unavailable: 503 Service Unavailable`)
+    }
+
     if (!response.ok) {
+      recordCircuitBreakerFailure(endpoints.graphql)
       const errorText = await response.text().catch(() => "Unknown error")
       throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}. ${errorText}`)
     }
+
+    // Reset circuit breaker on success
+    resetCircuitBreaker(endpoints.graphql)
 
     const result = await response.json()
 
@@ -394,6 +411,12 @@ async function restApiFallback<T>(
 ): Promise<T> {
   const endpoints = getCountryEndpoints(countryCode)
 
+  // Check circuit breaker first
+  if (isCircuitBreakerOpen(endpoints.rest)) {
+    console.log(`[v0] Circuit breaker is open for ${endpoints.rest}, using mock data`)
+    throw new Error("Circuit breaker is open")
+  }
+
   const queryParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
 
   const url = `${endpoints.rest}/${endpoint}${queryParams ? `?${queryParams}` : ""}`
@@ -412,9 +435,20 @@ async function restApiFallback<T>(
       throw new Error("REST API redirected")
     }
 
+    // Handle 503 Service Unavailable specifically
+    if (response.status === 503) {
+      recordCircuitBreakerFailure(endpoints.rest)
+      console.warn(`[v0] WordPress REST API is temporarily unavailable (503)`)
+      throw new Error("WordPress REST API temporarily unavailable: 503 Service Unavailable")
+    }
+
     if (!response.ok) {
+      recordCircuitBreakerFailure(endpoints.rest)
       throw new Error(`REST API request failed: ${response.status} ${response.statusText}`)
     }
+
+    // Reset circuit breaker on success
+    resetCircuitBreaker(endpoints.rest)
 
     const data = await response.json()
     console.log(`[v0] REST API response received successfully`)
@@ -423,7 +457,11 @@ async function restApiFallback<T>(
   } catch (error: any) {
     console.error(`[v0] REST API fallback failed:`, error.message)
 
-    if (error.message === "Failed to fetch" || error.message === "REST API redirected") {
+    if (
+      error.message === "Failed to fetch" ||
+      error.message === "REST API redirected" ||
+      error.message.includes("503")
+    ) {
       console.log(`[v0] Using mock data due to API unavailability`)
       return null // Will trigger mock data usage in calling functions
     }
@@ -563,43 +601,152 @@ export async function getLatestPostsForCountry(
   limit = 20,
   after?: string,
 ): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
-  if (!(await isCountryAvailable(countryCode))) {
-    console.warn(`[v0] Country ${countryCode} is not available`)
-    return { posts: [], hasNextPage: false, endCursor: null }
+
+  const cacheKey = `posts_${countryCode}_${limit}_${after || "first"}`
+
+  // Check cache first
+  const cached = categoryCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    cached.hits++
+    console.log(`[v0] Returning cached posts for ${countryCode}`)
+    return cached.data
+
   }
 
   try {
-    const data = await graphqlRequest<WordPressPostsResponse>(
-      LATEST_POSTS_QUERY,
-      {
-        first: limit,
-        after,
-      },
-      countryCode,
-    )
+    // Try GraphQL first
+    const query = `
+      query GetLatestPosts($first: Int!, $after: String) {
+        posts(first: $first, after: $after, where: { orderby: { field: DATE, order: DESC } }) {
+          nodes {
+            id
+            title
+            excerpt
+            slug
+            date
+            author {
+              node {
+                name
+                slug
+              }
+            }
+            categories {
+              nodes {
+                name
+                slug
+              }
+            }
+            featuredImage {
+              node {
+                sourceUrl
+                altText
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `
 
-    return {
-      posts: data.posts.nodes,
-      hasNextPage: data.posts.pageInfo.hasNextPage,
-      endCursor: data.posts.pageInfo.endCursor,
+    const data = await graphqlRequest<{
+      posts: {
+        nodes: any[]
+        pageInfo: { hasNextPage: boolean; endCursor: string | null }
+      }
+    }>(query, { first: limit, after }, countryCode)
+
+    if (data?.posts?.nodes) {
+      const result = {
+        posts: data.posts.nodes,
+        hasNextPage: data.posts.pageInfo.hasNextPage,
+        endCursor: data.posts.pageInfo.endCursor,
+      }
+
+      // Cache successful result
+      categoryCache.set(cacheKey, { data: result, timestamp: Date.now(), hits: 1 })
+      cleanupCache()
+
+      console.log(`[v0] Successfully fetched ${result.posts.length} posts for ${countryCode} via GraphQL`)
+      return result
     }
-  } catch (error) {
-    console.error(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API:`, error)
+
+    throw new Error("No data received from GraphQL")
+  } catch (graphqlError: any) {
+    console.log(`Failed to fetch latest posts for ${countryCode} via GraphQL, trying REST API: ${graphqlError.message}`)
 
     try {
-      return await restApiFallback(
+      // Try REST API fallback
+      const restData = await restApiFallback(
         "posts",
         { per_page: limit, _embed: 1 },
-        (posts: any[]) => ({
-          posts: posts.map(transformRestPostToGraphQL),
-          hasNextPage: posts.length === limit,
-          endCursor: null,
+        (data: any[]) => ({
+          posts: data.map((post) => ({
+            id: post.id.toString(),
+            title: post.title?.rendered || "Untitled",
+            excerpt: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "",
+            slug: post.slug || "",
+            date: post.date || new Date().toISOString(),
+            author: {
+              node: {
+                name: post._embedded?.author?.[0]?.name || "Unknown Author",
+                slug: post._embedded?.author?.[0]?.slug || "unknown",
+              },
+            },
+            categories: {
+              nodes:
+                post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+                  name: cat.name,
+                  slug: cat.slug,
+                })) || [],
+            },
+            featuredImage: {
+              node: {
+                sourceUrl: post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/news-placeholder.png",
+                altText: post._embedded?.["wp:featuredmedia"]?.[0]?.alt_text || "News image",
+              },
+            },
+          })),
+          hasNextPage: data.length === limit,
+          endCursor: data.length > 0 ? data[data.length - 1].id.toString() : null,
         }),
         countryCode,
       )
-    } catch (restError) {
-      console.error("Both GraphQL and REST API failed:", restError)
-      return { posts: [], hasNextPage: false, endCursor: null }
+
+      if (restData) {
+        // Cache successful REST result
+        categoryCache.set(cacheKey, { data: restData, timestamp: Date.now(), hits: 1 })
+        cleanupCache()
+
+        console.log(`[v0] Successfully fetched ${restData.posts.length} posts for ${countryCode} via REST API`)
+        return restData
+      }
+
+      throw new Error("REST API also failed")
+    } catch (restError: any) {
+      console.warn(`Both GraphQL and REST API failed for ${countryCode}:`, restError.message)
+
+      // Return cached data if available, even if expired
+      if (cached) {
+        console.log(`[v0] Returning expired cached data for ${countryCode} due to API unavailability`)
+        cached.hits++
+        return cached.data
+      }
+
+      // Return mock data as last resort
+      console.log(`[v0] Using mock data for ${countryCode} due to complete API failure`)
+      const mockResult = {
+        posts: MOCK_POSTS.slice(0, limit),
+        hasNextPage: false,
+        endCursor: null,
+      }
+
+      // Cache mock data temporarily
+      categoryCache.set(cacheKey, { data: mockResult, timestamp: Date.now(), hits: 1 })
+
+      return mockResult
     }
   }
 }
