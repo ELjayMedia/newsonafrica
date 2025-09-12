@@ -74,12 +74,6 @@ export const siteConfig = {
     enabled: true,
     provider: "mailchimp", // or "convertkit", "emailoctopus"
   },
-  // Ads
-  ads: {
-    enabled: true,
-    provider: "google", // Google Ad Manager
-    adsenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
-  },
 }
 
 export type SiteConfig = typeof siteConfig
