@@ -539,33 +539,58 @@ export { graphqlRequest }
 
 export { restApiFallback }
 
+async function filterExistingCountries(countries: string[]): Promise<string[]> {
+  const checks = await Promise.all(
+    countries.map(async (code) => {
+      const endpoints = getCountryEndpoints(code)
+      try {
+        const health = await checkEndpointHealth(endpoints.graphql)
+        return health.status === "healthy" ? code : null
+      } catch {
+        return null
+      }
+    }),
+  )
+  return checks.filter((code): code is string => Boolean(code))
+}
+
+async function isCountryAvailable(countryCode: string): Promise<boolean> {
+  const [available] = await filterExistingCountries([countryCode])
+  return Boolean(available)
+}
+
 export async function fetchWithMultipleCountryFallback<T>(
   primaryCountry: string,
   fetchFunction: (countryCode: string) => Promise<T>,
   fallbackCountries: string[] = ["sz", "ng", "ke", "za", "gh"],
 ): Promise<T> {
-  // Try primary country first
-  try {
-    return await fetchFunction(primaryCountry)
-  } catch (primaryError) {
-    console.warn(`[v0] Primary country ${primaryCountry} failed:`, primaryError)
+  const uniqueCountries = Array.from(new Set([primaryCountry, ...fallbackCountries]))
+  const availableCountries = await filterExistingCountries(uniqueCountries)
+  let lastError: unknown
 
-    // Try fallback countries
-    for (const fallbackCountry of fallbackCountries) {
-      if (fallbackCountry === primaryCountry) continue // Skip primary country
-
-      try {
-        console.log(`[v0] Trying fallback country: ${fallbackCountry}`)
-        return await fetchFunction(fallbackCountry)
-      } catch (fallbackError) {
-        console.warn(`[v0] Fallback country ${fallbackCountry} failed:`, fallbackError)
-        continue
-      }
+  if (availableCountries.includes(primaryCountry)) {
+    try {
+      return await fetchFunction(primaryCountry)
+    } catch (primaryError) {
+      console.warn(`[v0] Primary country ${primaryCountry} failed:`, primaryError)
+      lastError = primaryError
     }
-
-    // If all countries fail, throw the original error
-    throw primaryError
+  } else {
+    console.warn(`[v0] Primary country ${primaryCountry} is not available, skipping to fallbacks`)
   }
+
+  for (const fallbackCountry of availableCountries) {
+    if (fallbackCountry === primaryCountry) continue
+    try {
+      console.log(`[v0] Trying fallback country: ${fallbackCountry}`)
+      return await fetchFunction(fallbackCountry)
+    } catch (fallbackError) {
+      console.warn(`[v0] Fallback country ${fallbackCountry} failed:`, fallbackError)
+      lastError = fallbackError
+    }
+  }
+
+  throw lastError || new Error("No available countries responded")
 }
 
 /**
@@ -576,6 +601,7 @@ export async function getLatestPostsForCountry(
   limit = 20,
   after?: string,
 ): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
+
   const cacheKey = `posts_${countryCode}_${limit}_${after || "first"}`
 
   // Check cache first
@@ -584,6 +610,7 @@ export async function getLatestPostsForCountry(
     cached.hits++
     console.log(`[v0] Returning cached posts for ${countryCode}`)
     return cached.data
+
   }
 
   try {
