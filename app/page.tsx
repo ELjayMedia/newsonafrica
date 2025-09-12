@@ -88,7 +88,7 @@ async function getHomePageData() {
     const result = await circuitBreaker.execute(
       "wordpress-homepage-api",
       async () => {
-        const countries = ["sz", "ng", "ke", "za", "gh", "ug", "tz", "rw", "mw", "zm"]
+        const countries = ["sz", "za"]
         const countryPromises = countries.map(async (countryCode) => {
           try {
             const { posts } = await getLatestPostsForCountry(countryCode, 4)
