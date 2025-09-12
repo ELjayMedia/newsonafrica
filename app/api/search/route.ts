@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
+import { circuitBreaker } from "@/lib/api/circuit-breaker"
 
 // WordPress REST API configuration
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
@@ -46,47 +47,64 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
 
 // Search WordPress posts
 async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
-  try {
-    const searchParams = new URLSearchParams({
-      search: query,
-      page: page.toString(),
-      per_page: perPage.toString(),
-      _embed: "1",
-      orderby: "relevance",
-      order: "desc",
-      status: "publish",
-    })
+  return await circuitBreaker.execute(
+    "wordpress-search-api",
+    async () => {
+      const searchParams = new URLSearchParams({
+        search: query,
+        page: page.toString(),
+        per_page: perPage.toString(),
+        _embed: "1",
+        orderby: "relevance",
+        order: "desc",
+        status: "publish",
+      })
 
-    const url = `${WORDPRESS_REST_API_URL}/posts?${searchParams}`
+      const url = `${WORDPRESS_REST_API_URL}/posts?${searchParams}`
+      console.log(`[v0] Making WordPress search request to: ${url}`)
 
-    const response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "NewsOnAfrica/1.0",
-      },
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    })
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "NewsOnAfrica/1.0",
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      })
 
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`)
-    }
+      if (!response.ok) {
+        throw new Error(`WordPress API error: ${response.status} ${response.statusText}`)
+      }
 
-    const posts = await response.json()
-    const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
-    const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "1", 10)
+      const posts = await response.json()
+      const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
+      const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "1", 10)
 
-    return {
-      results: posts,
-      total: totalPosts,
-      totalPages,
-      currentPage: page,
-      hasMore: page < totalPages,
-    }
-  } catch (error) {
-    console.error("WordPress search error:", error)
-    throw error
-  }
+      return {
+        results: posts,
+        total: totalPosts,
+        totalPages,
+        currentPage: page,
+        hasMore: page < totalPages,
+      }
+    },
+    async () => {
+      console.log("[v0] Search API: Using enhanced fallback due to WordPress unavailability")
+      const filteredResults = FALLBACK_POSTS.filter(
+        (item) =>
+          item.title.rendered.toLowerCase().includes(query.toLowerCase()) ||
+          item.excerpt.rendered.toLowerCase().includes(query.toLowerCase()),
+      )
+
+      return {
+        results: filteredResults.slice((page - 1) * perPage, page * perPage),
+        total: filteredResults.length,
+        totalPages: Math.ceil(filteredResults.length / perPage),
+        currentPage: page,
+        hasMore: page < Math.ceil(filteredResults.length / perPage),
+      }
+    },
+  )
 }
 
 // Get search suggestions from WordPress
@@ -248,7 +266,6 @@ export async function GET(request: NextRequest) {
         query: queryParam,
         performance: {
           responseTime: Date.now() - startTime,
-          source: "fallback",
           error: true,
         },
       })

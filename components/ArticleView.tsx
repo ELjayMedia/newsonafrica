@@ -10,8 +10,8 @@ import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
-import { RelatedPostsCarousel } from "./RelatedPostsCarousel"
-import { useRelatedPosts } from "@/hooks/useRelatedPosts"
+import { RelatedArticles } from "./RelatedArticles"
+import { useEnhancedRelatedPosts } from "@/hooks/useEnhancedRelatedPosts"
 
 interface ArticleViewProps {
   post: {
@@ -68,23 +68,24 @@ export default function ArticleView({ post }: ArticleViewProps) {
   // Extract categories for related posts
   const categoryIds = categories?.edges?.map((edge) => edge.node.slug) || []
 
+  const {
+    posts: relatedPosts,
+    loading: loadingRelated,
+    error: relatedError,
+  } = useEnhancedRelatedPosts({
+    postId: id,
+    categories: categoryIds,
+    tags: [], // Add tags if available in your post data structure
+    limit: 8, // Increased limit for carousel
+    enableAI: true, // Enable AI-powered recommendations
+    enablePopularityBoost: true, // Enable popularity-based sorting
+  })
+
   // Debug logging
   console.log("ArticleView Debug:", {
     postId: id,
     categories: categoryIds,
     categoriesLength: categoryIds.length,
-  })
-
-  // Use the custom hook for related posts
-  const {
-    relatedPosts,
-    loading: loadingRelated,
-    error: relatedError,
-  } = useRelatedPosts({
-    postId: id,
-    categories: categoryIds,
-    tags: [], // Add tags if available in your post data structure
-    limit: 8, // Increased limit for carousel
   })
 
   // Debug related posts
@@ -414,12 +415,14 @@ export default function ArticleView({ post }: ArticleViewProps) {
         </div>
       </footer>
 
-      {/* Related Articles Carousel - Always show this section */}
       <div className="border-t border-gray-200 pt-8 mb-8">
-        <RelatedPostsCarousel
+        <RelatedArticles
           posts={relatedPosts || []}
           loading={loadingRelated}
           title="You might also like"
+          layout="carousel"
+          showMetadata={true}
+          enableAI={true}
           className="px-0"
         />
 
