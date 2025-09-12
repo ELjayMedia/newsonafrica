@@ -139,35 +139,14 @@ const nextConfig = {
     ]
   },
   webpack: (config, { isServer }) => {
-    if (process.env.INCLUDE_RN_WEB === "true") {
-      config.resolve.alias = {
-        ...(config.resolve.alias || {}),
-        "react-native$": "react-native-web",
-      }
-
-      if (!isServer) {
-        config.resolve.fallback = {
-          ...config.resolve.fallback,
-          crypto: require.resolve("crypto-browserify"),
-          stream: require.resolve("stream-browserify"),
-          path: require.resolve("path-browserify"),
-        }
-      }
-    } else {
-      if (!isServer) {
-        config.resolve.fallback = {
-          ...config.resolve.fallback,
-          fs: false,
-          net: false,
-          tls: false,
-        }
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
       }
     }
-
-    if (isServer) {
-      config.externals = [...(config.externals || []), "react-native-web"]
-    }
-
     return config
   },
   experimental: {
