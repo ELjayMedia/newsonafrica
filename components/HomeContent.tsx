@@ -148,82 +148,29 @@ export function HomeContent({
     shouldRetryOnError: !isOffline,
   })
 
+  // Fetch category-specific posts
   useEffect(() => {
     const fetchCategoryPosts = async () => {
       if (isOffline) return
 
-      // Circuit breaker: track failed attempts per category
-      const failedAttempts = new Map<string, number>()
-      const maxRetries = 2
-      const retryDelay = 1000
-
-      const fetchWithRetry = async (config: CategoryConfig, attempt = 1): Promise<{ name: string; posts: Post[] }> => {
+      const categoryPromises = categoryConfigs.map(async (config) => {
         try {
-          console.log(`[v0] Fetching ${config.name} posts (attempt ${attempt})`)
-
-          // Check if we should skip this category due to too many failures
-          const failures = failedAttempts.get(config.name) || 0
-          if (failures >= maxRetries) {
-            console.log(`[v0] Skipping ${config.name} due to circuit breaker`)
-            return { name: config.name, posts: [] }
-          }
-
           const result = await getPostsByCategory(config.name.toLowerCase(), 5)
-
-          // Reset failure count on success
-          failedAttempts.delete(config.name)
-          console.log(`[v0] Successfully fetched ${result.posts?.length || 0} posts for ${config.name}`)
-
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
-          console.error(`[v0] Error fetching ${config.name} posts (attempt ${attempt}):`, error)
-
-          // Increment failure count
-          const failures = failedAttempts.get(config.name) || 0
-          failedAttempts.set(config.name, failures + 1)
-
-          // If this is a 503 error and we haven't exceeded max retries, try again
-          if (attempt < maxRetries && (error as any)?.message?.includes("503")) {
-            console.log(`[v0] Retrying ${config.name} after ${retryDelay}ms delay`)
-            await new Promise((resolve) => setTimeout(resolve, retryDelay * attempt))
-            return fetchWithRetry(config, attempt + 1)
-          }
-
-          // Return empty array instead of throwing
+          console.error(`Error fetching ${config.name} posts:`, error)
           return { name: config.name, posts: [] }
         }
-      }
+      })
 
-      // Process categories in smaller batches to avoid overwhelming the backend
-      const batchSize = 2
+      const results = await Promise.allSettled(categoryPromises)
       const newCategoryPosts: Record<string, Post[]> = {}
 
-      for (let i = 0; i < categoryConfigs.length; i += batchSize) {
-        const batch = categoryConfigs.slice(i, i + batchSize)
-
-        try {
-          const batchPromises = batch.map((config) => fetchWithRetry(config))
-          const batchResults = await Promise.allSettled(batchPromises)
-
-          batchResults.forEach((result) => {
-            if (result.status === "fulfilled") {
-              newCategoryPosts[result.value.name] = result.value.posts
-            }
-          })
-
-          // Small delay between batches to be gentle on the backend
-          if (i + batchSize < categoryConfigs.length) {
-            await new Promise((resolve) => setTimeout(resolve, 500))
-          }
-        } catch (error) {
-          console.error(`[v0] Batch processing error:`, error)
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          newCategoryPosts[result.value.name] = result.value.posts
         }
-      }
-
-      console.log(
-        `[v0] Category posts fetch complete. Categories with posts:`,
-        Object.keys(newCategoryPosts).filter((key) => newCategoryPosts[key].length > 0),
-      )
+      })
 
       setCategoryPosts(newCategoryPosts)
     }

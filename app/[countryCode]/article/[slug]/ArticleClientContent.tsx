@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
-import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Calendar } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/api/wordpress"
 
@@ -19,10 +19,12 @@ interface ArticleClientContentProps {
 }
 
 export function ArticleClientContent({ slug, countryCode, initialData }: ArticleClientContentProps) {
+  const [readingProgress, setReadingProgress] = useState(0)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [estimatedReadTime, setEstimatedReadTime] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
+  const progressBarRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   const { data: relatedPosts, isLoading: relatedLoading } = useSWR(
@@ -41,7 +43,14 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
     }
 
     const handleScroll = () => {
+      if (!contentRef.current) return
+
+      const element = contentRef.current
       const scrollTop = window.scrollY
+      const scrollHeight = element.scrollHeight - window.innerHeight
+      const progress = Math.min(Math.max((scrollTop / scrollHeight) * 100, 0), 100)
+
+      setReadingProgress(progress)
       setShowScrollTop(scrollTop > 500)
     }
 
@@ -75,6 +84,14 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
 
   return (
     <>
+      <div className="fixed top-0 left-0 w-full h-1 bg-muted/30 z-50 backdrop-blur-sm">
+        <div
+          ref={progressBarRef}
+          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-150 ease-out shadow-sm"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
+
       <article className="max-w-4xl mx-auto px-4 py-8" ref={contentRef}>
         <header className="mb-8">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -105,6 +122,10 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>{estimatedReadTime} min read</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              <span>Reading progress: {Math.round(readingProgress)}%</span>
             </div>
           </div>
 
@@ -197,6 +218,17 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
             >
               <ChevronRight className="w-5 h-5" />
             </Button>
+          </div>
+        </Card>
+      </div>
+
+      <div className="fixed bottom-20 left-4 md:hidden z-40">
+        <Card className="px-3 py-2 shadow-lg">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-150" style={{ width: `${readingProgress}%` }} />
+            </div>
+            <span>{Math.round(readingProgress)}%</span>
           </div>
         </Card>
       </div>
