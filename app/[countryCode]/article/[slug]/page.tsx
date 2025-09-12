@@ -14,7 +14,7 @@ interface ArticlePageProps {
 export async function generateStaticParams() {
   console.log("🚀 Starting generateStaticParams for country articles...")
 
-  const supportedCountries = ["sz", "ng", "ke", "za", "gh", "ug", "tz", "rw"]
+  const supportedCountries = ["sz", "za"]
   const staticParams: { countryCode: string; slug: string }[] = []
 
   try {

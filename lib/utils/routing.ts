@@ -7,7 +7,7 @@
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
 // Supported countries
-export const SUPPORTED_COUNTRIES = ["sz", "ng", "ke", "za", "gh", "ug", "tz", "rw"]
+export const SUPPORTED_COUNTRIES = ["sz", "za"]
 
 /**
  * Get the current country code from various sources

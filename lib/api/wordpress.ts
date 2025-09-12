@@ -120,26 +120,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     apiEndpoint: getWpEndpoints("sz").graphql,
     restEndpoint: getWpEndpoints("sz").rest,
   },
-  ng: {
-    code: "ng",
-    name: "Nigeria",
-    flag: "🇳🇬",
-    currency: "NGN",
-    timezone: "Africa/Lagos",
-    languages: ["en"],
-    apiEndpoint: getWpEndpoints("ng").graphql,
-    restEndpoint: getWpEndpoints("ng").rest,
-  },
-  ke: {
-    code: "ke",
-    name: "Kenya",
-    flag: "🇰🇪",
-    currency: "KES",
-    timezone: "Africa/Nairobi",
-    languages: ["en", "sw"],
-    apiEndpoint: getWpEndpoints("ke").graphql,
-    restEndpoint: getWpEndpoints("ke").rest,
-  },
   za: {
     code: "za",
     name: "South Africa",
@@ -149,46 +129,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     languages: ["en", "af", "zu", "xh"],
     apiEndpoint: getWpEndpoints("za").graphql,
     restEndpoint: getWpEndpoints("za").rest,
-  },
-  gh: {
-    code: "gh",
-    name: "Ghana",
-    flag: "🇬🇭",
-    currency: "GHS",
-    timezone: "Africa/Accra",
-    languages: ["en"],
-    apiEndpoint: getWpEndpoints("gh").graphql,
-    restEndpoint: getWpEndpoints("gh").rest,
-  },
-  ug: {
-    code: "ug",
-    name: "Uganda",
-    flag: "🇺🇬",
-    currency: "UGX",
-    timezone: "Africa/Kampala",
-    languages: ["en"],
-    apiEndpoint: getWpEndpoints("ug").graphql,
-    restEndpoint: getWpEndpoints("ug").rest,
-  },
-  tz: {
-    code: "tz",
-    name: "Tanzania",
-    flag: "🇹🇿",
-    currency: "TZS",
-    timezone: "Africa/Dar_es_Salaam",
-    languages: ["en", "sw"],
-    apiEndpoint: getWpEndpoints("tz").graphql,
-    restEndpoint: getWpEndpoints("tz").rest,
-  },
-  rw: {
-    code: "rw",
-    name: "Rwanda",
-    flag: "🇷🇼",
-    currency: "RWF",
-    timezone: "Africa/Kigali",
-    languages: ["en", "rw", "fr"],
-    apiEndpoint: getWpEndpoints("rw").graphql,
-    restEndpoint: getWpEndpoints("rw").rest,
   },
 }
 
@@ -542,7 +482,7 @@ export { restApiFallback }
 export async function fetchWithMultipleCountryFallback<T>(
   primaryCountry: string,
   fetchFunction: (countryCode: string) => Promise<T>,
-  fallbackCountries: string[] = ["sz", "ng", "ke", "za", "gh"],
+  fallbackCountries: string[] = ["sz", "za"],
 ): Promise<T> {
   // Try primary country first
   try {

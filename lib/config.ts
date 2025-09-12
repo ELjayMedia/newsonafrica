@@ -16,19 +16,11 @@ export const appConfig = {
 
   // Supported African Countries
   countries: {
-    supported: ["sz", "ng", "ke", "za", "gh", "ug", "tz", "rw", "mw", "zm"],
+    supported: ["sz", "za"],
     default: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz",
     fallbacks: {
-      sz: ["za", "ng"],
-      ng: ["gh", "ke"],
-      ke: ["ug", "tz"],
-      za: ["sz", "ng"],
-      gh: ["ng", "ke"],
-      ug: ["ke", "tz"],
-      tz: ["ke", "ug"],
-      rw: ["ug", "ke"],
-      mw: ["zm", "za"],
-      zm: ["mw", "za"],
+      sz: ["za"],
+      za: ["sz"],
     },
   },
 
