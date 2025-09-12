@@ -1,15 +1,16 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import type { Metadata } from "next"
+import type { Metadata, PageProps } from "next"
 import { getPostBySlugForCountry, getLatestPostsForCountry } from "@/lib/api/wordpress"
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleSkeleton } from "./ArticleSkeleton"
 
 export const revalidate = 300 // Revalidate every 5 minutes
 
-interface ArticlePageProps {
-  params: { countryCode: string; slug: string }
-}
+type ArticlePageProps = PageProps<{
+  countryCode: string
+  slug: string
+}>
 
 export async function generateStaticParams() {
   console.log("🚀 Starting generateStaticParams for country articles...")
@@ -43,10 +44,11 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
+  const { countryCode, slug } = await params
+  console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
   try {
-    const post = await getPostBySlugForCountry(params.countryCode, params.slug)
+    const post = await getPostBySlugForCountry(countryCode, slug)
 
     if (!post) {
       return {
@@ -54,7 +56,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         description: "The requested article could not be found.",
         robots: { index: false, follow: false },
         alternates: {
-          canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+          canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
         },
       }
     }
@@ -62,7 +64,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
     const description = post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
     const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-    const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
+    const canonicalUrl = `https://newsonafrica.com/${countryCode}/article/${slug}`
 
     return {
       title: post.seo?.title || `${post.title} - News On Africa`,
@@ -94,26 +96,27 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       title: "Article - News On Africa",
       description: "Read the latest news from Africa.",
       alternates: {
-        canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
       },
     }
   }
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
+  const { countryCode, slug } = await params
+  console.log(`📖 Rendering article: ${countryCode}/${slug}`)
 
   try {
-    const post = await getPostBySlugForCountry(params.countryCode, params.slug)
+    const post = await getPostBySlugForCountry(countryCode, slug)
 
     if (!post) {
-      console.warn(`⚠️ Article not found: ${params.countryCode}/${params.slug}`)
+      console.warn(`⚠️ Article not found: ${countryCode}/${slug}`)
       notFound()
     }
 
     return (
       <Suspense fallback={<ArticleSkeleton />}>
-        <ArticleWrapper post={post} params={params} />
+        <ArticleWrapper post={post} params={{ countryCode, slug }} />
       </Suspense>
     )
   } catch (error) {
@@ -122,7 +125,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   }
 }
 
-function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps["params"] }) {
+function ArticleWrapper({ post, params }: { post: any; params: { countryCode: string; slug: string } }) {
   return (
     <div className="min-h-screen bg-background">
       <script
