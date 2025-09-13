@@ -13,7 +13,7 @@ beforeAll(async () => {
 // Helpers to create mock supabase client
 function createClient(tables: Record<string, any>) {
   return {
-    from: (table: string) => tables[table],
+    from: (table: string, _options?: any) => tables[table],
   } as any
 }
 
@@ -29,7 +29,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleChargeSuccess persists transaction", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       transactions: {
@@ -42,7 +42,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleChargeSuccess throws on insert error", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       transactions: {
@@ -63,7 +63,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleSubscriptionCreated inserts subscription", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
@@ -76,7 +76,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleSubscriptionCreated throws on insert error", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
@@ -118,7 +118,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handlePaymentFailed updates transaction", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       transactions: {
@@ -132,7 +132,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handlePaymentFailed throws on update error", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       transactions: {
@@ -151,7 +151,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleInvoiceUpdate updates subscription", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
@@ -165,7 +165,7 @@ describe("Paystack webhook handlers", () => {
 
   it("handleInvoiceUpdate throws on update error", async () => {
     const client = createClient({
-      profiles: {
+      users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
