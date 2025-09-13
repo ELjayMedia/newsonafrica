@@ -59,8 +59,13 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       }
     }
 
-    const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
-    const description = post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
+    const rawExcerpt =
+      typeof post.excerpt === "string"
+        ? post.excerpt
+        : post.excerpt?.rendered || ""
+    const cleanExcerpt = rawExcerpt.replace(/<[^>]*>/g, "").trim()
+    const description =
+      post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
     const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
     const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
 
@@ -123,6 +128,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 }
 
 function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps["params"] }) {
+  const rawExcerpt =
+    typeof post.excerpt === "string"
+      ? post.excerpt
+      : post.excerpt?.rendered || ""
+
   return (
     <div className="min-h-screen bg-background">
       <script
@@ -132,7 +142,7 @@ function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps[
             "@context": "https://schema.org",
             "@type": "NewsArticle",
             headline: post.title,
-            description: post.excerpt?.replace(/<[^>]*>/g, "").trim(),
+            description: rawExcerpt.replace(/<[^>]*>/g, "").trim(),
             image: post.featuredImage?.node?.sourceUrl,
             datePublished: post.date,
             dateModified: post.modified || post.date,
