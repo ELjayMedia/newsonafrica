@@ -1,5 +1,4 @@
 import { LRUCache } from "lru-cache"
-
 interface RateLimitOptions {
   interval: number
   uniqueTokenPerInterval: number

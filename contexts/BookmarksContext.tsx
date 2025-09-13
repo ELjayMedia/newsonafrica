@@ -10,6 +10,7 @@ interface Bookmark {
   id: string
   user_id: string
   post_id: string
+  country?: string
   title: string
   slug?: string
   excerpt?: string
@@ -140,7 +141,37 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setBookmarks(data || [])
+      const fetched = data || [];
+      const byCountry: Record<string,string[]> = {};
+      fetched.forEach(b => {
+        const c = b.country || (process.env.NEXT_PUBLIC_DEFAULT_SITE || "");
+        (byCountry[c] ||= []).push(b.post_id);
+      });
+      const postMap: Record<string, any> = {};
+      await Promise.all(Object.entries(byCountry).map(async ([c, ids]) => {
+        const res = await fetch(`/api/wp/posts?country=${c}&ids=${ids.join(',')}`);
+        const json = await res.json();
+        (json.data || []).forEach((p: any) => { postMap[String(p.id)] = p });
+      }));
+      const hydrated = fetched.map((b) => {
+        const p = postMap[b.post_id] || {};
+        const storedImg = b.featured_image ? JSON.parse(b.featured_image) : null;
+        const embedImg = p._embedded?.["wp:featuredmedia"]?.[0];
+        return {
+          ...b,
+          title: p.title?.rendered || b.title,
+          slug: p.slug || b.slug,
+          excerpt: p.excerpt?.rendered || b.excerpt,
+          featured_image: embedImg
+            ? {
+                url: embedImg.source_url,
+                width: embedImg.media_details?.width,
+                height: embedImg.media_details?.height,
+              }
+            : storedImg,
+        };
+      });
+      setBookmarks(hydrated)
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
       toast({
@@ -168,6 +199,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         const bookmarkData = {
           user_id: user.id,
           post_id: post.post_id,
+          country: post.country || null,
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",

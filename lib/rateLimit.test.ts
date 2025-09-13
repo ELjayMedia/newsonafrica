@@ -17,5 +17,6 @@ describe("applyRateLimit", () => {
     await applyRateLimit(req, 2, "TEST_THROTTLE")
     const res = await applyRateLimit(req, 2, "TEST_THROTTLE")
     expect(res?.status).toBe(429)
+
   })
 })

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 interface BookmarkButtonProps {
+  country?: string
   postId: string
   title?: string
   slug?: string
@@ -25,6 +26,7 @@ interface BookmarkButtonProps {
 
 export const BookmarkButton = ({
   postId,
+  country,
   title = "Untitled Post",
   slug = "",
   excerpt = "",
@@ -74,6 +76,7 @@ export const BookmarkButton = ({
         } else {
           await addBookmark({
             post_id: postId,
+            country,
             title,
             slug,
             excerpt,
@@ -103,6 +106,7 @@ export const BookmarkButton = ({
       isMarked,
       isDisabled,
       postId,
+      country,
       title,
       slug,
       excerpt,
