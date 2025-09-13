@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import type { Provider, User, Session } from "@supabase/supabase-js"
 import { getFacebookUserData, updateProfileWithFacebookData } from "@/lib/facebook-utils"
-import { getGoogleUserData, updateProfileWithGoogleData } from "@/lib/google-utils"
 import { parseAuthError, logAuthError, AuthErrorCategory } from "@/utils/auth-error-utils"
 
 // Session durations in seconds
@@ -297,7 +296,7 @@ export async function processSocialLoginData(session: Session): Promise<any> {
       }
     }
 
-    const { user, provider_token, provider_refresh_token } = session
+    const { user, provider_token } = session
     const provider = user.app_metadata?.provider as string
 
     if (!provider) {
@@ -308,9 +307,6 @@ export async function processSocialLoginData(session: Session): Promise<any> {
     if (provider === "facebook" && provider_token) {
       const facebookData = await getFacebookUserData(provider_token)
       return await updateProfileWithFacebookData(user.id, facebookData)
-    } else if (provider === "google" && provider_token) {
-      const googleData = await getGoogleUserData(provider_token)
-      return await updateProfileWithGoogleData(user.id, googleData)
     }
 
     return null

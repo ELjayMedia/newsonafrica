@@ -49,8 +49,6 @@
     "@tanstack/react-query": "latest",
     "@testing-library/dom": "10.4.1",
     "@types/debug": "4.1.12",
-    "@vercel/analytics": "latest",
-    "@vercel/speed-insights": "latest",
     "@vitest/browser": "3.2.4",
     "@vitest/ui": "3.2.4",
     "algoliasearch": "^5.25.0",
@@ -98,7 +96,6 @@
     "uuid": "latest",
     "vaul": "latest",
     "vue-router": "latest",
-    "web-vitals": "latest",
     "webpack": "latest",
     "zod": "^3.25.31"
   },

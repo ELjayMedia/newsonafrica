@@ -80,9 +80,6 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
 FACEBOOK_APP_SECRET=your_facebook_app_secret
 
-# Analytics
-NEXT_PUBLIC_GA_MEASUREMENT_ID=your_ga_id
-
 # Site
 NEXT_PUBLIC_SITE_URL=https://your-site-url.com
 \`\`\`
