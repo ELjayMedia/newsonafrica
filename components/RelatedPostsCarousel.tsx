@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface Post {
   id: string
@@ -120,7 +121,7 @@ export function RelatedPostsCarousel({
             }}
           >
             {posts.map((post) => (
-              <Link key={post.id} href={`/post/${post.slug}`} className="flex-shrink-0 w-64 group/card">
+              <Link key={post.id} href={getArticleUrl(post.slug)} className="flex-shrink-0 w-64 group/card">
                 <article className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 h-full">
                   {/* Image */}
                   <div className="relative aspect-[16/10] overflow-hidden">

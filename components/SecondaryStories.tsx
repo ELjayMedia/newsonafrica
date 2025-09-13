@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface SecondaryStoriesProps {
   posts: Array<{
@@ -50,7 +51,7 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
       {formattedPosts.map((post, index) => (
         <Link
           key={post.id}
-          href={`/post/${post.slug}`}
+          href={getArticleUrl(post.slug)}
           className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200`}
         >
           {post.featuredImage && (

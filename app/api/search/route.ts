@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 // WordPress REST API configuration
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
@@ -157,7 +158,7 @@ const FALLBACK_POSTS = [
     excerpt: { rendered: "Your premier source for African news, politics, business, and culture." },
     slug: "welcome-to-news-on-africa",
     date: new Date().toISOString(),
-    link: "/post/welcome-to-news-on-africa",
+    link: getArticleUrl("welcome-to-news-on-africa"),
     featured_media: 0,
     categories: [],
     tags: [],
@@ -172,7 +173,7 @@ const FALLBACK_POSTS = [
     excerpt: { rendered: "Our search is powered by WordPress and provides comprehensive coverage of African news." },
     slug: "search-service-info",
     date: new Date().toISOString(),
-    link: "/post/search-service-info",
+    link: getArticleUrl("search-service-info"),
     featured_media: 0,
     categories: [],
     tags: [],

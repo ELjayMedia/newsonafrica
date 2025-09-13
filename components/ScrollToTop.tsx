@@ -13,7 +13,7 @@ export function ScrollToTop() {
   const isArticlePageRef = useRef<boolean>(false)
 
   // Check if current page is an article page
-  const isArticlePage = pathname?.startsWith("/post/")
+  const isArticlePage = pathname?.startsWith("/post/") || pathname?.includes("/article/")
 
   // Function to handle scrolling to top
   const scrollToTop = () => {

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -122,7 +123,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
 
       return {
-        url: `${baseUrl}/post/${post.slug}`,
+        url: `${baseUrl}${getArticleUrl(post.slug, (post as any)?.country)}`,
         lastModified: postDate,
         changeFrequency: isRecent ? "daily" : ("weekly" as const),
         priority: isRecent ? 0.9 : 0.7,

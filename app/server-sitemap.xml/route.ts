@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -51,7 +52,7 @@ export async function GET() {
 
       sitemap += `
   <url>
-    <loc>${baseUrl}/post/${post.slug}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, (post as any)?.country)}</loc>
     <lastmod>${postDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
