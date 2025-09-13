@@ -104,7 +104,9 @@ export function useEnhancedRelatedPosts({
 
       // Fetch more posts than needed for better filtering
       const fetchLimit = Math.min(limit * 2, 20)
-      const rawPosts = await getRelatedPosts(postId, categories, tags, fetchLimit, countryCode)
+      let rawPosts = await getRelatedPosts(postId, categories, tags, fetchLimit, countryCode)
+      // Remove the original post if it sneaks into the results
+      rawPosts = rawPosts.filter((post) => post.id.toString() !== postId)
 
       const enhancedPosts: RelatedPost[] = rawPosts.map((post) => ({
         ...post,

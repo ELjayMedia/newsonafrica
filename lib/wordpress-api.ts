@@ -128,7 +128,9 @@ export async function getRelatedPostsForCountry(
     post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
   if (categoryIds.length === 0) return []
   const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
-  return fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  // Ensure the current post isn't included in results
+  return posts.filter((p) => p.id !== Number(postId))
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
@@ -144,13 +146,43 @@ export const getPostsByCategory = (slug: string, limit = 20) =>
   getPostsByCategoryForCountry(DEFAULT_COUNTRY, slug, limit)
 export const getCategories = () => getCategoriesForCountry(DEFAULT_COUNTRY)
 export const getPostBySlug = (slug: string) => getPostBySlugForCountry(DEFAULT_COUNTRY, slug)
-export const getRelatedPosts = (
+export const getRelatedPosts = async (
   postId: string,
   categories: string[] = [],
   tags: string[] = [],
   limit = 6,
   countryCode?: string,
-) => getRelatedPostsForCountry(countryCode || DEFAULT_COUNTRY, postId, limit)
+): Promise<WordPressPost[]> => {
+  const country = countryCode || DEFAULT_COUNTRY
+
+  // If tags are provided, attempt tag-intersection query via REST API
+  if (tags.length > 0) {
+    try {
+      const base = getWpEndpoints(country).rest
+      const params = new URLSearchParams({
+        tags: tags.join(','),
+        exclude: postId,
+        per_page: String(limit),
+        _embed: '1',
+      })
+      const res = await fetch(`${base}/posts?${params.toString()}`, {
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        next: { revalidate: 300 },
+      })
+      if (!res.ok) {
+        return []
+      }
+      const posts = (await res.json()) as WordPressPost[]
+      return posts.filter((p) => p.id !== Number(postId))
+    } catch (error) {
+      console.error('Tag-intersection query failed:', error)
+      return []
+    }
+  }
+
+  const posts = await getRelatedPostsForCountry(country, postId, limit)
+  return posts.filter((p) => p.id !== Number(postId))
+}
 
 // Legacy-compatible helper functions ---------------------------------------
 
