@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Facebook, Linkedin, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
+import { Facebook, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -43,7 +43,6 @@ export function ShareButtons({
   const shareUrls = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
     whatsapp: `https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`,
     email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
   }
@@ -118,7 +117,7 @@ export function ShareButtons({
         <div className="space-y-4">
           <div className="text-sm font-medium">Share this article</div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               variant="outline"
               size="icon"
@@ -137,16 +136,6 @@ export function ShareButtons({
               aria-label="Share on Twitter/X"
             >
               <X className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full bg-[#0077B5] hover:bg-[#0077B5]/90 text-white border-none transition-all duration-200"
-              onClick={() => handleShare("linkedin")}
-              aria-label="Share on LinkedIn"
-            >
-              <Linkedin className="h-4 w-4" />
             </Button>
 
             <Button

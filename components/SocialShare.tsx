@@ -5,7 +5,6 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Facebook, Twitter, Mail, LinkIcon, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { LinkedInShare } from "./LinkedInShare"
 import { useToast } from "@/hooks/use-toast"
 
 interface SocialShareProps {
@@ -88,7 +87,6 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
         label="Share on X (Twitter)"
         bgColor="bg-black hover:bg-black/90"
       />
-      <LinkedInShare url={url} title={title} summary={description} iconOnly />
       <ShareButton
         onClick={shareByEmail}
         icon={<Mail className="h-4 w-4 text-gray-600" />}

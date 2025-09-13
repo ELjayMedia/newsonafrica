@@ -11,7 +11,6 @@ export const siteConfig = {
     twitter: "https://twitter.com/newsonafrica",
     facebook: "https://facebook.com/newsonafrica",
     instagram: "https://instagram.com/newsonafrica",
-    linkedin: "https://linkedin.com/company/newsonafrica",
   },
   author: {
     name: "News On Africa",
@@ -62,7 +61,7 @@ export const siteConfig = {
   // Social sharing
   social: {
     enableSharing: true,
-    platforms: ["twitter", "facebook", "linkedin", "whatsapp", "email"],
+    platforms: ["twitter", "facebook", "whatsapp", "email"],
   },
   // Comments
   comments: {
