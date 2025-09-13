@@ -11,9 +11,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@apollo/client": "latest",
-    "@apollo/server": "latest",
-    "@as-integrations/next": "latest",
     "@ducanh2912/next-pwa": "latest",
     "@edge-runtime/vm": "5.0.0",
     "@hookform/resolvers": "^3.9.1",
@@ -70,10 +67,6 @@
     "embla-carousel-react": "latest",
     "fs": "latest",
     "fuse.js": "latest",
-    "graphql": "^16.11.0",
-    "graphql-request": "latest",
-    "graphql-tag": "latest",
-    "graphql-ws": "^6.0.5",
     "happy-dom": "18.0.1",
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",
@@ -98,7 +91,6 @@
     "sharp": "latest",
     "sonner": "latest",
     "stream-browserify": "^3.0.0",
-    "subscriptions-transport-ws": "^0.11.0",
     "swr": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

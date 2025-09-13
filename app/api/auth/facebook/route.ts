@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server"
-import { GraphQLClient } from "graphql-request"
 import jwt from "jsonwebtoken"
-import { getWpEndpoints } from "@/config/wp"
-
-const { graphql: WORDPRESS_API_URL } = getWpEndpoints()
+import { client as wpClient } from "@/lib/wordpress-api"
 const JWT_SECRET = process.env.JWT_SECRET
 const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
 const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
 
-if (!WORDPRESS_API_URL || !JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+if (!JWT_SECRET || !FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
   throw new Error("Missing required environment variables")
 }
-
-const client = new GraphQLClient(WORDPRESS_API_URL)
 
 const FACEBOOK_LOGIN_MUTATION = `
   mutation FacebookLogin($input: FacebookLoginInput!) {
@@ -55,7 +50,7 @@ export async function POST(request: Request) {
       },
     }
 
-    const data = await client.request(FACEBOOK_LOGIN_MUTATION, variables)
+    const data = await wpClient.query(FACEBOOK_LOGIN_MUTATION, variables)
 
     if (data.facebookLogin && data.facebookLogin.authToken) {
       const token = jwt.sign({ userId: data.facebookLogin.user.id }, JWT_SECRET, { expiresIn: "1d" })
