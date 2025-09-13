@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { WifiOff, RefreshCw, BookOpen, List, Home } from "lucide-react"
 import Link from "next/link"
+import { convertLegacyUrl } from "@/lib/utils/routing"
 
 interface OfflineFallbackProps {
   type?: "article" | "list" | "general"
@@ -82,7 +83,7 @@ export default function OfflineFallback({
 
           allCachedItems.push({
             title: itemTitle,
-            url: url.pathname,
+            url: convertLegacyUrl(url.pathname),
             type: itemType,
             timestamp: Date.now(),
           })

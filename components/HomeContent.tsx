@@ -316,7 +316,9 @@ export function HomeContent({
         finalFeaturedPosts?.map((post, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: `${siteConfig.url}${getArticleUrl(post.slug)}`,
+
+          url: `${siteConfig.url}${getArticleUrl(post.slug, (post as any)?.country)}`,
+
           name: post.title,
         })) || [],
     },

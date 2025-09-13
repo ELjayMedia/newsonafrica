@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
+import { convertLegacyUrl } from "@/lib/utils/routing"
 
 interface CachedArticle {
   title: string
@@ -65,7 +66,12 @@ export default function OfflineContent() {
       // Filter for article pages
       const articleRequests = cachedRequests.filter((request) => {
         const url = new URL(request.url)
-        return url.pathname.startsWith("/post/") || url.pathname.startsWith("/category/") || url.pathname === "/"
+        return (
+          url.pathname.startsWith("/post/") ||
+          url.pathname.includes("/article/") ||
+          url.pathname.startsWith("/category/") ||
+          url.pathname === "/"
+        )
       })
 
       // Create cached articles list
@@ -78,8 +84,11 @@ export default function OfflineContent() {
         if (title === "/") {
           title = "News On Africa - Homepage"
           category = "Home"
-        } else if (title.startsWith("/post/")) {
-          title = title.replace("/post/", "").replace(/-/g, " ")
+        } else if (title.startsWith("/post/") || title.includes("/article/")) {
+          const slug = title.startsWith("/post/")
+            ? title.replace("/post/", "")
+            : title.split("/article/")[1] || ""
+          title = slug.replace(/-/g, " ")
           title = title.charAt(0).toUpperCase() + title.slice(1)
           category = "Article"
         } else if (title.startsWith("/category/")) {
@@ -90,7 +99,7 @@ export default function OfflineContent() {
 
         return {
           title,
-          url: url.pathname,
+          url: convertLegacyUrl(url.pathname),
           category,
           date: "Cached content",
         }

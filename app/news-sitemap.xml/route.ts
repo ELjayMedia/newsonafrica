@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchRecentPosts } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -35,7 +36,7 @@ export async function GET() {
 
       return `
   <url>
-    <loc>${baseUrl}/post/${post.slug}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, (post as any)?.country)}</loc>
     <news:news>
       <news:publication>
         <news:name>News On Africa</news:name>

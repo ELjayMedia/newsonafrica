@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
+import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -43,8 +44,10 @@ export async function POST(request: NextRequest) {
       case "post_published":
       case "post_updated":
         if (post?.slug) {
-          // Revalidate the specific post page
-          revalidatePath(`/post/${post.slug}`)
+          // Revalidate the specific post page for all supported countries
+          for (const country of SUPPORTED_COUNTRIES) {
+            revalidatePath(getArticleUrl(post.slug, country))
+          }
           revalidateTag(`post-${post.id}`)
 
           // Revalidate category pages if categories are present
@@ -65,7 +68,9 @@ export async function POST(request: NextRequest) {
       case "post_deleted":
         if (post?.slug) {
           // Revalidate pages that might have referenced this post
-          revalidatePath(`/post/${post.slug}`)
+          for (const country of SUPPORTED_COUNTRIES) {
+            revalidatePath(getArticleUrl(post.slug, country))
+          }
           revalidatePath("/")
           revalidateTag("posts")
 

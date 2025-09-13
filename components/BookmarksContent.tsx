@@ -318,7 +318,12 @@ export default function BookmarksContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <Link href={getArticleUrl(bookmark.slug)} className="block hover:text-blue-600 transition-colors">
+
+                        <Link
+                          href={getArticleUrl(bookmark.slug, bookmark.country)}
+                          className="block hover:text-blue-600 transition-colors"
+                        >
+
                           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
                         </Link>
 
