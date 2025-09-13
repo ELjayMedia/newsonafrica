@@ -1,7 +1,8 @@
 "use client"
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
-import { getPostsByCategory } from "@/lib/wordpress-api"
+import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -35,11 +36,13 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const queryClient = useQueryClient()
 
   // Memoize query key to prevent unnecessary re-renders
-  const queryKey = useMemo(() => ["category", slug], [slug])
+  const country = getCurrentCountry()
+  const queryKey = useMemo(() => ["category", country, slug], [country, slug])
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam = null }) => getPostsByCategory(slug, 20, pageParam),
+    queryFn: ({ pageParam = null }) =>
+      getPostsByCategoryForCountry(country, slug, 20),
     getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
     initialPageParam: null,
     initialData: initialData
@@ -57,15 +60,16 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     async (relatedSlugs: string[]) => {
       const prefetchPromises = relatedSlugs.slice(0, 3).map((relatedSlug) =>
         queryClient.prefetchInfiniteQuery({
-          queryKey: ["category", relatedSlug],
-          queryFn: ({ pageParam = null }) => getPostsByCategory(relatedSlug, 20, pageParam),
+        queryKey: ["category", country, relatedSlug],
+        queryFn: ({ pageParam = null }) =>
+          getPostsByCategoryForCountry(country, relatedSlug, 20),
           initialPageParam: null,
           staleTime: 5 * 60 * 1000,
         }),
       )
       await Promise.allSettled(prefetchPromises)
     },
-    [queryClient],
+    [queryClient, country],
   )
 
   // Generate schema.org structured data (memoized)

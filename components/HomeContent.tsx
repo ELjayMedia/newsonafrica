@@ -12,7 +12,12 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/wordpress-api"
+import {
+  getLatestPostsForCountry,
+  getCategoriesForCountry,
+  getPostsByCategoryForCountry,
+} from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
@@ -45,6 +50,7 @@ const fetchHomeData = async (): Promise<{
   categories: Category[]
   recentPosts: HomePost[]
 }> => {
+  const country = getCurrentCountry()
   try {
     if (!isOnline()) {
       console.log("Device is offline, using cached data")
@@ -53,8 +59,8 @@ const fetchHomeData = async (): Promise<{
 
     // Use Promise.allSettled to handle partial failures
     const results = await Promise.allSettled([
-      getLatestPosts(50), // Get more posts to ensure we have enough fp-tagged ones
-      getCategories(), // Get all categories
+      getLatestPostsForCountry(country, 50),
+      getCategoriesForCountry(country),
     ])
 
     const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
@@ -91,6 +97,7 @@ export function HomeContent({
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
+  const currentCountry = getCurrentCountry()
 
   // Listen for online/offline events
   useEffect(() => {
@@ -154,7 +161,11 @@ export function HomeContent({
 
       const categoryPromises = categoryConfigs.map(async (config) => {
         try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 5)
+          const result = await getPostsByCategoryForCountry(
+            currentCountry,
+            config.name.toLowerCase(),
+            5,
+          )
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
           console.error(`Error fetching ${config.name} posts:`, error)
@@ -175,7 +186,7 @@ export function HomeContent({
     }
 
     fetchCategoryPosts()
-  }, [isOffline])
+  }, [isOffline, currentCountry])
 
   // Show offline notification if needed
   const renderOfflineNotification = () => {

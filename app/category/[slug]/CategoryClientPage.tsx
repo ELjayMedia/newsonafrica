@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { getPostsByCategory } from "@/lib/wordpress-api"
+import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { CategoryPage } from "./CategoryPage"
 import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -26,6 +27,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<Error | null>(null)
   const queryClient = useQueryClient()
+  const country = getCurrentCountry()
 
   // Memoize the load function to prevent unnecessary re-renders
   const loadCategory = useCallback(async () => {
@@ -33,7 +35,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       setIsLoading(true)
       setError(null)
 
-      const data = await getPostsByCategory(params.slug, 20)
+      const data = await getPostsByCategoryForCountry(country, params.slug, 20)
 
       if (!data.category) {
         notFound()
@@ -42,7 +44,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
       setCategoryData(data)
 
       // Cache the data in React Query for future use
-      queryClient.setQueryData(["category", params.slug], {
+      queryClient.setQueryData(["category", country, params.slug], {
         pages: [data],
         pageParams: [null],
       })
@@ -52,11 +54,11 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
     } finally {
       setIsLoading(false)
     }
-  }, [params.slug, queryClient])
+  }, [params.slug, queryClient, country])
 
   useEffect(() => {
     // Check if we have cached data first
-    const cachedData = queryClient.getQueryData(["category", params.slug])
+    const cachedData = queryClient.getQueryData(["category", country, params.slug])
 
     if (cachedData && !initialData) {
       // Use cached data if available
@@ -77,7 +79,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
 
     // Fetch data client-side if not provided (fallback case)
     loadCategory()
-  }, [params.slug, initialData, loadCategory, queryClient])
+  }, [params.slug, initialData, loadCategory, queryClient, country])
 
   // Loading state
   if (isLoading) {

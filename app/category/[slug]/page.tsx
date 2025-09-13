@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getCategories, getPostsByCategory } from "@/lib/wordpress-api"
+import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { getServerCountry } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {
@@ -18,7 +19,7 @@ export async function generateStaticParams() {
   try {
     const categories = await circuitBreaker.execute(
       "wordpress-categories-static",
-      async () => await getCategories(),
+      async () => await getCategoriesForCountry(getServerCountry()),
       async () => {
         console.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
         return []
@@ -43,7 +44,8 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const cacheKey = `category-metadata-${params.slug}`
+  const country = getServerCountry()
+  const cacheKey = `category-metadata-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
   if (cached.exists && !cached.isStale) {
@@ -55,7 +57,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     const result = await circuitBreaker.execute(
       "wordpress-category-metadata",
       async () => {
-        const { category, posts } = await getPostsByCategory(params.slug, 10)
+        const { category, posts } = await getPostsByCategoryForCountry(
+          country,
+          params.slug,
+          10,
+        )
 
         if (!category) {
           console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
@@ -231,14 +237,19 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const cacheKey = `category-data-${params.slug}`
+  const country = getServerCountry()
+  const cacheKey = `category-data-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
   try {
     const categoryData = await circuitBreaker.execute(
       "wordpress-category-data",
       async () => {
-        const data = await getPostsByCategory(params.slug, 20)
+        const data = await getPostsByCategoryForCountry(
+          country,
+          params.slug,
+          20,
+        )
 
         if (!data.category) {
           notFound()
