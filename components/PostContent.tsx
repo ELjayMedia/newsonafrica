@@ -36,7 +36,9 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           <div className="flex items-center gap-1">
             <span className="text-gray-500 text-xs">Share</span>
             <SocialShare
+
               url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center gap-1"
@@ -134,6 +136,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
             <p className="text-sm text-gray-600 mb-3">Found this article helpful? Share it with others!</p>
             <SocialShare
               url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center justify-center gap-2"
