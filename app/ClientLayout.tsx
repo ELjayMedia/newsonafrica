@@ -12,6 +12,7 @@ import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import { Footer } from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
+import { AuthProvider } from "@/contexts/AuthContext"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { useEffect } from "react"
@@ -62,8 +63,9 @@ export function ClientLayout({
             />
           }
         >
-          <UserProvider>
-            <ClientWrapper>
+          <AuthProvider>
+            <UserProvider>
+              <ClientWrapper>
               <ScrollToTop />
               <TopBar />
               <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
@@ -96,6 +98,7 @@ export function ClientLayout({
               </div>
             </ClientWrapper>
           </UserProvider>
+          </AuthProvider>
         </ErrorBoundary>
         <GoogleAnalyticsScript />
         <Analytics />

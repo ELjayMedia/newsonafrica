@@ -14,25 +14,6 @@ export interface BaseComponentProps {
 export interface WithChildrenProps extends BaseComponentProps {
   children: ReactNode
 }
-
-/**
- * Props for the AuthForm component
- */
-export interface AuthFormProps extends BaseComponentProps {
-  /**
-   * Initial mode of the form (login or register)
-   */
-  initialMode?: "login" | "register"
-  /**
-   * Callback function when authentication is successful
-   */
-  onSuccess?: () => void
-  /**
-   * Callback function when authentication fails
-   */
-  onError?: (error: Error) => void
-}
-
 /**
  * Props for the PostList component
  */
