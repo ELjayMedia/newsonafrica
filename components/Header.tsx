@@ -7,8 +7,10 @@ import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
+
 import { useCategories } from "@/lib/hooks/useWordPressData"
 import { getCurrentCountry, getCategoryUrl } from "@/lib/utils/routing"
+
 
 export function Header() {
   const router = useRouter()
@@ -34,18 +36,21 @@ export function Header() {
         <div className="w-full md:mx-auto -mb-4">
           {/* Top Bar */}
           <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
-            <Link href="/" className="flex items-center">
-              <Image
-                src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
-                alt="News On Africa"
-                width={200}
-                height={50}
-                className="w-auto h-8 md:h-12"
-                priority
-              />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
+                  alt="News On Africa"
+                  width={200}
+                  height={50}
+                  className="w-auto h-8 md:h-12"
+                  priority
+                />
+              </Link>
+              <CountrySelector />
+            </div>
 
-            <div className="flex items-center gap-4 ml-auto">
+            <div className="flex items-center gap-4">
               <div className="hidden sm:block">
                 <SearchBox
                   placeholder="Search"
