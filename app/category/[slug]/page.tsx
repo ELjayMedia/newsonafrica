@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getCategories, getPostsByCategory } from "@/lib/api/wordpress"
+import { getCategories, getPostsByCategory } from "@/lib/wordpress-api"
 import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {

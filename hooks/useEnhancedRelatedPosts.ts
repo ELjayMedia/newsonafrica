@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { getRelatedPosts } from "@/lib/api/wordpress"
-import type { WordPressPost } from "@/lib/api/wordpress"
-import { cachePreloader } from "@/lib/cache/cache-preloader"
+import { getRelatedPosts } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress-api"
 
 interface RelatedPost extends WordPressPost {
   similarity?: number
@@ -140,16 +139,7 @@ export function useEnhancedRelatedPosts({
       })
 
       if (finalPosts.length > 0) {
-        const priorityPosts = finalPosts.slice(0, 3) // Preload top 3
-        cachePreloader
-          .preloadVisiblePosts(priorityPosts, {
-            batchSize: 2,
-            delayBetweenBatches: 100,
-            maxConcurrent: 2,
-          })
-          .catch((err) => {
-            console.warn("Failed to preload related posts:", err)
-          })
+        // Preloading disabled in simplified API
       }
     } catch (err) {
       console.error("Failed to fetch enhanced related posts:", err)

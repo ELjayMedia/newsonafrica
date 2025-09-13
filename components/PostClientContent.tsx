@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getPostBySlug } from "@/lib/api/wordpress"
-import type { WordPressPost } from "@/lib/api/wordpress"
+import { getPostBySlug } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress-api"
 import { PostContent } from "@/components/PostContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 import { Button } from "@/components/ui/button"

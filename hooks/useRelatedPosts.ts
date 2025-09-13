@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getRelatedPosts } from "@/lib/api/wordpress"
-import type { WordPressPost } from "@/lib/api/wordpress"
-import { cachePreloader } from "@/lib/cache/cache-preloader"
+import { getRelatedPosts } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress-api"
 
 interface UseRelatedPostsProps {
   postId: string
@@ -38,19 +37,6 @@ export function useRelatedPosts({
 
         const related = await getRelatedPosts(postId, categories, tags, limit, countryCode)
         setRelatedPosts(related)
-
-        // Preload related posts for the fetched posts
-        if (enablePreloading && related.length > 0) {
-          cachePreloader
-            .preloadVisiblePosts(related, {
-              batchSize: 3,
-              delayBetweenBatches: 50,
-              maxConcurrent: 2,
-            })
-            .catch((err) => {
-              console.warn("Failed to preload related posts:", err)
-            })
-        }
       } catch (err) {
         console.error("Failed to fetch related posts:", err)
         setError(err instanceof Error ? err.message : "Failed to fetch related posts")

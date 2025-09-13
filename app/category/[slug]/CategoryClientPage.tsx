@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { getPostsByCategory } from "@/lib/api/wordpress"
+import { getPostsByCategory } from "@/lib/wordpress-api"
 import { CategoryPage } from "./CategoryPage"
 import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"

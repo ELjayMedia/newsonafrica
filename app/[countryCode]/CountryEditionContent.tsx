@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { getLatestPostsForCountry, getCategoriesForCountry, type CountryConfig } from "@/lib/api/wordpress"
+import { getLatestPostsForCountry, getCategoriesForCountry, type CountryConfig } from "@/lib/wordpress-api"
 import { ArticleCard } from "@/components/ArticleCard"
 import { ArticleList } from "@/components/ArticleList"
 import { Badge } from "@/components/ui/badge"

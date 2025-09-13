@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
 import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import { getRelatedPostsForCountry } from "@/lib/api/wordpress"
+import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 
 interface ArticleClientContentProps {
   slug: string

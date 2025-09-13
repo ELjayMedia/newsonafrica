@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getLatestPosts } from "@/lib/api/wordpress"
+import { getLatestPosts } from "@/lib/wordpress-api"
 import AuthorContent from "./AuthorContent"
 
 interface AuthorPageProps {

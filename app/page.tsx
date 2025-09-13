@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import { getLatestPostsForCountry } from "@/lib/api/wordpress"
+import { getLatestPostsForCountry } from "@/lib/wordpress-api"
 
 export const metadata: Metadata = {
   title: siteConfig.name,

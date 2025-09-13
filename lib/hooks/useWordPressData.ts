@@ -9,7 +9,7 @@ import {
   getPostBySlugForCountry,
   getRelatedPostsForCountry,
   getFeaturedPosts,
-} from "@/lib/api/wordpress"
+} from "@/lib/wordpress-api"
 
 export function useLatestPosts(countryCode: string, limit = 20) {
   const { data, error, isLoading, mutate } = useSWR(
