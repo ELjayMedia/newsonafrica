@@ -13,6 +13,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
+- **Planned Web2Native conversion**: Future native wrappers will package the PWA for app stores
 
 ## 🏗️ Architecture
 
@@ -107,6 +108,16 @@ The application is deployed on Vercel with the following configuration:
 1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
+
+## 📱 Future Web2Native Conversion
+
+Web2Native tooling will later be used to convert this PWA into installable native applications. Planned steps include:
+
+1. Configure the Web2Native project with app details.
+2. Generate platform-specific builds.
+3. Submit the builds to the respective app stores.
+
+Documentation for this workflow will be added once available.
 
 ## 🧪 Testing
 
