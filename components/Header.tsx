@@ -10,6 +10,7 @@ import { SearchBox } from "@/components/SearchBox"
 
 import { useCategories } from "@/lib/hooks/useWordPressData"
 import { getCurrentCountry, getCategoryUrl } from "@/lib/utils/routing"
+import CountrySelector from "@/components/CountrySelector"
 
 
 export function Header() {
