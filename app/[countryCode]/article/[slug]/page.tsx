@@ -68,12 +68,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
     const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
     const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
-    const authorName = post.author?.node?.name
+    const authorName = post.author?.node?.name ?? "Unknown"
 
     return {
       title: post.seo?.title || `${post.title} - News On Africa`,
       description,
-      authors: authorName ? [{ name: authorName }] : undefined,
+      authors: [{ name: authorName }],
       alternates: { canonical: canonicalUrl },
       robots: { index: true, follow: true },
       openGraph: {
@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         siteName: "News On Africa",
         publishedTime: post.date,
         modifiedTime: post.modified || post.date,
-        authors: authorName ? [authorName] : undefined,
+        authors: [authorName],
         images: [{ url: featuredImageUrl, width: 1200, height: 630, alt: post.title }],
       },
       twitter: {
@@ -133,7 +133,7 @@ function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps[
     typeof post.excerpt === "string"
       ? post.excerpt
       : post.excerpt?.rendered || ""
-  const authorName = post.author?.node?.name || "News On Africa"
+  const authorName = post.author?.node?.name ?? "Unknown"
 
   return (
     <div className="min-h-screen bg-background">
