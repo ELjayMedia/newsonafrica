@@ -16,10 +16,18 @@ create policy if not exists "Profiles are updatable by owner" on public.profiles
 create table if not exists public.bookmarks (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  article_id text not null,
+  post_id text not null,
   country text,
-  saved_at timestamptz not null default now(),
-  unique(user_id, article_id)
+  title text,
+  slug text,
+  excerpt text,
+  featured_image jsonb,
+  category text,
+  tags text[],
+  read_status text default 'unread',
+  notes text,
+  created_at timestamptz not null default now(),
+  unique(user_id, post_id)
 );
 alter table public.bookmarks enable row level security;
 create policy if not exists "Bookmarks are readable by owner" on public.bookmarks
@@ -31,8 +39,8 @@ create policy if not exists "Bookmarks are manageable by owner" on public.bookma
 create table if not exists public.comments (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  article_id text not null,
-  body text not null,
+  post_id text not null,
+  content text not null,
   parent_id uuid references public.comments(id) on delete cascade,
   country text,
   status text default 'active',

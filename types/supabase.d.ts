@@ -53,9 +53,14 @@ export interface Database {
           user_id: string
           post_id: string
           country?: string | null
-          title?: string
-          slug?: string
-          featuredImage?: Json
+          title?: string | null
+          slug?: string | null
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: string | null
+          notes?: string | null
           created_at: string
         }
         Insert: {
@@ -63,9 +68,14 @@ export interface Database {
           user_id: string
           post_id: string
           country?: string | null
-          title?: string
-          slug?: string
-          featuredImage?: Json
+          title?: string | null
+          slug?: string | null
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: string | null
+          notes?: string | null
           created_at?: string
         }
         Update: {
@@ -73,9 +83,14 @@ export interface Database {
           user_id?: string
           post_id?: string
           country?: string | null
-          title?: string
-          slug?: string
-          featuredImage?: Json
+          title?: string | null
+          slug?: string | null
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: string | null
+          notes?: string | null
           created_at?: string
         }
       }
@@ -86,6 +101,7 @@ export interface Database {
           user_id: string
           content: string
           parent_id: string | null
+          country?: string | null
           created_at: string
           status: string
           reported_by?: string | null
@@ -99,6 +115,7 @@ export interface Database {
           user_id: string
           content: string
           parent_id?: string | null
+          country?: string | null
           created_at?: string
           status?: string
           reported_by?: string | null
@@ -112,6 +129,7 @@ export interface Database {
           user_id?: string
           content?: string
           parent_id?: string | null
+          country?: string | null
           created_at?: string
           status?: string
           reported_by?: string | null

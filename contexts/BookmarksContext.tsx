@@ -153,14 +153,22 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         const json = await res.json();
         (json.data || []).forEach((p: any) => { postMap[String(p.id)] = p });
       }));
-      const hydrated = fetched.map(b => {
+      const hydrated = fetched.map((b) => {
         const p = postMap[b.post_id] || {};
+        const storedImg = b.featured_image ? JSON.parse(b.featured_image) : null;
+        const embedImg = p._embedded?.["wp:featuredmedia"]?.[0];
         return {
           ...b,
           title: p.title?.rendered || b.title,
           slug: p.slug || b.slug,
           excerpt: p.excerpt?.rendered || b.excerpt,
-          featured_image: p._embedded?.["wp:featuredmedia"]?.[0]?.source_url || b.featured_image,
+          featured_image: embedImg
+            ? {
+                url: embedImg.source_url,
+                width: embedImg.media_details?.width,
+                height: embedImg.media_details?.height,
+              }
+            : storedImg,
         };
       });
       setBookmarks(hydrated)
