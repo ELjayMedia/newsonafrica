@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
 
@@ -10,14 +10,15 @@ export type ApiResponse<T = any> = {
   meta?: Record<string, any>
 }
 
-export async function applyRateLimit(request: Request, limit: number, token: string) {
-  const limiter = rateLimit({
-    interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: 500,
-  })
+const limiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 500,
+})
 
+export async function applyRateLimit(request: NextRequest, limit: number, token: string) {
   try {
-    await limiter.check(limit, token)
+    const identifier = `${token}-${request.ip ?? "127.0.0.1"}`
+    await limiter.check(limit, identifier)
     return null
   } catch (error) {
     return NextResponse.json(
