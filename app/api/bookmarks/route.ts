@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId, title, slug, excerpt, featuredImage, category, tags, notes } = body
+    const { postId, title, slug, excerpt, featuredImage, category, tags, notes, country } = body
 
     if (!postId) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 })
@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
     const bookmarkData = {
       user_id: user.id,
       post_id: postId,
+      country: country || null,
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",

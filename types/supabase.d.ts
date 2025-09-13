@@ -52,6 +52,7 @@ export interface Database {
           id: string
           user_id: string
           post_id: string
+          country?: string | null
           title?: string
           slug?: string
           featuredImage?: Json
@@ -61,6 +62,7 @@ export interface Database {
           id?: string
           user_id: string
           post_id: string
+          country?: string | null
           title?: string
           slug?: string
           featuredImage?: Json
@@ -70,6 +72,7 @@ export interface Database {
           id?: string
           user_id?: string
           post_id?: string
+          country?: string | null
           title?: string
           slug?: string
           featuredImage?: Json

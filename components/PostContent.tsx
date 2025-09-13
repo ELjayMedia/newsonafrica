@@ -77,7 +77,14 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
               <span className="hidden sm:inline">Gift article</span>
             </Button>
 
-            <BookmarkButton post={post} />
+            <BookmarkButton
+            postId={post.id}
+            country={(post as any).country}
+            title={post.title}
+            slug={post.slug}
+            excerpt={post.excerpt}
+            featuredImage={post.featuredImage?.node}
+          />
           </div>
         </div>
 

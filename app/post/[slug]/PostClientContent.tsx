@@ -87,7 +87,14 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
                 {post.author?.node?.name}
               </Link>
             </div>
-            <BookmarkButton post={post} />
+            <BookmarkButton
+            postId={post.id}
+            country={(post as any).country}
+            title={post.title}
+            slug={post.slug}
+            excerpt={post.excerpt}
+            featuredImage={post.featuredImage?.node}
+          />
           </div>
         </header>
 

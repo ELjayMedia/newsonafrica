@@ -339,6 +339,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
           <BookmarkButton
             postId={id}
+            country={(post as any).country}
             title={title}
             slug={slug}
             featuredImage={
@@ -396,6 +397,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
             <BookmarkButton
               postId={id}
+              country={(post as any).country}
               title={title}
               slug={slug}
               featuredImage={
