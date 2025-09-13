@@ -5,7 +5,6 @@ import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { useEffect } from "react"
 import { HorizontalCard } from "./HorizontalCard"
-import { CategoryAd } from "@/components/CategoryAd"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
 import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
@@ -51,7 +50,6 @@ export function CategoryContent({ slug }: { slug: string }) {
         {category?.description && <p className="text-lg text-gray-600 mb-8 leading-relaxed">{category.description}</p>}
         <NewsGrid posts={gridPosts} layout="vertical" />
 
-        <CategoryAd className="my-12" />
 
         <h2 className="text-2xl font-bold mb-8 text-gray-900">More from {category?.name}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">

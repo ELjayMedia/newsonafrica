@@ -72,7 +72,6 @@ export const appConfig = {
   // Analytics Configuration
   analytics: {
     googleAnalytics: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
-    adsenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
   },
 } as const
 

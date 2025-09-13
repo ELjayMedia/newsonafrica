@@ -6,8 +6,6 @@ import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
 import React, { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
-import { HomeMidContentAd } from "@/components/HomeMidContentAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -262,7 +260,7 @@ export function HomeContent({
   }
 
   // Reusable CategorySection component
-  const CategorySection = ({ name, layout, typeOverride, showAdAfter }: CategoryConfig) => {
+  const CategorySection = ({ name, layout, typeOverride }: CategoryConfig) => {
     const posts = categoryPosts[name] || []
 
     // Only render the section if there are posts
@@ -285,7 +283,6 @@ export function HomeContent({
             className="compact-grid"
           />
         </section>
-        {showAdAfter && <HomeMidContentAd />}
       </React.Fragment>
     )
   }
@@ -345,7 +342,6 @@ export function HomeContent({
           </section>
         )}
 
-        <HomeAfterHeroAd />
 
         {/* Country Spotlight - Show posts from different countries */}
         {Object.keys(countryPosts).length > 0 && <CountrySpotlight countryPosts={countryPosts} />}

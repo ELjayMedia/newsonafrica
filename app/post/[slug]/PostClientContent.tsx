@@ -8,15 +8,11 @@ import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-import { useEffect, useState, useRef } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { fetchSinglePost } from "@/lib/wordpress-api"
 import { PostSkeleton } from "@/components/PostSkeleton"
-import { AdSense } from "@/components/AdSense"
 import { CommentList } from "@/components/CommentList"
 
-// Define ad positions for content
-const AD_POSITIONS = [3, 7, 11]
 
 export function PostClientContent({ slug, initialData }: { slug: string; initialData: any }) {
   const {
@@ -29,73 +25,6 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
     initialData,
   })
 
-  const [processedContent, setProcessedContent] = useState("")
-  const contentRef = useRef<HTMLDivElement>(null)
-  const adsInitialized = useRef(false)
-
-  // Process content to insert ad placeholders
-  useEffect(() => {
-    if (post?.content) {
-      // Calculate ad positions based on content length
-      const paragraphs = post.content.split("</p>").length
-      const adPositions = []
-
-      // Dynamically determine ad positions based on content length
-      if (paragraphs >= 4) adPositions.push(3)
-      if (paragraphs >= 8) adPositions.push(7)
-      if (paragraphs >= 12) adPositions.push(11)
-
-      // Insert ad placeholders
-      let contentWithAds = post.content
-      if (adPositions.length > 0) {
-        const paragraphs = contentWithAds.split("</p>")
-
-        // Insert placeholders at specified positions
-        adPositions.forEach((position, index) => {
-          // Skip if position is out of bounds
-          if (position >= paragraphs.length) return
-
-          // Add placeholder div with unique ID
-          const placeholderId = `ad-placeholder-${index}`
-          paragraphs[position] = `${paragraphs[position]}</p><div id="${placeholderId}" class="my-4"></div>`
-        })
-
-        contentWithAds = paragraphs.join("</p>")
-      }
-
-      setProcessedContent(contentWithAds)
-    }
-  }, [post?.content])
-
-  // Render ads in placeholders after content is rendered
-  useEffect(() => {
-    // Only run once
-    if (adsInitialized.current || !contentRef.current || !processedContent) return
-
-    // Mark as initialized to prevent multiple attempts
-    adsInitialized.current = true
-
-    // Wait for DOM to be fully rendered
-    setTimeout(() => {
-      // Find all ad placeholders
-      const placeholders = contentRef.current?.querySelectorAll('[id^="ad-placeholder-"]')
-      if (!placeholders || placeholders.length === 0) return
-
-      // Create ad components in each placeholder
-      placeholders.forEach((placeholder, index) => {
-        // Create container for AdSense component
-        const adContainer = document.createElement("div")
-        adContainer.className = "ad-container"
-
-        // Replace placeholder with container
-        placeholder.parentNode?.replaceChild(adContainer, placeholder)
-
-        // Create React root and render AdSense component
-        // Note: We're not using ReactDOM.render here as we're just preparing the container
-        // The actual AdSense ads will be initialized by the script
-      })
-    }, 100)
-  }, [processedContent])
 
   if (isLoading) return <PostSkeleton />
   if (error) return <div>Error loading article: {(error as Error).message}</div>
@@ -179,15 +108,9 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
 
         {/* Article Content */}
         <div
-          ref={contentRef}
-          dangerouslySetInnerHTML={{ __html: processedContent || post.content || "" }}
+          dangerouslySetInnerHTML={{ __html: post.content || "" }}
           className="prose prose-sm sm:prose-base lg:prose-lg max-w-none space-y-4"
         />
-
-        {/* Bottom ads - using AdSense component with unique IDs */}
-        <div className="my-6">
-          <AdSense slot="7364467238" format="rectangle" className="mx-auto" id="post-bottom-ad-1" />
-        </div>
 
         {/* Comments Section */}
         <ErrorBoundary>
