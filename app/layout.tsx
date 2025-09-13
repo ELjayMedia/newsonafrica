@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { inter, playfairDisplay, jetbrainsMono } from "@/lib/typography"
+import { lexend, playfairDisplay, jetbrainsMono } from "@/lib/typography"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -47,14 +47,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${inter.className}`}
+      className={`${lexend.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${lexend.className}`}
     >
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className={inter.className}>
+      <body className={lexend.className}>
 
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>

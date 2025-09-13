@@ -1,7 +1,7 @@
 "use client"
 
 import "./globals.css"
-import { Inter } from "next/font/google"
+import { Lexend } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
@@ -17,7 +17,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { ErrorFallback } from "@/components/ErrorFallback"
 import Link from "next/link"
 
-const inter = Inter({ subsets: ["latin"] })
+const lexend = Lexend({ subsets: ["latin"], variable: "--font-lexend" })
 
 export function ClientLayout({
   children,
@@ -45,12 +45,12 @@ export function ClientLayout({
   }, [])
 
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en" className={`${lexend.variable} ${lexend.className}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="bg-gray-100">
+      <body className={`${lexend.className} bg-gray-100`}>
         <ErrorBoundary
           fallback={
             <ErrorFallback
