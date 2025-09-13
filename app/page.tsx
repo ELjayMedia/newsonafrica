@@ -3,6 +3,7 @@ import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
 import { getLatestPostsForCountry } from "@/lib/wordpress-api"
 import type { CountryPosts, HomePageData, HomePost } from "@/types/home"
+import { getServerCountry } from "@/lib/utils/routing"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -72,11 +73,11 @@ export const metadata: Metadata = {
 
 export const revalidate = 60 // Revalidate every 60 seconds
 
-async function getHomePageData(): Promise<HomePageData> {
+async function getHomePageData(countryCode: string): Promise<HomePageData> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const cacheKey = "homepage-data"
+  const cacheKey = `homepage-data-${countryCode}`
   const cached = enhancedCache.get(cacheKey)
 
   // If we have fresh data, use it
@@ -89,39 +90,14 @@ async function getHomePageData(): Promise<HomePageData> {
     const result = await circuitBreaker.execute(
       "wordpress-homepage-api",
       async () => {
-        const countries = ["sz", "za"]
-        const countryPromises = countries.map(async (countryCode) => {
-          try {
-            const { posts } = await getLatestPostsForCountry(countryCode, 4)
-            return { countryCode, posts: posts || [] }
-          } catch (error) {
-            console.error(`[v0] Failed to fetch posts for ${countryCode}:`, error)
-            return { countryCode, posts: [] }
-          }
-        })
-
-        const countryResults = await Promise.allSettled(countryPromises)
-        const allPosts: HomePost[] = []
-        const countryPosts: CountryPosts = {}
-
-        countryResults.forEach((result) => {
-          if (result.status === "fulfilled") {
-            const { countryCode, posts } = result.value
-            countryPosts[countryCode] = posts
-            allPosts.push(...posts)
-          }
-        })
-
-        if (allPosts.length === 0) {
-          throw new Error("No posts available from any country")
+        const { posts } = await getLatestPostsForCountry(countryCode, 20)
+        if (!posts || posts.length === 0) {
+          throw new Error("No posts available")
         }
-
-        allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
         return {
-          posts: allPosts.slice(0, 20),
-          countryPosts,
-          featuredPosts: allPosts.slice(0, 6),
+          posts,
+          countryPosts: { [countryCode]: posts },
+          featuredPosts: posts.slice(0, 6),
         }
       },
       async () => {
@@ -182,8 +158,9 @@ async function getHomePageData(): Promise<HomePageData> {
 }
 
 export default async function Home() {
+  const countryCode = getServerCountry()
   try {
-    const { posts, countryPosts, featuredPosts } = await getHomePageData()
+    const { posts, countryPosts, featuredPosts } = await getHomePageData(countryCode)
     return <HomeContent initialPosts={posts} countryPosts={countryPosts} featuredPosts={featuredPosts} />
   } catch (error) {
     console.error("Homepage data fetch failed:", error)

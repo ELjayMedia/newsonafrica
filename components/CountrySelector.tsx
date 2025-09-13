@@ -19,6 +19,7 @@ export default function CountrySelector() {
     setCountry(value)
     if (typeof window !== "undefined") {
       localStorage.setItem("preferredCountry", value)
+      document.cookie = `preferredCountry=${value}; path=/; max-age=${60 * 60 * 24 * 365}`
     }
     router.push(`/${value}`)
   }

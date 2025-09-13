@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { fetchRecentPosts } from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
@@ -32,9 +33,11 @@ const getViewCounts = (posts) => {
 export function SidebarContent() {
   const [mostReadPosts, setMostReadPosts] = useState([])
 
+  const country = getCurrentCountry()
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["recentPosts"],
-    queryFn: () => fetchRecentPosts(10),
+    queryKey: ["recentPosts", country],
+    queryFn: () => fetchRecentPosts(10, country),
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
