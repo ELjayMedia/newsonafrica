@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
 import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
-import { getWpEndpoints } from "@/config/wp"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase"
 import type { Provider } from "@supabase/supabase-js"
 
+
 /**
  * Sign in a user with email and password.
  */
@@ -46,7 +47,9 @@ export async function signInWithProvider(provider: Provider) {
 }
 
 /**
+
  * Fetch the current auth session and user.
+
  */
 export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession()

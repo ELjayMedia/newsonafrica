@@ -53,11 +53,6 @@ export const siteConfig = {
     cacheTimeout: 5 * 60 * 1000, // 5 minutes
     provider: "wordpress", // Using WordPress for search
   },
-  // Analytics
-  analytics: {
-    googleAnalyticsId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
-    facebookPixelId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
-  },
   // Social sharing
   social: {
     enableSharing: true,

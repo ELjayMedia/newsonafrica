@@ -3,9 +3,6 @@
 import "./globals.css"
 import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
-import { Analytics } from "@vercel/analytics/react"
-import { GoogleAnalyticsScript } from "@/components/GoogleAnalyticsScript"
-import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
 import { BottomNavigation } from "@/components/BottomNavigation"
@@ -52,7 +49,6 @@ export function ClientLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
       </head>
       <body className="bg-gray-100">
         <ErrorBoundary
@@ -100,9 +96,6 @@ export function ClientLayout({
           </UserProvider>
           </AuthProvider>
         </ErrorBoundary>
-        <GoogleAnalyticsScript />
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   )

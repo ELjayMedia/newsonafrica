@@ -68,10 +68,6 @@ export const appConfig = {
     facebookAppId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
   },
 
-  // Analytics Configuration
-  analytics: {
-    googleAnalytics: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
-  },
 } as const
 
 export type AppConfig = typeof appConfig
