@@ -10,6 +10,7 @@ import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import NetworkStatus from "@/components/NetworkStatus"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
+import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
@@ -57,9 +58,10 @@ export default function RootLayout({
       <body className={inter.className}>
 
         <ThemeProvider attribute="class" defaultTheme="light">
-          <UserProvider>
-            <BookmarksProvider>
-              <ClientWrapper>
+          <AuthProvider>
+            <UserProvider>
+              <BookmarksProvider>
+                <ClientWrapper>
                 <ScrollToTop />
                 <ClientDynamicComponents />
                 <TopBar />
@@ -91,6 +93,7 @@ export default function RootLayout({
               </ClientWrapper>
             </BookmarksProvider>
           </UserProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
