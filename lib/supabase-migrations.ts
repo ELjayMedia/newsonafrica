@@ -76,8 +76,4 @@ CREATE INDEX IF NOT EXISTS comments_parent_id_idx ON public.comments(parent_id);
 ALTER TABLE public.comments
   ADD COLUMN IF NOT EXISTS depth INTEGER NOT NULL DEFAULT 0;
 
--- Add comment notification preferences
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS notify_on_comment_reply BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS notify_on_comment_like BOOLEAN NOT NULL DEFAULT true;
 `

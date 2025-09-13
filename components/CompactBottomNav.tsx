@@ -2,11 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, Bookmark, User, Bell } from "lucide-react"
+import { Home, Search, Bookmark, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
-import { Badge } from "@/components/ui/badge"
 
 export function CompactBottomNav() {
   const pathname = usePathname()
@@ -27,7 +26,6 @@ export function CompactBottomNav() {
     { href: "/", icon: Home, label: "Home" },
     { href: "/search", icon: Search, label: "Search" },
     { href: "/bookmarks", icon: Bookmark, label: "Saved" },
-    { href: "/notifications", icon: Bell, label: "Alerts", badge: 3 },
     { href: user ? "/profile" : "/auth", icon: User, label: "Profile", isProfile: true },
   ]
 
@@ -56,12 +54,11 @@ export function CompactBottomNav() {
                   <Icon size={18} className={cn("transition-colors", isActive ? "text-blue-600" : "text-gray-500")} />
                 )}
                 {item.badge && item.badge > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-3 w-3 p-0 text-xs flex items-center justify-center"
+                  <span
+                    className="absolute -top-1 -right-1 h-3 w-3 p-0 text-xs flex items-center justify-center bg-red-600 text-white rounded-full"
                   >
                     {item.badge > 9 ? "9+" : item.badge}
-                  </Badge>
+                  </span>
                 )}
               </div>
               <span

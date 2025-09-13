@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
-import { createCommentReplyNotification } from "@/services/notification-service"
 import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
 import { getWpEndpoints } from "@/config/wp"
 
@@ -364,52 +363,6 @@ export async function addComment(comment: NewComment): Promise<Comment> {
 
     // Record this submission for rate limiting
     recordSubmission(comment.user_id)
-
-    // If this is a reply, create a notification for the parent comment author
-    if (comment.parent_id) {
-      try {
-        // Get the parent comment to find its author
-        const parentComment = await fetchById("comments", comment.parent_id)
-
-        if (parentComment) {
-          // Get the post title
-          let postTitle = "a post"
-          try {
-            // Try to get the post from Supabase first
-            const { data: post } = await supabase.from("posts").select("title").eq("id", comment.post_id).single()
-
-            if (post) {
-              postTitle = post.title
-            } else {
-              // Try to get the post title from WordPress
-              const { rest } = getWpEndpoints()
-              const response = await fetch(`${rest}/posts/${comment.post_id}`)
-              if (response.ok) {
-                const wpPost = await response.json()
-                postTitle = wpPost.title.rendered || "a post"
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching post:", error)
-          }
-
-          // Create notification
-          await createCommentReplyNotification({
-            recipientId: parentComment.user_id,
-            senderId: comment.user_id,
-            senderName: profile?.username || "Someone",
-            senderAvatar: profile?.avatar_url || undefined,
-            postId: comment.post_id,
-            postTitle,
-            commentId: newComment.id,
-            commentContent: comment.content,
-          })
-        }
-      } catch (notifError) {
-        console.error("Error creating notification:", notifError)
-        // Don't throw here, we still want to return the comment
-      }
-    }
 
     // Return the comment with profile data
     return {

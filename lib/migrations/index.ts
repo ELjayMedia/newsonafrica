@@ -324,66 +324,6 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.5.0",
-    description: "Add notifications table",
-    scriptName: "notifications-table.sql",
-    dependencies: ["1.0.0"],
-    sql: `
-      -- Create notifications table if it doesn't exist
-      CREATE TABLE IF NOT EXISTS public.notifications (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        link TEXT NOT NULL,
-        is_read BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        metadata JSONB
-      );
-      
-      -- Create indexes for notifications
-      CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
-      CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON public.notifications(is_read);
-      CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON public.notifications(created_at);
-      
-      -- Set up RLS for notifications
-      ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-      
-      -- Create policies for notifications
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can view own notifications'
-        ) THEN
-          CREATE POLICY "Users can view own notifications" ON public.notifications
-            FOR SELECT USING (auth.uid() = user_id);
-        END IF;
-        
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can update own notifications'
-        ) THEN
-          CREATE POLICY "Users can update own notifications" ON public.notifications
-            FOR UPDATE USING (auth.uid() = user_id);
-        END IF;
-        
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can delete own notifications'
-        ) THEN
-          CREATE POLICY "Users can delete own notifications" ON public.notifications
-            FOR DELETE USING (auth.uid() = user_id);
-        END IF;
-      END
-      $$;
-      
-      -- Enable realtime for notifications
-      BEGIN;
-        DROP PUBLICATION IF EXISTS supabase_realtime;
-        CREATE PUBLICATION supabase_realtime FOR TABLE notifications;
-      COMMIT;
-    `,
-  },
-  {
     version: "1.6.0",
     description: "Add user settings table",
     scriptName: "user-settings-table.sql",

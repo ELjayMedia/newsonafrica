@@ -250,65 +250,6 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "005_notifications",
-    name: "Notifications",
-    description: "Creates the notifications table",
-    sql: `
-      -- Create notifications table
-      CREATE TABLE IF NOT EXISTS public.notifications (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        link TEXT NOT NULL,
-        is_read BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        metadata JSONB
-      );
-
-      -- Create indexes for notifications
-      CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
-      CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON public.notifications(is_read);
-      CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON public.notifications(created_at);
-
-      -- Set up RLS for notifications
-      ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-
-      -- Create policies for notifications
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can view own notifications'
-        ) THEN
-          CREATE POLICY "Users can view own notifications" ON public.notifications
-            FOR SELECT USING (auth.uid() = user_id);
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can update own notifications'
-        ) THEN
-          CREATE POLICY "Users can update own notifications" ON public.notifications
-            FOR UPDATE USING (auth.uid() = user_id);
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'Users can delete own notifications'
-        ) THEN
-          CREATE POLICY "Users can delete own notifications" ON public.notifications
-            FOR DELETE USING (auth.uid() = user_id);
-        END IF;
-      END
-      $$;
-
-      -- Enable realtime for notifications
-      BEGIN;
-        DROP PUBLICATION IF EXISTS supabase_realtime;
-        CREATE PUBLICATION supabase_realtime FOR TABLE notifications;
-      COMMIT;
-    `,
-  },
-  {
     id: "006_user_settings",
     name: "User Settings",
     description: "Creates the user settings table",
@@ -386,15 +327,11 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS comments_active_idx ON public.comments(post_id, created_at)
       WHERE status = 'active';
       
-      -- Add index for notifications filtering
-      CREATE INDEX IF NOT EXISTS notifications_type_idx ON public.notifications(type);
-      
       -- Add index for user settings
       CREATE INDEX IF NOT EXISTS user_settings_theme_idx ON public.user_settings(theme);
       CREATE INDEX IF NOT EXISTS user_settings_language_idx ON public.user_settings(language);
       
       -- Optimize vacuum settings for frequently updated tables
-      ALTER TABLE public.notifications SET (autovacuum_vacuum_scale_factor = 0.05);
       ALTER TABLE public.comments SET (autovacuum_vacuum_scale_factor = 0.05);
       
       -- Create materialized view for comment counts

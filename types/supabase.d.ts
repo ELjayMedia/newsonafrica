@@ -117,35 +117,6 @@ export interface Database {
           reviewed_by?: string | null
         }
       }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          content: string
-          related_id: string | null
-          read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          content: string
-          related_id?: string | null
-          read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          content?: string
-          related_id?: string | null
-          read?: boolean
-          created_at?: string
-        }
-      }
       schema_versions: {
         Row: {
           id: number
