@@ -68,11 +68,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
     const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
     const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
+    const authorName = post.author?.node?.name
 
     return {
       title: post.seo?.title || `${post.title} - News On Africa`,
       description,
-      authors: [{ name: post.author.node.name }],
+      authors: authorName ? [{ name: authorName }] : undefined,
       alternates: { canonical: canonicalUrl },
       robots: { index: true, follow: true },
       openGraph: {
@@ -83,7 +84,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         siteName: "News On Africa",
         publishedTime: post.date,
         modifiedTime: post.modified || post.date,
-        authors: [post.author.node.name],
+        authors: authorName ? [authorName] : undefined,
         images: [{ url: featuredImageUrl, width: 1200, height: 630, alt: post.title }],
       },
       twitter: {
@@ -132,6 +133,7 @@ function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps[
     typeof post.excerpt === "string"
       ? post.excerpt
       : post.excerpt?.rendered || ""
+  const authorName = post.author?.node?.name || "News On Africa"
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,7 +150,7 @@ function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps[
             dateModified: post.modified || post.date,
             author: {
               "@type": "Person",
-              name: post.author.node.name,
+              name: authorName,
             },
             publisher: {
               "@type": "Organization",
