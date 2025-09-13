@@ -4,7 +4,6 @@ export interface CategoryConfig {
   name: string
   layout: "grid" | "list" | "horizontal" | "vertical"
   typeOverride?: string
-  showAdAfter?: boolean
   priority?: number
 }
 
@@ -13,63 +12,54 @@ export const categoryConfigs: CategoryConfig[] = [
     name: "News",
     layout: "grid",
     typeOverride: "news",
-    showAdAfter: false,
     priority: 1,
   },
   {
     name: "Business",
     layout: "horizontal",
     typeOverride: "business",
-    showAdAfter: true,
     priority: 2,
   },
   {
     name: "Sport",
     layout: "grid",
     typeOverride: "sport",
-    showAdAfter: false,
     priority: 3,
   },
   {
     name: "Entertainment",
     layout: "horizontal",
     typeOverride: "entertainment",
-    showAdAfter: true,
     priority: 4,
   },
   {
     name: "Life",
     layout: "grid",
     typeOverride: "lifestyle",
-    showAdAfter: false,
     priority: 5,
   },
   {
     name: "Health",
     layout: "horizontal",
     typeOverride: "health",
-    showAdAfter: false,
     priority: 6,
   },
   {
     name: "Politics",
     layout: "grid",
     typeOverride: "politics",
-    showAdAfter: true,
     priority: 7,
   },
   {
     name: "Food",
     layout: "horizontal",
     typeOverride: "food",
-    showAdAfter: false,
     priority: 8,
   },
   {
     name: "Opinion",
     layout: "list",
     typeOverride: "opinion",
-    showAdAfter: false,
     priority: 9,
   },
 ]
@@ -97,11 +87,6 @@ export const homePageConfig = {
     enabled: true,
     maxCategories: 9,
     postsPerCategory: 5,
-  },
-  ads: {
-    afterHero: true,
-    midContent: true,
-    footer: true,
   },
 }
 

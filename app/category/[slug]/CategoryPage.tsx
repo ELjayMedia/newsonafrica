@@ -5,7 +5,6 @@ import { getPostsByCategory } from "@/lib/api/wordpress"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { CategoryAd } from "@/components/CategoryAd"
 import { useEffect, useMemo, useCallback } from "react"
 import { useInView } from "react-intersection-observer"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -193,8 +192,6 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
           </section>
         )}
 
-        {/* Advertisement */}
-        <CategoryAd />
 
         {/* More Posts */}
         {morePosts.length > 0 && (

@@ -1,5 +1,6 @@
-import { isBrowser } from "@/lib/adUtils"
 import type { Metric } from "web-vitals"
+
+const isBrowser = typeof window !== "undefined"
 
 // Send web vitals to Vercel Analytics
 export function sendWebVitalToVercel(metric: Metric) {

@@ -12,12 +12,8 @@ import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import { Footer } from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
-import { TopBannerAd } from "@/components/TopBannerAd"
-import { BelowHeaderAd } from "@/components/BelowHeaderAd"
-import { FooterBannerAd } from "@/components/FooterBannerAd"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
-import Script from "next/script"
 import { useEffect } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { ErrorFallback } from "@/components/ErrorFallback"
@@ -71,9 +67,7 @@ export function ClientLayout({
               <ScrollToTop />
               <TopBar />
               <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
-                <TopBannerAd />
                 <Header />
-                <BelowHeaderAd />
                 <div className="mt-4 md:mt-6">
                   <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
                     <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
@@ -84,7 +78,6 @@ export function ClientLayout({
                     </aside>
                   </div>
                 </div>
-                <FooterBannerAd />
               </div>
               <BottomNavigation />
               <Footer />
@@ -107,13 +100,6 @@ export function ClientLayout({
         <GoogleAnalyticsScript />
         <Analytics />
         <SpeedInsights />
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6089753674605524"
-          strategy="afterInteractive"
-          onError={(e) => {
-            console.error("Failed to load AdSense script", e)
-          }}
-        />
       </body>
     </html>
   )

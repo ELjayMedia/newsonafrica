@@ -7,8 +7,6 @@ import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useState, useEffect } from "react"
-import { AdSense } from "@/components/AdSense"
-import { AdErrorBoundary } from "./AdErrorBoundary"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 // Function to get view counts for posts
@@ -71,9 +69,6 @@ export function SidebarContent() {
           <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
         </section>
 
-        <AdErrorBoundary collapse={true}>
-          <AdSense slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
-        </AdErrorBoundary>
 
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
@@ -105,10 +100,6 @@ export function SidebarContent() {
           )}
         </section>
 
-        {/* AdSense ad between Most Read and Latest News */}
-        <AdErrorBoundary collapse={true}>
-          <AdSense slot="2584209442" format="vertical" className="w-full min-w-[300px]" />
-        </AdErrorBoundary>
 
         {/* Latest News Section */}
         <section className="bg-white shadow-md rounded-lg p-4">

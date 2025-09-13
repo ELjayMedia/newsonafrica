@@ -6,7 +6,6 @@ import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { HomeAfterHeroAd } from "@/components/HomeAfterHeroAd"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/api/wordpress"
@@ -209,7 +208,6 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
           </section>
         )}
 
-        <HomeAfterHeroAd />
 
         {/* Trending Stories - Minimal Layout */}
         {trendingStories.length > 0 && (
