@@ -9,8 +9,8 @@ import { toast } from "@/hooks/use-toast"
 type Subscription = {
   id: string
   status: string
-  plan_name: string
-  current_period_end: string
+  plan: string
+  renewal_date: string | null
   created_at: string
 }
 
@@ -45,47 +45,6 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
     loadSubscriptions()
   }, [userId, supabase])
 
-  const handleCancelSubscription = async (subscriptionId: string) => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/subscriptions/cancel", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ subscriptionId }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to cancel subscription")
-      }
-
-      toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription has been cancelled successfully.",
-      })
-
-      // Refresh subscriptions
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      setSubscriptions(data || [])
-    } catch (error) {
-      console.error("Error cancelling subscription:", error)
-      toast({
-        title: "Error",
-        description: "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (loading) {
     return <div className="animate-pulse h-96 bg-gray-100 rounded-md"></div>
   }
@@ -113,7 +72,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
       {subscriptions.map((subscription) => (
         <Card key={subscription.id}>
           <CardHeader>
-            <CardTitle>{subscription.plan_name}</CardTitle>
+            <CardTitle>{subscription.plan}</CardTitle>
             <CardDescription>
               Status: <span className="font-medium capitalize">{subscription.status}</span>
             </CardDescription>
@@ -123,21 +82,14 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
               <p className="text-sm">
                 <span className="font-medium">Started:</span> {new Date(subscription.created_at).toLocaleDateString()}
               </p>
-              {subscription.current_period_end && (
+              {subscription.renewal_date && (
                 <p className="text-sm">
                   <span className="font-medium">Renews:</span>{" "}
-                  {new Date(subscription.current_period_end).toLocaleDateString()}
+                  {new Date(subscription.renewal_date).toLocaleDateString()}
                 </p>
               )}
             </div>
           </CardContent>
-          <CardFooter>
-            {subscription.status === "active" && (
-              <Button variant="outline" onClick={() => handleCancelSubscription(subscription.id)} disabled={loading}>
-                Cancel Subscription
-              </Button>
-            )}
-          </CardFooter>
         </Card>
       ))}
     </div>

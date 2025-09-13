@@ -154,6 +154,7 @@ export interface Database {
           status: string
           start_date: string
           end_date: string | null
+          renewal_date: string | null
           payment_provider: string
           payment_id: string
           metadata: Json | null
@@ -167,6 +168,7 @@ export interface Database {
           status: string
           start_date: string
           end_date?: string | null
+          renewal_date?: string | null
           payment_provider: string
           payment_id: string
           metadata?: Json | null
@@ -180,6 +182,7 @@ export interface Database {
           status?: string
           start_date?: string
           end_date?: string | null
+          renewal_date?: string | null
           payment_provider?: string
           payment_id?: string
           metadata?: Json | null

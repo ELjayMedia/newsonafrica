@@ -6,7 +6,8 @@ import { Loader2, Lock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
 import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
-import type { PaystackOptions, SubscriptionPlan } from "@/config/paystack"
+import type { PaystackOptions, SubscriptionPlan, SupabaseSubscription } from "@/config/paystack"
+import { createClient } from "@/utils/supabase-client"
 
 interface PaystackButtonProps {
   email: string
@@ -128,6 +129,47 @@ export function PaystackButton({
             const verificationResult = await verifyPaystackTransaction(response.reference)
 
             if (verificationResult.status) {
+              // Store subscription in Supabase
+              try {
+                const supabase = createClient()
+                const userId = verificationResult.data?.metadata?.user_id
+                if (userId) {
+                  const renewalDate = (() => {
+                    const date = new Date()
+                    switch (plan.interval) {
+                      case "biannually":
+                        date.setMonth(date.getMonth() + 6)
+                        break
+                      case "annually":
+                        date.setFullYear(date.getFullYear() + 1)
+                        break
+                      default:
+                        date.setMonth(date.getMonth() + 1)
+                    }
+                    return date.toISOString()
+                  })()
+
+                  const record: SupabaseSubscription = {
+                    user_id: userId,
+                    plan: plan.name,
+                    status: "active",
+                    renewal_date: renewalDate,
+                    payment_id: verificationResult.data.reference,
+                  }
+
+                  await supabase.from("subscriptions").upsert({
+                    id: verificationResult.data.reference,
+                    ...record,
+                    start_date: new Date().toISOString(),
+                    payment_provider: "paystack",
+                    metadata: verificationResult.data,
+                    updated_at: new Date().toISOString(),
+                  })
+                }
+              } catch (dbError) {
+                console.error("Error saving subscription:", dbError)
+              }
+
               toast({
                 title: "Payment Successful",
                 description: `Your ${plan.name} subscription has been activated.`,

@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   status TEXT NOT NULL,
   start_date TIMESTAMPTZ NOT NULL,
   end_date TIMESTAMPTZ,
+  renewal_date TIMESTAMPTZ,
   payment_provider TEXT NOT NULL,
   payment_id TEXT NOT NULL,
   metadata JSONB,
