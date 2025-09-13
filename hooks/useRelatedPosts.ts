@@ -36,7 +36,9 @@ export function useRelatedPosts({
         setError(null)
 
         const related = await getRelatedPosts(postId, categories, tags, limit, countryCode)
-        setRelatedPosts(related)
+        // Remove the current post from the results if present
+        const filtered = related.filter((post) => post.id.toString() !== postId)
+        setRelatedPosts(filtered)
       } catch (err) {
         console.error("Failed to fetch related posts:", err)
         setError(err instanceof Error ? err.message : "Failed to fetch related posts")
