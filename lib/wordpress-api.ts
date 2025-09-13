@@ -235,6 +235,10 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
   return fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })
 }
 
+export const fetchCountries = async () => {
+  return Object.values(COUNTRIES)
+}
+
 export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
   const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug))
   return tags[0] || null

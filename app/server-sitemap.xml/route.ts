@@ -1,19 +1,44 @@
 import { NextResponse } from "next/server"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
+  let posts
   try {
-    // Fetch all necessary data in parallel
-    const [posts, categories, tags, authors] = await Promise.all([
-      fetchPosts(1000),
-      fetchCategories(),
-      fetchTags(),
-      fetchAuthors(),
-    ])
+    posts = await fetchPosts(1000)
+  } catch (error) {
+    console.error("Error fetching posts for server sitemap:", error)
+    return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
+  }
 
+  let categories
+  try {
+    categories = await fetchCategories()
+  } catch (error) {
+    console.error("Error fetching categories for server sitemap:", error)
+    return NextResponse.json({ error: "Failed to fetch categories" }, { status: 502 })
+  }
+
+  let _countries
+  try {
+    _countries = await fetchCountries()
+  } catch (error) {
+    console.error("Error fetching countries for server sitemap:", error)
+    return NextResponse.json({ error: "Failed to fetch countries" }, { status: 502 })
+  }
+
+  let tags
+  let authors
+  try {
+    ;[tags, authors] = await Promise.all([fetchTags(), fetchAuthors()])
+  } catch (error) {
+    console.error("Error fetching tags/authors for server sitemap:", error)
+    return NextResponse.json({ error: "Failed to fetch tags or authors" }, { status: 502 })
+  }
+
+  try {
     // Build the sitemap
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
