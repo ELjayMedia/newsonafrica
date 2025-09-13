@@ -10,16 +10,17 @@ import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/wordpress-api"
 import { categoryConfigs } from "@/config/homeConfig"
-import type { Post, Category } from "@/types/content"
+import type { Category } from "@/types/content"
+import type { HomePost } from "@/types/home"
 import { ChevronRight, TrendingUp } from "lucide-react"
 
 interface CompactHomeContentProps {
-  initialPosts?: Post[]
+  initialPosts?: HomePost[]
   initialData?: {
-    taggedPosts: Post[]
-    featuredPosts: Post[]
+    taggedPosts: HomePost[]
+    featuredPosts: HomePost[]
     categories: Category[]
-    recentPosts: Post[]
+    recentPosts: HomePost[]
   }
 }
 
@@ -31,10 +32,10 @@ const isOnline = () => {
 }
 
 const fetchHomeData = async (): Promise<{
-  taggedPosts: Post[]
-  featuredPosts: Post[]
+  taggedPosts: HomePost[]
+  featuredPosts: HomePost[]
   categories: Category[]
-  recentPosts: Post[]
+  recentPosts: HomePost[]
 }> => {
   try {
     if (!isOnline()) {
@@ -68,7 +69,7 @@ const fetchHomeData = async (): Promise<{
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, Post[]>>({})
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -101,10 +102,10 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
         }
 
   const { data, error, isLoading } = useSWR<{
-    taggedPosts: Post[]
-    featuredPosts: Post[]
+    taggedPosts: HomePost[]
+    featuredPosts: HomePost[]
     categories: Category[]
-    recentPosts: Post[]
+    recentPosts: HomePost[]
   }>("homepage-data", fetchHomeData, {
     fallbackData: initialData || fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length,
@@ -130,7 +131,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
       })
 
       const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, Post[]> = {}
+      const newCategoryPosts: Record<string, HomePost[]> = {}
 
       results.forEach((result) => {
         if (result.status === "fulfilled") {

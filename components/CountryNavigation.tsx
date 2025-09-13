@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin } from "lucide-react"
 import { COUNTRIES } from "@/lib/wordpress-api"
+import type { CountryPosts } from "@/types/home"
 
 export function CountryNavigation() {
   const [showAll, setShowAll] = useState(false)
@@ -60,7 +61,7 @@ export function CountryNavigation() {
   )
 }
 
-export function CountrySpotlight({ countryPosts }: { countryPosts: Record<string, any[]> }) {
+export function CountrySpotlight({ countryPosts }: { countryPosts: CountryPosts }) {
   const spotlightCountries = Object.entries(countryPosts)
     .filter(([_, posts]) => posts.length > 0)
     .slice(0, 3)

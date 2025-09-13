@@ -14,18 +14,19 @@ import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
 import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/wordpress-api"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
-import type { Post, Category } from "@/types/content"
+import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
+import type { HomePost, CountryPosts } from "@/types/home"
 
 interface HomeContentProps {
-  initialPosts?: Post[]
-  countryPosts?: Record<string, Post[]>
-  featuredPosts?: Post[]
+  initialPosts?: HomePost[]
+  countryPosts?: CountryPosts
+  featuredPosts?: HomePost[]
   initialData?: {
-    taggedPosts: Post[]
-    featuredPosts: Post[]
+    taggedPosts: HomePost[]
+    featuredPosts: HomePost[]
     categories: Category[]
-    recentPosts: Post[]
+    recentPosts: HomePost[]
   }
 }
 
@@ -39,10 +40,10 @@ const isOnline = () => {
 
 // Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async (): Promise<{
-  taggedPosts: Post[]
-  featuredPosts: Post[]
+  taggedPosts: HomePost[]
+  featuredPosts: HomePost[]
   categories: Category[]
-  recentPosts: Post[]
+  recentPosts: HomePost[]
 }> => {
   try {
     if (!isOnline()) {
@@ -89,7 +90,7 @@ export function HomeContent({
 }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, Post[]>>({})
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
 
   // Listen for online/offline events
   useEffect(() => {
@@ -125,10 +126,10 @@ export function HomeContent({
 
   // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR<{
-    taggedPosts: Post[]
-    featuredPosts: Post[]
+    taggedPosts: HomePost[]
+    featuredPosts: HomePost[]
     categories: Category[]
-    recentPosts: Post[]
+    recentPosts: HomePost[]
   }>("homepage-data", fetchHomeData, {
     fallbackData: initialData || fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
@@ -162,7 +163,7 @@ export function HomeContent({
       })
 
       const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, Post[]> = {}
+      const newCategoryPosts: Record<string, HomePost[]> = {}
 
       results.forEach((result) => {
         if (result.status === "fulfilled") {

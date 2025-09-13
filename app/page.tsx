@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
 import { getLatestPostsForCountry } from "@/lib/wordpress-api"
+import type { CountryPosts, HomePageData, HomePost } from "@/types/home"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -71,7 +72,7 @@ export const metadata: Metadata = {
 
 export const revalidate = 60 // Revalidate every 60 seconds
 
-async function getHomePageData() {
+async function getHomePageData(): Promise<HomePageData> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
@@ -100,8 +101,8 @@ async function getHomePageData() {
         })
 
         const countryResults = await Promise.allSettled(countryPromises)
-        const allPosts: any[] = []
-        const countryPosts: Record<string, any[]> = {}
+        const allPosts: HomePost[] = []
+        const countryPosts: CountryPosts = {}
 
         countryResults.forEach((result) => {
           if (result.status === "fulfilled") {
