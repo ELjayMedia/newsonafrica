@@ -31,7 +31,6 @@ export function getNewsMediaOrganizationSchema() {
     sameAs: [
       "https://twitter.com/newsonafrica",
       "https://facebook.com/newsonafrica",
-      "https://linkedin.com/company/newsonafrica",
       "https://instagram.com/newsonafrica",
     ],
     diversityPolicy: `${siteConfig.url}/diversity-policy`,

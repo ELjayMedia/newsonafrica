@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
-import { Menu, ChevronDown, Linkedin, Twitter, Facebook } from "lucide-react"
+import { Menu, ChevronDown, Twitter, Facebook } from "lucide-react"
 import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -293,15 +293,6 @@ export function SiteHeader() {
 
               {/* Social links */}
               <div className="flex items-center space-x-2">
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin className="h-5 w-5" />
-                </a>
                 <a
                   href="https://twitter.com"
                   target="_blank"
