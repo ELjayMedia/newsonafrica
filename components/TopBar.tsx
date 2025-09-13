@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { Bell, BookmarkIcon, LogIn } from "lucide-react"
-import { NotificationBadge } from "@/components/NotificationBadge"
+import { BookmarkIcon, LogIn } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
 export function TopBar() {
@@ -74,18 +73,6 @@ export function TopBar() {
                     <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-white hover:bg-white/20">
                       <BookmarkIcon className="h-4 w-4" />
                       <span className="sr-only">Bookmarks</span>
-                    </Button>
-                  </Link>
-
-                  <Link href="/notifications">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full h-8 w-8 text-white hover:bg-white/20 relative"
-                    >
-                      <Bell className="h-4 w-4" />
-                      <NotificationBadge />
-                      <span className="sr-only">Notifications</span>
                     </Button>
                   </Link>
 

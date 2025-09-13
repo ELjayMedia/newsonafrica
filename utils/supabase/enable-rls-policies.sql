@@ -145,41 +145,6 @@ FOR DELETE
 USING (auth.uid() = user_id);
 
 -- =============================================================================
--- NOTIFICATIONS TABLE
--- =============================================================================
-
--- Enable RLS for notifications table
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
-DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
-DROP POLICY IF EXISTS "Users can delete their own notifications" ON public.notifications;
-DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;
-
--- Create policies for notifications
-CREATE POLICY "Users can view their own notifications"
-ON public.notifications
-FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own notifications"
-ON public.notifications
-FOR UPDATE
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own notifications"
-ON public.notifications
-FOR DELETE
-USING (auth.uid() = user_id);
-
--- Policy for system to create notifications (service role)
-CREATE POLICY "System can create notifications"
-ON public.notifications
-FOR INSERT
-WITH CHECK (true);
-
--- =============================================================================
 -- USER_SETTINGS TABLE
 -- =============================================================================
 
@@ -286,10 +251,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =============================================================================
 
 -- Verify RLS is enabled on all tables
-SELECT schemaname, tablename, rowsecurity 
-FROM pg_tables 
-WHERE schemaname = 'public' 
-AND tablename IN ('profiles', 'bookmarks', 'comments', 'comment_reactions', 'notifications', 'user_settings');
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+AND tablename IN ('profiles', 'bookmarks', 'comments', 'comment_reactions', 'user_settings');
 
 -- List all policies
 SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
@@ -301,4 +266,3 @@ ORDER BY tablename, policyname;
 -- SELECT * FROM profiles; -- Should only show your profile
 -- SELECT * FROM bookmarks; -- Should only show your bookmarks
 -- SELECT * FROM comments WHERE status = 'active'; -- Should show all active comments
--- SELECT * FROM notifications; -- Should only show your notifications

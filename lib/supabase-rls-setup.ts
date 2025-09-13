@@ -64,7 +64,7 @@ export async function verifyRLSPolicies() {
           SELECT schemaname, tablename, rowsecurity 
           FROM pg_tables 
           WHERE schemaname = 'public' 
-          AND tablename IN ('profiles', 'bookmarks', 'comments', 'notifications');
+          AND tablename IN ('profiles', 'bookmarks', 'comments');
         `,
     })
 

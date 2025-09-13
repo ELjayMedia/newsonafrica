@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sun, Moon, Search, Menu, User, BellRing } from "lucide-react"
+import { Sun, Moon, Search, Menu, User } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
@@ -45,11 +45,6 @@ export function TopNavigation() {
     setIsMenuOpen(false)
   }
 
-  const handleNotifications = () => {
-    router.push("/notifications")
-    setIsMenuOpen(false)
-  }
-
   return (
     <header className="border-b bg-white dark:bg-gray-800 sticky top-0 z-30">
       <div className="px-4">
@@ -79,9 +74,6 @@ export function TopNavigation() {
             </Button>
             <Button variant="ghost" size="icon" onClick={handleSearch} aria-label="Search">
               <Search className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleNotifications} aria-label="Notifications">
-              <BellRing className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon" onClick={handleProfile} aria-label="User profile">
               <User className="h-5 w-5" />

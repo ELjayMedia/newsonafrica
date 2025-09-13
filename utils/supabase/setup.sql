@@ -2,7 +2,6 @@
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Create profiles table if it doesn't exist
@@ -62,17 +61,6 @@ CREATE TABLE IF NOT EXISTS public.comment_reactions (
 
 -- Enable RLS on comment_reactions table
 ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;
-
--- Create notifications table if it doesn't exist
-CREATE TABLE IF NOT EXISTS public.notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  content TEXT NOT NULL,
-  related_id TEXT,
-  read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 
 -- Create schema_versions table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.schema_versions (
@@ -144,21 +132,11 @@ CREATE POLICY "Users can add their own reactions"
 CREATE POLICY "Users can update their own reactions" 
   ON public.comment_reactions FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can delete their own reactions" 
+CREATE POLICY "Users can delete their own reactions"
   ON public.comment_reactions FOR DELETE USING (auth.uid() = user_id);
 
--- Notifications: Users can only access their own notifications
-CREATE POLICY "Users can view their own notifications" 
-  ON public.notifications FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Systems can create notifications for users" 
-  ON public.notifications FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Users can update their own notifications" 
-  ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
-
 -- Subscriptions: Users can view/update their own subscriptions
-CREATE POLICY "Users can view their own subscriptions" 
+CREATE POLICY "Users can view their own subscriptions"
   ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "System can create subscriptions" 

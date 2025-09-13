@@ -144,16 +144,6 @@ export async function handleChargeSuccess(
       metadata: data,
     })
   if (txnError) throw new Error("Failed to save transaction")
-  const { error: notifError } = await client.from("notifications").insert({
-    user_id: userId,
-    type: "payment",
-    content: `Payment ${data.status}`,
-    related_id: data.reference,
-    read: false,
-  })
-  if (notifError) {
-    console.error("Failed to create notification", notifError)
-  }
 }
 
 export async function handleSubscriptionCreated(
@@ -176,13 +166,6 @@ export async function handleSubscriptionCreated(
     updated_at: new Date().toISOString(),
   })
   if (error) throw new Error("Failed to create subscription")
-  await client.from("notifications").insert({
-    user_id: userId,
-    type: "subscription",
-    content: "Subscription created",
-    related_id: data.subscription_code,
-    read: false,
-  })
 }
 
 export async function handleSubscriptionDisabled(
@@ -205,13 +188,6 @@ export async function handleSubscriptionDisabled(
     })
     .eq("id", data.subscription_code)
   if (error) throw new Error("Failed to cancel subscription")
-  await client.from("notifications").insert({
-    user_id: sub.user_id,
-    type: "subscription",
-    content: "Subscription cancelled",
-    related_id: data.subscription_code,
-    read: false,
-  })
 }
 
 export async function handlePaymentFailed(
@@ -225,13 +201,6 @@ export async function handlePaymentFailed(
     .update({ status: "failed" })
     .eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
-  await client.from("notifications").insert({
-    user_id: userId,
-    type: "payment",
-    content: "Payment failed",
-    related_id: data.reference,
-    read: false,
-  })
 }
 
 export async function handleInvoiceUpdate(
@@ -245,13 +214,6 @@ export async function handleInvoiceUpdate(
     .update({ metadata: data, updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
-  await client.from("notifications").insert({
-    user_id: userId,
-    type: "invoice",
-    content: `Invoice ${data.status}`,
-    related_id: data.invoice_code,
-    read: false,
-  })
 }
 
 export async function handleTransferSuccess(

@@ -15,7 +15,7 @@ const migrations: Migration[] = [
   {
     id: "comment-system-v1",
     name: "Comment System Enhancements",
-    description: "Adds support for threaded comments, editing, and notification preferences",
+    description: "Adds support for threaded comments and editing",
     sql: COMMENT_SYSTEM_MIGRATION,
     version: 1,
     createdAt: "2024-05-17T00:00:00Z",

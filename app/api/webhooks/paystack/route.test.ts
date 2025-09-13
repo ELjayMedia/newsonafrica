@@ -35,13 +35,9 @@ describe("Paystack webhook handlers", () => {
       transactions: {
         insert: vi.fn().mockResolvedValue({ error: null }),
       },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
-      },
     })
     await handlers.handleChargeSuccess(chargeData as any, client)
     expect(client.from("transactions").insert).toHaveBeenCalled()
-    expect(client.from("notifications").insert).toHaveBeenCalled()
   })
 
   it("handleChargeSuccess throws on insert error", async () => {
@@ -51,9 +47,6 @@ describe("Paystack webhook handlers", () => {
       },
       transactions: {
         insert: vi.fn().mockResolvedValue({ error: new Error("fail") }),
-      },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await expect(handlers.handleChargeSuccess(chargeData as any, client)).rejects.toThrow()
@@ -76,9 +69,6 @@ describe("Paystack webhook handlers", () => {
       subscriptions: {
         insert: vi.fn().mockResolvedValue({ error: null }),
       },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
-      },
     })
     await handlers.handleSubscriptionCreated(subCreateData as any, client)
     expect(client.from("subscriptions").insert).toHaveBeenCalled()
@@ -91,9 +81,6 @@ describe("Paystack webhook handlers", () => {
       },
       subscriptions: {
         insert: vi.fn().mockResolvedValue({ error: new Error("fail") }),
-      },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await expect(handlers.handleSubscriptionCreated(subCreateData as any, client)).rejects.toThrow()
@@ -109,9 +96,6 @@ describe("Paystack webhook handlers", () => {
         select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { user_id: "user1" }, error: null }) }) }),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
-      },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handleSubscriptionDisabled(subDisableData as any, client)
@@ -140,9 +124,6 @@ describe("Paystack webhook handlers", () => {
       transactions: {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
-      },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handlePaymentFailed(paymentFailedData as any, client)
@@ -176,9 +157,6 @@ describe("Paystack webhook handlers", () => {
       subscriptions: {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
-      },
-      notifications: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handleInvoiceUpdate(invoiceData as any, client)

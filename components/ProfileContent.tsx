@@ -12,7 +12,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ProfileEditor } from "@/components/ProfileEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare } from "lucide-react"
+import { UserCircle, Settings, BookmarkIcon, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import ErrorBoundary from "@/components/ErrorBoundary"
 
@@ -78,7 +78,7 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
     <ErrorBoundary>
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-3 mb-8">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -90,10 +90,6 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
             <TabsTrigger value="bookmarks" className="flex items-center gap-2">
               <BookmarkIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Bookmarks</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
           </TabsList>
 
@@ -175,26 +171,6 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
             </Card>
           </TabsContent>
 
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Manage your notification preferences.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Coming Soon</h3>
-                  <p>Notification settings will be available soon. You'll be able to control:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Breaking news alerts</li>
-                    <li>Comment notifications</li>
-                    <li>Newsletter notifications</li>
-                    <li>Account updates</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </ErrorBoundary>

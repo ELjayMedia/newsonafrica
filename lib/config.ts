@@ -51,7 +51,6 @@ export const appConfig = {
   features: {
     comments: process.env.FEATURE_COMMENTS === "true",
     bookmarks: process.env.FEATURE_BOOKMARKS === "true",
-    notifications: process.env.FEATURE_NOTIFICATIONS === "true",
     subscriptions: process.env.FEATURE_SUBSCRIPTIONS === "true",
     advancedSearch: process.env.FEATURE_ADVANCED_SEARCH === "true",
     i18n: process.env.FEATURE_I18N === "true",
