@@ -59,50 +59,6 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    id: "002_bookmarks",
-    name: "Bookmarks",
-    description: "Creates the bookmarks table",
-    sql: `
-      -- Create bookmarks table
-      CREATE TABLE IF NOT EXISTS public.bookmarks (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        post_id TEXT NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        UNIQUE(user_id, post_id)
-      );
-
-      -- Set up RLS for bookmarks
-      ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
-
-      -- Create policies for bookmarks
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can view own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can view own bookmarks" ON public.bookmarks
-            FOR SELECT USING (auth.uid() = user_id);
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can create own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can create own bookmarks" ON public.bookmarks
-            FOR INSERT WITH CHECK (auth.uid() = user_id);
-        END IF;
-
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can delete own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can delete own bookmarks" ON public.bookmarks
-            FOR DELETE USING (auth.uid() = user_id);
-        END IF;
-      END
-      $$;
-    `,
-  },
-  {
     id: "003_comments",
     name: "Comments",
     description: "Creates the comments table",

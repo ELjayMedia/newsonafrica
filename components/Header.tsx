@@ -24,7 +24,7 @@ export function Header() {
   const router = useRouter()
   const { user, signOut } = useUser()
   const pathname = usePathname()
-  const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+  const hideOnMobile = ["/profile", "/subscribe"].includes(pathname)
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",

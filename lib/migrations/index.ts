@@ -272,58 +272,6 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    version: "1.4.0",
-    description: "Add bookmarks table",
-    scriptName: "bookmarks-table.sql",
-    dependencies: ["1.0.0"],
-    sql: `
-      -- Create bookmarks table if it doesn't exist
-      CREATE TABLE IF NOT EXISTS public.bookmarks (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        post_id TEXT NOT NULL,
-        title TEXT,
-        slug TEXT,
-        featuredImage JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE(user_id, post_id)
-      );
-      
-      -- Create indexes for bookmarks
-      CREATE INDEX IF NOT EXISTS bookmarks_user_id_idx ON public.bookmarks(user_id);
-      CREATE INDEX IF NOT EXISTS bookmarks_created_at_idx ON public.bookmarks(created_at);
-      
-      -- Set up RLS for bookmarks
-      ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
-      
-      -- Create policies for bookmarks
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can view own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can view own bookmarks" ON public.bookmarks
-            FOR SELECT USING (auth.uid() = user_id);
-        END IF;
-        
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can create own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can create own bookmarks" ON public.bookmarks
-            FOR INSERT WITH CHECK (auth.uid() = user_id);
-        END IF;
-        
-        IF NOT EXISTS (
-          SELECT FROM pg_policies WHERE tablename = 'bookmarks' AND policyname = 'Users can delete own bookmarks'
-        ) THEN
-          CREATE POLICY "Users can delete own bookmarks" ON public.bookmarks
-            FOR DELETE USING (auth.uid() = user_id);
-        END IF;
-      END
-      $$;
-    `,
-  },
-  {
     version: "1.5.0",
     description: "Add notifications table",
     scriptName: "notifications-table.sql",

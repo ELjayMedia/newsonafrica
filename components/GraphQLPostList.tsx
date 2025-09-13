@@ -25,7 +25,6 @@ const GET_POSTS = `
           name
           slug
         }
-        isBookmarked
       }
       pageInfo {
         hasNextPage
@@ -109,11 +108,6 @@ export default function GraphQLPostList({ initialLimit = 10, category }: PostLis
                 <a href={`/post/${post.slug}`} className="text-blue-600 hover:underline">
                   Read more
                 </a>
-                {post.isBookmarked ? (
-                  <button className="text-yellow-500">Bookmarked</button>
-                ) : (
-                  <button className="text-gray-400 hover:text-yellow-500">Bookmark</button>
-                )}
               </div>
             </div>
           </div>

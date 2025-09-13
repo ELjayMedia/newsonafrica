@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, Bookmark, User } from "lucide-react"
+import { Home, Search, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
@@ -38,13 +38,6 @@ export function BottomNavigation() {
             <Search size={20} />
           </div>
           <span className="text-xs mt-1">Search</span>
-        </Link>
-
-        <Link href="/bookmarks" className="flex flex-col items-center">
-          <div className={cn("p-1 rounded-full", pathname === "/bookmarks" ? "text-blue-600" : "text-gray-500")}>
-            <Bookmark size={20} />
-          </div>
-          <span className="text-xs mt-1">Bookmarks</span>
         </Link>
 
         <Link href={user ? "/profile" : "/auth"} className="flex flex-col items-center">

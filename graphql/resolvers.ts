@@ -131,52 +131,6 @@ export const resolvers = {
       return null // Placeholder
     },
 
-    bookmarkPost: async (_, { postId }, { user }) => {
-      if (!user) {
-        throw new Error("Authentication required")
-      }
-
-      // Add bookmark to Supabase
-      const { data, error } = await supabase.from("bookmarks").insert({ user_id: user.id, post_id: postId }).single()
-
-      if (error) {
-        console.error("Error creating bookmark:", error)
-        return {
-          success: false,
-          message: "Failed to bookmark post",
-        }
-      }
-
-      const post = await fetchSinglePost(postId)
-
-      return {
-        success: true,
-        message: "Post bookmarked successfully",
-        post,
-      }
-    },
-
-    removeBookmark: async (_, { postId }, { user }) => {
-      if (!user) {
-        throw new Error("Authentication required")
-      }
-
-      // Remove bookmark from Supabase
-      const { error } = await supabase.from("bookmarks").delete().match({ user_id: user.id, post_id: postId })
-
-      if (error) {
-        console.error("Error removing bookmark:", error)
-        return {
-          success: false,
-          message: "Failed to remove bookmark",
-        }
-      }
-
-      return {
-        success: true,
-        message: "Bookmark removed successfully",
-      }
-    },
 
     updateProfile: async (_, { input }, { user }) => {
       if (!user) {
@@ -218,18 +172,6 @@ export const resolvers = {
       return comments.length
     },
 
-    isBookmarked: async (post, _, { user }) => {
-      if (!user) return false
-
-      const { data, error } = await supabase
-        .from("bookmarks")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("post_id", post.id)
-        .single()
-
-      return !!data && !error
-    },
   },
 
   Category: {
@@ -320,20 +262,6 @@ export const resolvers = {
   },
 
   User: {
-    bookmarks: async (user) => {
-      const { data, error } = await supabase.from("bookmarks").select("post_id").eq("user_id", user.id)
-
-      if (error || !data) {
-        console.error("Error fetching bookmarks:", error)
-        return []
-      }
-
-      // Fetch posts for each bookmark
-      const posts = await Promise.all(data.map((bookmark) => fetchSinglePost(bookmark.post_id)))
-
-      return posts.filter(Boolean)
-    },
-
     comments: async (user) => {
       // This would require an additional API call to get user comments
       // For now, returning an empty array

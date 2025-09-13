@@ -13,7 +13,6 @@ import { UserProvider } from "@/contexts/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
-import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
 
 import "./globals.css"
@@ -58,8 +57,7 @@ export default function RootLayout({
 
         <ThemeProvider attribute="class" defaultTheme="light">
           <UserProvider>
-            <BookmarksProvider>
-              <ClientWrapper>
+            <ClientWrapper>
                 <ScrollToTop />
                 <ClientDynamicComponents />
                 <TopBar />
@@ -89,7 +87,6 @@ export default function RootLayout({
                 <Toaster />
                 <NetworkStatusHandler />
               </ClientWrapper>
-            </BookmarksProvider>
           </UserProvider>
         </ThemeProvider>
       </body>

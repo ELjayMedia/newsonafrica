@@ -90,7 +90,6 @@ In Android Studio:
 The TWA includes three app shortcuts:
 - **Home**: Direct link to the homepage
 - **Explore**: Quick access to search functionality
-- **Bookmarks**: Direct access to saved articles
 
 ### Theme Configuration
 

@@ -12,7 +12,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ProfileEditor } from "@/components/ProfileEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserCircle, Settings, BookmarkIcon, Bell, MessageSquare } from "lucide-react"
+import { UserCircle, Settings, Bell, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import ErrorBoundary from "@/components/ErrorBoundary"
 
@@ -78,7 +78,7 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
     <ErrorBoundary>
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-3 mb-8">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -86,10 +86,6 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
             <TabsTrigger value="preferences" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Preferences</span>
-            </TabsTrigger>
-            <TabsTrigger value="bookmarks" className="flex items-center gap-2">
-              <BookmarkIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Bookmarks</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
@@ -149,27 +145,6 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
                       Delete Account
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookmarks">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Bookmarks</CardTitle>
-                <CardDescription>View and manage your saved articles.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Manage your bookmarks</h3>
-                  <p className="text-gray-500 mb-4">
-                    View and manage your bookmarked articles in the dedicated bookmarks section.
-                  </p>
-                  <Button asChild>
-                    <Link href="/bookmarks">Go to Bookmarks</Link>
-                  </Button>
                 </div>
               </CardContent>
             </Card>

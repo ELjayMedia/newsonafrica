@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
+import { Wifi, WifiOff, RefreshCw, Home, Search } from "lucide-react"
 
 interface CachedArticle {
   title: string
@@ -175,7 +175,6 @@ export default function OfflineContent() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bookmark className="h-5 w-5" />
               Available Offline Content
             </CardTitle>
             <p className="text-sm text-gray-600">
@@ -232,16 +231,6 @@ export default function OfflineContent() {
                 <Home className="h-8 w-8 mx-auto mb-2 text-blue-500" />
                 <h3 className="font-medium">Homepage</h3>
                 <p className="text-sm text-gray-500">Latest news and updates</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/bookmarks" className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6 text-center">
-                <Bookmark className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                <h3 className="font-medium">Bookmarks</h3>
-                <p className="text-sm text-gray-500">Your saved articles</p>
               </CardContent>
             </Card>
           </Link>

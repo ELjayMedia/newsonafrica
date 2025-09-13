@@ -9,7 +9,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 - **Push notifications**: Real-time alerts for breaking news
 - **Fast loading times**: Optimized assets and code splitting for performance
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
-- **Personalization**: User profiles, bookmarks, and preferences
+- **Personalization**: User profiles and preferences
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions

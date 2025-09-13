@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, Bookmark, User, Bell } from "lucide-react"
+import { Home, Search, User, Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
@@ -26,7 +26,6 @@ export function CompactBottomNav() {
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
     { href: "/search", icon: Search, label: "Search" },
-    { href: "/bookmarks", icon: Bookmark, label: "Saved" },
     { href: "/notifications", icon: Bell, label: "Alerts", badge: 3 },
     { href: user ? "/profile" : "/auth", icon: User, label: "Profile", isProfile: true },
   ]

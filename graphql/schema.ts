@@ -16,8 +16,6 @@ export const typeDefs = gql`
 
   type Mutation {
     createComment(input: CommentInput!): Comment
-    bookmarkPost(postId: ID!): BookmarkResult!
-    removeBookmark(postId: ID!): BookmarkResult!
     updateProfile(input: ProfileInput!): User
   }
 
@@ -47,7 +45,6 @@ export const typeDefs = gql`
     comments(limit: Int): [Comment!]!
     commentCount: Int!
     seo: SEO
-    isBookmarked: Boolean
   }
 
   type Image {
@@ -106,7 +103,6 @@ export const typeDefs = gql`
     name: String!
     email: String!
     avatar: String
-    bookmarks: [Post!]!
     comments: [Comment!]!
   }
 
@@ -117,11 +113,6 @@ export const typeDefs = gql`
     ogImage: String
   }
 
-  type BookmarkResult {
-    success: Boolean!
-    message: String
-    post: Post
-  }
 
   input CommentInput {
     postId: ID!

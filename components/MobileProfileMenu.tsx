@@ -2,7 +2,7 @@
 
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, UserCircle, Settings, BookmarkIcon, Bell, MessageSquare, LogOut } from "lucide-react"
+import { ArrowLeft, UserCircle, Settings, Bell, MessageSquare, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -98,10 +98,6 @@ export function MobileProfileMenu() {
           <section>
             <h2 className="text-xs font-medium text-gray-500 mb-2 px-1">MY CONTENT</h2>
             <div className="space-y-1">
-              <Link href="/bookmarks" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
-                <BookmarkIcon className="h-5 w-5 mr-3 text-blue-600" />
-                My Bookmarks
-              </Link>
               <Link href="/comments" className="flex items-center p-3 bg-white rounded-lg text-blue-800 font-medium">
                 <MessageSquare className="h-5 w-5 mr-3 text-blue-600" />
                 My Comments

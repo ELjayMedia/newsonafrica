@@ -38,7 +38,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-6 mb-4">
               <li>
                 <strong>Account Registration:</strong> When you create an account via Auth0 for features like
-                bookmarking or commenting, we may collect personal details such as your name, email address, and
+                commenting, we may collect personal details such as your name, email address, and
                 password.
               </li>
               <li>

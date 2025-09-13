@@ -1,6 +1,5 @@
 -- Enable Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
@@ -19,18 +18,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   is_admin BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ
-);
-
--- Create bookmarks table if it doesn't exist
-CREATE TABLE IF NOT EXISTS public.bookmarks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  post_id TEXT NOT NULL,
-  title TEXT,
-  slug TEXT,
-  featuredImage JSONB,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(user_id, post_id)
 );
 
 -- Create comments table if it doesn't exist
@@ -107,19 +94,6 @@ CREATE POLICY "Profiles are viewable by everyone"
 
 CREATE POLICY "Users can update their own profile" 
   ON public.profiles FOR UPDATE USING (auth.uid() = id);
-
--- Bookmarks: Users can only access their own bookmarks
-CREATE POLICY "Users can view their own bookmarks" 
-  ON public.bookmarks FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create their own bookmarks" 
-  ON public.bookmarks FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own bookmarks" 
-  ON public.bookmarks FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own bookmarks" 
-  ON public.bookmarks FOR DELETE USING (auth.uid() = user_id);
 
 -- Comments: Everyone can view active comments
 CREATE POLICY "Anyone can view active comments" 

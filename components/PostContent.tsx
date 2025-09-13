@@ -8,7 +8,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { RelatedPosts } from "@/components/RelatedPosts"
 import { SocialShare } from "@/components/SocialShare"
-import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
@@ -77,7 +76,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
               <span className="hidden sm:inline">Gift article</span>
             </Button>
 
-            <BookmarkButton post={post} />
           </div>
         </div>
 

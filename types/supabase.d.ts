@@ -47,35 +47,6 @@ export interface Database {
           is_admin?: boolean | null
         }
       }
-      bookmarks: {
-        Row: {
-          id: string
-          user_id: string
-          post_id: string
-          title?: string
-          slug?: string
-          featuredImage?: Json
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          post_id: string
-          title?: string
-          slug?: string
-          featuredImage?: Json
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          post_id?: string
-          title?: string
-          slug?: string
-          featuredImage?: Json
-          created_at?: string
-        }
-      }
       comments: {
         Row: {
           id: string

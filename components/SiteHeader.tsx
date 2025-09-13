@@ -199,7 +199,7 @@ export function SiteHeader() {
     error: null,
   })
 
-  const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+  const hideOnMobile = ["/profile", "/subscribe"].includes(pathname)
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",

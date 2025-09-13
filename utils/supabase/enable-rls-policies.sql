@@ -37,34 +37,6 @@ FOR SELECT
 USING (true);
 
 -- =============================================================================
--- BOOKMARKS TABLE
--- =============================================================================
-
--- Enable RLS for bookmarks table
-ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view their own bookmarks" ON public.bookmarks;
-DROP POLICY IF EXISTS "Users can create their own bookmarks" ON public.bookmarks;
-DROP POLICY IF EXISTS "Users can delete their own bookmarks" ON public.bookmarks;
-
--- Create policies for bookmarks
-CREATE POLICY "Users can view their own bookmarks"
-ON public.bookmarks
-FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create their own bookmarks"
-ON public.bookmarks
-FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own bookmarks"
-ON public.bookmarks
-FOR DELETE
-USING (auth.uid() = user_id);
-
--- =============================================================================
 -- COMMENTS TABLE
 -- =============================================================================
 
@@ -289,7 +261,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 SELECT schemaname, tablename, rowsecurity 
 FROM pg_tables 
 WHERE schemaname = 'public' 
-AND tablename IN ('profiles', 'bookmarks', 'comments', 'comment_reactions', 'notifications', 'user_settings');
+AND tablename IN ('profiles', 'comments', 'comment_reactions', 'notifications', 'user_settings');
 
 -- List all policies
 SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
@@ -299,6 +271,5 @@ ORDER BY tablename, policyname;
 
 -- Test queries (run these after creating a test user)
 -- SELECT * FROM profiles; -- Should only show your profile
--- SELECT * FROM bookmarks; -- Should only show your bookmarks
 -- SELECT * FROM comments WHERE status = 'active'; -- Should show all active comments
 -- SELECT * FROM notifications; -- Should only show your notifications

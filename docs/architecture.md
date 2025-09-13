@@ -47,7 +47,7 @@ WordPress serves as the content management system with the following setup:
 Supabase provides authentication and database services:
 
 - **Auth Providers**: Email/password, Google, Facebook
-- **PostgreSQL Database**: Stores user profiles, bookmarks, comments
+- **PostgreSQL Database**: Stores user profiles and comments
 - **Row-Level Security**: For data protection
 - **Real-time Subscriptions**: For live updates
 

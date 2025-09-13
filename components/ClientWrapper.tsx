@@ -3,8 +3,6 @@
 import type React from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useRef, useState, useEffect } from "react"
-import { UserProvider } from "@/contexts/UserContext"
-import { BookmarksProvider } from "@/contexts/BookmarksContext"
 
 // Create a persistent QueryClient instance
 const createQueryClient = () =>
@@ -51,11 +49,5 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
     return null
   }
 
-  return (
-    <QueryClientProvider client={queryClientRef.current}>
-      <UserProvider>
-        <BookmarksProvider>{children}</BookmarksProvider>
-      </UserProvider>
-    </QueryClientProvider>
-  )
+  return <QueryClientProvider client={queryClientRef.current}>{children}</QueryClientProvider>
 }

@@ -25,7 +25,6 @@ export default function WelcomePage() {
           <h2 className="font-semibold text-blue-800 mb-2">What's Next?</h2>
           <ul className="text-sm text-blue-700 text-left space-y-2">
             <li>• Enjoy unlimited access to all articles</li>
-            <li>• Bookmark articles to read later</li>
             <li>• Receive our weekly newsletter</li>
             <li>• Join the conversation in article comments</li>
           </ul>

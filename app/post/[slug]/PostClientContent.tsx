@@ -5,7 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { Clock, User } from "lucide-react"
 import { SocialShare } from "@/components/SocialShare"
-import { BookmarkButton } from "@/components/BookmarkButton"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -87,7 +86,6 @@ export function PostClientContent({ slug, initialData }: { slug: string; initial
                 {post.author?.node?.name}
               </Link>
             </div>
-            <BookmarkButton post={post} />
           </div>
         </header>
 

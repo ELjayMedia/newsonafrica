@@ -4,7 +4,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
-import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
 import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
@@ -337,23 +336,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
             className="flex items-center"
           />
 
-          <BookmarkButton
-            postId={id}
-            title={title}
-            slug={slug}
-            featuredImage={
-              featuredImage?.node?.sourceUrl
-                ? {
-                    url: featuredImage.node.sourceUrl,
-                    width: featuredImage.node.mediaDetails?.width || 1200,
-                    height: featuredImage.node.mediaDetails?.height || 800,
-                  }
-                : undefined
-            }
-            variant="outline"
-            size="sm"
-            className="flex items-center"
-          />
         </div>
       </header>
 
@@ -381,7 +363,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       {/* Article Content */}
       <div className="prose prose-lg max-w-none mb-8" dangerouslySetInnerHTML={{ __html: content }} />
 
-      {/* Article Footer with Sharing and Bookmarking */}
+      {/* Article Footer with Sharing */}
       <footer className="border-t border-gray-200 pt-6 mt-8 mb-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -394,23 +376,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
               className="flex items-center"
             />
 
-            <BookmarkButton
-              postId={id}
-              title={title}
-              slug={slug}
-              featuredImage={
-                featuredImage?.node?.sourceUrl
-                  ? {
-                      url: featuredImage.node.sourceUrl,
-                      width: featuredImage.node.mediaDetails?.width || 1200,
-                      height: featuredImage.node.mediaDetails?.height || 800,
-                    }
-                  : undefined
-              }
-              variant="outline"
-              size="sm"
-              className="flex items-center"
-            />
           </div>
         </div>
       </footer>

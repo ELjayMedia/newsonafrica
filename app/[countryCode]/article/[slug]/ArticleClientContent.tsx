@@ -20,7 +20,6 @@ interface ArticleClientContentProps {
 
 export function ArticleClientContent({ slug, countryCode, initialData }: ArticleClientContentProps) {
   const [readingProgress, setReadingProgress] = useState(0)
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [estimatedReadTime, setEstimatedReadTime] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -59,24 +58,6 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  useEffect(() => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    setIsBookmarked(bookmarks.includes(slug))
-  }, [slug])
-
-  const handleBookmark = () => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    let newBookmarks
-
-    if (isBookmarked) {
-      newBookmarks = bookmarks.filter((id: string) => id !== slug)
-    } else {
-      newBookmarks = [...bookmarks, slug]
-    }
-
-    localStorage.setItem("bookmarks", JSON.stringify(newBookmarks))
-    setIsBookmarked(!isBookmarked)
-  }
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })

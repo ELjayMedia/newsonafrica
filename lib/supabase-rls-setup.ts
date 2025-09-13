@@ -23,13 +23,6 @@ export async function setupRLSPolicies() {
        ON public.profiles FOR UPDATE
        USING (auth.uid() = id);`,
 
-      // Bookmarks table
-      "ALTER TABLE public.bookmarks ENABLE ROW LEVEL SECURITY;",
-
-      `CREATE POLICY "Users can view their own bookmarks"
-       ON public.bookmarks FOR SELECT
-       USING (auth.uid() = user_id);`,
-
       // Add more policies as needed...
     ]
 
@@ -64,7 +57,7 @@ export async function verifyRLSPolicies() {
           SELECT schemaname, tablename, rowsecurity 
           FROM pg_tables 
           WHERE schemaname = 'public' 
-          AND tablename IN ('profiles', 'bookmarks', 'comments', 'notifications');
+          AND tablename IN ('profiles', 'comments', 'notifications');
         `,
     })
 
@@ -108,19 +101,10 @@ export async function testRLSPolicies(testUserId: string) {
 
     if (profileError) throw profileError
 
-    // Test bookmarks access
-    const { data: bookmarks, error: bookmarkError } = await supabase
-      .from("bookmarks")
-      .select("*")
-      .eq("user_id", testUserId)
-
-    if (bookmarkError) throw bookmarkError
-
     console.log("✅ RLS policy testing completed")
     return {
       success: true,
       profilesFound: profiles?.length || 0,
-      bookmarksFound: bookmarks?.length || 0,
     }
   } catch (error) {
     console.error("❌ Error testing RLS policies:", error)
