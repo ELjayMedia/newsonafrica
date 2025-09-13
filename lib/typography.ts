@@ -3,10 +3,23 @@
  * Comprehensive typography utilities and components for News On Africa
  */
 
-// Using system fonts to avoid external fetch during build
-export const inter = { className: "", variable: "--font-inter" }
-export const playfairDisplay = { className: "", variable: "--font-playfair" }
-export const jetbrainsMono = { className: "", variable: "--font-jetbrains" }
+import { Lexend, Playfair_Display, JetBrains_Mono } from "next/font/google"
+
+// Load fonts from Google Fonts
+export const lexend = Lexend({
+  subsets: ["latin"],
+  variable: "--font-lexend",
+})
+
+export const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+})
+
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+})
 
 // Typography Scale Configuration
 export const typographyScale = {
