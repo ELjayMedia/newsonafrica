@@ -3,32 +3,10 @@
  * Comprehensive typography utilities and components for News On Africa
  */
 
-import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google"
-
-// Font Configurations
-export const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["system-ui", "sans-serif"],
-  variable: "--font-inter",
-})
-
-export const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  display: "swap",
-  preload: false,
-  fallback: ["Georgia", "serif"],
-  variable: "--font-playfair",
-})
-
-export const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  preload: false,
-  fallback: ["Menlo", "Monaco", "monospace"],
-  variable: "--font-jetbrains",
-})
+// Using system fonts to avoid external fetch during build
+export const inter = { className: "", variable: "--font-inter" }
+export const playfairDisplay = { className: "", variable: "--font-playfair" }
+export const jetbrainsMono = { className: "", variable: "--font-jetbrains" }
 
 // Typography Scale Configuration
 export const typographyScale = {

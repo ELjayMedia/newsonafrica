@@ -36,6 +36,18 @@ export const wordpressQueries = {
     endpoint: 'tags',
     params: { slug },
   }),
+  postsByTag: (id: number | string, limit = 20) => ({
+    endpoint: 'posts',
+    params: { tags: id, per_page: limit, _embed: 1 },
+  }),
+  tags: () => ({
+    endpoint: 'tags',
+    params: { per_page: 100, hide_empty: true },
+  }),
+  authors: () => ({
+    endpoint: 'users',
+    params: { per_page: 100 },
+  }),
   featuredPosts: (tagId: number | string, limit = 10) => ({
     endpoint: 'posts',
     params: { tags: tagId, per_page: limit, _embed: 1 },
