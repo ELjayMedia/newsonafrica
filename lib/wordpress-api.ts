@@ -151,3 +151,101 @@ export const getRelatedPosts = (
   limit = 6,
   countryCode?: string,
 ) => getRelatedPostsForCountry(countryCode || DEFAULT_COUNTRY, postId, limit)
+
+// Legacy-compatible helper functions ---------------------------------------
+
+export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY) => {
+  const { posts } = await getLatestPostsForCountry(countryCode, limit)
+  return posts
+}
+
+export const fetchTaggedPosts = async (
+  tagSlug: string,
+  limit = 10,
+  countryCode = DEFAULT_COUNTRY,
+) => {
+  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(tagSlug))
+  const tag = tags[0]
+  if (!tag) return []
+  const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
+  return fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+}
+
+export const fetchPostsByTag = fetchTaggedPosts
+
+export async function fetchPosts(
+  options: number | {
+    page?: number
+    perPage?: number
+    category?: string
+    tag?: string
+    search?: string
+    author?: string
+    featured?: boolean
+    countryCode?: string
+  } = {},
+) {
+  if (typeof options === 'number') {
+    const { endpoint, params } = wordpressQueries.recentPosts(options)
+    return fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params })
+  }
+
+  const {
+    page = 1,
+    perPage = 10,
+    category,
+    tag,
+    search,
+    author,
+    featured,
+    countryCode = DEFAULT_COUNTRY,
+  } = options
+
+  const params: Record<string, any> = { page, per_page: perPage, _embed: 1 }
+  if (search) params.search = search
+  if (category) params.categories = category
+  if (tag) params.tags = tag
+  if (author) params.author = author
+  if (featured) params.sticky = 'true'
+
+  const base = getWpEndpoints(countryCode).rest
+  const url = `${base}/posts?${new URLSearchParams(params).toString()}`
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    next: { revalidate: 300 },
+  })
+  if (!res.ok) {
+    throw new Error(`WordPress API error: ${res.status}`)
+  }
+  const total = Number(res.headers.get('X-WP-Total') || '0')
+  const data = (await res.json()) as WordPressPost[]
+  return { data, total }
+}
+
+export const fetchCategories = (countryCode = DEFAULT_COUNTRY) =>
+  getCategoriesForCountry(countryCode)
+
+export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
+  const { endpoint, params } = wordpressQueries.tags()
+  return fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })
+}
+
+export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
+  const { endpoint, params } = wordpressQueries.authors()
+  return fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })
+}
+
+export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
+  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug))
+  return tags[0] || null
+}
+
+export const fetchAllTags = (countryCode = DEFAULT_COUNTRY) => {
+  const { endpoint, params } = wordpressQueries.tags()
+  return fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })
+}
+
+export async function updateUserProfile() {
+  // Placeholder – real implementation can integrate with WordPress REST API
+  return null
+}
