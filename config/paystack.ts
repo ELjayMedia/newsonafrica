@@ -1,6 +1,16 @@
 export const PAYSTACK_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
+export type SubscriptionStatus = "active" | "cancelled"
+
+export interface SupabaseSubscription {
+  user_id: string
+  plan: string
+  status: SubscriptionStatus
+  renewal_date: string
+  payment_id: string
+}
+
 export const SUBSCRIPTION_PLANS = [
   {
     id: "monthly",

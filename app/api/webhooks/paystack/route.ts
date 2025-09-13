@@ -159,6 +159,7 @@ export async function handleSubscriptionCreated(
     status: data.status,
     start_date: new Date(data.createdAt).toISOString(),
     end_date: null,
+    renewal_date: new Date(data.next_payment_date).toISOString(),
     payment_provider: "paystack",
     payment_id: data.subscription_code,
     metadata: data,
@@ -184,6 +185,7 @@ export async function handleSubscriptionDisabled(
     .update({
       status: "cancelled",
       end_date: new Date().toISOString(),
+      renewal_date: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", data.subscription_code)

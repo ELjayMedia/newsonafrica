@@ -67,7 +67,6 @@ export async function middleware(request: NextRequest) {
     if (
       pathname.startsWith("/api/user") ||
       pathname.startsWith("/api/bookmarks") ||
-      pathname.startsWith("/api/subscriptions") ||
       (pathname.startsWith("/api/comments") &&
         (request.method === "POST" || request.method === "PATCH" || request.method === "DELETE"))
     ) {
