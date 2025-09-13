@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface VerticalCardProps {
   post: {
@@ -53,7 +54,7 @@ export const VerticalCard = memo(function VerticalCard({ post, className = "" }:
   })()
 
   return (
-    <Link href={`/post/${post.slug}`} className={`group block h-full ${className}`}>
+    <Link href={getArticleUrl(post.slug)} className={`group block h-full ${className}`}>
       <article className="flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
         {post.featuredImage && (
           <div className="relative h-32 overflow-hidden">
