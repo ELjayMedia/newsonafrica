@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { fetchComments } from "@/lib/comment-service"
+import { supabase } from "@/lib/supabase"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -115,6 +116,24 @@ export function CommentList({ postId }: CommentListProps) {
       loadComments(nextPage, true)
     }
   }, [inView, hasMore, loading, loadComments, page])
+
+  // Subscribe to realtime updates for this post's comments
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${postId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` },
+        () => {
+          loadComments()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [postId, loadComments])
 
   // Handle optimistic updates
   const handleCommentAdded = useCallback(
