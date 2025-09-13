@@ -1,5 +1,4 @@
 import { client } from "@/lib/wordpress-api"
-import { gql } from "graphql-request"
 
 interface User {
   id: string
@@ -8,7 +7,7 @@ interface User {
 }
 
 export async function createOrUpdateUser(userData: { id: string; name: string; email: string }): Promise<User> {
-  const mutation = gql`
+  const mutation = `
     mutation CreateOrUpdateUser($input: CreateUserInput!) {
       createUser(input: $input) {
         user {
@@ -30,7 +29,7 @@ export async function createOrUpdateUser(userData: { id: string; name: string; e
   }
 
   try {
-    const response = await client.request(mutation, variables)
+    const response = await client.query(mutation, variables)
     return response.createUser.user
   } catch (error) {
     console.error("Error creating or updating user:", error)
