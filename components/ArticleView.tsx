@@ -81,21 +81,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
     enablePopularityBoost: true, // Enable popularity-based sorting
   })
 
-  // Debug logging
-  console.log("ArticleView Debug:", {
-    postId: id,
-    categories: categoryIds,
-    categoriesLength: categoryIds.length,
-  })
-
-  // Debug related posts
-  console.log("Related Posts Debug:", {
-    relatedPosts,
-    loading: loadingRelated,
-    error: relatedError,
-    postsCount: relatedPosts?.length || 0,
-  })
-
   // Use our custom hook to manage scroll position
   const { scrollPosition, hasRestoredPosition, restoreScrollPosition, clearScrollPosition, saveScrollPosition } =
     useArticleScrollPosition(id)
@@ -339,6 +324,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
           <BookmarkButton
             postId={id}
+            country={(post as any).country}
             title={title}
             slug={slug}
             featuredImage={
@@ -396,6 +382,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
             <BookmarkButton
               postId={id}
+              country={(post as any).country}
               title={title}
               slug={slug}
               featuredImage={
@@ -426,19 +413,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
           className="px-0"
         />
 
-        {/* Debug information - remove this in production */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="mt-4 p-4 bg-gray-100 rounded text-sm">
-            <p>
-              <strong>Debug Info:</strong>
-            </p>
-            <p>Post ID: {id}</p>
-            <p>Categories: {categoryIds.join(", ") || "None"}</p>
-            <p>Related Posts Count: {relatedPosts?.length || 0}</p>
-            <p>Loading: {loadingRelated ? "Yes" : "No"}</p>
-            {relatedError && <p className="text-red-600">Error: {relatedError}</p>}
-          </div>
-        )}
       </div>
 
       {/* Comments Section would go here */}
