@@ -1,5 +1,6 @@
 import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
+import logger from '@/utils/logger'
 
 export interface WordPressImage {
   source_url?: string
@@ -175,7 +176,7 @@ export const getRelatedPosts = async (
       const posts = (await res.json()) as WordPressPost[]
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
-      console.error('Tag-intersection query failed:', error)
+      logger.error('Tag-intersection query failed:', error)
       return []
     }
   }

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 export enum AuthErrorCategory {
   CREDENTIALS = "credentials",
   NETWORK = "network",
@@ -186,6 +187,6 @@ export function logAuthError(error: AuthError): void {
     case AuthErrorCategory.RATE_LIMIT:
     case AuthErrorCategory.UNKNOWN:
     default:
-      console.error(`Auth error (${category}${code ? ` - ${code}` : ""}): ${message}`, originalError)
+      logger.error(`Auth error (${category}${code ? ` - ${code}` : ""}): ${message}`, originalError)
   }
 }

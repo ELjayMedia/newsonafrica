@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 // Types for fetch responses and error handling
 export interface FetchResponse<T> {
   data: T | null
@@ -81,7 +82,7 @@ export async function fetchWithErrorHandling<T>(url: string, options: FetchOptio
     clearTimeout(timeoutId)
 
     const errorMessage = getErrorMessage(error)
-    console.error(`Fetch error for ${fullUrl}:`, errorMessage)
+    logger.error(`Fetch error for ${fullUrl}:`, errorMessage)
 
     return {
       data: null,
@@ -101,12 +102,12 @@ export async function simpleFetch<T>(url: string, options?: RequestInit): Promis
   try {
     const res = await fetch(url, options)
     if (!res.ok) {
-      console.error(`Fetch failed: ${res.status} ${res.statusText}`)
+      logger.error(`Fetch failed: ${res.status} ${res.statusText}`)
       return null
     }
     return await res.json()
   } catch (error) {
-    console.error("Fetch error:", error)
+    logger.error("Fetch error:", error)
     return null
   }
 }

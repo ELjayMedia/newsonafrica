@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchRecentPosts } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
+import logger from '@/utils/logger'
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -66,7 +67,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error("Error generating news sitemap:", error)
+    logger.error("Error generating news sitemap:", error)
     return new NextResponse("Error generating news sitemap", { status: 500 })
   }
 }

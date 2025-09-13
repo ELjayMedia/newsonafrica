@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useState, useEffect } from "react"
@@ -100,7 +101,7 @@ export default function OfflineFallback({
 
       setCachedItems(sortedItems)
     } catch (error) {
-      console.error("Error loading cached content:", error)
+      logger.error("Error loading cached content:", error)
     } finally {
       setIsLoading(false)
     }

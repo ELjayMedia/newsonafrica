@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { getPostBySlug, getLatestPosts } from "@/lib/wordpress-api"
 import { PostClientContent } from "@/components/PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
+import logger from '@/utils/logger'
 
 export const revalidate = 60 // Revalidate every 60 seconds
 
@@ -13,11 +14,11 @@ interface PostPageProps {
 
 // Generate static paths for posts at build time
 export async function generateStaticParams() {
-  console.log("🚀 Starting generateStaticParams for posts...")
+  logger.debug("🚀 Starting generateStaticParams for posts...")
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
 
   try {
-    console.log("📡 Fetching posts from WordPress API...")
+    logger.debug("📡 Fetching posts from WordPress API...")
     const startTime = Date.now()
 
     const result = await circuitBreaker.execute(
@@ -27,15 +28,15 @@ export async function generateStaticParams() {
         return { posts, hasNextPage }
       },
       async () => {
-        console.log("[v0] Posts static generation: Using fallback due to WordPress unavailability")
+        logger.debug("[v0] Posts static generation: Using fallback due to WordPress unavailability")
         return { posts: [], hasNextPage: false }
       },
     )
 
     const { posts, hasNextPage } = result
     const fetchTime = Date.now() - startTime
-    console.log(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
-    console.log(`📄 Has more pages: ${hasNextPage}`)
+    logger.debug(`✅ Fetched ${posts.length} posts in ${fetchTime}ms`)
+    logger.debug(`📄 Has more pages: ${hasNextPage}`)
 
     // Validate posts data
     const validPosts = posts.filter((post) => {
@@ -50,16 +51,16 @@ export async function generateStaticParams() {
       return true
     })
 
-    console.log(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
+    logger.debug(`✅ ${validPosts.length} valid posts out of ${posts.length} total`)
 
     if (validPosts.length > 0) {
-      console.log("📝 Sample posts being pre-generated:")
+      logger.debug("📝 Sample posts being pre-generated:")
       validPosts.slice(0, 5).forEach((post, index) => {
-        console.log(`  ${index + 1}. ${post.slug} - "${post.title}"`)
+        logger.debug(`  ${index + 1}. ${post.slug} - "${post.title}"`)
       })
 
       if (validPosts.length > 5) {
-        console.log(`  ... and ${validPosts.length - 5} more posts`)
+        logger.debug(`  ... and ${validPosts.length - 5} more posts`)
       }
     }
 
@@ -68,25 +69,25 @@ export async function generateStaticParams() {
       slug: post.slug,
     }))
 
-    console.log(`🎯 Generating static params for ${staticParams.length} posts`)
+    logger.debug(`🎯 Generating static params for ${staticParams.length} posts`)
     return staticParams
   } catch (error) {
-    console.error("❌ Error in generateStaticParams for posts:", error)
+    logger.error("❌ Error in generateStaticParams for posts:", error)
 
     if (error instanceof Error) {
-      console.error("Error message:", error.message)
-      console.error("Error stack:", error.stack)
+      logger.error("Error message:", error.message)
+      logger.error("Error stack:", error.stack)
     }
 
     // Return empty array to allow fallback generation
-    console.log("🔄 Falling back to on-demand generation")
+    logger.debug("🔄 Falling back to on-demand generation")
     return []
   }
 }
 
 // Enhanced metadata generation with canonical URLs and robots
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for post: ${params.slug}`)
+  logger.debug(`🔍 Generating metadata for post: ${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
@@ -94,7 +95,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const cached = enhancedCache.get(cacheKey)
 
   if (cached.exists && !cached.isStale) {
-    console.log(`[v0] Post metadata: Using cached data for ${params.slug}`)
+    logger.debug(`[v0] Post metadata: Using cached data for ${params.slug}`)
     return cached.data
   }
 
@@ -121,7 +122,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
           }
         }
 
-        console.log(`✅ Generated metadata for: "${post.title}"`)
+        logger.debug(`✅ Generated metadata for: "${post.title}"`)
 
         // Extract clean text from excerpt for description
         const cleanExcerpt = post.excerpt?.replace(/<[^>]*>/g, "").trim() || ""
@@ -249,11 +250,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Post metadata: Using stale cache for ${params.slug}`)
+          logger.debug(`[v0] Post metadata: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Post metadata: Using fallback for ${params.slug}`)
+        logger.debug(`[v0] Post metadata: Using fallback for ${params.slug}`)
         return {
           title: "Article - News On Africa",
           description: "Read the latest news and articles from across Africa.",
@@ -271,7 +272,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     enhancedCache.set(cacheKey, result, 600000, 1800000) // 10min fresh, 30min stale
     return result
   } catch (error) {
-    console.error(`❌ Error generating metadata for post ${params.slug}:`, error)
+    logger.error(`❌ Error generating metadata for post ${params.slug}:`, error)
 
     if (cached.exists) {
       return cached.data
@@ -293,7 +294,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Main post page component
 export default async function PostPage({ params }: PostPageProps) {
-  console.log(`📖 Rendering post page: ${params.slug}`)
+  logger.debug(`📖 Rendering post page: ${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
@@ -317,11 +318,11 @@ export default async function PostPage({ params }: PostPageProps) {
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Post data: Using stale cache for ${params.slug}`)
+          logger.debug(`[v0] Post data: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Post data: Using fallback for ${params.slug}`)
+        logger.debug(`[v0] Post data: Using fallback for ${params.slug}`)
         return {
           id: "fallback-post",
           title: "Article Temporarily Unavailable",
@@ -344,7 +345,7 @@ export default async function PostPage({ params }: PostPageProps) {
       enhancedCache.set(cacheKey, post, 300000, 900000) // 5min fresh, 15min stale
     }
 
-    console.log(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
+    logger.debug(`✅ Post data fetched in ${fetchTime}ms: "${post.title}"`)
 
     return (
       <Suspense fallback={<PostSkeleton />}>
@@ -352,10 +353,10 @@ export default async function PostPage({ params }: PostPageProps) {
       </Suspense>
     )
   } catch (error) {
-    console.error(`❌ Error fetching post ${params.slug}:`, error)
+    logger.error(`❌ Error fetching post ${params.slug}:`, error)
 
     if (cached.exists) {
-      console.log(`[v0] Post page: Using cached data due to error for ${params.slug}`)
+      logger.debug(`[v0] Post page: Using cached data due to error for ${params.slug}`)
       return (
         <Suspense fallback={<PostSkeleton />}>
           <PostWrapper post={cached.data} slug={params.slug} />

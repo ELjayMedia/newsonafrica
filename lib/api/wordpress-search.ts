@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useCallback } from "react"
@@ -108,7 +109,7 @@ export async function searchPosts(
         endCursor: data.posts.pageInfo.endCursor,
       }
     } catch (error) {
-      console.error(`Search failed for "${query}" in ${country} via GraphQL, trying REST API:`, error)
+      logger.error(`Search failed for "${query}" in ${country} via GraphQL, trying REST API:`, error)
 
       try {
         const posts = await restApiFallback(
@@ -164,7 +165,7 @@ export async function searchPosts(
           endCursor: null,
         }
       } catch (restError) {
-        console.error("Both GraphQL and REST search failed:", restError)
+        logger.error("Both GraphQL and REST search failed:", restError)
         return {
           posts: [],
           totalResults: 0,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import logger from '@/utils/logger'
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP = {
@@ -13,7 +14,7 @@ const LEGACY_ROUTES_MAP = {
 function logApiRequest(request: NextRequest) {
   if (process.env.NODE_ENV === "development") {
     const { pathname, search } = request.nextUrl
-    console.log(`[${request.method}] ${pathname}${search}`)
+    logger.debug(`[${request.method}] ${pathname}${search}`)
   }
 }
 
@@ -24,7 +25,7 @@ function handleLegacyPostRedirect(pathname: string, request: NextRequest): NextR
     const defaultCountry = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
     const newUrl = `/${defaultCountry}/article/${slug}`
 
-    console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
+    logger.debug(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
     return NextResponse.redirect(new URL(newUrl, request.url))
   }
   return null

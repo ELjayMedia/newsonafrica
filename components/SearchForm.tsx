@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import type React from "react"
@@ -49,7 +50,7 @@ export function SearchForm({
           setRecentSearches(JSON.parse(saved).slice(0, 5))
         }
       } catch (e) {
-        console.error("Error loading recent searches:", e)
+        logger.error("Error loading recent searches:", e)
       }
     }
   }, [])
@@ -91,7 +92,7 @@ export function SearchForm({
           setSuggestions(searchSuggestions)
         }
       } catch (error) {
-        console.error("Error fetching suggestions:", error)
+        logger.error("Error fetching suggestions:", error)
       }
     }, 300)
 
@@ -116,7 +117,7 @@ export function SearchForm({
           router.push(`/search?q=${encodeURIComponent(query.trim())}`)
         }
       } catch (error) {
-        console.error("Search form error:", error)
+        logger.error("Search form error:", error)
       } finally {
         setIsLoading(false)
       }

@@ -1,4 +1,5 @@
 import { siteConfig } from "@/config/site"
+import logger from '@/utils/logger'
 
 interface IndexedPost {
   id: string
@@ -287,7 +288,7 @@ export class SearchIndexer {
     const maxMemoryMB = SEARCH_CONFIG.MEMORY.MAX_INDEX_SIZE_MB
 
     if (memoryUsage > maxMemoryMB * SEARCH_CONFIG.MEMORY.CLEANUP_THRESHOLD) {
-      console.log(`Search index memory usage: ${memoryUsage}MB, performing cleanup...`)
+      logger.debug(`Search index memory usage: ${memoryUsage}MB, performing cleanup...`)
 
       // Remove least popular posts if memory is high
       const posts = Array.from(this.index.posts.values())
@@ -298,7 +299,7 @@ export class SearchIndexer {
         this.removePostFromIndex(posts[i].id)
       }
 
-      console.log(`Removed ${toRemove} posts from search index`)
+      logger.debug(`Removed ${toRemove} posts from search index`)
     }
   }
 
@@ -345,7 +346,7 @@ export class SearchIndexer {
     }
 
     this.isBuilding = true
-    console.log(`Building optimized search index for ${posts.length} posts...`)
+    logger.debug(`Building optimized search index for ${posts.length} posts...`)
     const startTime = Date.now()
 
     try {
@@ -381,12 +382,12 @@ export class SearchIndexer {
       }
 
       const buildTime = Date.now() - startTime
-      console.log(`Optimized search index built in ${buildTime}ms for ${this.index.posts.size} posts`)
-      console.log(
+      logger.debug(`Optimized search index built in ${buildTime}ms for ${this.index.posts.size} posts`)
+      logger.debug(
         `Index stats: ${this.getStats().memoryUsage}MB, ${this.index.titleIndex.size} title words, ${this.index.contentIndex.size} content words`,
       )
     } catch (error) {
-      console.error("Error building search index:", error)
+      logger.error("Error building search index:", error)
     } finally {
       this.isBuilding = false
 
@@ -407,7 +408,7 @@ export class SearchIndexer {
         this.indexWords(indexedPost)
         this.indexNGrams(indexedPost)
       } catch (error) {
-        console.error(`Error processing post ${post.id}:`, error)
+        logger.error(`Error processing post ${post.id}:`, error)
       }
     })
   }
@@ -1041,7 +1042,7 @@ export class SearchIndexer {
 
       return { posts: searchDocuments, total }
     } catch (error) {
-      console.error("Search indexer error:", error)
+      logger.error("Search indexer error:", error)
       return { posts: [], total: 0 }
     }
   }

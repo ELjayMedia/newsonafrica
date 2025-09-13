@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useState, useEffect } from "react"
@@ -40,7 +41,7 @@ export function useRelatedPosts({
         const filtered = related.filter((post) => post.id.toString() !== postId)
         setRelatedPosts(filtered)
       } catch (err) {
-        console.error("Failed to fetch related posts:", err)
+        logger.error("Failed to fetch related posts:", err)
         setError(err instanceof Error ? err.message : "Failed to fetch related posts")
         setRelatedPosts([])
       } finally {

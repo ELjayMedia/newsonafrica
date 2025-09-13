@@ -1,5 +1,6 @@
+import logger from '@/utils/logger'
 export function handleError(error: unknown) {
-  console.error("An error occurred:", error)
+  logger.error("An error occurred:", error)
 
   if (error instanceof Error) {
     // You can add more specific error handling here

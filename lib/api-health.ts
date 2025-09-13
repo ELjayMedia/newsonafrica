@@ -1,4 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
+import logger from '@/utils/logger'
 
 const CACHE_DURATION = 5 * 60 * 1000
 let lastCheck = 0
@@ -46,7 +47,7 @@ export async function checkGraphQLHealth(): Promise<boolean> {
 
     return isHealthy
   } catch (error) {
-    console.error("GraphQL health check failed:", error)
+    logger.error("GraphQL health check failed:", error)
 
     // Update cache
     cachedHealth.graphql = false
@@ -88,7 +89,7 @@ export async function checkRESTHealth(): Promise<boolean> {
 
     return isHealthy
   } catch (error) {
-    console.error("REST API health check failed:", error)
+    logger.error("REST API health check failed:", error)
 
     // Update cache
     cachedHealth.rest = false

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import type React from "react"
@@ -27,7 +28,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
   // Handle auth state changes
   const handleAuthStateChange = useCallback(
     async (event: string, session: Session | null) => {
-      console.log("Auth state changed:", event, session?.user?.id)
+      logger.debug("Auth state changed:", event, session?.user?.id)
 
       setSession(session)
       setUser(session?.user ?? null)
@@ -64,7 +65,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
                 })
               }
             } catch (error) {
-              console.error("Error handling profile:", error)
+              logger.error("Error handling profile:", error)
             }
 
             // Redirect to home page
@@ -82,11 +83,11 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
           break
 
         case "TOKEN_REFRESHED":
-          console.log("Token refreshed")
+          logger.debug("Token refreshed")
           break
 
         case "USER_UPDATED":
-          console.log("User updated")
+          logger.debug("User updated")
           break
       }
     },
@@ -104,13 +105,13 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
         } = await supabase.auth.getSession()
 
         if (error) {
-          console.error("Error getting session:", error)
+          logger.error("Error getting session:", error)
         }
 
         setSession(session)
         setUser(session?.user ?? null)
       } catch (error) {
-        console.error("Error in getInitialSession:", error)
+        logger.error("Error in getInitialSession:", error)
       } finally {
         setLoading(false)
       }
@@ -133,7 +134,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       const { error } = await supabase.auth.signOut()
       if (error) throw error
     } catch (error) {
-      console.error("Error signing out:", error)
+      logger.error("Error signing out:", error)
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
@@ -153,7 +154,7 @@ export function EnhancedAuthProvider({ children }: { children: React.ReactNode }
       setSession(data.session)
       setUser(data.session?.user ?? null)
     } catch (error) {
-      console.error("Error refreshing session:", error)
+      logger.error("Error refreshing session:", error)
     }
   }, [supabase])
 

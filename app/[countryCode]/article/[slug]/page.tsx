@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { getPostBySlugForCountry, getLatestPostsForCountry } from "@/lib/wordpress-api"
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleSkeleton } from "./ArticleSkeleton"
+import logger from '@/utils/logger'
 
 export const revalidate = 300 // Revalidate every 5 minutes
 
@@ -12,14 +13,14 @@ interface ArticlePageProps {
 }
 
 export async function generateStaticParams() {
-  console.log("🚀 Starting generateStaticParams for country articles...")
+  logger.debug("🚀 Starting generateStaticParams for country articles...")
 
   const supportedCountries = ["sz", "za"]
   const staticParams: { countryCode: string; slug: string }[] = []
 
   try {
     for (const countryCode of supportedCountries) {
-      console.log(`📡 Fetching posts for ${countryCode}...`)
+      logger.debug(`📡 Fetching posts for ${countryCode}...`)
       const { posts } = await getLatestPostsForCountry(countryCode, 100)
 
       const validPosts = posts.filter((post) => post.slug && typeof post.slug === "string")
@@ -31,19 +32,19 @@ export async function generateStaticParams() {
         })
       })
 
-      console.log(`✅ Added ${validPosts.length} posts for ${countryCode}`)
+      logger.debug(`✅ Added ${validPosts.length} posts for ${countryCode}`)
     }
 
-    console.log(`🎯 Generated ${staticParams.length} static params total`)
+    logger.debug(`🎯 Generated ${staticParams.length} static params total`)
     return staticParams
   } catch (error) {
-    console.error("❌ Error in generateStaticParams for articles:", error)
+    logger.error("❌ Error in generateStaticParams for articles:", error)
     return []
   }
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
+  logger.debug(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
 
   try {
     const post = await getPostBySlugForCountry(params.countryCode, params.slug)
@@ -95,7 +96,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
     }
   } catch (error) {
-    console.error(`❌ Error generating metadata:`, error)
+    logger.error(`❌ Error generating metadata:`, error)
     return {
       title: "Article - News On Africa",
       description: "Read the latest news from Africa.",
@@ -107,7 +108,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
+  logger.debug(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
 
   try {
     const post = await getPostBySlugForCountry(params.countryCode, params.slug)
@@ -123,7 +124,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       </Suspense>
     )
   } catch (error) {
-    console.error(`❌ Error fetching article:`, error)
+    logger.error(`❌ Error fetching article:`, error)
     throw error
   }
 }

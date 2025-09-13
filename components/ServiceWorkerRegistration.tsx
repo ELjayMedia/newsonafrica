@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useEffect, useState } from "react"
@@ -15,7 +16,7 @@ export default function ServiceWorkerRegistration() {
       window.location.hostname.includes("vusercontent.net") || // Skip in v0.dev preview
       window.location.hostname.includes("vercel.app") // Skip in Vercel preview
     ) {
-      console.log("Service Worker registration skipped in development/preview environment")
+      logger.debug("Service Worker registration skipped in development/preview environment")
       return
     }
 
@@ -30,7 +31,7 @@ export default function ServiceWorkerRegistration() {
 
           // If the file exists, register the service worker
           return navigator.serviceWorker.register("/sw.js").then((reg) => {
-            console.log("Service Worker registered with scope:", reg.scope)
+            logger.debug("Service Worker registered with scope:", reg.scope)
             setRegistration(reg)
 
             // Check for updates

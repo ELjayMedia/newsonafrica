@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useInfiniteQuery } from "@tanstack/react-query"
@@ -15,7 +16,7 @@ export function CategoryContent({ slug }: { slug: string }) {
     queryFn: ({ pageParam = null }) => fetchCategoryPosts(slug, pageParam),
     getNextPageParam: (lastPage) => (lastPage?.pageInfo?.hasNextPage ? lastPage.pageInfo.endCursor : undefined),
     onError: (error) => {
-      console.error("Error fetching category posts:", error)
+      logger.error("Error fetching category posts:", error)
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   })

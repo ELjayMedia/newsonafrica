@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { fetchPosts } from "@/lib/wordpress-api"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import logger from '@/utils/logger'
 
 // Input validation schema
 const querySchema = z.object({
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
           })
         },
         async () => {
-          console.log("[v0] Posts API: Using fallback due to WordPress unavailability")
+          logger.debug("[v0] Posts API: Using fallback due to WordPress unavailability")
           return {
             data: [
               {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
         },
       )
     } catch (error) {
-      console.error("[v0] Posts API: Failed to fetch posts:", error)
+      logger.error("[v0] Posts API: Failed to fetch posts:", error)
       return NextResponse.json(
         { error: "Failed to fetch posts" },
         { status: 502 },
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[v0] Posts API error:", error)
+    logger.error("[v0] Posts API error:", error)
     return handleApiError(error)
   }
 }

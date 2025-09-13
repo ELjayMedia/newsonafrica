@@ -4,6 +4,7 @@ import { updateUserProfile } from "@/lib/wordpress-api"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"
+import logger from '@/utils/logger'
 
 export async function POST(request: Request) {
   const token = getAuthTokenFromCookies()
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, avatarUrl })
   } catch (error) {
-    console.error("Error uploading avatar:", error)
+    logger.error("Error uploading avatar:", error)
     return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 })
   }
 }

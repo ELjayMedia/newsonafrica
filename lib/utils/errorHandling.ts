@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 /**
  * Error handling utilities for the application
  */
@@ -51,7 +52,7 @@ export function logError(error: Error, context?: string): void {
     timestamp: new Date().toISOString(),
   }
 
-  console.error("Application Error:", errorInfo)
+  logger.error("Application Error:", errorInfo)
 
   // In production, you might want to send this to an error tracking service
   if (process.env.NODE_ENV === "production") {

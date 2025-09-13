@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
 import { getLatestPostsForCountry } from "@/lib/wordpress-api"
+import logger from '@/utils/logger'
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -80,7 +81,7 @@ async function getHomePageData() {
 
   // If we have fresh data, use it
   if (cached.exists && !cached.isStale) {
-    console.log("[v0] Homepage: Using fresh cached data")
+    logger.debug("[v0] Homepage: Using fresh cached data")
     return cached.data
   }
 
@@ -94,7 +95,7 @@ async function getHomePageData() {
             const { posts } = await getLatestPostsForCountry(countryCode, 4)
             return { countryCode, posts: posts || [] }
           } catch (error) {
-            console.error(`[v0] Failed to fetch posts for ${countryCode}:`, error)
+            logger.error(`[v0] Failed to fetch posts for ${countryCode}:`, error)
             return { countryCode, posts: [] }
           }
         })
@@ -125,11 +126,11 @@ async function getHomePageData() {
       },
       async () => {
         if (cached.exists) {
-          console.log("[v0] Homepage: Using stale cached data due to API failure")
+          logger.debug("[v0] Homepage: Using stale cached data due to API failure")
           return cached.data
         }
 
-        console.log("[v0] Homepage: Using fallback content - no cache available")
+        logger.debug("[v0] Homepage: Using fallback content - no cache available")
         const fallbackPosts = [
           {
             id: "fallback-1",
@@ -154,10 +155,10 @@ async function getHomePageData() {
     enhancedCache.set(cacheKey, result, 300000, 900000) // 5min fresh, 15min stale
     return result
   } catch (error) {
-    console.error("[v0] Homepage data fetch failed:", error)
+    logger.error("[v0] Homepage data fetch failed:", error)
 
     if (cached.exists) {
-      console.log("[v0] Homepage: Returning stale cache due to complete failure")
+      logger.debug("[v0] Homepage: Returning stale cache due to complete failure")
       return cached.data
     }
 
@@ -185,7 +186,7 @@ export default async function Home() {
     const { posts, countryPosts, featuredPosts } = await getHomePageData()
     return <HomeContent initialPosts={posts} countryPosts={countryPosts} featuredPosts={featuredPosts} />
   } catch (error) {
-    console.error("Homepage data fetch failed:", error)
+    logger.error("Homepage data fetch failed:", error)
     return <HomeContent initialPosts={[]} />
   }
 }

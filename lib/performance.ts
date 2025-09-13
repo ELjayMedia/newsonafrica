@@ -1,4 +1,5 @@
 import React from "react"
+import logger from '@/utils/logger'
 // Performance monitoring and optimization utilities
 
 // Measure component render time
@@ -8,7 +9,7 @@ export function measureRenderTime(componentName: string) {
 
     return () => {
       const endTime = performance.now()
-      console.log(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
+      logger.debug(`[Performance] ${componentName} rendered in ${(endTime - startTime).toFixed(2)}ms`)
     }
   }
 

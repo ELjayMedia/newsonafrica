@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -47,7 +48,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
         pageParams: [null],
       })
     } catch (err) {
-      console.error(`Error loading category ${params.slug}:`, err)
+      logger.error(`Error loading category ${params.slug}:`, err)
       setError(err instanceof Error ? err : new Error(String(err)))
     } finally {
       setIsLoading(false)

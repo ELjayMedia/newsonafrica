@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useInfiniteQuery } from "@tanstack/react-query"
@@ -23,7 +24,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     onError: (error) => {
-      console.error(`Error fetching author data for ${slug}:`, error)
+      logger.error(`Error fetching author data for ${slug}:`, error)
     },
   })
 
@@ -37,7 +38,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
 
   // Improved error handling
   if (error) {
-    console.error("Author content error:", error)
+    logger.error("Author content error:", error)
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Unable to load author data</h2>

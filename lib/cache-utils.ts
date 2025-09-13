@@ -1,5 +1,6 @@
 import { cache } from "react"
 import { revalidatePath } from "next/cache"
+import logger from '@/utils/logger'
 
 // Cache durations in seconds
 export const CACHE_DURATIONS = {
@@ -53,7 +54,7 @@ export const cachedFetch = cache(
 
           return await response.json()
         } catch (error) {
-          console.error(`Fetch attempt ${attempt + 1} failed for ${url}:`, error)
+          logger.error(`Fetch attempt ${attempt + 1} failed for ${url}:`, error)
           lastError = error
           if (attempt === MAX_RETRIES - 1) throw error
           const backoff = Math.min(1000 * 2 ** attempt, 8000)
@@ -63,7 +64,7 @@ export const cachedFetch = cache(
 
       throw lastError
     } catch (error) {
-      console.error(`Error fetching ${url}:`, error)
+      logger.error(`Error fetching ${url}:`, error)
       throw error
     }
   }
@@ -75,7 +76,7 @@ export async function revalidateMultiplePaths(paths: string[]): Promise<void> {
     try {
       revalidatePath(path)
     } catch (error) {
-      console.error(`Error revalidating path ${path}:`, error)
+      logger.error(`Error revalidating path ${path}:`, error)
     }
   })
 }

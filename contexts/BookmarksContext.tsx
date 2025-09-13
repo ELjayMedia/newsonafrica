@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import type React from "react"
@@ -132,7 +133,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         .order("created_at", { ascending: false })
 
       if (error) {
-        console.error("Error fetching bookmarks:", error)
+        logger.error("Error fetching bookmarks:", error)
         toast({
           title: "Error",
           description: `Failed to load bookmarks: ${error.message}`,
@@ -173,7 +174,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       });
       setBookmarks(hydrated)
     } catch (error: any) {
-      console.error("Error fetching bookmarks:", error)
+      logger.error("Error fetching bookmarks:", error)
       toast({
         title: "Error",
         description: `Failed to load bookmarks: ${error.message || "Unknown error"}`,

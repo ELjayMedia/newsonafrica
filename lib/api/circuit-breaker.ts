@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 interface CircuitBreakerState {
   failures: number
   lastFailureTime: number
@@ -28,12 +29,12 @@ class CircuitBreaker {
     // Check if circuit should move from OPEN to HALF_OPEN
     if (state.state === "OPEN" && now - state.lastFailureTime > this.recoveryTimeout) {
       state.state = "HALF_OPEN"
-      console.log(`[v0] Circuit breaker ${key}: Moving to HALF_OPEN state`)
+      logger.debug(`[v0] Circuit breaker ${key}: Moving to HALF_OPEN state`)
     }
 
     // If circuit is OPEN, use fallback immediately
     if (state.state === "OPEN") {
-      console.log(`[v0] Circuit breaker ${key}: OPEN - using fallback`)
+      logger.debug(`[v0] Circuit breaker ${key}: OPEN - using fallback`)
       if (fallback) {
         return await fallback()
       }
@@ -45,7 +46,7 @@ class CircuitBreaker {
 
       // Success - reset failure count and close circuit
       if (state.state === "HALF_OPEN") {
-        console.log(`[v0] Circuit breaker ${key}: Success in HALF_OPEN - closing circuit`)
+        logger.debug(`[v0] Circuit breaker ${key}: Success in HALF_OPEN - closing circuit`)
       }
       state.failures = 0
       state.state = "CLOSED"
@@ -55,17 +56,17 @@ class CircuitBreaker {
       state.failures++
       state.lastFailureTime = now
 
-      console.log(`[v0] Circuit breaker ${key}: Failure ${state.failures}/${this.failureThreshold}`)
+      logger.debug(`[v0] Circuit breaker ${key}: Failure ${state.failures}/${this.failureThreshold}`)
 
       // Open circuit if failure threshold reached
       if (state.failures >= this.failureThreshold) {
         state.state = "OPEN"
-        console.log(`[v0] Circuit breaker ${key}: Opening circuit due to failures`)
+        logger.debug(`[v0] Circuit breaker ${key}: Opening circuit due to failures`)
       }
 
       // Use fallback if available
       if (fallback) {
-        console.log(`[v0] Circuit breaker ${key}: Using fallback due to error`)
+        logger.debug(`[v0] Circuit breaker ${key}: Using fallback due to error`)
         return await fallback()
       }
 

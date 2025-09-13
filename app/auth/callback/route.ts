@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import logger from '@/utils/logger'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
       if (error) {
-        console.error("Auth callback error:", error)
+        logger.error("Auth callback error:", error)
         return NextResponse.redirect(`${requestUrl.origin}/auth?error=callback_error`)
       }
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${requestUrl.origin}${next}`)
       }
     } catch (error) {
-      console.error("Session exchange error:", error)
+      logger.error("Session exchange error:", error)
       return NextResponse.redirect(`${requestUrl.origin}/auth?error=session_error`)
     }
   }

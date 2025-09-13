@@ -13,24 +13,31 @@ describe("logger", () => {
     process.env.NODE_ENV = ORIGINAL_ENV
   })
 
-  it("logs in development mode", () => {
+  it("logs debug in development mode", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {})
     process.env.NODE_ENV = "development"
-    logger.log("hello")
+    logger.debug("hello")
     expect(spy).toHaveBeenCalledWith("hello")
   })
 
-  it("does not log in production mode", () => {
+  it("does not log debug in production mode", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {})
     process.env.NODE_ENV = "production"
-    logger.log("hello")
+    logger.debug("hello")
     expect(spy).not.toHaveBeenCalled()
+  })
+
+  it("always logs errors", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    process.env.NODE_ENV = "production"
+    logger.error("fail")
+    expect(spy).toHaveBeenCalledWith("fail")
   })
 
   it("redacts sensitive fields", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {})
     process.env.NODE_ENV = "development"
-    logger.log({ password: "123", nested: { token: "abc", ok: "yes" } })
+    logger.debug({ password: "123", nested: { token: "abc", ok: "yes" } })
     expect(spy).toHaveBeenCalledWith({
       password: "[REDACTED]",
       nested: { token: "[REDACTED]", ok: "yes" },

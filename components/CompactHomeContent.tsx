@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { FeaturedHero } from "@/components/FeaturedHero"
@@ -60,7 +61,7 @@ const fetchHomeData = async (): Promise<{
       recentPosts: posts.slice(0, 10),
     }
   } catch (error) {
-    console.error("Error fetching home data:", error)
+    logger.error("Error fetching home data:", error)
     throw error
   }
 }

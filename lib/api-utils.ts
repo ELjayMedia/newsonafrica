@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
+import logger from '@/utils/logger'
 
 export type ApiResponse<T = any> = {
   success: boolean
@@ -32,7 +33,7 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
 }
 
 export function handleApiError(error: unknown): NextResponse<ApiResponse> {
-  console.error("API Error:", error)
+  logger.error("API Error:", error)
 
   if (error instanceof ZodError) {
     const fieldErrors: Record<string, string[]> = {}

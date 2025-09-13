@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 /**
  * WordPress-based post search utility
  */
@@ -74,7 +75,7 @@ export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
     const posts = await response.json()
     return posts || []
   } catch (error) {
-    console.error("WordPress search error:", error)
+    logger.error("WordPress search error:", error)
     // Fallback to local search if API is unavailable
     const localPosts: SearchPost[] = [] // This should be populated with local posts data
     return searchPosts(localPosts, query)

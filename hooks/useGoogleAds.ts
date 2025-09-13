@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useEffect, useState } from "react"
@@ -83,7 +84,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
               setHasError(true)
             }
           } catch (error) {
-            console.error("Error initializing ad slot:", error)
+            logger.error("Error initializing ad slot:", error)
             setHasError(true)
           }
         })
@@ -96,7 +97,7 @@ export function useGoogleAds({ adUnit, width, height, slotId, responsiveSizes }:
           }
         }, 10000) // 10 second timeout
       } catch (error) {
-        console.error("Error in ad initialization:", error)
+        logger.error("Error in ad initialization:", error)
         setHasError(true)
       }
     }

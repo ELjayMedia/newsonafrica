@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import type React from "react"
@@ -140,7 +141,7 @@ export function CommentForm({
         description: "Your comment has been posted successfully",
       })
     } catch (error: any) {
-      console.error("Failed to post comment:", error)
+      logger.error("Failed to post comment:", error)
 
       // Check if this is a schema-related error
       if (

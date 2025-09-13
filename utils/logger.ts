@@ -17,18 +17,29 @@ function sanitize(value: any): any {
   return value
 }
 
-function shouldLog() {
-  return process.env.NODE_ENV === "development"
+type LogLevel = "debug" | "info" | "warn" | "error"
+
+const LEVELS: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
 }
 
-function output(level: "log" | "warn" | "error", ...args: any[]) {
-  if (!shouldLog()) return
+function getEnvLevel() {
+  return process.env.NODE_ENV === "development" ? LEVELS.debug : LEVELS.warn
+}
+
+function output(level: LogLevel, ...args: any[]) {
+  if (LEVELS[level] < getEnvLevel()) return
   const sanitized = args.map(sanitize)
-  ;(console as any)[level](...sanitized)
+  const method = level === "debug" ? "log" : level
+  ;(console as any)[method](...sanitized)
 }
 
 const logger = {
-  log: (...args: any[]) => output("log", ...args),
+  debug: (...args: any[]) => output("debug", ...args),
+  info: (...args: any[]) => output("info", ...args),
   warn: (...args: any[]) => output("warn", ...args),
   error: (...args: any[]) => output("error", ...args),
 }

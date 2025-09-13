@@ -1,21 +1,22 @@
 import { getWpEndpoints } from "@/config/wp"
+import logger from '@/utils/logger'
 
 const { rest } = getWpEndpoints()
 const WORDPRESS_API_URL = rest.replace(/\/wp-json\/wp\/v2$/, "")
 
 if (!WORDPRESS_API_URL) {
-  console.error("WORDPRESS_API_URL is not set in the environment variables.")
+  logger.error("WORDPRESS_API_URL is not set in the environment variables.")
 }
 
 export async function signIn(username: string, password: string) {
   try {
     // Check if API URL is defined
     if (!WORDPRESS_API_URL) {
-      console.error("WORDPRESS_API_URL is not defined in environment variables")
+      logger.error("WORDPRESS_API_URL is not defined in environment variables")
       throw new Error("API configuration error")
     }
 
-    console.log("Attempting to sign in with WordPress API URL:", WORDPRESS_API_URL)
+    logger.debug("Attempting to sign in with WordPress API URL:", WORDPRESS_API_URL)
 
     const response = await fetch(`${WORDPRESS_API_URL}/jwt-auth/v1/token`, {
       method: "POST",
@@ -29,11 +30,11 @@ export async function signIn(username: string, password: string) {
     })
 
     // Log response status to help with debugging
-    console.log("Authentication response status:", response.status)
+    logger.debug("Authentication response status:", response.status)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
-      console.error("Authentication error details:", errorData)
+      logger.error("Authentication error details:", errorData)
       throw new Error(errorData?.message || "Authentication failed")
     }
 
@@ -47,7 +48,7 @@ export async function signIn(username: string, password: string) {
       },
     }
   } catch (error) {
-    console.error("Login error:", error)
+    logger.error("Login error:", error)
 
     // Provide more specific error messages based on the error type
     if (error instanceof TypeError && error.message.includes("fetch")) {
@@ -77,7 +78,7 @@ export async function getCurrentUser(token: string) {
       email: userData.email,
     }
   } catch (error) {
-    console.error("Error fetching current user:", error)
+    logger.error("Error fetching current user:", error)
     throw error
   }
 }
@@ -110,7 +111,7 @@ export async function signUp(username: string, email: string, password: string) 
       },
     }
   } catch (error) {
-    console.error("Registration error:", error)
+    logger.error("Registration error:", error)
     throw new Error("Registration failed")
   }
 }
@@ -133,7 +134,7 @@ export async function resetPassword(email: string) {
 
     return { success: true }
   } catch (error) {
-    console.error("Reset password error:", error)
+    logger.error("Reset password error:", error)
     throw new Error("Reset password request failed")
   }
 }

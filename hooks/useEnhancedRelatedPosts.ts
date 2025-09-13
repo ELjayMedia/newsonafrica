@@ -1,3 +1,4 @@
+import logger from '@/utils/logger'
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -144,7 +145,7 @@ export function useEnhancedRelatedPosts({
         // Preloading disabled in simplified API
       }
     } catch (err) {
-      console.error("Failed to fetch enhanced related posts:", err)
+      logger.error("Failed to fetch enhanced related posts:", err)
       setState({
         posts: [],
         loading: false,
