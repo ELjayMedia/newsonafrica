@@ -1,7 +1,7 @@
 "use client"
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
-import { getPostsByCategory } from "@/lib/api/wordpress"
+import { getPostsByCategory } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"

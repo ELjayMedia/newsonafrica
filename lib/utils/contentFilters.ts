@@ -1,4 +1,4 @@
-import type { WordPressPost } from "@/lib/api/wordpress"
+import type { WordPressPost } from "@/lib/wordpress-api"
 
 /**
  * Filter posts by tag

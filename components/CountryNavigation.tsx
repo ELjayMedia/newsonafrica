@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin } from "lucide-react"
-import { COUNTRIES } from "@/lib/api/wordpress"
+import { COUNTRIES } from "@/lib/wordpress-api"
 
 export function CountryNavigation() {
   const [showAll, setShowAll] = useState(false)

@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { getPostBySlug, getLatestPosts } from "@/lib/api/wordpress"
+import { getPostBySlug, getLatestPosts } from "@/lib/wordpress-api"
 import { PostClientContent } from "@/components/PostClientContent"
 import { PostSkeleton } from "@/components/PostSkeleton"
 

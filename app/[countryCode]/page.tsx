@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import { COUNTRIES } from "@/lib/api/wordpress"
+import { COUNTRIES } from "@/lib/wordpress-api"
 import { CountryEditionContent } from "./CountryEditionContent"
 import { CountryEditionSkeleton } from "./CountryEditionSkeleton"
 
