@@ -17,7 +17,7 @@ import {
   getCategoriesForCountry,
   getPostsByCategoryForCountry,
 } from "@/lib/wordpress-api"
-import { getCurrentCountry } from "@/lib/utils/routing"
+import { getCurrentCountry, getArticleUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
@@ -316,7 +316,7 @@ export function HomeContent({
         finalFeaturedPosts?.map((post, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: `${siteConfig.url}/post/${post.slug}`,
+          url: `${siteConfig.url}${getArticleUrl(post.slug)}`,
           name: post.title,
         })) || [],
     },

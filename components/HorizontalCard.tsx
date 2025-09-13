@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { formatDistanceToNow } from "date-fns"
 import Fuse from "fuse.js"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface HorizontalCardProps {
   post: {
@@ -37,7 +38,7 @@ export function HorizontalCard({ post, className = "", allowHtml = false }: Hori
   const result = fuse.search("")
 
   return (
-    <Link href={`/post/${post.slug}`} className={`block ${className}`}>
+    <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
       <div className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
         {/* Image container - left side */}
         <div className="sm:w-1/3 h-40 sm:h-auto relative">

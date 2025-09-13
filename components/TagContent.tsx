@@ -8,6 +8,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { fetchPostsByTag } from "@/lib/wordpress-api"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface TagContentProps {
   slug: string
@@ -48,7 +49,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
           {posts.map((post) => (
             <div key={post.id} className="border rounded-lg overflow-hidden shadow-md">
               <Link
-                href={`/post/${post.slug}`}
+                href={getArticleUrl(post.slug)}
                 className="flex items-start p-3 hover:bg-gray-50 transition-colors duration-200"
               >
                 <div className="relative w-20 h-20 flex-shrink-0 mr-3">

@@ -31,6 +31,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
@@ -317,7 +318,7 @@ export default function BookmarksContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <Link href={`/post/${bookmark.slug}`} className="block hover:text-blue-600 transition-colors">
+                        <Link href={getArticleUrl(bookmark.slug)} className="block hover:text-blue-600 transition-colors">
                           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
                         </Link>
 
