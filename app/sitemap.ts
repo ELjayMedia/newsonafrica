@@ -5,15 +5,46 @@ import { siteConfig } from "@/config/site"
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
-  try {
-    // Fetch all necessary data in parallel with increased limits
-    const [posts, categories, tags, authors] = await Promise.all([
-      fetchPosts(1000), // Increased limit to ensure we get all posts
-      fetchCategories(),
-      fetchTags(),
-      fetchAuthors(),
-    ])
+  const postsPromise = fetchPosts(1000).catch((err) => {
+    console.warn(
+      "Failed to fetch posts for sitemap:",
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  })
 
+  const categoriesPromise = fetchCategories().catch((err) => {
+    console.warn(
+      "Failed to fetch categories for sitemap:",
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  })
+
+  const tagsPromise = fetchTags().catch((err) => {
+    console.warn(
+      "Failed to fetch tags for sitemap:",
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  })
+
+  const authorsPromise = fetchAuthors().catch((err) => {
+    console.warn(
+      "Failed to fetch authors for sitemap:",
+      err instanceof Error ? err.message : err,
+    )
+    return []
+  })
+
+  const [posts, categories, tags, authors] = await Promise.all([
+    postsPromise,
+    categoriesPromise,
+    tagsPromise,
+    authorsPromise,
+  ])
+
+  try {
     // Static pages
     const staticPages = [
       {
@@ -87,7 +118,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Post pages - include all metadata needed for news sitemaps
     const postPages = posts.map((post) => {
       const postDate = new Date(post.modified || post.date)
-      const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
+      const isRecent =
+        Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
 
       return {
         url: `${baseUrl}/post/${post.slug}`,
@@ -103,7 +135,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               },
               publicationDate: postDate,
               title: post.title,
-              keywords: post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
+              keywords:
+                post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
             }
           : undefined,
         // Image data if available
@@ -144,11 +177,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
 
     // Combine all pages
-    return [...staticPages, ...postPages, ...categoryPages, ...tagPages, ...authorPages].filter(
-      (page) => !page.url.includes("/video-analysis") && !page.url.includes("/video-dashboard"),
+    return [
+      ...staticPages,
+      ...postPages,
+      ...categoryPages,
+      ...tagPages,
+      ...authorPages,
+    ].filter(
+      (page) =>
+        !page.url.includes("/video-analysis") &&
+        !page.url.includes("/video-dashboard"),
     )
   } catch (error) {
-    console.error("Error generating sitemap:", error)
+    console.warn(
+      "Error generating sitemap:",
+      error instanceof Error ? error.message : error,
+    )
 
     // Return minimal sitemap in case of error
     return [
@@ -161,3 +205,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]
   }
 }
+
