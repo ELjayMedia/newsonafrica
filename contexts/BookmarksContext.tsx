@@ -171,7 +171,10 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           title: post.title || "Untitled Post",
           slug: post.slug || "",
           excerpt: post.excerpt || "",
-          featured_image: post.featured_image ? JSON.stringify(post.featured_image) : null,
+          featured_image:
+            post.featured_image && typeof post.featured_image === "object"
+              ? post.featured_image
+              : null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
@@ -218,9 +221,17 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
+        const sanitizedUpdates = { ...updates }
+        if ("featured_image" in sanitizedUpdates) {
+          sanitizedUpdates.featured_image =
+            sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
+              ? sanitizedUpdates.featured_image
+              : null
+        }
+
         const { data, error } = await supabase
           .from("bookmarks")
-          .update(updates)
+          .update(sanitizedUpdates)
           .eq("user_id", user.id)
           .eq("post_id", postId)
           .select()

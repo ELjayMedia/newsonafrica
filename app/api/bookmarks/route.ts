@@ -132,7 +132,8 @@ export async function POST(request: NextRequest) {
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
-      featured_image: featuredImage ? JSON.stringify(featuredImage) : null,
+      featured_image:
+        featuredImage && typeof featuredImage === "object" ? featuredImage : null,
       category: category || null,
       tags: tags || null,
       read_status: "unread" as const,
@@ -174,9 +175,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 })
     }
 
+    const sanitizedUpdates = { ...updates }
+    if ("featuredImage" in sanitizedUpdates) {
+      sanitizedUpdates.featured_image =
+        sanitizedUpdates.featuredImage && typeof sanitizedUpdates.featuredImage === "object"
+          ? sanitizedUpdates.featuredImage
+          : null
+      delete sanitizedUpdates.featuredImage
+    } else if ("featured_image" in sanitizedUpdates) {
+      sanitizedUpdates.featured_image =
+        sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
+          ? sanitizedUpdates.featured_image
+          : null
+    }
+
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(updates)
+      .update(sanitizedUpdates)
       .eq("user_id", user.id)
       .eq("post_id", postId)
       .select()
