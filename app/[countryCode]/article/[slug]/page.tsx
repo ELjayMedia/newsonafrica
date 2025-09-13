@@ -45,55 +45,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
 
+  let post: any
   try {
-    const post = await getPostBySlugForCountry(params.countryCode, params.slug)
-
-    if (!post) {
-      return {
-        title: "Article Not Found - News On Africa",
-        description: "The requested article could not be found.",
-        robots: { index: false, follow: false },
-        alternates: {
-          canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
-        },
-      }
-    }
-
-    const rawExcerpt =
-      typeof post.excerpt === "string"
-        ? post.excerpt
-        : post.excerpt?.rendered || ""
-    const cleanExcerpt = rawExcerpt.replace(/<[^>]*>/g, "").trim()
-    const description =
-      post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
-    const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-    const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
-    const authorName = post.author?.node?.name ?? "Unknown"
-
-    return {
-      title: post.seo?.title || `${post.title} - News On Africa`,
-      description,
-      authors: [{ name: authorName }],
-      alternates: { canonical: canonicalUrl },
-      robots: { index: true, follow: true },
-      openGraph: {
-        type: "article",
-        title: post.title,
-        description,
-        url: canonicalUrl,
-        siteName: "News On Africa",
-        publishedTime: post.date,
-        modifiedTime: post.modified || post.date,
-        authors: [authorName],
-        images: [{ url: featuredImageUrl, width: 1200, height: 630, alt: post.title }],
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: post.title,
-        description,
-        images: [{ url: featuredImageUrl, alt: post.title }],
-      },
-    }
+    post = await getPostBySlugForCountry(params.countryCode, params.slug)
   } catch (error) {
     console.error(`❌ Error generating metadata:`, error)
     return {
@@ -104,28 +58,74 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
     }
   }
+
+  if (!post) {
+    return {
+      title: "Article Not Found - News On Africa",
+      description: "The requested article could not be found.",
+      robots: { index: false, follow: false },
+      alternates: {
+        canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+      },
+    }
+  }
+
+  const rawExcerpt =
+    typeof post.excerpt === "string" ? post.excerpt : post.excerpt?.rendered || ""
+  const cleanExcerpt = rawExcerpt.replace(/<[^>]*>/g, "").trim()
+  const description =
+    post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
+  const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
+  const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
+  const authorName = post.author?.node?.name ?? "Unknown"
+
+  return {
+    title: post.seo?.title || `${post.title} - News On Africa`,
+    description,
+    authors: [{ name: authorName }],
+    alternates: { canonical: canonicalUrl },
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description,
+      url: canonicalUrl,
+      siteName: "News On Africa",
+      publishedTime: post.date,
+      modifiedTime: post.modified || post.date,
+      authors: [authorName],
+      images: [{ url: featuredImageUrl, width: 1200, height: 630, alt: post.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: [{ url: featuredImageUrl, alt: post.title }],
+    },
+  }
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
 
+  let post: any
   try {
-    const post = await getPostBySlugForCountry(params.countryCode, params.slug)
-
-    if (!post) {
-      console.warn(`⚠️ Article not found: ${params.countryCode}/${params.slug}`)
-      notFound()
-    }
-
-    return (
-      <Suspense fallback={<ArticleSkeleton />}>
-        <ArticleWrapper post={post} params={params} />
-      </Suspense>
-    )
+    post = await getPostBySlugForCountry(params.countryCode, params.slug)
   } catch (error) {
     console.error(`❌ Error fetching article:`, error)
-    throw error
+    return <ArticleErrorFallback />
   }
+
+  if (!post) {
+    console.warn(`⚠️ Article not found: ${params.countryCode}/${params.slug}`)
+    notFound()
+  }
+
+  return (
+    <Suspense fallback={<ArticleSkeleton />}>
+      <ArticleWrapper post={post} params={params} />
+    </Suspense>
+  )
 }
 
 function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps["params"] }) {
@@ -167,6 +167,14 @@ function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps[
       />
 
       <ArticleClientContent slug={params.slug} countryCode={params.countryCode} initialData={post} />
+    </div>
+  )
+}
+
+function ArticleErrorFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p>Article temporarily unavailable</p>
     </div>
   )
 }
