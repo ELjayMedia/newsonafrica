@@ -48,7 +48,11 @@ interface TransferData {
 }
 
 async function getUserIdByEmail(client: SupabaseClient, email: string) {
-  const { data, error } = await client.from("profiles").select("id").eq("email", email).single()
+  const { data, error } = await (client as any)
+    .from("users", { schema: "auth" })
+    .select("id")
+    .eq("email", email)
+    .single()
   if (error || !data) {
     throw new Error("User not found")
   }
