@@ -90,10 +90,7 @@
       ]
     }
   ],
-  "buildCommand": "pnpm vercel-build",
-  "installCommand": "pnpm install --frozen-lockfile",
   "env": {
-    "NEXT_PUBLIC_SITE_URL": "https://app.newsonafrica.com",
-    "NEXT_TELEMETRY_DISABLED": "1"
+    "NEXT_PUBLIC_SITE_URL": "https://app.newsonafrica.com"
   }
 }
