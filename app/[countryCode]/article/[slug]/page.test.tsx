@@ -1,23 +1,25 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 
-vi.mock("@/lib/wordpress-api", () => ({
-  getLatestPostsForCountry: vi.fn(),
-}));
-vi.mock("@/lib/wp", () => ({
-  fetchPost: vi.fn(),
+vi.mock('@/lib/wp-data', () => ({
+  getPostBySlug: vi.fn(),
 }));
 
-import ArticlePage from "./page";
-import { fetchPost } from "@/lib/wp";
+vi.mock('./ArticleClientContent', () => ({
+  ArticleClientContent: ({ initialData }: { initialData: any }) => (
+    <div>{initialData.title}</div>
+  ),
+}));
 
-describe("ArticlePage", () => {
-  it("renders fallback content when WordPress is unreachable", async () => {
-    vi.mocked(fetchPost).mockRejectedValue(new Error("Service Unavailable"));
-    const ui = await ArticlePage({ params: { countryCode: "sz", slug: "test" } });
+import Page from './page';
+import { getPostBySlug } from '@/lib/wp-data';
+
+describe('ArticlePage', () => {
+  it('renders post content', async () => {
+    vi.mocked(getPostBySlug).mockResolvedValue({ title: 'Hello', slug: 'test' });
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } });
     render(ui);
-    expect(
-      screen.getByText("Article temporarily unavailable")
-    ).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    expect(getPostBySlug).toHaveBeenCalledWith('SZ', 'test');
   });
 });

@@ -67,6 +67,8 @@
     "embla-carousel-react": "latest",
     "fs": "latest",
     "fuse.js": "latest",
+    "graphql": "^16.9.0",
+    "graphql-request": "^7.1.1",
     "happy-dom": "18.0.1",
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",

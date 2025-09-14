@@ -1,0 +1,18 @@
+fragment PostCard on Post {
+  id
+  slug
+  date
+  title
+  excerpt
+  featuredImage {
+    node {
+      sourceUrl
+    }
+  }
+  categories {
+    nodes {
+      name
+      slug
+    }
+  }
+}
