@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { getPostBySlugForCountry, getLatestPostsForCountry } from "@/lib/wordpress-api"
+import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleSkeleton } from "./ArticleSkeleton"
 
@@ -16,11 +17,10 @@ interface ArticlePageProps {
 export async function generateStaticParams() {
   console.log("🚀 Starting generateStaticParams for country articles...")
 
-  const supportedCountries = ["sz", "za"]
   const staticParams: { countryCode: string; slug: string }[] = []
   try {
     await Promise.all(
-      supportedCountries.map(async (countryCode) => {
+      SUPPORTED_COUNTRIES.map(async (countryCode) => {
         try {
           console.log(`📡 Fetching posts for ${countryCode}...`)
           const { posts } = await getLatestPostsForCountry(countryCode, 100)
@@ -55,6 +55,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { countryCode, slug } = await params
   console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
+  const canonicalUrl = `https://newsonafrica.com${getArticleUrl(slug, countryCode)}`
+
   let post: any
   try {
     post = await getPostBySlugForCountry(countryCode, slug)
@@ -64,7 +66,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       title: "Article - News On Africa",
       description: "Read the latest news from Africa.",
       alternates: {
-        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
+        canonical: canonicalUrl,
       },
     }
   }
@@ -74,9 +76,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       title: "Article Not Found - News On Africa",
       description: "The requested article could not be found.",
       robots: { index: false, follow: false },
-      alternates: {
-        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
-      },
+      alternates: { canonical: canonicalUrl },
     }
   }
 
@@ -86,7 +86,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const description =
     post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
   const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-  const canonicalUrl = `https://newsonafrica.com/${countryCode}/article/${slug}`
   const authorName = post.author?.node?.name ?? "Unknown"
 
   return {
@@ -171,7 +170,7 @@ function ArticleWrapper({ post, params }: { post: any; params: RouteParams }) {
                 url: "https://newsonafrica.com/news-on-africa-logo.png",
               },
             },
-            mainEntityOfPage: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+            mainEntityOfPage: `https://newsonafrica.com${getArticleUrl(params.slug, params.countryCode)}`,
             articleSection: post.categories?.nodes?.[0]?.name || "News",
           }),
         }}
