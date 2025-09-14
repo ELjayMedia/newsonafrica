@@ -8,6 +8,7 @@ import { ArticleList } from "@/components/ArticleList"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getCategoryUrl } from "@/lib/utils/routing"
 import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -178,7 +179,7 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories?.slice(0, 10).map((category) => (
-              <Link key={category.id} href={`/category/${category.slug}`} className="flex-shrink-0">
+              <Link key={category.id} href={getCategoryUrl(category.slug)} className="flex-shrink-0">
                 <Badge
                   variant="secondary"
                   className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"

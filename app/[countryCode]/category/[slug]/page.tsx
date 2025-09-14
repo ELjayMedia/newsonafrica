@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import { getServerCountry } from "@/lib/utils/routing"
+import { getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {
-  params: { slug: string }
+  params: { countryCode: string; slug: string }
 }
 
 // Static generation configuration
@@ -17,34 +17,36 @@ export async function generateStaticParams() {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
 
   try {
-    const categories = await circuitBreaker.execute(
-      "wordpress-categories-static",
-      async () => await getCategoriesForCountry(getServerCountry()),
-      async () => {
-        console.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
-        return []
-      },
-    )
+    const allParams: { countryCode: string; slug: string }[] = []
+    for (const country of SUPPORTED_COUNTRIES) {
+      const categories = await circuitBreaker.execute(
+        "wordpress-categories-static",
+        async () => await getCategoriesForCountry(country),
+        async () => {
+          console.log(
+            `[v0] Categories static generation: Using fallback due to WordPress unavailability for ${country}`,
+          )
+          return []
+        },
+      )
 
-    // Return the first 50 most important categories for static generation
-    // Others will be generated on-demand
-    return categories.slice(0, 50).map((category) => ({
-      slug: category.slug,
-    }))
+      allParams.push(...categories.slice(0, 50).map((category) => ({ countryCode: country, slug: category.slug })))
+    }
+
+    return allParams
   } catch (error) {
     console.error("Error generating static params for categories:", error)
-    // Return empty array to allow all pages to be generated on-demand
     return []
   }
 }
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for category: ${params.slug}`)
+  console.log(`🔍 Generating metadata for category: ${params.countryCode}/${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const country = getServerCountry()
+  const country = params.countryCode
   const cacheKey = `category-metadata-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
@@ -57,11 +59,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     const result = await circuitBreaker.execute(
       "wordpress-category-metadata",
       async () => {
-        const { category, posts } = await getPostsByCategoryForCountry(
-          country,
-          params.slug,
-          10,
-        )
+        const { category, posts } = await getPostsByCategoryForCountry(country, params.slug, 10)
 
         if (!category) {
           console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
@@ -74,7 +72,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `https://newsonafrica.com/category/${params.slug}`,
+              canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
@@ -91,7 +89,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
+        const canonicalUrl = `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -202,9 +200,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             index: false,
             follow: true,
           },
-          alternates: {
-            canonical: `https://newsonafrica.com/category/${params.slug}`,
-          },
+            alternates: {
+              canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
+            },
         }
       },
     )
@@ -226,10 +224,10 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com/category/${params.slug}`,
+        canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
       },
-    }
   }
+}
 }
 
 // Server component that fetches data and renders the page
@@ -237,7 +235,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const country = getServerCountry()
+  const country = params.countryCode
   const cacheKey = `category-data-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
@@ -245,11 +243,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
     const categoryData = await circuitBreaker.execute(
       "wordpress-category-data",
       async () => {
-        const data = await getPostsByCategoryForCountry(
-          country,
-          params.slug,
-          20,
-        )
+        const data = await getPostsByCategoryForCountry(country, params.slug, 20)
 
         if (!data.category) {
           notFound()
