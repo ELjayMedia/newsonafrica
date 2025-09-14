@@ -2,6 +2,8 @@ import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
 import { GraphQLClient, gql } from 'graphql-request'
+import * as log from './log'
+import { fetchWithTimeout } from './utils/fetchWithTimeout'
 
 export interface WordPressImage {
   sourceUrl?: string
@@ -170,12 +172,14 @@ export async function fetchFromWpGraphQL<T>(
   variables?: Record<string, any>,
 ): Promise<T | null> {
   const base = getWpEndpoints(countryCode).graphql
-  const client = new GraphQLClient(base, { fetch })
+  const client = new GraphQLClient(base, {
+    fetch: (input, init) => fetchWithTimeout(input, { ...init, timeout: 10000 }),
+  })
   const operation = async (): Promise<T | null> => {
     try {
       return await client.request<T>(query, variables)
     } catch (error) {
-      console.error(`[v0] WordPress GraphQL request failed for ${base}`, error)
+      log.error(`[v0] WordPress GraphQL request failed for ${base}`, { error })
       throw error
     }
   }
@@ -183,7 +187,7 @@ export async function fetchFromWpGraphQL<T>(
   try {
     return await circuitBreaker.execute<T | null>(base, operation, async () => null)
   } catch (error) {
-    console.error(`[v0] Circuit breaker error for ${base}`, error)
+    log.error(`[v0] Circuit breaker error for ${base}`, { error })
     return null
   }
 }
@@ -370,6 +374,7 @@ const FEATURED_POSTS_QUERY = gql`
 export async function fetchFromWp<T>(
   countryCode: string,
   query: { endpoint: string; params?: Record<string, any> },
+  timeout = 10000,
 ): Promise<T | null> {
   const base = getWpEndpoints(countryCode).rest
   const params = new URLSearchParams(
@@ -379,12 +384,13 @@ export async function fetchFromWp<T>(
 
   const operation = async (): Promise<T | null> => {
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         next: { revalidate: 300 },
+        timeout,
       })
       if (!res.ok) {
-        console.error(`[v0] WordPress API error ${res.status} for ${url}`)
+        log.error(`[v0] WordPress API error ${res.status} for ${url}`)
         return null
       }
       const data = await res.json()
@@ -396,7 +402,7 @@ export async function fetchFromWp<T>(
       }
       return data as T
     } catch (error) {
-      console.error(`[v0] WordPress API request failed for ${url}`, error)
+      log.error(`[v0] WordPress API request failed for ${url}`, { error })
       throw error
     }
   }
@@ -404,7 +410,7 @@ export async function fetchFromWp<T>(
   try {
     return await circuitBreaker.execute<T | null>(url, operation, async () => null)
   } catch (error) {
-    console.error(`[v0] Circuit breaker error for ${url}`, error)
+    log.error(`[v0] Circuit breaker error for ${url}`, { error })
     return null
   }
 }

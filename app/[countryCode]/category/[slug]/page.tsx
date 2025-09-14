@@ -3,36 +3,42 @@ import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
 import CategoryClientPage from "../../../category/[slug]/CategoryClientPage"
 import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import * as log from "@/lib/log"
 
 interface Params {
   countryCode: string
   slug: string
 }
 
-export const revalidate = 60
+export const revalidate = 300
 export const dynamicParams = true
 
-export async function generateStaticParams() {
-  const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
-  const params: { countryCode: string; slug: string }[] = []
-  for (const country of SUPPORTED_COUNTRIES) {
-    try {
-      const categories = await circuitBreaker.execute(
-        `wordpress-categories-static-${country}`,
-        async () => await getCategoriesForCountry(country),
-        async () => [],
-      )
-      params.push(
-        ...categories.slice(0, 50).map((category) => ({
-          countryCode: country,
-          slug: category.slug,
-        })),
-      )
-    } catch (error) {
-      console.error(`Error generating static params for ${country} categories:`, error)
+export async function generateStaticParams(): Promise<Params[]> {
+  try {
+    const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
+    const params: Params[] = []
+    for (const country of SUPPORTED_COUNTRIES) {
+      try {
+        const categories = await circuitBreaker.execute(
+          `wordpress-categories-static-${country}`,
+          async () => await getCategoriesForCountry(country),
+          async () => [],
+        )
+        params.push(
+          ...categories.slice(0, 50).map((category) => ({
+            countryCode: country,
+            slug: category.slug,
+          })),
+        )
+      } catch (error) {
+        log.error(`Error generating static params for ${country} categories`, { error })
+      }
     }
+    return params
+  } catch (error) {
+    log.error("generateStaticParams for country categories failed", { error })
+    return []
   }
-  return params
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -163,7 +169,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     enhancedCache.set(cacheKey, metadata, 60 * 60)
     return metadata
   } catch (error) {
-    console.error(`❌ Error generating metadata for category ${slug}:`, error)
+    log.error(`Error generating metadata for category ${slug}`, { error })
     return {
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
@@ -174,11 +180,21 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 }
 
-export default async function CountryCategoryPage({ params }: { params: Params }) {
+interface CountryCategoryPageProps {
+  params: Params
+  searchParams?: Record<string, string | string[] | undefined>
+}
+
+export default async function CountryCategoryPage({ params }: CountryCategoryPageProps) {
   const { countryCode, slug } = params
-  const data = await getPostsByCategoryForCountry(countryCode, slug, 20)
-  if (!data.category) {
-    notFound()
+  try {
+    const data = await getPostsByCategoryForCountry(countryCode, slug, 20)
+    if (!data.category) {
+      return notFound()
+    }
+    return <CategoryClientPage params={{ slug }} initialData={data} />
+  } catch (error) {
+    log.error(`Error fetching category ${slug} for ${countryCode}`, { error })
+    return notFound()
   }
-  return <CategoryClientPage params={{ slug }} initialData={data} />
 }

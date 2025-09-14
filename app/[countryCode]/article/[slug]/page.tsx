@@ -3,21 +3,23 @@ import { getPostBySlug } from '@/lib/wp-data';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
 import { ArticleClientContent } from './ArticleClientContent';
+import * as log from '@/lib/log';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 interface ArticlePageProps {
   params: { countryCode: string; slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }
 
 export default async function Page({ params }: ArticlePageProps) {
   const country = (params.countryCode || 'DEFAULT').toUpperCase();
-  let post;
+  let post: WordPressPost | null = null;
 
   try {
     post = await getPostBySlug(country, params.slug);
   } catch (error) {
-    console.error('GraphQL getPostBySlug failed, falling back to REST', error);
+    log.error('getPostBySlug failed', { error });
   }
 
   if (!post) {
@@ -27,13 +29,15 @@ export default async function Page({ params }: ArticlePageProps) {
           country,
           wordpressQueries.postBySlug(params.slug),
         )) || [];
-      post = restPosts[0];
+      post = restPosts[0] || null;
     } catch (error) {
-      console.error('REST postBySlug fetch failed', error);
+      log.error('REST postBySlug fetch failed', { error });
     }
   }
 
-  if (!post) notFound();
+  if (!post) {
+    return notFound();
+  }
 
   return (
     <ArticleClientContent slug={params.slug} countryCode={country} initialData={post} />
