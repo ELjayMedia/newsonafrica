@@ -51,8 +51,6 @@ export async function GET(request: NextRequest) {
       // Revalidate main content paths
       const contentPaths = [
         "/",
-        "/news",
-        "/business",
         "/sport",
         "/entertainment",
         "/life",
@@ -77,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     if (type === "sitemaps" || type === "all") {
       // Revalidate all sitemap paths
-      const sitemapPaths = ["/sitemap.xml", "/news-sitemap.xml", "/sitemap-index.xml", "/server-sitemap.xml"]
+      const sitemapPaths = ["/sitemap.xml", "/sitemap-index.xml", "/server-sitemap.xml"]
 
       sitemapPaths.forEach((path) => {
         revalidatePath(path)

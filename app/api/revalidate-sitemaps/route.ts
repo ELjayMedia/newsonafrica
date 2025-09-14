@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
 
     // Revalidate all sitemap paths
     revalidatePath("/sitemap.xml")
-    revalidatePath("/news-sitemap.xml")
     revalidatePath("/sitemap-index.xml")
 
     return NextResponse.json({

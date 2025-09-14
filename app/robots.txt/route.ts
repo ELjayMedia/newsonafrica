@@ -15,7 +15,6 @@ Disallow: /_next/
 # Sitemaps
 Sitemap: ${baseUrl}/sitemap-index.xml
 Sitemap: ${baseUrl}/sitemap.xml
-Sitemap: ${baseUrl}/news-sitemap.xml
 Sitemap: ${baseUrl}/server-sitemap.xml
 
 Host: ${baseUrl}

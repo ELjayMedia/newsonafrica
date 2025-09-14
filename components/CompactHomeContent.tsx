@@ -196,7 +196,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                 <TrendingUp className="h-4 w-4 text-red-500" />
                 Quick Reads
               </h2>
-              <Link href="/news" className="text-xs text-blue-600 flex items-center gap-1">
+              <Link href={getCategoryUrl("news") as string} className="text-xs text-blue-600 flex items-center gap-1">
                 More <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
@@ -217,7 +217,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
             <div className="bg-white rounded-lg shadow-sm">
               <div className="flex items-center justify-between p-2 border-b border-gray-100">
                 <h2 className="text-sm font-bold">Trending Now</h2>
-                <Link href="/news" className="text-xs text-blue-600">
+                <Link href={getCategoryUrl("news") as string} className="text-xs text-blue-600">
                   View All
                 </Link>
               </div>
