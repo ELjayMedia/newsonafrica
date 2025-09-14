@@ -93,6 +93,7 @@ export default function RetryBanner({
     }, retryInterval)
 
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline])
 
   const handleRetry = async () => {

@@ -7,8 +7,11 @@ import { ArticleSkeleton } from "./ArticleSkeleton"
 
 export const revalidate = 300 // Revalidate every 5 minutes
 
-interface ArticlePageProps {
-  params: { countryCode: string; slug: string }
+type RouteParams = { countryCode: string; slug: string }
+
+type ArticlePageProps = {
+  params: RouteParams
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 export async function generateStaticParams() {
@@ -49,7 +52,11 @@ export async function generateStaticParams() {
   }
 }
 
-export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: RouteParams
+}): Promise<Metadata> {
   console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
 
   let post: any
@@ -112,7 +119,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   }
 }
 
-export default async function ArticlePage({ params }: ArticlePageProps) {
+export default async function Page({ params }: ArticlePageProps) {
   console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
 
   let post: any
@@ -135,7 +142,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   )
 }
 
-function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps["params"] }) {
+function ArticleWrapper({ post, params }: { post: any; params: RouteParams }) {
   const rawExcerpt =
     typeof post.excerpt === "string"
       ? post.excerpt
