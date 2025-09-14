@@ -7,6 +7,7 @@ import {
   type WordPressPost,
 } from './wordpress-api';
 import { wordpressQueries } from './wordpress-queries';
+import * as log from './log';
 
 const COUNTRY_SLUGS: Record<string, string> = {
   SZ: 'sz',
@@ -34,7 +35,7 @@ export async function getPostsByCountry(
     const data = await client.request(PostsByCountryDocument, vars);
     return data.posts;
   } catch (error) {
-    console.error('GraphQL getPostsByCountry failed, falling back to REST', error);
+    log.error('GraphQL getPostsByCountry failed, falling back to REST', { error });
     const limit = opts?.first ?? 20;
     const restData = opts?.category
       ? await getPostsByCategoryForCountry(countryIso, opts.category, limit)
@@ -53,7 +54,7 @@ export async function getPostBySlug(countryIso: string, slug: string) {
     const data = await client.request(PostBySlugDocument, { slug });
     return data.postBy;
   } catch (error) {
-    console.error('GraphQL getPostBySlug failed, falling back to REST', error);
+    log.error('GraphQL getPostBySlug failed, falling back to REST', { error });
     const posts =
       (await fetchFromWp<WordPressPost[]>(
         countryIso,

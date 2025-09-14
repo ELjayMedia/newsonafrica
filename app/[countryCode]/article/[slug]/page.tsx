@@ -4,20 +4,24 @@ import { getPostBySlug } from '@/lib/wp-data';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
 import { ArticleClientContent } from './ArticleClientContent';
+import * as log from '@/lib/log';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
-export default async function Page({
-  params,
-}: PageProps<{ countryCode: string; slug: string }>) {
-  const { countryCode, slug } = await params;
-  const country = (countryCode || 'DEFAULT').toUpperCase();
-  let post;
+interface ArticlePageProps {
+  params: { countryCode: string; slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export default async function Page({ params }: ArticlePageProps) {
+  const country = (params.countryCode || 'DEFAULT').toUpperCase();
+  let post: WordPressPost | null = null;
+
 
   try {
     post = await getPostBySlug(country, slug);
   } catch (error) {
-    console.error('GraphQL getPostBySlug failed, falling back to REST', error);
+    log.error('getPostBySlug failed', { error });
   }
 
   if (!post) {
@@ -27,13 +31,15 @@ export default async function Page({
           country,
           wordpressQueries.postBySlug(slug),
         )) || [];
-      post = restPosts[0];
+      post = restPosts[0] || null;
     } catch (error) {
-      console.error('REST postBySlug fetch failed', error);
+      log.error('REST postBySlug fetch failed', { error });
     }
   }
 
-  if (!post) notFound();
+  if (!post) {
+    return notFound();
+  }
 
   return (
     <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
