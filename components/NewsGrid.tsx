@@ -50,7 +50,7 @@ export const NewsGrid = memo(function NewsGrid({
       onLoadMore()
       setTimeout(() => setIsFetching(false), 500)
     }
-  }, [onLoadMore, isAuthorPage])
+  }, [onLoadMore, isAuthorPage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Use the infinite scroll hook with the memoized callback
   const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
