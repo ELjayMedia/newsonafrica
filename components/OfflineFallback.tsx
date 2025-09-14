@@ -32,7 +32,9 @@ export default function OfflineFallback({
 
   useEffect(() => {
     loadCachedContent()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadCachedContent = async () => {
     if (!showCachedContent) {

@@ -11,7 +11,7 @@ type RouteParams = { countryCode: string; slug: string }
 
 type ArticlePageProps = {
   params: RouteParams
-  searchParams?: { [key: string]: string | string[] | undefined }
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 export async function generateStaticParams() {
@@ -52,9 +52,12 @@ export async function generateStaticParams() {
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<RouteParams> }): Promise<Metadata> {
-  const { countryCode, slug } = await params
-  console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
+export async function generateMetadata({
+  params,
+}: {
+  params: RouteParams
+}): Promise<Metadata> {
+  console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
 
   let post: any
   try {
@@ -116,7 +119,7 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
   }
 }
 
-export default async function ArticlePage({ params }: ArticlePageProps) {
+export default async function Page({ params }: ArticlePageProps) {
   console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
 
   let post: any
@@ -139,7 +142,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   )
 }
 
-function ArticleWrapper({ post, params }: { post: any; params: ArticlePageProps["params"] }) {
+function ArticleWrapper({ post, params }: { post: any; params: RouteParams }) {
   const rawExcerpt =
     typeof post.excerpt === "string"
       ? post.excerpt
