@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -36,7 +37,7 @@ export function SubscribeContent() {
   const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId)
 
   const handleSuccess = (reference: string, responseData: any) => {
-    console.log("Subscription successful, storing data and redirecting...", { reference, responseData })
+    logger.log("Subscription successful, storing data and redirecting...", { reference, responseData })
 
     try {
       // Prevent multiple redirects
@@ -60,7 +61,7 @@ export function SubscribeContent() {
         router.push("/welcome")
       }, 1500)
     } catch (error) {
-      console.error("Error in handleSuccess:", error)
+      logger.error("Error in handleSuccess:", error)
       setIsRedirecting(false)
       toast({
         title: "Error",
@@ -71,7 +72,7 @@ export function SubscribeContent() {
   }
 
   const handleError = (error: string) => {
-    console.error("Payment error:", error)
+    logger.error("Payment error:", error)
     toast({
       title: "Payment Failed",
       description: "There was an error processing your payment. Please try again or contact support.",

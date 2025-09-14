@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
@@ -110,7 +111,7 @@ export function CommentItem({
       })
       onCommentUpdated()
     } catch (error) {
-      console.error("Failed to delete comment:", error)
+      logger.error("Failed to delete comment:", error)
       toast({
         title: "Delete failed",
         description: "Failed to delete your comment. Please try again.",
@@ -138,7 +139,7 @@ export function CommentItem({
       })
       onCommentUpdated()
     } catch (error) {
-      console.error("Failed to update comment:", error)
+      logger.error("Failed to update comment:", error)
       toast({
         title: "Update failed",
         description: "Failed to update your comment. Please try again.",
@@ -175,7 +176,7 @@ export function CommentItem({
       setIsReportDialogOpen(false)
       setReportReason("")
     } catch (error) {
-      console.error("Failed to report comment:", error)
+      logger.error("Failed to report comment:", error)
       toast({
         title: "Report failed",
         description: "Failed to report this comment. Please try again.",

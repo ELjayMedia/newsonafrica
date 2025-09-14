@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import type React from "react"
 
@@ -49,7 +50,7 @@ export function SearchBox({
           setSuggestions(data.suggestions || [])
         }
       } catch (error) {
-        console.error("Error fetching suggestions:", error)
+        logger.error("Error fetching suggestions:", error)
       }
     }, 300)
 
@@ -72,7 +73,7 @@ export function SearchBox({
           router.push(`/search?q=${encodeURIComponent(query.trim())}`)
         }
       } catch (error) {
-        console.error("Search error:", error)
+        logger.error("Search error:", error)
       } finally {
         setIsLoading(false)
       }

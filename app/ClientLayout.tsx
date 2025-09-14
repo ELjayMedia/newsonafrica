@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import "./globals.css"
 import { Lexend } from "next/font/google"
@@ -26,14 +27,14 @@ export function ClientLayout({
 }) {
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      console.error("Unhandled error:", event.error)
+      logger.error("Unhandled error:", event.error)
       if (event.error instanceof Error) {
-        console.error("Error message:", event.error.message)
-        console.error("Error stack:", event.error.stack)
+        logger.error("Error message:", event.error.message)
+        logger.error("Error stack:", event.error.stack)
       } else if (event.error === null) {
-        console.error("Unknown error object: null")
+        logger.error("Unknown error object: null")
       } else {
-        console.error("Unknown error object:", event.error)
+        logger.error("Unknown error object:", event.error)
       }
     }
 

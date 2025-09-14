@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
@@ -82,7 +83,7 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
 
   // If we have fresh data, use it
   if (cached.exists && !cached.isStale) {
-    console.log("[v0] Homepage: Using fresh cached data")
+    logger.log("[v0] Homepage: Using fresh cached data")
     return cached.data
   }
 
@@ -102,11 +103,11 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
       },
       async () => {
         if (cached.exists) {
-          console.log("[v0] Homepage: Using stale cached data due to API failure")
+          logger.log("[v0] Homepage: Using stale cached data due to API failure")
           return cached.data
         }
 
-        console.log("[v0] Homepage: Using fallback content - no cache available")
+        logger.log("[v0] Homepage: Using fallback content - no cache available")
         const fallbackPosts = [
           {
             id: "fallback-1",
@@ -131,10 +132,10 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
     enhancedCache.set(cacheKey, result, 300000, 900000) // 5min fresh, 15min stale
     return result
   } catch (error) {
-    console.error("[v0] Homepage data fetch failed:", error)
+    logger.error("[v0] Homepage data fetch failed:", error)
 
     if (cached.exists) {
-      console.log("[v0] Homepage: Returning stale cache due to complete failure")
+      logger.log("[v0] Homepage: Returning stale cache due to complete failure")
       return cached.data
     }
 
@@ -163,7 +164,7 @@ export default async function Home() {
     const { posts, countryPosts, featuredPosts } = await getHomePageData(countryCode)
     return <HomeContent initialPosts={posts} countryPosts={countryPosts} featuredPosts={featuredPosts} />
   } catch (error) {
-    console.error("Homepage data fetch failed:", error)
+    logger.error("Homepage data fetch failed:", error)
     return <HomeContent initialPosts={[]} />
   }
 }

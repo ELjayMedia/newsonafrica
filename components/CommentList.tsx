@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { fetchComments } from "@/lib/comment-service"
@@ -72,12 +73,12 @@ export function CommentList({ postId }: CommentListProps) {
         setError(null)
         setRetryCount(0) // Reset retry count on success
       } catch (err: any) {
-        console.error("Error loading comments:", err)
+        logger.error("Error loading comments:", err)
 
         // Check if we should retry
         if (retryCount < maxRetries) {
           setRetryCount((prev) => prev + 1)
-          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
+          logger.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
           return loadComments(pageNum, append)
         }
 

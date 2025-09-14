@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-paystack-signature")
 
     if (!signature) {
-      console.error("No Paystack signature provided")
+      logger.error("No Paystack signature provided")
       return NextResponse.json({ error: "No signature provided" }, { status: 400 })
     }
 
@@ -82,13 +83,13 @@ export async function POST(request: Request) {
     const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
 
     if (hash !== signature) {
-      console.error("Invalid Paystack signature")
+      logger.error("Invalid Paystack signature")
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the body
     const event = JSON.parse(body)
-    console.log(`Received Paystack webhook: ${event.event}`)
+    logger.log(`Received Paystack webhook: ${event.event}`)
 
     // Handle different event types
     switch (event.event) {
@@ -121,12 +122,12 @@ export async function POST(request: Request) {
         break
 
       default:
-        console.log(`Unhandled Paystack event: ${event.event}`, event.data)
+        logger.log(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error("Webhook processing error:", error)
+    logger.error("Webhook processing error:", error)
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
@@ -136,7 +137,7 @@ export async function handleChargeSuccess(
   data: ChargeSuccessData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing successful charge:", data.reference)
+  logger.log("Processing successful charge:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const { error: txnError } = await (client as any)
     .from("transactions")
@@ -154,7 +155,7 @@ export async function handleSubscriptionCreated(
   data: SubscriptionCreatedData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing subscription creation:", data.subscription_code)
+  logger.log("Processing subscription creation:", data.subscription_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client.from("subscriptions").insert({
     id: data.subscription_code,
@@ -177,7 +178,7 @@ export async function handleSubscriptionDisabled(
   data: SubscriptionDisabledData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing subscription cancellation:", data.subscription_code)
+  logger.log("Processing subscription cancellation:", data.subscription_code)
   const { data: sub, error: fetchError } = await client
     .from("subscriptions")
     .select("user_id")
@@ -200,7 +201,7 @@ export async function handlePaymentFailed(
   data: PaymentFailedData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing failed payment:", data.reference)
+  logger.log("Processing failed payment:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await (client as any)
     .from("transactions")
@@ -213,7 +214,7 @@ export async function handleInvoiceUpdate(
   data: InvoiceUpdateData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing invoice update:", data.invoice_code)
+  logger.log("Processing invoice update:", data.invoice_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
     .from("subscriptions")
@@ -226,7 +227,7 @@ export async function handleTransferSuccess(
   data: TransferData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing successful transfer:", data.reference)
+  logger.log("Processing successful transfer:", data.reference)
   const { error } = await (client as any).from("transfers").insert({
     id: data.reference,
     amount: data.amount / 100,
@@ -240,7 +241,7 @@ export async function handleTransferFailed(
   data: TransferData,
   client: SupabaseClient = createAdminClient(),
 ) {
-  console.log("Processing failed transfer:", data.reference)
+  logger.log("Processing failed transfer:", data.reference)
   const { error } = await (client as any)
     .from("transfers")
     .update({ status: "failed", metadata: data })

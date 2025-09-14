@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -30,7 +31,7 @@ export default function PushNotificationManager() {
       const existingSubscription = await registration.pushManager.getSubscription()
       setSubscription(existingSubscription)
     } catch (error) {
-      console.error("Error checking subscription:", error)
+      logger.error("Error checking subscription:", error)
     }
   }
 
@@ -56,7 +57,7 @@ export default function PushNotificationManager() {
         })
       }
     } catch (error) {
-      console.error("Error requesting permission:", error)
+      logger.error("Error requesting permission:", error)
       toast({
         title: "Error",
         description: "Failed to enable notifications. Please try again.",
@@ -75,7 +76,7 @@ export default function PushNotificationManager() {
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ""
 
       if (!vapidPublicKey) {
-        console.warn("VAPID public key not configured")
+        logger.warn("VAPID public key not configured")
         return
       }
 
@@ -95,7 +96,7 @@ export default function PushNotificationManager() {
         body: JSON.stringify(subscription),
       })
     } catch (error) {
-      console.error("Error subscribing to push:", error)
+      logger.error("Error subscribing to push:", error)
     }
   }
 
@@ -121,7 +122,7 @@ export default function PushNotificationManager() {
         description: "You won't receive push notifications anymore.",
       })
     } catch (error) {
-      console.error("Error unsubscribing:", error)
+      logger.error("Error unsubscribing:", error)
       toast({
         title: "Error",
         description: "Failed to disable notifications.",

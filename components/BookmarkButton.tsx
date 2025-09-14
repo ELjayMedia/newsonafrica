@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import type React from "react"
 import { useState, useCallback } from "react"
@@ -91,7 +92,7 @@ export const BookmarkButton = ({
         // Notify parent component of change
         onBookmarkChange?.(!wasBookmarked)
       } catch (error) {
-        console.error("Error toggling bookmark:", error)
+        logger.error("Error toggling bookmark:", error)
         toast({
           title: "Error",
           description: "Failed to update bookmark. Please try again.",

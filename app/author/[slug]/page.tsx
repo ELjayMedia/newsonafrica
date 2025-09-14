@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getLatestPosts } from "@/lib/wordpress-api"
@@ -11,7 +12,7 @@ export const revalidate = 600 // Revalidate every 10 minutes
 
 // Enhanced metadata generation for author pages
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for author: ${params.slug}`)
+  logger.log(`🔍 Generating metadata for author: ${params.slug}`)
 
   try {
     // Get latest posts to find author information
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
     const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
 
     if (authorPosts.length === 0) {
-      console.warn(`⚠️ Author not found: ${params.slug}`)
+      logger.warn(`⚠️ Author not found: ${params.slug}`)
       return {
         title: "Author Not Found - News On Africa",
         description: "The requested author could not be found.",
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
     }
 
     const author = authorPosts[0].author.node
-    console.log(`✅ Generated metadata for author: "${author.name}"`)
+    logger.log(`✅ Generated metadata for author: "${author.name}"`)
 
     // Create dynamic description
     const postCount = authorPosts.length
@@ -128,7 +129,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       },
     }
   } catch (error) {
-    console.error(`❌ Error generating metadata for author ${params.slug}:`, error)
+    logger.error(`❌ Error generating metadata for author ${params.slug}:`, error)
     return {
       title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
       description: `Articles and stories by ${params.slug} on News On Africa`,
@@ -157,7 +158,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
 
     return <AuthorContent author={author} posts={authorPosts} />
   } catch (error) {
-    console.error(`Error loading author page for ${params.slug}:`, error)
+    logger.error(`Error loading author page for ${params.slug}:`, error)
     throw error
   }
 }

@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import { fetchPendingComments, approveComment, deleteComment } from "@/lib/wordpress-api"
@@ -29,7 +30,7 @@ export function CommentModeration() {
       await approveComment(commentId)
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
-      console.error("Failed to approve comment:", error)
+      logger.error("Failed to approve comment:", error)
     }
   }
 
@@ -38,7 +39,7 @@ export function CommentModeration() {
       await deleteComment(commentId)
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
-      console.error("Failed to delete comment:", error)
+      logger.error("Failed to delete comment:", error)
     }
   }
 

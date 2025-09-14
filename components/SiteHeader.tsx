@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -231,7 +232,7 @@ export function SiteHeader() {
           error: null,
         })
       } catch (error) {
-        console.error("Failed to load categories:", error)
+        logger.error("Failed to load categories:", error)
         setCategoriesState({
           categories: [],
           loading: false,
