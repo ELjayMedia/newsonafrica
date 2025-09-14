@@ -16,23 +16,30 @@ export async function generateStaticParams() {
 
   const supportedCountries = ["sz", "za"]
   const staticParams: { countryCode: string; slug: string }[] = []
-
   try {
-    for (const countryCode of supportedCountries) {
-      console.log(`📡 Fetching posts for ${countryCode}...`)
-      const { posts } = await getLatestPostsForCountry(countryCode, 100)
+    await Promise.all(
+      supportedCountries.map(async (countryCode) => {
+        try {
+          console.log(`📡 Fetching posts for ${countryCode}...`)
+          const { posts } = await getLatestPostsForCountry(countryCode, 100)
 
-      const validPosts = posts.filter((post) => post.slug && typeof post.slug === "string")
+          const validPosts = posts.filter(
+            (post) => post.slug && typeof post.slug === "string",
+          )
 
-      validPosts.forEach((post) => {
-        staticParams.push({
-          countryCode,
-          slug: post.slug,
-        })
-      })
+          validPosts.forEach((post) => {
+            staticParams.push({
+              countryCode,
+              slug: post.slug,
+            })
+          })
 
-      console.log(`✅ Added ${validPosts.length} posts for ${countryCode}`)
-    }
+          console.log(`✅ Added ${validPosts.length} posts for ${countryCode}`)
+        } catch (error) {
+          console.error(`❌ Error fetching posts for ${countryCode}:`, error)
+        }
+      }),
+    )
 
     console.log(`🎯 Generated ${staticParams.length} static params total`)
     return staticParams
