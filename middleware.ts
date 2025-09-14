@@ -9,6 +9,17 @@ const LEGACY_ROUTES_MAP: Record<string, string> = {
   "/entertainment": "/category/entertainment",
 }
 
+// Supported country codes for editions
+const SUPPORTED_COUNTRIES = ["sz", "za"]
+
+function getCountryFromRequest(request: NextRequest) {
+  const cookieCountry = request.cookies.get("preferredCountry")?.value
+  if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
+    return cookieCountry
+  }
+  return process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+}
+
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
   if (process.env.NODE_ENV === "development") {
@@ -40,6 +51,11 @@ export function middleware(request: NextRequest) {
   const legacyRedirect = handleLegacyPostRedirect(pathname, request)
   if (legacyRedirect) {
     return legacyRedirect
+  }
+
+  if (pathname === "/" || pathname === "") {
+    const country = getCountryFromRequest(request)
+    return NextResponse.redirect(new URL(`/${country}`, request.url))
   }
 
   if (LEGACY_ROUTES_MAP[pathname]) {
