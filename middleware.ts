@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 // Legacy routes that should be redirected to their category equivalents
-const LEGACY_ROUTES_MAP = {
+const LEGACY_ROUTES_MAP: Record<string, string> = {
   "/news": "/category/news",
   "/business": "/category/business",
   "/sport": "/category/sport",
