@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getPostsByCountry } from '@/lib/wp-data';
+import {
+  getLatestPostsForCountry,
+  getPostsByCategoryForCountry,
+} from '@/lib/wordpress-api';
 
 export const revalidate = 60;
 
@@ -11,6 +15,13 @@ export async function GET(req: Request) {
     const posts = await getPostsByCountry(country, { category: section, first: 20 });
     return NextResponse.json(posts?.nodes ?? []);
   } catch {
-    return NextResponse.json([], { status: 200, headers: { 'x-gql-fallback': 'true' } });
+    const countryCode = country.toLowerCase();
+    const restData = section
+      ? await getPostsByCategoryForCountry(countryCode, section, 20)
+      : await getLatestPostsForCountry(countryCode, 20);
+    return NextResponse.json(restData.posts ?? restData, {
+      status: 200,
+      headers: { 'x-wp-fallback': 'true' },
+    });
   }
 }
