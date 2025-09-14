@@ -7,15 +7,26 @@ import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
-import NetworkStatus from "@/components/NetworkStatus"
-import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
+import dynamic from "next/dynamic"
+
+const ClientDynamicComponents = dynamic(
+  () => import("@/components/ClientDynamicComponents").then((mod) => ({ default: mod.ClientDynamicComponents })),
+  { ssr: false },
+)
+const NetworkStatus = dynamic(() => import("@/components/NetworkStatus"), { ssr: false })
+const NetworkStatusHandler = dynamic(
+  () => import("@/components/NetworkStatusHandler").then((mod) => ({ default: mod.NetworkStatusHandler })),
+  { ssr: false },
+)
+const Toaster = dynamic(
+  () => import("@/components/ui/toaster").then((mod) => ({ default: mod.Toaster })),
+  { ssr: false },
+)
 
 import "./globals.css"
 
