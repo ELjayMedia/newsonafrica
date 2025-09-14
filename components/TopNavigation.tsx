@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sun, Moon, Search, Menu, User } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { getCategoryUrl } from "@/lib/utils/routing"
 
 export function TopNavigation() {
   const [isDark, setIsDark] = useState(false)
@@ -87,28 +88,28 @@ export function TopNavigation() {
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <nav className="space-y-2">
             <Link
-              href="/news"
+              href={getCategoryUrl("news") as string}
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               News
             </Link>
             <Link
-              href="/business"
+              href={getCategoryUrl("business") as string}
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               Business
             </Link>
             <Link
-              href="/sport"
+              href={getCategoryUrl("sport") as string}
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >
               Sport
             </Link>
             <Link
-              href="/entertainment"
+              href={getCategoryUrl("entertainment") as string}
               className="block py-2 hover:text-blue-600 dark:hover:text-blue-400"
               onClick={() => setIsMenuOpen(false)}
             >

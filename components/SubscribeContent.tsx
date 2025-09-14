@@ -420,11 +420,11 @@ export function SubscribeContent() {
         <div className="text-center mt-8 text-xs text-gray-500">
           <p>
             By subscribing, you agree to our{" "}
-            <Link href="/terms" className="text-blue-600 hover:underline">
-              Terms
+            <Link href="/terms-of-service" className="text-blue-600 hover:underline">
+              Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="text-blue-600 hover:underline">
+            <Link href="/privacy-policy" className="text-blue-600 hover:underline">
               Privacy Policy
             </Link>
           </p>

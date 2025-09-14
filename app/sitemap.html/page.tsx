@@ -31,23 +31,18 @@ export default async function SitemapPage() {
               </Link>
             </li>
             <li>
-              <Link href="/news" className="text-blue-600 hover:underline">
+              <Link href={getCategoryUrl("news") as string} className="text-blue-600 hover:underline">
                 News
               </Link>
             </li>
             <li>
-              <Link href="/business" className="text-blue-600 hover:underline">
+              <Link href={getCategoryUrl("business") as string} className="text-blue-600 hover:underline">
                 Business
               </Link>
             </li>
             <li>
-              <Link href="/sport" className="text-blue-600 hover:underline">
+              <Link href={getCategoryUrl("sport") as string} className="text-blue-600 hover:underline">
                 Sport
-              </Link>
-            </li>
-            <li>
-              <Link href="/special-projects" className="text-blue-600 hover:underline">
-                Special Projects
               </Link>
             </li>
             <li>
@@ -86,11 +81,6 @@ export default async function SitemapPage() {
             <li>
               <Link href="/sitemap.xml" className="text-blue-600 hover:underline">
                 Main Sitemap
-              </Link>
-            </li>
-            <li>
-              <Link href="/news-sitemap.xml" className="text-blue-600 hover:underline">
-                News Sitemap
               </Link>
             </li>
           </ul>
