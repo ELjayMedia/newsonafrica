@@ -86,7 +86,10 @@ async function fetchFromWp<T>(
       })
       if (!res.ok) {
         console.error(`[v0] WordPress API error ${res.status} for ${url}`)
-        return null
+        if (res.status === 404) {
+          return null
+        }
+        throw new Error(`WordPress API error: ${res.status}`)
       }
       return (await res.json()) as T
     } catch (error) {
@@ -96,10 +99,10 @@ async function fetchFromWp<T>(
   }
 
   try {
-    return await circuitBreaker.execute<T | null>(url, operation, async () => null)
+    return await circuitBreaker.execute<T | null>(url, operation)
   } catch (error) {
     console.error(`[v0] Circuit breaker error for ${url}`, error)
-    return null
+    throw error
   }
 }
 
@@ -148,19 +151,28 @@ export async function getRelatedPostsForCountry(
   postId: string,
   limit = 6,
 ) {
-  const post = await fetchFromWp<WordPressPost>(
-    countryCode,
-    wordpressQueries.postById(postId),
-  )
-  if (!post) return []
-  const categoryIds: number[] =
-    post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
-  if (categoryIds.length === 0) return []
-  const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
-  const posts =
-    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
-  // Ensure the current post isn't included in results
-  return posts.filter((p) => p.id !== Number(postId))
+  try {
+    const post = await fetchFromWp<WordPressPost>(
+      countryCode,
+      wordpressQueries.postById(postId),
+    )
+    if (!post) return []
+    const categoryIds: number[] =
+      post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
+    if (categoryIds.length === 0) return []
+    const { endpoint, params } = wordpressQueries.relatedPosts(
+      categoryIds,
+      postId,
+      limit,
+    )
+    const posts =
+      (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
+    // Ensure the current post isn't included in results
+    return posts.filter((p) => p.id !== Number(postId))
+  } catch (error) {
+    console.error(`[v0] Error fetching related posts for ${postId}`, error)
+    return []
+  }
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {

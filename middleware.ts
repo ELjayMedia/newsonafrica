@@ -55,7 +55,14 @@ export function middleware(request: NextRequest) {
 
   if (pathname === "/" || pathname === "") {
     const country = getCountryFromRequest(request)
-    return NextResponse.redirect(new URL(`/${country}`, request.url))
+    const response = NextResponse.redirect(new URL(`/${country}`, request.url))
+    if (!request.cookies.get("preferredCountry")) {
+      response.cookies.set("preferredCountry", country, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+      })
+    }
+    return response
   }
 
   if (LEGACY_ROUTES_MAP[pathname]) {
