@@ -3,7 +3,10 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
 // Update a comment
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const commentId = params.id
+  const { id: commentId } = await params
 
   try {
     const { content } = await request.json()
@@ -103,7 +106,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // Delete a comment
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,7 +133,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const commentId = params.id
+  const { id: commentId } = await params
 
   try {
     // First check if the user owns this comment

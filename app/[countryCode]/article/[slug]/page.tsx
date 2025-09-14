@@ -15,14 +15,12 @@ interface ArticlePageProps {
 }
 
 export async function generateStaticParams() {
-  console.log("🚀 Starting generateStaticParams for country articles...")
 
   const staticParams: { countryCode: string; slug: string }[] = []
   try {
     await Promise.all(
       SUPPORTED_COUNTRIES.map(async (countryCode) => {
         try {
-          console.log(`📡 Fetching posts for ${countryCode}...`)
           const { posts } = await getLatestPostsForCountry(countryCode, 100)
 
           const validPosts = posts.filter(
@@ -36,14 +34,12 @@ export async function generateStaticParams() {
             })
           })
 
-          console.log(`✅ Added ${validPosts.length} posts for ${countryCode}`)
         } catch (error) {
           console.error(`❌ Error fetching posts for ${countryCode}:`, error)
         }
       }),
     )
 
-    console.log(`🎯 Generated ${staticParams.length} static params total`)
     return staticParams
   } catch (error) {
     console.error("❌ Error in generateStaticParams for articles:", error)
@@ -53,7 +49,6 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { countryCode, slug } = await params
-  console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
   const canonicalUrl = `https://newsonafrica.com${getArticleUrl(slug, countryCode)}`
 
@@ -116,7 +111,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { countryCode, slug } = await params
-  console.log(`📖 Rendering article: ${countryCode}/${slug}`)
 
   let post: any
   try {
@@ -127,7 +121,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   }
 
   if (!post) {
-    console.warn(`⚠️ Article not found: ${countryCode}/${slug}`)
     notFound()
   }
 
