@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,11 +30,7 @@ export default function OfflineFallback({
   const [isLoading, setIsLoading] = useState(true)
   const [isRetrying, setIsRetrying] = useState(false)
 
-  useEffect(() => {
-    loadCachedContent()
-  }, [])
-
-  const loadCachedContent = async () => {
+  const loadCachedContent = useCallback(async () => {
     if (!showCachedContent) {
       setIsLoading(false)
       return
@@ -105,7 +101,11 @@ export default function OfflineFallback({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showCachedContent, type])
+
+  useEffect(() => {
+    loadCachedContent()
+  }, [loadCachedContent])
 
   const handleRetry = async () => {
     setIsRetrying(true)

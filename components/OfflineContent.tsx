@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,27 +20,7 @@ export default function OfflineContent() {
   const [cachedArticles, setCachedArticles] = useState<CachedArticle[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Check initial online status
-    setIsOnline(navigator.onLine)
-
-    // Listen for online/offline events
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    // Load cached content
-    loadCachedContent()
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
-
-  const loadCachedContent = async () => {
+  const loadCachedContent = useCallback(async () => {
     try {
       setIsLoading(true)
 
@@ -112,7 +92,27 @@ export default function OfflineContent() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    // Check initial online status
+    setIsOnline(navigator.onLine)
+
+    // Listen for online/offline events
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    // Load cached content
+    loadCachedContent()
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [loadCachedContent])
 
   const handleRetry = () => {
     if (navigator.onLine) {
