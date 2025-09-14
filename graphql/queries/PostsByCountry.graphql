@@ -1,0 +1,26 @@
+# import PostCard from "../fragments/PostCard.graphql"
+
+query PostsByCountry($countrySlug: [String!], $first: Int = 20, $after: String, $category: String) {
+  posts(
+    first: $first
+    after: $after
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      taxQuery: {
+        taxArray: [
+          { taxonomy: COUNTRY, field: SLUG, terms: $countrySlug, operator: IN }
+          { taxonomy: CATEGORY, field: SLUG, terms: [$category], operator: IN }
+        ]
+      }
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      ...PostCard
+    }
+  }
+}
