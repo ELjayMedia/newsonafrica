@@ -105,7 +105,7 @@ function mapPostFromWp(post: any): WordPressPost {
   }
 }
 
-async function fetchFromWp<T>(
+export async function fetchFromWp<T>(
   countryCode: string,
   query: { endpoint: string; params?: Record<string, any> },
 ): Promise<T | null> {
