@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -44,7 +45,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       .single()
 
     if (fetchError) {
-      console.error("Error fetching comment:", fetchError)
+      logger.error("Error fetching comment:", fetchError)
       return NextResponse.json({ error: "Failed to fetch comment" }, { status: 500 })
     }
 
@@ -71,7 +72,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { data, error } = await supabase.from("comments").update({ content }).eq("id", commentId).select().single()
 
     if (error) {
-      console.error("Error updating comment:", error)
+      logger.error("Error updating comment:", error)
       return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
     }
 
@@ -83,7 +84,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       .single()
 
     if (profileError) {
-      console.error("Error fetching profile:", profileError)
+      logger.error("Error fetching profile:", profileError)
       // Return the comment without profile data
       return NextResponse.json(data)
     }
@@ -97,7 +98,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       },
     })
   } catch (error) {
-    console.error("Error updating comment:", error)
+    logger.error("Error updating comment:", error)
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
   }
 }
@@ -138,7 +139,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       .single()
 
     if (fetchError) {
-      console.error("Error fetching comment:", fetchError)
+      logger.error("Error fetching comment:", fetchError)
       return NextResponse.json({ error: "Failed to fetch comment" }, { status: 500 })
     }
 
@@ -155,13 +156,13 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const { error } = await supabase.from("comments").update({ status: "deleted" }).eq("id", commentId)
 
     if (error) {
-      console.error("Error deleting comment:", error)
+      logger.error("Error deleting comment:", error)
       return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting comment:", error)
+    logger.error("Error deleting comment:", error)
     return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
   }
 }

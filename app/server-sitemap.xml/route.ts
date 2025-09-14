@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import { NextResponse } from "next/server"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
@@ -10,7 +11,7 @@ export async function GET() {
   try {
     posts = await fetchPosts(1000)
   } catch (error) {
-    console.error("Error fetching posts for server sitemap:", error)
+    logger.error("Error fetching posts for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
   }
 
@@ -18,7 +19,7 @@ export async function GET() {
   try {
     categories = await fetchCategories()
   } catch (error) {
-    console.error("Error fetching categories for server sitemap:", error)
+    logger.error("Error fetching categories for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 502 })
   }
 
@@ -26,7 +27,7 @@ export async function GET() {
   try {
     _countries = await fetchCountries()
   } catch (error) {
-    console.error("Error fetching countries for server sitemap:", error)
+    logger.error("Error fetching countries for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch countries" }, { status: 502 })
   }
 
@@ -35,7 +36,7 @@ export async function GET() {
   try {
     ;[tags, authors] = await Promise.all([fetchTags(), fetchAuthors()])
   } catch (error) {
-    console.error("Error fetching tags/authors for server sitemap:", error)
+    logger.error("Error fetching tags/authors for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch tags or authors" }, { status: 502 })
   }
 
@@ -113,7 +114,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error("Error generating server sitemap:", error)
+    logger.error("Error generating server sitemap:", error)
     return new NextResponse("Error generating server sitemap", { status: 500 })
   }
 }

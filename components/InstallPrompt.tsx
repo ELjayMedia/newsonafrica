@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -52,7 +53,7 @@ export default function InstallPrompt() {
       setIsInstalled(true)
       setShowPrompt(false)
       setDeferredPrompt(null)
-      console.log("PWA was installed")
+      logger.log("PWA was installed")
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
@@ -72,16 +73,16 @@ export default function InstallPrompt() {
       const { outcome } = await deferredPrompt.userChoice
 
       if (outcome === "accepted") {
-        console.log("User accepted the install prompt")
+        logger.log("User accepted the install prompt")
       } else {
-        console.log("User dismissed the install prompt")
+        logger.log("User dismissed the install prompt")
         localStorage.setItem("pwa-install-dismissed", Date.now().toString())
       }
 
       setDeferredPrompt(null)
       setShowPrompt(false)
     } catch (error) {
-      console.error("Error showing install prompt:", error)
+      logger.error("Error showing install prompt:", error)
     }
   }
 

@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
@@ -25,7 +26,7 @@ export function MobileProfileMenu() {
       })
       router.push("/")
     } catch (error) {
-      console.error("Error signing out:", error)
+      logger.error("Error signing out:", error)
       toast({
         title: "Error",
         description: "Failed to log out. Please try again.",

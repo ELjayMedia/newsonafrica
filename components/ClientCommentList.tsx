@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
@@ -35,7 +36,7 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
       setComments(comments.filter((comment) => comment.id !== commentId))
       setIsDeleting(null)
     } catch (error) {
-      console.error("Failed to delete comment:", error)
+      logger.error("Failed to delete comment:", error)
       setError("Failed to delete comment. Please try again.")
       setIsDeleting(null)
     }
@@ -49,7 +50,7 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
   const submitReply = async (parentId: number) => {
     // Implementation for submitting reply would go here
     // This is a placeholder
-    console.log(`Replying to comment ${parentId}: ${replyText}`)
+    logger.log(`Replying to comment ${parentId}: ${replyText}`)
     setShowReplyForm(null)
     setReplyText("")
   }

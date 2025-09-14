@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import type React from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -41,7 +42,7 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
       const startTime = performance.now()
       return () => {
         const endTime = performance.now()
-        console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
+        logger.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
       }
     }
   }, [])

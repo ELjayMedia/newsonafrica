@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
@@ -7,7 +8,7 @@ const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
-    console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
+    logger.warn("WORDPRESS_WEBHOOK_SECRET not configured")
     return false
   }
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     if (WEBHOOK_SECRET && signature) {
       const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
       if (!isValid) {
-        console.error("Invalid webhook signature")
+        logger.error("Invalid webhook signature")
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
       }
     }
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const data = JSON.parse(body)
     const { action, post } = data
 
-    console.log(`WordPress webhook received: ${action}`, {
+    logger.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
       postTitle: post?.title?.rendered,
       postSlug: post?.slug,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
           revalidatePath("/")
           revalidateTag("posts")
 
-          console.log(`Revalidated post: ${post.slug}`)
+          logger.log(`Revalidated post: ${post.slug}`)
         }
         break
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
           revalidatePath("/")
           revalidateTag("posts")
 
-          console.log(`Revalidated after deletion: ${post.slug}`)
+          logger.log(`Revalidated after deletion: ${post.slug}`)
         }
         break
 
@@ -88,12 +89,12 @@ export async function POST(request: NextRequest) {
           revalidatePath(`/category/${post.slug}`)
           revalidateTag(`category-${post.id}`)
 
-          console.log(`Revalidated category: ${post.slug}`)
+          logger.log(`Revalidated category: ${post.slug}`)
         }
         break
 
       default:
-        console.log(`Unhandled webhook action: ${action}`)
+        logger.log(`Unhandled webhook action: ${action}`)
     }
 
     return NextResponse.json({
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       postId: post?.id,
     })
   } catch (error) {
-    console.error("Webhook processing error:", error)
+    logger.error("Webhook processing error:", error)
     return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
   }
 }

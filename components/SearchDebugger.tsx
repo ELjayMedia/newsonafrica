@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -18,13 +19,13 @@ export function SearchDebugger() {
     setResults(null)
 
     try {
-      console.log("Testing search API with query:", query)
+      logger.log("Testing search API with query:", query)
 
       const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      console.log("Response status:", response.status)
+      logger.log("Response status:", response.status)
 
       const data = await response.json()
-      console.log("Response data:", data)
+      logger.log("Response data:", data)
 
       if (!response.ok) {
         throw new Error(data.message || `HTTP ${response.status}`)
@@ -32,7 +33,7 @@ export function SearchDebugger() {
 
       setResults(data)
     } catch (err) {
-      console.error("Search test error:", err)
+      logger.error("Search test error:", err)
       setError(err instanceof Error ? err.message : "Unknown error")
     } finally {
       setLoading(false)

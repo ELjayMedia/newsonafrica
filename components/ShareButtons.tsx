@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useState } from "react"
 import { Facebook, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
@@ -62,7 +63,7 @@ export function ShareButtons({
           description: "The article has been shared",
         })
       } catch (error) {
-        console.error("Error sharing:", error)
+        logger.error("Error sharing:", error)
       }
     } else {
       setIsOpen(true)

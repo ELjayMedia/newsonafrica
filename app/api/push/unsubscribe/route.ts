@@ -1,3 +1,4 @@
+import logger from "@/utils/logger"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -5,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { endpoint } = await request.json()
 
     // Here you would typically remove the subscription from your database
-    console.log("Push unsubscription received for endpoint:", endpoint)
+    logger.log("Push unsubscription received for endpoint:", endpoint)
 
     // In a real implementation, you would:
     // 1. Find the subscription by endpoint
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: "Subscription removed" })
   } catch (error) {
-    console.error("Error removing push subscription:", error)
+    logger.error("Error removing push subscription:", error)
     return NextResponse.json({ success: false, error: "Failed to remove subscription" }, { status: 500 })
   }
 }

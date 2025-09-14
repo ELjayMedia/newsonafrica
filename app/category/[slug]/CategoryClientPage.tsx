@@ -1,4 +1,5 @@
 "use client"
+import logger from "@/utils/logger"
 
 import { useEffect, useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -49,7 +50,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
         pageParams: [null],
       })
     } catch (err) {
-      console.error(`Error loading category ${params.slug}:`, err)
+      logger.error(`Error loading category ${params.slug}:`, err)
       setError(err instanceof Error ? err : new Error(String(err)))
     } finally {
       setIsLoading(false)
