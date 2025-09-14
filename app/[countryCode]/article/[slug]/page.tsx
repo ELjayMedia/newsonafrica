@@ -1,7 +1,8 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { getPostBySlugForCountry, getLatestPostsForCountry } from "@/lib/wordpress-api"
+import { getLatestPostsForCountry } from "@/lib/wordpress-api"
+import { fetchPost } from "@/lib/wp"
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleSkeleton } from "./ArticleSkeleton"
 
@@ -60,7 +61,7 @@ export async function generateMetadata(
 
   let post: any
   try {
-    post = await getPostBySlugForCountry(countryCode, slug)
+    post = await fetchPost({ countryIso: countryCode, slug })
   } catch (error) {
     console.error(`❌ Error generating metadata:`, error)
     return {
@@ -124,7 +125,7 @@ export default async function Page({ params }: ArticlePageProps) {
 
   let post: any
   try {
-    post = await getPostBySlugForCountry(countryCode, slug)
+    post = await fetchPost({ countryIso: countryCode, slug })
   } catch (error) {
     console.error(`❌ Error fetching article:`, error)
     return <ArticleErrorFallback />

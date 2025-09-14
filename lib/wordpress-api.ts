@@ -181,12 +181,6 @@ export async function getCategoriesForCountry(countryCode: string) {
   )
 }
 
-export async function getPostBySlugForCountry(countryCode: string, slug: string) {
-  const { endpoint, params } = wordpressQueries.postBySlug(slug)
-  const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
-  return posts?.[0] || null
-}
-
 export async function getRelatedPostsForCountry(
   countryCode: string,
   postId: string,
@@ -225,7 +219,6 @@ export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_C
 export const getPostsByCategory = (slug: string, limit = 20) =>
   getPostsByCategoryForCountry(DEFAULT_COUNTRY, slug, limit)
 export const getCategories = () => getCategoriesForCountry(DEFAULT_COUNTRY)
-export const getPostBySlug = (slug: string) => getPostBySlugForCountry(DEFAULT_COUNTRY, slug)
 export const getRelatedPosts = async (
   postId: string,
   categories: string[] = [],

@@ -29,6 +29,11 @@ export interface FetchPostsArgs {
   ids?: (number | string)[]
 }
 
+export interface FetchPostArgs {
+  slug: string
+  countryIso?: string
+  countryTermId?: number
+}
 const DEFAULT_FIELDS = ["id", "date", "slug", "title", "excerpt"]
 
 /**
@@ -57,6 +62,59 @@ export async function fetchPosts({
   const total = Number(res.headers.get("X-WP-Total") || "0")
   const data = await res.json()
   return { data, total }
+}
+
+/**
+ * Fetch a single post by slug with optional country filtering
+ */
+export async function fetchPost({
+  slug,
+  countryIso,
+  countryTermId,
+}: FetchPostArgs) {
+  const base = getWpEndpoints(countryIso).rest
+  const params = new URLSearchParams({ _embed: "1", slug })
+  if (countryTermId) params.set("countries", String(countryTermId))
+  const res = await fetch(`${base}/posts?${params.toString()}`)
+  if (!res.ok) return null
+  const posts = await res.json()
+  const post = posts?.[0]
+  if (!post) return null
+  const featured = post._embedded?.["wp:featuredmedia"]?.[0]
+  const author = post._embedded?.["wp:author"]?.[0]
+  return {
+    ...post,
+    title: post.title?.rendered || post.title,
+    excerpt: post.excerpt?.rendered || post.excerpt,
+    content: post.content?.rendered || post.content,
+    featuredImage: featured
+      ? {
+          node: {
+            sourceUrl: featured.source_url,
+            altText: featured.alt_text || "",
+          },
+        }
+      : undefined,
+    author: author
+      ? { node: { id: author.id, name: author.name, slug: author.slug } }
+      : undefined,
+    categories: {
+      nodes:
+        post._embedded?.["wp:term"]?.[0]?.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+        })) || [],
+    },
+    tags: {
+      nodes:
+        post._embedded?.["wp:term"]?.[1]?.map((tag: any) => ({
+          id: tag.id,
+          name: tag.name,
+          slug: tag.slug,
+        })) || [],
+    },
+  }
 }
 
 /**
