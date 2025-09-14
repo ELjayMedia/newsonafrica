@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { Component, type ErrorInfo, type ReactNode } from "react"
 
@@ -27,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log the error to an error reporting service
-    logger.error("Error caught by ErrorBoundary:", error, errorInfo)
+    console.error("Error caught by ErrorBoundary:", error, errorInfo)
 
     // Call the onError callback if provided
     if (this.props.onError) {

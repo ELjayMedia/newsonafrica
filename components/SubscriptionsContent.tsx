@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
@@ -32,7 +31,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
         if (error) throw error
         setSubscriptions(data || [])
       } catch (error) {
-        logger.error("Error loading subscriptions:", error)
+        console.error("Error loading subscriptions:", error)
         toast({
           title: "Error",
           description: "Failed to load subscription data. Please try again.",

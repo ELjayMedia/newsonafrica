@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
@@ -22,7 +21,7 @@ export async function generateStaticParams() {
       "wordpress-categories-static",
       async () => await getCategoriesForCountry(getServerCountry()),
       async () => {
-        logger.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
+        console.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
         return []
       },
     )
@@ -33,7 +32,7 @@ export async function generateStaticParams() {
       slug: category.slug,
     }))
   } catch (error) {
-    logger.error("Error generating static params for categories:", error)
+    console.error("Error generating static params for categories:", error)
     // Return empty array to allow all pages to be generated on-demand
     return []
   }
@@ -41,7 +40,7 @@ export async function generateStaticParams() {
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  logger.log(`🔍 Generating metadata for category: ${params.slug}`)
+  console.log(`🔍 Generating metadata for category: ${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
@@ -50,7 +49,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const cached = enhancedCache.get(cacheKey)
 
   if (cached.exists && !cached.isStale) {
-    logger.log(`[v0] Category metadata: Using cached data for ${params.slug}`)
+    console.log(`[v0] Category metadata: Using cached data for ${params.slug}`)
     return cached.data
   }
 
@@ -65,7 +64,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         )
 
         if (!category) {
-          logger.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
+          console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
           return {
             title: "Category Not Found - News On Africa",
             description: "The requested category could not be found.",
@@ -80,7 +79,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
           }
         }
 
-        logger.log(`✅ Generated metadata for category: "${category.name}"`)
+        console.log(`✅ Generated metadata for category: "${category.name}"`)
 
         // Create dynamic description
         const baseDescription = category.description || `Latest articles in the ${category.name} category`
@@ -191,11 +190,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       },
       async () => {
         if (cached.exists) {
-          logger.log(`[v0] Category metadata: Using stale cache for ${params.slug}`)
+          console.log(`[v0] Category metadata: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        logger.log(`[v0] Category metadata: Using fallback for ${params.slug}`)
+        console.log(`[v0] Category metadata: Using fallback for ${params.slug}`)
         return {
           title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
           description: `Latest articles in the ${params.slug} category from News On Africa`,
@@ -213,7 +212,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     enhancedCache.set(cacheKey, result, 600000, 1800000) // 10min fresh, 30min stale
     return result
   } catch (error) {
-    logger.error(`❌ Error generating metadata for category ${params.slug}:`, error)
+    console.error(`❌ Error generating metadata for category ${params.slug}:`, error)
 
     if (cached.exists) {
       return cached.data
@@ -260,11 +259,11 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
       },
       async () => {
         if (cached.exists) {
-          logger.log(`[v0] Category data: Using stale cache for ${params.slug}`)
+          console.log(`[v0] Category data: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        logger.log(`[v0] Category data: Using fallback for ${params.slug}`)
+        console.log(`[v0] Category data: Using fallback for ${params.slug}`)
         return {
           category: {
             name: params.slug.charAt(0).toUpperCase() + params.slug.slice(1),
@@ -294,10 +293,10 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
 
     return <CategoryClientPage params={params} initialData={categoryData} />
   } catch (error) {
-    logger.error(`Error loading category page for ${params.slug}:`, error)
+    console.error(`Error loading category page for ${params.slug}:`, error)
 
     if (cached.exists) {
-      logger.log(`[v0] Category page: Using cached data due to error for ${params.slug}`)
+      console.log(`[v0] Category page: Using cached data due to error for ${params.slug}`)
       return <CategoryClientPage params={params} initialData={cached.data} />
     }
 

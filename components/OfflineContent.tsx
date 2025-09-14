@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -47,7 +46,7 @@ export default function OfflineContent() {
 
       // Check if caches API is available
       if (!("caches" in window)) {
-        logger.log("Cache API not available")
+        console.log("Cache API not available")
         setIsLoading(false)
         return
       }
@@ -56,7 +55,7 @@ export default function OfflineContent() {
       const newsCache = cacheNames.find((name) => name.includes("news-on-africa"))
 
       if (!newsCache) {
-        logger.log("No news cache found")
+        console.log("No news cache found")
         setIsLoading(false)
         return
       }
@@ -108,7 +107,7 @@ export default function OfflineContent() {
 
       setCachedArticles(articles.slice(0, 10)) // Limit to 10 items
     } catch (error) {
-      logger.error("Error loading cached content:", error)
+      console.error("Error loading cached content:", error)
     } finally {
       setIsLoading(false)
     }

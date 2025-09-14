@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { CompactCard } from "@/components/CompactCard"
@@ -63,7 +62,7 @@ const fetchHomeData = async (): Promise<{
       recentPosts: posts.slice(0, 10),
     }
   } catch (error) {
-    logger.error("Error fetching home data:", error)
+    console.error("Error fetching home data:", error)
     throw error
   }
 }

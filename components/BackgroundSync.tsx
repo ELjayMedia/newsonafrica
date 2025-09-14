@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -44,9 +43,9 @@ export default function BackgroundSync() {
     try {
       const registration = await navigator.serviceWorker.ready
       await registration.sync.register("background-news-sync")
-      logger.log("Background sync registered")
+      console.log("Background sync registered")
     } catch (error) {
-      logger.error("Background sync registration failed:", error)
+      console.error("Background sync registration failed:", error)
     }
   }
 
@@ -67,7 +66,7 @@ export default function BackgroundSync() {
         description: "Checking for latest news updates...",
       })
     } catch (error) {
-      logger.error("Manual sync failed:", error)
+      console.error("Manual sync failed:", error)
       setIsSyncing(false)
       toast({
         title: "Sync failed",

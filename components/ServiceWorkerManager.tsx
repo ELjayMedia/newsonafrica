@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -17,7 +16,7 @@ export function ServiceWorkerManager() {
       navigator.serviceWorker
         .register("/sw.js")
         .then((registration) => {
-          logger.log("[v0] Service Worker registered successfully:", registration.scope)
+          console.log("[v0] Service Worker registered successfully:", registration.scope)
 
           // Check for updates
           registration.addEventListener("updatefound", () => {
@@ -36,7 +35,7 @@ export function ServiceWorkerManager() {
           })
         })
         .catch((error) => {
-          logger.error("[v0] Service Worker registration failed:", error)
+          console.error("[v0] Service Worker registration failed:", error)
         })
 
       // Listen for messages from service worker

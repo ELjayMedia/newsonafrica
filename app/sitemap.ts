@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
@@ -8,7 +7,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
 
   const postsPromise = fetchPosts(1000).catch((err) => {
-    logger.warn(
+    console.warn(
       "Failed to fetch posts for sitemap:",
       err instanceof Error ? err.message : err,
     )
@@ -16,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   const categoriesPromise = fetchCategories().catch((err) => {
-    logger.warn(
+    console.warn(
       "Failed to fetch categories for sitemap:",
       err instanceof Error ? err.message : err,
     )
@@ -24,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   const tagsPromise = fetchTags().catch((err) => {
-    logger.warn(
+    console.warn(
       "Failed to fetch tags for sitemap:",
       err instanceof Error ? err.message : err,
     )
@@ -32,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   const authorsPromise = fetchAuthors().catch((err) => {
-    logger.warn(
+    console.warn(
       "Failed to fetch authors for sitemap:",
       err instanceof Error ? err.message : err,
     )
@@ -170,7 +169,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         !page.url.includes("/video-dashboard"),
     )
   } catch (error) {
-    logger.warn(
+    console.warn(
       "Error generating sitemap:",
       error instanceof Error ? error.message : error,
     )

@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import type React from "react"
 
@@ -117,7 +116,7 @@ export function OnboardingClient() {
       // Redirect to personalized feed
       router.push("/for-you")
     } catch (error) {
-      logger.error("Error updating profile:", error)
+      console.error("Error updating profile:", error)
       toast({
         title: "Error updating profile",
         description: "There was a problem updating your profile. Please try again.",

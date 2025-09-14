@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import { type NextRequest, NextResponse } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
@@ -63,7 +62,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       })
 
       const url = `${WORDPRESS_REST_API_URL}/posts?${searchParams}`
-      logger.log(`[v0] Making WordPress search request to: ${url}`)
+      console.log(`[v0] Making WordPress search request to: ${url}`)
 
       const response = await fetch(url, {
         headers: {
@@ -91,7 +90,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       }
     },
     async () => {
-      logger.log("[v0] Search API: Using enhanced fallback due to WordPress unavailability")
+      console.log("[v0] Search API: Using enhanced fallback due to WordPress unavailability")
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
           item.title.rendered.toLowerCase().includes(query.toLowerCase()) ||
@@ -146,7 +145,7 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
 
     return Array.from(suggestions)
   } catch (error) {
-    logger.error("Error getting suggestions:", error)
+    console.error("Error getting suggestions:", error)
     return []
   }
 }

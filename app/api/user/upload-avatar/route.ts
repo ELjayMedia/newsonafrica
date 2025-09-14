@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import { NextResponse } from "next/server"
 import { getAuthTokenFromCookies } from "@/lib/cookies"
 import { updateUserProfile } from "@/lib/wordpress-api"
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, avatarUrl })
   } catch (error) {
-    logger.error("Error uploading avatar:", error)
+    console.error("Error uploading avatar:", error)
     return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 })
   }
 }

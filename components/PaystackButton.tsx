@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -55,7 +54,7 @@ export function PaystackButton({
     script.async = true
     script.onload = () => setScriptLoaded(true)
     script.onerror = () => {
-      logger.error("Failed to load Paystack script")
+      console.error("Failed to load Paystack script")
       toast({
         title: "Payment Error",
         description: "Failed to load payment gateway. Please try again later.",
@@ -83,7 +82,7 @@ export function PaystackButton({
     }
 
     if (!PAYSTACK_PUBLIC_KEY) {
-      logger.error("PAYSTACK_PUBLIC_KEY is not defined")
+      console.error("PAYSTACK_PUBLIC_KEY is not defined")
       toast({
         title: "Configuration Error",
         description: "Payment system is not properly configured. Please contact support.",
@@ -125,7 +124,7 @@ export function PaystackButton({
         },
         onSuccess: async (response) => {
           try {
-            logger.log("Payment successful, verifying transaction...", response)
+            console.log("Payment successful, verifying transaction...", response)
             // Verify the transaction on the server
             const verificationResult = await verifyPaystackTransaction(response.reference)
 
@@ -168,7 +167,7 @@ export function PaystackButton({
                   })
                 }
               } catch (dbError) {
-                logger.error("Error saving subscription:", dbError)
+                console.error("Error saving subscription:", dbError)
               }
 
               toast({
@@ -183,7 +182,7 @@ export function PaystackButton({
               throw new Error(verificationResult.message || "Transaction verification failed")
             }
           } catch (error) {
-            logger.error("Verification error:", error)
+            console.error("Verification error:", error)
             toast({
               title: "Verification Error",
               description: "We received your payment, but there was an issue confirming it. Please contact support.",
@@ -199,7 +198,7 @@ export function PaystackButton({
           }
         },
         onCancel: () => {
-          logger.log("Payment cancelled by user")
+          console.log("Payment cancelled by user")
           setIsLoading(false)
           toast({
             title: "Payment Cancelled",
@@ -220,12 +219,12 @@ export function PaystackButton({
       // Add a safety timeout to reset loading state if callbacks don't fire
       setTimeout(() => {
         if (isLoading) {
-          logger.log("Safety timeout triggered to reset loading state")
+          console.log("Safety timeout triggered to reset loading state")
           setIsLoading(false)
         }
       }, 60000) // 1 minute timeout
     } catch (error) {
-      logger.error("Payment initialization error:", error)
+      console.error("Payment initialization error:", error)
       toast({
         title: "Payment Error",
         description: "There was an error initializing your payment. Please try again.",

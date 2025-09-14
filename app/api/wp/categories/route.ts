@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { fetchCategories } from "@/lib/wordpress-api"
+import { fetchCategories } from "@/lib/wp"
 
 export const runtime = "edge"
 export const revalidate = 60

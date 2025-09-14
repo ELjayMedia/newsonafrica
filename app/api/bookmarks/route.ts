@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
@@ -56,7 +55,7 @@ export async function GET(request: NextRequest) {
     const { data: bookmarks, error, count } = await query
 
     if (error) {
-      logger.error("Error fetching bookmarks:", error)
+      console.error("Error fetching bookmarks:", error)
       return NextResponse.json({ error: "Failed to fetch bookmarks" }, { status: 500 })
     }
 
@@ -89,7 +88,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    logger.error("Error in bookmarks API:", error)
+    console.error("Error in bookmarks API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -145,13 +144,13 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
 
     if (error) {
-      logger.error("Error adding bookmark:", error)
+      console.error("Error adding bookmark:", error)
       return NextResponse.json({ error: "Failed to add bookmark" }, { status: 500 })
     }
 
     return NextResponse.json({ bookmark: data })
   } catch (error) {
-    logger.error("Error in bookmarks API:", error)
+    console.error("Error in bookmarks API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -200,13 +199,13 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      logger.error("Error updating bookmark:", error)
+      console.error("Error updating bookmark:", error)
       return NextResponse.json({ error: "Failed to update bookmark" }, { status: 500 })
     }
 
     return NextResponse.json({ bookmark: data })
   } catch (error) {
-    logger.error("Error in bookmarks API:", error)
+    console.error("Error in bookmarks API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -244,13 +243,13 @@ export async function DELETE(request: NextRequest) {
     const { error } = await query
 
     if (error) {
-      logger.error("Error removing bookmark(s):", error)
+      console.error("Error removing bookmark(s):", error)
       return NextResponse.json({ error: "Failed to remove bookmark(s)" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    logger.error("Error in bookmarks API:", error)
+    console.error("Error in bookmarks API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

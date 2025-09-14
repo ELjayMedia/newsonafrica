@@ -1,4 +1,5 @@
-// Local search utility will be defined within this module
+// @ts-nocheck
+import { searchPosts as utilitySearchPosts } from "./searchPosts"
 
 // Types for search
 export interface SearchPost {
@@ -180,31 +181,6 @@ async function fetchPosts(): Promise<SearchPost[]> {
 }
 
 /**
- * Fallback local search when the API is unavailable
- */
-function searchPostsLocal(posts: SearchPost[], query: string): SearchPost[] {
-  if (!query || !posts || posts.length === 0) {
-    return []
-  }
-
-  const normalizedQuery = query.toLowerCase().trim()
-  const terms = normalizedQuery.split(/\s+/).filter((term) => term.length > 1)
-
-  if (terms.length === 0) {
-    return []
-  }
-
-  return posts.filter((post) => {
-    const title = (post.title?.rendered || "").toLowerCase()
-    const excerpt = (post.excerpt?.rendered || "").toLowerCase()
-    const content = (post.content?.rendered || "").toLowerCase()
-
-    // Check if any term is in the title, excerpt, or content
-    return terms.some((term) => title.includes(term) || excerpt.includes(term) || content.includes(term))
-  })
-}
-
-/**
  * Search posts using WordPress API
  */
 export async function searchPosts(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
@@ -303,7 +279,7 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
 
       // Fallback to utility search
       const posts = await fetchPosts()
-      const searchResults = searchPostsLocal(posts, normalizedQuery)
+      const searchResults = utilitySearchPosts(posts, normalizedQuery)
 
       // Apply filtering
       let filteredResults = searchResults

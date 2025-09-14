@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -35,14 +34,14 @@ export default function RetryBanner({
       setShowBanner(false)
       setRetryCount(0)
       setIsDismissed(false)
-      logger.log("[v0] Network connection restored")
+      console.log("[v0] Network connection restored")
     }
 
     const handleOffline = () => {
       setIsOnline(false)
       setShowBanner(true)
       setIsDismissed(false)
-      logger.log("[v0] Network connection lost")
+      console.log("[v0] Network connection lost")
     }
 
     // Listen for network events
@@ -123,11 +122,11 @@ export default function RetryBanner({
         }
       }
     } catch (error) {
-      logger.log("[v0] Retry failed:", error)
+      console.log("[v0] Retry failed:", error)
 
       // If we've reached max retries, stop auto-retrying
       if (retryCount >= maxRetries - 1) {
-        logger.log("[v0] Max retries reached")
+        console.log("[v0] Max retries reached")
       }
     } finally {
       setIsRetrying(false)

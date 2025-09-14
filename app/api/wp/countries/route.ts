@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getCountryBaseUrl } from "@/lib/wordpress-api"
+import { getCountryBaseUrl } from "@/lib/wp"
 
 export const runtime = "edge"
 export const revalidate = 60

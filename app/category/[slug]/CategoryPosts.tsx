@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import type React from "react"
 
@@ -50,7 +49,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
         setPageInfo(data.posts.pageInfo)
       }
     } catch (err) {
-      logger.error("Error loading more posts:", err)
+      console.error("Error loading more posts:", err)
       setError("Failed to load more posts. Please try again.")
     } finally {
       setIsLoading(false)
@@ -82,7 +81,7 @@ export default function CategoryPosts({ initialPosts, pageInfo: initialPageInfo,
           title: post.title,
           url: getArticleUrl(post.slug),
         })
-        .catch((err) => logger.error("Error sharing:", err))
+        .catch((err) => console.error("Error sharing:", err))
     } else {
       // Fallback for browsers that don't support navigator.share
       navigator.clipboard.writeText(`${window.location.origin}${getArticleUrl(post.slug)}`)

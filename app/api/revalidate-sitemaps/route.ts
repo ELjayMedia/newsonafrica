@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    logger.error("Error revalidating sitemaps:", error)
+    console.error("Error revalidating sitemaps:", error)
     return NextResponse.json(
       {
         revalidated: false,

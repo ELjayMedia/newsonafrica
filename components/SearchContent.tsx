@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { useState, useCallback, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -34,20 +33,20 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
     }
 
     setIsLoading(true)
-    logger.log(`Performing search for: "${query}", page: ${page}, append: ${append}`)
+    console.log(`Performing search for: "${query}", page: ${page}, append: ${append}`)
 
     try {
       const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}&per_page=20`)
-      logger.log(`Search API response status: ${response.status}`)
+      console.log(`Search API response status: ${response.status}`)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        logger.error("Search API error:", errorData)
+        console.error("Search API error:", errorData)
         throw new Error(errorData.message || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
-      logger.log("Search API response data:", data)
+      console.log("Search API response data:", data)
 
       // Handle the response format from our API
       if (append) {
@@ -62,9 +61,9 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       setHasMore(data.hasMore || false)
       setHasSearched(true)
 
-      logger.log(`Search completed: ${data.results?.length || 0} results found`)
+      console.log(`Search completed: ${data.results?.length || 0} results found`)
     } catch (error) {
-      logger.error("Search error:", error)
+      console.error("Search error:", error)
       if (!append) {
         setResults([])
         setTotal(0)

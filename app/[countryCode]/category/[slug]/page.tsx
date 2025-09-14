@@ -1,4 +1,3 @@
-import logger from "@/utils/logger"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
@@ -30,7 +29,7 @@ export async function generateStaticParams() {
         })),
       )
     } catch (error) {
-      logger.error(`Error generating static params for ${country} categories:`, error)
+      console.error(`Error generating static params for ${country} categories:`, error)
     }
   }
   return params
@@ -164,7 +163,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     enhancedCache.set(cacheKey, metadata, 60 * 60)
     return metadata
   } catch (error) {
-    logger.error(`❌ Error generating metadata for category ${slug}:`, error)
+    console.error(`❌ Error generating metadata for category ${slug}:`, error)
     return {
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,

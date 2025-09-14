@@ -1,5 +1,4 @@
 "use client"
-import logger from "@/utils/logger"
 
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
@@ -54,7 +53,7 @@ const fetchHomeData = async (): Promise<{
   const country = getCurrentCountry()
   try {
     if (!isOnline()) {
-      logger.log("Device is offline, using cached data")
+      console.log("Device is offline, using cached data")
       throw new Error("Device is offline")
     }
 
@@ -75,7 +74,7 @@ const fetchHomeData = async (): Promise<{
       post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
     )
 
-    logger.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
+    console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
 
     return {
       taggedPosts: fpTaggedPosts, // Use all fp tagged posts
@@ -84,7 +83,7 @@ const fetchHomeData = async (): Promise<{
       recentPosts: posts.slice(0, 10), // Use first 10 as recent
     }
   } catch (error) {
-    logger.error("Error fetching home data:", error)
+    console.error("Error fetching home data:", error)
     throw error
   }
 }
@@ -147,7 +146,7 @@ export function HomeContent({
     errorRetryCount: 3,
     errorRetryInterval: 5000,
     onError: (err) => {
-      logger.error("SWR Error:", err)
+      console.error("SWR Error:", err)
       if (!initialData && !initialPosts.length) {
         setIsOffline(true)
       }
@@ -169,7 +168,7 @@ export function HomeContent({
           )
           return { name: config.name, posts: result.posts || [] }
         } catch (error) {
-          logger.error(`Error fetching ${config.name} posts:`, error)
+          console.error(`Error fetching ${config.name} posts:`, error)
           return { name: config.name, posts: [] }
         }
       })
@@ -269,7 +268,7 @@ export function HomeContent({
 
   // If we don't have enough fp posts, show a message or fallback
   if (taggedPosts.length === 0) {
-    logger.warn("No fp-tagged posts found, using fallback content")
+    console.warn("No fp-tagged posts found, using fallback content")
   }
 
   // Reusable CategorySection component
