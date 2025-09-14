@@ -4,9 +4,11 @@ import { ArticleClientContent } from './ArticleClientContent';
 
 export const revalidate = 60;
 
-type Params = { countryCode: string; slug: string };
+interface ArticlePageProps {
+  params: { countryCode: string; slug: string };
+}
 
-export default async function Page({ params }: { params: Params }) {
+export default async function Page({ params }: ArticlePageProps) {
   const country = (params.countryCode || 'DEFAULT').toUpperCase();
   const post = await getPostBySlug(country, params.slug);
   if (!post) notFound();
