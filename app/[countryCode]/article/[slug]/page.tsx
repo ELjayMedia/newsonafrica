@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import type { PageProps } from 'next';
 import { getPostBySlug } from '@/lib/wp-data';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
@@ -16,8 +17,9 @@ export default async function Page({ params }: ArticlePageProps) {
   const country = (params.countryCode || 'DEFAULT').toUpperCase();
   let post: WordPressPost | null = null;
 
+
   try {
-    post = await getPostBySlug(country, params.slug);
+    post = await getPostBySlug(country, slug);
   } catch (error) {
     log.error('getPostBySlug failed', { error });
   }
@@ -27,7 +29,7 @@ export default async function Page({ params }: ArticlePageProps) {
       const restPosts =
         (await fetchFromWp<WordPressPost[]>(
           country,
-          wordpressQueries.postBySlug(params.slug),
+          wordpressQueries.postBySlug(slug),
         )) || [];
       post = restPosts[0] || null;
     } catch (error) {
@@ -40,6 +42,6 @@ export default async function Page({ params }: ArticlePageProps) {
   }
 
   return (
-    <ArticleClientContent slug={params.slug} countryCode={country} initialData={post} />
+    <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
   );
 }
