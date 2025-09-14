@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
-import { memo, useMemo, useEffect, useCallback } from "react"
+import { memo, useMemo, useEffect } from "react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
@@ -44,16 +44,14 @@ export const NewsGrid = memo(function NewsGrid({
   onLoadMore,
   hasMorePosts,
 }: NewsGridProps) {
-  // Memoize the load more callback
-  const handleLoadMore = useCallback(() => {
-    if (onLoadMore && isAuthorPage) {
-      onLoadMore()
-      setTimeout(() => setIsFetching(false), 500)
-    }
-  }, [onLoadMore, isAuthorPage])
-
-  // Use the infinite scroll hook with the memoized callback
+  // Use the infinite scroll hook with the load more handler
   const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
+
+  async function handleLoadMore() {
+    if (onLoadMore && isAuthorPage) {
+      await onLoadMore()
+    }
+  }
 
   // Generate blur placeholders once
   const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
