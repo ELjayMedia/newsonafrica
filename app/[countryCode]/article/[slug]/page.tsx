@@ -119,30 +119,25 @@ export async function generateMetadata(
 }
 
 export default async function Page({ params }: ArticlePageProps) {
-  const resolvedParams = await params
-  console.log(`📖 Rendering article: ${resolvedParams.countryCode}/${resolvedParams.slug}`)
+  const { countryCode, slug } = await params
+  console.log(`📖 Rendering article: ${countryCode}/${slug}`)
 
   let post: any
   try {
-    post = await getPostBySlugForCountry(
-      resolvedParams.countryCode,
-      resolvedParams.slug,
-    )
+    post = await getPostBySlugForCountry(countryCode, slug)
   } catch (error) {
     console.error(`❌ Error fetching article:`, error)
     return <ArticleErrorFallback />
   }
 
   if (!post) {
-    console.warn(
-      `⚠️ Article not found: ${resolvedParams.countryCode}/${resolvedParams.slug}`,
-    )
+    console.warn(`⚠️ Article not found: ${countryCode}/${slug}`)
     notFound()
   }
 
   return (
     <Suspense fallback={<ArticleSkeleton />}>
-      <ArticleWrapper post={post} params={resolvedParams} />
+      <ArticleWrapper post={post} params={{ countryCode, slug }} />
     </Suspense>
   )
 }
