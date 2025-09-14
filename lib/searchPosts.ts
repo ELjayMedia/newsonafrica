@@ -3,7 +3,8 @@
  * WordPress-based post search utility
  */
 
-import { siteConfig } from "@/config/site"
+import { getWpEndpoints } from "@/config/wp"
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 import type { SearchPost } from "./search"
 
 export interface Post {
@@ -60,7 +61,7 @@ export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
       order: "desc",
     })
 
-    const response = await fetch(`${siteConfig.wordpress.apiUrl}/posts?${searchParams}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",

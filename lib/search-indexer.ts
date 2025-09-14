@@ -1,4 +1,6 @@
-import { siteConfig } from "@/config/site"
+import { getWpEndpoints } from "@/config/wp"
+
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 interface IndexedPost {
   id: string
@@ -1014,7 +1016,7 @@ export class SearchIndexer {
         searchParams.append("tags", options.tags.join(","))
       }
 
-      const response = await fetch(`${siteConfig.wordpress.apiUrl}/posts?${searchParams.toString()}`)
+      const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams.toString()}`)
 
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`)
