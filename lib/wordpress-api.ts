@@ -3,8 +3,12 @@ import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
 
 export interface WordPressImage {
-  source_url?: string
-  alt_text?: string
+  sourceUrl?: string
+  altText?: string
+  mediaDetails?: {
+    width?: number
+    height?: number
+  }
 }
 
 export interface WordPressAuthor {
@@ -39,6 +43,7 @@ export interface WordPressPost {
   categories?: { nodes: WordPressCategory[] }
   tags?: { nodes: WordPressTag[] }
   author?: { node: WordPressAuthor }
+  featuredImage?: { node: WordPressImage }
 }
 
 export interface CountryConfig {
@@ -68,6 +73,38 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
 
+function mapPostFromWp(post: any): WordPressPost {
+  const featured = post._embedded?.['wp:featuredmedia']?.[0]
+  const author = post._embedded?.['wp:author']?.[0]
+  const categoryTerms = post._embedded?.['wp:term']?.[0] || []
+  const tagTerms = post._embedded?.['wp:term']?.[1] || []
+
+  return {
+    ...post,
+    featuredImage: featured
+      ? {
+          node: {
+            sourceUrl: featured.source_url,
+            altText: featured.alt_text || '',
+            mediaDetails: {
+              width: featured.media_details?.width,
+              height: featured.media_details?.height,
+            },
+          },
+        }
+      : undefined,
+    author: author
+      ? { node: { id: author.id, name: author.name, slug: author.slug } }
+      : undefined,
+    categories: {
+      nodes: categoryTerms.map((cat: any) => ({ id: cat.id, name: cat.name, slug: cat.slug })),
+    },
+    tags: {
+      nodes: tagTerms.map((tag: any) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
+    },
+  }
+}
+
 async function fetchFromWp<T>(
   countryCode: string,
   query: { endpoint: string; params?: Record<string, any> },
@@ -88,7 +125,14 @@ async function fetchFromWp<T>(
         console.error(`[v0] WordPress API error ${res.status} for ${url}`)
         return null
       }
-      return (await res.json()) as T
+      const data = await res.json()
+      if (query.endpoint.startsWith('posts')) {
+        if (Array.isArray(data)) {
+          return data.map(mapPostFromWp) as T
+        }
+        return mapPostFromWp(data) as T
+      }
+      return data as T
     } catch (error) {
       console.error(`[v0] WordPress API request failed for ${url}`, error)
       throw error
@@ -208,7 +252,8 @@ export const getRelatedPosts = async (
       if (!res.ok) {
         return []
       }
-      const posts = (await res.json()) as WordPressPost[]
+      const data = (await res.json()) as any[]
+      const posts = data.map(mapPostFromWp)
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
       console.error('Tag-intersection query failed:', error)
