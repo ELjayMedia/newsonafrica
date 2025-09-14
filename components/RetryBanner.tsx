@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { WifiOff, Wifi, RefreshCw, X } from "lucide-react"
@@ -82,20 +82,7 @@ export default function RetryBanner({
     }
   }, [isDismissed])
 
-  // Auto-retry logic
-  useEffect(() => {
-    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
-      return
-    }
-
-    const timer = setTimeout(() => {
-      handleRetry()
-    }, retryInterval)
-
-    return () => clearTimeout(timer)
-  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline])
-
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     setIsRetrying(true)
     setRetryCount((prev) => prev + 1)
 
@@ -129,7 +116,20 @@ export default function RetryBanner({
     } finally {
       setIsRetrying(false)
     }
-  }
+  }, [onRetry, retryCount, maxRetries])
+
+  // Auto-retry logic
+  useEffect(() => {
+    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      handleRetry()
+    }, retryInterval)
+
+    return () => clearTimeout(timer)
+  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline, handleRetry])
 
   const handleDismiss = () => {
     setShowBanner(false)
