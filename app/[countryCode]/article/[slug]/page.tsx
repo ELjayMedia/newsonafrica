@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import type { PageProps } from 'next';
 import { getPostBySlug } from '@/lib/wp-data';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
@@ -6,16 +7,15 @@ import { ArticleClientContent } from './ArticleClientContent';
 
 export const revalidate = 60;
 
-interface ArticlePageProps {
-  params: { countryCode: string; slug: string };
-}
-
-export default async function Page({ params }: ArticlePageProps) {
-  const country = (params.countryCode || 'DEFAULT').toUpperCase();
+export default async function Page({
+  params,
+}: PageProps<{ countryCode: string; slug: string }>) {
+  const { countryCode, slug } = await params;
+  const country = (countryCode || 'DEFAULT').toUpperCase();
   let post;
 
   try {
-    post = await getPostBySlug(country, params.slug);
+    post = await getPostBySlug(country, slug);
   } catch (error) {
     console.error('GraphQL getPostBySlug failed, falling back to REST', error);
   }
@@ -25,7 +25,7 @@ export default async function Page({ params }: ArticlePageProps) {
       const restPosts =
         (await fetchFromWp<WordPressPost[]>(
           country,
-          wordpressQueries.postBySlug(params.slug),
+          wordpressQueries.postBySlug(slug),
         )) || [];
       post = restPosts[0];
     } catch (error) {
@@ -36,6 +36,6 @@ export default async function Page({ params }: ArticlePageProps) {
   if (!post) notFound();
 
   return (
-    <ArticleClientContent slug={params.slug} countryCode={country} initialData={post} />
+    <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
   );
 }
