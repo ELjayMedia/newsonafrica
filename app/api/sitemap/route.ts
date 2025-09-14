@@ -2,7 +2,7 @@ const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
@@ -25,7 +25,7 @@ export async function GET() {
     .map(
       (category) => `
   <url>
-    <loc>${baseUrl}/category/${category.slug}</loc>
+    <loc>${baseUrl}${getCategoryUrl(category.slug, DEFAULT_COUNTRY)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

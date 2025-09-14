@@ -10,6 +10,7 @@ import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
 import { fetchAllCategories } from "@/lib/wordpress-api"
+import { getCategoryUrl } from "@/lib/utils/routing"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -58,7 +59,7 @@ function CategoryDropdown({ category }: { category: Category }) {
   if (!category.children || category.children.length === 0) {
     return (
       <Link
-        href={`/category/${category.slug}`}
+        href={getCategoryUrl(category.slug)}
         className="block px-3 py-3 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 transition-colors duration-200"
       >
         {category.name.toUpperCase()}
@@ -76,13 +77,13 @@ function CategoryDropdown({ category }: { category: Category }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem asChild>
-          <Link href={`/category/${category.slug}`} className="w-full">
+          <Link href={getCategoryUrl(category.slug)} className="w-full">
             All {category.name}
           </Link>
         </DropdownMenuItem>
         {category.children.map((child) => (
           <DropdownMenuItem key={child.id} asChild>
-            <Link href={`/category/${child.slug}`} className="w-full">
+            <Link href={getCategoryUrl(child.slug)} className="w-full">
               {child.name}
             </Link>
           </DropdownMenuItem>
@@ -142,7 +143,7 @@ function MobileMenu({
                 <li key={category.id}>
                   <div className="flex items-center justify-between">
                     <Link
-                      href={`/category/${category.slug}`}
+                      href={getCategoryUrl(category.slug)}
                       className="flex-1 py-2 text-gray-700 hover:text-blue-600 font-medium"
                       onClick={onClose}
                     >
@@ -168,7 +169,7 @@ function MobileMenu({
                       {category.children.map((child) => (
                         <li key={child.id}>
                           <Link
-                            href={`/category/${child.slug}`}
+                            href={getCategoryUrl(child.slug)}
                             className="block py-1 text-sm text-gray-600 hover:text-blue-600"
                             onClick={onClose}
                           >

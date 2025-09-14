@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -55,19 +55,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: `${baseUrl}/news`,
+        url: `${baseUrl}${getCategoryUrl("news", DEFAULT_COUNTRY)}`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${baseUrl}/business`,
+        url: `${baseUrl}${getCategoryUrl("business", DEFAULT_COUNTRY)}`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
       },
       {
-        url: `${baseUrl}/sport`,
+        url: `${baseUrl}${getCategoryUrl("sport", DEFAULT_COUNTRY)}`,
         lastModified: new Date(),
         changeFrequency: "daily" as const,
         priority: 0.9,
@@ -155,7 +155,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Category pages
     const categoryPages = categories.map((category) => ({
-      url: `${baseUrl}/category/${category.slug}`,
+      url: `${baseUrl}${getCategoryUrl(category.slug, DEFAULT_COUNTRY)}`,
       lastModified: new Date(),
       changeFrequency: "daily" as const,
       priority: 0.7,

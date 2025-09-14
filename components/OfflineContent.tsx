@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
-import { convertLegacyUrl } from "@/lib/utils/routing"
+import { convertLegacyUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 interface CachedArticle {
   title: string
@@ -69,8 +69,9 @@ export default function OfflineContent() {
         return (
           url.pathname.startsWith("/post/") ||
           url.pathname.includes("/article/") ||
-          url.pathname.startsWith("/category/") ||
-          url.pathname === "/"
+          url.pathname.includes("/category/") ||
+          url.pathname === "/" ||
+          SUPPORTED_COUNTRIES.some((c) => url.pathname === `/${c}`)
         )
       })
 
@@ -91,8 +92,8 @@ export default function OfflineContent() {
           title = slug.replace(/-/g, " ")
           title = title.charAt(0).toUpperCase() + title.slice(1)
           category = "Article"
-        } else if (title.startsWith("/category/")) {
-          const categoryName = title.replace("/category/", "").replace(/-/g, " ")
+        } else if (title.includes("/category/")) {
+          const categoryName = title.split("/category/")[1]?.replace(/-/g, " ") || ""
           title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`
           category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
         }

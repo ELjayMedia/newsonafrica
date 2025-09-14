@@ -66,7 +66,8 @@ export function middleware(request: NextRequest) {
   }
 
   if (LEGACY_ROUTES_MAP[pathname]) {
-    return NextResponse.redirect(new URL(LEGACY_ROUTES_MAP[pathname], request.url))
+    const country = getCountryFromRequest(request)
+    return NextResponse.redirect(new URL(`/${country}${LEGACY_ROUTES_MAP[pathname]}`, request.url))
   }
 
   if (pathname.startsWith("/api/")) {

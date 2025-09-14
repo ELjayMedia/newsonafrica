@@ -12,7 +12,7 @@ import { getPostBySlugForCountry } from "@/lib/wordpress-api";
 describe("ArticlePage", () => {
   it("renders fallback content when WordPress is unreachable", async () => {
     vi.mocked(getPostBySlugForCountry).mockRejectedValue(new Error("Service Unavailable"));
-    const ui = await ArticlePage({ params: { countryCode: "sz", slug: "test" } });
+    const ui = await ArticlePage({ params: Promise.resolve({ countryCode: "sz", slug: "test" }) });
     render(ui);
     expect(
       screen.getByText("Article temporarily unavailable")
