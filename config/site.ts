@@ -5,7 +5,7 @@ const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com",
   ogImage: "/news-on-africa-logo.png",
   links: {
     twitter: "https://twitter.com/newsonafrica",
@@ -14,7 +14,7 @@ export const siteConfig = {
   },
   author: {
     name: "News On Africa",
-    url: "https://newsonafrica.com",
+    url: "https://app.newsonafrica.com",
   },
   keywords: [
     "Africa news",

@@ -67,7 +67,7 @@ export async function generateMetadata(
       title: "Article - News On Africa",
       description: "Read the latest news from Africa.",
       alternates: {
-        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
+        canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/article/${slug}`,
       },
     }
   }
@@ -78,7 +78,7 @@ export async function generateMetadata(
       description: "The requested article could not be found.",
       robots: { index: false, follow: false },
       alternates: {
-        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
+        canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/article/${slug}`,
       },
     }
   }
@@ -89,7 +89,7 @@ export async function generateMetadata(
   const description =
     post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
   const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-  const canonicalUrl = `https://newsonafrica.com/${countryCode}/article/${slug}`
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/article/${slug}`
   const authorName = post.author?.node?.name ?? "Unknown"
 
   return {
@@ -170,10 +170,10 @@ function ArticleWrapper({ post, params }: { post: any; params: RouteParams }) {
               name: "News On Africa",
               logo: {
                 "@type": "ImageObject",
-                url: "https://newsonafrica.com/news-on-africa-logo.png",
+                url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/news-on-africa-logo.png`,
               },
             },
-            mainEntityOfPage: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+            mainEntityOfPage: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${params.countryCode}/article/${params.slug}`,
             articleSection: post.categories?.nodes?.[0]?.name || "News",
           }),
         }}

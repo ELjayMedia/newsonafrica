@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 export async function GET() {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
   let posts
   try {

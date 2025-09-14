@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
+              canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`
+        const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -203,7 +203,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             follow: true,
           },
           alternates: {
-            canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
+            canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
           },
         }
       },
@@ -226,7 +226,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
+        canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
       },
     }
   }

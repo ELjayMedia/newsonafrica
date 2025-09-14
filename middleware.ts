@@ -51,7 +51,7 @@ export function middleware(request: NextRequest) {
 
     const allowedOrigins =
       process.env.NODE_ENV === "production"
-        ? [process.env.NEXT_PUBLIC_SITE_URL || "", "https://news-on-africa.com"]
+        ? [process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com", "https://news-on-africa.com"]
         : ["http://localhost:3000"]
 
     const origin = request.headers.get("origin") || ""

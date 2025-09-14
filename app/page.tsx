@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 
   // Canonical URL and robots for homepage
   alternates: {
-    canonical: "https://newsonafrica.com",
+    canonical: siteConfig.url,
     languages: {
-      "en-US": "https://newsonafrica.com",
-      en: "https://newsonafrica.com",
+      "en-US": siteConfig.url,
+      en: siteConfig.url,
     },
   },
 
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,
-    url: "https://newsonafrica.com",
+    url: siteConfig.url,
     siteName: siteConfig.name,
     locale: "en_US",
     type: "website",
     images: [
       {
-        url: "https://newsonafrica.com/og-image.jpg",
+        url: `${siteConfig.url}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: siteConfig.name,
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     site: "@newsonafrica",
     title: siteConfig.name,
     description: siteConfig.description,
-    images: ["https://newsonafrica.com/og-image.jpg"],
+    images: [`${siteConfig.url}/og-image.jpg`],
   },
 
   // Additional SEO metadata

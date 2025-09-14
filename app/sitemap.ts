@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
   const postsPromise = fetchPosts(1000).catch((err) => {
     console.warn(

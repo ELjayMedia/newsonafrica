@@ -2,7 +2,7 @@ import { siteConfig } from "@/config/site"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
   const robotsTxt = `
 # News on Africa Robots.txt

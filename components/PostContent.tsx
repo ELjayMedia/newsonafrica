@@ -37,7 +37,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
             <span className="text-gray-500 text-xs">Share</span>
             <SocialShare
 
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
 
               title={post.title}
               description={post.excerpt || post.title}
@@ -135,7 +135,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">Found this article helpful? Share it with others!</p>
             <SocialShare
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
 
               title={post.title}
               description={post.excerpt || post.title}
