@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { getPostBySlugForCountry, getRelatedPosts } from "./wordpress-api";
+import { getRelatedPosts } from "./wordpress-api";
+import { fetchPost } from "./wp";
 
 // Restore global fetch after each test
 afterEach(() => {
@@ -7,7 +8,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("getPostBySlugForCountry", () => {
+describe("fetchPost", () => {
   it("returns post data with featured image", async () => {
     const mockPost = [
       {
@@ -15,17 +16,19 @@ describe("getPostBySlugForCountry", () => {
         slug: "test",
         title: { rendered: "Test" },
         excerpt: { rendered: "" },
+        content: { rendered: "content" },
         _embedded: { "wp:featuredmedia": [{ source_url: "img.jpg", alt_text: "img" }] },
       },
     ]
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPost }))
-    const result = await getPostBySlugForCountry("sz", "test")
+    const result = await fetchPost({ countryIso: "sz", slug: "test" })
     expect(result?.featuredImage?.node.sourceUrl).toBe("img.jpg")
+    expect(result?.title).toBe("Test")
   })
 
   it("returns null on 503 response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }))
-    const result = await getPostBySlugForCountry("sz", "test")
+    const result = await fetchPost({ countryIso: "sz", slug: "test" })
     expect(result).toBeNull()
   })
 })
