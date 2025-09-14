@@ -52,11 +52,9 @@ export async function generateStaticParams() {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: RouteParams
-}): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: { params: RouteParams }
+): Promise<Metadata> {
   const { countryCode, slug } = params
   console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
