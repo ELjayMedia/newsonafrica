@@ -1,6 +1,7 @@
 import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
+import { GraphQLClient, gql } from 'graphql-request'
 
 export interface WordPressImage {
   sourceUrl?: string
@@ -105,6 +106,267 @@ function mapPostFromWp(post: any): WordPressPost {
   }
 }
 
+function decodeGlobalId(id: string): number {
+  try {
+    const decoded = Buffer.from(id, 'base64').toString('ascii')
+    const parts = decoded.split(':')
+    return Number(parts[parts.length - 1])
+  } catch {
+    return Number(id)
+  }
+}
+
+function mapPostFromGql(post: any): WordPressPost {
+  return {
+    id: post.databaseId ?? decodeGlobalId(post.id),
+    date: post.date,
+    slug: post.slug,
+    title: { rendered: post.title ?? '' },
+    excerpt: { rendered: post.excerpt ?? '' },
+    content: post.content ? { rendered: post.content } : undefined,
+    featuredImage: post.featuredImage?.node
+      ? {
+          node: {
+            sourceUrl: post.featuredImage.node.sourceUrl,
+            altText: post.featuredImage.node.altText || '',
+            mediaDetails: {
+              width: post.featuredImage.node.mediaDetails?.width,
+              height: post.featuredImage.node.mediaDetails?.height,
+            },
+          },
+        }
+      : undefined,
+    author: post.author?.node
+      ? {
+          node: {
+            id: post.author.node.databaseId ?? decodeGlobalId(post.author.node.id),
+            name: post.author.node.name,
+            slug: post.author.node.slug,
+          },
+        }
+      : undefined,
+    categories: {
+      nodes:
+        post.categories?.nodes.map((c: any) => ({
+          id: c.databaseId ?? decodeGlobalId(c.id),
+          name: c.name,
+          slug: c.slug,
+        })) || [],
+    },
+    tags: {
+      nodes:
+        post.tags?.nodes.map((t: any) => ({
+          id: t.databaseId ?? decodeGlobalId(t.id),
+          name: t.name,
+          slug: t.slug,
+        })) || [],
+    },
+  }
+}
+
+export async function fetchFromWpGraphQL<T>(
+  countryCode: string,
+  query: string,
+  variables?: Record<string, any>,
+): Promise<T | null> {
+  const base = getWpEndpoints(countryCode).graphql
+  const client = new GraphQLClient(base, { fetch })
+  const operation = async (): Promise<T | null> => {
+    try {
+      return await client.request<T>(query, variables)
+    } catch (error) {
+      console.error(`[v0] WordPress GraphQL request failed for ${base}`, error)
+      throw error
+    }
+  }
+
+  try {
+    return await circuitBreaker.execute<T | null>(base, operation, async () => null)
+  } catch (error) {
+    console.error(`[v0] Circuit breaker error for ${base}`, error)
+    return null
+  }
+}
+
+const POST_FIELDS = gql`
+  fragment PostFields on Post {
+    databaseId
+    id
+    slug
+    date
+    title
+    excerpt
+    content
+    featuredImage {
+      node {
+        sourceUrl
+        altText
+        mediaDetails {
+          width
+          height
+        }
+      }
+    }
+    categories {
+      nodes {
+        databaseId
+        name
+        slug
+      }
+    }
+    tags {
+      nodes {
+        databaseId
+        name
+        slug
+      }
+    }
+    author {
+      node {
+        databaseId
+        name
+        slug
+      }
+    }
+  }
+`
+
+const LATEST_POSTS_QUERY = gql`
+  ${POST_FIELDS}
+  query LatestPosts($country: String!, $first: Int!) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        taxQuery: { taxArray: [{ taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }] }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+const POSTS_BY_CATEGORY_QUERY = gql`
+  ${POST_FIELDS}
+  query PostsByCategory($country: String!, $category: String!, $first: Int!) {
+    categories(where: { slug: [$category] }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        taxQuery: {
+          taxArray: [
+            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
+            { taxonomy: CATEGORY, field: SLUG, terms: [$category], operator: IN }
+          ]
+        }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+const CATEGORIES_QUERY = gql`
+  query AllCategories($first: Int = 100) {
+    categories(first: $first, where: { hideEmpty: true }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+  }
+`
+
+const POST_CATEGORIES_QUERY = gql`
+  query PostCategories($id: ID!) {
+    post(id: $id, idType: DATABASE_ID) {
+      categories {
+        nodes {
+          databaseId
+        }
+      }
+    }
+  }
+`
+
+const RELATED_POSTS_QUERY = gql`
+  ${POST_FIELDS}
+  query RelatedPosts(
+    $country: String!
+    $catIds: [ID!]
+    $exclude: ID!
+    $first: Int!
+  ) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        notIn: [$exclude]
+        taxQuery: {
+          taxArray: [
+            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
+            { taxonomy: CATEGORY, field: ID, terms: $catIds, operator: IN }
+          ]
+        }
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+const FEATURED_POSTS_QUERY = gql`
+  ${POST_FIELDS}
+  query FeaturedPosts($country: String!, $tag: String!, $first: Int!) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        taxQuery: {
+          taxArray: [
+            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
+            { taxonomy: TAG, field: SLUG, terms: [$tag], operator: IN }
+          ]
+        }
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
 export async function fetchFromWp<T>(
   countryCode: string,
   query: { endpoint: string; params?: Record<string, any> },
@@ -148,6 +410,19 @@ export async function fetchFromWp<T>(
 }
 
 export async function getLatestPostsForCountry(countryCode: string, limit = 20) {
+  const gqlData = await fetchFromWpGraphQL<any>(
+    countryCode,
+    LATEST_POSTS_QUERY,
+    { country: countryCode, first: limit },
+  )
+  if (gqlData?.posts) {
+    const posts = gqlData.posts.nodes.map(mapPostFromGql)
+    return {
+      posts,
+      hasNextPage: gqlData.posts.pageInfo.hasNextPage,
+      endCursor: gqlData.posts.pageInfo.endCursor,
+    }
+  }
   const { endpoint, params } = wordpressQueries.recentPosts(limit)
   const posts =
     (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
@@ -159,6 +434,30 @@ export async function getPostsByCategoryForCountry(
   categorySlug: string,
   limit = 20,
 ) {
+  const gqlData = await fetchFromWpGraphQL<any>(
+    countryCode,
+    POSTS_BY_CATEGORY_QUERY,
+    { country: countryCode, category: categorySlug, first: limit },
+  )
+  if (gqlData?.posts && gqlData?.categories) {
+    const catNode = gqlData.categories.nodes[0]
+    const category = catNode
+      ? {
+          id: catNode.databaseId,
+          name: catNode.name,
+          slug: catNode.slug,
+          description: catNode.description ?? undefined,
+          count: catNode.count ?? undefined,
+        }
+      : null
+    const posts = gqlData.posts.nodes.map(mapPostFromGql)
+    return {
+      category,
+      posts,
+      hasNextPage: gqlData.posts.pageInfo.hasNextPage,
+      endCursor: gqlData.posts.pageInfo.endCursor,
+    }
+  }
   const categories =
     (await fetchFromWp<WordPressCategory[]>(
       countryCode,
@@ -175,6 +474,16 @@ export async function getPostsByCategoryForCountry(
 }
 
 export async function getCategoriesForCountry(countryCode: string) {
+  const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORIES_QUERY)
+  if (gqlData?.categories) {
+    return gqlData.categories.nodes.map((c: any) => ({
+      id: c.databaseId,
+      name: c.name,
+      slug: c.slug,
+      description: c.description ?? undefined,
+      count: c.count ?? undefined,
+    })) as WordPressCategory[]
+  }
   const { endpoint, params } = wordpressQueries.categories()
   return (
     (await fetchFromWp<WordPressCategory[]>(countryCode, { endpoint, params })) || []
@@ -186,6 +495,30 @@ export async function getRelatedPostsForCountry(
   postId: string,
   limit = 6,
 ) {
+  const gqlPost = await fetchFromWpGraphQL<any>(
+    countryCode,
+    POST_CATEGORIES_QUERY,
+    { id: Number(postId) },
+  )
+  if (gqlPost?.post) {
+    const catIds = gqlPost.post.categories.nodes.map((c: any) => c.databaseId)
+    if (catIds.length > 0) {
+      const gqlData = await fetchFromWpGraphQL<any>(
+        countryCode,
+        RELATED_POSTS_QUERY,
+        {
+          country: countryCode,
+          catIds,
+          exclude: Number(postId),
+          first: limit,
+        },
+      )
+      if (gqlData?.posts) {
+        const posts = gqlData.posts.nodes.map(mapPostFromGql)
+        return posts.filter((p) => p.id !== Number(postId))
+      }
+    }
+  }
   const post = await fetchFromWp<WordPressPost>(
     countryCode,
     wordpressQueries.postById(postId),
@@ -197,11 +530,18 @@ export async function getRelatedPostsForCountry(
   const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
   const posts =
     (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
-  // Ensure the current post isn't included in results
   return posts.filter((p) => p.id !== Number(postId))
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
+  const gqlData = await fetchFromWpGraphQL<any>(
+    countryCode,
+    FEATURED_POSTS_QUERY,
+    { country: countryCode, tag: 'featured', first: limit },
+  )
+  if (gqlData?.posts) {
+    return gqlData.posts.nodes.map(mapPostFromGql)
+  }
   const tags =
     (await fetchFromWp<WordPressTag[]>(
       countryCode,
