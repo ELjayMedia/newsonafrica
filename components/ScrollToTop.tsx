@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useUser } from "@/contexts/UserContext"
 
@@ -16,7 +16,7 @@ export function ScrollToTop() {
   const isArticlePage = pathname?.startsWith("/post/") || pathname?.includes("/article/")
 
   // Function to handle scrolling to top
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     // Skip scrolling on article pages for authenticated users
     // (ArticleView component handles this separately)
     if (isAuthenticated && isArticlePage) {
@@ -34,7 +34,7 @@ export function ScrollToTop() {
       // Fallback for older browsers
       window.scrollTo(0, 0)
     }
-  }
+  }, [isAuthenticated, isArticlePage])
 
   // Effect for route changes
   useEffect(() => {
@@ -56,7 +56,7 @@ export function ScrollToTop() {
       prevPathRef.current = pathname
       prevSearchParamsRef.current = new URLSearchParams(currentSearchParams)
     }
-  }, [pathname, searchParams, isAuthenticated, isArticlePage])
+  }, [pathname, searchParams, isAuthenticated, isArticlePage, scrollToTop])
 
   // Effect for initial load and auth state changes
   useEffect(() => {
@@ -91,7 +91,7 @@ export function ScrollToTop() {
       window.removeEventListener("auth-state-change", handleAuthStateChange)
       window.removeEventListener("storage", handleStorageChange)
     }
-  }, [isAuthenticated, isArticlePage])
+  }, [isAuthenticated, isArticlePage, scrollToTop])
 
   // Listen for history changes (back/forward navigation)
   useEffect(() => {
@@ -107,7 +107,7 @@ export function ScrollToTop() {
     return () => {
       window.removeEventListener("popstate", handlePopState)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, scrollToTop])
 
   return null
 }
