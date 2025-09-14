@@ -10,7 +10,7 @@ export const revalidate = 300 // Revalidate every 5 minutes
 type RouteParams = { countryCode: string; slug: string }
 
 type ArticlePageProps = {
-  params: RouteParams
+  params: Promise<RouteParams>
   searchParams?: Record<string, string | string[] | undefined>
 }
 
@@ -53,9 +53,9 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata(
-  { params }: { params: RouteParams }
+  { params }: { params: Promise<RouteParams> }
 ): Promise<Metadata> {
-  const { countryCode, slug } = params
+  const { countryCode, slug } = await params
   console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
   let post: any
@@ -119,24 +119,25 @@ export async function generateMetadata(
 }
 
 export default async function Page({ params }: ArticlePageProps) {
-  console.log(`📖 Rendering article: ${params.countryCode}/${params.slug}`)
+  const { countryCode, slug } = await params
+  console.log(`📖 Rendering article: ${countryCode}/${slug}`)
 
   let post: any
   try {
-    post = await getPostBySlugForCountry(params.countryCode, params.slug)
+    post = await getPostBySlugForCountry(countryCode, slug)
   } catch (error) {
     console.error(`❌ Error fetching article:`, error)
     return <ArticleErrorFallback />
   }
 
   if (!post) {
-    console.warn(`⚠️ Article not found: ${params.countryCode}/${params.slug}`)
+    console.warn(`⚠️ Article not found: ${countryCode}/${slug}`)
     notFound()
   }
 
   return (
     <Suspense fallback={<ArticleSkeleton />}>
-      <ArticleWrapper post={post} params={params} />
+      <ArticleWrapper post={post} params={{ countryCode, slug }} />
     </Suspense>
   )
 }

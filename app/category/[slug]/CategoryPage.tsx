@@ -89,7 +89,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         initialData?.category?.description || `Latest articles in the ${slug} category`,
       ),
     ]
-  }, [slug, initialData])
+  }, [slug, country, initialData])
 
   // Memoize computed values with chronological sorting
   const category = initialData?.category || null
