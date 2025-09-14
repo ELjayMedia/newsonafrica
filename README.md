@@ -53,58 +53,48 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
+- Node.js 20 (see `.nvmrc`)
+- pnpm 9 (defined in `package.json`)
 - Supabase account
 - WordPress instance with REST API
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables:
+Copy `.env.example` to `.env.local` and fill in the required values:
 
-\`\`\`
-# WordPress
-NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-site/graphql
-WORDPRESS_REST_API_URL=https://your-wordpress-site/wp-json/wp/v2
-# Optional overrides for multisite support
-# NEXT_PUBLIC_WORDPRESS_API_URL_NG=https://nigeria-site/graphql
-# WORDPRESS_REST_API_URL_NG=https://nigeria-site/wp-json/wp/v2
-WP_APP_USERNAME=your_app_username
-WP_APP_PASSWORD=your_app_password
+```bash
+cp .env.example .env.local
+```
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# Authentication
-NEXT_PUBLIC_FACEBOOK_APP_ID=your_facebook_app_id
-FACEBOOK_APP_SECRET=your_facebook_app_secret
-
-# Site
-NEXT_PUBLIC_SITE_URL=https://app.newsonafrica.com
-\`\`\`
+The `.env.example` file documents all required keys.
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
-npm run dev
-\`\`\`
+pnpm dev
+```
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `npm run build`
+1. **Build Command**: `pnpm build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
+
+### Vercel Troubleshooting
+
+- Ensure the correct Node version is selected in the Vercel project settings.
+- Clear the build cache if you encounter unexpected build errors.
+- Verify all required environment variables are set in Vercel.
 
 ## 📱 Future Web2Native Conversion
 
@@ -118,16 +108,20 @@ Documentation for this workflow will be added once available.
 
 ## 🧪 Testing
 
-\`\`\`bash
+```bash
 # Run unit tests
-npm test
+pnpm test
 
 # Run end-to-end tests
-npm run test:e2e
+pnpm test:e2e
 
 # Run linting
-npm run lint
-\`\`\`
+pnpm lint
+```
+
+## 🤖 Continuous Integration
+
+Pull requests trigger a preflight workflow that installs dependencies and runs type checking and the production build using Node 20 and pnpm 9.
 
 ## 📚 Documentation
 
