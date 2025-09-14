@@ -31,7 +31,7 @@ function normalizeArticleData(article: Article | Post) {
       excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ""), // Strip HTML
       slug: post.slug,
       date: post.date,
-      featuredImage: post.featured_image_url,
+      featuredImage: post.featured_image_url || post.featuredImage?.node?.sourceUrl,
       author: post.author_data?.name,
       categories: post.category_data?.map((cat) => ({ name: cat.name, slug: cat.slug })) || [],
       link: `/posts/${post.slug}`,
