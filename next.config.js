@@ -10,7 +10,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   },
   runtimeCaching: [
     {
-      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+      urlPattern: /^https:\/\/app\.newsonafrica\.com\/api\/.*/i,
       handler: "NetworkFirst",
       options: {
         cacheName: "api-cache",
