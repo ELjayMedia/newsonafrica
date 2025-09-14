@@ -61,14 +61,14 @@ export async function generateMetadata({
 
   let post: any
   try {
-    post = await getPostBySlugForCountry(params.countryCode, params.slug)
+    post = await getPostBySlugForCountry(countryCode, slug)
   } catch (error) {
     console.error(`❌ Error generating metadata:`, error)
     return {
       title: "Article - News On Africa",
       description: "Read the latest news from Africa.",
       alternates: {
-        canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
       },
     }
   }
@@ -79,7 +79,7 @@ export async function generateMetadata({
       description: "The requested article could not be found.",
       robots: { index: false, follow: false },
       alternates: {
-        canonical: `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`,
+        canonical: `https://newsonafrica.com/${countryCode}/article/${slug}`,
       },
     }
   }
@@ -90,7 +90,7 @@ export async function generateMetadata({
   const description =
     post.seo?.metaDesc || cleanExcerpt || `Read ${post.title} on News On Africa`
   const featuredImageUrl = post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"
-  const canonicalUrl = `https://newsonafrica.com/${params.countryCode}/article/${params.slug}`
+  const canonicalUrl = `https://newsonafrica.com/${countryCode}/article/${slug}`
   const authorName = post.author?.node?.name ?? "Unknown"
 
   return {
