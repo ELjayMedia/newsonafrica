@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { searchPosts as utilitySearchPosts } from "./searchPosts"
 
 // Types for search

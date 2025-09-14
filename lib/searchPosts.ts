@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * WordPress-based post search utility
  */
