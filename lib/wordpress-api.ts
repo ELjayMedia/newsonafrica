@@ -73,6 +73,19 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
 
+export function getCountryBaseUrl(iso: string) {
+  const endpoints = getWpEndpoints(iso)
+  return endpoints.rest.replace(/\/wp-json\/wp\/v2$/, '')
+}
+
+export async function resolveCountryTermId(slug: string): Promise<number | null> {
+  const base = getCountryBaseUrl(process.env.NEXT_PUBLIC_DEFAULT_SITE || '')
+  const res = await fetch(`${base}/wp-json/wp/v2/countries?slug=${slug}`)
+  if (!res.ok) return null
+  const data = await res.json()
+  return data?.[0]?.id ?? null
+}
+
 function mapPostFromWp(post: any): WordPressPost {
   const featured = post._embedded?.['wp:featuredmedia']?.[0]
   const author = post._embedded?.['wp:author']?.[0]
@@ -302,6 +315,8 @@ export async function fetchPosts(
     author?: string
     featured?: boolean
     countryCode?: string
+    countryTermId?: number
+    ids?: (number | string)[]
   } = {},
 ) {
   if (typeof options === 'number') {
@@ -320,6 +335,8 @@ export async function fetchPosts(
     author,
     featured,
     countryCode = DEFAULT_COUNTRY,
+    countryTermId,
+    ids,
   } = options
 
   const params: Record<string, any> = { page, per_page: perPage, _embed: 1 }
@@ -328,6 +345,8 @@ export async function fetchPosts(
   if (tag) params.tags = tag
   if (author) params.author = author
   if (featured) params.sticky = 'true'
+  if (countryTermId) params.countries = String(countryTermId)
+  if (ids && ids.length) params.include = ids.join(',')
 
   const base = getWpEndpoints(countryCode).rest
   const url = `${base}/posts?${new URLSearchParams(params).toString()}`
