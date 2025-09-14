@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { fetchPosts, resolveCountryTermId } from "@/lib/wp"
+import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
 
 export const runtime = "edge"
 export const revalidate = 60
@@ -13,11 +13,13 @@ export async function GET(req: NextRequest) {
   const idsParam = searchParams.get("ids")
   const ids = idsParam ? idsParam.split(",").filter(Boolean) : undefined
 
-  const opts: any = { section, page, perPage, ids }
+  const opts: any = { page, perPage }
+  if (section) opts.category = section
+  if (ids) opts.ids = ids
 
   if (country) {
     if (country.length === 2) {
-      opts.countryIso = country
+      opts.countryCode = country
     } else {
       const termId = await resolveCountryTermId(country)
       if (termId) opts.countryTermId = termId
