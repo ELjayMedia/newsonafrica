@@ -11,11 +11,11 @@ function buildEndpoints(site: string): WordPressEndpoints {
     graphql:
       process.env[`NEXT_PUBLIC_WORDPRESS_API_URL_${upper}`] ||
       process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
-      `https://newsonafrica.com/${site}/graphql`,
+      `https://newsonafrica.com/graphql`,
     rest:
       process.env[`WORDPRESS_REST_API_URL_${upper}`] ||
       process.env.WORDPRESS_REST_API_URL ||
-      `https://newsonafrica.com/${site}/wp-json/wp/v2`,
+      `https://newsonafrica.com/wp-json/wp/v2`,
   }
 }
 
