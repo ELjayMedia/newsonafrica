@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from "@/lib/supabase"
 import {
   fetchById,

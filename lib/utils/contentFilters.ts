@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { WordPressPost } from "@/lib/wordpress-api"
 
 /**
