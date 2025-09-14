@@ -2,7 +2,7 @@ const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
@@ -22,14 +22,16 @@ export async function GET() {
     <priority>1.0</priority>
   </url>
   ${safeCategories
-    .map(
-      (category) => `
+    .flatMap((category) =>
+      SUPPORTED_COUNTRIES.map(
+        (country) => `
   <url>
-    <loc>${baseUrl}/category/${category.slug}</loc>
+    <loc>${baseUrl}${getCategoryUrl(category.slug, country)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   `,
+      ),
     )
     .join("")}
   ${safePosts

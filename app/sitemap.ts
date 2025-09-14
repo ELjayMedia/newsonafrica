@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -154,12 +154,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
 
     // Category pages
-    const categoryPages = categories.map((category) => ({
-      url: `${baseUrl}/category/${category.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    }))
+    const categoryPages = categories.flatMap((category) =>
+      SUPPORTED_COUNTRIES.map((country) => ({
+        url: `${baseUrl}${getCategoryUrl(category.slug, country)}`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      })),
+    )
 
     // Tag pages
     const tagPages = tags.map((tag) => ({

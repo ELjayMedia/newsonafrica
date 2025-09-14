@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { getCategoryUrl } from "@/lib/utils/routing"
 import { ArrowLeft, Home } from "lucide-react"
 
 export default function CategoryNotFound() {
@@ -37,7 +38,7 @@ export default function CategoryNotFound() {
             {["news", "business", "sports", "entertainment", "politics"].map((category) => (
               <Link
                 key={category}
-                href={`/category/${category}`}
+                href={getCategoryUrl(category)}
                 className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}

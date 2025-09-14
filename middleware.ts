@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { DEFAULT_COUNTRY, getCategoryUrl, getArticleUrl } from "@/lib/utils/routing"
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP: Record<string, string> = {
-  "/news": "/category/news",
-  "/business": "/category/business",
-  "/sport": "/category/sport",
-  "/entertainment": "/category/entertainment",
+  "/news": getCategoryUrl("news", DEFAULT_COUNTRY),
+  "/business": getCategoryUrl("business", DEFAULT_COUNTRY),
+  "/sport": getCategoryUrl("sport", DEFAULT_COUNTRY),
+  "/entertainment": getCategoryUrl("entertainment", DEFAULT_COUNTRY),
 }
 
 // Log API requests in development
@@ -21,8 +22,7 @@ function handleLegacyPostRedirect(pathname: string, request: NextRequest): NextR
   // Check if it's a legacy /post/ route
   if (pathname.startsWith("/post/")) {
     const slug = pathname.replace("/post/", "")
-    const defaultCountry = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
-    const newUrl = `/${defaultCountry}/article/${slug}`
+    const newUrl = getArticleUrl(slug, DEFAULT_COUNTRY)
 
     console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
     return NextResponse.redirect(new URL(newUrl, request.url))

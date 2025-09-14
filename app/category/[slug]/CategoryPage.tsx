@@ -16,7 +16,7 @@ import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
@@ -76,7 +76,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const schemas = useMemo(() => {
     if (!slug) return []
 
-    const categoryUrl = `${siteConfig.url}/category/${slug}`
+    const categoryUrl = `${siteConfig.url}${getCategoryUrl(slug, country)}`
 
     return [
       getBreadcrumbSchema([
@@ -175,7 +175,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
               {relatedCategoriesArray.map((relatedSlug) => (
                 <Link
                   key={relatedSlug}
-                  href={`/category/${relatedSlug}`}
+                  href={getCategoryUrl(relatedSlug)}
                   className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
                   {relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1)}
