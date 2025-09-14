@@ -1,7 +1,12 @@
 import { Suspense } from "react"
 import { SearchContent } from "@/components/SearchContent"
 import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
-import { SearchDebugger } from "@/components/SearchDebugger"
+import dynamic from "next/dynamic"
+
+const SearchDebugger = dynamic(
+  () => import("@/components/SearchDebugger").then((mod) => ({ default: mod.SearchDebugger })),
+  { ssr: false },
+)
 
 interface SearchPageProps {
   searchParams: { q?: string; page?: string }
