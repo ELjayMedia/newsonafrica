@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { getCategoryUrl } from "@/lib/utils/routing"
 import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
@@ -274,7 +275,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       <header className="mb-8">
         {primaryCategory && (
           <Link
-            href={`/category/${primaryCategory.slug}`}
+            href={getCategoryUrl(primaryCategory.slug)}
             className="text-primary font-medium text-sm mb-2 inline-block"
           >
             {primaryCategory.name}

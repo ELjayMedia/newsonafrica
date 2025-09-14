@@ -77,8 +77,10 @@ export default function OfflineFallback({
             itemTitle = url.pathname.split("/").pop()?.replace(/-/g, " ") || "Article"
             itemTitle = itemTitle.charAt(0).toUpperCase() + itemTitle.slice(1)
             itemType = "article"
-          } else if (url.pathname.startsWith("/category/")) {
-            const category = url.pathname.replace("/category/", "").replace(/-/g, " ")
+          } else if (/^\/([a-z]{2}\/)?category\//.test(url.pathname)) {
+            const category = url.pathname
+              .replace(/^\/([a-z]{2}\/)?category\//, "")
+              .replace(/-/g, " ")
             itemTitle = `${category.charAt(0).toUpperCase() + category.slice(1)} News`
             itemType = "category"
           }

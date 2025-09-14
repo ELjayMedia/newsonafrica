@@ -69,7 +69,7 @@ export default function OfflineContent() {
         return (
           url.pathname.startsWith("/post/") ||
           url.pathname.includes("/article/") ||
-          url.pathname.startsWith("/category/") ||
+          /^\/([a-z]{2}\/)?category\//.test(url.pathname) ||
           url.pathname === "/"
         )
       })
@@ -91,8 +91,8 @@ export default function OfflineContent() {
           title = slug.replace(/-/g, " ")
           title = title.charAt(0).toUpperCase() + title.slice(1)
           category = "Article"
-        } else if (title.startsWith("/category/")) {
-          const categoryName = title.replace("/category/", "").replace(/-/g, " ")
+        } else if (/^\/([a-z]{2}\/)?category\//.test(title)) {
+          const categoryName = title.replace(/^\/([a-z]{2}\/)?category\//, "").replace(/-/g, " ")
           title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`
           category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
         }

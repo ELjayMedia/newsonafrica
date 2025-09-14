@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
-import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
+import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -80,6 +80,11 @@ export async function POST(request: NextRequest) {
 
       case "category_updated":
         if (post?.slug) {
+          // Revalidate country-specific category pages
+          for (const country of SUPPORTED_COUNTRIES) {
+            revalidatePath(getCategoryUrl(post.slug, country))
+          }
+          // Legacy path
           revalidatePath(`/category/${post.slug}`)
           revalidateTag(`category-${post.id}`)
 

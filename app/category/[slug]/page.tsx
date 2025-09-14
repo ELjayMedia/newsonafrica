@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import { getServerCountry } from "@/lib/utils/routing"
+import { getServerCountry, getCategoryUrl } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
 
 interface CategoryPageProps {
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `https://newsonafrica.com/category/${params.slug}`,
+              canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
+        const canonicalUrl = `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -203,7 +203,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             follow: true,
           },
           alternates: {
-            canonical: `https://newsonafrica.com/category/${params.slug}`,
+            canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
           },
         }
       },
@@ -226,7 +226,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com/category/${params.slug}`,
+        canonical: `https://newsonafrica.com${getCategoryUrl(params.slug, country)}`,
       },
     }
   }

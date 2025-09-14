@@ -7,7 +7,7 @@ import { memo, useMemo, useEffect, useCallback } from "react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 interface Post {
   id: string
@@ -172,7 +172,7 @@ const SportCategorySection = memo(function SportCategorySection({
       {/* Sport Category Header */}
       <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
         <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
-        <Link href="/category/sport" className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
+        <Link href={getCategoryUrl("sport")} className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
           View all
         </Link>
       </div>
