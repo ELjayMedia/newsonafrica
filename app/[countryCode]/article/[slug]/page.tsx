@@ -57,7 +57,8 @@ export async function generateMetadata({
 }: {
   params: RouteParams
 }): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for article: ${params.countryCode}/${params.slug}`)
+  const { countryCode, slug } = params
+  console.log(`🔍 Generating metadata for article: ${countryCode}/${slug}`)
 
   let post: any
   try {
