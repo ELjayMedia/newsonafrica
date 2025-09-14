@@ -2,7 +2,9 @@
  * WordPress-based search actions
  */
 
-import { siteConfig } from "@/config/site"
+import { getWpEndpoints } from "@/config/wp"
+
+const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 export interface SearchResult {
   id: string
@@ -61,7 +63,7 @@ export async function searchPosts(
       searchParams.append("tags", tags.join(","))
     }
 
-    const response = await fetch(`${siteConfig.wordpress.apiUrl}/posts?${searchParams}`, {
+    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -117,7 +119,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 
   try {
     const response = await fetch(
-      `${siteConfig.wordpress.apiUrl}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +169,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 export async function searchCategories(query: string): Promise<any[]> {
   try {
     const response = await fetch(
-      `${siteConfig.wordpress.apiUrl}/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -189,7 +191,7 @@ export async function searchCategories(query: string): Promise<any[]> {
 export async function searchTags(query: string): Promise<any[]> {
   try {
     const response = await fetch(
-      `${siteConfig.wordpress.apiUrl}/tags?search=${encodeURIComponent(query)}&per_page=10`,
+      `${WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
