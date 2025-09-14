@@ -1,5 +1,6 @@
 import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
+import { circuitBreaker } from './api/circuit-breaker'
 
 export interface WordPressImage {
   source_url?: string
@@ -67,25 +68,45 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
 
-async function fetchFromWp<T>(countryCode: string, query: { endpoint: string; params?: Record<string, any> }): Promise<T> {
+async function fetchFromWp<T>(
+  countryCode: string,
+  query: { endpoint: string; params?: Record<string, any> },
+): Promise<T | null> {
   const base = getWpEndpoints(countryCode).rest
   const params = new URLSearchParams(
     Object.entries(query.params || {}).map(([k, v]) => [k, String(v)]),
   ).toString()
   const url = `${base}/${query.endpoint}${params ? `?${params}` : ''}`
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    next: { revalidate: 300 },
-  })
-  if (!res.ok) {
-    throw new Error(`WordPress API error: ${res.status}`)
+
+  const operation = async (): Promise<T | null> => {
+    try {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        next: { revalidate: 300 },
+      })
+      if (!res.ok) {
+        console.error(`[v0] WordPress API error ${res.status} for ${url}`)
+        return null
+      }
+      return (await res.json()) as T
+    } catch (error) {
+      console.error(`[v0] WordPress API request failed for ${url}`, error)
+      throw error
+    }
   }
-  return res.json() as Promise<T>
+
+  try {
+    return await circuitBreaker.execute<T | null>(url, operation, async () => null)
+  } catch (error) {
+    console.error(`[v0] Circuit breaker error for ${url}`, error)
+    return null
+  }
 }
 
 export async function getLatestPostsForCountry(countryCode: string, limit = 20) {
   const { endpoint, params } = wordpressQueries.recentPosts(limit)
-  const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  const posts =
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
   return { posts, hasNextPage: false, endCursor: null }
 }
 
@@ -94,28 +115,32 @@ export async function getPostsByCategoryForCountry(
   categorySlug: string,
   limit = 20,
 ) {
-  const categories = await fetchFromWp<WordPressCategory[]>(
-    countryCode,
-    wordpressQueries.categoryBySlug(categorySlug),
-  )
+  const categories =
+    (await fetchFromWp<WordPressCategory[]>(
+      countryCode,
+      wordpressQueries.categoryBySlug(categorySlug),
+    )) || []
   const category = categories[0]
   if (!category) {
     return { category: null, posts: [], hasNextPage: false, endCursor: null }
   }
   const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
-  const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  const posts =
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
   return { category, posts, hasNextPage: false, endCursor: null }
 }
 
 export async function getCategoriesForCountry(countryCode: string) {
   const { endpoint, params } = wordpressQueries.categories()
-  return fetchFromWp<WordPressCategory[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressCategory[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export async function getPostBySlugForCountry(countryCode: string, slug: string) {
   const { endpoint, params } = wordpressQueries.postBySlug(slug)
   const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
-  return posts[0] || null
+  return posts?.[0] || null
 }
 
 export async function getRelatedPostsForCountry(
@@ -123,22 +148,33 @@ export async function getRelatedPostsForCountry(
   postId: string,
   limit = 6,
 ) {
-  const post = await fetchFromWp<WordPressPost>(countryCode, wordpressQueries.postById(postId))
+  const post = await fetchFromWp<WordPressPost>(
+    countryCode,
+    wordpressQueries.postById(postId),
+  )
+  if (!post) return []
   const categoryIds: number[] =
     post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
   if (categoryIds.length === 0) return []
   const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
-  const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  const posts =
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
   // Ensure the current post isn't included in results
   return posts.filter((p) => p.id !== Number(postId))
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
-  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug('featured'))
+  const tags =
+    (await fetchFromWp<WordPressTag[]>(
+      countryCode,
+      wordpressQueries.tagBySlug('featured'),
+    )) || []
   const tag = tags[0]
   if (!tag) return []
   const { endpoint, params } = wordpressQueries.featuredPosts(tag.id, limit)
-  return fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
@@ -196,11 +232,17 @@ export const fetchTaggedPosts = async (
   limit = 10,
   countryCode = DEFAULT_COUNTRY,
 ) => {
-  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(tagSlug))
+  const tags =
+    (await fetchFromWp<WordPressTag[]>(
+      countryCode,
+      wordpressQueries.tagBySlug(tagSlug),
+    )) || []
   const tag = tags[0]
   if (!tag) return []
   const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-  return fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export const fetchPostsByTag = fetchTaggedPosts
@@ -219,7 +261,9 @@ export async function fetchPosts(
 ) {
   if (typeof options === 'number') {
     const { endpoint, params } = wordpressQueries.recentPosts(options)
-    return fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params })
+    return (
+      (await fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params })) || []
+    )
   }
 
   const {
@@ -259,12 +303,16 @@ export const fetchCategories = (countryCode = DEFAULT_COUNTRY) =>
 
 export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
   const { endpoint, params } = wordpressQueries.tags()
-  return fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
   const { endpoint, params } = wordpressQueries.authors()
-  return fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export const fetchCountries = async () => {
@@ -272,13 +320,18 @@ export const fetchCountries = async () => {
 }
 
 export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
-  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug))
-  return tags[0] || null
+  const tags = await fetchFromWp<WordPressTag[]>(
+    countryCode,
+    wordpressQueries.tagBySlug(slug),
+  )
+  return tags?.[0] || null
 }
 
-export const fetchAllTags = (countryCode = DEFAULT_COUNTRY) => {
+export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
   const { endpoint, params } = wordpressQueries.tags()
-  return fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })
+  return (
+    (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })) || []
+  )
 }
 
 export async function updateUserProfile() {
