@@ -5,10 +5,10 @@ import { COUNTRIES } from "@/lib/wordpress-api"
 import { CountryEditionContent } from "./CountryEditionContent"
 import { CountryEditionSkeleton } from "./CountryEditionSkeleton"
 
+type RouteParams = { countryCode: string }
+
 interface CountryPageProps {
-  params: {
-    countryCode: string
-  }
+  params: Promise<RouteParams>
 }
 
 // Generate static params for all supported countries
@@ -20,7 +20,7 @@ export async function generateStaticParams() {
 
 // Generate metadata for each country
 export async function generateMetadata({ params }: CountryPageProps): Promise<Metadata> {
-  const { countryCode } = params
+  const { countryCode } = await params
   const country = COUNTRIES[countryCode]
 
   if (!country) {
@@ -51,8 +51,8 @@ export async function generateMetadata({ params }: CountryPageProps): Promise<Me
   }
 }
 
-export default function CountryPage({ params }: CountryPageProps) {
-  const { countryCode } = params
+export default async function CountryPage({ params }: CountryPageProps) {
+  const { countryCode } = await params
 
   // Check if country code is valid
   if (!COUNTRIES[countryCode]) {
