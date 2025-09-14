@@ -4,7 +4,6 @@ import { FeaturedHero } from "@/components/FeaturedHero"
 import { CompactCard } from "@/components/CompactCard"
 import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
@@ -248,7 +247,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
                   ))}
                 </div>
                 <Link
-                  href={getCategoryUrl(categoryName.toLowerCase())}
+                  href={`/category/${categoryName.toLowerCase()}`}
                   className="block text-center text-xs text-blue-600 mt-2 py-1 border-t border-gray-100"
                 >
                   View all {categoryName} news

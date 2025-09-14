@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { fetchAllCategories } from "@/lib/wordpress-api"
-import { getCategoryUrl } from "@/lib/utils/routing"
 import { Button } from "@/components/ui/button"
 
 export default async function CategoryMenu() {
@@ -21,7 +20,7 @@ export default async function CategoryMenu() {
             className="rounded-full hover:bg-blue-50 hover:text-blue-700 transition-colors"
             asChild
           >
-            <Link href={getCategoryUrl(category.slug)}>
+            <Link href={`/category/${category.slug}`}>
               {category.name}
               {category.count !== undefined && <span className="ml-1 text-xs text-gray-500">({category.count})</span>}
             </Link>

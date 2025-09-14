@@ -86,10 +86,7 @@ async function fetchFromWp<T>(
       })
       if (!res.ok) {
         console.error(`[v0] WordPress API error ${res.status} for ${url}`)
-        if (res.status === 404) {
-          return null
-        }
-        throw new Error(`WordPress API error: ${res.status}`)
+        return null
       }
       return (await res.json()) as T
     } catch (error) {
@@ -99,10 +96,10 @@ async function fetchFromWp<T>(
   }
 
   try {
-    return await circuitBreaker.execute<T | null>(url, operation)
+    return await circuitBreaker.execute<T | null>(url, operation, async () => null)
   } catch (error) {
     console.error(`[v0] Circuit breaker error for ${url}`, error)
-    throw error
+    return null
   }
 }
 
@@ -151,28 +148,19 @@ export async function getRelatedPostsForCountry(
   postId: string,
   limit = 6,
 ) {
-  try {
-    const post = await fetchFromWp<WordPressPost>(
-      countryCode,
-      wordpressQueries.postById(postId),
-    )
-    if (!post) return []
-    const categoryIds: number[] =
-      post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
-    if (categoryIds.length === 0) return []
-    const { endpoint, params } = wordpressQueries.relatedPosts(
-      categoryIds,
-      postId,
-      limit,
-    )
-    const posts =
-      (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
-    // Ensure the current post isn't included in results
-    return posts.filter((p) => p.id !== Number(postId))
-  } catch (error) {
-    console.error(`[v0] Error fetching related posts for ${postId}`, error)
-    return []
-  }
+  const post = await fetchFromWp<WordPressPost>(
+    countryCode,
+    wordpressQueries.postById(postId),
+  )
+  if (!post) return []
+  const categoryIds: number[] =
+    post._embedded?.['wp:term']?.[0]?.map((cat: any) => cat.id) || []
+  if (categoryIds.length === 0) return []
+  const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
+  const posts =
+    (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })) || []
+  // Ensure the current post isn't included in results
+  return posts.filter((p) => p.id !== Number(postId))
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {

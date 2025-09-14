@@ -11,4 +11,3 @@ export interface HomePageData {
   countryPosts: CountryPosts
   featuredPosts: HomePost[]
 }
-

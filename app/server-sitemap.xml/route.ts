@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
-import { getArticleUrl, getCategoryUrl, DEFAULT_COUNTRY } from "@/lib/utils/routing"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 export async function GET() {
   const baseUrl = siteConfig.url || "https://newsonafrica.com"
@@ -72,7 +72,7 @@ export async function GET() {
     categories.forEach((category) => {
       sitemap += `
   <url>
-    <loc>${baseUrl}${getCategoryUrl(category.slug, DEFAULT_COUNTRY)}</loc>
+    <loc>${baseUrl}/category/${category.slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>

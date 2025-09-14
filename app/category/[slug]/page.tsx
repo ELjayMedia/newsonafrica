@@ -1,13 +1,11 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import { getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { getServerCountry } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
 
-type RouteParams = { countryCode: string; slug: string }
-
 interface CategoryPageProps {
-  params: Promise<RouteParams>
+  params: { slug: string }
 }
 
 // Static generation configuration
@@ -19,42 +17,39 @@ export async function generateStaticParams() {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
 
   try {
-    const allParams: { countryCode: string; slug: string }[] = []
-    for (const country of SUPPORTED_COUNTRIES) {
-      const categories = await circuitBreaker.execute(
-        "wordpress-categories-static",
-        async () => await getCategoriesForCountry(country),
-        async () => {
-          console.log(
-            `[v0] Categories static generation: Using fallback due to WordPress unavailability for ${country}`,
-          )
-          return []
-        },
-      )
+    const categories = await circuitBreaker.execute(
+      "wordpress-categories-static",
+      async () => await getCategoriesForCountry(getServerCountry()),
+      async () => {
+        console.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
+        return []
+      },
+    )
 
-      allParams.push(...categories.slice(0, 50).map((category) => ({ countryCode: country, slug: category.slug })))
-    }
-
-    return allParams
+    // Return the first 50 most important categories for static generation
+    // Others will be generated on-demand
+    return categories.slice(0, 50).map((category) => ({
+      slug: category.slug,
+    }))
   } catch (error) {
     console.error("Error generating static params for categories:", error)
+    // Return empty array to allow all pages to be generated on-demand
     return []
   }
 }
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { countryCode, slug } = await params
-  console.log(`🔍 Generating metadata for category: ${countryCode}/${slug}`)
+  console.log(`🔍 Generating metadata for category: ${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const country = countryCode
-  const cacheKey = `category-metadata-${country}-${slug}`
+  const country = getServerCountry()
+  const cacheKey = `category-metadata-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
   if (cached.exists && !cached.isStale) {
-    console.log(`[v0] Category metadata: Using cached data for ${slug}`)
+    console.log(`[v0] Category metadata: Using cached data for ${params.slug}`)
     return cached.data
   }
 
@@ -62,10 +57,14 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     const result = await circuitBreaker.execute(
       "wordpress-category-metadata",
       async () => {
-        const { category, posts } = await getPostsByCategoryForCountry(country, slug, 10)
+        const { category, posts } = await getPostsByCategoryForCountry(
+          country,
+          params.slug,
+          10,
+        )
 
         if (!category) {
-          console.warn(`⚠️ Category not found for metadata generation: ${slug}`)
+          console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
           return {
             title: "Category Not Found - News On Africa",
             description: "The requested category could not be found.",
@@ -75,7 +74,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `https://newsonafrica.com${getCategoryUrl(slug, country)}`,
+              canonical: `https://newsonafrica.com/category/${params.slug}`,
             },
           }
         }
@@ -92,7 +91,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `https://newsonafrica.com${getCategoryUrl(slug, country)}`
+        const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
 
         // Generate keywords
         const keywords = [
@@ -191,21 +190,21 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Category metadata: Using stale cache for ${slug}`)
+          console.log(`[v0] Category metadata: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Category metadata: Using fallback for ${slug}`)
+        console.log(`[v0] Category metadata: Using fallback for ${params.slug}`)
         return {
-          title: `${slug.charAt(0).toUpperCase() + slug.slice(1)} - News On Africa`,
-          description: `Latest articles in the ${slug} category from News On Africa`,
+          title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
+          description: `Latest articles in the ${params.slug} category from News On Africa`,
           robots: {
             index: false,
             follow: true,
           },
-            alternates: {
-              canonical: `https://newsonafrica.com${getCategoryUrl(slug, country)}`,
-            },
+          alternates: {
+            canonical: `https://newsonafrica.com/category/${params.slug}`,
+          },
         }
       },
     )
@@ -213,24 +212,24 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     enhancedCache.set(cacheKey, result, 600000, 1800000) // 10min fresh, 30min stale
     return result
   } catch (error) {
-    console.error(`❌ Error generating metadata for category ${slug}:`, error)
+    console.error(`❌ Error generating metadata for category ${params.slug}:`, error)
 
     if (cached.exists) {
       return cached.data
     }
 
     return {
-      title: `${slug.charAt(0).toUpperCase() + slug.slice(1)} - News On Africa`,
-      description: `Latest articles in the ${slug} category from News On Africa`,
+      title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
+      description: `Latest articles in the ${params.slug} category from News On Africa`,
       robots: {
         index: false,
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com${getCategoryUrl(slug, country)}`,
+        canonical: `https://newsonafrica.com/category/${params.slug}`,
       },
+    }
   }
-}
 }
 
 // Server component that fetches data and renders the page
@@ -238,16 +237,19 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
-  const { countryCode, slug } = await params
-  const country = countryCode
-  const cacheKey = `category-data-${country}-${slug}`
+  const country = getServerCountry()
+  const cacheKey = `category-data-${country}-${params.slug}`
   const cached = enhancedCache.get(cacheKey)
 
   try {
     const categoryData = await circuitBreaker.execute(
       "wordpress-category-data",
       async () => {
-        const data = await getPostsByCategoryForCountry(country, slug, 20)
+        const data = await getPostsByCategoryForCountry(
+          country,
+          params.slug,
+          20,
+        )
 
         if (!data.category) {
           notFound()
@@ -257,15 +259,15 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Category data: Using stale cache for ${slug}`)
+          console.log(`[v0] Category data: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Category data: Using fallback for ${slug}`)
+        console.log(`[v0] Category data: Using fallback for ${params.slug}`)
         return {
           category: {
-            name: slug.charAt(0).toUpperCase() + slug.slice(1),
-            slug: slug,
+            name: params.slug.charAt(0).toUpperCase() + params.slug.slice(1),
+            slug: params.slug,
             description: "Category temporarily unavailable",
             count: 0,
           },
@@ -277,7 +279,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
               slug: "category-unavailable",
               date: new Date().toISOString(),
               author: { node: { name: "News On Africa", slug: "news-team" } },
-              categories: { nodes: [{ name: slug, slug }] },
+              categories: { nodes: [{ name: params.slug, slug: params.slug }] },
               featuredImage: { node: { sourceUrl: "/category-placeholder.png", altText: "Category unavailable" } },
             },
           ],
@@ -289,17 +291,17 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
       enhancedCache.set(cacheKey, categoryData, 300000, 900000) // 5min fresh, 15min stale
     }
 
-    return <CategoryClientPage params={{ countryCode, slug }} initialData={categoryData} />
+    return <CategoryClientPage params={params} initialData={categoryData} />
   } catch (error) {
-    console.error(`Error loading category page for ${slug}:`, error)
+    console.error(`Error loading category page for ${params.slug}:`, error)
 
     if (cached.exists) {
-      console.log(`[v0] Category page: Using cached data due to error for ${slug}`)
-      return <CategoryClientPage params={{ countryCode, slug }} initialData={cached.data} />
+      console.log(`[v0] Category page: Using cached data due to error for ${params.slug}`)
+      return <CategoryClientPage params={params} initialData={cached.data} />
     }
 
     // For build-time errors, still try to render with empty data
     // The client component will handle the error state
-    return <CategoryClientPage params={{ countryCode, slug }} initialData={null} />
+    return <CategoryClientPage params={params} initialData={null} />
   }
 }

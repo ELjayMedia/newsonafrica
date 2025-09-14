@@ -1,6 +1,5 @@
 import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress-api"
 import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
 import type { Metadata } from "next"
 import { getArticleUrl } from "@/lib/utils/routing"
 
@@ -101,7 +100,7 @@ export default async function SitemapPage() {
           <ul className="grid grid-cols-2 gap-2">
             {categories.map((category) => (
               <li key={category.slug}>
-                <Link href={getCategoryUrl(category.slug)} className="text-blue-600 hover:underline">
+                <Link href={`/category/${category.slug}`} className="text-blue-600 hover:underline">
                   {category.name}
                 </Link>
               </li>

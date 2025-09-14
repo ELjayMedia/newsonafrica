@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import { getCategoryUrl, getArticleUrl } from "@/lib/utils/routing"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -16,6 +16,7 @@ import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { getArticleUrl } from "@/lib/utils/routing"
 import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
@@ -27,21 +28,21 @@ interface CategoryData {
 
 interface CategoryPageProps {
   slug: string
-  countryCode: string
   initialData: CategoryData
 }
 
-export function CategoryPage({ slug, countryCode, initialData }: CategoryPageProps) {
+export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
   const queryClient = useQueryClient()
 
   // Memoize query key to prevent unnecessary re-renders
-  const queryKey = useMemo(() => ["category", countryCode, slug], [countryCode, slug])
+  const country = getCurrentCountry()
+  const queryKey = useMemo(() => ["category", country, slug], [country, slug])
 
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam = null }) =>
-      getPostsByCategoryForCountry(countryCode, slug, 20),
+      getPostsByCategoryForCountry(country, slug, 20),
     getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
     initialPageParam: null,
     initialData: initialData
@@ -59,23 +60,23 @@ export function CategoryPage({ slug, countryCode, initialData }: CategoryPagePro
     async (relatedSlugs: string[]) => {
       const prefetchPromises = relatedSlugs.slice(0, 3).map((relatedSlug) =>
         queryClient.prefetchInfiniteQuery({
-        queryKey: ["category", countryCode, relatedSlug],
+        queryKey: ["category", country, relatedSlug],
         queryFn: ({ pageParam = null }) =>
-          getPostsByCategoryForCountry(countryCode, relatedSlug, 20),
+          getPostsByCategoryForCountry(country, relatedSlug, 20),
           initialPageParam: null,
           staleTime: 5 * 60 * 1000,
         }),
       )
       await Promise.allSettled(prefetchPromises)
     },
-    [queryClient, countryCode],
+    [queryClient, country],
   )
 
   // Generate schema.org structured data (memoized)
   const schemas = useMemo(() => {
     if (!slug) return []
 
-    const categoryUrl = `${siteConfig.url}${getCategoryUrl(slug, countryCode)}`
+    const categoryUrl = `${siteConfig.url}/category/${slug}`
 
     return [
       getBreadcrumbSchema([
@@ -88,7 +89,7 @@ export function CategoryPage({ slug, countryCode, initialData }: CategoryPagePro
         initialData?.category?.description || `Latest articles in the ${slug} category`,
       ),
     ]
-  }, [slug, initialData, countryCode])
+  }, [slug, initialData])
 
   // Memoize computed values with chronological sorting
   const category = initialData?.category || null
@@ -174,7 +175,7 @@ export function CategoryPage({ slug, countryCode, initialData }: CategoryPagePro
               {relatedCategoriesArray.map((relatedSlug) => (
                 <Link
                   key={relatedSlug}
-                    href={getCategoryUrl(relatedSlug, countryCode)}
+                  href={`/category/${relatedSlug}`}
                   className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
                   {relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1)}
@@ -206,7 +207,7 @@ export function CategoryPage({ slug, countryCode, initialData }: CategoryPagePro
                 .map((post) => (
                   <Link
                     key={post.id}
-                    href={getArticleUrl(post.slug, countryCode)}
+                    href={getArticleUrl(post.slug)}
                     className="group flex flex-row items-center bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 min-h-[84px]"
                   >
                     <div className="flex-grow py-3 px-4 flex flex-col justify-center">

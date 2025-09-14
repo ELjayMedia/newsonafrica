@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,7 +30,11 @@ export default function OfflineFallback({
   const [isLoading, setIsLoading] = useState(true)
   const [isRetrying, setIsRetrying] = useState(false)
 
-  const loadCachedContent = useCallback(async () => {
+  useEffect(() => {
+    loadCachedContent()
+  }, [])
+
+  const loadCachedContent = async () => {
     if (!showCachedContent) {
       setIsLoading(false)
       return
@@ -71,8 +75,8 @@ export default function OfflineFallback({
             itemTitle = url.pathname.split("/").pop()?.replace(/-/g, " ") || "Article"
             itemTitle = itemTitle.charAt(0).toUpperCase() + itemTitle.slice(1)
             itemType = "article"
-          } else if (url.pathname.includes("/category/")) {
-            const category = url.pathname.split("/category/")[1]?.replace(/-/g, " ") || ""
+          } else if (url.pathname.startsWith("/category/")) {
+            const category = url.pathname.replace("/category/", "").replace(/-/g, " ")
             itemTitle = `${category.charAt(0).toUpperCase() + category.slice(1)} News`
             itemType = "category"
           }
@@ -101,11 +105,7 @@ export default function OfflineFallback({
     } finally {
       setIsLoading(false)
     }
-  }, [showCachedContent, type])
-
-  useEffect(() => {
-    loadCachedContent()
-  }, [loadCachedContent])
+  }
 
   const handleRetry = async () => {
     setIsRetrying(true)

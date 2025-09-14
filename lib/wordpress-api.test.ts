@@ -37,4 +37,3 @@ describe("getRelatedPosts", () => {
     expect(result).toEqual(mockPosts);
   });
 });
-

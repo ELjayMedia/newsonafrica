@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { ArrowLeft, Home } from "lucide-react"
-import { getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
 
 export default function CategoryNotFound() {
   return (
@@ -16,7 +15,7 @@ export default function CategoryNotFound() {
 
         <div className="space-y-4">
           <Link
-            href={`/${getCurrentCountry()}`}
+            href="/"
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Home className="h-4 w-4 mr-2" />
@@ -38,7 +37,7 @@ export default function CategoryNotFound() {
             {["news", "business", "sports", "entertainment", "politics"].map((category) => (
               <Link
                 key={category}
-                href={getCategoryUrl(category)}
+                href={`/category/${category}`}
                 className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}

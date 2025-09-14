@@ -78,7 +78,7 @@
       "name": "Business",
       "short_name": "Business",
       "description": "African business news and updates",
-      "url": "/sz/category/business",
+      "url": "/category/business",
       "icons": [
         {
           "src": "/icons/shortcut-business.png",
@@ -90,7 +90,7 @@
       "name": "Sports",
       "short_name": "Sports",
       "description": "African sports news and coverage",
-      "url": "/sz/category/sport",
+      "url": "/category/sport",
       "icons": [
         {
           "src": "/icons/shortcut-sports.png",
@@ -102,7 +102,7 @@
       "name": "Entertainment",
       "short_name": "Entertainment",
       "description": "African entertainment and culture",
-      "url": "/sz/category/entertainment",
+      "url": "/category/entertainment",
       "icons": [
         {
           "src": "/icons/shortcut-entertainment.png",

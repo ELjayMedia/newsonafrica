@@ -7,7 +7,7 @@ beforeAll(async () => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost"
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "testkey"
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service"
-  handlers = await import("./handlers")
+  handlers = await import("./route")
 })
 
 // Helpers to create mock supabase client

@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server"
 import { fetchPostsByTag } from "@/lib/wordpress-api"
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function GET(request: Request, { params }: { params: { slug: string } }) {
   const { searchParams } = new URL(request.url)
   const after = searchParams.get("after") || null
-  const { slug } = await params
+  const slug = params.slug
 
   try {
     const data = await fetchPostsByTag(slug, after)

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { CategoryPage } from "./CategoryPage"
 import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -17,7 +18,7 @@ interface CategoryData {
 }
 
 interface CategoryClientPageProps {
-  params: { countryCode: string; slug: string }
+  params: { slug: string }
   initialData: CategoryData | null
 }
 
@@ -26,7 +27,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<Error | null>(null)
   const queryClient = useQueryClient()
-  const country = params.countryCode
+  const country = getCurrentCountry()
 
   // Memoize the load function to prevent unnecessary re-renders
   const loadCategory = useCallback(async () => {
@@ -118,7 +119,7 @@ export default function CategoryClientPage({ params, initialData }: CategoryClie
 
   return (
     <ErrorBoundary>
-      <CategoryPage slug={params.slug} countryCode={params.countryCode} initialData={categoryData} />
+      <CategoryPage slug={params.slug} initialData={categoryData} />
     </ErrorBoundary>
   )
 }

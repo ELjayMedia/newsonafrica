@@ -12,7 +12,7 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface PostContentProps {
   post: Post
@@ -122,7 +122,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           {post.categories?.nodes?.map((category: Category) => (
             <Link
               key={category.id}
-              href={getCategoryUrl(category.slug)}
+              href={`/category/${category.slug}`}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm"
             >
               {category.name}

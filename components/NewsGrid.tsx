@@ -3,11 +3,11 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
-import { memo, useMemo, useEffect } from "react"
+import { memo, useMemo, useEffect, useCallback } from "react"
 import { formatDate } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazyLoad"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { getArticleUrl } from "@/lib/utils/routing"
 
 interface Post {
   id: string
@@ -44,14 +44,16 @@ export const NewsGrid = memo(function NewsGrid({
   onLoadMore,
   hasMorePosts,
 }: NewsGridProps) {
-  // Use the infinite scroll hook with the load more handler
-  const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
-
-  async function handleLoadMore() {
+  // Memoize the load more callback
+  const handleLoadMore = useCallback(() => {
     if (onLoadMore && isAuthorPage) {
-      await onLoadMore()
+      onLoadMore()
+      setTimeout(() => setIsFetching(false), 500)
     }
-  }
+  }, [onLoadMore, isAuthorPage])
+
+  // Use the infinite scroll hook with the memoized callback
+  const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
 
   // Generate blur placeholders once
   const mainPostBlurURL = useMemo(() => generateBlurDataURL(400, 300), [])
@@ -166,7 +168,7 @@ const SportCategorySection = memo(function SportCategorySection({
       {/* Sport Category Header */}
       <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
         <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
-        <Link href={getCategoryUrl("sport") } className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
+        <Link href="/category/sport" className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
           View all
         </Link>
       </div>

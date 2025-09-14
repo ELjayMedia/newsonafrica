@@ -4,7 +4,6 @@ import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
 import React, { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
@@ -283,7 +282,7 @@ export function HomeContent({
       <React.Fragment key={name}>
         <section className="bg-white rounded-lg">
           <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
+            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
               {name}
             </Link>
           </h2>

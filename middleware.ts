@@ -9,17 +9,6 @@ const LEGACY_ROUTES_MAP: Record<string, string> = {
   "/entertainment": "/category/entertainment",
 }
 
-// Supported country codes for editions
-const SUPPORTED_COUNTRIES = ["sz", "za"]
-
-function getCountryFromRequest(request: NextRequest) {
-  const cookieCountry = request.cookies.get("preferredCountry")?.value
-  if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
-    return cookieCountry
-  }
-  return process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
-}
-
 // Log API requests in development
 function logApiRequest(request: NextRequest) {
   if (process.env.NODE_ENV === "development") {
@@ -53,21 +42,8 @@ export function middleware(request: NextRequest) {
     return legacyRedirect
   }
 
-  if (pathname === "/" || pathname === "") {
-    const country = getCountryFromRequest(request)
-    const response = NextResponse.redirect(new URL(`/${country}`, request.url))
-    if (!request.cookies.get("preferredCountry")) {
-      response.cookies.set("preferredCountry", country, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-      })
-    }
-    return response
-  }
-
   if (LEGACY_ROUTES_MAP[pathname]) {
-    const country = getCountryFromRequest(request)
-    return NextResponse.redirect(new URL(`/${country}${LEGACY_ROUTES_MAP[pathname]}`, request.url))
+    return NextResponse.redirect(new URL(LEGACY_ROUTES_MAP[pathname], request.url))
   }
 
   if (pathname.startsWith("/api/")) {

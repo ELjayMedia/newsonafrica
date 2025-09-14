@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
-import { convertLegacyUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { convertLegacyUrl } from "@/lib/utils/routing"
 
 interface CachedArticle {
   title: string
@@ -20,7 +20,27 @@ export default function OfflineContent() {
   const [cachedArticles, setCachedArticles] = useState<CachedArticle[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadCachedContent = useCallback(async () => {
+  useEffect(() => {
+    // Check initial online status
+    setIsOnline(navigator.onLine)
+
+    // Listen for online/offline events
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    // Load cached content
+    loadCachedContent()
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
+  const loadCachedContent = async () => {
     try {
       setIsLoading(true)
 
@@ -49,9 +69,8 @@ export default function OfflineContent() {
         return (
           url.pathname.startsWith("/post/") ||
           url.pathname.includes("/article/") ||
-          url.pathname.includes("/category/") ||
-          url.pathname === "/" ||
-          SUPPORTED_COUNTRIES.some((c) => url.pathname === `/${c}`)
+          url.pathname.startsWith("/category/") ||
+          url.pathname === "/"
         )
       })
 
@@ -72,8 +91,8 @@ export default function OfflineContent() {
           title = slug.replace(/-/g, " ")
           title = title.charAt(0).toUpperCase() + title.slice(1)
           category = "Article"
-        } else if (title.includes("/category/")) {
-          const categoryName = title.split("/category/")[1]?.replace(/-/g, " ") || ""
+        } else if (title.startsWith("/category/")) {
+          const categoryName = title.replace("/category/", "").replace(/-/g, " ")
           title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`
           category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
         }
@@ -92,27 +111,7 @@ export default function OfflineContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
-
-  useEffect(() => {
-    // Check initial online status
-    setIsOnline(navigator.onLine)
-
-    // Listen for online/offline events
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    // Load cached content
-    loadCachedContent()
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [loadCachedContent])
+  }
 
   const handleRetry = () => {
     if (navigator.onLine) {
