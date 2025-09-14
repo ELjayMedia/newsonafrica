@@ -89,5 +89,8 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_SITE_URL": "https://app.newsonafrica.com"
+  }
 }

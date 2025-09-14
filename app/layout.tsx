@@ -33,7 +33,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],

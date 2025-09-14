@@ -16,7 +16,7 @@ export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
     datePublished: post.date,
     dateModified: post.modified,
     authorName: post.author.node.name,
-    authorUrl: `https://newsonafrica.com/author/${post.author.node.slug}`,
+    authorUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/author/${post.author.node.slug}`,
   })
 
   return <JsonLd data={schema} />

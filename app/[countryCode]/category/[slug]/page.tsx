@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
           noarchive: true,
         },
         alternates: {
-          canonical: `https://newsonafrica.com/${countryCode}/category/${slug}`,
+          canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/category/${slug}`,
         },
       }
     }
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const featuredImageUrl =
       featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
-    const canonicalUrl = `https://newsonafrica.com/${countryCode}/category/${slug}`
+    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/category/${slug}`
 
     const keywords = [
       category.name,
@@ -169,7 +169,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
       alternates: {
-        canonical: `https://newsonafrica.com/${countryCode}/category/${slug}`,
+        canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/${countryCode}/category/${slug}`,
       },
     }
   }

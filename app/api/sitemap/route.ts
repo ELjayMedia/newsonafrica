@@ -6,7 +6,7 @@ import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])

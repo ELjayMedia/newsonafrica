@@ -21,11 +21,11 @@ export function StructuredData({ post, url }: StructuredDataProps) {
       name: "News On Africa",
       logo: {
         "@type": "ImageObject",
-        url: "https://newsonafrica.com/logo.png",
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/logo.png`,
       },
     },
     description: post.excerpt,
-    image: post.featuredImage?.node?.sourceUrl || "https://newsonafrica.com/default-og-image.jpg",
+    image: post.featuredImage?.node?.sourceUrl || `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/default-og-image.jpg`,
     mainEntityOfPage: url,
   }
 
