@@ -68,6 +68,9 @@ WORDPRESS_REST_API_URL=https://your-wordpress-site/wp-json/wp/v2
 # Optional overrides for multisite support
 # NEXT_PUBLIC_WORDPRESS_API_URL_NG=https://nigeria-site/graphql
 # WORDPRESS_REST_API_URL_NG=https://nigeria-site/wp-json/wp/v2
+WP_GRAPHQL_SZ=https://eswatini-site/graphql
+WP_GRAPHQL_ZA=https://south-africa-site/graphql
+WP_GRAPHQL_DEFAULT=https://default-site/graphql
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
 
@@ -82,6 +85,15 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://app.newsonafrica.com
+\`\`\`
+
+### GraphQL Client Usage
+
+\`\`\`ts
+import { wpClient } from '@/lib/wp-graphql';
+
+const client = wpClient('za');
+// Use `client.request` to run queries
 \`\`\`
 
 ### Installation

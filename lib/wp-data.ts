@@ -1,4 +1,4 @@
-import { gqlClient } from './gql';
+import { wpClient } from './wp-graphql';
 import { PostsByCountryDocument, PostBySlugDocument } from '@/graphql/generated';
 import {
   getLatestPostsForCountry,
@@ -23,7 +23,7 @@ export async function getPostsByCountry(
   countryIso: string,
   opts?: { category?: string; first?: number; after?: string }
 ) {
-  const client = gqlClient(countryIso);
+  const client = wpClient(countryIso);
   const vars = {
     countrySlug: [countrySlug(countryIso)],
     category: opts?.category || null,
@@ -47,8 +47,8 @@ export async function getPostsByCountry(
   }
 }
 
-export async function getPostBySlug(countryIso: string, slug: string) {
-  const client = gqlClient(countryIso);
+export async function getPostBySlugForCountry(countryIso: string, slug: string) {
+  const client = wpClient(countryIso);
   try {
     const data = await client.request(PostBySlugDocument, { slug });
     return data.postBy;

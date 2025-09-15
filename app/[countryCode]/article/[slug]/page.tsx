@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { PageProps } from 'next';
-import { getPostBySlug } from '@/lib/wp-data';
+import { getPostBySlugForCountry } from '@/lib/wp-data';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
 import { ArticleClientContent } from './ArticleClientContent';
@@ -15,7 +15,7 @@ export default async function Page({
   let post;
 
   try {
-    post = await getPostBySlug(country, slug);
+    post = await getPostBySlugForCountry(country, slug);
   } catch (error) {
     console.error('GraphQL getPostBySlug failed, falling back to REST', error);
   }

@@ -1,7 +1,9 @@
 import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
-import { GraphQLClient, gql } from 'graphql-request'
+import { gql } from 'graphql-request'
+import { wpClient } from './wp-graphql'
+import { resolveGraphQLEndpoint } from './country'
 
 export interface WordPressImage {
   sourceUrl?: string
@@ -169,8 +171,8 @@ export async function fetchFromWpGraphQL<T>(
   query: string,
   variables?: Record<string, any>,
 ): Promise<T | null> {
-  const base = getWpEndpoints(countryCode).graphql
-  const client = new GraphQLClient(base, { fetch })
+  const base = resolveGraphQLEndpoint(countryCode)
+  const client = wpClient(countryCode)
   const operation = async (): Promise<T | null> => {
     try {
       return await client.request<T>(query, variables)
