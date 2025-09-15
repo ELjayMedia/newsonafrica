@@ -3,6 +3,35 @@ export const wordpressQueries = {
     endpoint: 'posts',
     params: { per_page: limit, _embed: 1, order: 'desc', orderby: 'date' },
   }),
+  posts: ({
+    page = 1,
+    perPage = 10,
+    category,
+    tag,
+    search,
+    author,
+    featured,
+  }: {
+    page?: number
+    perPage?: number
+    category?: string
+    tag?: string
+    search?: string
+    author?: string
+    featured?: boolean
+  }) => ({
+    endpoint: 'posts',
+    params: {
+      page,
+      per_page: perPage,
+      _embed: 1,
+      ...(search ? { search } : {}),
+      ...(category ? { categories: category } : {}),
+      ...(tag ? { tags: tag } : {}),
+      ...(author ? { author } : {}),
+      ...(featured ? { sticky: 'true' } : {}),
+    },
+  }),
   categoryBySlug: (slug: string) => ({
     endpoint: 'categories',
     params: { slug },
@@ -53,4 +82,4 @@ export const wordpressQueries = {
     params: { tags: tagId, per_page: limit, _embed: 1 },
   }),
 }
-export type WordpressQuery = ReturnType<typeof wordpressQueries.recentPosts>
+export type WordpressQuery = ReturnType<(typeof wordpressQueries)[keyof typeof wordpressQueries]>
