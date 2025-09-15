@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function GET(request: NextRequest) {
   try {

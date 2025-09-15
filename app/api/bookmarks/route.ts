@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
+import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function GET(request: NextRequest) {
   try {
@@ -148,6 +153,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to add bookmark" }, { status: 500 })
     }
 
+      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -203,6 +210,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Failed to update bookmark" }, { status: 500 })
     }
 
+      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -247,6 +256,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Failed to remove bookmark(s)" }, { status: 500 })
     }
 
+      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidatePath("/bookmarks")
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error in bookmarks API:", error)

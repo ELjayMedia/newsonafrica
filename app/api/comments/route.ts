@@ -3,6 +3,10 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 // Input validation schemas
 const getCommentsSchema = z.object({
@@ -232,10 +236,12 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       // Still return the comment, just without profile data
+      revalidateByTag(CACHE_TAGS.COMMENTS)
       return successResponse(comment)
     }
 
     // Return the comment with profile data
+    revalidateByTag(CACHE_TAGS.COMMENTS)
     return successResponse({
       ...comment,
       profile: {
@@ -339,6 +345,7 @@ export async function PATCH(request: NextRequest) {
       throw new Error(`Failed to ${action} comment: ${error.message}`)
     }
 
+    revalidateByTag(CACHE_TAGS.COMMENTS)
     return successResponse({ success: true, action })
   } catch (error) {
     return handleApiError(error)
