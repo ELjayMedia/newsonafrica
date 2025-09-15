@@ -4,7 +4,11 @@ import { updateUserProfile } from "@/lib/wordpress-api"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"
-import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function POST(request: Request) {
   logRequest(request)
@@ -39,7 +43,11 @@ export async function POST(request: Request) {
     const avatarUrl = `/uploads/${filename}`
     await updateUserProfile(token, { avatar_url: avatarUrl })
 
-    return jsonWithCors(request, { success: true, avatarUrl })
+      revalidateByTag(CACHE_TAGS.USERS)
+    revalidatePath("/profile")
+
+    return NextResponse.json({ success: true, avatarUrl })
+
   } catch (error) {
     console.error("Error uploading avatar:", error)
     return jsonWithCors(request, { error: "Failed to upload avatar" }, { status: 500 })

@@ -4,6 +4,7 @@
  */
 
 import { getWpEndpoints } from "@/config/wp"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 import type { SearchPost } from "./search"
 
@@ -66,7 +67,7 @@ export async function searchPosts(query: string, limit = 20): Promise<Post[]> {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: CACHE_DURATIONS.MEDIUM }, // Cache for 5 minutes
     })
 
     if (!response.ok) {

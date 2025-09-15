@@ -4,6 +4,7 @@ import { circuitBreaker } from './api/circuit-breaker'
 import * as log from './log'
 import { fetchWithTimeout } from './utils/fetchWithTimeout'
 import { rewriteLegacyLinks } from './utils/routing'
+import { CACHE_DURATIONS } from '@/lib/cache-utils'
 
 // Simple gql tag replacement
 const gql = String.raw
@@ -455,7 +456,7 @@ export async function fetchFromWp<T>(
     try {
       const res = await fetchWithTimeout(url, {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        next: { revalidate: 300 },
+        next: { revalidate: CACHE_DURATIONS.MEDIUM },
         timeout,
       })
       if (!res.ok) {
@@ -655,7 +656,7 @@ export const getRelatedPosts = async (
       })
       const res = await fetch(`${base}/posts?${params.toString()}`, {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        next: { revalidate: 300 },
+        next: { revalidate: CACHE_DURATIONS.MEDIUM },
       })
       if (!res.ok) {
         return []
@@ -741,7 +742,7 @@ export async function fetchPosts(
   const url = `${base}/posts?${new URLSearchParams(params).toString()}`
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    next: { revalidate: 300 },
+    next: { revalidate: CACHE_DURATIONS.MEDIUM },
   })
   if (!res.ok) {
     throw new Error(`WordPress API error: ${res.status}`)

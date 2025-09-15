@@ -1,4 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
@@ -118,7 +119,7 @@ export async function searchWordPressPosts(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: CACHE_DURATIONS.MEDIUM }, // Cache for 5 minutes
     })
 
     if (!response.ok) {

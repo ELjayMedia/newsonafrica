@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
-import { withCors, logRequest } from "@/lib/api-utils"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
+
+// Cache policy: very long (24 hours)
+export const revalidate = CACHE_DURATIONS.VERY_LONG
+
 
 export async function GET(request: NextRequest) {
   logRequest(request)

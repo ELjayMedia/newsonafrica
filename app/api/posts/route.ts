@@ -5,9 +5,12 @@ import { getPostsByCountry } from "@/lib/wp-data"
 import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
-} from "@/lib/wordpress-api"
+} from '@/lib/wordpress-api';
+import { CACHE_DURATIONS } from '@/lib/cache-utils';
 
-export const revalidate = 60;
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT;
 
 export async function GET(req: Request) {
   logRequest(req)

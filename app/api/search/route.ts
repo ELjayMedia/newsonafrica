@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
+
+// Cache policy: medium (5 minutes)
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 // WordPress REST API configuration
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
@@ -71,7 +74,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
           Accept: "application/json",
           "User-Agent": "NewsOnAfrica/1.0",
         },
-        next: { revalidate: 300 }, // Cache for 5 minutes
+        next: { revalidate: CACHE_DURATIONS.MEDIUM }, // Cache for 5 minutes
       })
 
       if (!response.ok) {

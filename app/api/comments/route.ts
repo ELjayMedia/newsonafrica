@@ -2,7 +2,12 @@ import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { z } from "zod"
-import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
+import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
+
 
 // Input validation schemas
 const getCommentsSchema = z.object({
@@ -240,20 +245,21 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       // Still return the comment, just without profile data
-      return withCors(request, successResponse(comment))
+
+      revalidateByTag(CACHE_TAGS.COMMENTS)
+      return successResponse(comment)
     }
 
     // Return the comment with profile data
-    return withCors(
-      request,
-      successResponse({
-        ...comment,
-        profile: {
-          username: profile.username,
-          avatar_url: profile.avatar_url,
-        },
-      }),
-    )
+    revalidateByTag(CACHE_TAGS.COMMENTS)
+    return successResponse({
+      ...comment,
+      profile: {
+        username: profile.username,
+        avatar_url: profile.avatar_url,
+      },
+    })
+
   } catch (error) {
     return withCors(request, handleApiError(error))
   }
@@ -351,7 +357,9 @@ export async function PATCH(request: NextRequest) {
       throw new Error(`Failed to ${action} comment: ${error.message}`)
     }
 
-    return withCors(request, successResponse({ success: true, action }))
+    revalidateByTag(CACHE_TAGS.COMMENTS)
+    return successResponse({ success: true, action })
+
   } catch (error) {
     return withCors(request, handleApiError(error))
   }
