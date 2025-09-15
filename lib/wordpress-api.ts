@@ -349,8 +349,21 @@ const CATEGORY_POSTS_QUERY = gql`
 export async function fetchFromWp<T>(
   countryCode: string,
   query: { endpoint: string; params?: Record<string, any> },
-  timeout = 10000,
-): Promise<T | null> {
+  timeout?: number,
+): Promise<T | null>
+export async function fetchFromWp<T>(
+  countryCode: string,
+  query: { endpoint: string; params?: Record<string, any> },
+  opts: { timeout?: number; withHeaders: true },
+): Promise<{ data: T; headers: Headers } | null>
+export async function fetchFromWp<T>(
+  countryCode: string,
+  query: { endpoint: string; params?: Record<string, any> },
+  opts: { timeout?: number; withHeaders?: boolean } = {},
+): Promise<any> {
+  const { timeout = 10000, withHeaders = false } =
+    typeof opts === 'number' ? { timeout: opts, withHeaders: false } : opts
+
   const base = getWpEndpoints(countryCode).rest
   const params = new URLSearchParams(
     Object.entries(query.params || {}).map(([k, v]) => [k, String(v)]),
@@ -368,12 +381,21 @@ export async function fetchFromWp<T>(
         log.error(`[v0] WordPress API error ${res.status} for ${url}`)
         return null
       }
-      const data = await res.json()
+      const rawData = await res.json()
+      let data: any
       if (query.endpoint.startsWith('posts')) {
-        if (Array.isArray(data)) {
-          return data.map((p: any) => mapWpPost(p, 'rest', countryCode)) as T
+
+        if (Array.isArray(rawData)) {
+          data = rawData.map((p: any) => mapPostFromWp(p, countryCode)) as T
+        } else {
+          data = mapPostFromWp(rawData, countryCode) as T
         }
-        return mapWpPost(data, 'rest', countryCode) as T
+      } else {
+        data = rawData as T
+      }
+
+      if (withHeaders) {
+        return { data: data as T, headers: res.headers }
       }
       return data as T
     } catch (error) {
@@ -644,24 +666,20 @@ export async function fetchPosts(
     countryCode = DEFAULT_COUNTRY,
   } = options
 
-  const params: Record<string, any> = { page, per_page: perPage, _embed: 1 }
-  if (search) params.search = search
-  if (category) params.categories = category
-  if (tag) params.tags = tag
-  if (author) params.author = author
-  if (featured) params.sticky = 'true'
-
-  const base = getWpEndpoints(countryCode).rest
-  const url = `${base}/posts?${new URLSearchParams(params).toString()}`
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    next: { revalidate: CACHE_DURATIONS.MEDIUM },
+  const query = wordpressQueries.posts({
+    page,
+    perPage,
+    category,
+    tag,
+    search,
+    author,
+    featured,
   })
-  if (!res.ok) {
-    throw new Error(`WordPress API error: ${res.status}`)
-  }
-  const total = Number(res.headers.get('X-WP-Total') || '0')
-  const data = (await res.json()) as WordPressPost[]
+  const result = await fetchFromWp<WordPressPost[]>(countryCode, query, {
+    withHeaders: true,
+  })
+  const total = Number(result?.headers.get('X-WP-Total') || '0')
+  const data = result?.data || []
   return { data, total }
 }
 
