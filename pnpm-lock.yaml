@@ -180,7 +180,7 @@ importers:
         specifier: ^16.9.0
         version: 16.11.0
       graphql-request:
-        specifier: ^7.1.1
+        specifier: latest
         version: 7.2.0(graphql@16.11.0)
       happy-dom:
         specifier: 18.0.1
@@ -226,7 +226,7 @@ importers:
         version: 19.0.0
       react-day-picker:
         specifier: latest
-        version: 9.9.0(react@19.0.0)
+        version: 9.10.0(react@19.0.0)
       react-dom:
         specifier: ^19
         version: 19.0.0(react@19.0.0)
@@ -5707,8 +5707,8 @@ packages:
   randomfill@1.0.4:
     resolution: {integrity: sha512-87lcbR8+MhcWcUiQ+9e+Rwx8MyR2P7qnt15ynUlbm3TU/fjbgz4GsvfSUDTemtCCtVCqb4ZcEFlyPNTh9bBTLw==}
 
-  react-day-picker@9.9.0:
-    resolution: {integrity: sha512-NtkJbuX6cl/VaGNb3sVVhmMA6LSMnL5G3xNL+61IyoZj0mUZFWTg4hmj7PHjIQ8MXN9dHWhUHFoJWG6y60DKSg==}
+  react-day-picker@9.10.0:
+    resolution: {integrity: sha512-tedecLSd+fpSN+J08601MaMsf122nxtqZXxB6lwX37qFoLtuPNuRJN8ylxFjLhyJS1kaLfAqL1GUkSLd2BMrpQ==}
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=16.8.0'
@@ -12785,7 +12785,7 @@ snapshots:
       randombytes: 2.1.0
       safe-buffer: 5.2.1
 
-  react-day-picker@9.9.0(react@19.0.0):
+  react-day-picker@9.10.0(react@19.0.0):
     dependencies:
       '@date-fns/tz': 1.4.1
       date-fns: 4.1.0
