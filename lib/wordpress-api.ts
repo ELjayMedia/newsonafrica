@@ -49,6 +49,15 @@ export interface WordPressPost {
   featuredImage?: { node: WordPressImage }
 }
 
+export interface WordPressComment {
+  id: number
+  author_name: string
+  content: { rendered: string }
+  date: string
+  status: string
+  post: number
+}
+
 export interface CountryConfig {
   code: string
   name: string
@@ -364,6 +373,67 @@ const FEATURED_POSTS_QUERY = gql`
         }
       }
     ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+const AUTHOR_DATA_QUERY = gql`
+  ${POST_FIELDS}
+  query AuthorData($slug: String!, $after: String, $first: Int!) {
+    user(id: $slug, idType: SLUG) {
+      databaseId
+      name
+      slug
+      description
+      avatar {
+        url
+      }
+      posts(first: $first, after: $after, where: { orderby: { field: DATE, order: DESC } }) {
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+        nodes {
+          ...PostFields
+        }
+      }
+    }
+  }
+`
+
+const CATEGORY_POSTS_QUERY = gql`
+  ${POST_FIELDS}
+  query CategoryPosts($country: String!, $slug: String!, $after: String, $first: Int!) {
+    categories(where: { slug: [$slug] }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+    posts(
+      first: $first
+      after: $after
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        taxQuery: {
+          taxArray: [
+            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
+            { taxonomy: CATEGORY, field: SLUG, terms: [$slug], operator: IN }
+          ]
+        }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
       nodes {
         ...PostFields
       }
@@ -716,6 +786,97 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
   return (
     (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })) || []
   )
+}
+
+export async function fetchAuthorData(
+  slug: string,
+  cursor: string | null = null,
+  countryCode = DEFAULT_COUNTRY,
+) {
+  const data = await fetchFromWpGraphQL<any>(countryCode, AUTHOR_DATA_QUERY, {
+    slug,
+    after: cursor,
+    first: 10,
+  })
+  if (!data?.user) return null
+  return {
+    ...data.user,
+    posts: {
+      nodes: data.user.posts.nodes.map(mapPostFromGql),
+      pageInfo: data.user.posts.pageInfo,
+    },
+  }
+}
+
+export async function fetchCategoryPosts(
+  slug: string,
+  cursor: string | null = null,
+  countryCode = DEFAULT_COUNTRY,
+) {
+  const data = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_QUERY, {
+    country: countryCode,
+    slug,
+    after: cursor,
+    first: 10,
+  })
+  if (!data?.posts || !data?.categories) return null
+  const catNode = data.categories.nodes[0]
+  const category = catNode
+    ? {
+        id: catNode.databaseId,
+        name: catNode.name,
+        slug: catNode.slug,
+        description: catNode.description ?? undefined,
+        count: catNode.count ?? undefined,
+      }
+    : null
+  return {
+    category,
+    posts: data.posts.nodes.map(mapPostFromGql),
+    pageInfo: data.posts.pageInfo,
+  }
+}
+
+export const fetchAllCategories = (countryCode = DEFAULT_COUNTRY) =>
+  getCategoriesForCountry(countryCode)
+
+export async function fetchPendingComments(
+  countryCode = DEFAULT_COUNTRY,
+): Promise<WordPressComment[]> {
+  const comments = await fetchFromWp<WordPressComment[]>(countryCode, {
+    endpoint: 'comments',
+    params: { status: 'hold', per_page: 100, _embed: 1 },
+  })
+  return comments || []
+}
+
+export async function approveComment(
+  commentId: number,
+  countryCode = DEFAULT_COUNTRY,
+) {
+  const base = getWpEndpoints(countryCode).rest
+  const res = await fetch(`${base}/comments/${commentId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'approve' }),
+  })
+  if (!res.ok)
+    throw new Error(`Failed to approve comment ${commentId}: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteComment(
+  commentId: number,
+  countryCode = DEFAULT_COUNTRY,
+) {
+  const base = getWpEndpoints(countryCode).rest
+  const res = await fetch(`${base}/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok)
+    throw new Error(`Failed to delete comment ${commentId}: ${res.status}`)
+  return res.json()
 }
 
 export async function updateUserProfile() {
