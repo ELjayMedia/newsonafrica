@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import useSWR from "swr"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
@@ -8,16 +8,17 @@ import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 export function SpecialProjectsContent() {
   const {
     data: projects,
-    isLoading,
     error,
-  } = useQuery({
-    queryKey: ["specialProjects"],
-    queryFn: () => fetchTaggedPosts("special-project", 10),
+    isLoading,
+  } = useSWR(["specialProjects"], () => fetchTaggedPosts("special-project", 10), {
+    revalidateOnFocus: false,
   })
 
   if (isLoading) return <NewsGridSkeleton />
-  if (error) return <p className="text-center text-red-500">An error occurred while fetching special projects.</p>
-  if (!projects || projects.length === 0) return <p className="text-center">No special projects found.</p>
+  if (error)
+    return <p className="text-center text-red-500">An error occurred while fetching special projects.</p>
+  if (!projects || projects.length === 0)
+    return <p className="text-center">No special projects found.</p>
 
   return (
     <div className="space-y-8">

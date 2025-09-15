@@ -1,11 +1,11 @@
 "use client"
 
-import { useInfiniteQuery } from "@tanstack/react-query"
+import useSWRInfinite from "swr/infinite"
 import { fetchAuthorData } from "@/lib/wordpress-api"
 import Image from "next/image"
 import { NewsGrid } from "@/components/NewsGrid"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { useInView } from "react-intersection-observer"
 import { Button } from "@/components/ui/button"
 
@@ -16,16 +16,28 @@ interface AuthorContentProps {
 export function AuthorContent({ slug }: AuthorContentProps) {
   const { ref, inView } = useInView()
 
-  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["author", slug],
-    queryFn: ({ pageParam = null }) => fetchAuthorData(slug, pageParam),
-    getNextPageParam: (lastPage) => lastPage?.posts.pageInfo.endCursor ?? undefined,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    onError: (error) => {
-      console.error(`Error fetching author data for ${slug}:`, error)
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
+    (index, previousPage) => {
+      if (previousPage && !previousPage.posts.pageInfo.hasNextPage) return null
+      const cursor = index === 0 ? null : previousPage.posts.pageInfo.endCursor
+      return ["author", slug, cursor]
     },
-  })
+    ([_, slug, cursor]) => fetchAuthorData(slug, cursor),
+    {
+      revalidateOnFocus: false,
+    },
+  )
+
+  const fetchNextPage = useCallback(() => setSize(size + 1), [size, setSize])
+  const hasNextPage = data?.[data.length - 1]?.posts.pageInfo.hasNextPage
+  const isFetchingNextPage = isValidating && size > (data?.length || 0)
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -51,7 +63,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
     )
   }
 
-  if (!data || !data.pages[0]) {
+  if (!data || !data[0]) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Author not found</h2>
@@ -62,8 +74,8 @@ export function AuthorContent({ slug }: AuthorContentProps) {
     )
   }
 
-  const author = data.pages[0]
-  const posts = data.pages.flatMap((page) => page?.posts.nodes ?? [])
+  const author = data[0]
+  const posts = data.flatMap((page) => page?.posts.nodes ?? [])
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -89,7 +101,7 @@ export function AuthorContent({ slug }: AuthorContentProps) {
             <NewsGrid posts={posts} layout="vertical" />
             {hasNextPage && (
               <div ref={ref} className="flex justify-center mt-8">
-                <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                <Button onClick={fetchNextPage} disabled={isFetchingNextPage}>
                   {isFetchingNextPage ? "Loading..." : "Load More"}
                 </Button>
               </div>
