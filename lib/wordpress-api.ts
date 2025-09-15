@@ -1,10 +1,12 @@
 import { getWpEndpoints } from '@/config/wp'
 import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
-import { GraphQLClient, gql } from 'graphql-request'
 import * as log from './log'
 import { fetchWithTimeout } from './utils/fetchWithTimeout'
 import { rewriteLegacyLinks } from './utils/routing'
+
+// Simple gql tag replacement
+const gql = String.raw
 
 export interface WordPressImage {
   sourceUrl?: string
@@ -187,12 +189,19 @@ export async function fetchFromWpGraphQL<T>(
   variables?: Record<string, any>,
 ): Promise<T | null> {
   const base = getWpEndpoints(countryCode).graphql
-  const client = new GraphQLClient(base, {
-    fetch: (input, init) => fetchWithTimeout(input, { ...init, timeout: 10000 }),
-  })
   const operation = async (): Promise<T | null> => {
     try {
-      return await client.request<T>(query, variables)
+      const res = await fetchWithTimeout(base, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables }),
+        timeout: 10000,
+      })
+      if (!res.ok) {
+        log.error(`[v0] WordPress GraphQL request failed for ${base}`, { status: res.status })
+        throw new Error('GraphQL request failed')
+      }
+      return (await res.json()) as T
     } catch (error) {
       log.error(`[v0] WordPress GraphQL request failed for ${base}`, { error })
       throw error

@@ -60,8 +60,6 @@
     "date-fns": "latest",
     "embla-carousel-react": "latest",
     "fuse.js": "latest",
-    "graphql": "^16.9.0",
-    "graphql-request": "latest",
     "happy-dom": "18.0.1",
     "imagemin": "latest",
     "imagemin-mozjpeg": "latest",

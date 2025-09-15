@@ -1,13 +1,12 @@
 import { getWpEndpoints } from "@/config/wp"
 
-const { rest, graphql } = getWpEndpoints()
+const { rest } = getWpEndpoints()
 const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
 
 export const appConfig = {
   // WordPress API Configuration
   wordpress: {
     baseUrl,
-    graphqlEndpoint: graphql,
     restEndpoint: rest,
     timeout: 30000,
     retryAttempts: 3,
