@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
