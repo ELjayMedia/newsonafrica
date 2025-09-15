@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 // Update a comment
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  logRequest(request)
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +26,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     data: { session },
   } = await supabase.auth.getSession()
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
 
   const commentId = params.id
@@ -33,7 +35,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { content } = await request.json()
 
     if (!content) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 })
+      return jsonWithCors(request, { error: "Content is required" }, { status: 400 })
     }
 
     // First check if the user owns this comment
@@ -45,21 +47,22 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
-      return NextResponse.json({ error: "Failed to fetch comment" }, { status: 500 })
+      return jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 })
     }
 
     if (!comment) {
-      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+      return jsonWithCors(request, { error: "Comment not found" }, { status: 404 })
     }
 
     // Verify ownership
     if (comment.user_id !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return jsonWithCors(request, { error: "Unauthorized" }, { status: 403 })
     }
 
     // Check if comment is deleted or flagged
     if (comment.status !== "active") {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         {
           error: `Cannot edit a comment with status: ${comment.status}`,
         },
@@ -72,7 +75,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     if (error) {
       console.error("Error updating comment:", error)
-      return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
+      return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
     }
 
     // Fetch the profile data
@@ -85,11 +88,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (profileError) {
       console.error("Error fetching profile:", profileError)
       // Return the comment without profile data
-      return NextResponse.json(data)
+      return jsonWithCors(request, data)
     }
 
     // Return the updated comment with profile data
-    return NextResponse.json({
+    return jsonWithCors(request, {
       ...data,
       profile: {
         username: profile.username,
@@ -98,12 +101,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     })
   } catch (error) {
     console.error("Error updating comment:", error)
-    return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
+    return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
   }
 }
 
 // Delete a comment
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  logRequest(request)
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -124,7 +128,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     data: { session },
   } = await supabase.auth.getSession()
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
 
   const commentId = params.id
@@ -139,16 +143,16 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
-      return NextResponse.json({ error: "Failed to fetch comment" }, { status: 500 })
+      return jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 })
     }
 
     if (!comment) {
-      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+      return jsonWithCors(request, { error: "Comment not found" }, { status: 404 })
     }
 
     // Verify ownership
     if (comment.user_id !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return jsonWithCors(request, { error: "Unauthorized" }, { status: 403 })
     }
 
     // Soft delete the comment by updating its status
@@ -156,12 +160,12 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     if (error) {
       console.error("Error deleting comment:", error)
-      return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
+      return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return jsonWithCors(request, { success: true })
   } catch (error) {
     console.error("Error deleting comment:", error)
-    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
+    return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })
   }
 }

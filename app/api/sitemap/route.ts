@@ -3,8 +3,10 @@ const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { withCors, logRequest } from "@/lib/api-utils"
 
-export async function GET() {
+export async function GET(request: Request) {
+  logRequest(request)
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
 
   try {
@@ -47,13 +49,16 @@ export async function GET() {
     .join("")}
 </urlset>`
 
-    return new NextResponse(sitemap, {
-      headers: {
-        "Content-Type": "application/xml",
-      },
-    })
+    return withCors(
+      request,
+      new NextResponse(sitemap, {
+        headers: {
+          "Content-Type": "application/xml",
+        },
+      }),
+    )
   } catch (error) {
     console.error("Error generating sitemap:", error)
-    return new NextResponse("Error generating sitemap", { status: 500 })
+    return withCors(request, new NextResponse("Error generating sitemap", { status: 500 }))
   }
 }
