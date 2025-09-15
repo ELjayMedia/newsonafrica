@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useUser } from "@/contexts/UserContext"
+import { isLegacyPostUrl } from "@/lib/utils/routing"
 
 export function ScrollToTop() {
   const pathname = usePathname()
@@ -13,7 +14,7 @@ export function ScrollToTop() {
   const isArticlePageRef = useRef<boolean>(false)
 
   // Check if current page is an article page
-  const isArticlePage = pathname?.startsWith("/post/") || pathname?.includes("/article/")
+  const isArticlePage = isLegacyPostUrl(pathname || "") || pathname?.includes("/article/")
 
   // Function to handle scrolling to top
   const scrollToTop = useCallback(() => {

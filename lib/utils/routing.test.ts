@@ -32,5 +32,6 @@ describe('convertLegacyUrl', () => {
   it('converts absolute legacy URL', () => {
     const result = convertLegacyUrl('https://example.com/post/sample-article', country)
     expect(result).toBe(`https://example.com/${country}/article/sample-article`)
+
   })
 })
