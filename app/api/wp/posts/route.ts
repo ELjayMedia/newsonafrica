@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 
 export const runtime = "edge"
 // Cache policy: short (1 minute)
-export const revalidate = CACHE_DURATIONS.SHORT
+export const revalidate = 60
 
 export async function GET(req: NextRequest) {
   logRequest(req)

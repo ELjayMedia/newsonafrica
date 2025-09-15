@@ -1,9 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 // Cache policy: very long (24 hours)
-export const revalidate = CACHE_DURATIONS.VERY_LONG
+export const revalidate = 86400
 
 
 export async function GET(request: NextRequest) {

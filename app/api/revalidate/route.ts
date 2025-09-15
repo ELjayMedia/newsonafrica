@@ -2,10 +2,11 @@ import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
-import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache-utils"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: none (manual revalidation endpoint)
-export const revalidate = CACHE_DURATIONS.NONE
+export const revalidate = 0
 
 
 // Input validation schema

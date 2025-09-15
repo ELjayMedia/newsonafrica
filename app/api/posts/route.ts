@@ -7,7 +7,6 @@ import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
 } from '@/lib/wordpress-api';
-import { CACHE_DURATIONS } from '@/lib/cache-utils';
 
 const formatError = (error: unknown) =>
   error instanceof Error
@@ -16,7 +15,7 @@ const formatError = (error: unknown) =>
 
 
 // Cache policy: short (1 minute)
-export const revalidate = CACHE_DURATIONS.SHORT;
+export const revalidate = 60;
 
 export async function GET(req: Request) {
   logRequest(req)

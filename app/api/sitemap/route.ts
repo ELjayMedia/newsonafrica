@@ -3,10 +3,9 @@ const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 // Cache policy: long (30 minutes)
-export const revalidate = CACHE_DURATIONS.LONG
+export const revalidate = 1800
 
 export async function GET(request: Request) {
   logRequest(request)
