@@ -2,6 +2,10 @@ import type { NextRequest } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+
+// Cache policy: none (manual revalidation endpoint)
+export const revalidate = CACHE_DURATIONS.NONE
 
 // Input validation schema
 const revalidateSchema = z.object({
@@ -65,7 +69,12 @@ export async function GET(request: NextRequest) {
       })
 
       // Revalidate content tags
-      const contentTags = ["posts", "categories", "featured", "trending"]
+      const contentTags = [
+        CACHE_TAGS.POSTS,
+        CACHE_TAGS.CATEGORIES,
+        CACHE_TAGS.FEATURED,
+        CACHE_TAGS.TRENDING,
+      ]
       contentTags.forEach((tag) => {
         revalidateTag(tag)
       })

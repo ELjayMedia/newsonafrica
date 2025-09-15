@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { revalidateTag } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 // Update a comment
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -89,6 +94,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     // Return the updated comment with profile data
+    revalidateTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({
       ...data,
       profile: {
@@ -159,6 +165,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
     }
 
+    revalidateTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting comment:", error)

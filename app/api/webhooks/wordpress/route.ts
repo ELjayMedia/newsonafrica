@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import crypto from "crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+
+// Cache policy: none (webhook endpoint)
+export const revalidate = CACHE_DURATIONS.NONE
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -48,18 +52,18 @@ export async function POST(request: NextRequest) {
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
-          revalidateTag(`post-${post.id}`)
+          revalidateTag(CACHE_TAGS.POST(post.id))
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
             for (const categoryId of post.categories) {
-              revalidateTag(`category-${categoryId}`)
+              revalidateTag(CACHE_TAGS.CATEGORY(categoryId))
             }
           }
 
           // Revalidate home page to show latest posts
           revalidatePath("/")
-          revalidateTag("posts")
+          revalidateTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated post: ${post.slug}`)
         }
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
           revalidatePath("/")
-          revalidateTag("posts")
+          revalidateTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
           }
           // Legacy path
           revalidatePath(`/category/${post.slug}`)
-          revalidateTag(`category-${post.id}`)
+          revalidateTag(CACHE_TAGS.CATEGORY(post.id))
 
           console.log(`Revalidated category: ${post.slug}`)
         }

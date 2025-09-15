@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getCountryBaseUrl } from "@/lib/wp"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 export const runtime = "edge"
-export const revalidate = 60
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function GET(req: NextRequest) {
   const base = getCountryBaseUrl(process.env.NEXT_PUBLIC_DEFAULT_SITE || "")

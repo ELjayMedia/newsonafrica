@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -44,18 +49,10 @@ export async function GET(request: NextRequest) {
     if (data.status && data.data.status === "success") {
       try {
         // Here you would typically store the subscription in your database
-        // For example:
-        // await storeSubscription({
-        //   userId: data.data.metadata.user_id,
-        //   planId: data.data.metadata.plan_id,
-        //   reference: data.data.reference,
-        //   amount: data.data.amount,
-        //   status: data.data.status,
-        //   startDate: new Date(),
-        //   endDate: calculateEndDate(data.data.metadata.interval),
-        // })
-
+        // ...
         console.log("Subscription verified and stored:", data.data.reference)
+        revalidateTag(CACHE_TAGS.SUBSCRIPTIONS)
+        revalidatePath("/subscriptions")
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)
         // We still return success to the client since the payment was successful

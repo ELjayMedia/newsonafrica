@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { CACHE_DURATIONS } from "@/lib/cache-utils"
+
+// Cache policy: medium (5 minutes)
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 // WordPress REST API configuration
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()

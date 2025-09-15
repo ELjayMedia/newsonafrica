@@ -3,6 +3,11 @@ import crypto from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
+import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+
+// Cache policy: none (webhook endpoint)
+export const revalidate = CACHE_DURATIONS.NONE
 
 interface PaystackCustomer {
   email: string
@@ -148,6 +153,13 @@ export async function handleChargeSuccess(
       metadata: data,
     })
   if (txnError) throw new Error("Failed to save transaction")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleSubscriptionCreated(
@@ -171,6 +183,13 @@ export async function handleSubscriptionCreated(
     updated_at: new Date().toISOString(),
   })
   if (error) throw new Error("Failed to create subscription")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleSubscriptionDisabled(
@@ -194,6 +213,13 @@ export async function handleSubscriptionDisabled(
     })
     .eq("id", data.subscription_code)
   if (error) throw new Error("Failed to cancel subscription")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handlePaymentFailed(
@@ -220,6 +246,13 @@ export async function handleInvoiceUpdate(
     .update({ metadata: data, updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleTransferSuccess(
