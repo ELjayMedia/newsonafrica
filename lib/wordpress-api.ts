@@ -3,8 +3,8 @@ import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
 import * as log from './log'
 import { fetchWithTimeout } from './utils/fetchWithTimeout'
-import { rewriteLegacyLinks } from './utils/routing'
 import { CACHE_DURATIONS } from '@/lib/cache-utils'
+import { mapWpPost } from './utils/mapWpPost'
 
 // Simple gql tag replacement
 const gql = String.raw
@@ -88,101 +88,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 }
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
-
-function mapPostFromWp(post: any, countryCode?: string): WordPressPost {
-  const featured = post._embedded?.['wp:featuredmedia']?.[0]
-  const author = post._embedded?.['wp:author']?.[0]
-  const categoryTerms = post._embedded?.['wp:term']?.[0] || []
-  const tagTerms = post._embedded?.['wp:term']?.[1] || []
-
-  return {
-    ...post,
-    content: post.content
-      ? { rendered: rewriteLegacyLinks(post.content.rendered || '', countryCode) }
-      : undefined,
-    featuredImage: featured
-      ? {
-          node: {
-            sourceUrl: featured.source_url,
-            altText: featured.alt_text || '',
-            mediaDetails: {
-              width: featured.media_details?.width,
-              height: featured.media_details?.height,
-            },
-          },
-        }
-      : undefined,
-    author: author
-      ? { node: { id: author.id, name: author.name, slug: author.slug } }
-      : undefined,
-    categories: {
-      nodes: categoryTerms.map((cat: any) => ({ id: cat.id, name: cat.name, slug: cat.slug })),
-    },
-    tags: {
-      nodes: tagTerms.map((tag: any) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
-    },
-  }
-}
-
-function decodeGlobalId(id: string): number {
-  try {
-    const decoded = Buffer.from(id, 'base64').toString('ascii')
-    const parts = decoded.split(':')
-    return Number(parts[parts.length - 1])
-  } catch {
-    return Number(id)
-  }
-}
-
-function mapPostFromGql(post: any, countryCode?: string): WordPressPost {
-  return {
-    id: post.databaseId ?? decodeGlobalId(post.id),
-    date: post.date,
-    slug: post.slug,
-    title: { rendered: post.title ?? '' },
-    excerpt: { rendered: post.excerpt ?? '' },
-    content: post.content
-      ? { rendered: rewriteLegacyLinks(post.content, countryCode) }
-      : undefined,
-    featuredImage: post.featuredImage?.node
-      ? {
-          node: {
-            sourceUrl: post.featuredImage.node.sourceUrl,
-            altText: post.featuredImage.node.altText || '',
-            mediaDetails: {
-              width: post.featuredImage.node.mediaDetails?.width,
-              height: post.featuredImage.node.mediaDetails?.height,
-            },
-          },
-        }
-      : undefined,
-    author: post.author?.node
-      ? {
-          node: {
-            id: post.author.node.databaseId ?? decodeGlobalId(post.author.node.id),
-            name: post.author.node.name,
-            slug: post.author.node.slug,
-          },
-        }
-      : undefined,
-    categories: {
-      nodes:
-        post.categories?.nodes.map((c: any) => ({
-          id: c.databaseId ?? decodeGlobalId(c.id),
-          name: c.name,
-          slug: c.slug,
-        })) || [],
-    },
-    tags: {
-      nodes:
-        post.tags?.nodes.map((t: any) => ({
-          id: t.databaseId ?? decodeGlobalId(t.id),
-          name: t.name,
-          slug: t.slug,
-        })) || [],
-    },
-  }
-}
 
 export async function fetchFromWpGraphQL<T>(
   countryCode: string,
@@ -466,9 +371,9 @@ export async function fetchFromWp<T>(
       const data = await res.json()
       if (query.endpoint.startsWith('posts')) {
         if (Array.isArray(data)) {
-          return data.map((p: any) => mapPostFromWp(p, countryCode)) as T
+          return data.map((p: any) => mapWpPost(p, 'rest', countryCode)) as T
         }
-        return mapPostFromWp(data, countryCode) as T
+        return mapWpPost(data, 'rest', countryCode) as T
       }
       return data as T
     } catch (error) {
@@ -492,7 +397,9 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20) 
     { country: countryCode, first: limit },
   )
   if (gqlData?.posts) {
-    const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
+    const posts = gqlData.posts.nodes.map((p: any) =>
+      mapWpPost(p, 'gql', countryCode),
+    )
     return {
       posts,
       hasNextPage: gqlData.posts.pageInfo.hasNextPage,
@@ -526,7 +433,9 @@ export async function getPostsByCategoryForCountry(
           count: catNode.count ?? undefined,
         }
       : null
-    const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
+    const posts = gqlData.posts.nodes.map((p: any) =>
+      mapWpPost(p, 'gql', countryCode),
+    )
     return {
       category,
       posts,
@@ -590,7 +499,9 @@ export async function getRelatedPostsForCountry(
         },
       )
       if (gqlData?.posts) {
-        const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
+        const posts = gqlData.posts.nodes.map((p: any) =>
+          mapWpPost(p, 'gql', countryCode),
+        )
         return posts.filter((p) => p.id !== Number(postId))
       }
     }
@@ -616,7 +527,9 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     { country: countryCode, tag: 'featured', first: limit },
   )
   if (gqlData?.posts) {
-    return gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
+    return gqlData.posts.nodes.map((p: any) =>
+      mapWpPost(p, 'gql', countryCode),
+    )
   }
   const tags =
     (await fetchFromWp<WordPressTag[]>(
@@ -662,7 +575,7 @@ export const getRelatedPosts = async (
         return []
       }
       const data = (await res.json()) as any[]
-      const posts = data.map((p: any) => mapPostFromWp(p, country))
+      const posts = data.map((p: any) => mapWpPost(p, 'rest', country))
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
       console.error('Tag-intersection query failed:', error)
@@ -802,7 +715,9 @@ export async function fetchAuthorData(
   return {
     ...data.user,
     posts: {
-      nodes: data.user.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode)),
+      nodes: data.user.posts.nodes.map((p: any) =>
+        mapWpPost(p, 'gql', countryCode),
+      ),
       pageInfo: data.user.posts.pageInfo,
     },
   }
@@ -832,7 +747,7 @@ export async function fetchCategoryPosts(
     : null
   return {
     category,
-    posts: data.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode)),
+    posts: data.posts.nodes.map((p: any) => mapWpPost(p, 'gql', countryCode)),
     pageInfo: data.posts.pageInfo,
   }
 }
