@@ -349,33 +349,52 @@ const CATEGORY_POSTS_QUERY = gql`
 
 export async function fetchFromWp<T>(
   countryCode: string,
-  query: { endpoint: string; params?: Record<string, any> },
+  query: {
+    endpoint: string
+    params?: Record<string, any>
+    method?: string
+    payload?: unknown
+  },
   timeout?: number,
 ): Promise<T | null>
 export async function fetchFromWp<T>(
   countryCode: string,
-  query: { endpoint: string; params?: Record<string, any> },
+  query: {
+    endpoint: string
+    params?: Record<string, any>
+    method?: string
+    payload?: unknown
+  },
   opts: { timeout?: number; withHeaders: true },
 ): Promise<{ data: T; headers: Headers } | null>
 export async function fetchFromWp<T>(
   countryCode: string,
-  query: { endpoint: string; params?: Record<string, any> },
+  query: {
+    endpoint: string
+    params?: Record<string, any>
+    method?: string
+    payload?: unknown
+  },
   opts: { timeout?: number; withHeaders?: boolean } = {},
 ): Promise<any> {
   const { timeout = 10000, withHeaders = false } =
     typeof opts === 'number' ? { timeout: opts, withHeaders: false } : opts
 
+  const { method = 'GET', payload, params: queryParams = {}, endpoint } = query
+
   const base = getWpEndpoints(countryCode).rest
   const params = new URLSearchParams(
-    Object.entries(query.params || {}).map(([k, v]) => [k, String(v)]),
+    Object.entries(queryParams).map(([k, v]) => [k, String(v)]),
   ).toString()
-  const url = `${base}/${query.endpoint}${params ? `?${params}` : ''}`
+  const url = `${base}/${endpoint}${params ? `?${params}` : ''}`
 
   const operation = async (): Promise<T | null> => {
     try {
       const res = await fetchWithTimeout(url, {
+        method,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         next: { revalidate: CACHE_DURATIONS.MEDIUM },
+        ...(payload ? { body: JSON.stringify(payload) } : {}),
         timeout,
       })
       if (!res.ok) {
@@ -822,29 +841,35 @@ export async function approveComment(
   commentId: number,
   countryCode = DEFAULT_COUNTRY,
 ) {
-  const base = getWpEndpoints(countryCode).rest
-  const res = await fetch(`${base}/comments/${commentId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'approve' }),
-  })
-  if (!res.ok)
-    throw new Error(`Failed to approve comment ${commentId}: ${res.status}`)
-  return res.json()
+  try {
+    const res = await fetchFromWp<WordPressComment>(countryCode, {
+      endpoint: `comments/${commentId}`,
+      method: 'POST',
+      payload: { status: 'approve' },
+    })
+    if (!res) throw new Error(`Failed to approve comment ${commentId}`)
+    return res
+  } catch (error) {
+    log.error(`[v0] Failed to approve comment ${commentId}`, { error })
+    throw error
+  }
 }
 
 export async function deleteComment(
   commentId: number,
   countryCode = DEFAULT_COUNTRY,
 ) {
-  const base = getWpEndpoints(countryCode).rest
-  const res = await fetch(`${base}/comments/${commentId}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-  })
-  if (!res.ok)
-    throw new Error(`Failed to delete comment ${commentId}: ${res.status}`)
-  return res.json()
+  try {
+    const res = await fetchFromWp<WordPressComment>(countryCode, {
+      endpoint: `comments/${commentId}`,
+      method: 'DELETE',
+    })
+    if (!res) throw new Error(`Failed to delete comment ${commentId}`)
+    return res
+  } catch (error) {
+    log.error(`[v0] Failed to delete comment ${commentId}`, { error })
+    throw error
+  }
 }
 
 export async function updateUserProfile() {
