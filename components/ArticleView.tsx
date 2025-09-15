@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
 import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
@@ -58,7 +58,18 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
+  const {
+    id,
+    title,
+    content,
+    date,
+    featuredImage,
+    author,
+    categories,
+    readingTime,
+    excerpt,
+    slug,
+  } = post
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
@@ -366,7 +377,12 @@ export default function ArticleView({ post }: ArticleViewProps) {
       </div>
 
       {/* Article Content */}
-      <div className="prose prose-lg max-w-none mb-8" dangerouslySetInnerHTML={{ __html: content }} />
+      <div
+        className="prose prose-lg max-w-none mb-8"
+        dangerouslySetInnerHTML={{
+          __html: rewriteLegacyLinks(content || "", (post as any).country),
+        }}
+      />
 
       {/* Article Footer with Sharing and Bookmarking */}
       <footer className="border-t border-gray-200 pt-6 mt-8 mb-8">

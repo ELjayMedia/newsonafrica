@@ -11,6 +11,7 @@ import { ArticleList } from "@/components/ArticleList"
 import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
+import { rewriteLegacyLinks } from "@/lib/utils/routing"
 
 interface ArticleClientContentProps {
   slug: string
@@ -143,14 +144,16 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
         </header>
 
         <div
-          className="prose prose-lg prose-gray max-w-none mb-12 
+          className="prose prose-lg prose-gray max-w-none mb-12
                      prose-headings:font-bold prose-headings:text-foreground
                      prose-p:text-foreground prose-p:leading-relaxed
                      prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                      prose-img:rounded-lg prose-img:shadow-md
                      prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg
                      prose-code:bg-muted prose-code:px-1 prose-code:rounded"
-          dangerouslySetInnerHTML={{ __html: initialData.content }}
+          dangerouslySetInnerHTML={{
+            __html: rewriteLegacyLinks(initialData.content || "", countryCode),
+          }}
         />
 
         <section className="border-t pt-8">

@@ -14,9 +14,9 @@ interface ArticlePageProps {
 }
 
 export default async function Page({ params }: ArticlePageProps) {
+  const { slug } = params;
   const country = (params.countryCode || 'DEFAULT').toUpperCase();
   let post: WordPressPost | null = null;
-
 
   try {
     post = await getPostBySlug(country, slug);

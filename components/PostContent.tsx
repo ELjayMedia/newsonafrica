@@ -12,7 +12,7 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
 
 interface PostContentProps {
   post: Post
@@ -114,7 +114,9 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         {/* Article content */}
         <div
           className="prose prose-lg max-w-none mb-8 text-sm text-black"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{
+            __html: rewriteLegacyLinks(post.content || "", (post as any).country),
+          }}
         />
 
         {/* Categories and tags */}
