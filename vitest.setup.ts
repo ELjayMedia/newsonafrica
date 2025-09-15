@@ -3,6 +3,11 @@ import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
 
+// Provide default environment variables required by config/env.ts
+process.env.NEXT_PUBLIC_SITE_URL ||= 'https://example.com'
+process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||= 'https://wp.example.com/graphql'
+process.env.WORDPRESS_REST_API_URL ||= 'https://wp.example.com/wp-json'
+
 class ResizeObserver {
   observe() {}
   unobserve() {}
