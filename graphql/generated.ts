@@ -30,12 +30,8 @@ export const PostsByCountryDocument = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        taxQuery: {
-          taxArray: [
-            { taxonomy: COUNTRY, field: SLUG, terms: $countrySlug, operator: IN }
-            { taxonomy: CATEGORY, field: SLUG, terms: [$category], operator: IN }
-          ]
-        }
+        countrySlugIn: $countrySlug
+        categoryName: $category
       }
     ) {
       pageInfo {
