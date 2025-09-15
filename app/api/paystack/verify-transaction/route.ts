@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
-import { revalidatePath, revalidateTag } from "next/cache"
-import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 
 // Cache policy: short (1 minute)
 export const revalidate = CACHE_DURATIONS.SHORT
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         // Here you would typically store the subscription in your database
         // ...
         console.log("Subscription verified and stored:", data.data.reference)
-        revalidateTag(CACHE_TAGS.SUBSCRIPTIONS)
+          revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
         revalidatePath("/subscriptions")
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)

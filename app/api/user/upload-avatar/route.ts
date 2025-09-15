@@ -4,8 +4,8 @@ import { updateUserProfile } from "@/lib/wordpress-api"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"
-import { revalidatePath, revalidateTag } from "next/cache"
-import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+import { revalidatePath } from "next/cache"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 
 // Cache policy: short (1 minute)
 export const revalidate = CACHE_DURATIONS.SHORT
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const avatarUrl = `/uploads/${filename}`
     await updateUserProfile(token, { avatar_url: avatarUrl })
 
-    revalidateTag(CACHE_TAGS.USERS)
+      revalidateByTag(CACHE_TAGS.USERS)
     revalidatePath("/profile")
 
     return NextResponse.json({ success: true, avatarUrl })

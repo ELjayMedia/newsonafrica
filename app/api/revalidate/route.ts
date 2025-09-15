@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server"
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
-import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache-utils"
+import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 
 // Cache policy: none (manual revalidation endpoint)
 export const revalidate = CACHE_DURATIONS.NONE
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         results.actions.push(`Revalidated path: ${path}`)
       }
       if (tag) {
-        revalidateTag(tag)
+          revalidateByTag(tag)
         results.actions.push(`Revalidated tag: ${tag}`)
       }
       return successResponse(results)
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         CACHE_TAGS.TRENDING,
       ]
       contentTags.forEach((tag) => {
-        revalidateTag(tag)
+          revalidateByTag(tag)
       })
 
       results.actions.push("Revalidated all content paths and tags")
