@@ -646,6 +646,8 @@ export async function fetchPosts(
     author?: string
     featured?: boolean
     countryCode?: string
+    ids?: Array<number | string>
+    countryTermId?: number
   } = {},
 ) {
   if (typeof options === 'number') {
@@ -664,6 +666,8 @@ export async function fetchPosts(
     author,
     featured,
     countryCode = DEFAULT_COUNTRY,
+    ids,
+    countryTermId,
   } = options
 
   const query = wordpressQueries.posts({
@@ -674,6 +678,8 @@ export async function fetchPosts(
     search,
     author,
     featured,
+    ids,
+    countryTermId,
   })
   const result = await fetchFromWp<WordPressPost[]>(countryCode, query, {
     withHeaders: true,
@@ -698,6 +704,34 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
   return (
     (await fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })) || []
   )
+}
+
+export async function resolveCountryTermId(slug: string): Promise<number | null> {
+  const base = getWpEndpoints(
+    process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY,
+  ).rest
+  const res = await fetch(`${base}/countries?slug=${slug}`)
+  if (!res.ok) return null
+  const data = await res.json()
+  return data?.[0]?.id ?? null
+}
+
+export async function fetchPost({
+  slug,
+  countryCode = DEFAULT_COUNTRY,
+  countryTermId,
+}: {
+  slug: string
+  countryCode?: string
+  countryTermId?: number
+}) {
+  const { endpoint, params } = wordpressQueries.postBySlug(slug)
+  if (countryTermId) params.countries = countryTermId
+  const posts = await fetchFromWp<WordPressPost[]>(countryCode, {
+    endpoint,
+    params,
+  })
+  return posts?.[0] || null
 }
 
 export const fetchCountries = async () => {

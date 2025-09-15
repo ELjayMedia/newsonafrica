@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { fetchPosts, resolveCountryTermId } from "@/lib/wp"
+import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
 import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 
@@ -10,18 +10,18 @@ export const revalidate = CACHE_DURATIONS.SHORT
 export async function GET(req: NextRequest) {
   logRequest(req)
   const { searchParams } = new URL(req.url)
-  const country = searchParams.get("country") || undefined
+  const country = searchParams.get("country")?.toLowerCase() || undefined
   const section = searchParams.get("section") || undefined
   const page = Number(searchParams.get("page") || "1")
   const perPage = Number(searchParams.get("per_page") || "10")
   const idsParam = searchParams.get("ids")
   const ids = idsParam ? idsParam.split(",").filter(Boolean) : undefined
 
-  const opts: any = { section, page, perPage, ids }
+  const opts: any = { category: section || undefined, page, perPage, ids }
 
   if (country) {
     if (country.length === 2) {
-      opts.countryIso = country
+      opts.countryCode = country.toLowerCase()
     } else {
       const termId = await resolveCountryTermId(country)
       if (termId) opts.countryTermId = termId
