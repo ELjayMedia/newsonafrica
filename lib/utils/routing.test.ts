@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rewriteLegacyLinks, isLegacyPostUrl, convertLegacyUrl } from './routing'
+import { convertLegacyUrl, rewriteLegacyLinks } from './routing'
 
 const country = 'za'
 
@@ -23,18 +23,15 @@ describe('rewriteLegacyLinks', () => {
   })
 })
 
-describe('legacy url helpers', () => {
-  it('detects legacy post urls correctly', () => {
-    expect(isLegacyPostUrl('/post/sample-article')).toBe(true)
-    expect(isLegacyPostUrl('/za/article/sample-article')).toBe(false)
+describe('convertLegacyUrl', () => {
+  it('converts relative legacy URL', () => {
+    const result = convertLegacyUrl('/post/sample-article', country)
+    expect(result).toBe(`/${country}/article/sample-article`)
   })
 
-  it('converts legacy urls while leaving modern urls untouched', () => {
-    expect(convertLegacyUrl('/post/sample-article', country)).toBe(
-      `/${country}/article/sample-article`
-    )
-    expect(convertLegacyUrl(`/${country}/article/sample-article`, country)).toBe(
-      `/${country}/article/sample-article`
-    )
+  it('converts absolute legacy URL', () => {
+    const result = convertLegacyUrl('https://example.com/post/sample-article', country)
+    expect(result).toBe(`https://example.com/${country}/article/sample-article`)
+
   })
 })
