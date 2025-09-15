@@ -3,12 +3,12 @@
  * Comprehensive typography utilities and components for News On Africa
  */
 
-import { Lexend, Playfair_Display, JetBrains_Mono } from "next/font/google"
+import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google"
 
 // Load fonts from Google Fonts
-export const lexend = Lexend({
+export const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-lexend",
+  variable: "--font-inter",
 })
 
 export const playfairDisplay = Playfair_Display({
