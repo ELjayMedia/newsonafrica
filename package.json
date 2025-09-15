@@ -53,8 +53,6 @@
     "@tanstack/react-query": "latest",
     "@testing-library/dom": "10.4.1",
     "@types/debug": "4.1.12",
-    "@vitest/browser": "3.2.4",
-    "@vitest/ui": "3.2.4",
     "autoprefixer": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
