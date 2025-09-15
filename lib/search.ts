@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { searchPosts as utilitySearchPosts } from "./searchPosts"
 
 // Types for search
 export interface SearchPost {
@@ -181,6 +180,30 @@ async function fetchPosts(): Promise<SearchPost[]> {
 }
 
 /**
+ * Perform a simple local search through posts when the API is unavailable
+ */
+function localSearchPosts(posts: SearchPost[], query: string): SearchPost[] {
+  if (!query || !posts || posts.length === 0) {
+    return []
+  }
+
+  const normalizedQuery = query.toLowerCase().trim()
+  const terms = normalizedQuery.split(/\s+/).filter((term) => term.length > 1)
+
+  if (terms.length === 0) {
+    return []
+  }
+
+  return posts.filter((post) => {
+    const title = (post.title?.rendered || "").toLowerCase()
+    const excerpt = (post.excerpt?.rendered || "").toLowerCase()
+    const content = (post.content?.rendered || "").toLowerCase()
+
+    return terms.some((term) => title.includes(term) || excerpt.includes(term) || content.includes(term))
+  })
+}
+
+/**
  * Search posts using WordPress API
  */
 export async function searchPosts(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
@@ -275,11 +298,11 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
 
       return searchResponse
     } catch (apiError) {
-      console.error("WordPress API search failed, using utility search:", apiError)
+      console.error("WordPress API search failed, using local search:", apiError)
 
-      // Fallback to utility search
+      // Fallback to local search
       const posts = await fetchPosts()
-      const searchResults = utilitySearchPosts(posts, normalizedQuery)
+      const searchResults = localSearchPosts(posts, normalizedQuery)
 
       // Apply filtering
       let filteredResults = searchResults

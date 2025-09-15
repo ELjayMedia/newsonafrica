@@ -307,3 +307,25 @@ export function highlightSearchTerms(text: string, searchQuery: string): string 
 
   return highlightedText
 }
+
+// Server action wrappers for Next.js
+export async function searchWordPressPostsAction(
+  query: string,
+  options: {
+    page?: number
+    perPage?: number
+    categories?: number[]
+    tags?: number[]
+    author?: number
+    orderBy?: "relevance" | "date" | "title"
+    order?: "asc" | "desc"
+  } = {},
+): Promise<SearchResponse> {
+  "use server"
+  return searchWordPressPosts(query, options)
+}
+
+export async function getSearchSuggestionsAction(query: string, limit = 8): Promise<string[]> {
+  "use server"
+  return getSearchSuggestions(query, limit)
+}
