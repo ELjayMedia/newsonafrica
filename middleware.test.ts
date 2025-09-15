@@ -17,4 +17,20 @@ describe('middleware legacy post redirect', () => {
     expect(response.status).toBe(307)
     expect(response.headers.get('Location')).toBe(`https://example.com/za/article/${slug}`)
   })
+
+  it('falls back to default country when no cookie is present', () => {
+    vi.spyOn(routing, 'getServerCountry').mockReturnValue('')
+    const slug = 'another-post'
+    const request = new NextRequest(`https://example.com/post/${slug}`)
+    const response = middleware(request)
+    expect(response.status).toBe(307)
+    expect(response.headers.get('Location')).toBe(`https://example.com/sz/article/${slug}`)
+  })
+
+  it('redirects legacy category routes', () => {
+    const request = new NextRequest('https://example.com/news')
+    const response = middleware(request)
+    expect(response.status).toBe(307)
+    expect(response.headers.get('Location')).toBe('https://example.com/sz/category/news')
+  })
 })

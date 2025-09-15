@@ -7,6 +7,7 @@ import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   const searchParams = request.nextUrl.searchParams
   const reference = searchParams.get("reference")
 
@@ -14,14 +15,14 @@ export async function GET(request: NextRequest) {
 
   if (!reference) {
     console.error("Missing reference parameter")
-    return NextResponse.json({ status: false, error: "Transaction reference is required" }, { status: 400 })
+    return jsonWithCors(request, { status: false, error: "Transaction reference is required" }, { status: 400 })
   }
 
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
 
   if (!paystackSecretKey) {
     console.error("PAYSTACK_SECRET_KEY is not defined")
-    return NextResponse.json({ status: false, error: "Payment configuration error" }, { status: 500 })
+    return jsonWithCors(request, { status: false, error: "Payment configuration error" }, { status: 500 })
   }
 
   try {
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error("Paystack API error:", data)
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { status: false, error: data.message || "Failed to verify transaction" },
         { status: response.status },
       )
@@ -60,10 +62,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(data)
+    return jsonWithCors(request, data)
   } catch (error) {
     console.error("Error verifying transaction:", error)
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { status: false, error: "An error occurred while verifying the transaction" },
       { status: 500 },
     )

@@ -47,11 +47,13 @@ describe("getRelatedPosts", () => {
         slug: "hello",
         title: { rendered: "Hello" },
         excerpt: { rendered: "" },
+        content: { rendered: '<a href="/post/old">link</a>' },
         _embedded: { "wp:featuredmedia": [{ source_url: "img.jpg" }] },
       },
     ]
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPosts }))
     const result = await getRelatedPosts("1", [], ["news"])
     expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
+    expect(result[0].content?.rendered).toContain('/sz/article/old')
   })
 })

@@ -4,6 +4,7 @@ import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wor
 import { getServerCountry, getCategoryUrl } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
 import * as log from "@/lib/log"
+import { env } from "@/config/env"
 
 interface CategoryPageProps {
   params: { slug: string }
@@ -73,7 +74,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
+                canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
@@ -90,7 +91,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`
+          const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -202,7 +203,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             follow: true,
           },
           alternates: {
-            canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
+              canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
           },
         }
       },
@@ -225,7 +226,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-        canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}${getCategoryUrl(params.slug, country)}`,
+            canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
       },
     }
   }

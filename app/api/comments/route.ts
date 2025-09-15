@@ -8,6 +8,7 @@ import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 // Cache policy: short (1 minute)
 export const revalidate = CACHE_DURATIONS.SHORT
 
+
 // Input validation schemas
 const getCommentsSchema = z.object({
   postId: z.string().min(1, "Post ID is required"),
@@ -25,10 +26,11 @@ const createCommentSchema = z.object({
 
 // Get comments for a post with pagination
 export async function GET(request: NextRequest) {
+  logRequest(request)
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 30, "COMMENTS_GET_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -88,11 +90,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (!comments || comments.length === 0) {
-      return successResponse({
-        comments: [],
-        totalCount: 0,
-        hasMore: false,
-      })
+      return withCors(
+        request,
+        successResponse({
+          comments: [],
+          totalCount: 0,
+          hasMore: false,
+        }),
+      )
     }
 
     // Extract all user IDs from comments
@@ -132,32 +137,36 @@ export async function GET(request: NextRequest) {
     const hasMore = count ? from + limit < count : false
     const totalCount = count || 0
 
-    return successResponse(
-      {
-        comments: commentsWithProfiles,
-        totalCount,
-        hasMore,
-      },
-      {
-        pagination: {
-          page,
-          limit,
-          from,
-          to,
+    return withCors(
+      request,
+      successResponse(
+        {
+          comments: commentsWithProfiles,
+          totalCount,
+          hasMore,
         },
-      },
+        {
+          pagination: {
+            page,
+            limit,
+            from,
+            to,
+          },
+        },
+      ),
     )
   } catch (error) {
-    return handleApiError(error)
+    return withCors(request, handleApiError(error))
   }
 }
 
 // Create a new comment
 export async function POST(request: NextRequest) {
+  logRequest(request)
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 5, "COMMENTS_POST_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -180,7 +189,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return handleApiError(new Error("Unauthorized"))
+      return withCors(request, handleApiError(new Error("Unauthorized")))
     }
 
     const body = await request.json()
@@ -236,6 +245,7 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       // Still return the comment, just without profile data
+
       revalidateByTag(CACHE_TAGS.COMMENTS)
       return successResponse(comment)
     }
@@ -249,17 +259,19 @@ export async function POST(request: NextRequest) {
         avatar_url: profile.avatar_url,
       },
     })
+
   } catch (error) {
-    return handleApiError(error)
+    return withCors(request, handleApiError(error))
   }
 }
 
 // Update comment status (report, delete, approve)
 export async function PATCH(request: NextRequest) {
+  logRequest(request)
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 10, "COMMENTS_PATCH_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -282,7 +294,7 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return handleApiError(new Error("Unauthorized"))
+      return withCors(request, handleApiError(new Error("Unauthorized")))
     }
 
     const updateCommentSchema = z.object({
@@ -304,7 +316,7 @@ export async function PATCH(request: NextRequest) {
     const { data: comment, error: fetchError } = await supabase.from("comments").select("*").eq("id", id).single()
 
     if (fetchError) {
-      return handleApiError(new Error("Comment not found"))
+      return withCors(request, handleApiError(new Error("Comment not found")))
     }
 
     let updateData = {}
@@ -320,7 +332,7 @@ export async function PATCH(request: NextRequest) {
       case "delete":
         // Only allow the author to delete their own comment
         if (comment.user_id !== session.user.id) {
-          return handleApiError(new Error("You can only delete your own comments"))
+          return withCors(request, handleApiError(new Error("You can only delete your own comments")))
         }
         updateData = { status: "deleted" }
         break
@@ -328,7 +340,7 @@ export async function PATCH(request: NextRequest) {
         // Check if user is a moderator (implement your own logic)
         // For now, we'll just check if the user is the author
         if (comment.user_id !== session.user.id) {
-          return handleApiError(new Error("You don't have permission to approve this comment"))
+          return withCors(request, handleApiError(new Error("You don't have permission to approve this comment")))
         }
         updateData = {
           status: "active",
@@ -347,7 +359,8 @@ export async function PATCH(request: NextRequest) {
 
     revalidateByTag(CACHE_TAGS.COMMENTS)
     return successResponse({ success: true, action })
+
   } catch (error) {
-    return handleApiError(error)
+    return withCors(request, handleApiError(error))
   }
 }

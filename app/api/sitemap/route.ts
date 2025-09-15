@@ -8,8 +8,9 @@ import { CACHE_DURATIONS } from "@/lib/cache-utils"
 // Cache policy: long (30 minutes)
 export const revalidate = CACHE_DURATIONS.LONG
 
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
+export async function GET(request: Request) {
+  logRequest(request)
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
@@ -51,13 +52,16 @@ export async function GET() {
     .join("")}
 </urlset>`
 
-    return new NextResponse(sitemap, {
-      headers: {
-        "Content-Type": "application/xml",
-      },
-    })
+    return withCors(
+      request,
+      new NextResponse(sitemap, {
+        headers: {
+          "Content-Type": "application/xml",
+        },
+      }),
+    )
   } catch (error) {
     console.error("Error generating sitemap:", error)
-    return new NextResponse("Error generating sitemap", { status: 500 })
+    return withCors(request, new NextResponse("Error generating sitemap", { status: 500 }))
   }
 }

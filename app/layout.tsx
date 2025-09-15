@@ -7,6 +7,7 @@ import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
+import { env } from "@/config/env"
 import NetworkStatus from "@/components/NetworkStatus"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
@@ -22,7 +23,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"),
+    metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],

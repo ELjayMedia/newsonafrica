@@ -9,6 +9,7 @@ import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 // Cache policy: none (webhook endpoint)
 export const revalidate = CACHE_DURATIONS.NONE
 
+
 interface PaystackCustomer {
   email: string
   [key: string]: any
@@ -70,13 +71,14 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export async function POST(request: Request) {
+  logRequest(request)
   try {
     // Get the signature from the headers
     const signature = request.headers.get("x-paystack-signature")
 
     if (!signature) {
       console.error("No Paystack signature provided")
-      return NextResponse.json({ error: "No signature provided" }, { status: 400 })
+      return jsonWithCors(request, { error: "No signature provided" }, { status: 400 })
     }
 
     // Get the request body as text
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
 
     if (hash !== signature) {
       console.error("Invalid Paystack signature")
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      return jsonWithCors(request, { error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the body
@@ -129,10 +131,10 @@ export async function POST(request: Request) {
         console.log(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
-    return NextResponse.json({ received: true })
+    return jsonWithCors(request, { received: true })
   } catch (error) {
     console.error("Webhook processing error:", error)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    return jsonWithCors(request, { error: "Webhook processing failed" }, { status: 500 })
   }
 }
 

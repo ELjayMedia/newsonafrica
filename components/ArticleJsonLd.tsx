@@ -1,6 +1,7 @@
 import { JsonLd } from "@/components/JsonLd"
 import { getNewsArticleSchema } from "@/lib/schema"
 import type { Post } from "@/lib/wordpress-api"
+import { env } from "@/config/env"
 
 interface ArticleJsonLdProps {
   post: Post
@@ -16,7 +17,7 @@ export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
     datePublished: post.date,
     dateModified: post.modified,
     authorName: post.author.node.name,
-    authorUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"}/author/${post.author.node.slug}`,
+      authorUrl: `${env.NEXT_PUBLIC_SITE_URL}/author/${post.author.node.slug}`,
   })
 
   return <JsonLd data={schema} />

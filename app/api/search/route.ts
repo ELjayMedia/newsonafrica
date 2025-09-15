@@ -189,13 +189,15 @@ const FALLBACK_POSTS = [
 ]
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   const startTime = Date.now()
 
   try {
     // Check rate limit
     const rateLimitCheck = checkRateLimit(request)
     if (rateLimitCheck.limited) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         {
           error: "Too many search requests",
           message: "Please try again later",
@@ -214,7 +216,7 @@ export async function GET(request: NextRequest) {
     const queryParam = searchParams.get("q") || searchParams.get("query")
 
     if (!queryParam) {
-      return NextResponse.json({ error: "Missing search query" }, { status: 400 })
+      return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
     }
 
     const page = Number.parseInt(searchParams.get("page") || "1", 10)
@@ -225,7 +227,7 @@ export async function GET(request: NextRequest) {
     if (suggestions) {
       try {
         const suggestionResults = await getSearchSuggestions(queryParam)
-        return NextResponse.json({
+        return jsonWithCors(request, {
           suggestions: suggestionResults,
           performance: {
             responseTime: Date.now() - startTime,
@@ -233,7 +235,7 @@ export async function GET(request: NextRequest) {
           },
         })
       } catch (error) {
-        return NextResponse.json({ suggestions: [] })
+        return jsonWithCors(request, { suggestions: [] })
       }
     }
 
@@ -242,7 +244,7 @@ export async function GET(request: NextRequest) {
       const searchResults = await searchWordPressPosts(queryParam, page, perPage)
       const responseTime = Date.now() - startTime
 
-      return NextResponse.json({
+      return jsonWithCors(request, {
         ...searchResults,
         query: queryParam,
         performance: {
@@ -262,7 +264,7 @@ export async function GET(request: NextRequest) {
       const endIndex = startIndex + perPage
       const paginatedResults = filteredResults.slice(startIndex, endIndex)
 
-      return NextResponse.json({
+      return jsonWithCors(request, {
         results: paginatedResults,
         total: filteredResults.length,
         totalPages: Math.ceil(filteredResults.length / perPage),
@@ -276,7 +278,8 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error) {
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",

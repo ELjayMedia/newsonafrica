@@ -1,23 +1,33 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { getPostsByCountry } from "@/lib/wp-data"
+
 import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
 } from '@/lib/wordpress-api';
 import { CACHE_DURATIONS } from '@/lib/cache-utils';
 
+
 // Cache policy: short (1 minute)
 export const revalidate = CACHE_DURATIONS.SHORT;
 
 export async function GET(req: Request) {
-  const u = new URL(req.url);
-  const countryCode = (u.searchParams.get('country') || 'DEFAULT').toLowerCase();
+  logRequest(req)
+  const u = new URL(req.url)
+  const country = (u.searchParams.get('country') || 'DEFAULT').toUpperCase();
   const section = u.searchParams.get('section') || undefined;
   try {
-    const data = section
+    const posts = await getPostsByCountry(country, { category: section, first: 20 })
+    return jsonWithCors(req, posts?.nodes ?? [])
+  } catch {
+    const countryCode = country.toLowerCase();
+    const restData = section
       ? await getPostsByCategoryForCountry(countryCode, section, 20)
       : await getLatestPostsForCountry(countryCode, 20);
-    return NextResponse.json(data.posts ?? data);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
+    return jsonWithCors(req, restData.posts ?? restData, {
+      status: 200,
+      headers: { "x-wp-fallback": "true" },
+    })
   }
 }

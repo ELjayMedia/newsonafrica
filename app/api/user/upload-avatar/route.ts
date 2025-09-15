@@ -11,9 +11,10 @@ import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 export const revalidate = CACHE_DURATIONS.SHORT
 
 export async function POST(request: Request) {
+  logRequest(request)
   const token = getAuthTokenFromCookies()
   if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
 
   try {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+      return jsonWithCors(request, { error: "No file uploaded" }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
@@ -46,8 +47,9 @@ export async function POST(request: Request) {
     revalidatePath("/profile")
 
     return NextResponse.json({ success: true, avatarUrl })
+
   } catch (error) {
     console.error("Error uploading avatar:", error)
-    return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 })
+    return jsonWithCors(request, { error: "Failed to upload avatar" }, { status: 500 })
   }
 }

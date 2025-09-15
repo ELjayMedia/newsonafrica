@@ -7,6 +7,7 @@ import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
 // Cache policy: none (manual revalidation endpoint)
 export const revalidate = CACHE_DURATIONS.NONE
 
+
 // Input validation schema
 const revalidateSchema = z.object({
   secret: z.string().min(1),
@@ -16,10 +17,11 @@ const revalidateSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 10, "REVALIDATE_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const { searchParams } = new URL(request.url)
     const params = Object.fromEntries(searchParams.entries())
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
           revalidateByTag(tag)
         results.actions.push(`Revalidated tag: ${tag}`)
       }
-      return successResponse(results)
+      return withCors(request, successResponse(results))
     }
 
     // Handle bulk revalidation based on type
@@ -93,8 +95,8 @@ export async function GET(request: NextRequest) {
       results.actions.push("Revalidated all sitemap files")
     }
 
-    return successResponse(results)
+    return withCors(request, successResponse(results))
   } catch (error) {
-    return handleApiError(error)
+    return withCors(request, handleApiError(error))
   }
 }
