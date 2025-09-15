@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { WifiOff, RefreshCw, BookOpen, List, Home } from "lucide-react"
 import Link from "next/link"
-import { convertLegacyUrl } from "@/lib/utils/routing"
+import { convertLegacyUrl, isLegacyPostUrl } from "@/lib/utils/routing"
 
 interface OfflineFallbackProps {
   type?: "article" | "list" | "general"
@@ -73,7 +73,7 @@ export default function OfflineFallback({
           if (url.pathname === "/") {
             itemTitle = "News On Africa - Homepage"
             itemType = "home"
-          } else if (url.pathname.startsWith("/post/") || url.pathname.includes("/article/")) {
+          } else if (isLegacyPostUrl(url.pathname) || url.pathname.includes("/article/")) {
             itemTitle = url.pathname.split("/").pop()?.replace(/-/g, " ") || "Article"
             itemTitle = itemTitle.charAt(0).toUpperCase() + itemTitle.slice(1)
             itemType = "article"
