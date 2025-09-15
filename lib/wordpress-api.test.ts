@@ -22,7 +22,7 @@ describe("fetchPost", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPost }))
     const result = await fetchPost({ countryCode: "sz", slug: "test" })
     expect(result?.featuredImage?.node.sourceUrl).toBe("img.jpg")
-    expect(result?.title).toBe("Test")
+    expect(result?.title?.rendered).toBe("Test")
   })
 
   it("returns null on 503 response", async () => {
@@ -50,8 +50,15 @@ describe("getRelatedPosts", () => {
         _embedded: { "wp:featuredmedia": [{ source_url: "img.jpg" }] },
       },
     ]
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPosts }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => mockPosts })
+    vi.stubGlobal("fetch", fetchMock)
     const result = await getRelatedPosts("1", [], ["news"])
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("tags_relation=AND"),
+      expect.anything(),
+    )
     expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
     expect(result[0].content?.rendered).toContain('/sz/article/old')
   })

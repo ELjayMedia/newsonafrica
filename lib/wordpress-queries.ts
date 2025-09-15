@@ -67,6 +67,20 @@ export const wordpressQueries = {
       _embed: 1,
     },
   }),
+  relatedPostsByTags: (
+    tagIds: Array<number | string>,
+    excludeId: number | string,
+    limit = 6,
+  ) => ({
+    endpoint: 'posts',
+    params: {
+      tags: tagIds.join(','),
+      tags_relation: 'AND',
+      exclude: excludeId,
+      per_page: limit,
+      _embed: 1,
+    },
+  }),
   tagBySlug: (slug: string) => ({
     endpoint: 'tags',
     params: { slug },

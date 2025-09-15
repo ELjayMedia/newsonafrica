@@ -9,6 +9,9 @@ import { mapWpPost } from './utils/mapWpPost'
 // Simple gql tag replacement
 const gql = String.raw
 
+const mapPostFromWp = (post: any, countryCode?: string) =>
+  mapWpPost(post, 'rest', countryCode)
+
 export interface WordPressImage {
   sourceUrl?: string
   altText?: string
@@ -602,22 +605,13 @@ export const getRelatedPosts = async (
   // If tags are provided, attempt tag-intersection query via REST API
   if (tags.length > 0) {
     try {
-      const base = getWpEndpoints(country).rest
-      const params = new URLSearchParams({
-        tags: tags.join(','),
-        exclude: postId,
-        per_page: String(limit),
-        _embed: '1',
-      })
-      const res = await fetch(`${base}/posts?${params.toString()}`, {
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        next: { revalidate: CACHE_DURATIONS.MEDIUM },
-      })
-      if (!res.ok) {
-        return []
-      }
-      const data = (await res.json()) as any[]
-      const posts = data.map((p: any) => mapWpPost(p, 'rest', country))
+      const { endpoint, params } = wordpressQueries.relatedPostsByTags(
+        tags,
+        postId,
+        limit,
+      )
+      const posts =
+        (await fetchFromWp<WordPressPost[]>(country, { endpoint, params })) || []
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
       console.error('Tag-intersection query failed:', error)
