@@ -83,3 +83,17 @@ export function convertLegacyUrl(url: string, countryCode?: string): string {
   }
   return url
 }
+
+/**
+ * Rewrite legacy post links within HTML content
+ * Converts both relative and absolute /post/{slug} URLs
+ * to the country-aware article format
+ */
+export function rewriteLegacyLinks(html: string, countryCode?: string): string {
+  if (!html) return html
+  const country = countryCode || getCurrentCountry()
+  const regex = /href=(['"])(?:https?:\/\/[^'" ]+)?\/post\/([^'"?#]+)([^'"]*)\1/g
+  return html.replace(regex, (_match, quote, slug, rest) => {
+    return `href=${quote}${getArticleUrl(slug, country)}${rest}${quote}`
+  })
+}

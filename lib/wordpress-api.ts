@@ -4,6 +4,7 @@ import { circuitBreaker } from './api/circuit-breaker'
 import { GraphQLClient, gql } from 'graphql-request'
 import * as log from './log'
 import { fetchWithTimeout } from './utils/fetchWithTimeout'
+import { rewriteLegacyLinks } from './utils/routing'
 
 export interface WordPressImage {
   sourceUrl?: string
@@ -85,7 +86,7 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
 
-function mapPostFromWp(post: any): WordPressPost {
+function mapPostFromWp(post: any, countryCode?: string): WordPressPost {
   const featured = post._embedded?.['wp:featuredmedia']?.[0]
   const author = post._embedded?.['wp:author']?.[0]
   const categoryTerms = post._embedded?.['wp:term']?.[0] || []
@@ -93,6 +94,9 @@ function mapPostFromWp(post: any): WordPressPost {
 
   return {
     ...post,
+    content: post.content
+      ? { rendered: rewriteLegacyLinks(post.content.rendered || '', countryCode) }
+      : undefined,
     featuredImage: featured
       ? {
           node: {
@@ -127,14 +131,16 @@ function decodeGlobalId(id: string): number {
   }
 }
 
-function mapPostFromGql(post: any): WordPressPost {
+function mapPostFromGql(post: any, countryCode?: string): WordPressPost {
   return {
     id: post.databaseId ?? decodeGlobalId(post.id),
     date: post.date,
     slug: post.slug,
     title: { rendered: post.title ?? '' },
     excerpt: { rendered: post.excerpt ?? '' },
-    content: post.content ? { rendered: post.content } : undefined,
+    content: post.content
+      ? { rendered: rewriteLegacyLinks(post.content, countryCode) }
+      : undefined,
     featuredImage: post.featuredImage?.node
       ? {
           node: {
@@ -450,9 +456,9 @@ export async function fetchFromWp<T>(
       const data = await res.json()
       if (query.endpoint.startsWith('posts')) {
         if (Array.isArray(data)) {
-          return data.map(mapPostFromWp) as T
+          return data.map((p: any) => mapPostFromWp(p, countryCode)) as T
         }
-        return mapPostFromWp(data) as T
+        return mapPostFromWp(data, countryCode) as T
       }
       return data as T
     } catch (error) {
@@ -476,7 +482,7 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20) 
     { country: countryCode, first: limit },
   )
   if (gqlData?.posts) {
-    const posts = gqlData.posts.nodes.map(mapPostFromGql)
+    const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
     return {
       posts,
       hasNextPage: gqlData.posts.pageInfo.hasNextPage,
@@ -510,7 +516,7 @@ export async function getPostsByCategoryForCountry(
           count: catNode.count ?? undefined,
         }
       : null
-    const posts = gqlData.posts.nodes.map(mapPostFromGql)
+    const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
     return {
       category,
       posts,
@@ -574,7 +580,7 @@ export async function getRelatedPostsForCountry(
         },
       )
       if (gqlData?.posts) {
-        const posts = gqlData.posts.nodes.map(mapPostFromGql)
+        const posts = gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
         return posts.filter((p) => p.id !== Number(postId))
       }
     }
@@ -600,7 +606,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     { country: countryCode, tag: 'featured', first: limit },
   )
   if (gqlData?.posts) {
-    return gqlData.posts.nodes.map(mapPostFromGql)
+    return gqlData.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode))
   }
   const tags =
     (await fetchFromWp<WordPressTag[]>(
@@ -646,7 +652,7 @@ export const getRelatedPosts = async (
         return []
       }
       const data = (await res.json()) as any[]
-      const posts = data.map(mapPostFromWp)
+      const posts = data.map((p: any) => mapPostFromWp(p, country))
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
       console.error('Tag-intersection query failed:', error)
@@ -786,7 +792,7 @@ export async function fetchAuthorData(
   return {
     ...data.user,
     posts: {
-      nodes: data.user.posts.nodes.map(mapPostFromGql),
+      nodes: data.user.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode)),
       pageInfo: data.user.posts.pageInfo,
     },
   }
@@ -816,7 +822,7 @@ export async function fetchCategoryPosts(
     : null
   return {
     category,
-    posts: data.posts.nodes.map(mapPostFromGql),
+    posts: data.posts.nodes.map((p: any) => mapPostFromGql(p, countryCode)),
     pageInfo: data.posts.pageInfo,
   }
 }
