@@ -252,7 +252,7 @@ const LATEST_POSTS_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        taxQuery: { taxArray: [{ taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }] }
+        countrySlugIn: [$country]
       }
     ) {
       pageInfo {
@@ -283,12 +283,8 @@ const POSTS_BY_CATEGORY_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        taxQuery: {
-          taxArray: [
-            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
-            { taxonomy: CATEGORY, field: SLUG, terms: [$category], operator: IN }
-          ]
-        }
+        countrySlugIn: [$country]
+        categoryName: $category
       }
     ) {
       pageInfo {
@@ -342,12 +338,8 @@ const RELATED_POSTS_QUERY = gql`
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
         notIn: [$exclude]
-        taxQuery: {
-          taxArray: [
-            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
-            { taxonomy: CATEGORY, field: ID, terms: $catIds, operator: IN }
-          ]
-        }
+        countrySlugIn: [$country]
+        categoryIn: $catIds
       }
     ) {
       nodes {
@@ -365,12 +357,8 @@ const FEATURED_POSTS_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        taxQuery: {
-          taxArray: [
-            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
-            { taxonomy: TAG, field: SLUG, terms: [$tag], operator: IN }
-          ]
-        }
+        countrySlugIn: [$country]
+        tagSlugIn: [$tag]
       }
     ) {
       nodes {
@@ -422,12 +410,8 @@ const CATEGORY_POSTS_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        taxQuery: {
-          taxArray: [
-            { taxonomy: COUNTRY, field: SLUG, terms: [$country], operator: IN }
-            { taxonomy: CATEGORY, field: SLUG, terms: [$slug], operator: IN }
-          ]
-        }
+        countrySlugIn: [$country]
+        categoryName: $slug
       }
     ) {
       pageInfo {
