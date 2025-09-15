@@ -4,11 +4,13 @@ import { updateUserProfile } from "@/lib/wordpress-api"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 export async function POST(request: Request) {
+  logRequest(request)
   const token = getAuthTokenFromCookies()
   if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
 
   try {
@@ -16,7 +18,7 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+      return jsonWithCors(request, { error: "No file uploaded" }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
@@ -37,9 +39,9 @@ export async function POST(request: Request) {
     const avatarUrl = `/uploads/${filename}`
     await updateUserProfile(token, { avatar_url: avatarUrl })
 
-    return NextResponse.json({ success: true, avatarUrl })
+    return jsonWithCors(request, { success: true, avatarUrl })
   } catch (error) {
     console.error("Error uploading avatar:", error)
-    return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 })
+    return jsonWithCors(request, { error: "Failed to upload avatar" }, { status: 500 })
   }
 }

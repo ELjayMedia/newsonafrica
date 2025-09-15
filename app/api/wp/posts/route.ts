@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { fetchPosts, resolveCountryTermId } from "@/lib/wp"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 export const runtime = "edge"
 export const revalidate = 60
 
 export async function GET(req: NextRequest) {
+  logRequest(req)
   const { searchParams } = new URL(req.url)
   const country = searchParams.get("country") || undefined
   const section = searchParams.get("section") || undefined
@@ -25,5 +27,5 @@ export async function GET(req: NextRequest) {
   }
 
   const data = await fetchPosts(opts)
-  return NextResponse.json(data)
+  return jsonWithCors(req, data)
 }

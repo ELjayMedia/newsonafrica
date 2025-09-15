@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
+import logger from "@/utils/logger"
 
 export type ApiResponse<T = any> = {
   success: boolean
@@ -87,4 +88,31 @@ export function setCacheHeaders(res: NextResponse, maxAge = 60) {
   res.headers.set("Cache-Control", `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`)
 
   return res
+}
+
+export function logRequest(req: Request) {
+  const { pathname, search } = new URL(req.url)
+  logger.log(`[${req.method}] ${pathname}${search}`)
+}
+
+export function withCors(req: Request, res: Response) {
+  const allowedOrigins =
+    process.env.NODE_ENV === "production"
+      ? [process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com", "https://news-on-africa.com"]
+      : ["http://localhost:3000"]
+
+  const origin = req.headers.get("origin") || ""
+
+  if (allowedOrigins.includes(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin)
+    res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+    res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    res.headers.set("Access-Control-Max-Age", "86400")
+  }
+
+  return res
+}
+
+export function jsonWithCors(req: Request, data: any, init?: ResponseInit) {
+  return withCors(req, NextResponse.json(data, init))
 }
