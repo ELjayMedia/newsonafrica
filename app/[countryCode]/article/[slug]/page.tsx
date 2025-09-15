@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import type { PageProps } from 'next';
 import { fetchFromWp, type WordPressPost } from '@/lib/wordpress-api';
 import { wordpressQueries } from '@/lib/wordpress-queries';
 import { ArticleClientContent } from './ArticleClientContent';
@@ -7,14 +6,16 @@ import * as log from '@/lib/log';
 
 export const revalidate = 300;
 
-interface ArticlePageProps {
-  params: { countryCode: string; slug: string };
-  searchParams?: Record<string, string | string[] | undefined>;
-}
+type RouteParams = { countryCode: string; slug: string };
+
+type ArticlePageProps = {
+  params: Promise<RouteParams>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export default async function Page({ params }: ArticlePageProps) {
-  const { slug } = params;
-  const country = (params.countryCode || 'DEFAULT').toLowerCase();
+  const { slug, countryCode } = await params;
+  const country = (countryCode || 'DEFAULT').toLowerCase();
   let post: WordPressPost | null = null;
 
   try {
