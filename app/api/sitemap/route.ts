@@ -4,10 +4,11 @@ const fetchRecentPosts = async () => []
 import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { withCors, logRequest } from "@/lib/api-utils"
+import { env } from "@/config/env"
 
 export async function GET(request: Request) {
   logRequest(request)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
