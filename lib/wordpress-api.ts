@@ -101,6 +101,7 @@ export async function fetchFromWpGraphQL<T>(
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query, variables }),
+        next: { revalidate: CACHE_DURATIONS.MEDIUM },
         timeout: 10000,
       })
       if (!res.ok) {
