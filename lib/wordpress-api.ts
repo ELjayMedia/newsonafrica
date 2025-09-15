@@ -654,8 +654,6 @@ export const fetchTaggedPosts = async (
   )
 }
 
-export const fetchPostsByTag = fetchTaggedPosts
-
 export async function fetchPosts(
   options: number | {
     page?: number

@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchPostsByTag } from "@/lib/wordpress-api"
+import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 interface TagContentProps {
@@ -35,7 +35,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
       const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
       return ["tagPosts", slug, cursor]
     },
-    ([_, slug, cursor]) => fetchPostsByTag(slug, cursor),
+    ([_, slug, cursor]) => fetchTaggedPosts(slug, cursor),
     {
       revalidateOnFocus: false,
       fallbackData: initialData ? [initialData] : undefined,

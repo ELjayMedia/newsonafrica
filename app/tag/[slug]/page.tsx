@@ -1,4 +1,4 @@
-import { fetchPostsByTag, fetchSingleTag } from "@/lib/wordpress-api"
+import { fetchSingleTag, fetchTaggedPosts } from "@/lib/wordpress-api"
 import { TagContent } from "@/components/TagContent"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"
@@ -33,6 +33,6 @@ async function TagWrapper({ slug }: { slug: string }) {
   const tag = await fetchSingleTag(slug)
   if (!tag) notFound()
 
-  const initialData = await fetchPostsByTag(slug)
+  const initialData = await fetchTaggedPosts(slug)
   return <TagContent slug={slug} initialData={initialData} tag={tag} />
 }
