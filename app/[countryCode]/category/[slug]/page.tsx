@@ -42,10 +42,10 @@ export async function generateStaticParams(): Promise<Params[]> {
   }
 }
 
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
-  const { countryCode, slug } = params
+  const { countryCode, slug } = await params
   const cacheKey = `category-metadata-${countryCode}-${slug}`
   const cached = enhancedCache.get(cacheKey)
 
@@ -69,9 +69,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
           follow: false,
           noarchive: true,
         },
-          alternates: {
-            canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
-          },
+        alternates: {
+          canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
+        },
       }
     }
 
@@ -83,7 +83,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const featuredImageUrl =
       featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
-      const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
+    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 
     const keywords = [
       category.name,
@@ -174,20 +174,20 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return {
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
-        alternates: {
-          canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
-        },
+      alternates: {
+        canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
+      },
     }
   }
 }
 
 interface CountryCategoryPageProps {
-  params: Params
-  searchParams?: Record<string, string | string[] | undefined>
+  params: Promise<Params>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function CountryCategoryPage({ params }: CountryCategoryPageProps) {
-  const { countryCode, slug } = params
+  const { countryCode, slug } = await params
   try {
     const data = await getPostsByCategoryForCountry(countryCode, slug, 20)
     if (!data.category) {
