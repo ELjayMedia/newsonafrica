@@ -1,14 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
 import {
   searchWordPressPosts as wpSearchPosts,
   getSearchSuggestions as wpGetSearchSuggestions,
 } from "@/lib/wordpress-search"
 
 // Cache policy: medium (5 minutes)
-export const revalidate = CACHE_DURATIONS.MEDIUM
+export const revalidate = 300
 
 // Rate limiting
 const RATE_LIMIT = 50

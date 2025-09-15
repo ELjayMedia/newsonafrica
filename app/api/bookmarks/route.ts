@@ -3,10 +3,11 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 
 import { revalidatePath } from "next/cache"
-import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache-utils"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: short (1 minute)
-export const revalidate = CACHE_DURATIONS.SHORT
+export const revalidate = 60
 
 
 export async function GET(request: NextRequest) {

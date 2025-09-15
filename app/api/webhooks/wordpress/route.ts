@@ -2,10 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { CACHE_DURATIONS, CACHE_TAGS, revalidateByTag } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache-utils"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: none (webhook endpoint)
-export const revalidate = CACHE_DURATIONS.NONE
+export const revalidate = 0
 
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET

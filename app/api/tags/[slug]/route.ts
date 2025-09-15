@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 // Cache policy: medium (5 minutes)
-export const revalidate = CACHE_DURATIONS.MEDIUM
+export const revalidate = 300
 
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   logRequest(request)

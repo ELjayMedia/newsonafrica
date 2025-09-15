@@ -1,5 +1,4 @@
 import { cache } from "react"
-import { revalidatePath, revalidateTag } from "next/cache"
 
 // Cache durations in seconds
 export const CACHE_DURATIONS = {
@@ -76,26 +75,6 @@ export const cachedFetch = cache(
     }
   }
 )
-
-// Function to revalidate multiple paths at once
-export async function revalidateMultiplePaths(paths: string[]): Promise<void> {
-  paths.forEach((path) => {
-    try {
-      revalidatePath(path)
-    } catch (error) {
-      console.error(`Error revalidating path ${path}:`, error)
-    }
-  })
-}
-
-// Convenience wrapper to revalidate by tag
-export function revalidateByTag(tag: string): void {
-  try {
-    revalidateTag(tag)
-  } catch (error) {
-    console.error(`Error revalidating tag ${tag}:`, error)
-  }
-}
 
 // Function to generate cache control headers
 export function generateCacheControlHeader(
