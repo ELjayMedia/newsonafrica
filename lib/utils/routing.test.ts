@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rewriteLegacyLinks } from './routing'
+import { convertLegacyUrl, rewriteLegacyLinks } from './routing'
 
 const country = 'za'
 
@@ -20,5 +20,17 @@ describe('rewriteLegacyLinks', () => {
     const html = '<a href="/category/news">News</a>'
     const result = rewriteLegacyLinks(html, country)
     expect(result).toBe(html)
+  })
+})
+
+describe('convertLegacyUrl', () => {
+  it('converts relative legacy URL', () => {
+    const result = convertLegacyUrl('/post/sample-article', country)
+    expect(result).toBe(`/${country}/article/sample-article`)
+  })
+
+  it('converts absolute legacy URL', () => {
+    const result = convertLegacyUrl('https://example.com/post/sample-article', country)
+    expect(result).toBe(`https://example.com/${country}/article/sample-article`)
   })
 })

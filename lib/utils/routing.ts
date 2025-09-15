@@ -77,9 +77,26 @@ export function isLegacyPostUrl(url: string): boolean {
  * Convert legacy /post/ URL to country-specific format
  */
 export function convertLegacyUrl(url: string, countryCode?: string): string {
-  if (isLegacyPostUrl(url)) {
-    const slug = url.replace("/post/", "")
-    return getArticleUrl(slug, countryCode)
+  // Handle absolute URLs by parsing and preserving origin/search/hash
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url)
+      if (isLegacyPostUrl(parsed.pathname)) {
+        const slug = parsed.pathname.replace("/post/", "")
+        const newPath = getArticleUrl(slug, countryCode)
+        return `${parsed.origin}${newPath}${parsed.search}${parsed.hash}`
+      }
+      return url
+    } catch {
+      return url
+    }
+  }
+
+  // Relative URL handling
+  const [path, rest = ""] = url.split(/(?=[?#])/)
+  if (isLegacyPostUrl(path)) {
+    const slug = path.replace("/post/", "")
+    return getArticleUrl(slug, countryCode) + rest
   }
   return url
 }
