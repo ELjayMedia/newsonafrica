@@ -8,8 +8,8 @@ import {
   getCategoriesForCountry,
   getRelatedPostsForCountry,
   getFeaturedPosts,
+  fetchPost,
 } from "@/lib/wordpress-api"
-import { fetchPost } from "@/lib/wp"
 
 export function useLatestPosts(countryCode: string, limit = 20) {
   const { data, error, isLoading, mutate } = useSWR(
@@ -76,7 +76,7 @@ export function useCategories(countryCode: string) {
 export function usePost(countryCode: string, slug: string) {
   const { data, error, isLoading, mutate } = useSWR(
     [`post`, countryCode, slug],
-    () => fetchPost({ countryIso: countryCode, slug }),
+    () => fetchPost({ countryCode, slug }),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,

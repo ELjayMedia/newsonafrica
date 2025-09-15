@@ -11,6 +11,8 @@ export const wordpressQueries = {
     search,
     author,
     featured,
+    ids,
+    countryTermId,
   }: {
     page?: number
     perPage?: number
@@ -19,6 +21,8 @@ export const wordpressQueries = {
     search?: string
     author?: string
     featured?: boolean
+    ids?: Array<number | string>
+    countryTermId?: number
   }) => ({
     endpoint: 'posts',
     params: {
@@ -30,6 +34,8 @@ export const wordpressQueries = {
       ...(tag ? { tags: tag } : {}),
       ...(author ? { author } : {}),
       ...(featured ? { sticky: 'true' } : {}),
+      ...(ids && ids.length ? { include: ids.join(',') } : {}),
+      ...(countryTermId ? { countries: countryTermId } : {}),
     },
   }),
   categoryBySlug: (slug: string) => ({
