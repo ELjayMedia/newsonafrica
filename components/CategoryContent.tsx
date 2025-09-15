@@ -1,24 +1,38 @@
 "use client"
 
-import { useInfiniteQuery } from "@tanstack/react-query"
+import useSWRInfinite from "swr/infinite"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGrid } from "@/components/NewsGrid"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { HorizontalCard } from "./HorizontalCard"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
 import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
 
 export function CategoryContent({ slug }: { slug: string }) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useInfiniteQuery({
-    queryKey: ["category", slug],
-    queryFn: ({ pageParam = null }) => fetchCategoryPosts(slug, pageParam),
-    getNextPageParam: (lastPage) => (lastPage?.pageInfo?.hasNextPage ? lastPage.pageInfo.endCursor : undefined),
-    onError: (error) => {
-      console.error("Error fetching category posts:", error)
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
+    (index, previousPage) => {
+      if (previousPage && !previousPage.pageInfo?.hasNextPage) return null
+      const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
+      return ["category", slug, cursor]
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  })
+    ([_, slug, cursor]) => fetchCategoryPosts(slug, cursor),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 1000 * 60 * 5,
+    },
+  )
+
+  const fetchNextPage = useCallback(() => setSize(size + 1), [size, setSize])
+  const hasNextPage = data?.[data.length - 1]?.pageInfo?.hasNextPage
+  const isFetchingNextPage = isValidating && size > (data?.length || 0)
 
   const { ref, inView } = useInView({
     threshold: 0,
@@ -33,11 +47,11 @@ export function CategoryContent({ slug }: { slug: string }) {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   if (isLoading) return <CategoryPageSkeleton />
-  if (isError) return <div>Error loading category: {(error as Error).message}</div>
-  if (!data || !data.pages || data.pages.length === 0) return <div>No posts found for this category.</div>
+  if (error) return <div>Error loading category: {(error as Error).message}</div>
+  if (!data || data.length === 0) return <div>No posts found for this category.</div>
 
-  const category = data.pages[0]?.category
-  const allPosts = data.pages.flatMap((page) => page.posts || [])
+  const category = data[0]?.category
+  const allPosts = data.flatMap((page) => page.posts || [])
 
   // Separate posts for different sections
   const gridPosts = allPosts.slice(0, 10)
