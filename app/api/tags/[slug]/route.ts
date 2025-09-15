@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchPostsByTag } from "@/lib/wordpress-api"
+import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import { CACHE_DURATIONS } from "@/lib/cache-utils"
 
 // Cache policy: medium (5 minutes)
@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
   const slug = params.slug
 
   try {
-    const data = await fetchPostsByTag(slug, after)
+    const data = await fetchTaggedPosts(slug, after)
     return jsonWithCors(request, data)
   } catch (error) {
     console.error("Error fetching posts by tag:", error)
