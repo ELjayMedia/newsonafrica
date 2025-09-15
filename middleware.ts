@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { DEFAULT_COUNTRY, getCategoryUrl, getArticleUrl } from "@/lib/utils/routing"
+import {
+  DEFAULT_COUNTRY,
+  getCategoryUrl,
+  getArticleUrl,
+  getServerCountry,
+} from "@/lib/utils/routing"
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_ROUTES_MAP: Record<string, string> = {
@@ -22,7 +27,8 @@ function handleLegacyPostRedirect(pathname: string, request: NextRequest): NextR
   // Check if it's a legacy /post/ route
   if (pathname.startsWith("/post/")) {
     const slug = pathname.replace("/post/", "")
-    const newUrl = getArticleUrl(slug, DEFAULT_COUNTRY)
+    const country = getServerCountry() || DEFAULT_COUNTRY
+    const newUrl = getArticleUrl(slug, country)
 
     console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
     return NextResponse.redirect(new URL(newUrl, request.url))
