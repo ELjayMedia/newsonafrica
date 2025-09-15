@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import useSWR from "swr"
 import { fetchRecentPosts } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
@@ -35,10 +35,13 @@ export function SidebarContent() {
 
   const country = getCurrentCountry()
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["recentPosts", country],
-    queryFn: () => fetchRecentPosts(10, country),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  const {
+    data,
+    error,
+    isLoading,
+  } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
+    revalidateOnFocus: false,
+    dedupingInterval: 1000 * 60 * 5,
   })
 
   useEffect(() => {

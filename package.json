@@ -49,7 +49,6 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tailwindcss/typography": "0.5.16",
-    "@tanstack/react-query": "latest",
     "autoprefixer": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

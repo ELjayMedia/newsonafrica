@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { getPostsByCountry } from "@/lib/wp-data"
+
 import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
