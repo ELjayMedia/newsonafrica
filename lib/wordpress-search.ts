@@ -1,5 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
-import { CACHE_DURATIONS } from "@/lib/cache-utils"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 

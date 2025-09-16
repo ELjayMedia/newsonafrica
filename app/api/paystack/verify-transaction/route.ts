@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
 import { revalidatePath } from "next/cache"
-import { CACHE_TAGS } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: short (1 minute)
