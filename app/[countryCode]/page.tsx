@@ -7,10 +7,10 @@ import { CountryEditionSkeleton } from "./CountryEditionSkeleton"
 import * as log from "@/lib/log"
 
 interface CountryPageProps {
-  params: {
+  params: Promise<{
     countryCode: string
-  }
-  searchParams?: Record<string, string | string[] | undefined>
+  }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 export const revalidate = 300
@@ -29,7 +29,7 @@ export async function generateStaticParams(): Promise<{ countryCode: string }[]>
 
 // Generate metadata for each country
 export async function generateMetadata({ params }: CountryPageProps): Promise<Metadata> {
-  const { countryCode } = params
+  const { countryCode } = await params
   const country = COUNTRIES[countryCode]
 
   if (!country) {
@@ -60,8 +60,8 @@ export async function generateMetadata({ params }: CountryPageProps): Promise<Me
   }
 }
 
-export default function CountryPage({ params }: CountryPageProps) {
-  const { countryCode } = params
+export default async function CountryPage({ params }: CountryPageProps) {
+  const { countryCode } = await params
 
   // Check if country code is valid
   if (!COUNTRIES[countryCode]) {
