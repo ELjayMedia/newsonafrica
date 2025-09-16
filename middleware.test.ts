@@ -1,3 +1,4 @@
+@@ -0,0 +1,36 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
@@ -33,4 +34,3 @@ describe("legacy post redirect", () => {
     )
   })
 })
-
