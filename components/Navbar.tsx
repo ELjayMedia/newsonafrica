@@ -8,6 +8,7 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, X, Menu } from "lucide-react"
+import { getCategoryUrl } from "@/lib/utils/routing"
 
 export default function Navbar() {
   const router = useRouter()
@@ -52,13 +53,13 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex space-x-4">
-            <Link href="/news" className="hover:text-primary-foreground/80">
+            <Link href={getCategoryUrl("news") as string} className="hover:text-primary-foreground/80">
               News
             </Link>
-            <Link href="/business" className="hover:text-primary-foreground/80">
+            <Link href={getCategoryUrl("business") as string} className="hover:text-primary-foreground/80">
               Business
             </Link>
-            <Link href="/sport" className="hover:text-primary-foreground/80">
+            <Link href={getCategoryUrl("sport") as string} className="hover:text-primary-foreground/80">
               Sport
             </Link>
           </div>
@@ -101,21 +102,21 @@ export default function Navbar() {
           <div className="md:hidden mt-4 bg-primary-foreground/10 rounded-md p-4">
             <div className="flex flex-col space-y-3">
               <Link
-                href="/news"
+                href={getCategoryUrl("news") as string}
                 className="text-primary-foreground hover:text-primary-foreground/80 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 News
               </Link>
               <Link
-                href="/business"
+                href={getCategoryUrl("business") as string}
                 className="text-primary-foreground hover:text-primary-foreground/80 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Business
               </Link>
               <Link
-                href="/sport"
+                href={getCategoryUrl("sport") as string}
                 className="text-primary-foreground hover:text-primary-foreground/80 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

@@ -1,10 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getWpEndpoints } from "@/config/wp"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
+import {
+  searchWordPressPosts as wpSearchPosts,
+  getSearchSuggestions as wpGetSearchSuggestions,
+} from "@/lib/wordpress-search"
 
-// WordPress REST API configuration
-const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
+// Cache policy: medium (5 minutes)
+export const revalidate = 300
 
 // Rate limiting
 const RATE_LIMIT = 50
@@ -51,42 +54,13 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
   return await circuitBreaker.execute(
     "wordpress-search-api",
     async () => {
-      const searchParams = new URLSearchParams({
-        search: query,
-        page: page.toString(),
-        per_page: perPage.toString(),
-        _embed: "1",
-        orderby: "relevance",
-        order: "desc",
-        status: "publish",
-      })
-
-      const url = `${WORDPRESS_REST_API_URL}/posts?${searchParams}`
-      console.log(`[v0] Making WordPress search request to: ${url}`)
-
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "User-Agent": "NewsOnAfrica/1.0",
-        },
-        next: { revalidate: 300 }, // Cache for 5 minutes
-      })
-
-      if (!response.ok) {
-        throw new Error(`WordPress API error: ${response.status} ${response.statusText}`)
-      }
-
-      const posts = await response.json()
-      const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
-      const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "1", 10)
-
+      const response = await wpSearchPosts(query, { page, perPage })
       return {
-        results: posts,
-        total: totalPosts,
-        totalPages,
-        currentPage: page,
-        hasMore: page < totalPages,
+        results: response.results,
+        total: response.total,
+        totalPages: response.totalPages,
+        currentPage: response.currentPage,
+        hasMore: response.hasMore,
       }
     },
     async () => {
@@ -110,44 +84,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
 
 // Get search suggestions from WordPress
 async function getSearchSuggestions(query: string): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=10&_fields=title`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "NewsOnAfrica/1.0",
-        },
-      },
-    )
-
-    if (!response.ok) {
-      return []
-    }
-
-    const posts = await response.json()
-    const suggestions = new Set<string>()
-
-    posts.forEach((post: any) => {
-      // Extract words from titles
-      const titleWords = post.title.rendered
-        .toLowerCase()
-        .replace(/[^\w\s]/g, " ")
-        .split(/\s+/)
-        .filter((word: string) => word.length > 2 && word.includes(query.toLowerCase()))
-
-      titleWords.forEach((word: string) => {
-        if (suggestions.size < 8) {
-          suggestions.add(word)
-        }
-      })
-    })
-
-    return Array.from(suggestions)
-  } catch (error) {
-    console.error("Error getting suggestions:", error)
-    return []
-  }
+  return await wpGetSearchSuggestions(query)
 }
 
 // Fallback search data
@@ -185,13 +122,15 @@ const FALLBACK_POSTS = [
 ]
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   const startTime = Date.now()
 
   try {
     // Check rate limit
     const rateLimitCheck = checkRateLimit(request)
     if (rateLimitCheck.limited) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         {
           error: "Too many search requests",
           message: "Please try again later",
@@ -210,7 +149,7 @@ export async function GET(request: NextRequest) {
     const queryParam = searchParams.get("q") || searchParams.get("query")
 
     if (!queryParam) {
-      return NextResponse.json({ error: "Missing search query" }, { status: 400 })
+      return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
     }
 
     const page = Number.parseInt(searchParams.get("page") || "1", 10)
@@ -221,7 +160,7 @@ export async function GET(request: NextRequest) {
     if (suggestions) {
       try {
         const suggestionResults = await getSearchSuggestions(queryParam)
-        return NextResponse.json({
+        return jsonWithCors(request, {
           suggestions: suggestionResults,
           performance: {
             responseTime: Date.now() - startTime,
@@ -229,7 +168,7 @@ export async function GET(request: NextRequest) {
           },
         })
       } catch (error) {
-        return NextResponse.json({ suggestions: [] })
+        return jsonWithCors(request, { suggestions: [] })
       }
     }
 
@@ -238,7 +177,7 @@ export async function GET(request: NextRequest) {
       const searchResults = await searchWordPressPosts(queryParam, page, perPage)
       const responseTime = Date.now() - startTime
 
-      return NextResponse.json({
+      return jsonWithCors(request, {
         ...searchResults,
         query: queryParam,
         performance: {
@@ -258,7 +197,7 @@ export async function GET(request: NextRequest) {
       const endIndex = startIndex + perPage
       const paginatedResults = filteredResults.slice(startIndex, endIndex)
 
-      return NextResponse.json({
+      return jsonWithCors(request, {
         results: paginatedResults,
         total: filteredResults.length,
         totalPages: Math.ceil(filteredResults.length / perPage),
@@ -272,7 +211,8 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error) {
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       {
         error: "Search failed",
         message: error instanceof Error ? error.message : "Unknown error",

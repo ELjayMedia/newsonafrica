@@ -17,7 +17,7 @@ import {
   getCategoriesForCountry,
   getPostsByCategoryForCountry,
 } from "@/lib/wordpress-api"
-import { getCurrentCountry, getArticleUrl } from "@/lib/utils/routing"
+import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
@@ -44,13 +44,14 @@ const isOnline = () => {
 }
 
 // Update the fetchHomeData function to use new WordPress API
-const fetchHomeData = async (): Promise<{
+const fetchHomeData = async (
+  country: string,
+): Promise<{
   taggedPosts: HomePost[]
   featuredPosts: HomePost[]
   categories: Category[]
   recentPosts: HomePost[]
 }> => {
-  const country = getCurrentCountry()
   try {
     if (!isOnline()) {
       console.log("Device is offline, using cached data")
@@ -113,16 +114,17 @@ export function HomeContent({
     }
   }, [])
 
-  // Create fallback data from initialPosts if provided
+  // Create fallback data from initial posts based on current country
+  const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const fallbackData =
-    initialPosts.length > 0
+    initialCountryPosts.length > 0
       ? {
-          taggedPosts: initialPosts.filter((post) =>
+          taggedPosts: initialCountryPosts.filter((post) =>
             post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
           ),
-          featuredPosts: initialPosts.slice(0, 6),
+          featuredPosts: initialCountryPosts.slice(0, 6),
           categories: [],
-          recentPosts: initialPosts.slice(0, 10),
+          recentPosts: initialCountryPosts.slice(0, 10),
         }
       : {
           taggedPosts: [],
@@ -137,9 +139,10 @@ export function HomeContent({
     featuredPosts: HomePost[]
     categories: Category[]
     recentPosts: HomePost[]
-  }>("homepage-data", fetchHomeData, {
+  }>(["homepage-data", currentCountry], () => fetchHomeData(currentCountry), {
     fallbackData: initialData || fallbackData,
-    revalidateOnMount: !initialData && !initialPosts.length, // Only revalidate if no initial data
+    revalidateOnMount:
+      !initialData && !initialCountryPosts.length, // Only revalidate if no initial data
     revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
     dedupingInterval: 60000,
@@ -282,7 +285,7 @@ export function HomeContent({
       <React.Fragment key={name}>
         <section className="bg-white rounded-lg">
           <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link href={`/category/${name.toLowerCase()}`} className="hover:text-blue-600 transition-colors">
+            <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
               {name}
             </Link>
           </h2>

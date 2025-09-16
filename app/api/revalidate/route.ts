@@ -1,7 +1,13 @@
 import type { NextRequest } from "next/server"
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
+
+// Cache policy: none (manual revalidation endpoint)
+export const revalidate = 0
+
 
 // Input validation schema
 const revalidateSchema = z.object({
@@ -12,10 +18,11 @@ const revalidateSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 10, "REVALIDATE_API_CACHE_TOKEN")
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const { searchParams } = new URL(request.url)
     const params = Object.fromEntries(searchParams.entries())
@@ -40,10 +47,10 @@ export async function GET(request: NextRequest) {
         results.actions.push(`Revalidated path: ${path}`)
       }
       if (tag) {
-        revalidateTag(tag)
+          revalidateByTag(tag)
         results.actions.push(`Revalidated tag: ${tag}`)
       }
-      return successResponse(results)
+      return withCors(request, successResponse(results))
     }
 
     // Handle bulk revalidation based on type
@@ -51,8 +58,6 @@ export async function GET(request: NextRequest) {
       // Revalidate main content paths
       const contentPaths = [
         "/",
-        "/news",
-        "/business",
         "/sport",
         "/entertainment",
         "/life",
@@ -67,9 +72,14 @@ export async function GET(request: NextRequest) {
       })
 
       // Revalidate content tags
-      const contentTags = ["posts", "categories", "featured", "trending"]
+      const contentTags = [
+        CACHE_TAGS.POSTS,
+        CACHE_TAGS.CATEGORIES,
+        CACHE_TAGS.FEATURED,
+        CACHE_TAGS.TRENDING,
+      ]
       contentTags.forEach((tag) => {
-        revalidateTag(tag)
+          revalidateByTag(tag)
       })
 
       results.actions.push("Revalidated all content paths and tags")
@@ -77,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     if (type === "sitemaps" || type === "all") {
       // Revalidate all sitemap paths
-      const sitemapPaths = ["/sitemap.xml", "/news-sitemap.xml", "/sitemap-index.xml", "/server-sitemap.xml"]
+      const sitemapPaths = ["/sitemap.xml", "/sitemap-index.xml", "/server-sitemap.xml"]
 
       sitemapPaths.forEach((path) => {
         revalidatePath(path)
@@ -86,8 +96,8 @@ export async function GET(request: NextRequest) {
       results.actions.push("Revalidated all sitemap files")
     }
 
-    return successResponse(results)
+    return withCors(request, successResponse(results))
   } catch (error) {
-    return handleApiError(error)
+    return withCors(request, handleApiError(error))
   }
 }

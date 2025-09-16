@@ -3,6 +3,13 @@ import crypto from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
+import { revalidatePath } from "next/cache"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
+
+// Cache policy: none (webhook endpoint)
+export const revalidate = 0
+
 
 interface PaystackCustomer {
   email: string
@@ -65,13 +72,14 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export async function POST(request: Request) {
+  logRequest(request)
   try {
     // Get the signature from the headers
     const signature = request.headers.get("x-paystack-signature")
 
     if (!signature) {
       console.error("No Paystack signature provided")
-      return NextResponse.json({ error: "No signature provided" }, { status: 400 })
+      return jsonWithCors(request, { error: "No signature provided" }, { status: 400 })
     }
 
     // Get the request body as text
@@ -83,7 +91,7 @@ export async function POST(request: Request) {
 
     if (hash !== signature) {
       console.error("Invalid Paystack signature")
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      return jsonWithCors(request, { error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the body
@@ -124,10 +132,10 @@ export async function POST(request: Request) {
         console.log(`Unhandled Paystack event: ${event.event}`, event.data)
     }
 
-    return NextResponse.json({ received: true })
+    return jsonWithCors(request, { received: true })
   } catch (error) {
     console.error("Webhook processing error:", error)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    return jsonWithCors(request, { error: "Webhook processing failed" }, { status: 500 })
   }
 }
 
@@ -148,6 +156,13 @@ export async function handleChargeSuccess(
       metadata: data,
     })
   if (txnError) throw new Error("Failed to save transaction")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleSubscriptionCreated(
@@ -171,6 +186,13 @@ export async function handleSubscriptionCreated(
     updated_at: new Date().toISOString(),
   })
   if (error) throw new Error("Failed to create subscription")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleSubscriptionDisabled(
@@ -194,6 +216,13 @@ export async function handleSubscriptionDisabled(
     })
     .eq("id", data.subscription_code)
   if (error) throw new Error("Failed to cancel subscription")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handlePaymentFailed(
@@ -220,6 +249,13 @@ export async function handleInvoiceUpdate(
     .update({ metadata: data, updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
+
+  revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+  try {
+    revalidatePath("/subscriptions")
+  } catch (error) {
+    console.error("Error revalidating path /subscriptions:", error)
+  }
 }
 
 export async function handleTransferSuccess(

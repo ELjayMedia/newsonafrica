@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { env } from "@/config/env"
 
 interface ShareButtonsProps {
   title: string
@@ -32,7 +33,7 @@ export function ShareButtons({
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   // Ensure we have the full URL
-  const fullUrl = url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}${url}`
+    const fullUrl = url.startsWith("http") ? url : `${env.NEXT_PUBLIC_SITE_URL}${url}`
 
   // Encode components for sharing
   const encodedUrl = encodeURIComponent(fullUrl)

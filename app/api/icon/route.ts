@@ -1,7 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
 
+// Cache policy: very long (24 hours)
+export const revalidate = 86400
+
+
 export async function GET(request: NextRequest) {
+  logRequest(request)
   const searchParams = request.nextUrl.searchParams
   const size = Number.parseInt(searchParams.get("size") || "192", 10)
 
@@ -17,10 +22,13 @@ export async function GET(request: NextRequest) {
   const pngBuffer = await sharp(svgBuffer).resize(size, size).png().toBuffer()
 
   // Return the PNG image
-  return new NextResponse(pngBuffer, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  })
+  return withCors(
+    request,
+    new NextResponse(pngBuffer, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    }),
+  )
 }

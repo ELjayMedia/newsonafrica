@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { WifiOff, RefreshCw, BookOpen, List, Home } from "lucide-react"
 import Link from "next/link"
-import { convertLegacyUrl } from "@/lib/utils/routing"
+import { convertLegacyUrl, isLegacyPostUrl } from "@/lib/utils/routing"
 
 interface OfflineFallbackProps {
   type?: "article" | "list" | "general"
@@ -32,6 +32,8 @@ export default function OfflineFallback({
 
   useEffect(() => {
     loadCachedContent()
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadCachedContent = async () => {
@@ -71,12 +73,14 @@ export default function OfflineFallback({
           if (url.pathname === "/") {
             itemTitle = "News On Africa - Homepage"
             itemType = "home"
-          } else if (url.pathname.startsWith("/post/") || url.pathname.includes("/article/")) {
+          } else if (isLegacyPostUrl(url.pathname) || url.pathname.includes("/article/")) {
             itemTitle = url.pathname.split("/").pop()?.replace(/-/g, " ") || "Article"
             itemTitle = itemTitle.charAt(0).toUpperCase() + itemTitle.slice(1)
             itemType = "article"
-          } else if (url.pathname.startsWith("/category/")) {
-            const category = url.pathname.replace("/category/", "").replace(/-/g, " ")
+          } else if (/^\/([a-z]{2}\/)?category\//.test(url.pathname)) {
+            const category = url.pathname
+              .replace(/^\/([a-z]{2}\/)?category\//, "")
+              .replace(/-/g, " ")
             itemTitle = `${category.charAt(0).toUpperCase() + category.slice(1)} News`
             itemType = "category"
           }

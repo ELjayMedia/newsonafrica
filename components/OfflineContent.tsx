@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Wifi, WifiOff, RefreshCw, Home, Bookmark, Search } from "lucide-react"
-import { convertLegacyUrl } from "@/lib/utils/routing"
+import { convertLegacyUrl, isLegacyPostUrl } from "@/lib/utils/routing"
 
 interface CachedArticle {
   title: string
@@ -67,9 +67,9 @@ export default function OfflineContent() {
       const articleRequests = cachedRequests.filter((request) => {
         const url = new URL(request.url)
         return (
-          url.pathname.startsWith("/post/") ||
+          isLegacyPostUrl(url.pathname) ||
           url.pathname.includes("/article/") ||
-          url.pathname.startsWith("/category/") ||
+          /^\/([a-z]{2}\/)?category\//.test(url.pathname) ||
           url.pathname === "/"
         )
       })
@@ -84,15 +84,15 @@ export default function OfflineContent() {
         if (title === "/") {
           title = "News On Africa - Homepage"
           category = "Home"
-        } else if (title.startsWith("/post/") || title.includes("/article/")) {
-          const slug = title.startsWith("/post/")
+        } else if (isLegacyPostUrl(title) || title.includes("/article/")) {
+          const slug = isLegacyPostUrl(title)
             ? title.replace("/post/", "")
             : title.split("/article/")[1] || ""
           title = slug.replace(/-/g, " ")
           title = title.charAt(0).toUpperCase() + title.slice(1)
           category = "Article"
-        } else if (title.startsWith("/category/")) {
-          const categoryName = title.replace("/category/", "").replace(/-/g, " ")
+        } else if (/^\/([a-z]{2}\/)?category\//.test(title)) {
+          const categoryName = title.replace(/^\/([a-z]{2}\/)?category\//, "").replace(/-/g, " ")
           title = `${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)} News`
           category = categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
         }

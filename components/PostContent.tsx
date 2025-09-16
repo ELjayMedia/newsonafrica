@@ -12,7 +12,8 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/utils/date-utils"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
+import { env } from "@/config/env"
 
 interface PostContentProps {
   post: Post
@@ -35,9 +36,9 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
           <div className="flex items-center gap-1">
             <span className="text-gray-500 text-xs">Share</span>
-            <SocialShare
+              <SocialShare
 
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+                url={`${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
 
               title={post.title}
               description={post.excerpt || post.title}
@@ -114,7 +115,9 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         {/* Article content */}
         <div
           className="prose prose-lg max-w-none mb-8 text-sm text-black"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{
+            __html: rewriteLegacyLinks(post.content || "", (post as any).country),
+          }}
         />
 
         {/* Categories and tags */}
@@ -122,7 +125,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           {post.categories?.nodes?.map((category: Category) => (
             <Link
               key={category.id}
-              href={`/category/${category.slug}`}
+              href={getCategoryUrl(category.slug)}
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm"
             >
               {category.name}
@@ -134,8 +137,8 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
         <div className="flex items-center justify-center py-6 border-t border-gray-200 mt-6">
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">Found this article helpful? Share it with others!</p>
-            <SocialShare
-              url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"}${getArticleUrl(post.slug, (post as any).country)}`}
+              <SocialShare
+                url={`${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
 
               title={post.title}
               description={post.excerpt || post.title}

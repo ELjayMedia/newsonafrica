@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -31,7 +31,7 @@ function normalizeArticleData(article: Article | Post) {
       excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ""), // Strip HTML
       slug: post.slug,
       date: post.date,
-      featuredImage: post.featured_image_url,
+      featuredImage: post.featured_image_url || post.featuredImage?.node?.sourceUrl,
       author: post.author_data?.name,
       categories: post.category_data?.map((cat) => ({ name: cat.name, slug: cat.slug })) || [],
       link: `/posts/${post.slug}`,

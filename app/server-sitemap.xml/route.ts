@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 export async function GET() {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
   let posts
   try {
@@ -68,15 +68,17 @@ export async function GET() {
   </url>`
     })
 
-    // Add categories
-    categories.forEach((category) => {
-      sitemap += `
+    // Add categories for each country
+    _countries.forEach((c) => {
+      categories.forEach((category) => {
+        sitemap += `
   <url>
-    <loc>${baseUrl}/category/${category.slug}</loc>
+    <loc>${baseUrl}${getCategoryUrl(category.slug, c.code)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>`
+      })
     })
 
     // Add tags

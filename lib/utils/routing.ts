@@ -39,7 +39,7 @@ export function getServerCountry(): string {
   try {
     // Dynamically import to avoid bundling on client
     const { cookies } = require("next/headers") as typeof import("next/headers")
-    const store = cookies()
+    const store = cookies() as any
     const saved = store.get("preferredCountry")?.value
     if (saved && SUPPORTED_COUNTRIES.includes(saved)) {
       return saved
@@ -77,9 +77,40 @@ export function isLegacyPostUrl(url: string): boolean {
  * Convert legacy /post/ URL to country-specific format
  */
 export function convertLegacyUrl(url: string, countryCode?: string): string {
-  if (isLegacyPostUrl(url)) {
-    const slug = url.replace("/post/", "")
-    return getArticleUrl(slug, countryCode)
+  // Handle absolute URLs by parsing and preserving origin/search/hash
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url)
+      if (isLegacyPostUrl(parsed.pathname)) {
+        const slug = parsed.pathname.replace("/post/", "")
+        const newPath = getArticleUrl(slug, countryCode)
+        return `${parsed.origin}${newPath}${parsed.search}${parsed.hash}`
+      }
+      return url
+    } catch {
+      return url
+    }
+  }
+
+  // Relative URL handling
+  const [path, rest = ""] = url.split(/(?=[?#])/)
+  if (isLegacyPostUrl(path)) {
+    const slug = path.replace("/post/", "")
+    return getArticleUrl(slug, countryCode) + rest
   }
   return url
+}
+
+/**
+ * Rewrite legacy post links within HTML content
+ * Converts both relative and absolute /post/{slug} URLs
+ * to the country-aware article format
+ */
+export function rewriteLegacyLinks(html: string, countryCode?: string): string {
+  if (!html) return html
+  const country = countryCode || getCurrentCountry()
+  const regex = /href=(['"])(?:https?:\/\/[^'" ]+)?\/post\/([^'"?#]+)([^'"]*)\1/g
+  return html.replace(regex, (_match, quote, slug, rest) => {
+    return `href=${quote}${getArticleUrl(slug, country)}${rest}${quote}`
+  })
 }

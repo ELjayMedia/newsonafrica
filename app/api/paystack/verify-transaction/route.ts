@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
+import { revalidatePath } from "next/cache"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
+
+// Cache policy: short (1 minute)
+export const revalidate = 60
 
 export async function GET(request: NextRequest) {
+  logRequest(request)
   const searchParams = request.nextUrl.searchParams
   const reference = searchParams.get("reference")
 
@@ -9,14 +16,14 @@ export async function GET(request: NextRequest) {
 
   if (!reference) {
     console.error("Missing reference parameter")
-    return NextResponse.json({ status: false, error: "Transaction reference is required" }, { status: 400 })
+    return jsonWithCors(request, { status: false, error: "Transaction reference is required" }, { status: 400 })
   }
 
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
 
   if (!paystackSecretKey) {
     console.error("PAYSTACK_SECRET_KEY is not defined")
-    return NextResponse.json({ status: false, error: "Payment configuration error" }, { status: 500 })
+    return jsonWithCors(request, { status: false, error: "Payment configuration error" }, { status: 500 })
   }
 
   try {
@@ -34,7 +41,8 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error("Paystack API error:", data)
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { status: false, error: data.message || "Failed to verify transaction" },
         { status: response.status },
       )
@@ -44,18 +52,10 @@ export async function GET(request: NextRequest) {
     if (data.status && data.data.status === "success") {
       try {
         // Here you would typically store the subscription in your database
-        // For example:
-        // await storeSubscription({
-        //   userId: data.data.metadata.user_id,
-        //   planId: data.data.metadata.plan_id,
-        //   reference: data.data.reference,
-        //   amount: data.data.amount,
-        //   status: data.data.status,
-        //   startDate: new Date(),
-        //   endDate: calculateEndDate(data.data.metadata.interval),
-        // })
-
+        // ...
         console.log("Subscription verified and stored:", data.data.reference)
+          revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+        revalidatePath("/subscriptions")
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)
         // We still return success to the client since the payment was successful
@@ -63,10 +63,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(data)
+    return jsonWithCors(request, data)
   } catch (error) {
     console.error("Error verifying transaction:", error)
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { status: false, error: "An error occurred while verifying the transaction" },
       { status: 500 },
     )

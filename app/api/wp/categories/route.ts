@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-import { fetchCategories } from "@/lib/wp"
+import { fetchCategories } from "@/lib/wordpress-api"
+
 
 export const runtime = "edge"
+// Cache policy: short (1 minute)
 export const revalidate = 60
 
 export async function GET(req: NextRequest) {
+  logRequest(req)
   const { searchParams } = new URL(req.url)
-  const country = searchParams.get("country") || undefined
-  const cats = await fetchCategories(country ?? undefined)
-  return NextResponse.json(cats)
+  const country = searchParams.get("country")?.toLowerCase() || undefined
+  const cats = await fetchCategories(country)
+  return jsonWithCors(req, cats)
 }

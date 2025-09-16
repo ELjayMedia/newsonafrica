@@ -1,6 +1,7 @@
 "use client"
 
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
+import useSWRInfinite from "swr/infinite"
+import { useSWRConfig } from "swr"
 import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import { NewsGrid } from "@/components/NewsGrid"
@@ -15,8 +16,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazyLoad"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { generateBlurDataURL } from "@/utils/lazy-load"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import type { Category, Post } from "@/types/content"
 
 interface CategoryData {
@@ -33,50 +34,51 @@ interface CategoryPageProps {
 
 export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   const { ref, inView } = useInView()
-  const queryClient = useQueryClient()
+  const { mutate } = useSWRConfig()
 
-  // Memoize query key to prevent unnecessary re-renders
   const country = getCurrentCountry()
-  const queryKey = useMemo(() => ["category", country, slug], [country, slug])
 
-  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam = null }) =>
-      getPostsByCategoryForCountry(country, slug, 20),
-    getNextPageParam: (lastPage) => (lastPage?.hasNextPage ? lastPage.endCursor : undefined),
-    initialPageParam: null,
-    initialData: initialData
-      ? {
-          pages: [initialData],
-          pageParams: [null],
-        }
-      : undefined,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  })
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
+    (index, previousPage) => {
+      if (previousPage && !previousPage.hasNextPage) return null
+      return ["category", country, slug, index]
+    },
+    () => getPostsByCategoryForCountry(country, slug, 20),
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialData ? [initialData] : undefined,
+      dedupingInterval: 5 * 60 * 1000,
+    },
+  )
+
+  const fetchNextPage = useCallback(() => setSize(size + 1), [size, setSize])
+  const hasNextPage = data?.[data.length - 1]?.hasNextPage
+  const isFetchingNextPage = isValidating && size > (data?.length || 0)
 
   // Prefetch related categories
   const prefetchRelatedCategories = useCallback(
     async (relatedSlugs: string[]) => {
-      const prefetchPromises = relatedSlugs.slice(0, 3).map((relatedSlug) =>
-        queryClient.prefetchInfiniteQuery({
-        queryKey: ["category", country, relatedSlug],
-        queryFn: ({ pageParam = null }) =>
-          getPostsByCategoryForCountry(country, relatedSlug, 20),
-          initialPageParam: null,
-          staleTime: 5 * 60 * 1000,
-        }),
-      )
+      const prefetchPromises = relatedSlugs.slice(0, 3).map(async (relatedSlug) => {
+        const data = await getPostsByCategoryForCountry(country, relatedSlug, 20)
+        mutate(["category", country, relatedSlug, 0], [data], false)
+      })
       await Promise.allSettled(prefetchPromises)
     },
-    [queryClient, country],
+    [mutate, country],
   )
 
   // Generate schema.org structured data (memoized)
   const schemas = useMemo(() => {
     if (!slug) return []
 
-    const categoryUrl = `${siteConfig.url}/category/${slug}`
+    const categoryUrl = `${siteConfig.url}${getCategoryUrl(slug, country)}`
 
     return [
       getBreadcrumbSchema([
@@ -89,13 +91,15 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
         initialData?.category?.description || `Latest articles in the ${slug} category`,
       ),
     ]
-  }, [slug, initialData])
+  }, [slug, country, initialData])
 
   // Memoize computed values with chronological sorting
-  const category = initialData?.category || null
+  const pages = data ?? []
+  const category = pages[0]?.category || initialData?.category || null
+  const posts = pages.flatMap((page) => page.posts || [])
   const allPostsSorted = useMemo(
-    () => (initialData?.posts || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [initialData?.posts],
+    () => posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [posts],
   )
   const featuredPosts = allPostsSorted.slice(0, 5)
   const morePosts = allPostsSorted.slice(5)
@@ -175,7 +179,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
               {relatedCategoriesArray.map((relatedSlug) => (
                 <Link
                   key={relatedSlug}
-                  href={`/category/${relatedSlug}`}
+                  href={getCategoryUrl(relatedSlug)}
                   className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
                   {relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1)}

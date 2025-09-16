@@ -4,18 +4,27 @@ import { Suspense } from "react"
 import { COUNTRIES } from "@/lib/wordpress-api"
 import { CountryEditionContent } from "./CountryEditionContent"
 import { CountryEditionSkeleton } from "./CountryEditionSkeleton"
+import * as log from "@/lib/log"
 
 interface CountryPageProps {
   params: {
     countryCode: string
   }
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
+export const revalidate = 300
+
 // Generate static params for all supported countries
-export async function generateStaticParams() {
-  return Object.keys(COUNTRIES).map((countryCode) => ({
-    countryCode,
-  }))
+export async function generateStaticParams(): Promise<{ countryCode: string }[]> {
+  try {
+    return Object.keys(COUNTRIES).map((countryCode) => ({
+      countryCode,
+    }))
+  } catch (error) {
+    log.error("generateStaticParams for country page failed", { error })
+    return []
+  }
 }
 
 // Generate metadata for each country

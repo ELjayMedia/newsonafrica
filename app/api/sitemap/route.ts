@@ -2,10 +2,14 @@ const fetchAllCategories = async () => []
 const fetchRecentPosts = async () => []
 
 import { NextResponse } from "next/server"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"
+// Cache policy: long (30 minutes)
+export const revalidate = 1800
+
+export async function GET(request: Request) {
+  logRequest(request)
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
@@ -22,14 +26,16 @@ export async function GET() {
     <priority>1.0</priority>
   </url>
   ${safeCategories
-    .map(
-      (category) => `
+    .flatMap((category) =>
+      SUPPORTED_COUNTRIES.map(
+        (country) => `
   <url>
-    <loc>${baseUrl}/category/${category.slug}</loc>
+    <loc>${baseUrl}${getCategoryUrl(category.slug, country)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   `,
+      ),
     )
     .join("")}
   ${safePosts
@@ -45,13 +51,16 @@ export async function GET() {
     .join("")}
 </urlset>`
 
-    return new NextResponse(sitemap, {
-      headers: {
-        "Content-Type": "application/xml",
-      },
-    })
+    return withCors(
+      request,
+      new NextResponse(sitemap, {
+        headers: {
+          "Content-Type": "application/xml",
+        },
+      }),
+    )
   } catch (error) {
     console.error("Error generating sitemap:", error)
-    return new NextResponse("Error generating sitemap", { status: 500 })
+    return withCors(request, new NextResponse("Error generating sitemap", { status: 500 }))
   }
 }

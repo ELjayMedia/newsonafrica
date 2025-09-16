@@ -1,12 +1,13 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { lexend, playfairDisplay, jetbrainsMono } from "@/lib/typography"
+import { inter, playfairDisplay, jetbrainsMono } from "@/lib/typography"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
+import { env } from "@/config/env"
 import NetworkStatus from "@/components/NetworkStatus"
 import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
@@ -22,7 +23,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://newsonafrica.com"),
+    metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
@@ -47,14 +48,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lexend.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${lexend.className}`}
+      className={`${inter.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${inter.className}`}
     >
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className={lexend.className}>
+      <body className={inter.className}>
 
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>

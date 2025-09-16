@@ -1,13 +1,13 @@
 "use client"
 
-import { useInfiniteQuery } from "@tanstack/react-query"
+import useSWRInfinite from "swr/infinite"
 import { useInView } from "react-intersection-observer"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchPostsByTag } from "@/lib/wordpress-api"
+import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 interface TagContentProps {
@@ -22,12 +22,29 @@ interface TagContentProps {
 export function TagContent({ slug, initialData, tag }: TagContentProps) {
   const { ref, inView } = useInView()
 
-  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
-    queryKey: ["tagPosts", slug],
-    queryFn: ({ pageParam = null }) => fetchPostsByTag(slug, pageParam),
-    getNextPageParam: (lastPage) => (lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined),
-    initialData: { pages: [initialData], pageParams: [null] },
-  })
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
+    (index, previousPage) => {
+      if (previousPage && !previousPage.pageInfo.hasNextPage) return null
+      const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
+      return ["tagPosts", slug, cursor]
+    },
+    ([_, slug, cursor]) => fetchTaggedPosts(slug, cursor),
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialData ? [initialData] : undefined,
+    },
+  )
+
+  const fetchNextPage = useCallback(() => setSize(size + 1), [size, setSize])
+  const hasNextPage = data?.[data.length - 1]?.pageInfo.hasNextPage
+  const isFetchingNextPage = isValidating && size > (data?.length || 0)
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -35,10 +52,10 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  if (status === "loading") return <div>Loading...</div>
-  if (status === "error") return <div>Error: {(error as Error).message}</div>
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error: {(error as Error).message}</div>
 
-  const posts = data?.pages.flatMap((page) => page.nodes) || []
+  const posts = data?.flatMap((page) => page.nodes) || []
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
@@ -82,7 +99,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
           {isFetchingNextPage ? (
             <div>Loading more...</div>
           ) : hasNextPage ? (
-            <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+            <Button onClick={fetchNextPage} disabled={isFetchingNextPage}>
               Load More
             </Button>
           ) : (

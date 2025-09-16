@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { revalidateTag, revalidatePath } from "next/cache"
+import { revalidatePath } from "next/cache"
 import crypto from "crypto"
-import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
+import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
+
+// Cache policy: none (webhook endpoint)
+export const revalidate = 0
+
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -17,6 +23,7 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  logRequest(request)
   try {
     const body = await request.text()
     const signature = request.headers.get("x-wp-signature")
@@ -26,7 +33,7 @@ export async function POST(request: NextRequest) {
       const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
       if (!isValid) {
         console.error("Invalid webhook signature")
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+        return jsonWithCors(request, { error: "Invalid signature" }, { status: 401 })
       }
     }
 
@@ -48,18 +55,18 @@ export async function POST(request: NextRequest) {
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
-          revalidateTag(`post-${post.id}`)
+            revalidateByTag(CACHE_TAGS.POST(post.id))
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
             for (const categoryId of post.categories) {
-              revalidateTag(`category-${categoryId}`)
+                revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
             }
           }
 
           // Revalidate home page to show latest posts
           revalidatePath("/")
-          revalidateTag("posts")
+            revalidateByTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated post: ${post.slug}`)
         }
@@ -72,7 +79,7 @@ export async function POST(request: NextRequest) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
           revalidatePath("/")
-          revalidateTag("posts")
+            revalidateByTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
@@ -80,8 +87,13 @@ export async function POST(request: NextRequest) {
 
       case "category_updated":
         if (post?.slug) {
+          // Revalidate country-specific category pages
+          for (const country of SUPPORTED_COUNTRIES) {
+            revalidatePath(getCategoryUrl(post.slug, country))
+          }
+          // Legacy path
           revalidatePath(`/category/${post.slug}`)
-          revalidateTag(`category-${post.id}`)
+            revalidateByTag(CACHE_TAGS.CATEGORY(post.id))
 
           console.log(`Revalidated category: ${post.slug}`)
         }
@@ -91,7 +103,7 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled webhook action: ${action}`)
     }
 
-    return NextResponse.json({
+    return jsonWithCors(request, {
       success: true,
       message: "Webhook processed successfully",
       action,
@@ -99,12 +111,13 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Webhook processing error:", error)
-    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
+    return jsonWithCors(request, { error: "Failed to process webhook" }, { status: 500 })
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
+export async function GET(request: NextRequest) {
+  logRequest(request)
+  return jsonWithCors(request, {
     message: "WordPress webhook endpoint is active",
     timestamp: new Date().toISOString(),
   })

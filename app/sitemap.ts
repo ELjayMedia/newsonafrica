@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next"
 import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = siteConfig.url || "https://newsonafrica.com"
+  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
   const postsPromise = fetchPosts(1000).catch((err) => {
     console.warn(
@@ -54,30 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "daily" as const,
         priority: 1.0,
       },
-      {
-        url: `${baseUrl}/news`,
-        lastModified: new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.9,
-      },
-      {
-        url: `${baseUrl}/business`,
-        lastModified: new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.9,
-      },
-      {
-        url: `${baseUrl}/sport`,
-        lastModified: new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.9,
-      },
-      {
-        url: `${baseUrl}/special-projects`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-      },
+      
       {
         url: `${baseUrl}/subscribe`,
         lastModified: new Date(),
@@ -154,12 +131,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
 
     // Category pages
-    const categoryPages = categories.map((category) => ({
-      url: `${baseUrl}/category/${category.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    }))
+    const categoryPages = categories.flatMap((category) =>
+      SUPPORTED_COUNTRIES.map((country) => ({
+        url: `${baseUrl}${getCategoryUrl(category.slug, country)}`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      })),
+    )
 
     // Tag pages
     const tagPages = tags.map((tag) => ({
@@ -206,4 +185,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]
   }
 }
-

@@ -1,4 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
@@ -118,7 +119,7 @@ export async function searchWordPressPosts(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: CACHE_DURATIONS.MEDIUM }, // Cache for 5 minutes
     })
 
     if (!response.ok) {
@@ -305,4 +306,26 @@ export function highlightSearchTerms(text: string, searchQuery: string): string 
   })
 
   return highlightedText
+}
+
+// Server action wrappers for Next.js
+export async function searchWordPressPostsAction(
+  query: string,
+  options: {
+    page?: number
+    perPage?: number
+    categories?: number[]
+    tags?: number[]
+    author?: number
+    orderBy?: "relevance" | "date" | "title"
+    order?: "asc" | "desc"
+  } = {},
+): Promise<SearchResponse> {
+  "use server"
+  return searchWordPressPosts(query, options)
+}
+
+export async function getSearchSuggestionsAction(query: string, limit = 8): Promise<string[]> {
+  "use server"
+  return getSearchSuggestions(query, limit)
 }

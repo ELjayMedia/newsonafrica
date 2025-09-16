@@ -1,19 +1,22 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import { getServerCountry } from "@/lib/utils/routing"
+import { getServerCountry, getCategoryUrl } from "@/lib/utils/routing"
 import CategoryClientPage from "./CategoryClientPage"
+import * as log from "@/lib/log"
+import { env } from "@/config/env"
 
 interface CategoryPageProps {
   params: { slug: string }
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 // Static generation configuration
-export const revalidate = 60 // Revalidate every 60 seconds
+export const revalidate = 300 // Revalidate every 5 minutes
 export const dynamicParams = true // Allow dynamic params not in generateStaticParams
 
 // Generate static paths for all categories
-export async function generateStaticParams() {
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
 
   try {
@@ -21,26 +24,23 @@ export async function generateStaticParams() {
       "wordpress-categories-static",
       async () => await getCategoriesForCountry(getServerCountry()),
       async () => {
-        console.log("[v0] Categories static generation: Using fallback due to WordPress unavailability")
+        log.info("[v0] Categories static generation: Using fallback due to WordPress unavailability")
         return []
       },
     )
 
-    // Return the first 50 most important categories for static generation
-    // Others will be generated on-demand
     return categories.slice(0, 50).map((category) => ({
       slug: category.slug,
     }))
   } catch (error) {
-    console.error("Error generating static params for categories:", error)
-    // Return empty array to allow all pages to be generated on-demand
+    log.error("Error generating static params for categories", { error })
     return []
   }
 }
 
 // Enhanced metadata generation for categories with canonical URLs and robots
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  console.log(`🔍 Generating metadata for category: ${params.slug}`)
+  log.info(`Generating metadata for category: ${params.slug}`)
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
 
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const cached = enhancedCache.get(cacheKey)
 
   if (cached.exists && !cached.isStale) {
-    console.log(`[v0] Category metadata: Using cached data for ${params.slug}`)
+    log.info(`[v0] Category metadata: Using cached data for ${params.slug}`)
     return cached.data
   }
 
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         )
 
         if (!category) {
-          console.warn(`⚠️ Category not found for metadata generation: ${params.slug}`)
+          log.info(`Category not found for metadata generation: ${params.slug}`)
           return {
             title: "Category Not Found - News On Africa",
             description: "The requested category could not be found.",
@@ -74,12 +74,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-              canonical: `https://newsonafrica.com/category/${params.slug}`,
+                canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
 
-        console.log(`✅ Generated metadata for category: "${category.name}"`)
+        log.info(`Generated metadata for category: "${category.name}"`)
 
         // Create dynamic description
         const baseDescription = category.description || `Latest articles in the ${category.name} category`
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-        const canonicalUrl = `https://newsonafrica.com/category/${params.slug}`
+          const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -190,11 +190,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Category metadata: Using stale cache for ${params.slug}`)
+          log.info(`[v0] Category metadata: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Category metadata: Using fallback for ${params.slug}`)
+        log.info(`[v0] Category metadata: Using fallback for ${params.slug}`)
         return {
           title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1)} - News On Africa`,
           description: `Latest articles in the ${params.slug} category from News On Africa`,
@@ -203,7 +203,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             follow: true,
           },
           alternates: {
-            canonical: `https://newsonafrica.com/category/${params.slug}`,
+              canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
           },
         }
       },
@@ -212,7 +212,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     enhancedCache.set(cacheKey, result, 600000, 1800000) // 10min fresh, 30min stale
     return result
   } catch (error) {
-    console.error(`❌ Error generating metadata for category ${params.slug}:`, error)
+    log.error(`Error generating metadata for category ${params.slug}`, { error })
 
     if (cached.exists) {
       return cached.data
@@ -226,7 +226,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-        canonical: `https://newsonafrica.com/category/${params.slug}`,
+            canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
       },
     }
   }
@@ -259,11 +259,11 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
       },
       async () => {
         if (cached.exists) {
-          console.log(`[v0] Category data: Using stale cache for ${params.slug}`)
+          log.info(`[v0] Category data: Using stale cache for ${params.slug}`)
           return cached.data
         }
 
-        console.log(`[v0] Category data: Using fallback for ${params.slug}`)
+        log.info(`[v0] Category data: Using fallback for ${params.slug}`)
         return {
           category: {
             name: params.slug.charAt(0).toUpperCase() + params.slug.slice(1),
@@ -293,15 +293,13 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
 
     return <CategoryClientPage params={params} initialData={categoryData} />
   } catch (error) {
-    console.error(`Error loading category page for ${params.slug}:`, error)
+    log.error(`Error loading category page for ${params.slug}`, { error })
 
     if (cached.exists) {
-      console.log(`[v0] Category page: Using cached data due to error for ${params.slug}`)
+      log.info(`[v0] Category page: Using cached data due to error for ${params.slug}`)
       return <CategoryClientPage params={params} initialData={cached.data} />
     }
 
-    // For build-time errors, still try to render with empty data
-    // The client component will handle the error state
-    return <CategoryClientPage params={params} initialData={null} />
+    return notFound()
   }
 }

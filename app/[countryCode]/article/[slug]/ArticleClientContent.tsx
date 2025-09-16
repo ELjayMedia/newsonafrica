@@ -11,6 +11,7 @@ import { ArticleList } from "@/components/ArticleList"
 import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
+import { rewriteLegacyLinks } from "@/lib/utils/routing"
 
 interface ArticleClientContentProps {
   slug: string
@@ -112,7 +113,7 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
             </div>
           </div>
 
-          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-left">{initialData.title}</h1>
+          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-left">{initialData.title.rendered}</h1>
 
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6 text-sm">
             <div className="flex items-center gap-2">
@@ -134,7 +135,9 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
             <div className="mb-8 rounded-xl overflow-hidden shadow-lg">
               <img
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={initialData.featuredImage.node.altText || initialData.title}
+                alt={
+                  initialData.featuredImage.node.altText || initialData.title.rendered
+                }
                 className="w-full h-auto aspect-video object-cover"
                 loading="eager"
               />
@@ -143,14 +146,19 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
         </header>
 
         <div
-          className="prose prose-lg prose-gray max-w-none mb-12 
+          className="prose prose-lg prose-gray max-w-none mb-12
                      prose-headings:font-bold prose-headings:text-foreground
                      prose-p:text-foreground prose-p:leading-relaxed
                      prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                      prose-img:rounded-lg prose-img:shadow-md
                      prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg
                      prose-code:bg-muted prose-code:px-1 prose-code:rounded"
-          dangerouslySetInnerHTML={{ __html: initialData.content }}
+          dangerouslySetInnerHTML={{
+            __html: rewriteLegacyLinks(
+              initialData.content?.rendered || "",
+              countryCode,
+            ),
+          }}
         />
 
         <section className="border-t pt-8">
