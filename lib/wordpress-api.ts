@@ -69,6 +69,7 @@ export interface WordPressAuthor {
   name: string
   slug: string
   description?: string
+  avatar?: { url?: string }
 }
 
 export interface WordPressCategory {
@@ -677,12 +678,22 @@ export const getRelatedPosts = async (
       postId,
       limit,
     )
-    const posts = await executeRestFallback(
-      () => fetchFromWp<WordPressPost[]>(country, { endpoint, params }),
-      `[v0] Related posts by tags REST fallback failed for ${postId} (${country})`,
-      { country, postId, tags, limit, endpoint, params },
-    )
-    return posts.filter((p) => p.id !== Number(postId))
+    try {
+      const posts = await executeRestFallback(
+        () => fetchFromWp<WordPressPost[]>(country, { endpoint, params }),
+        `[v0] Related posts by tags REST fallback failed for ${postId} (${country})`,
+        { country, postId, tags, limit, endpoint, params },
+      )
+      return posts.filter((p) => p.id !== Number(postId))
+    } catch (error) {
+      log.error(`[v0] Related posts by tags request failed for ${postId}`, {
+        country,
+        postId,
+        tags,
+        error,
+      })
+      return []
+    }
   }
 
   const posts = await getRelatedPostsForCountry(country, postId, limit)
@@ -835,11 +846,12 @@ export async function fetchAuthorData(
   slug: string,
   cursor: string | null = null,
   countryCode = DEFAULT_COUNTRY,
+  limit = 10,
 ) {
   const data = await fetchFromWpGraphQL<any>(countryCode, AUTHOR_DATA_QUERY, {
     slug,
     after: cursor,
-    first: 10,
+    first: limit,
   })
   if (!data?.user) return null
   return {
@@ -850,6 +862,119 @@ export async function fetchAuthorData(
       ),
       pageInfo: data.user.posts.pageInfo,
     },
+  }
+}
+
+interface AuthorLookupResult {
+  author: WordPressAuthor
+  posts: WordPressPost[]
+  pageInfo?: {
+    endCursor: string | null
+    hasNextPage: boolean
+  }
+}
+
+const coerceToNumber = (value: unknown): number => {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const numeric = Number(value)
+    if (!Number.isNaN(numeric)) {
+      return numeric
+    }
+
+    try {
+      const decoded = Buffer.from(value, 'base64').toString('ascii')
+      const parts = decoded.split(':')
+      const maybeNumber = Number(parts[parts.length - 1])
+      if (!Number.isNaN(maybeNumber)) {
+        return maybeNumber
+      }
+    } catch {
+      // Ignore decoding errors and fall through to default
+    }
+  }
+  return 0
+}
+
+const selectAvatarUrl = (avatar: any): { url?: string } | undefined => {
+  if (!avatar) return undefined
+  if (typeof avatar === 'object' && 'url' in avatar) {
+    const url = (avatar as { url?: string }).url
+    return url ? { url } : undefined
+  }
+  if (typeof avatar === 'object' && '96' in avatar) {
+    const urls = avatar as Record<string, string>
+    return {
+      url: urls['96'] || urls['48'] || urls['24'],
+    }
+  }
+  return undefined
+}
+
+export async function getAuthorBySlug(
+  slug: string,
+  {
+    countryCode = DEFAULT_COUNTRY,
+    postLimit = 12,
+  }: { countryCode?: string; postLimit?: number } = {},
+): Promise<AuthorLookupResult | null> {
+  const gqlAuthor = await fetchAuthorData(slug, null, countryCode, postLimit)
+  if (gqlAuthor) {
+    return {
+      author: {
+        id: coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id),
+        name: gqlAuthor.name,
+        slug: gqlAuthor.slug,
+        description: gqlAuthor.description ?? undefined,
+        avatar: selectAvatarUrl(gqlAuthor.avatar),
+      },
+      posts: gqlAuthor.posts.nodes ?? [],
+      pageInfo: gqlAuthor.posts.pageInfo,
+    }
+  }
+
+  const restAuthors = await executeRestFallback(
+    () =>
+      fetchFromWp<any[]>(countryCode, {
+        endpoint: 'users',
+        params: { slug },
+      }),
+    `[v0] Author REST fallback failed for ${slug} (${countryCode})`,
+    { countryCode, slug },
+  )
+
+  const restAuthor = restAuthors[0]
+  if (!restAuthor) {
+    return null
+  }
+
+  const query = wordpressQueries.posts({
+    page: 1,
+    perPage: postLimit,
+    author: String(restAuthor.id),
+  })
+  const posts = await executeRestFallback(
+    () => fetchFromWp<WordPressPost[]>(countryCode, query),
+    `[v0] Author posts REST fallback failed for ${slug} (${countryCode})`,
+    {
+      countryCode,
+      slug,
+      authorId: restAuthor.id,
+      postLimit,
+      endpoint: query.endpoint,
+      params: query.params,
+    },
+  )
+
+  return {
+    author: {
+      id: restAuthor.id,
+      name: restAuthor.name,
+      slug: restAuthor.slug,
+      description: restAuthor.description || undefined,
+      avatar: selectAvatarUrl(restAuthor.avatar_urls),
+    },
+    posts,
   }
 }
 

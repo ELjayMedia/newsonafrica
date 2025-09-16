@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { env } from "@/config/env"
 import * as log from "@/lib/log"
-import { getLatestPosts } from "@/lib/wordpress-api"
+import { getAuthorBySlug } from "@/lib/wordpress-api"
 import AuthorContent from "./AuthorContent"
 
 interface AuthorPageProps {
@@ -16,13 +16,9 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
   log.info(`🔍 Generating metadata for author: ${params.slug}`)
 
   try {
-    // Get latest posts to find author information
-    const { posts } = await getLatestPosts(100)
+    const authorData = await getAuthorBySlug(params.slug, { postLimit: 12 })
 
-    // Find posts by this author
-    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
-
-    if (authorPosts.length === 0) {
+    if (!authorData || authorData.posts.length === 0) {
       log.warn(`⚠️ Author not found: ${params.slug}`)
       return {
         title: "Author Not Found - News On Africa",
@@ -34,18 +30,18 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       }
     }
 
-    const author = authorPosts[0].author.node
+    const { author, posts } = authorData
     log.info(`✅ Generated metadata for author: "${author.name}"`)
 
     // Create dynamic description
-    const postCount = authorPosts.length
+    const postCount = posts.length
     const description =
       author.description ||
       `Read ${postCount} articles by ${author.name} on News On Africa. ${author.name} covers news and stories from across the African continent.`
 
     // Get author avatar or featured image from their latest post
     const avatarUrl =
-      author.avatar?.url || authorPosts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
+      author.avatar?.url || posts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
 
     // Create canonical URL
     const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`
@@ -56,7 +52,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       `${author.name} Articles`,
       "African Journalist",
       "News On Africa",
-      ...authorPosts.slice(0, 3).flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
+      ...posts.slice(0, 3).flatMap((post) => post.categories?.nodes?.map((cat) => cat.name) || []),
     ].join(", ")
 
     return {
@@ -145,19 +141,15 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
 // Server component that fetches data and renders the page
 export default async function AuthorPage({ params }: AuthorPageProps) {
   try {
-    // Get latest posts to find author and their articles
-    const { posts } = await getLatestPosts(200)
+    const authorData = await getAuthorBySlug(params.slug, { postLimit: 20 })
 
-    // Find posts by this author
-    const authorPosts = posts.filter((post) => post.author.node.slug === params.slug)
-
-    if (authorPosts.length === 0) {
+    if (!authorData || authorData.posts.length === 0) {
       notFound()
     }
 
-    const author = authorPosts[0].author.node
+    const { author, posts } = authorData
 
-    return <AuthorContent author={author} posts={authorPosts} />
+    return <AuthorContent author={author} posts={posts} />
   } catch (error) {
     log.error(`Error loading author page for ${params.slug}`, { error })
     throw error
