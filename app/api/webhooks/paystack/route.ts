@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
 import { revalidatePath } from "next/cache"
-import { CACHE_TAGS } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: none (webhook endpoint)

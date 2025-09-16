@@ -3,7 +3,7 @@ import { wordpressQueries } from './wordpress-queries'
 import { circuitBreaker } from './api/circuit-breaker'
 import * as log from './log'
 import { fetchWithTimeout } from './utils/fetchWithTimeout'
-import { CACHE_DURATIONS } from '@/lib/cache-utils'
+import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { mapWpPost } from './utils/mapWpPost'
 import { APIError } from './utils/errorHandling'
 

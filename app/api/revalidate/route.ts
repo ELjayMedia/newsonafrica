@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
-import { CACHE_TAGS } from "@/lib/cache-utils"
+import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
 // Cache policy: none (manual revalidation endpoint)
