@@ -1,14 +1,21 @@
-@@ -0,0 +1,36 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
 vi.mock("@/lib/utils/routing", () => ({
   getServerCountry: vi.fn(),
 }))
 
-import { middleware } from "@/middleware"
-import { getServerCountry } from "@/lib/utils/routing"
+vi.stubGlobal("getCategoryUrl", (slug: string, country: string) => `/${country}/${slug}`)
+vi.stubGlobal("DEFAULT_COUNTRY", "sz")
+
+let middleware: typeof import("@/middleware")["middleware"]
+let getServerCountry: typeof import("@/lib/utils/routing")["getServerCountry"]
+
+beforeAll(async () => {
+  ;({ middleware } = await import("@/middleware"))
+  ;({ getServerCountry } = await import("@/lib/utils/routing"))
+})
 
 describe("legacy post redirect", () => {
   it("uses country from server cookies", () => {
@@ -33,4 +40,8 @@ describe("legacy post redirect", () => {
       "https://example.com/sz/article/another",
     )
   })
+})
+
+afterAll(() => {
+  vi.unstubAllGlobals()
 })
