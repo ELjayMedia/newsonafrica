@@ -1,35 +1,20 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { NextRequest } from "next/server"
 
-vi.mock("@/lib/utils/routing", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/utils/routing")>(
-    "@/lib/utils/routing",
-  )
-
-  return {
-    ...actual,
-    getServerCountry: vi.fn(),
-  }
-})
-
-vi.stubGlobal("getCategoryUrl", (slug: string, country: string) => `/${country}/${slug}`)
-vi.stubGlobal("DEFAULT_COUNTRY", "sz")
-
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 let middleware: typeof import("@/middleware")["middleware"]
-let getServerCountry: typeof import("@/lib/utils/routing")["getServerCountry"]
 
 beforeAll(async () => {
   ;({ middleware } = await import("@/middleware"))
-  ;({ getServerCountry } = await import("@/lib/utils/routing"))
 })
 
 describe("legacy post redirect", () => {
-  it("uses country from server cookies", () => {
-    vi.mocked(getServerCountry).mockReturnValue("za")
-
-    const req = new NextRequest("https://example.com/post/some-slug")
+  it("uses the preferredCountry cookie when present", () => {
+    const req = new NextRequest("https://example.com/post/some-slug", {
+      headers: { cookie: "preferredCountry=za" },
+    })
     const res = middleware(req)
 
     expect(res?.status).toBe(307)
@@ -38,18 +23,23 @@ describe("legacy post redirect", () => {
     )
   })
 
-  it("falls back to default country", () => {
-    vi.mocked(getServerCountry).mockReturnValue("sz")
-
+  it("falls back to the default country when no cookie exists", () => {
     const req = new NextRequest("https://example.com/post/another")
     const res = middleware(req)
 
     expect(res?.headers.get("location")).toBe(
-      "https://example.com/sz/article/another",
+      `https://example.com/${DEFAULT_COUNTRY}/article/another`,
     )
   })
-})
 
-afterAll(() => {
-  vi.resetModules()
+  it("ignores unsupported preferredCountry values", () => {
+    const req = new NextRequest("https://example.com/post/third", {
+      headers: { cookie: "preferredCountry=xx" },
+    })
+    const res = middleware(req)
+
+    expect(res?.headers.get("location")).toBe(
+      `https://example.com/${DEFAULT_COUNTRY}/article/third`,
+    )
+  })
 })
