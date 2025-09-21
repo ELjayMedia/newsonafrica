@@ -24,8 +24,7 @@ BEGIN
   IF p_action = 'add' OR (p_action = 'toggle' AND existing_bookmark.id IS NULL) THEN
     -- Add bookmark if it doesn't exist
     IF existing_bookmark.id IS NULL THEN
-      INSERT INTO bookmarks (user_id, post_id, title, slug, excerpt, "featuredImage")
-      VALUES (p_user_id, p_post_id, p_title, p_slug, p_excerpt, p_featured_image)
+      INSERT INTO bookmarks (user_id, post_id, title, slug, excerpt, "featured_image")      VALUES (p_user_id, p_post_id, p_title, p_slug, p_excerpt, p_featured_image)
       RETURNING * INTO existing_bookmark;
       
       result := jsonb_build_object(
