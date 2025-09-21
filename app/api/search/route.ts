@@ -1,10 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
 import {
   searchWordPressPosts as wpSearchPosts,
   getSearchSuggestions as wpGetSearchSuggestions,
 } from "@/lib/wordpress-search"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 // Cache policy: medium (5 minutes)
 export const revalidate = 300

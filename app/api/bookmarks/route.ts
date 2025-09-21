@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
+import { logRequest, withCors } from "@/lib/api-utils"
 
 // Cache policy: very long (24 hours)
 export const revalidate = 86400
