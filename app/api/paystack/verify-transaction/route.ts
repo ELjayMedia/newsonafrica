@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server"
 import type { NextRequest } from "next/request"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { createAdminClient } from "@/lib/supabase"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
@@ -51,11 +52,51 @@ export async function GET(request: NextRequest) {
     // Store subscription information in database
     if (data.status && data.data.status === "success") {
       try {
-        // Here you would typically store the subscription in your database
-        // ...
-        console.log("Subscription verified and stored:", data.data.reference)
+        const supabase = createAdminClient()
+        const customer = data.data.customer || {}
+        const metadata = data.data.metadata || {}
+        let userId: string | null = metadata.user_id || null
+
+        if (!userId && customer.email) {
+          const { data: profileMatch } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", customer.email)
+            .maybeSingle()
+
+          if (profileMatch?.id) {
+            userId = profileMatch.id
+          }
+        }
+
+        if (userId) {
+          const startDate = data.data.paid_at ? new Date(data.data.paid_at).toISOString() : new Date().toISOString()
+          const renewalDate = data.data.next_payment_date
+            ? new Date(data.data.next_payment_date).toISOString()
+            : null
+          const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
+
+          await supabase
+            .from("subscriptions")
+            .upsert({
+              id: data.data.reference,
+              user_id: userId,
+              plan: planName,
+              status: data.data.status || "success",
+              start_date: startDate,
+              end_date: null,
+              renewal_date: renewalDate,
+              payment_provider: "paystack",
+              payment_id: data.data.reference,
+              metadata: data.data,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "id" })
+
           revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
-        revalidatePath("/subscriptions")
+          revalidatePath("/subscriptions")
+        } else {
+          console.warn("Unable to map Paystack transaction to a Supabase user", { reference: data.data.reference, email: customer.email })
+        }
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)
         // We still return success to the client since the payment was successful

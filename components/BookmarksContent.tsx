@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useBookmarks } from "@/contexts/BookmarksContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
@@ -52,15 +53,29 @@ export default function BookmarksContent() {
     isLoading,
   } = useBookmarks()
 
+  const { preferences, setBookmarkSortPreference } = useUserPreferences()
+
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<SortOption>("newest")
+  const [sortBy, setSortBy] = useState<SortOption>(preferences.bookmarkSort)
   const [filterBy, setFilterBy] = useState<FilterOption>("all")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [notePostId, setNotePostId] = useState<string>("")
   const [noteText, setNoteText] = useState("")
   const { toast } = useToast()
+
+  useEffect(() => {
+    setSortBy(preferences.bookmarkSort as SortOption)
+  }, [preferences.bookmarkSort])
+
+  const handleSortChange = useCallback(
+    (value: SortOption) => {
+      setSortBy(value)
+      void setBookmarkSortPreference(value)
+    },
+    [setBookmarkSortPreference],
+  )
 
   // Filter and sort bookmarks
   const filteredBookmarks = useMemo(() => {
@@ -238,7 +253,7 @@ export default function BookmarksContent() {
         </div>
 
         <div className="flex gap-2">
-          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+          <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>

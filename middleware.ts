@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getServerCountry } from "@/lib/utils/routing"
+import { getServerCountry, getCategoryUrl, DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 
 // Legacy routes that should be redirected to their category equivalents

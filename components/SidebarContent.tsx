@@ -7,8 +7,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
 // Function to get view counts for posts
 const getViewCounts = (posts) => {
@@ -34,6 +35,9 @@ export function SidebarContent() {
   const [mostReadPosts, setMostReadPosts] = useState([])
 
   const country = getCurrentCountry()
+  const { preferences } = useUserPreferences()
+
+  const preferredSections = useMemo(() => preferences.sections.map((section) => section.toLowerCase()), [preferences.sections])
 
   const {
     data,
@@ -44,13 +48,35 @@ export function SidebarContent() {
     dedupingInterval: 1000 * 60 * 5,
   })
 
+  const personalizedPosts = useMemo(() => {
+    if (!data || !Array.isArray(data)) {
+      return []
+    }
+
+    if (!preferredSections.length) {
+      return data
+    }
+
+    const matches = data.filter((post) => {
+      const categories = post.categories?.nodes || []
+      return categories.some((category: any) => {
+        const slug = (category?.slug || category?.name || "").toLowerCase()
+        return slug && preferredSections.includes(slug)
+      })
+    })
+
+    return matches.length > 0 ? matches : data
+  }, [data, preferredSections])
+
   useEffect(() => {
-    if (data) {
-      const postsWithViews = getViewCounts(data)
+    if (personalizedPosts.length > 0) {
+      const postsWithViews = getViewCounts(personalizedPosts)
       const sortedPosts = postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
       setMostReadPosts(sortedPosts)
+    } else {
+      setMostReadPosts([])
     }
-  }, [data])
+  }, [personalizedPosts])
 
   if (isLoading) return <SidebarSkeleton />
 
@@ -67,7 +93,7 @@ export function SidebarContent() {
   }
 
   // Handle empty data
-  if (!data || data.length === 0) {
+  if (personalizedPosts.length === 0) {
     return (
       <div className="space-y-6">
         <section className="bg-white shadow-md rounded-lg p-4">
@@ -110,9 +136,9 @@ export function SidebarContent() {
         {/* Latest News Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
-          {data.length > 0 ? (
+          {personalizedPosts.length > 0 ? (
             <div className="space-y-4">
-              {data.slice(0, 5).map((post) => (
+              {personalizedPosts.slice(0, 5).map((post) => (
                 <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-2 group">
                   {post.featuredImage && post.featuredImage.node && (
                     <div className="relative w-16 h-16 flex-shrink-0">
