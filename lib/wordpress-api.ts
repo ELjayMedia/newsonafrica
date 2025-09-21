@@ -136,6 +136,11 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
 
+interface WordPressGraphQLResponse<T> {
+  data?: T
+  errors?: Array<Record<string, unknown>>
+}
+
 export async function fetchFromWpGraphQL<T>(
   countryCode: string,
   query: string,
@@ -153,10 +158,30 @@ export async function fetchFromWpGraphQL<T>(
       })
       if (!res.ok) {
         log.error(`[v0] WordPress GraphQL request failed for ${base}`, { status: res.status })
-        throw new Error('GraphQL request failed')
+        throw new APIError('GraphQL request failed', 'GRAPHQL_HTTP_ERROR', res.status)
       }
-      return (await res.json()) as T
+
+      const json = (await res.json()) as WordPressGraphQLResponse<T>
+
+      if (json.errors && json.errors.length > 0) {
+        const graphQLError = new APIError(
+          'GraphQL response contained errors',
+          'GRAPHQL_RESPONSE_ERROR',
+          res.status,
+          { errors: json.errors },
+        )
+        log.error(`[v0] WordPress GraphQL errors for ${base}`, { errors: json.errors })
+        throw graphQLError
+      }
+
+      return (json.data ?? null) as T | null
     } catch (error) {
+      if (
+        error instanceof APIError &&
+        (error.code === 'GRAPHQL_RESPONSE_ERROR' || error.code === 'GRAPHQL_HTTP_ERROR')
+      ) {
+        throw error
+      }
       log.error(`[v0] WordPress GraphQL request failed for ${base}`, { error })
       throw error
     }

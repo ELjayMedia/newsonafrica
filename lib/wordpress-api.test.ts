@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { getRelatedPosts, fetchPost } from "./wordpress-api";
+import { getRelatedPosts, fetchPost, fetchFromWpGraphQL } from "./wordpress-api";
 
 // Restore global fetch after each test
 afterEach(() => {
@@ -29,6 +29,21 @@ describe("fetchPost", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }))
     const result = await fetchPost({ countryCode: "sz", slug: "test" })
     expect(result).toBeNull()
+  })
+})
+
+describe("fetchFromWpGraphQL", () => {
+  it("returns GraphQL data when response contains data", async () => {
+    const mockData = { posts: { nodes: [] } }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: mockData }),
+    }))
+
+    const result = await fetchFromWpGraphQL<typeof mockData>("sz", "query")
+
+    expect(result).toEqual(mockData)
   })
 })
 
