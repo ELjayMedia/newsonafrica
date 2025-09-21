@@ -6,6 +6,7 @@ vi.mock("@/lib/utils/routing", async () => {
   const actual = await vi.importActual<typeof import("@/lib/utils/routing")>(
     "@/lib/utils/routing",
   )
+
   return {
     ...actual,
     getServerCountry: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock("@/lib/utils/routing", async () => {
 
 vi.stubGlobal("getCategoryUrl", (slug: string, country: string) => `/${country}/${slug}`)
 vi.stubGlobal("DEFAULT_COUNTRY", "sz")
+
 
 let middleware: typeof import("@/middleware")["middleware"]
 let getServerCountry: typeof import("@/lib/utils/routing")["getServerCountry"]
@@ -49,5 +51,5 @@ describe("legacy post redirect", () => {
 })
 
 afterAll(() => {
-  vi.unstubAllGlobals()
+  vi.resetModules()
 })

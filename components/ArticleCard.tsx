@@ -7,6 +7,7 @@ import { generateBlurDataURL } from "@/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
 import type { Post } from "@/types/wordpress"
 
@@ -19,9 +20,101 @@ interface ArticleCardProps {
   priority?: boolean
 }
 
+function normalizeCountry(candidate?: string | null) {
+  if (!candidate) return undefined
+  const normalized = candidate.toLowerCase()
+  return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
+}
+
+function extractCountrySlug(value: unknown): string | undefined {
+  if (!value) return undefined
+
+  if (typeof value === "string") {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const slug = extractCountrySlug(item)
+      if (slug) return slug
+    }
+    return undefined
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (typeof record.slug === "string") {
+      return record.slug
+    }
+
+    if (typeof record.code === "string") {
+      return record.code
+    }
+
+    if (typeof record.value === "string") {
+      return record.value
+    }
+
+    if (record.node) {
+      const slug = extractCountrySlug(record.node)
+      if (slug) return slug
+    }
+
+    if (record.country) {
+      const slug = extractCountrySlug(record.country)
+      if (slug) return slug
+    }
+
+    if (record.countries) {
+      const slug = extractCountrySlug(record.countries)
+      if (slug) return slug
+    }
+
+    if (Array.isArray(record.nodes)) {
+      const slug = extractCountrySlug(record.nodes)
+      if (slug) return slug
+    }
+
+    if (Array.isArray(record.edges)) {
+      const slug = extractCountrySlug(record.edges)
+      if (slug) return slug
+    }
+  }
+
+  return undefined
+}
+
+function inferArticleCountry(article: Article | Post) {
+  const source = article as any
+  const potentialSources: unknown[] = [
+    source?.country,
+    source?.countryCode,
+    source?.country_code,
+    source?.edition?.country,
+    source?.edition?.code,
+    source?.edition?.slug,
+    source?.countries,
+    source?.countries?.nodes,
+    source?.countries?.edges,
+  ]
+
+  for (const candidate of potentialSources) {
+    const slug = extractCountrySlug(candidate)
+    const normalized = normalizeCountry(slug)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return undefined
+}
+
 function normalizeArticleData(article: Article | Post) {
   // Check if it's a WordPress Post or Article
   const isWordPressPost = "title" in article && typeof article.title === "object"
+
+  const country = inferArticleCountry(article)
 
   if (isWordPressPost) {
     const post = article as Post
@@ -34,7 +127,7 @@ function normalizeArticleData(article: Article | Post) {
       featuredImage: post.featured_image_url || post.featuredImage?.node?.sourceUrl,
       author: post.author_data?.name,
       categories: post.category_data?.map((cat) => ({ name: cat.name, slug: cat.slug })) || [],
-      link: `/posts/${post.slug}`,
+      link: getArticleUrl(post.slug, country),
     }
   } else {
     const art = article as Article
@@ -51,7 +144,7 @@ function normalizeArticleData(article: Article | Post) {
           name: edge.node.name,
           slug: edge.node.slug,
         })) || [],
-      link: `/articles/${art.slug}`,
+      link: getArticleUrl(art.slug, country),
     }
   }
 }
