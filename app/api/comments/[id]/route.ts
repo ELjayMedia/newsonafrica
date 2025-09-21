@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
@@ -8,9 +10,21 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 export const revalidate = 60
 
 
+type CommentRouteContext = {
+  params?: Promise<{ id: string }>
+}
+
+
 // Update a comment
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
+  const params = await context.params
+  const commentId = params?.id
+
+  if (!commentId) {
+    return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
+  }
+
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,8 +47,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!session) {
     return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
-
-  const commentId = params.id
 
   try {
     const { content } = await request.json()
@@ -97,7 +109,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     // Return the updated comment with profile data
-      revalidateByTag(CACHE_TAGS.COMMENTS)
+    revalidateByTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({
 
       ...data,
@@ -113,8 +125,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // Delete a comment
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
+  const params = await context.params
+  const commentId = params?.id
+
+  if (!commentId) {
+    return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
+  }
+
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,8 +156,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   if (!session) {
     return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }
-
-  const commentId = params.id
 
   try {
     // First check if the user owns this comment
@@ -170,7 +187,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })
     }
 
-      revalidateByTag(CACHE_TAGS.COMMENTS)
+    revalidateByTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({ success: true })
 
   } catch (error) {
