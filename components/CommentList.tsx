@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useInView } from "react-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface CommentListProps {
@@ -27,7 +28,8 @@ export function CommentList({ postId }: CommentListProps) {
   const [totalComments, setTotalComments] = useState(0)
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
-  const [sortOption, setSortOption] = useState<CommentSortOption>("newest")
+  const { preferences, setCommentSortPreference } = useUserPreferences()
+  const [sortOption, setSortOption] = useState<CommentSortOption>(preferences.commentSort)
   const { user } = useUser()
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
@@ -179,8 +181,13 @@ export function CommentList({ postId }: CommentListProps) {
   }, [])
 
   // Handle sort change
+  useEffect(() => {
+    setSortOption(preferences.commentSort)
+  }, [preferences.commentSort])
+
   const handleSortChange = (option: CommentSortOption) => {
     setSortOption(option)
+    void setCommentSortPreference(option)
   }
 
   // Get sort option display text

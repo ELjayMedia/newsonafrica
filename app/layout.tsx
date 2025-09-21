@@ -16,6 +16,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 import ClientLayoutComponents from "./ClientLayoutComponents"
 
 import "./globals.css"
@@ -60,39 +61,41 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
             <UserProvider>
-              <BookmarksProvider>
-                <ClientWrapper>
-                <ScrollToTop />
-                <ClientDynamicComponents />
-                <TopBar />
-                <div className="flex-grow">
-                  <div className="mx-auto max-w-full md:max-w-[980px]">
-                    <ClientLayoutComponents>
-                      <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                        <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                      </main>
-                    </ClientLayoutComponents>
-                  </div>
-                </div>
-                <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-                  <Link href="/privacy-policy" className="hover:underline">
-                    Privacy Policy
-                  </Link>
-                  {" | "}
-                  <Link href="/terms-of-service" className="hover:underline">
-                    Terms of Service
-                  </Link>
-                  {" | "}
-                  <Link href="/sitemap.xml" className="hover:underline">
-                    Sitemap
-                  </Link>
-                </footer>
-                <NetworkStatus />
-                <Toaster />
-                <NetworkStatusHandler />
-              </ClientWrapper>
-            </BookmarksProvider>
-          </UserProvider>
+              <UserPreferencesProvider>
+                <BookmarksProvider>
+                  <ClientWrapper>
+                    <ScrollToTop />
+                    <ClientDynamicComponents />
+                    <TopBar />
+                    <div className="flex-grow">
+                      <div className="mx-auto max-w-full md:max-w-[980px]">
+                        <ClientLayoutComponents>
+                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                            <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                          </main>
+                        </ClientLayoutComponents>
+                      </div>
+                    </div>
+                    <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+                      <Link href="/privacy-policy" className="hover:underline">
+                        Privacy Policy
+                      </Link>
+                      {" | "}
+                      <Link href="/terms-of-service" className="hover:underline">
+                        Terms of Service
+                      </Link>
+                      {" | "}
+                      <Link href="/sitemap.xml" className="hover:underline">
+                        Sitemap
+                      </Link>
+                    </footer>
+                    <NetworkStatus />
+                    <Toaster />
+                    <NetworkStatusHandler />
+                  </ClientWrapper>
+                </BookmarksProvider>
+              </UserPreferencesProvider>
+            </UserProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

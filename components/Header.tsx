@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
+import { useMemo } from "react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
@@ -19,7 +21,31 @@ export function Header() {
   const pathname = usePathname()
   const countryCode = getCurrentCountry(pathname)
   const { categories } = useCategories(countryCode)
+  const { preferences } = useUserPreferences()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+
+  const favouriteSlugs = useMemo(() => preferences.sections.map((section) => section.toLowerCase()), [preferences.sections])
+
+  const sortedCategories = useMemo(() => {
+    if (!categories || categories.length === 0) {
+      return []
+    }
+
+    if (!favouriteSlugs.length) {
+      return categories
+    }
+
+    return [...categories].sort((a, b) => {
+      const aFav = favouriteSlugs.includes(a.slug.toLowerCase())
+      const bFav = favouriteSlugs.includes(b.slug.toLowerCase())
+
+      if (aFav === bFav) {
+        return a.name.localeCompare(b.name)
+      }
+
+      return aFav ? -1 : 1
+    })
+  }, [categories, favouriteSlugs])
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -102,7 +128,7 @@ export function Header() {
           <nav className="mt-4 md:mt-0 bg-white">
             <div className="overflow-x-auto">
               <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-                {categories.map((category) => {
+                {sortedCategories.map((category) => {
                   const url = getCategoryUrl(category.slug, countryCode)
                   return (
                     <li key={category.slug}>

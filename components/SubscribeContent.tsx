@@ -14,12 +14,20 @@ import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from "lu
 import { useUser } from "@/contexts/UserContext"
 import Link from "next/link"
 import Image from "next/image"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
 export function SubscribeContent() {
   const [email, setEmail] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
-  const [selectedPlanId, setSelectedPlanId] = useState("biannually") // Default to the popular plan
+  const { preferences, setLastSubscriptionPlan } = useUserPreferences()
+  const resolvePlanId = (planId?: string | null) => {
+    if (planId && SUBSCRIPTION_PLANS.some((plan) => plan.id === planId)) {
+      return planId
+    }
+    return "biannually"
+  }
+  const [selectedPlanId, setSelectedPlanId] = useState(resolvePlanId(preferences.lastSubscriptionPlan))
   const [step, setStep] = useState(1)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const router = useRouter()
@@ -33,6 +41,10 @@ export function SubscribeContent() {
     }
   }, [user])
 
+  useEffect(() => {
+    setSelectedPlanId(resolvePlanId(preferences.lastSubscriptionPlan))
+  }, [preferences.lastSubscriptionPlan])
+
   const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId)
 
   const handleSuccess = (reference: string, responseData: any) => {
@@ -42,6 +54,8 @@ export function SubscribeContent() {
       // Prevent multiple redirects
       if (isRedirecting) return
       setIsRedirecting(true)
+
+      void setLastSubscriptionPlan(selectedPlanId)
 
       // Store subscription info in localStorage
       localStorage.setItem("subscription_active", "true")
@@ -80,6 +94,12 @@ export function SubscribeContent() {
   }
 
   const isFormValid = email && email.includes("@") && firstName && lastName && selectedPlan
+
+  const handlePlanSelect = (planId: string) => {
+    const resolved = resolvePlanId(planId)
+    setSelectedPlanId(resolved)
+    void setLastSubscriptionPlan(resolved)
+  }
 
   const goToNextStep = () => {
     if (step === 1 && !selectedPlan) {
@@ -153,7 +173,7 @@ export function SubscribeContent() {
         {/* Step 1: Subscription Plans */}
         {step === 1 && (
           <div className="space-y-6">
-            <Tabs defaultValue="monthly" onValueChange={setSelectedPlanId} value={selectedPlanId}>
+            <Tabs defaultValue={selectedPlanId} onValueChange={handlePlanSelect} value={selectedPlanId}>
               <TabsList className="grid w-full grid-cols-3 mb-6">
                 {SUBSCRIPTION_PLANS.map((plan) => (
                   <TabsTrigger key={plan.id} value={plan.id} className="relative">

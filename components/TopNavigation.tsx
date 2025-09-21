@@ -6,33 +6,32 @@ import { Sun, Moon, Search, Menu, User } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getCategoryUrl } from "@/lib/utils/routing"
+import { useUserPreferences, type ThemePreference } from "@/contexts/UserPreferencesContext"
 
 export function TopNavigation() {
   const [isDark, setIsDark] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
+  const { preferences, setTheme, updating } = useUserPreferences()
 
-  // Check for user's theme preference
   useEffect(() => {
-    const isDarkMode =
-      localStorage.getItem("theme") === "dark" ||
-      (localStorage.getItem("theme") === null && window.matchMedia("(prefers-color-scheme: dark)").matches)
-
-    setIsDark(isDarkMode)
-
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark")
+    const resolvedTheme = preferences.theme
+    if (resolvedTheme === "system") {
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+      setIsDark(systemPrefersDark)
+      return
     }
-  }, [])
 
-  const toggleTheme = () => {
+    setIsDark(resolvedTheme === "dark")
+  }, [preferences.theme])
+
+  const toggleTheme = async () => {
+    const nextTheme = isDark ? "light" : "dark"
     setIsDark(!isDark)
-    if (isDark) {
-      document.documentElement.classList.remove("dark")
-      localStorage.setItem("theme", "light")
-    } else {
-      document.documentElement.classList.add("dark")
-      localStorage.setItem("theme", "dark")
+    try {
+      await setTheme(nextTheme as ThemePreference)
+    } catch (error) {
+      console.error("Failed to update theme preference:", error)
     }
   }
 
@@ -69,6 +68,7 @@ export function TopNavigation() {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
+              disabled={updating}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

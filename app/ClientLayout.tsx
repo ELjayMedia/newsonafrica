@@ -9,6 +9,8 @@ import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import Footer from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
+import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 import { AuthProvider } from "@/contexts/AuthContext"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -61,39 +63,43 @@ export function ClientLayout({
         >
           <AuthProvider>
             <UserProvider>
-              <ClientWrapper>
-              <ScrollToTop />
-              <TopBar />
-              <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
-                <Header />
-                <div className="mt-4 md:mt-6">
-                  <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
-                    <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                      <div className="p-1 md:p-2">{children}</div>
-                    </main>
-                    <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
-                      <Sidebar />
-                    </aside>
-                  </div>
-                </div>
-              </div>
-              <BottomNavigation />
-              <Footer />
-              <div className="text-center text-sm text-gray-500 mt-4">
-                <Link href="/privacy-policy" className="hover:underline">
-                  Privacy Policy
-                </Link>
-                {" | "}
-                <Link href="/terms-of-service" className="hover:underline">
-                  Terms of Service
-                </Link>
-                {" | "}
-                <Link href="/sitemap.xml" className="hover:underline">
-                  Sitemap
-                </Link>
-              </div>
-            </ClientWrapper>
-          </UserProvider>
+              <UserPreferencesProvider>
+                <BookmarksProvider>
+                  <ClientWrapper>
+                    <ScrollToTop />
+                    <TopBar />
+                    <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
+                      <Header />
+                      <div className="mt-4 md:mt-6">
+                        <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
+                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                            <div className="p-1 md:p-2">{children}</div>
+                          </main>
+                          <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
+                            <Sidebar />
+                          </aside>
+                        </div>
+                      </div>
+                    </div>
+                    <BottomNavigation />
+                    <Footer />
+                    <div className="text-center text-sm text-gray-500 mt-4">
+                      <Link href="/privacy-policy" className="hover:underline">
+                        Privacy Policy
+                      </Link>
+                      {" | "}
+                      <Link href="/terms-of-service" className="hover:underline">
+                        Terms of Service
+                      </Link>
+                      {" | "}
+                      <Link href="/sitemap.xml" className="hover:underline">
+                        Sitemap
+                      </Link>
+                    </div>
+                  </ClientWrapper>
+                </BookmarksProvider>
+              </UserPreferencesProvider>
+            </UserProvider>
           </AuthProvider>
         </ErrorBoundary>
       </body>

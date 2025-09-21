@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast"
 import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
 import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
 import type { PaystackOptions, SubscriptionPlan, SupabaseSubscription } from "@/config/paystack"
-import { createClient } from "@/utils/supabase-client"
+import { createClient } from "@/utils/supabase/client"
+import { useUser } from "@/contexts/UserContext"
 
 interface PaystackButtonProps {
   email: string
@@ -39,6 +40,7 @@ export function PaystackButton({
   const [isLoading, setIsLoading] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const { toast } = useToast()
+  const { user } = useUser()
 
   // Load Paystack script
   useEffect(() => {
@@ -96,6 +98,49 @@ export function PaystackButton({
     try {
       const reference = generateTransactionReference()
 
+      const metadataPayload: Record<string, any> = {
+        plan_id: plan.id,
+        plan_name: plan.name,
+        paystack_plan_id: plan.paystackPlanId,
+        ...metadata,
+      }
+
+      if (user?.id) {
+        metadataPayload.user_id = user.id
+      }
+
+      if (firstName && !metadataPayload.first_name) {
+        metadataPayload.first_name = firstName
+      }
+
+      if (lastName && !metadataPayload.last_name) {
+        metadataPayload.last_name = lastName
+      }
+
+      if (!metadataPayload.subscriber_email) {
+        metadataPayload.subscriber_email = email
+      }
+
+      const existingCustomFields = Array.isArray(metadataPayload.custom_fields)
+        ? metadataPayload.custom_fields
+        : []
+
+      metadataPayload.custom_fields = [
+        ...existingCustomFields.filter(
+          (field: any) => field?.variable_name !== "plan" && field?.variable_name !== "interval",
+        ),
+        {
+          display_name: "Plan",
+          variable_name: "plan",
+          value: plan.name,
+        },
+        {
+          display_name: "Interval",
+          variable_name: "interval",
+          value: plan.interval,
+        },
+      ]
+
       const paystackOptions: PaystackOptions = {
         key: PAYSTACK_PUBLIC_KEY,
         email,
@@ -104,24 +149,7 @@ export function PaystackButton({
         ref: reference,
         plan: plan.paystackPlanId, // Use the Paystack plan ID
         label: plan.name,
-        metadata: {
-          plan_id: plan.id,
-          plan_name: plan.name,
-          paystack_plan_id: plan.paystackPlanId,
-          ...metadata,
-          custom_fields: [
-            {
-              display_name: "Plan",
-              variable_name: "plan",
-              value: plan.name,
-            },
-            {
-              display_name: "Interval",
-              variable_name: "interval",
-              value: plan.interval,
-            },
-          ],
-        },
+        metadata: metadataPayload,
         onSuccess: async (response) => {
           try {
             console.log("Payment successful, verifying transaction...", response)

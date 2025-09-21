@@ -13,10 +13,13 @@ export interface Database {
           email: string | null
           bio: string | null
           country: string | null
+          location: string | null
           interests: string[] | null
+          preferences: Json | null
           updated_at: string | null
           created_at: string
           is_admin: boolean | null
+          onboarded: boolean | null
         }
         Insert: {
           id: string
@@ -27,10 +30,13 @@ export interface Database {
           email?: string | null
           bio?: string | null
           country?: string | null
+          location?: string | null
           interests?: string[] | null
+          preferences?: Json | null
           updated_at?: string | null
           created_at?: string
           is_admin?: boolean | null
+          onboarded?: boolean | null
         }
         Update: {
           id?: string
@@ -41,10 +47,13 @@ export interface Database {
           email?: string | null
           bio?: string | null
           country?: string | null
+          location?: string | null
           interests?: string[] | null
+          preferences?: Json | null
           updated_at?: string | null
           created_at?: string
           is_admin?: boolean | null
+          onboarded?: boolean | null
         }
       }
       bookmarks: {
@@ -207,6 +216,55 @@ export interface Database {
           payment_provider?: string
           payment_id?: string
           metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_preferences: {
+        Row: {
+          user_id: string
+          sections: string[] | null
+          blocked_topics: string[] | null
+          countries: string[] | null
+        }
+        Insert: {
+          user_id: string
+          sections?: string[] | null
+          blocked_topics?: string[] | null
+          countries?: string[] | null
+        }
+        Update: {
+          user_id?: string
+          sections?: string[] | null
+          blocked_topics?: string[] | null
+          countries?: string[] | null
+        }
+      }
+      user_settings: {
+        Row: {
+          user_id: string
+          email_notifications: boolean
+          push_notifications: boolean
+          theme: string
+          language: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          email_notifications?: boolean
+          push_notifications?: boolean
+          theme?: string
+          language?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          email_notifications?: boolean
+          push_notifications?: boolean
+          theme?: string
+          language?: string
           created_at?: string
           updated_at?: string
         }
