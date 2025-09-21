@@ -2,12 +2,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
-vi.mock("@/lib/utils/routing", () => ({
-  getServerCountry: vi.fn(),
-}))
-
-vi.stubGlobal("getCategoryUrl", (slug: string, country: string) => `/${country}/${slug}`)
-vi.stubGlobal("DEFAULT_COUNTRY", "sz")
+vi.mock("@/lib/utils/routing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/utils/routing")>()
+  return {
+    ...actual,
+    getServerCountry: vi.fn(),
+  }
+})
 
 let middleware: typeof import("@/middleware")["middleware"]
 let getServerCountry: typeof import("@/lib/utils/routing")["getServerCountry"]
@@ -43,5 +44,5 @@ describe("legacy post redirect", () => {
 })
 
 afterAll(() => {
-  vi.unstubAllGlobals()
+  vi.resetModules()
 })
