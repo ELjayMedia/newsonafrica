@@ -1,21 +1,37 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getServerCountry, getCategoryUrl, DEFAULT_COUNTRY } from "@/lib/utils/routing"
+import {
+  getCategoryUrl,
+  DEFAULT_COUNTRY,
+  SUPPORTED_COUNTRIES,
+} from "@/lib/utils/routing"
 
 
 // Legacy routes that should be redirected to their category equivalents
-const LEGACY_ROUTES_MAP: Record<string, string> = {
-  "/news": getCategoryUrl("news", DEFAULT_COUNTRY),
-  "/business": getCategoryUrl("business", DEFAULT_COUNTRY),
-  "/sport": getCategoryUrl("sport", DEFAULT_COUNTRY),
-  "/entertainment": getCategoryUrl("entertainment", DEFAULT_COUNTRY),
+const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
+  "/news": "news",
+  "/business": "business",
+  "/sport": "sport",
+  "/entertainment": "entertainment",
 }
 
-function handleLegacyPostRedirect(pathname: string, request: NextRequest): NextResponse | null {
+function getCountryFromRequest(request: NextRequest): string {
+  const preferredCountry = request.cookies.get("preferredCountry")?.value
+  if (preferredCountry && SUPPORTED_COUNTRIES.includes(preferredCountry)) {
+    return preferredCountry
+  }
+  return DEFAULT_COUNTRY
+}
+
+function handleLegacyPostRedirect(
+  pathname: string,
+  request: NextRequest,
+  country: string,
+): NextResponse | null {
   // Check if it's a legacy /post/ route
   if (pathname.startsWith("/post/")) {
     const slug = pathname.replace("/post/", "")
-    const newUrl = `/${getServerCountry()}/article/${slug}`
+    const newUrl = `/${country}/article/${slug}`
     console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
     return NextResponse.redirect(new URL(newUrl, request.url))
   }
@@ -26,13 +42,16 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const { pathname } = url
 
-  const legacyRedirect = handleLegacyPostRedirect(pathname, request)
+  const country = getCountryFromRequest(request)
+
+  const legacyRedirect = handleLegacyPostRedirect(pathname, request, country)
   if (legacyRedirect) {
     return legacyRedirect
   }
 
-  if (LEGACY_ROUTES_MAP[pathname]) {
-    return NextResponse.redirect(new URL(LEGACY_ROUTES_MAP[pathname], request.url))
+  if (LEGACY_CATEGORY_SLUGS[pathname]) {
+    const redirectUrl = getCategoryUrl(LEGACY_CATEGORY_SLUGS[pathname], country)
+    return NextResponse.redirect(new URL(redirectUrl, request.url))
   }
 
   if (pathname.startsWith("/api/")) {
