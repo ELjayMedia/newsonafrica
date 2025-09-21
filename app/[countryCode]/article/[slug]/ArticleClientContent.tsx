@@ -28,9 +28,11 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
   const progressBarRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
+  const postId = initialData?.id != null ? String(initialData.id) : undefined
+
   const { data: relatedPosts, isLoading: relatedLoading } = useSWR(
-    `related-${countryCode}-${slug}`,
-    () => getRelatedPostsForCountry(countryCode, slug, 6),
+    postId ? `related-${countryCode}-${postId}` : null,
+    () => getRelatedPostsForCountry(countryCode, postId!, 6),
     { fallbackData: [] },
   )
 
