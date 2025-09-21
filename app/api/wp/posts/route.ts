@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 
 export const runtime = "edge"
