@@ -11,7 +11,7 @@ export const revalidate = 60
 
 
 type CommentRouteContext = {
-  params?: Promise<{ id: string }>
+  params?: Promise<Record<string, string | string[] | undefined>>
 }
 
 
@@ -19,7 +19,8 @@ type CommentRouteContext = {
 export async function PATCH(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
   const params = await context.params
-  const commentId = params?.id
+  const rawCommentId = params?.id
+  const commentId = Array.isArray(rawCommentId) ? rawCommentId[0] : rawCommentId
 
   if (!commentId) {
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
@@ -128,7 +129,8 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 export async function DELETE(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
   const params = await context.params
-  const commentId = params?.id
+  const rawCommentId = params?.id
+  const commentId = Array.isArray(rawCommentId) ? rawCommentId[0] : rawCommentId
 
   if (!commentId) {
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
