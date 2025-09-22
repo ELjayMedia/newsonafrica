@@ -4,12 +4,19 @@ import { FeaturedHero } from "@/components/FeaturedHero"
 import { CompactCard } from "@/components/CompactCard"
 import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { getLatestPosts, getCategories, getPostsByCategory } from "@/lib/wordpress-api"
+import {
+  getLatestPostsForCountry,
+  getCategoriesForCountry,
+  getPostsForCategories,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
+} from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress-api"
 import { categoryConfigs } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import type { HomePost } from "@/types/home"
@@ -43,23 +50,33 @@ const fetchHomeData = async (): Promise<{
       throw new Error("Device is offline")
     }
 
-    const results = await Promise.allSettled([getLatestPosts(50), getCategories()])
+    const country = getCurrentCountry()
 
-    const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
-    const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
+    const results = await Promise.allSettled([
+      getFpTaggedPostsForCountry(country, 6),
+      getLatestPostsForCountry(country, 10),
+      getCategoriesForCountry(country),
+    ])
 
-    const posts = latestPostsResult.posts || []
+    const taggedPosts =
+      results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
+
+    const latestPostsResult =
+      results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
+    const recentPosts = mapPostsToHomePosts(latestPostsResult.posts ?? [], country)
+
+    const categoriesResult =
+      results[2].status === "fulfilled" ? results[2].value : { categories: [] }
     const categories = categoriesResult.categories || []
 
-    const fpTaggedPosts = posts.filter((post) =>
-      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-    )
+    const featuredPosts =
+      taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
 
     return {
-      taggedPosts: fpTaggedPosts,
-      featuredPosts: posts.slice(0, 6),
-      categories: categories,
-      recentPosts: posts.slice(0, 10),
+      taggedPosts,
+      featuredPosts,
+      categories,
+      recentPosts,
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -86,11 +103,10 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
   }, [])
 
   const fallbackData =
-    initialPosts.length > 0
+    initialData ||
+    (initialPosts.length > 0
       ? {
-          taggedPosts: initialPosts.filter((post) =>
-            post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-          ),
+          taggedPosts: initialPosts.slice(0, 6),
           featuredPosts: initialPosts.slice(0, 6),
           categories: [],
           recentPosts: initialPosts.slice(0, 10),
@@ -100,7 +116,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
           featuredPosts: [],
           categories: [],
           recentPosts: [],
-        }
+        })
 
   const { data, error, isLoading } = useSWR<{
     taggedPosts: HomePost[]
@@ -108,7 +124,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     categories: Category[]
     recentPosts: HomePost[]
   }>("homepage-data", fetchHomeData, {
-    fallbackData: initialData || fallbackData,
+    fallbackData,
     revalidateOnMount: !initialData && !initialPosts.length,
     revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000,
@@ -122,25 +138,26 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     const fetchCategoryPosts = async () => {
       if (isOffline) return
 
-      const categoryPromises = categoryConfigs.slice(0, 3).map(async (config) => {
-        try {
-          const result = await getPostsByCategory(config.name.toLowerCase(), 4)
-          return { name: config.name, posts: result.posts || [] }
-        } catch (error) {
-          return { name: config.name, posts: [] }
+      const country = getCurrentCountry()
+      const selectedConfigs = categoryConfigs.slice(0, 3)
+      const slugs = selectedConfigs.map((config) => config.name.toLowerCase())
+      const batchedPosts = await getPostsForCategories(country, slugs, 4)
+
+      const mapped: Record<string, HomePost[]> = {}
+
+      selectedConfigs.forEach((config) => {
+        const slug = config.name.toLowerCase()
+        const categoryData = batchedPosts[slug]
+
+        if (categoryData?.posts?.length) {
+          mapped[config.name] = mapPostsToHomePosts(
+            categoryData.posts as WordPressPost[],
+            country,
+          )
         }
       })
 
-      const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, HomePost[]> = {}
-
-      results.forEach((result) => {
-        if (result.status === "fulfilled") {
-          newCategoryPosts[result.value.name] = result.value.posts
-        }
-      })
-
-      setCategoryPosts(newCategoryPosts)
+      setCategoryPosts(mapped)
     }
 
     fetchCategoryPosts()
@@ -151,7 +168,7 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     featuredPosts = [],
     categories = [],
     recentPosts = [],
-  } = data || initialData || fallbackData
+  } = data || fallbackData
 
   if (isLoading && !initialData && !initialPosts.length) {
     return (

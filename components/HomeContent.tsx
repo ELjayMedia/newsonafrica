@@ -16,7 +16,10 @@ import {
   getLatestPostsForCountry,
   getCategoriesForCountry,
   getPostsForCategories,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
 } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress-api"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
@@ -60,28 +63,30 @@ const fetchHomeData = async (
 
     // Use Promise.allSettled to handle partial failures
     const results = await Promise.allSettled([
-      getLatestPostsForCountry(country, 50),
+      getFpTaggedPostsForCountry(country, 8),
+      getLatestPostsForCountry(country, 10),
       getCategoriesForCountry(country),
     ])
 
-    const latestPostsResult = results[0].status === "fulfilled" ? results[0].value : { posts: [] }
-    const categoriesResult = results[1].status === "fulfilled" ? results[1].value : { categories: [] }
+    const taggedPosts =
+      results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
 
-    const posts = latestPostsResult.posts || []
+    const latestPostsResult =
+      results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
+    const recentPosts = mapPostsToHomePosts(latestPostsResult.posts ?? [], country)
+
+    const categoriesResult =
+      results[2].status === "fulfilled" ? results[2].value : { categories: [] }
     const categories = categoriesResult.categories || []
 
-    // Filter posts that are tagged with 'fp'
-    const fpTaggedPosts = posts.filter((post) =>
-      post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-    )
-
-    console.log(`Found ${fpTaggedPosts.length} fp-tagged posts out of ${posts.length} total posts`)
+    const featuredPosts =
+      taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
 
     return {
-      taggedPosts: fpTaggedPosts, // Use all fp tagged posts
-      featuredPosts: posts.slice(0, 6), // Use first 6 as featured
-      categories: categories,
-      recentPosts: posts.slice(0, 10), // Use first 10 as recent
+      taggedPosts,
+      featuredPosts,
+      categories,
+      recentPosts,
     }
   } catch (error) {
     console.error("Error fetching home data:", error)
@@ -116,22 +121,24 @@ export function HomeContent({
 
   // Create fallback data from initial posts based on current country
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
+  const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
   const fallbackData =
-    initialCountryPosts.length > 0
+    initialData ||
+    (baselinePosts.length > 0
       ? {
-          taggedPosts: initialCountryPosts.filter((post) =>
-            post.tags?.nodes?.some((tag) => tag.slug === "fp" || tag.name.toLowerCase() === "fp"),
-          ),
-          featuredPosts: initialCountryPosts.slice(0, 6),
+          taggedPosts: baselinePosts.slice(0, 8),
+          featuredPosts: featuredPosts.length
+            ? featuredPosts.slice(0, 6)
+            : baselinePosts.slice(0, 6),
           categories: [],
-          recentPosts: initialCountryPosts.slice(0, 10),
+          recentPosts: baselinePosts.slice(0, 10),
         }
       : {
           taggedPosts: [],
           featuredPosts: [],
           categories: [],
           recentPosts: [],
-        }
+        })
 
   // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR<{
@@ -140,9 +147,8 @@ export function HomeContent({
     categories: Category[]
     recentPosts: HomePost[]
   }>(["homepage-data", currentCountry], () => fetchHomeData(currentCountry), {
-    fallbackData: initialData || fallbackData,
-    revalidateOnMount:
-      !initialData && !initialCountryPosts.length, // Only revalidate if no initial data
+    fallbackData,
+    revalidateOnMount: !initialData && !baselinePosts.length, // Only revalidate if no initial data
     revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
     dedupingInterval: 60000,
@@ -177,7 +183,10 @@ export function HomeContent({
           const categoryData = batchedPosts[slug]
 
           if (categoryData?.posts?.length) {
-            mappedPosts[config.name] = categoryData.posts as HomePost[]
+            mappedPosts[config.name] = mapPostsToHomePosts(
+              categoryData.posts as WordPressPost[],
+              currentCountry,
+            )
           }
         })
 
@@ -228,7 +237,7 @@ export function HomeContent({
     featuredPosts: fetchedFeaturedPosts = [],
     categories = [],
     recentPosts = [],
-  } = data || initialData || fallbackData
+  } = data || fallbackData
 
   // Use provided featuredPosts if available
   const finalFeaturedPosts = featuredPosts.length > 0 ? featuredPosts : fetchedFeaturedPosts
@@ -271,14 +280,15 @@ export function HomeContent({
   }
 
   // Extract main content posts - ensure we have enough fp posts
-  const mainStory = taggedPosts[0] || null // Show latest fp-tagged post only
-  const secondaryStories = taggedPosts.slice(1, 5) || [] // Show next 4 fp-tagged posts
-  const verticalCardPosts = taggedPosts.slice(5, 8) || [] // Show next 3 fp-tagged posts after secondary stories
+  const heroSource =
+    taggedPosts.length > 0
+      ? taggedPosts
+      : finalFeaturedPosts.length > 0
+        ? finalFeaturedPosts
+        : recentPosts
 
-  // If we don't have enough fp posts, show a message or fallback
-  if (taggedPosts.length === 0) {
-    console.warn("No fp-tagged posts found, using fallback content")
-  }
+  const mainStory = heroSource[0] || null
+  const secondaryStories = heroSource.slice(1, 5)
 
   // Reusable CategorySection component
   const CategorySection = ({ name, layout, typeOverride }: CategoryConfig) => {
@@ -334,7 +344,7 @@ export function HomeContent({
   ]
 
   // Show empty state if no fp-tagged content is available
-  if (!taggedPosts.length && !isLoading) {
+  if (!heroSource.length && !isLoading) {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold mb-2">Featured Content Coming Soon</h2>

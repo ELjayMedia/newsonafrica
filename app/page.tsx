@@ -1,8 +1,12 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import { getLatestPostsForCountry } from "@/lib/wordpress-api"
-import type { CountryPosts, HomePageData, HomePost } from "@/types/home"
+import {
+  getLatestPostsForCountry,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
+} from "@/lib/wordpress-api"
+import type { HomePageData } from "@/types/home"
 import { getServerCountry } from "@/lib/utils/routing"
 
 export const metadata: Metadata = {
@@ -90,14 +94,27 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
     const result = await circuitBreaker.execute(
       "wordpress-homepage-api",
       async () => {
-        const { posts } = await getLatestPostsForCountry(countryCode, 20)
-        if (!posts || posts.length === 0) {
+        const [taggedPosts, latestPosts] = await Promise.all([
+          getFpTaggedPostsForCountry(countryCode, 8),
+          getLatestPostsForCountry(countryCode, 10),
+        ])
+
+        const recentPosts = mapPostsToHomePosts(latestPosts.posts ?? [], countryCode)
+
+        if (taggedPosts.length === 0 && recentPosts.length === 0) {
           throw new Error("No posts available")
         }
+
+        const featuredPosts =
+          taggedPosts.length > 0
+            ? taggedPosts.slice(0, 6)
+            : recentPosts.slice(0, 6)
+
         return {
-          posts,
-          countryPosts: { [countryCode]: posts },
-          featuredPosts: posts.slice(0, 6),
+          taggedPosts,
+          recentPosts,
+          countryPosts: { [countryCode]: recentPosts },
+          featuredPosts,
         }
       },
       async () => {
@@ -110,19 +127,25 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
         const fallbackPosts = [
           {
             id: "fallback-1",
-            title: "News On Africa - Service Notice",
-            excerpt: "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
             slug: "service-notice",
+            title: "News On Africa - Service Notice",
+            excerpt:
+              "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
             date: new Date().toISOString(),
-            author: { node: { name: "News On Africa", slug: "news-team" } },
-            categories: { nodes: [{ name: "Notice", slug: "notice" }] },
-            featuredImage: { node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" } },
+            country: countryCode,
+            featuredImage: {
+              node: {
+                sourceUrl: "/news-placeholder.png",
+                altText: "Service notice",
+              },
+            },
           },
         ]
 
         return {
-          posts: fallbackPosts,
-          countryPosts: { sz: fallbackPosts },
+          taggedPosts: fallbackPosts,
+          recentPosts: fallbackPosts,
+          countryPosts: { [countryCode]: fallbackPosts },
           featuredPosts: fallbackPosts,
         }
       },
@@ -138,21 +161,23 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
       return cached.data
     }
 
+    const fallbackPost = {
+      id: "error-fallback",
+      slug: "service-unavailable",
+      title: "Service Temporarily Unavailable",
+      excerpt: "We're working to restore full service. Thank you for your patience.",
+      date: new Date().toISOString(),
+      country: countryCode,
+      featuredImage: {
+        node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" },
+      },
+    }
+
     return {
-      posts: [
-        {
-          id: "error-fallback",
-          title: "Service Temporarily Unavailable",
-          excerpt: "We're working to restore full service. Thank you for your patience.",
-          slug: "service-unavailable",
-          date: new Date().toISOString(),
-          author: { node: { name: "News On Africa", slug: "news-team" } },
-          categories: { nodes: [{ name: "System", slug: "system" }] },
-          featuredImage: { node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" } },
-        },
-      ],
-      countryPosts: {},
-      featuredPosts: [],
+      taggedPosts: [fallbackPost],
+      recentPosts: [fallbackPost],
+      countryPosts: { [countryCode]: [fallbackPost] },
+      featuredPosts: [fallbackPost],
     }
   }
 }
@@ -160,8 +185,15 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
 export default async function Home() {
   const countryCode = getServerCountry()
   try {
-    const { posts, countryPosts, featuredPosts } = await getHomePageData(countryCode)
-    return <HomeContent initialPosts={posts} countryPosts={countryPosts} featuredPosts={featuredPosts} />
+    const initialData = await getHomePageData(countryCode)
+    return (
+      <HomeContent
+        initialPosts={initialData.recentPosts}
+        countryPosts={initialData.countryPosts}
+        featuredPosts={initialData.featuredPosts}
+        initialData={initialData}
+      />
+    )
   } catch (error) {
     console.error("Homepage data fetch failed:", error)
     return <HomeContent initialPosts={[]} />
