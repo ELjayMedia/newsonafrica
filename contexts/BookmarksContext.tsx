@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect, u
 import { useUser } from "@/contexts/UserContext"
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import type { Database } from "@/types/supabase"
 
 interface Bookmark {
   id: string
@@ -50,6 +51,116 @@ interface BookmarksContextType {
 }
 
 const BookmarksContext = createContext<BookmarksContextType | undefined>(undefined)
+
+type SupabaseBookmarkRow = Database["public"]["Tables"]["bookmarks"]["Row"]
+
+type BookmarkHydrationMap = Record<
+  string,
+  {
+    id: string
+    country?: string
+    slug?: string
+    title?: string
+    excerpt?: string
+    featured_image?: Bookmark["featured_image"]
+  }
+>
+
+const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
+
+const extractText = (value: unknown): string => {
+  if (!value) return ""
+  if (typeof value === "string") return value
+  if (typeof value === "object" && "rendered" in (value as Record<string, unknown>)) {
+    const rendered = (value as { rendered?: unknown }).rendered
+    return typeof rendered === "string" ? rendered : ""
+  }
+  return ""
+}
+
+const extractFeaturedImage = (value: unknown): Bookmark["featured_image"] => {
+  if (!value) return null
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      return extractFeaturedImage(parsed)
+    } catch {
+      return null
+    }
+  }
+  if (typeof value !== "object" || value === null) return null
+  const obj = value as Record<string, any>
+  if (obj.node) {
+    return extractFeaturedImage(obj.node)
+  }
+
+  const url =
+    obj.url ||
+    obj.sourceUrl ||
+    obj.source_url ||
+    obj.media_details?.source_url ||
+    obj.guid?.rendered
+  const width = obj.width || obj.mediaDetails?.width || obj.media_details?.width
+  const height = obj.height || obj.mediaDetails?.height || obj.media_details?.height
+
+  if (!url && !width && !height) {
+    return null
+  }
+
+  return {
+    url: url || undefined,
+    width: typeof width === "number" ? width : undefined,
+    height: typeof height === "number" ? height : undefined,
+  }
+}
+
+const formatBookmarkRow = (
+  row: SupabaseBookmarkRow,
+  metadata?: BookmarkHydrationMap[string],
+): Bookmark => {
+  const metaTitle = metadata?.title ? extractText(metadata.title) : ""
+  const metaExcerpt = metadata?.excerpt ? extractText(metadata.excerpt) : ""
+  const title = extractText(row.title) || metaTitle || "Untitled Post"
+  const slug = row.slug || metadata?.slug || ""
+  const excerpt = extractText(row.excerpt) || metaExcerpt || ""
+  const featured_image =
+    extractFeaturedImage(row.featured_image) || extractFeaturedImage(metadata?.featured_image) || null
+
+  const readStatus = row.read_status === "read" || row.read_status === "unread" ? row.read_status : undefined
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    post_id: row.post_id,
+    country: row.country || metadata?.country || undefined,
+    title,
+    slug: slug || undefined,
+    excerpt: excerpt || undefined,
+    created_at: row.created_at,
+    featured_image,
+    category: row.category || undefined,
+    tags: row.tags || undefined,
+    read_status: readStatus,
+    notes: row.notes || undefined,
+  }
+}
+
+const buildHydrationPayload = (bookmarks: SupabaseBookmarkRow[]) => {
+  const grouped = new Map<string, Set<string>>()
+
+  bookmarks.forEach((bookmark) => {
+    const country = (bookmark.country || DEFAULT_COUNTRY).toLowerCase()
+    if (!grouped.has(country)) {
+      grouped.set(country, new Set())
+    }
+    grouped.get(country)!.add(bookmark.post_id)
+  })
+
+  return Array.from(grouped.entries()).map(([country, ids]) => ({
+    country,
+    postIds: Array.from(ids),
+  }))
+}
 
 export function useBookmarks() {
   const context = useContext(BookmarksContext)
@@ -141,36 +252,31 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      const fetched = data || [];
-      const byCountry: Record<string,string[]> = {};
-      fetched.forEach(b => {
-        const c = b.country || (process.env.NEXT_PUBLIC_DEFAULT_SITE || "");
-        (byCountry[c] ||= []).push(b.post_id);
-      });
-      const postMap: Record<string, any> = {};
-      await Promise.all(Object.entries(byCountry).map(async ([c, ids]) => {
-        const res = await fetch(`/api/wp/posts?country=${c}&ids=${ids.join(',')}`);
-        const json = await res.json();
-        (json.data || []).forEach((p: any) => { postMap[String(p.id)] = p });
-      }));
-      const hydrated = fetched.map((b) => {
-        const p = postMap[b.post_id] || {};
-        const storedImg = b.featured_image ? JSON.parse(b.featured_image) : null;
-        const embedImg = p._embedded?.["wp:featuredmedia"]?.[0];
-        return {
-          ...b,
-          title: p.title?.rendered || b.title,
-          slug: p.slug || b.slug,
-          excerpt: p.excerpt?.rendered || b.excerpt,
-          featured_image: embedImg
-            ? {
-                url: embedImg.source_url,
-                width: embedImg.media_details?.width,
-                height: embedImg.media_details?.height,
-              }
-            : storedImg,
-        };
-      });
+      const fetched = (data || []) as SupabaseBookmarkRow[]
+      const hydrationPayload = buildHydrationPayload(fetched)
+
+      let hydrationMap: BookmarkHydrationMap = {}
+      if (hydrationPayload.length > 0) {
+        try {
+          const res = await fetch("/api/bookmarks/hydrate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(hydrationPayload),
+          })
+          if (res.ok) {
+            const json = (await res.json()) as { posts?: BookmarkHydrationMap }
+            hydrationMap = json.posts || {}
+          } else {
+            console.error("Failed to hydrate bookmarks: HTTP", res.status)
+          }
+        } catch (err) {
+          console.error("Failed to hydrate bookmarks", err)
+        }
+      }
+
+      const hydrated = fetched.map((row) =>
+        formatBookmarkRow(row, hydrationMap[row.post_id]),
+      )
       setBookmarks(hydrated)
     } catch (error: any) {
       console.error("Error fetching bookmarks:", error)
@@ -196,30 +302,33 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
-        const bookmarkData = {
+        const postData = post as any
+        const insertPayload = {
           user_id: user.id,
           post_id: post.post_id,
           country: post.country || null,
-          title: post.title || "Untitled Post",
-          slug: post.slug || "",
-          excerpt: post.excerpt || "",
+          title: extractText(postData.title) || "Untitled Post",
+          slug: typeof postData.slug === "string" ? postData.slug : "",
+          excerpt: extractText(postData.excerpt),
           featured_image:
-            post.featured_image && typeof post.featured_image === "object"
-              ? post.featured_image
-              : null,
+            extractFeaturedImage(postData.featured_image || postData.featuredImage) || null,
           category: post.category || null,
           tags: post.tags || null,
           read_status: "unread" as const,
           notes: post.notes || null,
         }
 
-        const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
+        const { data, error } = await supabase
+          .from("bookmarks")
+          .insert(insertPayload)
+          .select()
+          .single()
 
         if (error) {
           throw error
         }
 
-        setBookmarks((prev) => [data, ...prev])
+        setBookmarks((prev) => [formatBookmarkRow(data as SupabaseBookmarkRow), ...prev])
       } finally {
         setIsLoading(false)
       }
