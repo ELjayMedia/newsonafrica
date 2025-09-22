@@ -15,7 +15,7 @@ import { HomePageSkeleton } from "./HomePageSkeleton"
 import {
   getLatestPostsForCountry,
   getCategoriesForCountry,
-  getPostsByCategoryForCountry,
+  getPostsForCategories,
 } from "@/lib/wordpress-api"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
@@ -159,36 +159,42 @@ export function HomeContent({
 
   // Fetch category-specific posts
   useEffect(() => {
+    let isCancelled = false
+
     const fetchCategoryPosts = async () => {
       if (isOffline) return
 
-      const categoryPromises = categoryConfigs.map(async (config) => {
-        try {
-          const result = await getPostsByCategoryForCountry(
-            currentCountry,
-            config.name.toLowerCase(),
-            5,
-          )
-          return { name: config.name, posts: result.posts || [] }
-        } catch (error) {
-          console.error(`Error fetching ${config.name} posts:`, error)
-          return { name: config.name, posts: [] }
+      try {
+        const slugs = categoryConfigs.map((config) => config.name.toLowerCase())
+        const batchedPosts = await getPostsForCategories(currentCountry, slugs, 5)
+
+        if (isCancelled) return
+
+        const mappedPosts: Record<string, HomePost[]> = {}
+
+        categoryConfigs.forEach((config) => {
+          const slug = config.name.toLowerCase()
+          const categoryData = batchedPosts[slug]
+
+          if (categoryData?.posts?.length) {
+            mappedPosts[config.name] = categoryData.posts as HomePost[]
+          }
+        })
+
+        setCategoryPosts(mappedPosts)
+      } catch (error) {
+        console.error("Error fetching batched category posts:", error)
+        if (!isCancelled) {
+          setCategoryPosts({})
         }
-      })
-
-      const results = await Promise.allSettled(categoryPromises)
-      const newCategoryPosts: Record<string, HomePost[]> = {}
-
-      results.forEach((result) => {
-        if (result.status === "fulfilled") {
-          newCategoryPosts[result.value.name] = result.value.posts
-        }
-      })
-
-      setCategoryPosts(newCategoryPosts)
+      }
     }
 
     fetchCategoryPosts()
+
+    return () => {
+      isCancelled = true
+    }
   }, [isOffline, currentCountry])
 
   // Show offline notification if needed

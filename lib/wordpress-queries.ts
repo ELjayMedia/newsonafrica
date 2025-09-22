@@ -46,6 +46,14 @@ export const wordpressQueries = {
     endpoint: 'posts',
     params: { categories: id, per_page: limit, _embed: 1 },
   }),
+  categoriesBySlugs: (slugs: string[]) => ({
+    endpoint: 'categories',
+    params: {
+      slug: slugs.join(','),
+      per_page: Math.max(slugs.length, 1),
+      hide_empty: false,
+    },
+  }),
   categories: () => ({
     endpoint: 'categories',
     params: { per_page: 100, hide_empty: true },

@@ -100,6 +100,13 @@ export interface WordPressPost {
   featuredImage?: { node: WordPressImage }
 }
 
+export interface CategoryPostsResult {
+  category: WordPressCategory | null
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}
+
 export interface WordPressComment {
   id: number
   author_name: string
@@ -135,6 +142,18 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 }
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
+
+const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
+
+interface CachedCategoryPosts {
+  posts: WordPressPost[]
+  expiresAt: number
+}
+
+const restCategoryPostsCache = new Map<string, CachedCategoryPosts>()
+
+const buildCategoryCacheKey = (countryCode: string, categoryId: number | string, limit: number) =>
+  `${countryCode}:${categoryId}:${limit}`
 
 interface WordPressGraphQLResponse<T> {
   data?: T
@@ -288,6 +307,37 @@ const POSTS_BY_CATEGORY_QUERY = gql`
       }
       nodes {
         ...PostFields
+      }
+    }
+  }
+`
+
+const CATEGORY_POSTS_BATCH_QUERY = gql`
+  ${POST_FIELDS}
+  query CategoryPostsBatch($country: String!, $slugs: [String!]!, $first: Int!) {
+    categories(where: { slugIn: $slugs }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+        posts(
+          first: $first
+          where: {
+            status: PUBLISH
+            orderby: { field: DATE, order: DESC }
+            countrySlugIn: [$country]
+          }
+        ) {
+          pageInfo {
+            endCursor
+            hasNextPage
+          }
+          nodes {
+            ...PostFields
+          }
+        }
       }
     }
   }
@@ -574,11 +624,150 @@ export async function getLatestPostsForCountry(
   }
 }
 
+export async function getPostsForCategories(
+  countryCode: string,
+  categorySlugs: string[],
+  limit = 20,
+): Promise<Record<string, CategoryPostsResult>> {
+  const normalizedSlugs = Array.from(
+    new Set(
+      categorySlugs
+        .map((slug) => slug?.trim().toLowerCase())
+        .filter((slug): slug is string => Boolean(slug)),
+    ),
+  )
+
+  if (normalizedSlugs.length === 0) {
+    return {}
+  }
+
+  const ensureEntry = (results: Record<string, CategoryPostsResult>, slug: string) => {
+    if (!results[slug]) {
+      results[slug] = {
+        category: null,
+        posts: [],
+        hasNextPage: false,
+        endCursor: null,
+      }
+    }
+  }
+
+  const results: Record<string, CategoryPostsResult> = {}
+
+  const gqlData = await fetchFromWpGraphQL<any>(
+    countryCode,
+    CATEGORY_POSTS_BATCH_QUERY,
+    { country: countryCode, slugs: normalizedSlugs, first: limit },
+  )
+
+  if (gqlData?.categories?.nodes?.length) {
+    gqlData.categories.nodes.forEach((node: any) => {
+      if (!node?.slug) {
+        return
+      }
+
+      const slug = String(node.slug).toLowerCase()
+      const category: WordPressCategory = {
+        id: node.databaseId,
+        name: node.name,
+        slug: node.slug,
+        description: node.description ?? undefined,
+        count: node.count ?? undefined,
+      }
+
+      const posts = (node.posts?.nodes ?? []).map((post: any) =>
+        mapWpPost(post, 'gql', countryCode),
+      )
+
+      results[slug] = {
+        category,
+        posts,
+        hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
+        endCursor: node.posts?.pageInfo?.endCursor ?? null,
+      }
+    })
+
+    normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+    return results
+  }
+
+  const categories = await executeRestFallback(
+    () =>
+      fetchFromWp<any[]>(
+        countryCode,
+        wordpressQueries.categoriesBySlugs(normalizedSlugs),
+      ),
+    `[v0] Category batch REST fallback failed for ${normalizedSlugs.join(', ')} (${countryCode})`,
+    { countryCode, categorySlugs: normalizedSlugs },
+  )
+
+  const categoriesBySlug = new Map<string, WordPressCategory>()
+  categories.forEach((cat: any) => {
+    if (!cat?.slug) {
+      return
+    }
+
+    const slug = String(cat.slug).toLowerCase()
+    categoriesBySlug.set(slug, {
+      id: cat.id ?? cat.databaseId,
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description ?? undefined,
+      count: cat.count ?? undefined,
+    })
+  })
+
+  for (const slug of normalizedSlugs) {
+    const category = categoriesBySlug.get(slug) ?? null
+
+    if (!category) {
+      ensureEntry(results, slug)
+      continue
+    }
+
+    const cacheKey = buildCategoryCacheKey(countryCode, category.id, limit)
+    const cached = restCategoryPostsCache.get(cacheKey)
+    let posts: WordPressPost[] = []
+
+    if (cached && cached.expiresAt > Date.now()) {
+      posts = cached.posts
+    } else {
+      const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
+      try {
+        posts = await executeRestFallback(
+          () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
+          `[v0] Posts by category REST fallback failed for ${category.slug} (${countryCode})`,
+          { countryCode, categorySlug: category.slug, categoryId: category.id, limit, endpoint, params },
+        )
+
+        restCategoryPostsCache.set(cacheKey, {
+          posts,
+          expiresAt: Date.now() + REST_CATEGORY_CACHE_TTL_MS,
+        })
+      } catch (error) {
+        restCategoryPostsCache.delete(cacheKey)
+        posts = []
+      }
+    }
+
+    results[slug] = {
+      category,
+      posts,
+      hasNextPage: posts.length === limit,
+      endCursor: null,
+    }
+  }
+
+  normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+
+  return results
+}
+
 export async function getPostsByCategoryForCountry(
   countryCode: string,
   categorySlug: string,
   limit = 20,
-) {
+): Promise<CategoryPostsResult> {
   const gqlData = await fetchFromWpGraphQL<any>(
     countryCode,
     POSTS_BY_CATEGORY_QUERY,
