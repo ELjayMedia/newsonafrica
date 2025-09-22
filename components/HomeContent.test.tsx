@@ -55,6 +55,8 @@ const wpMocks = vi.hoisted(() => ({
   getLatestPostsForCountry: vi.fn(),
   getCategoriesForCountry: vi.fn(),
   getPostsForCategories: vi.fn(),
+  getFpTaggedPostsForCountry: vi.fn(),
+  mapPostsToHomePosts: vi.fn((posts: any[]) => posts),
 }))
 
 vi.mock("@/lib/wordpress-api", () => wpMocks)
@@ -68,19 +70,19 @@ vi.mock("@/lib/utils/routing", () => ({
 import { HomeContent } from "./HomeContent"
 
 type HomePost = {
-  id: number
+  id: string
   slug: string
   date: string
-  title: { rendered: string }
-  excerpt: { rendered: string }
+  title: string
+  excerpt: string
 }
 
 const createPost = (slug: string, title: string): HomePost => ({
-  id: Math.floor(Math.random() * 100000),
+  id: Math.floor(Math.random() * 100000).toString(),
   slug,
   date: new Date().toISOString(),
-  title: { rendered: title },
-  excerpt: { rendered: `${title} excerpt` },
+  title,
+  excerpt: `${title} excerpt`,
 })
 
 describe("HomeContent", () => {
@@ -90,15 +92,40 @@ describe("HomeContent", () => {
   })
 
   const renderHomeContent = async () => {
+    wpMocks.getFpTaggedPostsForCountry.mockResolvedValue([
+      createPost("fp-post", "Featured Story"),
+    ])
+    wpMocks.getLatestPostsForCountry.mockResolvedValue({
+      posts: [
+        {
+          id: 1,
+          slug: "latest-story",
+          date: new Date().toISOString(),
+          title: { rendered: "Latest Story" },
+          excerpt: { rendered: "Latest Story excerpt" },
+        },
+      ],
+    })
+    wpMocks.mapPostsToHomePosts.mockImplementation((posts: any[]) =>
+      posts.map((post) => ({
+        id: String(post.id ?? post.slug),
+        slug: post.slug,
+        date: post.date || new Date().toISOString(),
+        title: post.title?.rendered ?? post.title ?? "",
+        excerpt: post.excerpt?.rendered ?? post.excerpt ?? "",
+      })),
+    )
+    wpMocks.getCategoriesForCountry.mockResolvedValue({ categories: [] })
+
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
         <HomeContent
-          initialPosts={[createPost("initial-post", "Initial Story") as any]}
+          initialPosts={[createPost("initial-post", "Initial Story")]}
           initialData={{
-            taggedPosts: [createPost("fp-post", "Featured Story") as any],
-            featuredPosts: [createPost("feat-post", "Featured Story") as any],
+            taggedPosts: [createPost("fp-post", "Featured Story")],
+            featuredPosts: [createPost("feat-post", "Featured Story")],
             categories: [],
-            recentPosts: [createPost("recent-post", "Recent Story") as any],
+            recentPosts: [createPost("recent-post", "Recent Story")],
           }}
         />
       </SWRConfig>,

@@ -1,13 +1,25 @@
-import type { Post } from "./content"
-
-export interface HomePost extends Post {}
+export interface HomePost {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  date: string
+  country?: string
+  featuredImage?: {
+    node: {
+      sourceUrl?: string
+      altText?: string
+    }
+  }
+}
 
 export interface CountryPosts {
   [countryCode: string]: HomePost[]
 }
 
 export interface HomePageData {
-  posts: HomePost[]
+  taggedPosts: HomePost[]
+  recentPosts: HomePost[]
   countryPosts: CountryPosts
   featuredPosts: HomePost[]
 }

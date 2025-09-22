@@ -6,12 +6,51 @@ import { fetchWithTimeout } from './utils/fetchWithTimeout'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { mapWpPost } from './utils/mapWpPost'
 import { APIError } from './utils/errorHandling'
+import type { HomePost } from '@/types/home'
 
 // Simple gql tag replacement
 const gql = String.raw
 
 const mapPostFromWp = (post: any, countryCode?: string) =>
   mapWpPost(post, 'rest', countryCode)
+
+const mapWordPressPostToHomePost = (
+  post: WordPressPost,
+  countryCode: string,
+): HomePost => ({
+  id: String(post.id ?? post.slug ?? ''),
+  slug: post.slug ?? '',
+  title: post.title?.rendered ?? '',
+  excerpt: post.excerpt?.rendered ?? '',
+  date: post.date ?? '',
+  country: countryCode,
+  featuredImage: post.featuredImage?.node
+    ? {
+        node: {
+          sourceUrl: post.featuredImage.node.sourceUrl ?? undefined,
+          altText: post.featuredImage.node.altText ?? undefined,
+        },
+      }
+    : undefined,
+})
+
+const mapGraphqlNodeToHomePost = (
+  post: any,
+  countryCode: string,
+): HomePost => {
+  const mapped = mapWpPost(post, 'gql', countryCode)
+  return mapWordPressPostToHomePost(mapped, countryCode)
+}
+
+export const mapPostsToHomePosts = (
+  posts: WordPressPost[] | null | undefined,
+  countryCode: string,
+): HomePost[] => {
+  if (!posts || posts.length === 0) {
+    return []
+  }
+  return posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
+}
 
 type RestFallbackContext = Record<string, unknown>
 
@@ -257,6 +296,22 @@ const POST_FIELDS = gql`
   }
 `
 
+const HOME_POST_FIELDS = gql`
+  fragment HomePostFields on Post {
+    databaseId
+    slug
+    date
+    title
+    excerpt
+    featuredImage {
+      node {
+        sourceUrl
+        altText
+      }
+    }
+  }
+`
+
 const LATEST_POSTS_QUERY = gql`
   ${POST_FIELDS}
   query LatestPosts($country: String!, $first: Int!, $after: String) {
@@ -275,6 +330,25 @@ const LATEST_POSTS_QUERY = gql`
       }
       nodes {
         ...PostFields
+      }
+    }
+  }
+`
+
+const FP_TAGGED_POSTS_QUERY = gql`
+  ${HOME_POST_FIELDS}
+  query FpTaggedPosts($country: String!, $tagSlugs: [String!]!, $first: Int!) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        countrySlugIn: [$country]
+        tagSlugIn: $tagSlugs
+      }
+    ) {
+      nodes {
+        ...HomePostFields
       }
     }
   }
@@ -583,6 +657,57 @@ const cursorToOffset = (cursor: string | null | undefined) => {
   }
 
   return index + 1
+}
+
+export async function getFpTaggedPostsForCountry(
+  countryCode: string,
+  limit = 8,
+): Promise<HomePost[]> {
+  const gqlData = await fetchFromWpGraphQL<any>(
+    countryCode,
+    FP_TAGGED_POSTS_QUERY,
+    {
+      country: countryCode,
+      tagSlugs: ['fp'],
+      first: limit,
+    },
+  )
+
+  if (gqlData?.posts?.nodes?.length) {
+    return gqlData.posts.nodes.map((node: any) =>
+      mapGraphqlNodeToHomePost(node, countryCode),
+    )
+  }
+
+  const tags = await executeRestFallback(
+    () =>
+      fetchFromWp<WordPressTag[]>(
+        countryCode,
+        wordpressQueries.tagBySlug('fp'),
+      ),
+    `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
+    { countryCode },
+  )
+
+  const tag = tags[0]
+  if (!tag) {
+    return []
+  }
+
+  const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
+  const posts = await executeRestFallback(
+    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
+    `[v0] FP tagged posts REST fallback failed for ${countryCode}`,
+    { countryCode, tagId: tag.id, limit, endpoint, params },
+  )
+
+  const normalizedPosts = Array.isArray(posts)
+    ? posts.map((post) =>
+        mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode),
+      )
+    : []
+
+  return normalizedPosts
 }
 
 export async function getLatestPostsForCountry(
