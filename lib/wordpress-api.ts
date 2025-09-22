@@ -240,9 +240,10 @@ const POST_FIELDS = gql`
 
 const LATEST_POSTS_QUERY = gql`
   ${POST_FIELDS}
-  query LatestPosts($country: String!, $first: Int!) {
+  query LatestPosts($country: String!, $first: Int!, $after: String) {
     posts(
       first: $first
+      after: $after
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
@@ -504,11 +505,49 @@ export async function fetchFromWp<T>(
   }
 }
 
-export async function getLatestPostsForCountry(countryCode: string, limit = 20) {
+const decodeCursorIndex = (cursor: string | null | undefined) => {
+  if (!cursor) {
+    return null
+  }
+
+  try {
+    const decoded = Buffer.from(cursor, 'base64').toString('utf8')
+    const parts = decoded.split(':')
+    const lastPart = parts[parts.length - 1]
+    const index = Number.parseInt(lastPart || '', 10)
+
+    return Number.isNaN(index) ? null : index
+  } catch (error) {
+    log.warn('[v0] Failed to decode pagination cursor for REST fallback', {
+      cursor,
+      error: toErrorDetails(error),
+    })
+    return null
+  }
+}
+
+const cursorToOffset = (cursor: string | null | undefined) => {
+  const index = decodeCursorIndex(cursor)
+  if (index === null) {
+    return null
+  }
+
+  return index + 1
+}
+
+export async function getLatestPostsForCountry(
+  countryCode: string,
+  limit = 20,
+  cursor?: string | null,
+) {
   const gqlData = await fetchFromWpGraphQL<any>(
     countryCode,
     LATEST_POSTS_QUERY,
-    { country: countryCode, first: limit },
+    {
+      country: countryCode,
+      first: limit,
+      ...(cursor ? { after: cursor } : {}),
+    },
   )
   if (gqlData?.posts) {
     const posts = gqlData.posts.nodes.map((p: any) =>
@@ -521,12 +560,18 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20) 
     }
   }
   const { endpoint, params } = wordpressQueries.recentPosts(limit)
+  const offset = cursorToOffset(cursor ?? null)
+  const restParams = offset !== null ? { ...params, offset } : params
   const posts = await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
+    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }),
     `[v0] Latest posts REST fallback failed for ${countryCode}`,
-    { countryCode, limit, endpoint, params },
+    { countryCode, limit, endpoint, params: restParams },
   )
-  return { posts, hasNextPage: false, endCursor: null }
+  return {
+    posts,
+    hasNextPage: posts.length === limit,
+    endCursor: null,
+  }
 }
 
 export async function getPostsByCategoryForCountry(

@@ -26,42 +26,33 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
     error: heroError,
     isLoading: heroLoading,
   } = useSWR(
-    `hero-${countryCode}`,
+    [`hero`, countryCode],
     () => getLatestPostsForCountry(countryCode, 3),
     { revalidateOnFocus: false, dedupingInterval: 300000 }, // 5 minutes
   )
 
-  // Fetch trending posts (posts 4-10)
   const {
     data: trendingData,
     error: trendingError,
-    isLoading: trendingLoading,
+    isLoading: trendingSWRLoading,
   } = useSWR(
-    `trending-${countryCode}`,
-    () => getLatestPostsForCountry(countryCode, 7, heroData?.endCursor || undefined),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 300000,
-      // Only fetch after hero data is loaded
-      ...(heroData && { refreshInterval: 0 }),
-    },
+    heroData?.endCursor ? [`trending`, countryCode, heroData.endCursor] : null,
+    ([, code, cursor]) => getLatestPostsForCountry(code, 7, cursor),
+    { revalidateOnFocus: false, dedupingInterval: 300000 },
   )
 
-  // Fetch latest posts (posts 11-30)
   const {
     data: latestData,
     error: latestError,
-    isLoading: latestLoading,
+    isLoading: latestSWRLoading,
   } = useSWR(
-    `latest-${countryCode}`,
-    () => getLatestPostsForCountry(countryCode, 20, trendingData?.endCursor || undefined),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 300000,
-      // Only fetch after trending data is loaded
-      ...(trendingData && { refreshInterval: 0 }),
-    },
+    trendingData?.endCursor ? [`latest`, countryCode, trendingData.endCursor] : null,
+    ([, code, cursor]) => getLatestPostsForCountry(code, 20, cursor),
+    { revalidateOnFocus: false, dedupingInterval: 300000 },
   )
+
+  const trendingLoading = heroLoading || trendingSWRLoading
+  const latestLoading = trendingLoading || latestSWRLoading
 
   // Fetch categories
   const {
@@ -78,6 +69,13 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
   const featuredPosts = heroData?.posts.slice(1, 3) || []
   const trendingPosts = trendingData?.posts || []
   const latestPosts = latestData?.posts || []
+  const moreForYouInitialData = latestData
+    ? {
+        posts: latestData.posts.slice(8),
+        hasNextPage: latestData.hasNextPage,
+        endCursor: latestData.endCursor,
+      }
+    : undefined
 
   // Error state
   if (heroError && trendingError && latestError) {
@@ -230,7 +228,7 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
 
         <ArticleList
           fetcher={(cursor) => getLatestPostsForCountry(countryCode, 20, cursor)}
-          initialData={latestData}
+          initialData={moreForYouInitialData}
           layout="standard"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         />

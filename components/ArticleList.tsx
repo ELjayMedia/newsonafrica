@@ -2,33 +2,52 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useInView } from "react-intersection-observer"
-import useSWR from "swr"
 import { ArticleCard } from "./ArticleCard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Article } from "@/types/article"
 import type { Post } from "@/types/wordpress"
 
-interface ArticleListProps {
-  endpoint: string
-  layout?: "compact" | "standard" | "featured"
+type ArticleCardLayout = "compact" | "standard" | "featured"
+
+type ArticleItem = Article | Post
+
+interface BaseArticleListProps {
+  layout?: ArticleCardLayout
   className?: string
-  pageSize?: number
-  gridCols?: {
-    default: number
-    sm?: number
-    md?: number
-    lg?: number
-    xl?: number
-  }
   emptyMessage?: string
   errorMessage?: string
 }
 
-function ArticleCardSkeleton({ layout = "standard" }: { layout?: "compact" | "standard" | "featured" }) {
+interface InfiniteFetcherResult {
+  posts?: ArticleItem[]
+  items?: ArticleItem[]
+  hasNextPage?: boolean
+  endCursor?: string | null
+}
+
+interface InfiniteArticleListProps extends BaseArticleListProps {
+  fetcher: (cursor?: string | null) => Promise<InfiniteFetcherResult>
+  initialData?: InfiniteFetcherResult | null
+}
+
+interface StaticArticleListProps extends BaseArticleListProps {
+  articles: ArticleItem[]
+  showLoadMore?: boolean
+  onLoadMore?: () => void
+  isLoadingMore?: boolean
+}
+
+type ArticleListProps = InfiniteArticleListProps | StaticArticleListProps
+
+function isInfiniteProps(props: ArticleListProps): props is InfiniteArticleListProps {
+  return typeof (props as InfiniteArticleListProps).fetcher === "function"
+}
+
+function ArticleCardSkeleton({ layout = "standard" }: { layout?: ArticleCardLayout }) {
   if (layout === "compact") {
     return (
       <div className="p-4 border rounded-lg">
@@ -81,87 +100,100 @@ function ArticleCardSkeleton({ layout = "standard" }: { layout?: "compact" | "st
   )
 }
 
-const fetcher = async (url: string) => {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+const extractArticles = (data?: InfiniteFetcherResult | null): ArticleItem[] => {
+  if (!data) {
+    return []
   }
-  return response.json()
+
+  if (Array.isArray(data)) {
+    return data as ArticleItem[]
+  }
+
+  if (data.posts && Array.isArray(data.posts)) {
+    return data.posts
+  }
+
+  if (data.items && Array.isArray(data.items)) {
+    return data.items
+  }
+
+  return []
 }
 
-export function ArticleList({
-  endpoint,
+function InfiniteArticleList({
+  fetcher,
+  initialData,
   layout = "standard",
   className,
-  pageSize = 12,
-  gridCols = { default: 1, sm: 2, lg: 3 },
   emptyMessage = "No articles found.",
   errorMessage = "Failed to load articles. Please try again.",
-}: ArticleListProps) {
-  const [page, setPage] = useState(1)
-  const [allArticles, setAllArticles] = useState<(Article | Post)[]>([])
-  const [hasMore, setHasMore] = useState(true)
-
-  const getUrl = useCallback(
-    (pageNum: number) => {
-      const url = new URL(endpoint, window.location.origin)
-      url.searchParams.set("page", pageNum.toString())
-      url.searchParams.set("per_page", pageSize.toString())
-      return url.toString()
-    },
-    [endpoint, pageSize],
-  )
-
-  const { data, error, isLoading, mutate } = useSWR(getUrl(page), fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 60000, // 1 minute
-  })
+}: InfiniteArticleListProps) {
+  const [articles, setArticles] = useState<ArticleItem[]>(() => extractArticles(initialData))
+  const [hasMore, setHasMore] = useState(initialData?.hasNextPage ?? true)
+  const [endCursor, setEndCursor] = useState<string | null>(initialData?.endCursor ?? null)
+  const [isLoading, setIsLoading] = useState(!initialData)
+  const [error, setError] = useState<Error | null>(null)
 
   const { ref: loadMoreRef, inView } = useInView({
-    threshold: 0.1,
-    rootMargin: "100px",
+    threshold: 0,
+    rootMargin: "200px 0px",
   })
 
   useEffect(() => {
-    if (data?.articles || data?.posts || Array.isArray(data)) {
-      const newArticles = data.articles || data.posts || data
-
-      if (page === 1) {
-        setAllArticles(newArticles)
-      } else {
-        setAllArticles((prev) => [...prev, ...newArticles])
-      }
-
-      // Check if there are more articles to load
-      setHasMore(newArticles.length === pageSize)
+    if (initialData) {
+      setArticles(extractArticles(initialData))
+      setHasMore(initialData.hasNextPage ?? false)
+      setEndCursor(initialData.endCursor ?? null)
+      setIsLoading(false)
+    } else {
+      setArticles([])
+      setHasMore(true)
+      setEndCursor(null)
     }
-  }, [data, page, pageSize])
+  }, [initialData])
+
+  const loadMore = useCallback(async () => {
+    if (isLoading || !hasMore) {
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await fetcher(endCursor ?? undefined)
+      const nextArticles = extractArticles(result)
+      if (nextArticles.length > 0) {
+        setArticles((prev) => [...prev, ...nextArticles])
+      }
+      setHasMore(result.hasNextPage ?? false)
+      setEndCursor(result.endCursor ?? null)
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(errorMessage))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [fetcher, endCursor, hasMore, isLoading, errorMessage])
 
   useEffect(() => {
-    if (inView && hasMore && !isLoading && !error) {
-      setPage((prev) => prev + 1)
+    if (articles.length === 0 && hasMore && !isLoading && !error && endCursor) {
+      loadMore()
     }
-  }, [inView, hasMore, isLoading, error])
+  }, [articles.length, hasMore, isLoading, error, endCursor, loadMore])
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoading) {
+      loadMore()
+    }
+  }, [inView, hasMore, isLoading, loadMore])
 
   const handleRetry = () => {
-    setPage(1)
-    setAllArticles([])
-    setHasMore(true)
-    mutate()
+    if (!isLoading) {
+      loadMore()
+    }
   }
 
-  const gridClasses = cn(
-    "grid gap-6",
-    `grid-cols-${gridCols.default}`,
-    gridCols.sm && `sm:grid-cols-${gridCols.sm}`,
-    gridCols.md && `md:grid-cols-${gridCols.md}`,
-    gridCols.lg && `lg:grid-cols-${gridCols.lg}`,
-    gridCols.xl && `xl:grid-cols-${gridCols.xl}`,
-    className,
-  )
-
-  if (error && allArticles.length === 0) {
+  if (error && articles.length === 0) {
     return (
       <div className="space-y-4">
         <Alert variant="destructive">
@@ -176,17 +208,17 @@ export function ArticleList({
     )
   }
 
-  if (isLoading && allArticles.length === 0) {
+  if (isLoading && articles.length === 0) {
     return (
-      <div className={gridClasses}>
-        {Array.from({ length: pageSize }).map((_, index) => (
+      <div className={cn("grid gap-6", className)}>
+        {Array.from({ length: 6 }).map((_, index) => (
           <ArticleCardSkeleton key={index} layout={layout} />
         ))}
       </div>
     )
   }
 
-  if (!isLoading && allArticles.length === 0) {
+  if (articles.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">{emptyMessage}</p>
@@ -196,16 +228,23 @@ export function ArticleList({
 
   return (
     <div className="space-y-8">
-      <div className={gridClasses}>
-        {allArticles.map((article, index) => (
+      <div className={cn("grid gap-6", className)}>
+        {articles.map((article, index) => (
           <ArticleCard
             key={`${article.id}-${index}`}
             article={article}
             layout={layout}
-            priority={index < 3} // Prioritize first 3 images
+            priority={index < 3}
           />
         ))}
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
 
       {hasMore && (
         <div ref={loadMoreRef} className="flex justify-center py-8">
@@ -215,16 +254,74 @@ export function ArticleList({
               Loading more articles...
             </div>
           ) : (
-            <div className="h-4" /> // Invisible trigger element
+            <Button variant="outline" onClick={loadMore} className="bg-transparent">
+              Load more articles
+            </Button>
           )}
         </div>
       )}
 
-      {!hasMore && allArticles.length > 0 && (
+      {!hasMore && !isLoading && (
         <div className="text-center py-8 text-muted-foreground">
           <p>You've reached the end of the articles.</p>
         </div>
       )}
     </div>
   )
+}
+
+function StaticArticleList({
+  articles,
+  layout = "standard",
+  className,
+  showLoadMore = false,
+  onLoadMore,
+  isLoadingMore = false,
+  emptyMessage = "No articles found.",
+}: StaticArticleListProps) {
+  if (!articles || articles.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">{emptyMessage}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className={cn("grid gap-6", className)}>
+        {articles.map((article, index) => (
+          <ArticleCard
+            key={`${article.id}-${index}`}
+            article={article}
+            layout={layout}
+            priority={index < 3}
+          />
+        ))}
+      </div>
+
+      {showLoadMore && onLoadMore && (
+        <div className="flex justify-center pt-6">
+          <Button onClick={onLoadMore} disabled={isLoadingMore} variant="outline" className="bg-transparent">
+            {isLoadingMore ? (
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              "Load more articles"
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function ArticleList(props: ArticleListProps) {
+  if (isInfiniteProps(props)) {
+    return <InfiniteArticleList {...props} />
+  }
+
+  return <StaticArticleList {...props} />
 }
