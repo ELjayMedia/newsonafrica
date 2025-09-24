@@ -1,5 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
-import { env } from "@/config/env"
+import { siteConfig } from "@/config/site"
 
 const { rest } = getWpEndpoints()
 const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
@@ -63,7 +63,7 @@ export const appConfig = {
     defaultTitle: "News On Africa - Pan-African News Platform",
     titleTemplate: "%s | News On Africa",
     defaultDescription: "Your trusted source for news across Africa with local relevance and continental context.",
-    siteUrl: env.NEXT_PUBLIC_SITE_URL,
+    siteUrl: siteConfig.url,
     twitterHandle: "@newsonafrica",
     facebookAppId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
   },
