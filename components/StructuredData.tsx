@@ -1,5 +1,5 @@
 import type { Post } from "@/lib/types"
-import { env } from "@/config/env"
+import { siteConfig } from "@/config/site"
 
 interface StructuredDataProps {
   post: Post
@@ -20,13 +20,13 @@ export function StructuredData({ post, url }: StructuredDataProps) {
     publisher: {
       "@type": "Organization",
       name: "News On Africa",
-        logo: {
-          "@type": "ImageObject",
-          url: `${env.NEXT_PUBLIC_SITE_URL}/logo.png`,
-        },
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteConfig.url}/logo.png`,
+      },
     },
     description: post.excerpt,
-      image: post.featuredImage?.node?.sourceUrl || `${env.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`,
+    image: post.featuredImage?.node?.sourceUrl || `${siteConfig.url}/default-og-image.jpg`,
     mainEntityOfPage: url,
   }
 

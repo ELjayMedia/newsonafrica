@@ -1,12 +1,15 @@
 import { getWpEndpoints } from "@/config/wp"
-import { env } from "@/config/env"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
+const WORDPRESS_AUTH_TOKEN = process.env.WORDPRESS_AUTH_TOKEN
+const WP_APP_USERNAME = process.env.WP_APP_USERNAME
+const WP_APP_PASSWORD = process.env.WP_APP_PASSWORD
 
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
-  url: env.NEXT_PUBLIC_SITE_URL,
+  url: SITE_URL,
   ogImage: "/news-on-africa-logo.png",
   links: {
     twitter: "https://twitter.com/newsonafrica",
@@ -40,9 +43,9 @@ export const siteConfig = {
   // WordPress API configuration
   wordpress: {
     apiUrl: WORDPRESS_REST_API_URL,
-    authToken: env.WORDPRESS_AUTH_TOKEN,
-    username: env.WP_APP_USERNAME,
-    password: env.WP_APP_PASSWORD,
+    authToken: WORDPRESS_AUTH_TOKEN,
+    username: WP_APP_USERNAME,
+    password: WP_APP_PASSWORD,
   },
   // Search configuration
   search: {
