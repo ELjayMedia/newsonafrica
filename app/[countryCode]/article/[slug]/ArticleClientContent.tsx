@@ -118,10 +118,12 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
           <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-left">{initialData.title.rendered}</h1>
 
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span className="font-medium">{initialData.author.node.name}</span>
-            </div>
+            {initialData.author?.node?.name && (
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span className="font-medium">{initialData.author.node.name}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>{estimatedReadTime} min read</span>
@@ -137,9 +139,7 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
             <div className="mb-8 rounded-xl overflow-hidden shadow-lg">
               <img
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={
-                  initialData.featuredImage.node.altText || initialData.title.rendered
-                }
+                alt={initialData.featuredImage.node.altText || initialData.title.rendered}
                 className="w-full h-auto aspect-video object-cover"
                 loading="eager"
               />
@@ -156,10 +156,7 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
                      prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg
                      prose-code:bg-muted prose-code:px-1 prose-code:rounded"
           dangerouslySetInnerHTML={{
-            __html: rewriteLegacyLinks(
-              initialData.content?.rendered || "",
-              countryCode,
-            ),
+            __html: rewriteLegacyLinks(initialData.content?.rendered || "", countryCode),
           }}
         />
 
