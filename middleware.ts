@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import {
-  getCategoryUrl,
-  DEFAULT_COUNTRY,
-  SUPPORTED_COUNTRIES,
-} from "@/lib/utils/routing"
-
+import { createServerClient } from "@supabase/ssr"
+import { getCategoryUrl, DEFAULT_COUNTRY, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
@@ -23,11 +19,7 @@ function getCountryFromRequest(request: NextRequest): string {
   return DEFAULT_COUNTRY
 }
 
-function handleLegacyPostRedirect(
-  pathname: string,
-  request: NextRequest,
-  country: string,
-): NextResponse | null {
+function handleLegacyPostRedirect(pathname: string, request: NextRequest, country: string): NextResponse | null {
   // Check if it's a legacy /post/ route
   if (pathname.startsWith("/post/")) {
     const slug = pathname.replace("/post/", "")
@@ -38,9 +30,45 @@ function handleLegacyPostRedirect(
   return null
 }
 
-export function middleware(request: NextRequest) {
+async function updateSession(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    },
+  )
+
+  // This will refresh session if expired - required for Server Components
+  await supabase.auth.getUser()
+
+  return response
+}
+
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const { pathname } = url
+
+  const response = await updateSession(request)
 
   const country = getCountryFromRequest(request)
 
@@ -63,10 +91,20 @@ export function middleware(request: NextRequest) {
     return apiResponse
   }
 
-  return NextResponse.next()
+  return response
 }
 
-// Only run middleware on specific paths
 export const config = {
-  matcher: ["/post/:path*", "/news", "/business", "/sport", "/entertainment", "/api/:path*"],
+  matcher: [
+    "/post/:path*",
+    "/news",
+    "/business",
+    "/sport",
+    "/entertainment",
+    "/api/:path*",
+    "/auth/:path*",
+    "/profile/:path*",
+    "/bookmarks/:path*",
+    "/subscriptions/:path*",
+  ],
 }

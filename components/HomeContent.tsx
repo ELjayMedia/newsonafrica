@@ -4,7 +4,7 @@ import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -26,16 +26,25 @@ import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import type { HomePost, CountryPosts } from "@/types/home"
 
-interface HomeContentProps {
+// Declare the HomeContentProps type
+type HomeContentProps = {
   initialPosts?: HomePost[]
   countryPosts?: CountryPosts
   featuredPosts?: HomePost[]
   initialData?: {
     taggedPosts: HomePost[]
-    featuredPosts: HomePost[]
-    categories: Category[]
     recentPosts: HomePost[]
+    countryPosts: CountryPosts
+    featuredPosts: HomePost[]
   }
+  emptyState?: {
+    title: string
+    description: string
+  }
+}
+
+const handleRefresh = () => {
+  window.location.reload()
 }
 
 // Check if we're in a browser environment and if we're online
@@ -46,7 +55,6 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
-// Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async (
   country: string,
 ): Promise<{
@@ -55,32 +63,37 @@ const fetchHomeData = async (
   categories: Category[]
   recentPosts: HomePost[]
 }> => {
+  const startTime = performance.now()
+
   try {
     if (!isOnline()) {
-      console.log("Device is offline, using cached data")
+      console.log("[v0] Device is offline, using cached data")
       throw new Error("Device is offline")
     }
 
-    // Use Promise.allSettled to handle partial failures
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // Reduced timeout to 15 seconds
+
     const results = await Promise.allSettled([
       getFpTaggedPostsForCountry(country, 8),
       getLatestPostsForCountry(country, 10),
       getCategoriesForCountry(country),
     ])
 
-    const taggedPosts =
-      results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
+    clearTimeout(timeoutId)
 
-    const latestPostsResult =
-      results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
+    const taggedPosts = results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
+
+    const latestPostsResult = results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
     const recentPosts = mapPostsToHomePosts(latestPostsResult.posts ?? [], country)
 
-    const categoriesResult =
-      results[2].status === "fulfilled" ? results[2].value : { categories: [] }
+    const categoriesResult = results[2].status === "fulfilled" ? results[2].value : { categories: [] }
     const categories = categoriesResult.categories || []
 
-    const featuredPosts =
-      taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
+    const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
+
+    const endTime = performance.now()
+    console.log(`[v0] Home data fetch completed in ${Math.round(endTime - startTime)}ms`)
 
     return {
       taggedPosts,
@@ -89,7 +102,8 @@ const fetchHomeData = async (
       recentPosts,
     }
   } catch (error) {
-    console.error("Error fetching home data:", error)
+    const endTime = performance.now()
+    console.error(`[v0] Home data fetch failed after ${Math.round(endTime - startTime)}ms:`, error)
     throw error
   }
 }
@@ -99,17 +113,18 @@ export function HomeContent({
   countryPosts = {},
   featuredPosts = [],
   initialData,
+  emptyState,
 }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
   const currentCountry = getCurrentCountry()
 
+  const handleOnline = useCallback(() => setIsOffline(false), [])
+  const handleOffline = useCallback(() => setIsOffline(true), [])
+
   // Listen for online/offline events
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
 
@@ -117,7 +132,7 @@ export function HomeContent({
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
-  }, [])
+  }, [handleOnline, handleOffline])
 
   // Create fallback data from initial posts based on current country
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
@@ -127,9 +142,7 @@ export function HomeContent({
     (baselinePosts.length > 0
       ? {
           taggedPosts: baselinePosts.slice(0, 8),
-          featuredPosts: featuredPosts.length
-            ? featuredPosts.slice(0, 6)
-            : baselinePosts.slice(0, 6),
+          featuredPosts: featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6),
           categories: [],
           recentPosts: baselinePosts.slice(0, 10),
         }
@@ -140,30 +153,41 @@ export function HomeContent({
           recentPosts: [],
         })
 
-  // Update the useSWR configuration for better error handling
-  const { data, error, isLoading } = useSWR<{
+  const { data, error, isLoading, mutate } = useSWR<{
     taggedPosts: HomePost[]
     featuredPosts: HomePost[]
     categories: Category[]
     recentPosts: HomePost[]
-  }>(["homepage-data", currentCountry], () => fetchHomeData(currentCountry), {
+  }>([`homepage-data-${currentCountry}`, currentCountry], () => fetchHomeData(currentCountry), {
     fallbackData,
-    revalidateOnMount: !initialData && !baselinePosts.length, // Only revalidate if no initial data
+    revalidateOnMount: !initialData && !baselinePosts.length,
     revalidateOnFocus: false,
-    refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
-    dedupingInterval: 60000,
+    revalidateOnReconnect: true, // Revalidate when coming back online
+    refreshInterval: isOffline ? 0 : 300000, // 5 minutes when online
+    dedupingInterval: 60000, // 1 minute deduping
     errorRetryCount: 3,
-    errorRetryInterval: 5000,
+    errorRetryInterval: (retryCount) => Math.min(1000 * 2 ** retryCount, 30000), // Exponential backoff
     onError: (err) => {
-      console.error("SWR Error:", err)
+      console.error("[v0] SWR Error:", err)
       if (!initialData && !initialPosts.length) {
         setIsOffline(true)
       }
     },
-    shouldRetryOnError: !isOffline,
+    onSuccess: () => {
+      // Reset offline state on successful fetch
+      if (isOffline) {
+        setIsOffline(false)
+      }
+    },
+    shouldRetryOnError: (error) => {
+      // Don't retry on network errors when offline
+      if (isOffline) return false
+      // Don't retry on 4xx errors
+      if (error?.status >= 400 && error?.status < 500) return false
+      return true
+    },
   })
 
-  // Fetch category-specific posts
   useEffect(() => {
     let isCancelled = false
 
@@ -183,10 +207,7 @@ export function HomeContent({
           const categoryData = batchedPosts[slug]
 
           if (categoryData?.posts?.length) {
-            mappedPosts[config.name] = mapPostsToHomePosts(
-              categoryData.posts as WordPressPost[],
-              currentCountry,
-            )
+            mappedPosts[config.name] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], currentCountry)
           }
         })
 
@@ -247,18 +268,74 @@ export function HomeContent({
     return <HomePageSkeleton />
   }
 
-  // Show error message if data fetch failed and we have no initial data
+  if (emptyState) {
+    return (
+      <div className="p-4 text-center">
+        <div className="max-w-md mx-auto">
+          <div className="mb-4">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-gray-900">{emptyState.title}</h2>
+          <p className="text-gray-600 mb-4">{emptyState.description}</p>
+          <div className="space-y-2">
+            <button
+              onClick={handleRefresh}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <a
+              href="/api/health"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors inline-block"
+            >
+              Check System Health
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (error && !finalFeaturedPosts.length && !isOffline) {
     return (
       <div className="p-4 text-center">
-        <h2 className="text-xl font-bold mb-2">Unable to load content</h2>
-        <p>We're experiencing technical difficulties. Please try again later.</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-green-500 text-black rounded hover:bg-green-600"
-        >
-          Refresh Page
-        </button>
+        <div className="max-w-md mx-auto">
+          <div className="mb-4">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-gray-900">Unable to load content</h2>
+          <p className="text-gray-600 mb-4">We're experiencing technical difficulties. Please try again later.</p>
+          <div className="space-y-2">
+            <button
+              onClick={handleRefresh}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -281,42 +358,35 @@ export function HomeContent({
 
   // Extract main content posts - ensure we have enough fp posts
   const heroSource =
-    taggedPosts.length > 0
-      ? taggedPosts
-      : finalFeaturedPosts.length > 0
-        ? finalFeaturedPosts
-        : recentPosts
+    taggedPosts.length > 0 ? taggedPosts : finalFeaturedPosts.length > 0 ? finalFeaturedPosts : recentPosts
 
   const mainStory = heroSource[0] || null
   const secondaryStories = heroSource.slice(1, 5)
 
-  // Reusable CategorySection component
-  const CategorySection = ({ name, layout, typeOverride }: CategoryConfig) => {
+  const CategorySection = React.memo(({ name, layout, typeOverride }: CategoryConfig) => {
     const posts = categoryPosts[name] || []
 
     // Only render the section if there are posts
     if (posts.length === 0) return null
 
     return (
-      <React.Fragment key={name}>
-        <section className="bg-white rounded-lg">
-          <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-            <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
-              {name}
-            </Link>
-          </h2>
-          <NewsGrid
-            posts={posts.map((post) => ({
-              ...post,
-              type: typeOverride,
-            }))}
-            layout={layout}
-            className="compact-grid"
-          />
-        </section>
-      </React.Fragment>
+      <section className="bg-white rounded-lg">
+        <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
+          <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
+            {name}
+          </Link>
+        </h2>
+        <NewsGrid
+          posts={posts.map((post) => ({
+            ...post,
+            type: typeOverride,
+          }))}
+          layout={layout}
+          className="compact-grid"
+        />
+      </section>
     )
-  }
+  })
 
   // Generate schema.org structured data for the homepage
   const schemas = [
@@ -374,7 +444,6 @@ export function HomeContent({
             <FeaturedHero post={mainStory} />
           </section>
         )}
-
 
         {/* Country Spotlight - Show posts from different countries */}
         {Object.keys(countryPosts).length > 0 && <CountrySpotlight countryPosts={countryPosts} />}

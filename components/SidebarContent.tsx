@@ -37,13 +37,12 @@ export function SidebarContent() {
   const country = getCurrentCountry()
   const { preferences } = useUserPreferences()
 
-  const preferredSections = useMemo(() => preferences.sections.map((section) => section.toLowerCase()), [preferences.sections])
+  const preferredSections = useMemo(
+    () => preferences.sections.map((section) => section.toLowerCase()),
+    [preferences.sections],
+  )
 
-  const {
-    data,
-    error,
-    isLoading,
-  } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
+  const { data, error, isLoading } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
     revalidateOnFocus: false,
     dedupingInterval: 1000 * 60 * 5,
   })
@@ -101,7 +100,6 @@ export function SidebarContent() {
           <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
         </section>
 
-
         <section className="bg-white shadow-md rounded-lg p-4">
           <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
           <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
@@ -122,7 +120,9 @@ export function SidebarContent() {
                 <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-3 group">
                   <span className="text-2xl font-light text-gray-300 leading-tight">{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
+                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">
+                      {typeof post.title === "object" && post.title?.rendered ? post.title.rendered : post.title}
+                    </h3>
                   </div>
                 </Link>
               ))}
@@ -131,7 +131,6 @@ export function SidebarContent() {
             <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
           )}
         </section>
-
 
         {/* Latest News Section */}
         <section className="bg-white shadow-md rounded-lg p-4">
@@ -144,7 +143,7 @@ export function SidebarContent() {
                     <div className="relative w-16 h-16 flex-shrink-0">
                       <Image
                         src={post.featuredImage.node.sourceUrl || "/placeholder.png"}
-                        alt={post.title}
+                        alt={typeof post.title === "object" && post.title?.rendered ? post.title.rendered : post.title}
                         layout="fill"
                         objectFit="cover"
                         className="rounded-sm"
@@ -152,7 +151,9 @@ export function SidebarContent() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
+                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">
+                      {typeof post.title === "object" && post.title?.rendered ? post.title.rendered : post.title}
+                    </h3>
                     <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
                       <Clock className="h-3 w-3" />
                       <time dateTime={post.date}>

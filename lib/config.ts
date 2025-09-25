@@ -1,5 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
-import { siteConfig } from "@/config/site"
+import { env } from "@/config/env"
 
 const { rest } = getWpEndpoints()
 const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
@@ -49,13 +49,13 @@ export const appConfig = {
 
   // Feature Flags
   features: {
-    comments: process.env.FEATURE_COMMENTS === "true",
-    bookmarks: process.env.FEATURE_BOOKMARKS === "true",
-    subscriptions: process.env.FEATURE_SUBSCRIPTIONS === "true",
-    advancedSearch: process.env.FEATURE_ADVANCED_SEARCH === "true",
-    i18n: process.env.FEATURE_I18N === "true",
-    aiRecommendations: process.env.FEATURE_AI_RECOMMENDATIONS === "true",
-    aiContent: process.env.FEATURE_AI_CONTENT === "true",
+    comments: true, // process.env.FEATURE_COMMENTS === "true"
+    bookmarks: true, // process.env.FEATURE_BOOKMARKS === "true"
+    subscriptions: true, // process.env.FEATURE_SUBSCRIPTIONS === "true"
+    advancedSearch: true, // process.env.FEATURE_ADVANCED_SEARCH === "true"
+    i18n: false, // process.env.FEATURE_I18N === "true"
+    aiRecommendations: false, // process.env.FEATURE_AI_RECOMMENDATIONS === "true"
+    aiContent: false, // process.env.FEATURE_AI_CONTENT === "true"
   },
 
   // SEO Configuration
@@ -63,11 +63,10 @@ export const appConfig = {
     defaultTitle: "News On Africa - Pan-African News Platform",
     titleTemplate: "%s | News On Africa",
     defaultDescription: "Your trusted source for news across Africa with local relevance and continental context.",
-    siteUrl: siteConfig.url,
+    siteUrl: env.NEXT_PUBLIC_SITE_URL,
     twitterHandle: "@newsonafrica",
     facebookAppId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
   },
-
 } as const
 
 export type AppConfig = typeof appConfig

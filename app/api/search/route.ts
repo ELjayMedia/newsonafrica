@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+import type { NextRequest } from "next/server"
 import { circuitBreaker } from "@/lib/api/circuit-breaker"
 import { getArticleUrl } from "@/lib/utils/routing"
 import {
@@ -10,10 +10,19 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 // Cache policy: medium (5 minutes)
 export const revalidate = 300
 
-// Rate limiting
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+// Clean up expired entries periodically
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of rateLimitMap.entries()) {
+    if (now > entry.resetAt) {
+      rateLimitMap.delete(key)
+    }
+  }
+}, RATE_LIMIT_WINDOW)
 
 function getRateLimitKey(request: NextRequest): string {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
@@ -88,7 +97,6 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
   return await wpGetSearchSuggestions(query)
 }
 
-// Fallback search data
 const FALLBACK_POSTS = [
   {
     id: 1,
@@ -187,7 +195,6 @@ export async function GET(request: NextRequest) {
         },
       })
     } catch (wpError) {
-      // Fallback to mock data
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
           item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||

@@ -45,16 +45,16 @@ export const NewsGrid = memo(function NewsGrid({
   hasMorePosts,
 }: NewsGridProps) {
   // Memoize the load more callback
-  const handleLoadMore = useCallback(() => {
-    if (onLoadMore && isAuthorPage) {
-      onLoadMore()
-      setTimeout(() => setIsFetching(false), 500)
-    }
-
-  },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [onLoadMore, isAuthorPage])
-
+  const handleLoadMore = useCallback(
+    () => {
+      if (onLoadMore && isAuthorPage) {
+        onLoadMore()
+        setTimeout(() => setIsFetching(false), 500)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onLoadMore, isAuthorPage],
+  )
 
   // Use the infinite scroll hook with the memoized callback
   const { isFetching, setIsFetching } = useInfiniteScroll(handleLoadMore)
@@ -304,7 +304,7 @@ const RegularCategorySection = memo(function RegularCategorySection({
           >
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
-                <h3 className="text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-4 leading-4 leading-4">
+                <h3 className="text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-4">
                   {post.title}
                 </h3>
               </div>

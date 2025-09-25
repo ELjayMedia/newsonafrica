@@ -1,15 +1,12 @@
 import { getWpEndpoints } from "@/config/wp"
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
-const WORDPRESS_AUTH_TOKEN = process.env.WORDPRESS_AUTH_TOKEN
-const WP_APP_USERNAME = process.env.WP_APP_USERNAME
-const WP_APP_PASSWORD = process.env.WP_APP_PASSWORD
+import { env } from "@/config/env"
 
 const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
 
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
-  url: SITE_URL,
+  url: env.NEXT_PUBLIC_SITE_URL,
   ogImage: "/news-on-africa-logo.png",
   links: {
     twitter: "https://twitter.com/newsonafrica",
@@ -43,9 +40,12 @@ export const siteConfig = {
   // WordPress API configuration
   wordpress: {
     apiUrl: WORDPRESS_REST_API_URL,
-    authToken: WORDPRESS_AUTH_TOKEN,
-    username: WP_APP_USERNAME,
-    password: WP_APP_PASSWORD,
+    authToken: env.WORDPRESS_AUTH_TOKEN,
+    username: env.WP_APP_USERNAME,
+    password: env.WP_APP_PASSWORD,
+    timeout: 10000,
+    retries: 3,
+    fallbackEnabled: true,
   },
   // Search configuration
   search: {
@@ -71,6 +71,20 @@ export const siteConfig = {
   newsletter: {
     enabled: true,
     provider: "mailchimp", // or "convertkit", "emailoctopus"
+  },
+  performance: {
+    enableCaching: true,
+    cacheTimeout: 300000, // 5 minutes
+    enableOfflineMode: true,
+    enableServiceWorker: true,
+  },
+  features: {
+    comments: env.NEXT_PUBLIC_APP_ENV !== "development",
+    bookmarks: true,
+    subscriptions: env.NEXT_PUBLIC_APP_ENV !== "development",
+    advancedSearch: true,
+    socialSharing: true,
+    newsletter: true,
   },
 }
 

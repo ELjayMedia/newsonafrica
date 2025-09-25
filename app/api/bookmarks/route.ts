@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
 
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
@@ -10,12 +9,10 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
-
 export async function GET(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -106,8 +103,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -144,8 +140,7 @@ export async function POST(request: NextRequest) {
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
-      featured_image:
-        featuredImage && typeof featuredImage === "object" ? featuredImage : null,
+      featured_image: featuredImage && typeof featuredImage === "object" ? featuredImage : null,
       category: category || null,
       tags: tags || null,
       read_status: "unread" as const,
@@ -159,10 +154,9 @@ export async function POST(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 })
     }
 
-      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidateByTag(CACHE_TAGS.BOOKMARKS)
     revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
-
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
@@ -172,8 +166,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -218,10 +211,9 @@ export async function PUT(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 })
     }
 
-      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidateByTag(CACHE_TAGS.BOOKMARKS)
     revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
-
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
@@ -231,8 +223,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -266,10 +257,9 @@ export async function DELETE(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 })
     }
 
-      revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    revalidateByTag(CACHE_TAGS.BOOKMARKS)
     revalidatePath("/bookmarks")
     return NextResponse.json({ success: true })
-
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })

@@ -2,12 +2,17 @@
 
 import { useState, useEffect, memo } from "react"
 import Image, { type ImageProps } from "next/image"
-import { generateBlurDataURL } from "@/utils/lazy-load"
 
 interface OptimizedImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string
   aspectRatio?: string
   priority?: boolean
+}
+
+function generateSimpleBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
+  return `data:image/svg+xml;base64,${Buffer.from(
+    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/></svg>`,
+  ).toString("base64")}`
 }
 
 export const OptimizedImage = memo(function OptimizedImage({
@@ -28,8 +33,7 @@ export const OptimizedImage = memo(function OptimizedImage({
     setImgSrc(src)
   }, [src])
 
-  // Generate blur data URL if not provided
-  const blur = blurDataURL || generateBlurDataURL(700, 475)
+  const blur = blurDataURL || generateSimpleBlurDataURL(700, 475)
 
   const handleError = () => {
     if (!error) {
@@ -53,7 +57,7 @@ export const OptimizedImage = memo(function OptimizedImage({
         blurDataURL={blur}
         priority={priority}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        quality={80} // Add quality parameter for better optimization
+        quality={80}
         {...props}
       />
     </div>

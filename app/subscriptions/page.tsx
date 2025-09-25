@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { SubscriptionsContent } from "@/components/SubscriptionsContent"
 
@@ -11,8 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default async function SubscriptionsPage() {
-  const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const {
     data: { session },

@@ -61,9 +61,8 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
               <Image
                 src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                 alt={post.title}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-md transition-transform duration-300 group-hover:scale-105"
+                fill
+                className="object-cover rounded-md transition-transform duration-300 group-hover:scale-105"
                 priority={index === 0}
                 loading={index === 0 ? "eager" : "lazy"}
                 placeholder="blur"

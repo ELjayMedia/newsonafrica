@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
 import logger from "@/utils/logger"
-import { siteConfig } from "@/config/site"
+import { env } from "@/config/env"
 
 export type ApiResponse<T = any> = {
   success: boolean
@@ -99,7 +99,7 @@ export function logRequest(req: Request) {
 export function withCors(req: Request, res: Response) {
   const allowedOrigins =
     process.env.NODE_ENV === "production"
-      ? [siteConfig.url, "https://news-on-africa.com"]
+      ? [env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]
       : ["http://localhost:3000"]
 
   const origin = req.headers.get("origin") || ""

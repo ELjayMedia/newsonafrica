@@ -1,11 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import {
-  getLatestPostsForCountry,
-  getFpTaggedPostsForCountry,
-  mapPostsToHomePosts,
-} from "@/lib/wordpress-api"
+import { getLatestPostsForCountry, getFpTaggedPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
 import type { HomePageData } from "@/types/home"
 import { getServerCountry } from "@/lib/utils/routing"
 
@@ -86,7 +82,6 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
 
   // If we have fresh data, use it
   if (cached.exists && !cached.isStale) {
-    console.log("[v0] Homepage: Using fresh cached data")
     return cached.data
   }
 
@@ -105,10 +100,7 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
           throw new Error("No posts available")
         }
 
-        const featuredPosts =
-          taggedPosts.length > 0
-            ? taggedPosts.slice(0, 6)
-            : recentPosts.slice(0, 6)
+        const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
 
         return {
           taggedPosts,
@@ -119,25 +111,19 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
       },
       async () => {
         if (cached.exists) {
-          console.log("[v0] Homepage: Using stale cached data due to API failure")
           return cached.data
         }
 
-        console.log("[v0] Homepage: Using fallback content - no cache available")
         const fallbackPosts = [
           {
             id: "fallback-1",
             slug: "service-notice",
             title: "News On Africa - Service Notice",
-            excerpt:
-              "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
+            excerpt: "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
             date: new Date().toISOString(),
             country: countryCode,
             featuredImage: {
-              node: {
-                sourceUrl: "/news-placeholder.png",
-                altText: "Service notice",
-              },
+              node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" },
             },
           },
         ]
@@ -157,7 +143,6 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
     console.error("[v0] Homepage data fetch failed:", error)
 
     if (cached.exists) {
-      console.log("[v0] Homepage: Returning stale cache due to complete failure")
       return cached.data
     }
 
@@ -194,8 +179,16 @@ export default async function Home() {
         initialData={initialData}
       />
     )
-  } catch (error) {
-    console.error("Homepage data fetch failed:", error)
-    return <HomeContent initialPosts={[]} />
+  } catch (error: any) {
+    console.error("Homepage data fetch failed:", error?.message || error, error?.stack)
+    return (
+      <HomeContent
+        initialPosts={[]}
+        emptyState={{
+          title: "We're having trouble loading stories",
+          description: "Our content service didn't respond. Please try again, or check /api/health for diagnostics.",
+        }}
+      />
+    )
   }
 }

@@ -4,7 +4,7 @@ import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wor
 import CategoryClientPage from "../../../category/[slug]/CategoryClientPage"
 import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import * as log from "@/lib/log"
-import { siteConfig } from "@/config/site"
+import { env } from "@/config/env"
 
 interface Params {
   countryCode: string
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
           noarchive: true,
         },
         alternates: {
-          canonical: `${siteConfig.url}/${countryCode}/category/${slug}`,
+          canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
         },
       }
     }
@@ -83,7 +83,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     const featuredImageUrl =
       featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
-    const canonicalUrl = `${siteConfig.url}/${countryCode}/category/${slug}`
+    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 
     const keywords = [
       category.name,
@@ -175,7 +175,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
       alternates: {
-        canonical: `${siteConfig.url}/${countryCode}/category/${slug}`,
+        canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
       },
     }
   }

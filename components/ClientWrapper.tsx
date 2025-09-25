@@ -10,10 +10,12 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true)
 
-    if (process.env.NODE_ENV === "development") {
-      const startTime = performance.now()
-      return () => {
-        const endTime = performance.now()
+    // Development performance logging removed to avoid client-side env var issues
+    const startTime = performance.now()
+    return () => {
+      const endTime = performance.now()
+      // Only log in development if we can detect it another way
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log(`[Performance] ClientWrapper mounted in ${(endTime - startTime).toFixed(2)}ms`)
       }
     }
