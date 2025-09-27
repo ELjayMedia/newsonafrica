@@ -81,20 +81,7 @@ export default function RetryBanner({
     }
   }, [isDismissed, handleOnline, handleOffline])
 
-  // Auto-retry logic
-  useEffect(() => {
-    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
-      return
-    }
-
-    const timer = setTimeout(() => {
-      handleRetry()
-    }, retryInterval)
-
-    return () => clearTimeout(timer)
-  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline])
-
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     setIsRetrying(true)
     setRetryCount((prev) => prev + 1)
 
@@ -128,7 +115,20 @@ export default function RetryBanner({
     } finally {
       setIsRetrying(false)
     }
-  }
+  }, [maxRetries, onRetry, retryCount])
+
+  // Auto-retry logic
+  useEffect(() => {
+    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      handleRetry()
+    }, retryInterval)
+
+    return () => clearTimeout(timer)
+  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline, handleRetry])
 
   const handleDismiss = () => {
     setShowBanner(false)

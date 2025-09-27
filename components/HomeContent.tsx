@@ -4,8 +4,7 @@ import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
-import React, { useEffect, useState, useCallback } from "react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
+import React, { useEffect, useState, useCallback, useMemo } from "react"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -25,6 +24,59 @@ import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import type { HomePost, CountryPosts } from "@/types/home"
+
+type CategorySectionProps = CategoryConfig & {
+  posts: HomePost[]
+}
+
+const CategorySection = React.memo(({ name, layout, typeOverride, posts }: CategorySectionProps) => {
+  if (posts.length === 0) return null
+
+  return (
+    <section className="bg-white rounded-lg">
+      <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
+        <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
+          {name}
+        </Link>
+      </h2>
+      <NewsGrid
+        posts={posts.map((post) => ({
+          ...post,
+          type: typeOverride,
+        }))}
+        layout={layout}
+        className="compact-grid"
+      />
+    </section>
+  )
+})
+
+CategorySection.displayName = "CategorySection"
+
+const areCategoryPostsEqual = (a: Record<string, HomePost[]>, b: Record<string, HomePost[]>) => {
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+
+  if (keysA.length !== keysB.length) return false
+
+  for (const key of keysA) {
+    const postsA = a[key] ?? []
+    const postsB = b[key] ?? []
+
+    if (postsA.length !== postsB.length) return false
+
+    for (let index = 0; index < postsA.length; index += 1) {
+      const postA = postsA[index]
+      const postB = postsB[index]
+
+      if (postA.id !== postB.id || postA.slug !== postB.slug || postA.date !== postB.date) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
 
 // Declare the HomeContentProps type
 type HomeContentProps = {
@@ -71,16 +123,11 @@ const fetchHomeData = async (
       throw new Error("Device is offline")
     }
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // Reduced timeout to 15 seconds
-
     const results = await Promise.allSettled([
       getFpTaggedPostsForCountry(country, 8),
       getLatestPostsForCountry(country, 10),
       getCategoriesForCountry(country),
     ])
-
-    clearTimeout(timeoutId)
 
     const taggedPosts = results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
 
@@ -115,7 +162,6 @@ export function HomeContent({
   initialData,
   emptyState,
 }: HomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
   const currentCountry = getCurrentCountry()
@@ -135,25 +181,39 @@ export function HomeContent({
   }, [handleOnline, handleOffline])
 
   // Create fallback data from initial posts based on current country
-  const initialCountryPosts = countryPosts[currentCountry] || initialPosts
-  const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
-  const fallbackData =
-    initialData ||
-    (baselinePosts.length > 0
-      ? {
-          taggedPosts: baselinePosts.slice(0, 8),
-          featuredPosts: featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6),
-          categories: [],
-          recentPosts: baselinePosts.slice(0, 10),
-        }
-      : {
-          taggedPosts: [],
-          featuredPosts: [],
-          categories: [],
-          recentPosts: [],
-        })
+  const initialCountryPosts = useMemo(
+    () => countryPosts[currentCountry] || initialPosts,
+    [countryPosts, currentCountry, initialPosts],
+  )
 
-  const { data, error, isLoading, mutate } = useSWR<{
+  const baselinePosts = useMemo(
+    () => (initialCountryPosts.length ? initialCountryPosts : initialPosts),
+    [initialCountryPosts, initialPosts],
+  )
+
+  const fallbackData = useMemo(() => {
+    if (initialData) return initialData
+
+    if (baselinePosts.length > 0) {
+      const fallbackFeatured = featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6)
+
+      return {
+        taggedPosts: baselinePosts.slice(0, 8),
+        featuredPosts: fallbackFeatured,
+        categories: [],
+        recentPosts: baselinePosts.slice(0, 10),
+      }
+    }
+
+    return {
+      taggedPosts: [],
+      featuredPosts: [],
+      categories: [],
+      recentPosts: [],
+    }
+  }, [initialData, baselinePosts, featuredPosts])
+
+  const { data, error, isLoading } = useSWR<{
     taggedPosts: HomePost[]
     featuredPosts: HomePost[]
     categories: Category[]
@@ -200,22 +260,34 @@ export function HomeContent({
 
         if (isCancelled) return
 
-        const mappedPosts: Record<string, HomePost[]> = {}
-
-        categoryConfigs.forEach((config) => {
+        const mappedPosts = categoryConfigs.reduce<Record<string, HomePost[]>>((acc, config) => {
           const slug = config.name.toLowerCase()
           const categoryData = batchedPosts[slug]
 
           if (categoryData?.posts?.length) {
-            mappedPosts[config.name] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], currentCountry)
+            acc[config.name] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], currentCountry)
           }
-        })
 
-        setCategoryPosts(mappedPosts)
+          return acc
+        }, {})
+
+        setCategoryPosts((prev) => {
+          if (areCategoryPostsEqual(prev, mappedPosts)) {
+            return prev
+          }
+
+          return mappedPosts
+        })
       } catch (error) {
         console.error("Error fetching batched category posts:", error)
         if (!isCancelled) {
-          setCategoryPosts({})
+          setCategoryPosts((prev) => {
+            if (Object.keys(prev).length === 0) {
+              return prev
+            }
+
+            return {}
+          })
         }
       }
     }
@@ -227,30 +299,28 @@ export function HomeContent({
     }
   }, [isOffline, currentCountry])
 
-  // Show offline notification if needed
-  const renderOfflineNotification = () => {
-    if (isOffline) {
-      return (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">You are currently offline. Some content may not be up to date.</p>
-            </div>
+  const offlineNotification = useMemo(() => {
+    if (!isOffline) return null
+
+    return (
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-yellow-700">You are currently offline. Some content may not be up to date.</p>
           </div>
         </div>
-      )
-    }
-    return null
-  }
+      </div>
+    )
+  }, [isOffline])
 
   // Safely extract data with fallbacks
   const {
@@ -261,7 +331,47 @@ export function HomeContent({
   } = data || fallbackData
 
   // Use provided featuredPosts if available
-  const finalFeaturedPosts = featuredPosts.length > 0 ? featuredPosts : fetchedFeaturedPosts
+  const finalFeaturedPosts = useMemo(
+    () => (featuredPosts.length > 0 ? featuredPosts : fetchedFeaturedPosts),
+    [featuredPosts, fetchedFeaturedPosts],
+  )
+
+  const heroSource = useMemo(() => {
+    if (taggedPosts.length > 0) return taggedPosts
+    if (finalFeaturedPosts.length > 0) return finalFeaturedPosts
+    return recentPosts
+  }, [taggedPosts, finalFeaturedPosts, recentPosts])
+
+  const mainStory = useMemo(() => heroSource[0] || null, [heroSource])
+  const secondaryStories = useMemo(() => heroSource.slice(1, 5), [heroSource])
+
+  // Generate schema.org structured data for the homepage
+  const schemas = useMemo(
+    () => [
+      // WebPage schema for the homepage
+      getWebPageSchema(
+        siteConfig.url,
+        "News On Africa - Where the Continent Connects",
+        "A pan-African news platform providing comprehensive coverage across the continent",
+      ),
+
+      // ItemList schema for featured articles
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        itemListElement:
+          finalFeaturedPosts?.map((post, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+
+            url: `${siteConfig.url}${getArticleUrl(post.slug, (post as any)?.country)}`,
+
+            name: post.title,
+          })) || [],
+      },
+    ],
+    [finalFeaturedPosts],
+  )
 
   // Show skeleton during initial loading
   if (isLoading && !initialData && !initialPosts.length) {
@@ -356,63 +466,6 @@ export function HomeContent({
     )
   }
 
-  // Extract main content posts - ensure we have enough fp posts
-  const heroSource =
-    taggedPosts.length > 0 ? taggedPosts : finalFeaturedPosts.length > 0 ? finalFeaturedPosts : recentPosts
-
-  const mainStory = heroSource[0] || null
-  const secondaryStories = heroSource.slice(1, 5)
-
-  const CategorySection = React.memo(({ name, layout, typeOverride }: CategoryConfig) => {
-    const posts = categoryPosts[name] || []
-
-    // Only render the section if there are posts
-    if (posts.length === 0) return null
-
-    return (
-      <section className="bg-white rounded-lg">
-        <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-          <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
-            {name}
-          </Link>
-        </h2>
-        <NewsGrid
-          posts={posts.map((post) => ({
-            ...post,
-            type: typeOverride,
-          }))}
-          layout={layout}
-          className="compact-grid"
-        />
-      </section>
-    )
-  })
-
-  // Generate schema.org structured data for the homepage
-  const schemas = [
-    // WebPage schema for the homepage
-    getWebPageSchema(
-      siteConfig.url,
-      "News On Africa - Where the Continent Connects",
-      "A pan-African news platform providing comprehensive coverage across the continent",
-    ),
-
-    // ItemList schema for featured articles
-    {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      itemListElement:
-        finalFeaturedPosts?.map((post, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-
-          url: `${siteConfig.url}${getArticleUrl(post.slug, (post as any)?.country)}`,
-
-          name: post.title,
-        })) || [],
-    },
-  ]
-
   // Show empty state if no fp-tagged content is available
   if (!heroSource.length && !isLoading) {
     return (
@@ -433,7 +486,7 @@ export function HomeContent({
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
       <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
-        {renderOfflineNotification()}
+        {offlineNotification}
 
         {/* Pan-African Country Navigation */}
         <CountryNavigation />
@@ -458,7 +511,7 @@ export function HomeContent({
         {/* Category Sections - Show posts from each category */}
         <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => (
-            <CategorySection key={config.name} {...config} />
+            <CategorySection key={config.name} {...config} posts={categoryPosts[config.name] || []} />
           ))}
         </div>
       </div>
