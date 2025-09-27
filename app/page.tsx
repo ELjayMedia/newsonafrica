@@ -97,7 +97,7 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
         const recentPosts = mapPostsToHomePosts(latestPosts.posts ?? [], countryCode)
 
         if (taggedPosts.length === 0 && recentPosts.length === 0) {
-          throw new Error("No posts available")
+          throw new Error("No posts available from WordPress API")
         }
 
         const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
@@ -111,29 +111,11 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
       },
       async () => {
         if (cached.exists) {
+          console.log("[v0] Using stale cached data as fallback")
           return cached.data
         }
 
-        const fallbackPosts = [
-          {
-            id: "fallback-1",
-            slug: "service-notice",
-            title: "News On Africa - Service Notice",
-            excerpt: "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
-            date: new Date().toISOString(),
-            country: countryCode,
-            featuredImage: {
-              node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" },
-            },
-          },
-        ]
-
-        return {
-          taggedPosts: fallbackPosts,
-          recentPosts: fallbackPosts,
-          countryPosts: { [countryCode]: fallbackPosts },
-          featuredPosts: fallbackPosts,
-        }
+        throw new Error("No cached data available and API is unavailable")
       },
     )
 
@@ -143,27 +125,11 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
     console.error("[v0] Homepage data fetch failed:", error)
 
     if (cached.exists) {
+      console.log("[v0] Using stale cached data due to API failure")
       return cached.data
     }
 
-    const fallbackPost = {
-      id: "error-fallback",
-      slug: "service-unavailable",
-      title: "Service Temporarily Unavailable",
-      excerpt: "We're working to restore full service. Thank you for your patience.",
-      date: new Date().toISOString(),
-      country: countryCode,
-      featuredImage: {
-        node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" },
-      },
-    }
-
-    return {
-      taggedPosts: [fallbackPost],
-      recentPosts: [fallbackPost],
-      countryPosts: { [countryCode]: [fallbackPost] },
-      featuredPosts: [fallbackPost],
-    }
+    throw new Error("Unable to load homepage data: API unavailable and no cached data")
   }
 }
 
@@ -185,8 +151,10 @@ export default async function Home() {
       <HomeContent
         initialPosts={[]}
         emptyState={{
-          title: "We're having trouble loading stories",
-          description: "Our content service didn't respond. Please try again, or check /api/health for diagnostics.",
+          title: "Unable to Load Content",
+          description:
+            "We're experiencing connectivity issues with our content service. Please try refreshing the page or check back in a few minutes.",
+          showRetry: true,
         }}
       />
     )

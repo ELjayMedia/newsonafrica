@@ -181,6 +181,7 @@ export function HomeContent({
   }, [handleOnline, handleOffline])
 
   // Create fallback data from initial posts based on current country
+
   const initialCountryPosts = useMemo(
     () => countryPosts[currentCountry] || initialPosts,
     [countryPosts, currentCountry, initialPosts],
@@ -193,6 +194,7 @@ export function HomeContent({
 
   const fallbackData = useMemo(() => {
     if (initialData) return initialData
+
 
     if (baselinePosts.length > 0) {
       const fallbackFeatured = featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6)
@@ -220,16 +222,16 @@ export function HomeContent({
     recentPosts: HomePost[]
   }>([`homepage-data-${currentCountry}`, currentCountry], () => fetchHomeData(currentCountry), {
     fallbackData,
-    revalidateOnMount: !initialData && !baselinePosts.length,
+    revalidateOnMount: !initialData && initialPosts.length === 0,
     revalidateOnFocus: false,
-    revalidateOnReconnect: true, // Revalidate when coming back online
+    revalidateOnReconnect: true,
     refreshInterval: isOffline ? 0 : 300000, // 5 minutes when online
     dedupingInterval: 60000, // 1 minute deduping
     errorRetryCount: 3,
     errorRetryInterval: (retryCount) => Math.min(1000 * 2 ** retryCount, 30000), // Exponential backoff
     onError: (err) => {
       console.error("[v0] SWR Error:", err)
-      if (!initialData && !initialPosts.length) {
+      if (!initialData && initialPosts.length === 0) {
         setIsOffline(true)
       }
     },
