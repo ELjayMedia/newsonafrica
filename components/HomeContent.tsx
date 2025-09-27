@@ -137,21 +137,12 @@ export function HomeContent({
   // Create fallback data from initial posts based on current country
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
-  const fallbackData =
-    initialData ||
-    (baselinePosts.length > 0
-      ? {
-          taggedPosts: baselinePosts.slice(0, 8),
-          featuredPosts: featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6),
-          categories: [],
-          recentPosts: baselinePosts.slice(0, 10),
-        }
-      : {
-          taggedPosts: [],
-          featuredPosts: [],
-          categories: [],
-          recentPosts: [],
-        })
+  const fallbackData = initialData || {
+    taggedPosts: initialPosts.slice(0, 8),
+    featuredPosts: featuredPosts.length ? featuredPosts.slice(0, 6) : initialPosts.slice(0, 6),
+    categories: [],
+    recentPosts: initialPosts.slice(0, 10),
+  }
 
   const { data, error, isLoading, mutate } = useSWR<{
     taggedPosts: HomePost[]
@@ -160,16 +151,16 @@ export function HomeContent({
     recentPosts: HomePost[]
   }>([`homepage-data-${currentCountry}`, currentCountry], () => fetchHomeData(currentCountry), {
     fallbackData,
-    revalidateOnMount: !initialData && !baselinePosts.length,
+    revalidateOnMount: !initialData && initialPosts.length === 0,
     revalidateOnFocus: false,
-    revalidateOnReconnect: true, // Revalidate when coming back online
+    revalidateOnReconnect: true,
     refreshInterval: isOffline ? 0 : 300000, // 5 minutes when online
     dedupingInterval: 60000, // 1 minute deduping
     errorRetryCount: 3,
     errorRetryInterval: (retryCount) => Math.min(1000 * 2 ** retryCount, 30000), // Exponential backoff
     onError: (err) => {
       console.error("[v0] SWR Error:", err)
-      if (!initialData && !initialPosts.length) {
+      if (!initialData && initialPosts.length === 0) {
         setIsOffline(true)
       }
     },

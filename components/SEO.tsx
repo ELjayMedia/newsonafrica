@@ -1,7 +1,4 @@
 import { SchemaOrg } from "@/components/SchemaOrg"
-import { SocialMetadata } from "@/components/SocialMetadata"
-import { CanonicalUrl } from "@/components/CanonicalUrl"
-import Head from "next/head"
 
 interface SEOProps {
   title: string
@@ -30,27 +27,9 @@ export function SEO({
   section,
   schemas = [],
 }: SEOProps) {
-  const path = url.replace(/^https?:\/\/[^/]+/, "")
-
+  // Only render SchemaOrg since it doesn't use Head
   return (
     <>
-      <Head>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-      </Head>
-      <CanonicalUrl path={path} />
-      <SocialMetadata
-        title={title}
-        description={description}
-        image={image}
-        url={url}
-        type={type}
-        publishedTime={publishedTime}
-        modifiedTime={modifiedTime}
-        authorName={authorName}
-        keywords={keywords}
-        section={section}
-      />
       <SchemaOrg schemas={schemas} />
     </>
   )

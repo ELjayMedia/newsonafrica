@@ -1,16 +1,11 @@
-import Head from "next/head"
-import { siteConfig } from "@/config/site"
-
 interface CanonicalUrlProps {
   path: string
 }
 
+// This component is now deprecated in favor of metadata API
+// Canonical URLs should be set in generateMetadata functions
 export function CanonicalUrl({ path }: CanonicalUrlProps) {
-  const canonicalUrl = `${siteConfig.url}${path}`
-
-  return (
-    <Head>
-      <link rel="canonical" href={canonicalUrl} />
-    </Head>
-  )
+  // Component kept for backward compatibility but renders nothing
+  // Canonical URLs are now handled via the metadata API in page components
+  return null
 }

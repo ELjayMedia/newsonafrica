@@ -1,12 +1,12 @@
 import { getWpEndpoints } from "@/config/wp"
-import { wordpressQueries } from "./wordpress-queries"
 import { circuitBreaker } from "./api/circuit-breaker"
 import * as log from "./log"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { mapWpPost } from "./utils/mapWpPost"
-import { APIError } from "./utils/errorHandling"
 import type { HomePost } from "@/types/home"
+import { fetchWithErrorHandling } from "./utils/fetchWithErrorHandling"
+import { retryWithBackoff, isNetworkError } from "../utils/network-utils"
 
 // Simple gql tag replacement
 const gql = String.raw
@@ -44,75 +44,6 @@ const toErrorDetails = (error: unknown) => {
   return { error }
 }
 
-const handleRestFallbackFailure = (message: string, context: any, error: unknown): never => {
-  const details = {
-    ...context,
-    error: toErrorDetails(error),
-  }
-
-  log.error(message, details)
-  throw new APIError(message, "REST_FALLBACK_FAILED", undefined, details)
-}
-
-const handleRestFallbackError = (error: unknown, message: string, context: any) => {
-  const details = {
-    ...context,
-    error: toErrorDetails(error),
-  }
-
-  log.error(message, details)
-  throw new APIError(message, "REST_FALLBACK_ERROR", undefined, details)
-}
-
-// Sample fallback data for when WordPress APIs are unavailable
-const SAMPLE_FALLBACK_POSTS = [
-  {
-    id: "sample-1",
-    slug: "breaking-news-africa-economic-summit",
-    title: { rendered: "African Economic Summit Announces New Trade Partnerships" },
-    excerpt: {
-      rendered: "Leaders from across the continent gather to discuss economic cooperation and trade opportunities...",
-    },
-    date: new Date().toISOString(),
-    featuredImage: { node: { sourceUrl: "/african-economic-summit.jpg", altText: "Economic Summit" } },
-    categories: [{ id: 1, name: "Business", slug: "business" }],
-    author: { node: { name: "News On Africa", slug: "news-team" } },
-  },
-  {
-    id: "sample-2",
-    slug: "technology-innovation-africa",
-    title: { rendered: "Tech Innovation Hubs Expanding Across African Cities" },
-    excerpt: {
-      rendered:
-        "New technology centers are opening in major African cities, fostering innovation and entrepreneurship...",
-    },
-    date: new Date(Date.now() - 3600000).toISOString(),
-    featuredImage: { node: { sourceUrl: "/african-technology-innovation.jpg", altText: "Tech Innovation" } },
-    categories: [{ id: 2, name: "Technology", slug: "technology" }],
-    author: { node: { name: "News On Africa", slug: "news-team" } },
-  },
-  {
-    id: "sample-3",
-    slug: "african-culture-festival-celebration",
-    title: { rendered: "Continental Culture Festival Celebrates African Heritage" },
-    excerpt: {
-      rendered: "A vibrant celebration of African culture, music, and traditions brings communities together...",
-    },
-    date: new Date(Date.now() - 7200000).toISOString(),
-    featuredImage: { node: { sourceUrl: "/african-cultural-festival.png", altText: "Cultural Festival" } },
-    categories: [{ id: 3, name: "Culture", slug: "culture" }],
-    author: { node: { name: "News On Africa", slug: "news-team" } },
-  },
-]
-
-const SAMPLE_FALLBACK_CATEGORIES = [
-  { id: 1, name: "News", slug: "news", description: "Latest news from across Africa" },
-  { id: 2, name: "Business", slug: "business", description: "African business and economic news" },
-  { id: 3, name: "Sport", slug: "sport", description: "Sports news and updates" },
-  { id: 4, name: "Entertainment", slug: "entertainment", description: "Entertainment and lifestyle" },
-  { id: 5, name: "Politics", slug: "politics", description: "Political developments" },
-]
-
 async function executeRestFallback<T>(
   countryCode: string,
   endpoint: string,
@@ -123,7 +54,6 @@ async function executeRestFallback<T>(
   const endpoints = getWpEndpoints(countryCode)
   const baseUrl = endpoints.rest
 
-  // Input validation
   if (!endpoint || typeof endpoint !== "string") {
     throw new Error("Invalid REST endpoint provided")
   }
@@ -132,7 +62,6 @@ async function executeRestFallback<T>(
     throw new Error("Invalid REST API base URL")
   }
 
-  // Sanitize and validate parameters
   const sanitizedParams = sanitizeRestParams(params)
   const queryString = new URLSearchParams(sanitizedParams).toString()
   const url = `${baseUrl}/${endpoint.replace(/^\//, "")}${queryString ? `?${queryString}` : ""}`
@@ -140,46 +69,43 @@ async function executeRestFallback<T>(
   console.log(`[v0] Attempting API operation: ${operation}`)
 
   try {
-    return await circuitBreaker.execute<T[]>(url, operation, async () => {
-      console.log(`[v0] REST API request to ${url}`)
+    return await retryWithBackoff(
+      async () => {
+        console.log(`[v0] REST API request to ${url}`)
 
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "NewsOnAfrica/1.0",
-          ...(process.env.WORDPRESS_AUTH_TOKEN && {
-            Authorization: `Bearer ${process.env.WORDPRESS_AUTH_TOKEN}`,
-          }),
-          ...(process.env.WP_APP_USERNAME &&
-            process.env.WP_APP_PASSWORD && {
-              Authorization: `Basic ${Buffer.from(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`).toString("base64")}`,
+        const response = await fetchWithErrorHandling<T[]>(url, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "NewsOnAfrica/1.0",
+            ...(process.env.WORDPRESS_AUTH_TOKEN && {
+              Authorization: `Bearer ${process.env.WORDPRESS_AUTH_TOKEN}`,
             }),
-        },
-        signal: AbortSignal.timeout(15000), // 15 second timeout
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error")
-        log.error(`[v0] WordPress API request failed for ${url}`, {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
+            ...(process.env.WP_APP_USERNAME &&
+              process.env.WP_APP_PASSWORD && {
+                Authorization: `Basic ${Buffer.from(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`).toString("base64")}`,
+              }),
+          },
+          timeout: 15000,
+          retries: 2,
+          retryDelay: 1000,
         })
-        throw new Error(`REST API request failed: ${response.status} ${response.statusText}`)
-      }
 
-      const data = await response.json()
+        if (!response.success || !response.data) {
+          throw new Error(response.error || `REST API request failed: ${response.status} ${response.statusText}`)
+        }
 
-      // Validate response is an array
-      if (!Array.isArray(data)) {
-        log.warn(`[v0] REST API response is not an array for ${url}`, { response: data })
-        return []
-      }
+        if (!Array.isArray(response.data)) {
+          log.warn(`[v0] REST API response is not an array for ${url}`, { response: response.data })
+          return []
+        }
 
-      console.log(`[v0] API operation successful: ${operation}`)
-      return data as T[]
-    })
+        console.log(`[v0] API operation successful: ${operation}`)
+        return response.data
+      },
+      3,
+      2000,
+    )
   } catch (error) {
     log.error(`[v0] ${operation}`, {
       countryCode,
@@ -189,30 +115,18 @@ async function executeRestFallback<T>(
         message: error instanceof Error ? error.message : "Unknown error",
         name: error instanceof Error ? error.name : "Error",
         stack: error instanceof Error ? error.stack : undefined,
+        isNetworkError: isNetworkError(error),
       },
     })
 
     console.log(`[v0] API operation failed: ${operation}`, error instanceof Error ? error.message : "Unknown error")
 
-    // Return fallback data if provided
     if (fallbackData && Array.isArray(fallbackData)) {
       console.log(`[v0] Using provided fallback data for: ${operation}`)
       return fallbackData
     }
 
-    // Return sample data for critical operations
-    if (operation.includes("Latest posts") || operation.includes("FP tagged posts")) {
-      console.log(`[v0] Using sample posts fallback for: ${operation}`)
-      return getSamplePosts() as T[]
-    }
-
-    if (operation.includes("Categories")) {
-      console.log(`[v0] Using provided fallback data for: ${operation}`)
-      return getSampleCategories() as T[]
-    }
-
-    console.log(`[v0] No fallback available, returning empty array for: ${operation}`)
-    return []
+    throw new Error(`API operation failed: ${operation}`)
   }
 }
 
@@ -240,82 +154,6 @@ function sanitizeRestParams(params: Record<string, any>): Record<string, string>
   }
 
   return sanitized
-}
-
-function getSamplePosts(): WordPressPost[] {
-  return [
-    {
-      id: 1001,
-      date: new Date().toISOString(),
-      slug: "african-economic-growth-2025",
-      title: { rendered: "African Economic Growth Shows Promise in 2025" },
-      excerpt: {
-        rendered:
-          "Economic indicators across the continent show positive trends as African nations continue to diversify their economies and strengthen regional partnerships.",
-      },
-      content: { rendered: "African economies are experiencing unprecedented growth..." },
-      _embedded: {
-        "wp:featuredmedia": [
-          {
-            source_url: "/african-economic-summit.jpg",
-            alt_text: "African Economic Summit",
-          },
-        ],
-      },
-    },
-    {
-      id: 1002,
-      date: new Date(Date.now() - 86400000).toISOString(),
-      slug: "technology-innovation-africa",
-      title: { rendered: "Technology Innovation Hubs Flourish Across Africa" },
-      excerpt: {
-        rendered:
-          "From fintech in Nigeria to renewable energy solutions in Kenya, African innovators are leading the charge in technological advancement.",
-      },
-      content: { rendered: "Technology hubs across Africa are becoming centers of innovation..." },
-      _embedded: {
-        "wp:featuredmedia": [
-          {
-            source_url: "/african-technology-innovation.jpg",
-            alt_text: "African Technology Innovation",
-          },
-        ],
-      },
-    },
-    {
-      id: 1003,
-      date: new Date(Date.now() - 172800000).toISOString(),
-      slug: "cultural-festivals-celebrate-heritage",
-      title: { rendered: "Cultural Festivals Celebrate African Heritage" },
-      excerpt: {
-        rendered:
-          "Traditional festivals across the continent showcase the rich cultural diversity and heritage that defines African communities.",
-      },
-      content: { rendered: "Cultural celebrations are taking place across Africa..." },
-      _embedded: {
-        "wp:featuredmedia": [
-          {
-            source_url: "/african-cultural-festival.png",
-            alt_text: "African Cultural Festival",
-          },
-        ],
-      },
-    },
-  ]
-}
-
-function getSampleCategories(): WordPressCategory[] {
-  return [
-    { id: 1, name: "News", slug: "news", description: "Latest news from across Africa", count: 150 },
-    { id: 2, name: "Business", slug: "business", description: "African business and economic news", count: 89 },
-    { id: 3, name: "Sport", slug: "sport", description: "Sports news and updates", count: 67 },
-    { id: 4, name: "Entertainment", slug: "entertainment", description: "Entertainment and culture", count: 45 },
-    { id: 5, name: "Life", slug: "life", description: "Lifestyle and living", count: 34 },
-    { id: 6, name: "Health", slug: "health", description: "Health and wellness news", count: 28 },
-    { id: 7, name: "Politics", slug: "politics", description: "Political news and analysis", count: 56 },
-    { id: 8, name: "Food", slug: "food", description: "Food and culinary culture", count: 23 },
-    { id: 9, name: "Opinion", slug: "opinion", description: "Opinion pieces and editorials", count: 41 },
-  ]
 }
 
 export const mapPostsToHomePosts = (posts: any[] | null | undefined, countryCode: string): HomePost[] => {
@@ -443,32 +281,29 @@ async function fetchFromWpGraphQL<T>(
   const operation = `GraphQL query for ${countryCode}`
 
   try {
-    return await circuitBreaker.execute<T | null>(url, operation, async () => {
-      // Input validation
-      if (!query || typeof query !== "string") {
-        throw new Error("Invalid GraphQL query provided")
-      }
+    return await retryWithBackoff(
+      async () => {
+        if (!query || typeof query !== "string") {
+          throw new Error("Invalid GraphQL query provided")
+        }
 
-      if (!url || !url.startsWith("http")) {
-        throw new Error("Invalid GraphQL endpoint URL")
-      }
+        if (!url || !url.startsWith("http")) {
+          throw new Error("Invalid GraphQL endpoint URL")
+        }
 
-      // Sanitize variables
-      const sanitizedVariables = sanitizeGraphQLVariables(variables)
+        const sanitizedVariables = sanitizeGraphQLVariables(variables)
 
-      const requestBody = {
-        query: query.trim(),
-        variables: sanitizedVariables,
-      }
+        const requestBody = {
+          query: query.trim(),
+          variables: sanitizedVariables,
+        }
 
-      console.log(`[v0] GraphQL request to ${url}:`, {
-        query: query.substring(0, 100) + "...",
-        variables: sanitizedVariables,
-      })
+        console.log(`[v0] GraphQL request to ${url}:`, {
+          query: query.substring(0, 100) + "...",
+          variables: sanitizedVariables,
+        })
 
-      let response: Response
-      try {
-        response = await fetch(url, {
+        const response = await fetchWithErrorHandling<WordPressGraphQLResponse<T>>(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -479,64 +314,54 @@ async function fetchFromWpGraphQL<T>(
             }),
           },
           body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(15000), // 15 second timeout
+          timeout: 15000,
+          retries: 2,
+          retryDelay: 1000,
         })
-      } catch (fetchError) {
-        const errorMessage = fetchError instanceof Error ? fetchError.message : "Unknown fetch error"
-        console.error(`[v0] GraphQL fetch failed for ${url}:`, errorMessage)
 
-        if (errorMessage.includes("fetch")) {
-          throw new Error(
-            `Network error: Unable to connect to GraphQL endpoint at ${url}. This may indicate the GraphQL plugin is not installed or the endpoint is not accessible.`,
-          )
+        if (!response.success || !response.data) {
+          if (response.error?.includes("404")) {
+            throw new Error(
+              `GraphQL endpoint not found (404). The WordPress site may not have GraphQL enabled or the endpoint URL is incorrect.`,
+            )
+          } else if (response.error?.includes("500")) {
+            throw new Error(
+              `GraphQL server error (500). There may be an issue with the WordPress GraphQL configuration.`,
+            )
+          } else {
+            throw new Error(response.error || `GraphQL request failed`)
+          }
         }
-        throw new Error(`GraphQL request failed: ${errorMessage}`)
-      }
 
-      if (!response.ok) {
-        const statusText = response.statusText || "Unknown error"
-        console.error(`[v0] GraphQL HTTP error ${response.status} for ${url}:`, statusText)
+        const data = response.data
 
-        if (response.status === 404) {
-          throw new Error(
-            `GraphQL endpoint not found (404). The WordPress site may not have GraphQL enabled or the endpoint URL is incorrect.`,
-          )
-        } else if (response.status === 500) {
-          throw new Error(`GraphQL server error (500). There may be an issue with the WordPress GraphQL configuration.`)
-        } else {
-          throw new Error(`GraphQL HTTP error ${response.status}: ${statusText}`)
+        if (data.errors && data.errors.length > 0) {
+          const errorMessages = data.errors
+            .map((err) =>
+              typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err),
+            )
+            .join("; ")
+          console.error(`[v0] GraphQL errors for ${url}:`, data.errors)
+          throw new Error(`GraphQL query errors: ${errorMessages}`)
         }
-      }
 
-      let data: WordPressGraphQLResponse<T>
-      try {
-        data = await response.json()
-      } catch (parseError) {
-        console.error(`[v0] GraphQL JSON parse error for ${url}:`, parseError)
-        throw new Error("Invalid JSON response from GraphQL endpoint")
-      }
+        if (!data.data) {
+          console.error(`[v0] GraphQL response missing data field for ${url}:`, data)
+          throw new Error("GraphQL response missing data field")
+        }
 
-      if (data.errors && data.errors.length > 0) {
-        const errorMessages = data.errors
-          .map((err) =>
-            typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err),
-          )
-          .join("; ")
-        console.error(`[v0] GraphQL errors for ${url}:`, data.errors)
-        throw new Error(`GraphQL query errors: ${errorMessages}`)
-      }
-
-      if (!data.data) {
-        console.error(`[v0] GraphQL response missing data field for ${url}:`, data)
-        throw new Error("GraphQL response missing data field")
-      }
-
-      console.log(`[v0] GraphQL request successful for ${url}`)
-      return data.data
-    })
+        console.log(`[v0] GraphQL request successful for ${url}`)
+        return data.data
+      },
+      3,
+      2000,
+    )
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error(`[v0] WordPress GraphQL request failed for ${url}`, { error: errorMessage })
+    console.error(`[v0] WordPress GraphQL request failed for ${url}`, {
+      error: errorMessage,
+      isNetworkError: isNetworkError(error),
+    })
 
     return null
   }
@@ -551,13 +376,10 @@ function sanitizeGraphQLVariables(variables: Record<string, any>): Record<string
     }
 
     if (typeof value === "string") {
-      // Basic XSS prevention and length limits
       sanitized[key] = value.trim().substring(0, 1000)
     } else if (typeof value === "number") {
-      // Ensure reasonable numeric limits
       sanitized[key] = Math.max(0, Math.min(value, 10000))
     } else if (Array.isArray(value)) {
-      // Limit array size and sanitize string elements
       sanitized[key] = value
         .slice(0, 100)
         .map((item) => (typeof item === "string" ? item.trim().substring(0, 200) : item))
@@ -953,20 +775,33 @@ const cursorToOffset = (cursor: string | null | undefined) => {
   return index + 1
 }
 
-export async function getLatestPostsForCountry(countryCode: string, limit = 10): Promise<WordPressPost[]> {
+export async function getLatestPostsForCountry(
+  countryCode: string,
+  limit = 10,
+  cursor?: string | null,
+): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null }> {
   try {
     const gqlData = await fetchFromWpGraphQL<any>(countryCode, LATEST_POSTS_QUERY, {
       first: limit,
+      after: cursor,
     })
 
     if (gqlData?.posts?.nodes) {
-      return gqlData.posts.nodes
+      return {
+        posts: gqlData.posts.nodes,
+        hasNextPage: gqlData.posts.pageInfo?.hasNextPage ?? false,
+        endCursor: gqlData.posts.pageInfo?.endCursor ?? null,
+      }
     }
   } catch (error) {
-    log.warn(`[v0] GraphQL failed for latest posts, trying REST fallback`, { error })
+    log.warn(`[v0] GraphQL failed for latest posts, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
   }
 
-  return executeRestFallback<WordPressPost>(
+  const offset = cursorToOffset(cursor)
+  const posts = await executeRestFallback<WordPressPost>(
     countryCode,
     "posts",
     {
@@ -974,63 +809,63 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 10):
       _embed: 1,
       order: "desc",
       orderby: "date",
+      ...(offset && { offset }),
     },
-    `[v0] Latest posts REST fallback failed for ${countryCode}`,
+    `Latest posts REST fallback for ${countryCode}`,
   )
+
+  return {
+    posts,
+    hasNextPage: posts.length === limit,
+    endCursor: posts.length > 0 ? Buffer.from(`post:${posts[posts.length - 1].id}`).toString("base64") : null,
+  }
 }
 
 export async function getFpTaggedPosts(countryCode: string, limit = 8): Promise<WordPressPost[]> {
   try {
-    // First get the FP tag
-    const fpTag = await executeRestFallback<WordPressTag>(
-      countryCode,
-      "tags",
-      { slug: "fp" },
-      `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
-    )
-
-    if (!fpTag || fpTag.length === 0) {
-      console.log(`[v0] No FP tag found for ${countryCode}`)
-      return getSamplePosts().slice(0, limit)
-    }
-
-    const tagId = fpTag[0].id
-
-    // Try GraphQL first
     const gqlData = await fetchFromWpGraphQL<any>(countryCode, FP_TAGGED_POSTS_QUERY, {
       tagSlugs: ["fp"],
       first: limit,
     })
 
-    if (gqlData?.posts?.nodes) {
+    if (gqlData?.posts?.nodes && gqlData.posts.nodes.length > 0) {
       return gqlData.posts.nodes
     }
   } catch (error) {
-    log.warn(`[v0] GraphQL failed for FP tagged posts, trying REST fallback`, { error })
+    log.warn(`[v0] GraphQL failed for FP tagged posts, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
   }
 
-  // REST fallback
-  const fpTag = await executeRestFallback<WordPressTag>(
-    countryCode,
-    "tags",
-    { slug: "fp" },
-    `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
-  )
-
-  if (fpTag && fpTag.length > 0) {
-    return executeRestFallback<WordPressPost>(
+  try {
+    const fpTag = await executeRestFallback<WordPressTag>(
       countryCode,
-      "posts",
-      {
-        tags: fpTag[0].id,
-        per_page: limit,
-        _embed: 1,
-      },
-      `[v0] FP tagged posts REST fallback failed for ${countryCode}`,
+      "tags",
+      { slug: "fp" },
+      `FP tag lookup REST fallback for ${countryCode}`,
     )
+
+    if (fpTag && fpTag.length > 0) {
+      return executeRestFallback<WordPressPost>(
+        countryCode,
+        "posts",
+        {
+          tags: fpTag[0].id,
+          per_page: limit,
+          _embed: 1,
+        },
+        `FP tagged posts REST fallback for ${countryCode}`,
+      )
+    }
+  } catch (error) {
+    log.error(`[v0] Failed to fetch FP tagged posts for ${countryCode}`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
   }
 
-  return getSamplePosts().slice(0, limit)
+  throw new Error(`Unable to fetch FP tagged posts for ${countryCode}`)
 }
 
 export const getFpTaggedPostsForCountry = getFpTaggedPosts
@@ -1061,149 +896,162 @@ export async function getPostsForCategories(
 
   const results: Record<string, CategoryPostsResult> = {}
 
-  const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_BATCH_QUERY, {
-    categories: normalizedSlugs,
-    postsPerCategory: limit,
-  })
+  try {
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_BATCH_QUERY, {
+      categories: normalizedSlugs,
+      postsPerCategory: limit,
+    })
 
-  if (gqlData?.categories?.nodes?.length) {
-    gqlData.categories.nodes.forEach((node: any) => {
-      if (!node?.slug) {
-        return
+    if (gqlData?.categories?.nodes?.length) {
+      gqlData.categories.nodes.forEach((node: any) => {
+        if (!node?.slug) {
+          return
+        }
+
+        const slug = String(node.slug).toLowerCase()
+        const category: WordPressCategory = {
+          id: node.databaseId,
+          name: node.name,
+          slug: node.slug,
+          description: node.description ?? undefined,
+          count: node.count ?? undefined,
+        }
+
+        const posts = (node.posts?.nodes ?? []).map((post: any) => mapWpPost(post, "gql", countryCode))
+
+        results[slug] = {
+          category,
+          posts,
+          hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
+          endCursor: node.posts?.pageInfo?.endCursor ?? null,
+        }
+      })
+
+      normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+      return results
+    }
+  } catch (error) {
+    log.warn(`[v0] GraphQL failed for category posts batch, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
+  }
+
+  // REST fallback for category posts
+  for (const slug of normalizedSlugs) {
+    try {
+      const categoryData = await executeRestFallback<WordPressCategory>(
+        countryCode,
+        "categories",
+        { slug },
+        `Category lookup REST fallback for ${slug}`,
+      )
+
+      if (categoryData && categoryData.length > 0) {
+        const category = categoryData[0]
+        const posts = await executeRestFallback<WordPressPost>(
+          countryCode,
+          "posts",
+          {
+            categories: category.id,
+            per_page: limit,
+            _embed: 1,
+          },
+          `Category posts REST fallback for ${slug}`,
+        )
+
+        results[slug] = {
+          category,
+          posts,
+          hasNextPage: posts.length === limit,
+          endCursor: posts.length > 0 ? Buffer.from(`post:${posts[posts.length - 1].id}`).toString("base64") : null,
+        }
       }
+    } catch (error) {
+      log.error(`[v0] Failed to fetch posts for category ${slug}`, {
+        error,
+        isNetworkError: isNetworkError(error),
+      })
+    }
+  }
 
-      const slug = String(node.slug).toLowerCase()
-      const category: WordPressCategory = {
+  normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+  return results
+}
+
+export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+  try {
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORIES_QUERY)
+
+    if (gqlData?.categories?.nodes) {
+      return gqlData.categories.nodes.map((node: any) => ({
         id: node.databaseId,
         name: node.name,
         slug: node.slug,
         description: node.description ?? undefined,
         count: node.count ?? undefined,
-      }
-
-      const posts = (node.posts?.nodes ?? []).map((post: any) => mapWpPost(post, "gql", countryCode))
-
-      results[slug] = {
-        category,
-        posts,
-        hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
-        endCursor: node.posts?.pageInfo?.endCursor ?? null,
-      }
+      }))
+    }
+  } catch (error) {
+    log.warn(`[v0] GraphQL failed for categories, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
     })
-
-    normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
-    return results
   }
 
-  const categories = await executeRestFallback<WordPressCategory>(
+  return executeRestFallback<WordPressCategory>(
     countryCode,
     "categories",
-    { slug: normalizedSlugs.join(",") },
-    `[v0] Category batch REST fallback failed for ${normalizedSlugs.join(", ")} (${countryCode})`,
+    { per_page: 100, hide_empty: true },
+    `Categories REST fallback for ${countryCode}`,
   )
-
-  const categoriesBySlug = new Map<string, WordPressCategory>()
-  categories.forEach((cat: any) => {
-    if (!cat?.slug) {
-      return
-    }
-
-    const slug = String(cat.slug).toLowerCase()
-    categoriesBySlug.set(slug, {
-      id: cat.id ?? cat.databaseId,
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description ?? undefined,
-      count: cat.count ?? undefined,
-    })
-  })
-
-  for (const slug of normalizedSlugs) {
-    const category = categoriesBySlug.get(slug) ?? null
-
-    if (!category) {
-      ensureEntry(results, slug)
-      continue
-    }
-
-    const cacheKey = buildCategoryCacheKey(countryCode, category.id, limit)
-    const cached = restCategoryPostsCache.get(cacheKey)
-    let posts: WordPressPost[] = []
-
-    if (cached && cached.expiresAt > Date.now()) {
-      posts = cached.posts
-    } else {
-      const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
-      try {
-        posts = await executeRestFallback<WordPressPost>(
-          countryCode,
-          endpoint,
-          params,
-          `[v0] Posts by category REST fallback failed for ${category.slug} (${countryCode})`,
-        )
-
-        restCategoryPostsCache.set(cacheKey, {
-          posts,
-          expiresAt: Date.now() + REST_CATEGORY_CACHE_TTL_MS,
-        })
-      } catch (error) {
-        restCategoryPostsCache.delete(cacheKey)
-        posts = []
-      }
-    }
-
-    results[slug] = {
-      category,
-      posts,
-      hasNextPage: posts.length === limit,
-      endCursor: null,
-    }
-  }
-
-  normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
-
-  return results
 }
 
-export async function getPostsByCategoryForCountry(
+export async function getPostsByCategory(
   countryCode: string,
   categorySlug: string,
   limit = 20,
+  cursor?: string | null,
 ): Promise<CategoryPostsResult> {
-  const gqlData = await fetchFromWpGraphQL<any>(countryCode, POSTS_BY_CATEGORY_QUERY, {
-    category: categorySlug,
-    first: limit,
-  })
+  try {
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_QUERY, {
+      slug: categorySlug,
+      first: limit,
+      after: cursor,
+    })
 
-  if (gqlData?.posts && gqlData?.categories) {
-    const catNode = gqlData.categories.nodes[0]
-    const category = catNode
-      ? {
-          id: catNode.databaseId,
-          name: catNode.name,
-          slug: catNode.slug,
-          description: catNode.description ?? undefined,
-          count: catNode.count ?? undefined,
-        }
-      : null
-    const posts = gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
-    return {
-      category,
-      posts,
-      hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-      endCursor: gqlData.posts.pageInfo.endCursor,
+    if (gqlData?.category) {
+      const category: WordPressCategory = {
+        id: gqlData.category.databaseId,
+        name: gqlData.category.name,
+        slug: gqlData.category.slug,
+        description: gqlData.category.description ?? undefined,
+        count: gqlData.category.count ?? undefined,
+      }
+
+      return {
+        category,
+        posts: gqlData.category.posts?.nodes ?? [],
+        hasNextPage: gqlData.category.posts?.pageInfo?.hasNextPage ?? false,
+        endCursor: gqlData.category.posts?.pageInfo?.endCursor ?? null,
+      }
     }
+  } catch (error) {
+    log.warn(`[v0] GraphQL failed for category posts, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
   }
 
-  const categories = await executeRestFallback<WordPressCategory>(
+  // REST fallback
+  const categoryData = await executeRestFallback<WordPressCategory>(
     countryCode,
     "categories",
     { slug: categorySlug },
-    `[v0] Category REST fallback failed for ${categorySlug} (${countryCode})`,
+    `Category lookup REST fallback for ${categorySlug}`,
   )
 
-  const category = categories[0] || null
-  if (!category) {
+  if (!categoryData || categoryData.length === 0) {
     return {
       category: null,
       posts: [],
@@ -1212,482 +1060,39 @@ export async function getPostsByCategoryForCountry(
     }
   }
 
-  const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
-  const posts = await executeRestFallback<WordPressPost>(
-    countryCode,
-    endpoint,
-    params,
-    `[v0] Posts by category REST fallback failed for ${categorySlug} (${countryCode})`,
-  )
-
-  return {
-    category,
-    posts: posts || [],
-    hasNextPage: false,
-    endCursor: null,
-  }
-}
-
-export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  const query = `
-    query GetCategories {
-      categories(first: 20) {
-        nodes {
-          databaseId
-          name
-          slug
-          description
-          count
-        }
-      }
-    }
-  `
-
-  try {
-    const data = await fetchFromWpGraphQL<{ categories: { nodes: WordPressCategory[] } }>(countryCode, query)
-
-    if (data?.categories?.nodes && Array.isArray(data.categories.nodes)) {
-      return data.categories.nodes.filter((cat) => cat && cat.slug && cat.name)
-    }
-
-    console.log(`[v0] GraphQL categories data invalid or empty, using fallback`)
-    return getSampleCategories()
-  } catch (error) {
-    console.error(`[v0] Failed to fetch categories via GraphQL:`, error)
-
-    try {
-      const restData = await executeRestFallback<WordPressCategory[]>(
-        countryCode, // Pass countryCode to executeRestFallback
-        "categories", // Endpoint
-        {
-          // Params
-          slug: "news,business,sport,entertainment,life,health,politics,food,opinion",
-          per_page: 9,
-          hide_empty: false,
-        },
-        `[v0] Category batch REST fallback failed for news, business, sport, entertainment, life, health, politics, food, opinion (${countryCode})`, // Operation name
-        getSampleCategories(), // Fallback data
-      )
-
-      return Array.isArray(restData) ? restData : getSampleCategories()
-    } catch (restError) {
-      console.error(`[v0] REST API fallback also failed:`, restError)
-      return getSampleCategories()
-    }
-  }
-}
-
-export async function getRelatedPostsForCountry(countryCode: string, postId: string, limit = 6) {
-  const gqlPost = await fetchFromWpGraphQL<any>(countryCode, POST_CATEGORIES_QUERY, { id: Number(postId) })
-  if (gqlPost?.post) {
-    const catIds = gqlPost.post.categories.nodes.map((c: any) => c.databaseId)
-    if (catIds.length > 0) {
-      const gqlData = await fetchFromWpGraphQL<any>(countryCode, RELATED_POSTS_QUERY, {
-        categoryIds: catIds,
-        excludeId: Number(postId),
-        first: limit,
-      })
-      if (gqlData?.posts) {
-        const posts = gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
-        return posts.filter((p) => p.id !== Number(postId))
-      }
-    }
-  }
-  const post = await executeRestFallback<WordPressPost>(
-    countryCode,
-    `posts/${postId}`,
-    {},
-    `[v0] Related posts REST fallback failed for base post ${postId} (${countryCode})`,
-  )
-  const categoryIds: number[] = post._embedded?.["wp:term"]?.[0]?.map((cat: any) => cat.id) || []
-  if (categoryIds.length === 0) return []
-  const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
-  const posts = await executeRestFallback<WordPressPost>(
-    countryCode,
-    endpoint,
-    params,
-    `[v0] Related posts REST fallback failed for ${postId} (${countryCode})`,
-  )
-  return posts.filter((p) => p.id !== Number(postId))
-}
-
-export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
-  const gqlData = await fetchFromWpGraphQL<any>(countryCode, FEATURED_POSTS_QUERY, {
-    first: limit,
-  })
-  if (gqlData?.posts) {
-    return gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
-  }
-  // REST fallback for featured posts
+  const category = categoryData[0]
+  const offset = cursorToOffset(cursor)
   const posts = await executeRestFallback<WordPressPost>(
     countryCode,
     "posts",
     {
+      categories: category.id,
       per_page: limit,
       _embed: 1,
-      order: "desc",
-      orderby: "date",
-      featured: true, // Assuming 'featured' is a valid REST API parameter for featured posts
+      ...(offset && { offset }),
     },
-    `[v0] Featured posts REST fallback failed for ${countryCode}`,
-  )
-  return posts
-}
-
-export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
-export const getPostsByCategory = (slug: string, limit = 20) =>
-  getPostsByCategoryForCountry(DEFAULT_COUNTRY, slug, limit)
-export const getCategories = () => getCategoriesForCountry(DEFAULT_COUNTRY)
-export const getRelatedPosts = async (
-  postId: string,
-  categories: string[] = [],
-  tags: string[] = [],
-  limit = 6,
-  countryCode?: string,
-): Promise<WordPressPost[]> => {
-  const country = countryCode || DEFAULT_COUNTRY
-
-  // If tags are provided, attempt tag-intersection query via REST API
-  if (tags.length > 0) {
-    const { endpoint, params } = wordpressQueries.relatedPostsByTags(tags, postId, limit)
-    try {
-      const posts = await executeRestFallback<WordPressPost>(
-        country,
-        endpoint,
-        params,
-        `[v0] Related posts by tags REST fallback failed for ${postId} (${country})`,
-      )
-      return posts.filter((p) => p.id !== Number(postId))
-    } catch (error) {
-      log.error(`[v0] Related posts by tags request failed for ${postId}`, {
-        country,
-        postId,
-        tags,
-        error,
-      })
-      return []
-    }
-  }
-
-  const posts = await getRelatedPostsForCountry(country, postId, limit)
-  return posts.filter((p) => p.id !== Number(postId))
-}
-
-// Legacy-compatible helper functions ---------------------------------------
-
-export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY) => {
-  const posts = await getLatestPostsForCountry(countryCode, limit)
-  return posts
-}
-
-export const fetchTaggedPosts = async (tagSlug: string, limit = 10, countryCode = DEFAULT_COUNTRY) => {
-  const tags = await executeRestFallback<WordPressTag>(
-    countryCode,
-    "tags",
-    { slug: tagSlug },
-    `[v0] Tag lookup REST fallback failed for ${tagSlug} (${countryCode})`,
-  )
-  const tag = tags[0]
-  if (!tag) return []
-  const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-  return await executeRestFallback<WordPressPost>(
-    countryCode,
-    endpoint,
-    params,
-    `[v0] Tagged posts REST fallback failed for ${tagSlug} (${countryCode})`,
-  )
-}
-
-export async function fetchPosts(
-  options:
-    | number
-    | {
-        page?: number
-        perPage?: number
-        category?: string
-        tag?: string
-        search?: string
-        author?: string
-        featured?: boolean
-        countryCode?: string
-        ids?: Array<number | string>
-        countryTermId?: number
-      } = {},
-) {
-  if (typeof options === "number") {
-    const { endpoint, params } = wordpressQueries.recentPosts(options)
-    return (await fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params })) || []
-  }
-
-  const {
-    page = 1,
-    perPage = 10,
-    category,
-    tag,
-    search,
-    author,
-    featured,
-    countryCode = DEFAULT_COUNTRY,
-    ids,
-    countryTermId,
-  } = options
-
-  const query = wordpressQueries.posts({
-    page,
-    perPage,
-    category,
-    tag,
-    search,
-    author,
-    featured,
-    ids,
-    countryTermId,
-  })
-  const result = await fetchFromWp<WordPressPost[]>(countryCode, query, {
-    withHeaders: true,
-  })
-  const total = Number(result?.headers.get("X-WP-Total") || "0")
-  const data = result?.data || []
-  return { data, total }
-}
-
-export const fetchCategories = (countryCode = DEFAULT_COUNTRY) => getCategoriesForCountry(countryCode)
-
-export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.tags()
-  return (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })) || []
-}
-
-export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.authors()
-  return (await fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params })) || []
-}
-
-export async function resolveCountryTermId(slug: string): Promise<number | null> {
-  const base = getWpEndpoints(process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY).rest
-  const res = await fetch(`${base}/countries?slug=${slug}`)
-  if (!res.ok) return null
-  const data = await res.json()
-  return data?.[0]?.id ?? null
-}
-
-export async function fetchPost({
-  slug,
-  countryCode = DEFAULT_COUNTRY,
-  countryTermId,
-}: {
-  slug: string
-  countryCode?: string
-  countryTermId?: number
-}) {
-  const { endpoint, params } = wordpressQueries.postBySlug(slug)
-  if (countryTermId) params.countries = countryTermId
-  const posts = await fetchFromWp<WordPressPost[]>(countryCode, {
-    endpoint,
-    params,
-  })
-  return posts?.[0] || null
-}
-
-export const fetchCountries = async () => {
-  return Object.values(COUNTRIES)
-}
-
-export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
-  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug))
-  return tags?.[0] || null
-}
-
-export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.tags()
-  return (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params })) || []
-}
-
-export async function fetchAuthorData(
-  slug: string,
-  cursor: string | null = null,
-  countryCode = DEFAULT_COUNTRY,
-  limit = 10,
-) {
-  const data = await fetchFromWpGraphQL<any>(countryCode, AUTHOR_DATA_QUERY, {
-    slug,
-    first: limit,
-  })
-  if (!data?.user) return null
-  return {
-    ...data.user,
-    posts: {
-      nodes: data.user.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode)),
-      pageInfo: data.user.posts.pageInfo,
-    },
-  }
-}
-
-interface AuthorLookupResult {
-  author: WordPressAuthor
-  posts: WordPressPost[]
-  pageInfo?: {
-    endCursor: string | null
-    hasNextPage: boolean
-  }
-}
-
-const coerceToNumber = (value: unknown): number => {
-  if (typeof value === "number") return value
-  if (typeof value === "string") {
-    const numeric = Number(value)
-    if (!Number.isNaN(numeric)) {
-      return numeric
-    }
-
-    try {
-      const decoded = Buffer.from(value, "base64").toString("ascii")
-      const parts = decoded.split(":")
-      const maybeNumber = Number(parts[parts.length - 1])
-      if (!Number.isNaN(maybeNumber)) {
-        return maybeNumber
-      }
-    } catch {
-      // Ignore decoding errors and fall through to default
-    }
-  }
-  return 0
-}
-
-const selectAvatarUrl = (avatar: any): { url?: string } | undefined => {
-  if (!avatar) return undefined
-  if (typeof avatar === "object" && "url" in avatar) {
-    const url = (avatar as { url?: string }).url
-    return url ? { url } : undefined
-  }
-  if (typeof avatar === "object" && "96" in avatar) {
-    const urls = avatar as Record<string, string>
-    return {
-      url: urls["96"] || urls["48"] || urls["24"],
-    }
-  }
-  return undefined
-}
-
-export async function getAuthorBySlug(
-  slug: string,
-  { countryCode = DEFAULT_COUNTRY, postLimit = 12 }: { countryCode?: string; postLimit?: number } = {},
-): Promise<AuthorLookupResult | null> {
-  const gqlAuthor = await fetchAuthorData(slug, null, countryCode, postLimit)
-  if (gqlAuthor) {
-    return {
-      author: {
-        id: coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id),
-        name: gqlAuthor.name,
-        slug: gqlAuthor.slug,
-        description: gqlAuthor.description ?? undefined,
-        avatar: selectAvatarUrl(gqlAuthor.avatar),
-      },
-      posts: gqlAuthor.posts.nodes ?? [],
-      pageInfo: gqlAuthor.posts.pageInfo,
-    }
-  }
-
-  const restAuthors = await executeRestFallback<WordPressAuthor>(
-    countryCode,
-    "users",
-    { slug },
-    `[v0] Author REST fallback failed for ${slug} (${countryCode})`,
-  )
-
-  const restAuthor = restAuthors[0]
-  if (!restAuthor) {
-    return null
-  }
-
-  const query = wordpressQueries.posts({
-    page: 1,
-    perPage: postLimit,
-    author: String(restAuthor.id),
-  })
-  const posts = await executeRestFallback<WordPressPost>(
-    countryCode,
-    query.endpoint,
-    query.params,
-    `[v0] Author posts REST fallback failed for ${slug} (${countryCode})`,
+    `Category posts REST fallback for ${categorySlug}`,
   )
 
   return {
-    author: {
-      id: restAuthor.id,
-      name: restAuthor.name,
-      slug: restAuthor.slug,
-      description: restAuthor.description || undefined,
-      avatar: selectAvatarUrl(restAuthor.avatar_urls),
-    },
+    category,
     posts,
+    hasNextPage: posts.length === limit,
+    endCursor: posts.length > 0 ? Buffer.from(`post:${posts[posts.length - 1].id}`).toString("base64") : null,
   }
 }
 
-export async function fetchCategoryPosts(slug: string, cursor: string | null = null, countryCode = DEFAULT_COUNTRY) {
-  const data = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_QUERY, {
-    slug,
-    after: cursor,
-    first: 10,
-  })
-  if (!data?.category || !data?.category?.posts) return null
-  const catNode = data.category
-  const category = catNode
-    ? {
-        id: catNode.databaseId,
-        name: catNode.name,
-        slug: catNode.slug,
-        description: catNode.description ?? undefined,
-        count: catNode.count ?? undefined,
-      }
-    : null
-  return {
-    category,
-    posts: data.category.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode)),
-    pageInfo: data.category.posts.pageInfo,
-  }
-}
-
-export const fetchAllCategories = (countryCode = DEFAULT_COUNTRY) => getCategoriesForCountry(countryCode)
-
-export async function fetchPendingComments(countryCode = DEFAULT_COUNTRY): Promise<WordPressComment[]> {
-  const comments = await fetchFromWp<WordPressComment[]>(countryCode, {
-    endpoint: "comments",
-    params: { status: "hold", per_page: 100, _embed: 1 },
-  })
-  return comments || []
-}
-
-export async function approveComment(commentId: number, countryCode = DEFAULT_COUNTRY) {
+export async function getRelatedPosts(
+  countryCode: string,
+  postId: number,
+  categoryIds: number[],
+  limit = 6,
+): Promise<WordPressPost[]> {
   try {
-    const res = await fetchFromWp<WordPressComment>(countryCode, {
-      endpoint: `comments/${commentId}`,
-      method: "POST",
-      payload: { status: "approve" },
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, RELATED_POSTS_QUERY, {
+      categoryIds,
+      excludeId: postId,
+      first: limit,
     })
-    if (!res) throw new Error(`Failed to approve comment ${commentId}`)
-    return res
-  } catch (error) {
-    log.error(`[v0] Failed to approve comment ${commentId}`, { error })
-    throw error
-  }
-}
 
-export async function deleteComment(commentId: number, countryCode = DEFAULT_COUNTRY) {
-  try {
-    const res = await fetchFromWp<WordPressComment>(countryCode, {
-      endpoint: `comments/${commentId}`,
-      method: "DELETE",
-    })
-    if (!res) throw new Error(`Failed to delete comment ${commentId}`)
-    return res
-  } catch (error) {
-    log.error(`[v0] Failed to delete comment ${commentId}`, { error })
-    throw error
-  }
-}
-
-export async function updateUserProfile() {
-  // Placeholder – real implementation can integrate with WordPress REST API
-  return null
-}
+    if (gqlData?.posts?.nodes) {

@@ -24,7 +24,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-    metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
@@ -36,6 +36,10 @@ export const metadata: Metadata = {
     telephone: false,
   },
   generator: "v0.dev",
+  other: {
+    preconnect: "https://cdn-lfdfp.nitrocdn.com",
+    "dns-prefetch": "https://cdn-lfdfp.nitrocdn.com",
+  },
 }
 
 export default function RootLayout({
@@ -51,12 +55,8 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${inter.className}`}
     >
-      <head>
-        <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
-        <SchemaOrg schemas={baseSchemas} />
-      </head>
       <body className={inter.className}>
+        <SchemaOrg schemas={baseSchemas} />
 
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
