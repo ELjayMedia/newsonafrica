@@ -43,7 +43,7 @@ class CircuitBreakerManager {
   CodeProject
   id =
     'news-on-africa-pwa" taskNameActive="Improving circuit breaker resilience" taskNameComplete="Improved circuit breaker resilience' >
-    ```ts file="lib/api/circuit-breaker.ts"
+    \`\`\`ts file="lib/api/circuit-breaker.ts"
 import OpossumCircuitBreaker from "opossum"
 import { isNetworkError } from "../../utils/network-utils"
 
