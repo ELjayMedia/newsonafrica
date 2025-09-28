@@ -3,7 +3,11 @@ import { z } from "zod"
 const envSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_WORDPRESS_API_URL: z.string().url().optional(),
+  NEXT_PUBLIC_WORDPRESS_API_URL_ZA: z.string().url().optional(),
+  NEXT_PUBLIC_WORDPRESS_API_URL_SZ: z.string().url().optional(),
   WORDPRESS_REST_API_URL: z.string().url().optional(),
+  WORDPRESS_REST_API_URL_ZA: z.string().url().optional(),
+  WORDPRESS_REST_API_URL_SZ: z.string().url().optional(),
   WORDPRESS_AUTH_TOKEN: z.string().optional(),
   WP_APP_USERNAME: z.string().optional(),
   WP_APP_PASSWORD: z.string().optional(),
@@ -31,7 +35,23 @@ const data = parsed.success ? parsed.data : ({} as z.infer<typeof envSchema>)
 export const env = {
   NEXT_PUBLIC_SITE_URL: data.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   NEXT_PUBLIC_WORDPRESS_API_URL: data.NEXT_PUBLIC_WORDPRESS_API_URL ?? "https://newsonafrica.com/graphql",
+  NEXT_PUBLIC_WORDPRESS_API_URL_ZA:
+    data.NEXT_PUBLIC_WORDPRESS_API_URL_ZA ??
+    data.NEXT_PUBLIC_WORDPRESS_API_URL ??
+    "https://newsonafrica.com/graphql",
+  NEXT_PUBLIC_WORDPRESS_API_URL_SZ:
+    data.NEXT_PUBLIC_WORDPRESS_API_URL_SZ ??
+    data.NEXT_PUBLIC_WORDPRESS_API_URL ??
+    "https://newsonafrica.com/graphql",
   WORDPRESS_REST_API_URL: data.WORDPRESS_REST_API_URL ?? "https://newsonafrica.com/wp-json/wp/v2",
+  WORDPRESS_REST_API_URL_ZA:
+    data.WORDPRESS_REST_API_URL_ZA ??
+    data.WORDPRESS_REST_API_URL ??
+    "https://newsonafrica.com/wp-json/wp/v2",
+  WORDPRESS_REST_API_URL_SZ:
+    data.WORDPRESS_REST_API_URL_SZ ??
+    data.WORDPRESS_REST_API_URL ??
+    "https://newsonafrica.com/wp-json/wp/v2",
   WORDPRESS_AUTH_TOKEN: data.WORDPRESS_AUTH_TOKEN,
   WP_APP_USERNAME: data.WP_APP_USERNAME,
   WP_APP_PASSWORD: data.WP_APP_PASSWORD,
