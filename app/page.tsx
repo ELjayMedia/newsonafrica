@@ -1,7 +1,12 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import { getLatestPostsForCountry, getFpTaggedPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
+import {
+  COUNTRIES,
+  getLatestPostsForCountry,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
+} from "@/lib/wordpress-api"
 import type { HomePageData } from "@/types/home"
 import { getServerCountry } from "@/lib/utils/routing"
 
@@ -89,12 +94,53 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
     const result = await circuitBreaker.execute(
       "wordpress-homepage-api",
       async () => {
-        const [taggedPosts, latestPosts] = await Promise.all([
-          getFpTaggedPostsForCountry(countryCode, 8),
-          getLatestPostsForCountry(countryCode, 10),
-        ])
+        const countryCodes = Array.from(new Set([countryCode, ...Object.keys(COUNTRIES)]))
 
-        const recentPosts = mapPostsToHomePosts(latestPosts.posts ?? [], countryCode)
+        const countryResults = await Promise.all(
+          countryCodes.map(async (code) => {
+            const [taggedResult, latestResult] = await Promise.allSettled([
+              getFpTaggedPostsForCountry(code, 8),
+              getLatestPostsForCountry(code, 10),
+            ])
+
+            if (taggedResult.status === "rejected") {
+              console.warn(`[v0] Failed to fetch fp-tagged posts for ${code}:`, taggedResult.reason)
+            }
+
+            if (latestResult.status === "rejected") {
+              console.warn(`[v0] Failed to fetch latest posts for ${code}:`, latestResult.reason)
+            }
+
+            const taggedPosts =
+              taggedResult.status === "fulfilled" ? mapPostsToHomePosts(taggedResult.value, code) : []
+
+            const latestPosts =
+              latestResult.status === "fulfilled"
+                ? mapPostsToHomePosts(latestResult.value.posts ?? [], code)
+                : []
+
+            return {
+              code,
+              taggedPosts,
+              recentPosts: latestPosts,
+            }
+          }),
+        )
+
+        const countryPosts = countryResults.reduce<HomePageData["countryPosts"]>((acc, { code, recentPosts }) => {
+          acc[code] = recentPosts
+          return acc
+        }, {})
+
+        const defaultCountryData =
+          countryResults.find((entry) => entry.code === countryCode) ?? ({
+            code: countryCode,
+            taggedPosts: [] as HomePageData["taggedPosts"],
+            recentPosts: [] as HomePageData["recentPosts"],
+          } as const)
+
+        const taggedPosts = defaultCountryData.taggedPosts
+        const recentPosts = defaultCountryData.recentPosts
 
         if (taggedPosts.length === 0 && recentPosts.length === 0) {
           throw new Error("No posts available from WordPress API")
@@ -105,7 +151,7 @@ async function getHomePageData(countryCode: string): Promise<HomePageData> {
         return {
           taggedPosts,
           recentPosts,
-          countryPosts: { [countryCode]: recentPosts },
+          countryPosts,
           featuredPosts,
         }
       },
