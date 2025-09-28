@@ -13,13 +13,13 @@ vi.mock("@/hooks/useMediaQuery", () => ({
 }))
 
 vi.mock("@/components/FeaturedHero", () => ({
-  ElegantHero: ({ post }: any) => (
+  FeaturedHero: ({ post }: any) => (
     <div data-testid="featured-hero">{post.title?.rendered ?? post.title}</div>
   ),
 }))
 
 vi.mock("@/components/SecondaryStories", () => ({
-  ElegantArticleList: ({ posts }: any) => (
+  SecondaryStories: ({ posts }: any) => (
     <div data-testid="secondary-stories">
       {posts.map((post: any) => (
         <span key={post.slug}>{post.title?.rendered ?? post.title}</span>
@@ -38,30 +38,10 @@ vi.mock("@/components/NewsGrid", () => ({
   ),
 }))
 
-vi.mock("@/components/ElegantCountryNavigation", () => ({
-  ElegantCountryNavigation: () => <nav data-testid="country-navigation" />,
-  ElegantCountrySpotlight: ({ countryPosts }: any) => (
-    <section data-testid="country-spotlight">
-      {Object.entries(countryPosts || {}).map(([code]) => (
-        <span key={code}>{code}</span>
-      ))}
-    </section>
-  ),
+vi.mock("@/components/CountryNavigation", () => ({
+  CountryNavigation: () => <nav data-testid="country-navigation" />,
+  CountrySpotlight: ({ children }: any) => <section>{children}</section>,
 }))
-
-vi.mock(
-  "@/components/ElegantCountrySpotlight",
-  () => ({
-    ElegantCountrySpotlight: ({ countryPosts }: any) => (
-      <section data-testid="country-spotlight">
-        {Object.entries(countryPosts || {}).map(([code]) => (
-          <span key={code}>{code}</span>
-        ))}
-      </section>
-    ),
-  }),
-  { virtual: true },
-)
 
 vi.mock("@/components/SchemaOrg", () => ({
   SchemaOrg: () => null,
@@ -137,22 +117,15 @@ describe("HomeContent", () => {
     )
     wpMocks.getCategoriesForCountry.mockResolvedValue({ categories: [] })
 
-    const spotlightPosts = {
-      sz: [createPost("sz-story", "Eswatini Story")],
-      za: [createPost("za-story", "South Africa Story")],
-    }
-
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
         <HomeContent
           initialPosts={[createPost("initial-post", "Initial Story")]}
-          countryPosts={spotlightPosts}
           initialData={{
             taggedPosts: [createPost("fp-post", "Featured Story")],
             featuredPosts: [createPost("feat-post", "Featured Story")],
             categories: [],
             recentPosts: [createPost("recent-post", "Recent Story")],
-            countryPosts: spotlightPosts,
           }}
         />
       </SWRConfig>,
@@ -177,10 +150,6 @@ describe("HomeContent", () => {
     wpMocks.getPostsForCategories.mockResolvedValue(batchedResponse)
 
     await renderHomeContent()
-
-    const spotlight = screen.getByTestId("country-spotlight")
-    expect(spotlight).toHaveTextContent("sz")
-    expect(spotlight).toHaveTextContent("za")
 
     await waitFor(() =>
       expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
@@ -212,10 +181,6 @@ describe("HomeContent", () => {
     wpMocks.getPostsForCategories.mockResolvedValue(batchedResponse)
 
     await renderHomeContent()
-
-    const spotlight = screen.getByTestId("country-spotlight")
-    expect(spotlight).toHaveTextContent("sz")
-    expect(spotlight).toHaveTextContent("za")
 
     await waitFor(() =>
       expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
