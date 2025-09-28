@@ -22,7 +22,8 @@ import type { WordPressPost } from "@/lib/wordpress-api"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
-import { ElegantCountryNavigation, ElegantCountrySpotlight } from "@/components/ElegantCountryNavigation"
+import { ElegantCountryNavigation } from "@/components/ElegantCountryNavigation"
+import { ElegantCountrySpotlight } from "@/components/ElegantCountrySpotlight"
 import type { HomePost, CountryPosts } from "@/types/home"
 
 type CategorySectionProps = CategoryConfig & {
