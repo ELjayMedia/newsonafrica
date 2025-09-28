@@ -1,7 +1,7 @@
 "use client"
 
-import { FeaturedHero } from "@/components/FeaturedHero"
-import { SecondaryStories } from "@/components/SecondaryStories"
+import { ElegantHero } from "@/components/FeaturedHero"
+import { ElegantArticleList } from "@/components/SecondaryStories"
 import { NewsGrid } from "@/components/NewsGrid"
 import Link from "next/link"
 import React, { useEffect, useState, useCallback, useMemo } from "react"
@@ -22,7 +22,8 @@ import type { WordPressPost } from "@/lib/wordpress-api"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
-import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
+import { ElegantCountryNavigation } from "@/components/ElegantCountryNavigation"
+import { ElegantCountrySpotlight } from "@/components/ElegantCountrySpotlight"
 import type { HomePost, CountryPosts } from "@/types/home"
 
 type CategorySectionProps = CategoryConfig & {
@@ -194,7 +195,6 @@ export function HomeContent({
 
   const fallbackData = useMemo(() => {
     if (initialData) return initialData
-
 
     if (baselinePosts.length > 0) {
       const fallbackFeatured = featuredPosts.length ? featuredPosts.slice(0, 6) : baselinePosts.slice(0, 6)
@@ -487,35 +487,78 @@ export function HomeContent({
   return (
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
-      <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
+      <div className="press-layout">
         {offlineNotification}
 
-        {/* Pan-African Country Navigation */}
-        <CountryNavigation />
+        {mainStory && <ElegantHero post={mainStory} />}
 
-        {/* Hero Section - Show the latest post */}
-        {mainStory && (
-          <section className="bg-gray-50 px-2 py-2 rounded-lg">
-            <FeaturedHero post={mainStory} />
-          </section>
-        )}
+        <ElegantCountryNavigation />
 
-        {/* Country Spotlight - Show posts from different countries */}
-        {Object.keys(countryPosts).length > 0 && <CountrySpotlight countryPosts={countryPosts} />}
+        {Object.keys(countryPosts).length > 0 && <ElegantCountrySpotlight countryPosts={countryPosts} />}
 
-        {/* Secondary Stories - Show featured posts */}
         {secondaryStories.length > 0 && (
-          <section className="bg-white p-2 md:p-3 rounded-lg md:flex md:flex-col">
-            <SecondaryStories posts={secondaryStories} layout="horizontal" />
+          <section className="mx-auto max-w-7xl px-4">
+            <ElegantArticleList posts={secondaryStories} title="Latest Stories" showCategory={true} />
           </section>
         )}
 
-        {/* Category Sections - Show posts from each category */}
-        <div className="grid grid-cols-1 gap-3 md:gap-4">
-          {categoryConfigs.map((config) => (
-            <CategorySection key={config.name} {...config} posts={categoryPosts[config.name] || []} />
-          ))}
-        </div>
+        <section className="bg-muted/20 py-16">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {categoryConfigs.map((config) => {
+                const posts = categoryPosts[config.name] || []
+                if (!posts.length) return null
+
+                return (
+                  <div key={config.name} className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-serif text-2xl font-bold text-earth-dark">
+                        <Link
+                          href={getCategoryUrl(config.name.toLowerCase())}
+                          className="hover:text-earth-warm transition-colors"
+                        >
+                          {config.name}
+                        </Link>
+                      </h2>
+                      <Link
+                        href={getCategoryUrl(config.name.toLowerCase())}
+                        className="text-sm text-earth-warm hover:text-earth-dark font-medium transition-colors"
+                      >
+                        View All
+                      </Link>
+                    </div>
+                    <div className="space-y-6">
+                      {posts.slice(0, 3).map((post) => (
+                        <article key={post.id} className="group">
+                          <Link href={getArticleUrl(post.slug, post.country)}>
+                            <h3 className="news-article-title group-hover:text-earth-warm transition-colors mb-2">
+                              {post.title}
+                            </h3>
+                          </Link>
+                          <div className="article-meta">
+                            <span className="news-date">
+                              {new Date(post.date).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                            {post.author && (
+                              <>
+                                <span className="text-border">•</span>
+                                <span className="font-medium">{post.author}</span>
+                              </>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
       </div>
     </ErrorBoundary>
   )

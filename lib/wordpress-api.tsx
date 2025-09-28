@@ -247,6 +247,139 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     apiEndpoint: getWpEndpoints("za").graphql,
     restEndpoint: getWpEndpoints("za").rest,
   },
+  ng: {
+    code: "ng",
+    name: "Nigeria",
+    flag: "🇳🇬",
+    apiEndpoint: getWpEndpoints("ng").graphql,
+    restEndpoint: getWpEndpoints("ng").rest,
+  },
+  ke: {
+    code: "ke",
+    name: "Kenya",
+    flag: "🇰🇪",
+    apiEndpoint: getWpEndpoints("ke").graphql,
+    restEndpoint: getWpEndpoints("ke").rest,
+  },
+  gh: {
+    code: "gh",
+    name: "Ghana",
+    flag: "🇬🇭",
+    apiEndpoint: getWpEndpoints("gh").graphql,
+    restEndpoint: getWpEndpoints("gh").rest,
+  },
+  et: {
+    code: "et",
+    name: "Ethiopia",
+    flag: "🇪🇹",
+    apiEndpoint: getWpEndpoints("et").graphql,
+    restEndpoint: getWpEndpoints("et").rest,
+  },
+  eg: {
+    code: "eg",
+    name: "Egypt",
+    flag: "🇪🇬",
+    apiEndpoint: getWpEndpoints("eg").graphql,
+    restEndpoint: getWpEndpoints("eg").rest,
+  },
+  ma: {
+    code: "ma",
+    name: "Morocco",
+    flag: "🇲🇦",
+    apiEndpoint: getWpEndpoints("ma").graphql,
+    restEndpoint: getWpEndpoints("ma").rest,
+  },
+  tz: {
+    code: "tz",
+    name: "Tanzania",
+    flag: "🇹🇿",
+    apiEndpoint: getWpEndpoints("tz").graphql,
+    restEndpoint: getWpEndpoints("tz").rest,
+  },
+  ug: {
+    code: "ug",
+    name: "Uganda",
+    flag: "🇺🇬",
+    apiEndpoint: getWpEndpoints("ug").graphql,
+    restEndpoint: getWpEndpoints("ug").rest,
+  },
+  rw: {
+    code: "rw",
+    name: "Rwanda",
+    flag: "🇷🇼",
+    apiEndpoint: getWpEndpoints("rw").graphql,
+    restEndpoint: getWpEndpoints("rw").rest,
+  },
+  sn: {
+    code: "sn",
+    name: "Senegal",
+    flag: "🇸🇳",
+    apiEndpoint: getWpEndpoints("sn").graphql,
+    restEndpoint: getWpEndpoints("sn").rest,
+  },
+  ci: {
+    code: "ci",
+    name: "Côte d'Ivoire",
+    flag: "🇨🇮",
+    apiEndpoint: getWpEndpoints("ci").graphql,
+    restEndpoint: getWpEndpoints("ci").rest,
+  },
+  cm: {
+    code: "cm",
+    name: "Cameroon",
+    flag: "🇨🇲",
+    apiEndpoint: getWpEndpoints("cm").graphql,
+    restEndpoint: getWpEndpoints("cm").rest,
+  },
+  ao: {
+    code: "ao",
+    name: "Angola",
+    flag: "🇦🇴",
+    apiEndpoint: getWpEndpoints("ao").graphql,
+    restEndpoint: getWpEndpoints("ao").rest,
+  },
+  mz: {
+    code: "mz",
+    name: "Mozambique",
+    flag: "🇲🇿",
+    apiEndpoint: getWpEndpoints("mz").graphql,
+    restEndpoint: getWpEndpoints("mz").rest,
+  },
+  zw: {
+    code: "zw",
+    name: "Zimbabwe",
+    flag: "🇿🇼",
+    apiEndpoint: getWpEndpoints("zw").graphql,
+    restEndpoint: getWpEndpoints("zw").rest,
+  },
+  bw: {
+    code: "bw",
+    name: "Botswana",
+    flag: "🇧🇼",
+    apiEndpoint: getWpEndpoints("bw").graphql,
+    restEndpoint: getWpEndpoints("bw").rest,
+  },
+  zm: {
+    code: "zm",
+    name: "Zambia",
+    flag: "🇿🇲",
+    apiEndpoint: getWpEndpoints("zm").graphql,
+    restEndpoint: getWpEndpoints("zm").rest,
+  },
+  mw: {
+    code: "mw",
+    name: "Malawi",
+    flag: "🇲🇼",
+    apiEndpoint: getWpEndpoints("mw").graphql,
+    restEndpoint: getWpEndpoints("mw").rest,
+  },
+  na: {
+    code: "na",
+    name: "Namibia",
+    flag: "🇳🇦",
+    apiEndpoint: getWpEndpoints("na").graphql,
+    restEndpoint: getWpEndpoints("na").rest,
+  },
 }
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
@@ -1096,3 +1229,380 @@ export async function getRelatedPosts(
     })
 
     if (gqlData?.posts?.nodes) {
+      return gqlData.posts.nodes
+    }
+  } catch (error) {
+    console.error(`[v0] Failed to get related posts for country ${countryCode}, post ${postId}:`, error)
+    return []
+  }
+}
+
+export const getRelatedPostsForCountry = async (
+  countryCode: string,
+  postId: string,
+  limit = 6,
+): Promise<WordPressPost[]> => {
+  try {
+    const numericPostId = Number.parseInt(postId, 10)
+    if (isNaN(numericPostId)) {
+      console.warn(`[v0] Invalid post ID: ${postId}`)
+      return []
+    }
+
+    // First get the post's categories
+    const categoriesData = await fetchFromWpGraphQL<any>(countryCode, POST_CATEGORIES_QUERY, {
+      id: numericPostId,
+    })
+
+    const categoryIds = categoriesData?.post?.categories?.nodes?.map((cat: any) => cat.databaseId) || []
+
+    if (categoryIds.length === 0) {
+      console.warn(`[v0] No categories found for post ${postId}`)
+      return []
+    }
+
+    return await getRelatedPosts(countryCode, numericPostId, categoryIds, limit)
+  } catch (error) {
+    console.error(`[v0] Failed to get related posts for country ${countryCode}, post ${postId}:`, error)
+    return []
+  }
+}
+
+export const getBalancedCountryContent = async (countryCode: string, limit = 10): Promise<WordPressPost[]> => {
+  try {
+    // Get a balanced mix of latest posts and featured posts
+    const [latestPosts, featuredPosts] = await Promise.allSettled([
+      getLatestPostsForCountry(countryCode, Math.ceil(limit * 0.7)),
+      getFpTaggedPosts(countryCode, Math.ceil(limit * 0.3)),
+    ])
+
+    const latest = latestPosts.status === "fulfilled" ? latestPosts.value.posts : []
+    const featured = featuredPosts.status === "fulfilled" ? featuredPosts.value : []
+
+    // Combine and deduplicate
+    const combined = [...featured, ...latest]
+    const unique = combined.filter((post, index, self) => index === self.findIndex((p) => p.id === post.id))
+
+    return unique.slice(0, limit)
+  } catch (error) {
+    console.error(`[v0] Failed to get balanced country content for ${countryCode}:`, error)
+    return []
+  }
+}
+
+export const fetchPosts = async (countryCode: string, params: Record<string, any> = {}): Promise<WordPressPost[]> => {
+  const { limit = 10, category, tag, author, search, ...restParams } = params
+
+  try {
+    return await executeRestFallback<WordPressPost>(
+      countryCode,
+      "posts",
+      {
+        per_page: limit,
+        _embed: 1,
+        ...(category && { categories: category }),
+        ...(tag && { tags: tag }),
+        ...(author && { author }),
+        ...(search && { search }),
+        ...restParams,
+      },
+      `Fetch posts for ${countryCode}`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to fetch posts for ${countryCode}:`, error)
+    return []
+  }
+}
+
+export const fetchPost = async (countryCode: string, slug: string): Promise<WordPressPost | null> => {
+  try {
+    const posts = await executeRestFallback<WordPressPost>(
+      countryCode,
+      "posts",
+      {
+        slug,
+        _embed: 1,
+      },
+      `Fetch post ${slug} for ${countryCode}`,
+    )
+
+    return posts.length > 0 ? posts[0] : null
+  } catch (error) {
+    console.error(`[v0] Failed to fetch post ${slug} for ${countryCode}:`, error)
+    return null
+  }
+}
+
+export const getFeaturedPosts = async (countryCode: string, limit = 6): Promise<WordPressPost[]> => {
+  try {
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, FEATURED_POSTS_QUERY, {
+      first: limit,
+    })
+
+    if (gqlData?.posts?.nodes && gqlData.posts.nodes.length > 0) {
+      return gqlData.posts.nodes
+    }
+  } catch (error) {
+    log.warn(`[v0] GraphQL failed for featured posts, trying REST fallback`, {
+      error,
+      isNetworkError: isNetworkError(error),
+    })
+  }
+
+  // REST fallback - try to find posts with featured meta
+  try {
+    return await executeRestFallback<WordPressPost>(
+      countryCode,
+      "posts",
+      {
+        per_page: limit,
+        _embed: 1,
+        meta_key: "featured",
+        meta_value: "1",
+      },
+      `Featured posts REST fallback for ${countryCode}`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to fetch featured posts for ${countryCode}:`, error)
+    return []
+  }
+}
+
+export const resolveCountryTermId = async (countryCode: string): Promise<number | null> => {
+  try {
+    const categories = await getCategoriesForCountry(countryCode)
+    const countryCategory = categories.find(
+      (cat) =>
+        cat.slug.toLowerCase() === countryCode.toLowerCase() ||
+        cat.name.toLowerCase().includes(countryCode.toLowerCase()),
+    )
+
+    return countryCategory ? countryCategory.id : null
+  } catch (error) {
+    console.error(`[v0] Failed to resolve country term ID for ${countryCode}:`, error)
+    return null
+  }
+}
+
+export const fetchCategories = async (countryCode: string): Promise<WordPressCategory[]> => {
+  return getCategoriesForCountry(countryCode)
+}
+
+export const fetchTags = async (countryCode: string): Promise<WordPressTag[]> => {
+  try {
+    return await executeRestFallback<WordPressTag>(
+      countryCode,
+      "tags",
+      {
+        per_page: 100,
+        hide_empty: true,
+      },
+      `Fetch tags for ${countryCode}`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to fetch tags for ${countryCode}:`, error)
+    return []
+  }
+}
+
+export const fetchAuthors = async (countryCode: string): Promise<WordPressAuthor[]> => {
+  try {
+    return await executeRestFallback<WordPressAuthor>(
+      countryCode,
+      "users",
+      {
+        per_page: 100,
+        who: "authors",
+      },
+      `Fetch authors for ${countryCode}`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to fetch authors for ${countryCode}:`, error)
+    return []
+  }
+}
+
+export const fetchCountries = async (): Promise<CountryConfig[]> => {
+  return Object.values(COUNTRIES)
+}
+
+export const fetchTaggedPosts = async (countryCode: string, tagSlug: string, limit = 10): Promise<WordPressPost[]> => {
+  try {
+    const tags = await executeRestFallback<WordPressTag>(
+      countryCode,
+      "tags",
+      { slug: tagSlug },
+      `Tag lookup for ${tagSlug}`,
+    )
+
+    if (tags && tags.length > 0) {
+      return executeRestFallback<WordPressPost>(
+        countryCode,
+        "posts",
+        {
+          tags: tags[0].id,
+          per_page: limit,
+          _embed: 1,
+        },
+        `Tagged posts for ${tagSlug}`,
+      )
+    }
+
+    return []
+  } catch (error) {
+    console.error(`[v0] Failed to fetch tagged posts for ${tagSlug}:`, error)
+    return []
+  }
+}
+
+export const getPostsByCategoryForCountry = async (
+  countryCode: string,
+  categorySlug: string,
+  limit = 20,
+  cursor?: string,
+): Promise<CategoryPostsResult> => {
+  return getPostsByCategory(countryCode, categorySlug, limit, cursor)
+}
+
+export const fetchCategoryPosts = async (
+  countryCode: string,
+  categorySlug: string,
+  limit = 20,
+): Promise<WordPressPost[]> => {
+  const result = await getPostsByCategory(countryCode, categorySlug, limit)
+  return result.posts
+}
+
+export const getAuthorBySlug = async (
+  countryCode: string,
+  authorSlug: string,
+): Promise<{ author: WordPressAuthor; posts: WordPressPost[] } | null> => {
+  try {
+    const gqlData = await fetchFromWpGraphQL<any>(countryCode, AUTHOR_DATA_QUERY, {
+      slug: authorSlug,
+      first: 10,
+    })
+
+    if (gqlData?.user) {
+      const author: WordPressAuthor = {
+        id: gqlData.user.databaseId,
+        name: gqlData.user.name,
+        slug: gqlData.user.slug,
+        description: gqlData.user.description,
+        avatar: gqlData.user.avatar,
+      }
+
+      return {
+        author,
+        posts: gqlData.user.posts?.nodes || [],
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error(`[v0] Failed to fetch author ${authorSlug}:`, error)
+    return null
+  }
+}
+
+export const fetchRecentPosts = async (countryCode: string, limit = 10): Promise<WordPressPost[]> => {
+  const result = await getLatestPostsForCountry(countryCode, limit)
+  return result.posts
+}
+
+export const fetchAllCategories = async (countryCode: string): Promise<WordPressCategory[]> => {
+  return getCategoriesForCountry(countryCode)
+}
+
+export const fetchAllTags = async (countryCode: string): Promise<WordPressTag[]> => {
+  return fetchTags(countryCode)
+}
+
+export const fetchSingleTag = async (countryCode: string, tagSlug: string): Promise<WordPressTag | null> => {
+  try {
+    const tags = await executeRestFallback<WordPressTag>(
+      countryCode,
+      "tags",
+      { slug: tagSlug },
+      `Single tag lookup for ${tagSlug}`,
+    )
+
+    return tags.length > 0 ? tags[0] : null
+  } catch (error) {
+    console.error(`[v0] Failed to fetch tag ${tagSlug}:`, error)
+    return null
+  }
+}
+
+export const fetchAuthorData = async (
+  countryCode: string,
+  authorSlug: string,
+): Promise<{ author: WordPressAuthor; posts: WordPressPost[] } | null> => {
+  return getAuthorBySlug(countryCode, authorSlug)
+}
+
+export const fetchPendingComments = async (countryCode: string): Promise<WordPressComment[]> => {
+  try {
+    return await executeRestFallback<WordPressComment>(
+      countryCode,
+      "comments",
+      {
+        status: "hold",
+        per_page: 100,
+      },
+      `Fetch pending comments for ${countryCode}`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to fetch pending comments:`, error)
+    return []
+  }
+}
+
+export const approveComment = async (countryCode: string, commentId: number): Promise<boolean> => {
+  try {
+    const result = await executeRestFallback<any>(
+      countryCode,
+      `comments/${commentId}`,
+      { status: "approved" },
+      `Approve comment ${commentId}`,
+    )
+    return !!result
+  } catch (error) {
+    console.error(`[v0] Failed to approve comment ${commentId}:`, error)
+    return false
+  }
+}
+
+export const deleteComment = async (countryCode: string, commentId: number): Promise<boolean> => {
+  try {
+    const result = await executeRestFallback<any>(
+      countryCode,
+      `comments/${commentId}`,
+      { force: true },
+      `Delete comment ${commentId}`,
+    )
+    return !!result
+  } catch (error) {
+    console.error(`[v0] Failed to delete comment ${commentId}:`, error)
+    return false
+  }
+}
+
+export const updateUserProfile = async (countryCode: string, userId: number, profileData: any): Promise<boolean> => {
+  try {
+    const result = await executeRestFallback<any>(
+      countryCode,
+      `users/${userId}`,
+      profileData,
+      `Update user profile ${userId}`,
+    )
+    return !!result
+  } catch (error) {
+    console.error(`[v0] Failed to update user profile ${userId}:`, error)
+    return false
+  }
+}
+
+// Type exports for compatibility
+export type { WordPressPost, WordPressCategory, WordPressTag, WordPressAuthor, WordPressComment, CountryConfig }
+export type Post = WordPressPost

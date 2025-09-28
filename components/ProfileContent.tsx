@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { MobileProfileMenu } from "@/components/MobileProfileMenu"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { ProfileEditor } from "@/components/ProfileEditor"
+import { ElegantProfileEditor } from "@/components/ElegantProfileEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UserCircle, Settings, BookmarkIcon, MessageSquare } from "lucide-react"
@@ -76,102 +76,117 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
 
   return (
     <ErrorBoundary>
-      <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-8">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <UserCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Preferences</span>
-            </TabsTrigger>
-            <TabsTrigger value="bookmarks" className="flex items-center gap-2">
-              <BookmarkIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Bookmarks</span>
-            </TabsTrigger>
-          </TabsList>
+      <div className="max-w-4xl mx-auto bg-gradient-to-br from-amber-50/30 via-orange-50/20 to-red-50/30 min-h-screen">
+        <div className="p-6">
+          <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-3 mb-8 bg-white/80 backdrop-blur-sm">
+              <TabsTrigger
+                value="profile"
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-100 data-[state=active]:to-orange-100 data-[state=active]:text-amber-800"
+              >
+                <UserCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Profile</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="preferences"
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-100 data-[state=active]:to-orange-100 data-[state=active]:text-amber-800"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Preferences</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="bookmarks"
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-100 data-[state=active]:to-orange-100 data-[state=active]:text-amber-800"
+              >
+                <BookmarkIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Bookmarks</span>
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="profile" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>
-                  Update your profile information. This information may be visible to other users.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProfileEditor />
-              </CardContent>
-            </Card>
+            <TabsContent value="profile" className="space-y-6">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-serif text-gray-800">Profile Information</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Update your profile information. This information may be visible to other users.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ElegantProfileEditor />
+                </CardContent>
+              </Card>
 
-            <div className="flex justify-end">
-              <Button variant="destructive" onClick={handleLogout}>
-                Log Out
-              </Button>
-            </div>
-          </TabsContent>
+              <div className="flex justify-end">
+                <Button variant="destructive" onClick={handleLogout} className="bg-red-600 hover:bg-red-700">
+                  Log Out
+                </Button>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="preferences">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Preferences</CardTitle>
-                <CardDescription>Manage your account preferences and settings.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Email Preferences</h3>
-                  <p>
-                    Manage your email preferences in the{" "}
-                    <Link href="/newsletters" className="text-blue-600 hover:underline">
-                      Newsletters
-                    </Link>{" "}
-                    section.
-                  </p>
+            <TabsContent value="preferences">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-serif text-gray-800">Account Preferences</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Manage your account preferences and settings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Email Preferences</h3>
+                    <p>
+                      Manage your email preferences in the{" "}
+                      <Link href="/newsletters" className="text-blue-600 hover:underline">
+                        Newsletters
+                      </Link>{" "}
+                      section.
+                    </p>
 
-                  <h3 className="text-lg font-medium">Privacy Settings</h3>
-                  <p>Coming soon: Control who can see your profile and activity.</p>
+                    <h3 className="text-lg font-medium">Privacy Settings</h3>
+                    <p>Coming soon: Control who can see your profile and activity.</p>
 
-                  <h3 className="text-lg font-medium">Account Management</h3>
-                  <div className="flex flex-col space-y-2 mt-2">
-                    <Button variant="outline" asChild>
-                      <Link href="/reset-password">Change Password</Link>
-                    </Button>
-                    <Button variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
-                      Download My Data
-                    </Button>
-                    <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50">
-                      Delete Account
+                    <h3 className="text-lg font-medium">Account Management</h3>
+                    <div className="flex flex-col space-y-2 mt-2">
+                      <Button variant="outline" asChild>
+                        <Link href="/reset-password">Change Password</Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-amber-600 border-amber-600 hover:bg-amber-50 bg-transparent"
+                      >
+                        Download My Data
+                      </Button>
+                      <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50 bg-transparent">
+                        Delete Account
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="bookmarks">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-serif text-gray-800">Your Bookmarks</CardTitle>
+                  <CardDescription className="text-gray-600">View and manage your saved articles.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Manage your bookmarks</h3>
+                    <p className="text-gray-500 mb-4">
+                      View and manage your bookmarked articles in the dedicated bookmarks section.
+                    </p>
+                    <Button asChild>
+                      <Link href="/bookmarks">Go to Bookmarks</Link>
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookmarks">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Bookmarks</CardTitle>
-                <CardDescription>View and manage your saved articles.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Manage your bookmarks</h3>
-                  <p className="text-gray-500 mb-4">
-                    View and manage your bookmarked articles in the dedicated bookmarks section.
-                  </p>
-                  <Button asChild>
-                    <Link href="/bookmarks">Go to Bookmarks</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-        </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </ErrorBoundary>
   )
