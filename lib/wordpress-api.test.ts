@@ -1,6 +1,49 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import * as wordpressApi from "./wordpress-api"
 
+const ORIGINAL_ENV = { ...process.env }
+
+describe("COUNTRIES endpoints", () => {
+  afterEach(() => {
+    vi.resetModules()
+
+    for (const key of Object.keys(process.env)) {
+      if (!(key in ORIGINAL_ENV)) {
+        delete process.env[key]
+      }
+    }
+
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
+  })
+
+  it("uses site-specific endpoints for ZA and SZ when configured", async () => {
+    vi.resetModules()
+
+    Object.assign(process.env, {
+      NEXT_PUBLIC_WORDPRESS_API_URL: "https://default.newsonafrica.com/graphql",
+      WORDPRESS_REST_API_URL: "https://default.newsonafrica.com/wp-json/wp/v2",
+      NEXT_PUBLIC_WORDPRESS_API_URL_ZA: "https://za.newsonafrica.com/graphql",
+      WORDPRESS_REST_API_URL_ZA: "https://za.newsonafrica.com/wp-json/wp/v2",
+      NEXT_PUBLIC_WORDPRESS_API_URL_SZ: "https://sz.newsonafrica.com/graphql",
+      WORDPRESS_REST_API_URL_SZ: "https://sz.newsonafrica.com/wp-json/wp/v2",
+    })
+
+    const { COUNTRIES, getWpEndpoints } = await import("./wordpress-api")
+
+    expect(COUNTRIES.za.apiEndpoint).toBe("https://za.newsonafrica.com/graphql")
+    expect(COUNTRIES.za.restEndpoint).toBe("https://za.newsonafrica.com/wp-json/wp/v2")
+    expect(COUNTRIES.sz.apiEndpoint).toBe("https://sz.newsonafrica.com/graphql")
+    expect(COUNTRIES.sz.restEndpoint).toBe("https://sz.newsonafrica.com/wp-json/wp/v2")
+    expect(getWpEndpoints("ng").graphql).toBe("https://default.newsonafrica.com/graphql")
+  })
+})
+
 // Restore global fetch after each test
 afterEach(() => {
   vi.unstubAllGlobals();
