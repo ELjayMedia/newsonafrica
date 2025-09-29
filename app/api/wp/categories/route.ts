@@ -1,9 +1,8 @@
-import { NextRequest } from "next/server"
+import type { NextRequest } from "next/server"
 import { fetchCategories } from "@/lib/wordpress-api"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
-
-export const runtime = "edge"
+export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
 import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
 import { logRequest } from "@/lib/api-utils"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 
@@ -52,11 +52,7 @@ const extractFeaturedImage = (value: any): BookmarkHydrationPost["featured_image
   }
 
   const url =
-    value?.url ||
-    value?.sourceUrl ||
-    value?.source_url ||
-    value?.media_details?.source_url ||
-    value?.guid?.rendered
+    value?.url || value?.sourceUrl || value?.source_url || value?.media_details?.source_url || value?.guid?.rendered
   const width = value?.width || value?.mediaDetails?.width || value?.media_details?.width
   const height = value?.height || value?.mediaDetails?.height || value?.media_details?.height
 
@@ -71,7 +67,9 @@ const extractFeaturedImage = (value: any): BookmarkHydrationPost["featured_image
   }
 }
 
-const normaliseRequestItems = (items: BookmarkHydrationRequestItem[]): Array<{
+const normaliseRequestItems = (
+  items: BookmarkHydrationRequestItem[],
+): Array<{
   country: string
   postIds: string[]
 }> => {
@@ -161,8 +159,7 @@ export async function POST(req: NextRequest) {
             title: extractText(post.title),
             excerpt: extractText(post.excerpt),
             featured_image:
-              extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) ||
-              null,
+              extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) || null,
           }
         })
       } catch (error) {

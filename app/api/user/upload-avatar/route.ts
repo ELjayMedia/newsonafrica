@@ -9,6 +9,8 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
+export const runtime = "nodejs"
+
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
@@ -45,11 +47,10 @@ export async function POST(request: Request) {
     const avatarUrl = `/uploads/${filename}`
     await updateUserProfile(token, { avatar_url: avatarUrl })
 
-      revalidateByTag(CACHE_TAGS.USERS)
+    revalidateByTag(CACHE_TAGS.USERS)
     revalidatePath("/profile")
 
     return NextResponse.json({ success: true, avatarUrl })
-
   } catch (error) {
     console.error("Error uploading avatar:", error)
     return jsonWithCors(request, { error: "Failed to upload avatar" }, { status: 500 })

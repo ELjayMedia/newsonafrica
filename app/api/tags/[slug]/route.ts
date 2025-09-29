@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
 
+export const runtime = "nodejs"
+
 // Cache policy: medium (5 minutes)
 export const revalidate = 300
 

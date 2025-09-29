@@ -1,10 +1,9 @@
-import { NextRequest } from "next/server"
+import type { NextRequest } from "next/server"
 import { getWpEndpoints } from "@/config/wp"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { env } from "@/config/env"
 
-
-export const runtime = "edge"
+export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
