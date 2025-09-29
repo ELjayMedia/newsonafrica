@@ -170,6 +170,9 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                 placeholder="blur"
                 blurDataURL={generateBlurDataURL(64, 64)}
                 priority={priority}
+                loading={priority ? "eager" : "lazy"}
+                sizes="64px"
+                quality={75}
               />
             </div>
             <div className="flex-1 min-w-0">
@@ -203,6 +206,9 @@ export function ArticleCard({ article, layout = "standard", className, priority 
             placeholder="blur"
             blurDataURL={generateBlurDataURL(600, 400)}
             priority={priority}
+            loading={priority ? "eager" : "lazy"}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 448px"
+            quality={85}
           />
           {primaryCategory && (
             <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-xs">
@@ -237,12 +243,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
           placeholder="blur"
           blurDataURL={generateBlurDataURL(400, 300)}
           priority={priority}
+          loading={priority ? "eager" : "lazy"}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
+          quality={80}
         />
-        {primaryCategory && (
-          <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
-            {primaryCategory.name}
-          </Badge>
-        )}
       </div>
       <CardContent className="p-3">
         <Link href={data.link} className="block">

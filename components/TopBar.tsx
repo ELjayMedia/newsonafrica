@@ -2,10 +2,10 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ElegantUserMenu } from "@/components/ElegantUserMenu"
+import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { BookmarkIcon } from "lucide-react"
+import { BookmarkIcon, LogIn } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
 export function TopBar() {
@@ -76,7 +76,7 @@ export function TopBar() {
                     </Button>
                   </Link>
 
-                  <ElegantUserMenu />
+                  <ProfileDropdown />
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
@@ -84,8 +84,9 @@ export function TopBar() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white hover:bg-amber-600/20 hover:text-amber-200 rounded-full flex items-center gap-1.5 border border-amber-600/30"
+                      className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5"
                     >
+                      <LogIn className="h-4 w-4" />
                       <span>Sign In</span>
                     </Button>
                   </Link>

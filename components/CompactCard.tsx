@@ -69,7 +69,15 @@ export const CompactCard = memo(function CompactCard({
         <article className="py-2 border-b border-gray-100 last:border-b-0">
           <div className="flex gap-2">
             <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
-              <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="64px" />
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={post.title}
+                fill
+                className="object-cover"
+                sizes="64px"
+                loading="lazy"
+                quality={75}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1">{post.title}</h3>
@@ -101,6 +109,8 @@ export const CompactCard = memo(function CompactCard({
               fill
               className="object-cover transition-transform duration-300 hover:scale-105"
               sizes="(max-width: 768px) 50vw, 25vw"
+              loading="lazy"
+              quality={80}
             />
             {category && (
               <div className="absolute top-1 left-1">
@@ -129,7 +139,15 @@ export const CompactCard = memo(function CompactCard({
     <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
       <article className="flex gap-2 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow p-2">
         <div className="w-20 h-16 flex-shrink-0 relative rounded overflow-hidden">
-          <Image src={imageUrl || "/placeholder.svg"} alt={post.title} fill className="object-cover" sizes="80px" />
+          <Image
+            src={imageUrl || "/placeholder.svg"}
+            alt={post.title}
+            fill
+            className="object-cover"
+            sizes="80px"
+            loading="lazy"
+            quality={75}
+          />
         </div>
         <div className="flex-1 min-w-0">
           {category && <span className="text-xs text-blue-600 font-medium">{category.name}</span>}

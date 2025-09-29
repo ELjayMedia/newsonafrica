@@ -98,32 +98,6 @@ npm install
 npm run dev
 \`\`\`
 
-## 🔧 Troubleshooting
-
-If you encounter issues with the application, here are some common solutions:
-
-### Homepage Shows Generic Error
-
-If the homepage shows a generic "Something went wrong!" error:
-
-1. **Check system health**: Visit `/api/health` to see environment variables and WordPress connectivity status
-2. **Verify environment variables**: Ensure all required environment variables are configured in v0.app (Environment Variables) or Vercel Project Settings → Environment Variables
-3. **Check WordPress connectivity**: The health endpoint will show if WordPress REST/GraphQL endpoints are accessible
-
-### Environment Variable Issues
-
-- **In preview/development**: The app won't crash on missing environment variables but will log warnings and use fallback defaults
-- **In production**: Missing or invalid environment variables will cause build/runtime errors with clear error messages
-- **Required variables**: See the `.env.example` file for all required environment variables
-
-### Content Loading Issues
-
-If the homepage shows empty content or loading issues:
-
-1. Check the `/api/health` endpoint for WordPress connectivity
-2. Verify your WordPress site is accessible and has the required REST API endpoints
-3. Check browser console for detailed error messages (in development mode)
-
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:

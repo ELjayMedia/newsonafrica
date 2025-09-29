@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
 import BookmarksContent from "@/components/BookmarksContent"
 import BookmarksSkeleton from "@/components/BookmarksSkeleton"
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function BookmarksPage() {
-  const supabase = await createClient()
+  const cookieStore = cookies()
+  const supabase = createClient(cookieStore)
 
   const {
     data: { session },

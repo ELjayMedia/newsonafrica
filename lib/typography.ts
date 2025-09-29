@@ -3,23 +3,21 @@
  * Comprehensive typography utilities and components for News On Africa
  */
 
-import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google"
-
-// Load fonts from Google Fonts
-export const inter = Inter({
-  subsets: ["latin"],
+// Using CSS font stacks instead of next/font/google for better compatibility
+export const inter = {
   variable: "--font-inter",
-})
+  className: "font-sans",
+}
 
-export const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
+export const playfairDisplay = {
   variable: "--font-playfair",
-})
+  className: "font-serif",
+}
 
-export const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
+export const jetbrainsMono = {
   variable: "--font-jetbrains",
-})
+  className: "font-mono",
+}
 
 // Typography Scale Configuration
 export const typographyScale = {
@@ -108,13 +106,13 @@ export const typographyScale = {
     sm: {
       fontSize: "0.875rem", // 14px
       lineHeight: "1.5",
-      letterSpacing: "0.025em",
+      letterSpacing: "0em",
       fontWeight: "400",
     },
     xs: {
       fontSize: "0.75rem", // 12px
       lineHeight: "1.4",
-      letterSpacing: "0.025em",
+      letterSpacing: "0em",
       fontWeight: "400",
     },
   },
@@ -131,7 +129,7 @@ export const typographyScale = {
     caption: {
       fontSize: "0.875rem", // 14px
       lineHeight: "1.4",
-      letterSpacing: "0.025em",
+      letterSpacing: "0em",
       fontWeight: "400",
       color: "hsl(var(--muted-foreground))",
     },

@@ -2,17 +2,13 @@
 
 import { useState, useEffect, memo } from "react"
 import Image, { type ImageProps } from "next/image"
+import { generateBlurDataURL } from "@/utils/lazy-load"
 
 interface OptimizedImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string
   aspectRatio?: string
   priority?: boolean
-}
-
-function generateSimpleBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
-  return `data:image/svg+xml;base64,${Buffer.from(
-    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${color}"/></svg>`,
-  ).toString("base64")}`
+  loading?: "lazy" | "eager"
 }
 
 export const OptimizedImage = memo(function OptimizedImage({
@@ -23,27 +19,35 @@ export const OptimizedImage = memo(function OptimizedImage({
   aspectRatio = "16/9",
   className = "",
   priority = false,
+  loading = "lazy",
+  sizes,
   ...props
 }: OptimizedImageProps) {
-  const [imgSrc, setImgSrc] = useState<string | null>(null)
+  const [imgSrc, setImgSrc] = useState<string>(src)
   const [error, setError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Defer image loading until component is mounted
   useEffect(() => {
     setImgSrc(src)
+    setError(false)
+    setIsLoading(true)
   }, [src])
 
-  const blur = blurDataURL || generateSimpleBlurDataURL(700, 475)
+  const blur = blurDataURL || generateBlurDataURL(700, 475)
 
   const handleError = () => {
     if (!error) {
       setImgSrc(fallbackSrc)
       setError(true)
+      setIsLoading(false)
     }
   }
 
-  // Don't render anything until we have a source
-  if (!imgSrc) return null
+  const handleLoad = () => {
+    setIsLoading(false)
+  }
+
+  const responsiveSizes = sizes || "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ aspectRatio }}>
@@ -51,13 +55,17 @@ export const OptimizedImage = memo(function OptimizedImage({
         src={imgSrc || "/placeholder.svg"}
         alt={alt}
         fill
-        className={`object-cover transition-opacity duration-300 ${error ? "opacity-70" : ""}`}
+        className={`object-cover transition-opacity duration-300 ${
+          isLoading ? "opacity-0" : "opacity-100"
+        } ${error ? "opacity-70" : ""}`}
         onError={handleError}
+        onLoad={handleLoad}
         placeholder="blur"
         blurDataURL={blur}
         priority={priority}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        quality={80}
+        loading={loading}
+        sizes={responsiveSizes}
+        quality={85}
         {...props}
       />
     </div>

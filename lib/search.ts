@@ -109,10 +109,23 @@ const postsCache = new SimpleCache<SearchPost[]>(CACHE_CONFIG.SIZES.POSTS, CACHE
 const searchResultsCache = new SimpleCache<SearchResponse>(CACHE_CONFIG.SIZES.SEARCH_RESULTS, CACHE_CONFIG.TTL.SEARCH)
 const suggestionsCache = new SimpleCache<string[]>(CACHE_CONFIG.SIZES.SUGGESTIONS, CACHE_CONFIG.TTL.SUGGESTIONS)
 
-const FALLBACK_POSTS: SearchPost[] = []
+// Fallback posts for when API fails
+const FALLBACK_POSTS: SearchPost[] = [
+  {
+    id: "fallback-1",
+    title: { rendered: "Search Service Temporarily Unavailable" },
+    excerpt: {
+      rendered: "We're experiencing difficulties with our search service. Please try again in a few moments.",
+    },
+    slug: "search-unavailable",
+    date: new Date().toISOString(),
+    categories: [],
+    author: 0,
+  },
+]
 
 /**
- * Fetch posts with caching and enhanced error handling
+ * Fetch posts with caching
  */
 async function fetchPosts(): Promise<SearchPost[]> {
   const cacheKey = "posts-data"
@@ -128,7 +141,6 @@ async function fetchPosts(): Promise<SearchPost[]> {
       headers: {
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(15000), // 15 second timeout
     })
 
     if (!response.ok) {
@@ -137,11 +149,6 @@ async function fetchPosts(): Promise<SearchPost[]> {
 
     const data = await response.json()
     const posts = Array.isArray(data) ? data : data.data || []
-
-    if (posts.length === 0) {
-      console.warn("[v0] No posts returned from API")
-      return []
-    }
 
     const processedPosts = posts.map((post: any) => ({
       id: post.id?.toString() || `temp-${Date.now()}-${Math.random()}`,
@@ -167,8 +174,8 @@ async function fetchPosts(): Promise<SearchPost[]> {
     postsCache.set(cacheKey, processedPosts)
     return processedPosts
   } catch (error) {
-    console.error("[v0] Error fetching posts for search:", error)
-    return []
+    console.error("Error fetching posts:", error)
+    return FALLBACK_POSTS
   }
 }
 

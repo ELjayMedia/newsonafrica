@@ -13,9 +13,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        serif: ["var(--font-playfair)", "Georgia", "serif"],
-        mono: ["var(--font-jetbrains)", "Menlo", "Monaco", "monospace"],
+        sans: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+        serif: ["Georgia", "Times New Roman", "serif"],
+        mono: ["SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", "Consolas", "Courier New", "monospace"],
       },
       colors: {
         background: "hsl(var(--background))",

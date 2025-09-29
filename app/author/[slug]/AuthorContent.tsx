@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { OptimizedImage } from "@/components/OptimizedImage"
 import { PostList } from "@/components/PostList"
+import { Skeleton } from "@/components/Skeleton"
 import type { WordPressPost, WordPressAuthor } from "@/lib/wordpress-api"
 
 interface AuthorContentProps {
@@ -10,6 +12,8 @@ interface AuthorContentProps {
 }
 
 export default function AuthorContent({ author, posts }: AuthorContentProps) {
+  const [isLoading, setIsLoading] = useState(false)
+
   if (!author) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -58,7 +62,17 @@ export default function AuthorContent({ author, posts }: AuthorContentProps) {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-2xl font-bold mb-6">Articles by {author.name}</h2>
 
-        {posts.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="border-b border-gray-200 pb-4">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : posts.length > 0 ? (
           <PostList posts={posts} layout="list" />
         ) : (
           <div className="text-center py-8">

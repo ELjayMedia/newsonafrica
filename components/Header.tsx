@@ -14,70 +14,28 @@ import { useCategories } from "@/lib/hooks/useWordPressData"
 import { getCurrentCountry, getCategoryUrl } from "@/lib/utils/routing"
 import CountrySelector from "@/components/CountrySelector"
 
-const FALLBACK_CATEGORIES_BY_COUNTRY: Record<string, Array<{ id: number; name: string; slug: string }>> = {
-  sz: [
-    { id: 1, name: "News", slug: "news" },
-    { id: 2, name: "Business", slug: "business" },
-    { id: 3, name: "Sport", slug: "sport" },
-    { id: 4, name: "Entertainment", slug: "entertainment" },
-    { id: 5, name: "Life", slug: "life" },
-    { id: 6, name: "Health", slug: "health" },
-    { id: 7, name: "Politics", slug: "politics" },
-    { id: 8, name: "Culture", slug: "culture" },
-    { id: 9, name: "Opinion", slug: "opinion" },
-  ],
-  za: [
-    { id: 1, name: "News", slug: "news" },
-    { id: 2, name: "Business", slug: "business" },
-    { id: 3, name: "Sport", slug: "sport" },
-    { id: 4, name: "Entertainment", slug: "entertainment" },
-    { id: 5, name: "Politics", slug: "politics" },
-    { id: 6, name: "Economy", slug: "economy" },
-    { id: 7, name: "Technology", slug: "technology" },
-    { id: 8, name: "Health", slug: "health" },
-    { id: 9, name: "Opinion", slug: "opinion" },
-  ],
-}
-
-const DEFAULT_FALLBACK_CATEGORIES = [
-  { id: 1, name: "News", slug: "news" },
-  { id: 2, name: "Business", slug: "business" },
-  { id: 3, name: "Sport", slug: "sport" },
-  { id: 4, name: "Entertainment", slug: "entertainment" },
-  { id: 5, name: "Life", slug: "life" },
-  { id: 6, name: "Health", slug: "health" },
-  { id: 7, name: "Politics", slug: "politics" },
-  { id: 8, name: "Food", slug: "food" },
-  { id: 9, name: "Opinion", slug: "opinion" },
-]
 
 export function Header() {
   const router = useRouter()
   const { user, signOut } = useUser()
   const pathname = usePathname()
   const countryCode = getCurrentCountry(pathname)
-  const { categories, error } = useCategories(countryCode)
+  const { categories } = useCategories(countryCode)
   const { preferences } = useUserPreferences()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
 
-  const favouriteSlugs = useMemo(
-    () => preferences.sections.map((section) => section.toLowerCase()),
-    [preferences.sections],
-  )
+  const favouriteSlugs = useMemo(() => preferences.sections.map((section) => section.toLowerCase()), [preferences.sections])
 
   const sortedCategories = useMemo(() => {
-    const fallbackCategories = FALLBACK_CATEGORIES_BY_COUNTRY[countryCode] || DEFAULT_FALLBACK_CATEGORIES
-    const availableCategories = categories && categories.length > 0 ? categories : fallbackCategories
-
-    if (!availableCategories || availableCategories.length === 0) {
+    if (!categories || categories.length === 0) {
       return []
     }
 
     if (!favouriteSlugs.length) {
-      return availableCategories
+      return categories
     }
 
-    return [...availableCategories].sort((a, b) => {
+    return [...categories].sort((a, b) => {
       const aFav = favouriteSlugs.includes(a.slug.toLowerCase())
       const bFav = favouriteSlugs.includes(b.slug.toLowerCase())
 
@@ -87,7 +45,7 @@ export function Header() {
 
       return aFav ? -1 : 1
     })
-  }, [categories, favouriteSlugs, countryCode])
+  }, [categories, favouriteSlugs])
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",

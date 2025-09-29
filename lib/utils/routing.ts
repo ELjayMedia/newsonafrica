@@ -6,29 +6,8 @@
 // Default country mapping based on user preferences or URL structure
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
-export const SUPPORTED_COUNTRIES = [
-  "sz",
-  "za",
-  "ng",
-  "ke",
-  "gh",
-  "et",
-  "eg",
-  "ma",
-  "tz",
-  "ug",
-  "rw",
-  "sn",
-  "ci",
-  "cm",
-  "ao",
-  "mz",
-  "zw",
-  "bw",
-  "zm",
-  "mw",
-  "na",
-]
+// Supported countries
+export const SUPPORTED_COUNTRIES = ["sz", "za"]
 
 /**
  * Get the current country code from various sources

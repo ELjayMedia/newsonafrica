@@ -3,16 +3,16 @@
  * Responsive grid components for consistent layouts
  */
 
-import React from "react"
+import { forwardRef, type HTMLAttributes } from "react"
 import { cn } from "@/lib/utils"
 
 // Container Component
-interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ContainerProps extends HTMLAttributes<HTMLDivElement> {
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full"
   centered?: boolean
 }
 
-export const Container = React.forwardRef<HTMLDivElement, ContainerProps>(
+export const Container = forwardRef<HTMLDivElement, ContainerProps>(
   ({ className, size = "xl", centered = true, ...props }, ref) => {
     const sizeClasses = {
       sm: "max-w-screen-sm",
@@ -35,13 +35,13 @@ export const Container = React.forwardRef<HTMLDivElement, ContainerProps>(
 Container.displayName = "Container"
 
 // Grid Component
-interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
+interface GridProps extends HTMLAttributes<HTMLDivElement> {
   cols?: 1 | 2 | 3 | 4 | 5 | 6 | 12 | "auto-fit-xs" | "auto-fit-sm" | "auto-fit-md" | "auto-fit-lg"
   gap?: 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12
   responsive?: boolean
 }
 
-export const Grid = React.forwardRef<HTMLDivElement, GridProps>(
+export const Grid = forwardRef<HTMLDivElement, GridProps>(
   ({ className, cols = 1, gap = 4, responsive = true, ...props }, ref) => {
     const getColsClass = () => {
       if (typeof cols === "string") {
@@ -76,7 +76,7 @@ export const Grid = React.forwardRef<HTMLDivElement, GridProps>(
 Grid.displayName = "Grid"
 
 // Flex Component
-interface FlexProps extends React.HTMLAttributes<HTMLDivElement> {
+interface FlexProps extends HTMLAttributes<HTMLDivElement> {
   direction?: "row" | "col" | "row-reverse" | "col-reverse"
   align?: "start" | "center" | "end" | "stretch" | "baseline"
   justify?: "start" | "center" | "end" | "between" | "around" | "evenly"
@@ -84,7 +84,7 @@ interface FlexProps extends React.HTMLAttributes<HTMLDivElement> {
   gap?: 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12
 }
 
-export const Flex = React.forwardRef<HTMLDivElement, FlexProps>(
+export const Flex = forwardRef<HTMLDivElement, FlexProps>(
   ({ className, direction = "row", align = "start", justify = "start", wrap = false, gap, ...props }, ref) => {
     const directionClass = `flex-${direction}`
     const alignClass =
@@ -130,25 +130,23 @@ export const Flex = React.forwardRef<HTMLDivElement, FlexProps>(
 Flex.displayName = "Flex"
 
 // News-specific Grid Components
-export const NewsGrid = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6", className)}
-      {...props}
-    />
-  ),
-)
+export const NewsGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6", className)}
+    {...props}
+  />
+))
 NewsGrid.displayName = "NewsGrid"
 
-export const NewsHeroGrid = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+export const NewsHeroGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div ref={ref} className={cn("grid grid-cols-1 lg:grid-cols-3 gap-6", className)} {...props} />
   ),
 )
 NewsHeroGrid.displayName = "NewsHeroGrid"
 
-export const NewsSidebarLayout = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+export const NewsSidebarLayout = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div ref={ref} className={cn("grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 lg:gap-8", className)} {...props} />
   ),
@@ -156,12 +154,12 @@ export const NewsSidebarLayout = React.forwardRef<HTMLDivElement, React.HTMLAttr
 NewsSidebarLayout.displayName = "NewsSidebarLayout"
 
 // Section Component for consistent spacing
-interface SectionProps extends React.HTMLAttributes<HTMLElement> {
+interface SectionProps extends HTMLAttributes<HTMLElement> {
   size?: "sm" | "default" | "lg"
   as?: "section" | "div" | "article" | "aside"
 }
 
-export const Section = React.forwardRef<HTMLElement, SectionProps>(
+export const Section = forwardRef<HTMLElement, SectionProps>(
   ({ className, size = "default", as: Component = "section", ...props }, ref) => {
     const sizeClasses = {
       sm: "py-8 md:py-12",
@@ -175,12 +173,12 @@ export const Section = React.forwardRef<HTMLElement, SectionProps>(
 Section.displayName = "Section"
 
 // Stack Component for vertical spacing
-interface StackProps extends React.HTMLAttributes<HTMLDivElement> {
+interface StackProps extends HTMLAttributes<HTMLDivElement> {
   space?: 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12
   align?: "start" | "center" | "end" | "stretch"
 }
 
-export const Stack = React.forwardRef<HTMLDivElement, StackProps>(
+export const Stack = forwardRef<HTMLDivElement, StackProps>(
   ({ className, space = 4, align = "stretch", ...props }, ref) => {
     const alignClass =
       align === "start"

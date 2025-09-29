@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
 import ProfileContent from "@/components/ProfileContent"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
+  const cookieStore = cookies()
+  const supabase = createClient(cookieStore)
 
   const {
     data: { session },

@@ -38,7 +38,14 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
 
   const country = getCurrentCountry()
 
-  const { data, error, isLoading, isValidating, size, setSize } = useSWRInfinite(
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    size,
+    setSize,
+  } = useSWRInfinite(
     (index, previousPage) => {
       if (previousPage && !previousPage.hasNextPage) return null
       return ["category", country, slug, index]
@@ -192,6 +199,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
             />
           </section>
         )}
+
 
         {/* More Posts */}
         {morePosts.length > 0 && (

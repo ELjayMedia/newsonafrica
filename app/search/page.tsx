@@ -11,15 +11,13 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
   const query = searchParams.q || ""
   const page = Number.parseInt(searchParams.page || "1", 10)
 
-  const isDevelopment = process.env.NODE_ENV === "development"
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Search News On Africa</h1>
 
         {/* Temporary debugger - remove after fixing */}
-        {isDevelopment && (
+        {process.env.NODE_ENV === "development" && (
           <div className="mb-8">
             <SearchDebugger />
           </div>

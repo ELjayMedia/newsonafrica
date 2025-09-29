@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { inter, playfairDisplay, jetbrainsMono } from "@/lib/typography"
 import { ClientWrapper } from "@/components/ClientWrapper"
+import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -16,7 +16,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
-import { ElegantHeader } from "@/components/ElegantHeader"
+import ClientLayoutComponents from "./ClientLayoutComponents"
 
 import "./globals.css"
 
@@ -34,11 +34,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  generator: "v0.dev",
-  other: {
-    preconnect: "https://cdn-lfdfp.nitrocdn.com",
-    "dns-prefetch": "https://cdn-lfdfp.nitrocdn.com",
-  },
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -50,13 +46,13 @@ export default function RootLayout({
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${inter.className}`}
-    >
-      <body className={inter.className}>
+    <html lang="en" className="font-sans">
+      <head>
+        <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
-
+      </head>
+      <body className="font-sans">
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
             <UserProvider>
@@ -65,29 +61,28 @@ export default function RootLayout({
                   <ClientWrapper>
                     <ScrollToTop />
                     <ClientDynamicComponents />
-                    <ElegantHeader />
-                    <div className="min-h-screen bg-background">
-                      <main className="flex-1">{children}</main>
-                    </div>
-                    <footer className="bg-earth-dark text-earth-dark-foreground py-8 mt-16">
-                      <div className="mx-auto max-w-7xl px-4 text-center">
-                        <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-sm">
-                          <Link href="/privacy-policy" className="hover:text-earth-light transition-colors">
-                            Privacy Policy
-                          </Link>
-                          <span className="hidden md:inline text-earth-light">|</span>
-                          <Link href="/terms-of-service" className="hover:text-earth-light transition-colors">
-                            Terms of Service
-                          </Link>
-                          <span className="hidden md:inline text-earth-light">|</span>
-                          <Link href="/sitemap.xml" className="hover:text-earth-light transition-colors">
-                            Sitemap
-                          </Link>
-                        </div>
-                        <p className="mt-4 text-earth-light text-sm">
-                          © 2025 News On Africa. Where the Continent Connects.
-                        </p>
+                    <TopBar />
+                    <div className="flex-grow">
+                      <div className="mx-auto max-w-full md:max-w-[980px]">
+                        <ClientLayoutComponents>
+                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                            <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                          </main>
+                        </ClientLayoutComponents>
                       </div>
+                    </div>
+                    <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+                      <Link href="/privacy-policy" className="hover:underline">
+                        Privacy Policy
+                      </Link>
+                      {" | "}
+                      <Link href="/terms-of-service" className="hover:underline">
+                        Terms of Service
+                      </Link>
+                      {" | "}
+                      <Link href="/sitemap.xml" className="hover:underline">
+                        Sitemap
+                      </Link>
                     </footer>
                     <NetworkStatus />
                     <Toaster />

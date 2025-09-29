@@ -92,7 +92,7 @@
     "util": "latest",
     "uuid": "latest",
     "vaul": "latest",
-    "webpack": "^5.101.3",
+    "webpack": "latest",
     "zod": "^3.25.31"
   },
   "devDependencies": {

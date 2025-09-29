@@ -1,45 +1,61 @@
 import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import type { CookieOptions } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
 
-export async function createClient() {
-  const cookieStore = await cookies()
+export function createClient(cookieStore: any) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error("Missing Supabase environment variables")
+  }
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
+  return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value
+      },
+      set(name: string, value: string, options: CookieOptions) {
+        try {
+          cookieStore.set({ name, value, ...options })
+        } catch (error) {
+          // The `set` method was called from a Server Component.
+          // This is allowed and will be fixed in a future version.
+        }
+      },
+      remove(name: string, options: CookieOptions) {
+        try {
+          cookieStore.set({ name, value: "", ...options })
+        } catch (error) {
+          // The `delete` method was called from a Server Component.
+          // This is allowed and will be fixed in a future version.
+        }
       },
     },
-  )
+  })
 }
 
-export async function createAdminClient() {
-  const cookieStore = await cookies()
+// Create a client with service role for admin operations
+// IMPORTANT: This should only be used in server-side code
+export function createAdminClient(cookieStore: any) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing Supabase environment variables")
+  }
 
-  return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll()
+      get(name: string) {
+        return cookieStore.get(name)?.value
       },
-      setAll(cookiesToSet) {
+      set(name: string, value: string, options: CookieOptions) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        } catch {
-          // The `setAll` method was called from a Server Component.
+          cookieStore.set({ name, value, ...options })
+        } catch (error) {
+          // The `set` method was called from a Server Component.
+        }
+      },
+      remove(name: string, options: CookieOptions) {
+        try {
+          cookieStore.set({ name, value: "", ...options })
+        } catch (error) {
+          // The `delete` method was called from a Server Component.
         }
       },
     },

@@ -8,11 +8,9 @@ import { ArticleList } from "@/components/ArticleList"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus, MapPin } from "lucide-react"
+import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus } from "lucide-react"
 import Link from "next/link"
 import { getCategoryUrl } from "@/lib/utils/routing"
-import { ElegantArticleList } from "@/components/ElegantArticleList"
-import { ElegantHero } from "@/components/ElegantHero"
 
 interface CountryEditionContentProps {
   countryCode: string
@@ -82,7 +80,7 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
   // Error state
   if (heroError && trendingError && latestError) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Failed to load content for {country.name}. Please try again later.</AlertDescription>
@@ -92,181 +90,147 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
   }
 
   return (
-    <div className="press-layout">
-      {/* Country Header */}
-      <section className="bg-earth-dark text-earth-dark-foreground py-12">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex items-center gap-4 mb-6">
-            <span className="text-4xl" role="img" aria-label={`${country.name} flag`}>
-              {country.flag}
-            </span>
-            <div>
-              <h1 className="font-serif text-3xl md:text-4xl font-bold">{country.name} Edition</h1>
-              <p className="text-earth-light text-lg mt-2">Latest news and updates from {country.name}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-earth-light">
-            <MapPin className="h-4 w-4" />
-            <span className="text-sm">Part of News On Africa's pan-continental coverage</span>
-          </div>
-        </div>
-      </section>
-
+    <div className="container mx-auto px-4 py-8 space-y-12">
       {/* Hero Section */}
-      {heroLoading ? (
-        <section className="mx-auto max-w-7xl px-4 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              <Skeleton className="aspect-video w-full" />
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-4 w-full" />
+      <section className="space-y-6">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="h-1 w-8 bg-primary rounded-full" />
+          <h2 className="text-2xl font-bold">Featured Story</h2>
+        </div>
+
+        {heroLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Skeleton className="aspect-video w-full mb-4" />
+              <Skeleton className="h-8 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
               <Skeleton className="h-4 w-2/3" />
             </div>
-            <div className="space-y-6">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-video w-full" />
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
+            <div className="space-y-4">
+              <Skeleton className="aspect-video w-full" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="aspect-video w-full" />
+              <Skeleton className="h-6 w-full" />
+            </div>
+          </div>
+        ) : heroPost ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Hero Post */}
+            <div className="lg:col-span-2">
+              <ArticleCard article={heroPost} layout="featured" className="h-full" />
+            </div>
+
+            {/* Side Featured Posts */}
+            <div className="space-y-4">
+              {featuredPosts.map((post) => (
+                <ArticleCard key={post.id} article={post} layout="compact" />
               ))}
             </div>
           </div>
-        </section>
-      ) : heroPost ? (
-        <ElegantHero post={heroPost} />
-      ) : null}
-
-      {/* Featured Stories */}
-      {featuredPosts.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-12">
-          <ElegantArticleList posts={featuredPosts} title="Featured Stories" showCategory={true} />
-        </section>
-      )}
-
-      {/* Categories Navigation */}
-      <section className="bg-muted/20 py-12">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Grid3X3 className="h-6 w-6 text-earth-warm" />
-              <h2 className="font-serif text-2xl md:text-3xl font-bold text-earth-dark">Browse Categories</h2>
-            </div>
-            <p className="text-muted-foreground">Explore news by topic in {country.name}</p>
-          </div>
-
-          {categoriesLoading ? (
-            <div className="flex flex-wrap justify-center gap-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-24 rounded-full" />
-              ))}
-            </div>
-          ) : categoriesError ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Failed to load categories. Using default navigation.</AlertDescription>
-            </Alert>
-          ) : (
-            <div className="flex flex-wrap justify-center gap-3">
-              {categories?.slice(0, 12).map((category) => (
-                <Link key={category.id} href={getCategoryUrl(category.slug, countryCode)}>
-                  <Badge
-                    variant="secondary"
-                    className="hover:bg-earth-warm hover:text-earth-warm-foreground transition-colors cursor-pointer px-4 py-2 text-sm"
-                  >
-                    {category.name}
-                    {category.count && <span className="ml-2 text-xs opacity-70">{category.count}</span>}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        ) : null}
       </section>
 
-      {/* Trending Now */}
-      {trendingPosts.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-12">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <TrendingUp className="h-6 w-6 text-earth-warm" />
-              <h2 className="font-serif text-2xl md:text-3xl font-bold text-earth-dark">Trending Now</h2>
-            </div>
-            <p className="text-muted-foreground">Most popular stories from {country.name}</p>
-          </div>
+      {/* Trending Section */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">Trending Now</h2>
+        </div>
 
-          {trendingLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-video w-full" />
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {trendingPosts.slice(0, 6).map((post) => (
-                <ArticleCard key={post.id} article={post} layout="standard" />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        {trendingLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="aspect-video w-full mb-3" />
+                <Skeleton className="h-6 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trendingPosts.slice(0, 6).map((post) => (
+              <ArticleCard key={post.id} article={post} layout="standard" />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Categories Rail */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Grid3X3 className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">Browse Categories</h2>
+        </div>
+
+        {categoriesLoading ? (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20 rounded-full flex-shrink-0" />
+            ))}
+          </div>
+        ) : categoriesError ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>Failed to load categories. Using default navigation.</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {categories?.slice(0, 10).map((category) => (
+              <Link key={category.id} href={getCategoryUrl(category.slug, countryCode)} className="flex-shrink-0">
+                <Badge
+                  variant="secondary"
+                  className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                >
+                  {category.name}
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Latest News */}
-      {latestPosts.length > 0 && (
-        <section className="bg-muted/20 py-12">
-          <div className="mx-auto max-w-7xl px-4">
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Clock className="h-6 w-6 text-earth-warm" />
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-earth-dark">Latest News</h2>
-              </div>
-              <p className="text-muted-foreground">Recent updates from {country.name}</p>
-            </div>
+      <section className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">Latest News</h2>
+        </div>
 
-            {latestLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="flex gap-4">
-                    <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-5 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  </div>
-                ))}
+        {latestLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex gap-4">
+                <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {latestPosts.slice(0, 8).map((post) => (
-                  <ArticleCard key={post.id} article={post} layout="compact" />
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {latestPosts.slice(0, 8).map((post) => (
+              <ArticleCard key={post.id} article={post} layout="compact" />
+            ))}
+          </div>
+        )}
+      </section>
 
-      {/* More Stories - Infinite Scroll */}
-      <section className="mx-auto max-w-7xl px-4 py-12">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Plus className="h-6 w-6 text-earth-warm" />
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-earth-dark">More Stories</h2>
-          </div>
-          <p className="text-muted-foreground">Discover more news from {country.name}</p>
+      {/* More for You - Infinite Scroll */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Plus className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">More for You</h2>
         </div>
 
         <ArticleList
           fetcher={(cursor) => getLatestPostsForCountry(countryCode, 20, cursor)}
           initialData={moreForYouInitialData}
           layout="standard"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         />
       </section>
     </div>

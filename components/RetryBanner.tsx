@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { WifiOff, Wifi, RefreshCw, X } from "lucide-react"
@@ -25,29 +25,30 @@ export default function RetryBanner({
   const [lastFailedRequest, setLastFailedRequest] = useState<string | null>(null)
   const [isDismissed, setIsDismissed] = useState(false)
 
-  const handleOnline = useCallback(() => {
-    setIsOnline(true)
-    setShowBanner(false)
-    setRetryCount(0)
-    setIsDismissed(false)
-    console.log("[v0] Network connection restored")
-  }, [])
-
-  const handleOffline = useCallback(() => {
-    setIsOnline(false)
-    setShowBanner(true)
-    setIsDismissed(false)
-    console.log("[v0] Network connection lost")
-  }, [])
-
   useEffect(() => {
     // Set initial online status
     setIsOnline(navigator.onLine)
+
+    const handleOnline = () => {
+      setIsOnline(true)
+      setShowBanner(false)
+      setRetryCount(0)
+      setIsDismissed(false)
+      console.log("[v0] Network connection restored")
+    }
+
+    const handleOffline = () => {
+      setIsOnline(false)
+      setShowBanner(true)
+      setIsDismissed(false)
+      console.log("[v0] Network connection lost")
+    }
 
     // Listen for network events
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
 
+    // Listen for failed fetch requests
     const originalFetch = window.fetch
     window.fetch = async (...args) => {
       try {
@@ -79,9 +80,24 @@ export default function RetryBanner({
       window.removeEventListener("offline", handleOffline)
       window.fetch = originalFetch
     }
-  }, [isDismissed, handleOnline, handleOffline])
+  }, [isDismissed])
 
-  const handleRetry = useCallback(async () => {
+  // Auto-retry logic
+  useEffect(() => {
+    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      handleRetry()
+    }, retryInterval)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline])
+
+
+  const handleRetry = async () => {
     setIsRetrying(true)
     setRetryCount((prev) => prev + 1)
 
@@ -115,20 +131,7 @@ export default function RetryBanner({
     } finally {
       setIsRetrying(false)
     }
-  }, [maxRetries, onRetry, retryCount])
-
-  // Auto-retry logic
-  useEffect(() => {
-    if (!autoRetry || !showBanner || isOnline || retryCount >= maxRetries) {
-      return
-    }
-
-    const timer = setTimeout(() => {
-      handleRetry()
-    }, retryInterval)
-
-    return () => clearTimeout(timer)
-  }, [showBanner, retryCount, autoRetry, retryInterval, maxRetries, isOnline, handleRetry])
+  }
 
   const handleDismiss = () => {
     setShowBanner(false)

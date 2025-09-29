@@ -43,9 +43,6 @@ export const siteConfig = {
     authToken: env.WORDPRESS_AUTH_TOKEN,
     username: env.WP_APP_USERNAME,
     password: env.WP_APP_PASSWORD,
-    timeout: 10000,
-    retries: 3,
-    fallbackEnabled: true,
   },
   // Search configuration
   search: {
@@ -71,20 +68,6 @@ export const siteConfig = {
   newsletter: {
     enabled: true,
     provider: "mailchimp", // or "convertkit", "emailoctopus"
-  },
-  performance: {
-    enableCaching: true,
-    cacheTimeout: 300000, // 5 minutes
-    enableOfflineMode: true,
-    enableServiceWorker: true,
-  },
-  features: {
-    comments: env.NEXT_PUBLIC_APP_ENV !== "development",
-    bookmarks: true,
-    subscriptions: env.NEXT_PUBLIC_APP_ENV !== "development",
-    advancedSearch: true,
-    socialSharing: true,
-    newsletter: true,
   },
 }
 
