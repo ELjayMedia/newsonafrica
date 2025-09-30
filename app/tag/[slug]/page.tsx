@@ -5,6 +5,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 
+export const runtime = "nodejs"
 export const revalidate = 60 // Revalidate every 60 seconds
 
 interface TagPageProps {

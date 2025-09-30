@@ -4,6 +4,8 @@ import { getCategoryUrl } from "@/lib/utils/routing"
 import type { Metadata } from "next"
 import { getArticleUrl } from "@/lib/utils/routing"
 
+export const runtime = "nodejs"
+
 export const metadata: Metadata = {
   title: "Sitemap | News On Africa",
   description: "Complete sitemap of News On Africa website",
@@ -118,10 +120,7 @@ export default async function SitemapPage() {
         <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {recentPosts.map((post) => (
             <li key={post.slug} className="border-b pb-2">
-              <Link
-                href={getArticleUrl(post.slug, (post as any)?.country)}
-                className="text-blue-600 hover:underline"
-              >
+              <Link href={getArticleUrl(post.slug, (post as any)?.country)} className="text-blue-600 hover:underline">
                 {post.title}
               </Link>
               <p className="text-sm text-gray-500">{new Date(post.date).toLocaleDateString()}</p>

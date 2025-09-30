@@ -11,6 +11,7 @@ interface Params {
   slug: string
 }
 
+export const runtime = "nodejs"
 export const revalidate = 300
 export const dynamicParams = true
 
@@ -80,8 +81,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     const description = `${baseDescription}. Browse ${postCount} articles covering ${category.name.toLowerCase()} news from across Africa.`
 
     const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
-    const featuredImageUrl =
-      featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
+    const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
     const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 

@@ -9,6 +9,7 @@ interface AuthorPageProps {
   params: { slug: string }
 }
 
+export const runtime = "nodejs"
 export const revalidate = 600 // Revalidate every 10 minutes
 
 // Enhanced metadata generation for author pages
@@ -40,8 +41,7 @@ export async function generateMetadata({ params }: AuthorPageProps): Promise<Met
       `Read ${postCount} articles by ${author.name} on News On Africa. ${author.name} covers news and stories from across the African continent.`
 
     // Get author avatar or featured image from their latest post
-    const avatarUrl =
-      author.avatar?.url || posts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
+    const avatarUrl = author.avatar?.url || posts[0]?.featuredImage?.node?.sourceUrl || "/default-author-image.jpg"
 
     // Create canonical URL
     const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/author/${params.slug}`

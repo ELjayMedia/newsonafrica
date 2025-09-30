@@ -1,11 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { HomeContent } from "@/components/HomeContent"
-import {
-  getLatestPostsForCountry,
-  getFpTaggedPostsForCountry,
-  mapPostsToHomePosts,
-} from "@/lib/wordpress-api"
+import { getLatestPostsForCountry, getFpTaggedPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
 import type { HomePageData } from "@/types/home"
 import { getServerCountry } from "@/lib/utils/routing"
 
@@ -14,7 +10,6 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   keywords: "African News, News On Africa, Latest News, Breaking News, African Politics, Business News",
 
-  // Canonical URL and robots for homepage
   alternates: {
     canonical: siteConfig.url,
     languages: {
@@ -23,7 +18,6 @@ export const metadata: Metadata = {
     },
   },
 
-  // Enhanced robots directives
   robots: {
     index: true,
     follow: true,
@@ -68,134 +62,126 @@ export const metadata: Metadata = {
     images: [`${siteConfig.url}/og-image.jpg`],
   },
 
-  // Additional SEO metadata
   other: {
     "og:site_name": "News On Africa",
     "og:locale": "en_US",
   },
 }
 
-export const revalidate = 60 // Revalidate every 60 seconds
+export const revalidate = 60
 
 async function getHomePageData(countryCode: string): Promise<HomePageData> {
-  const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
-  const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
+  const fallbackPost = {
+    id: "fallback-1",
+    slug: "welcome",
+    title: "Welcome to News On Africa",
+    excerpt: "Your trusted source for pan-African news and stories. We're loading the latest content for you.",
+    date: new Date().toISOString(),
+    country: countryCode,
+    featuredImage: {
+      node: {
+        sourceUrl: "/placeholder.svg?height=400&width=600",
+        altText: "News On Africa",
+      },
+    },
+  }
 
-  const cacheKey = `homepage-data-${countryCode}`
-  const cached = enhancedCache.get(cacheKey)
-
-  // If we have fresh data, use it
-  if (cached.exists && !cached.isStale) {
-    console.log("[v0] Homepage: Using fresh cached data")
-    return cached.data
+  const fallbackData: HomePageData = {
+    taggedPosts: [fallbackPost],
+    recentPosts: [fallbackPost],
+    countryPosts: { [countryCode]: [fallbackPost] },
+    featuredPosts: [fallbackPost],
   }
 
   try {
-    const result = await circuitBreaker.execute(
-      "wordpress-homepage-api",
-      async () => {
-        const [taggedPosts, latestPosts] = await Promise.all([
-          getFpTaggedPostsForCountry(countryCode, 8),
-          getLatestPostsForCountry(countryCode, 10),
-        ])
+    console.log("[v0] Fetching homepage data for country:", countryCode)
 
-        const recentPosts = mapPostsToHomePosts(latestPosts.posts ?? [], countryCode)
+    // Use Promise.allSettled to handle partial failures gracefully
+    const [taggedResult, latestResult] = await Promise.allSettled([
+      getFpTaggedPostsForCountry(countryCode, 8),
+      getLatestPostsForCountry(countryCode, 10),
+    ])
 
-        if (taggedPosts.length === 0 && recentPosts.length === 0) {
-          throw new Error("No posts available")
-        }
+    const taggedPosts = taggedResult.status === "fulfilled" ? taggedResult.value : []
+    const latestPosts = latestResult.status === "fulfilled" ? (latestResult.value.posts ?? []) : []
 
-        const featuredPosts =
-          taggedPosts.length > 0
-            ? taggedPosts.slice(0, 6)
-            : recentPosts.slice(0, 6)
+    console.log("[v0] Tagged posts:", taggedPosts.length, "Latest posts:", latestPosts.length)
 
-        return {
-          taggedPosts,
-          recentPosts,
-          countryPosts: { [countryCode]: recentPosts },
-          featuredPosts,
-        }
-      },
-      async () => {
-        if (cached.exists) {
-          console.log("[v0] Homepage: Using stale cached data due to API failure")
-          return cached.data
-        }
+    const recentPosts = mapPostsToHomePosts(latestPosts, countryCode)
 
-        console.log("[v0] Homepage: Using fallback content - no cache available")
-        const fallbackPosts = [
-          {
-            id: "fallback-1",
-            slug: "service-notice",
-            title: "News On Africa - Service Notice",
-            excerpt:
-              "We're experiencing temporary connectivity issues. Our team is working to restore full service.",
-            date: new Date().toISOString(),
-            country: countryCode,
-            featuredImage: {
-              node: {
-                sourceUrl: "/news-placeholder.png",
-                altText: "Service notice",
-              },
-            },
-          },
-        ]
+    // If we have no posts at all, return fallback data
+    if (taggedPosts.length === 0 && recentPosts.length === 0) {
+      console.log("[v0] No posts available, using fallback data")
+      return fallbackData
+    }
 
-        return {
-          taggedPosts: fallbackPosts,
-          recentPosts: fallbackPosts,
-          countryPosts: { [countryCode]: fallbackPosts },
-          featuredPosts: fallbackPosts,
-        }
-      },
-    )
+    const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
 
-    enhancedCache.set(cacheKey, result, 300000, 900000) // 5min fresh, 15min stale
-    return result
+    console.log("[v0] Successfully fetched homepage data")
+    return {
+      taggedPosts,
+      recentPosts,
+      countryPosts: { [countryCode]: recentPosts },
+      featuredPosts,
+    }
   } catch (error) {
     console.error("[v0] Homepage data fetch failed:", error)
-
-    if (cached.exists) {
-      console.log("[v0] Homepage: Returning stale cache due to complete failure")
-      return cached.data
-    }
-
-    const fallbackPost = {
-      id: "error-fallback",
-      slug: "service-unavailable",
-      title: "Service Temporarily Unavailable",
-      excerpt: "We're working to restore full service. Thank you for your patience.",
-      date: new Date().toISOString(),
-      country: countryCode,
-      featuredImage: {
-        node: { sourceUrl: "/news-placeholder.png", altText: "Service notice" },
-      },
-    }
-
-    return {
-      taggedPosts: [fallbackPost],
-      recentPosts: [fallbackPost],
-      countryPosts: { [countryCode]: [fallbackPost] },
-      featuredPosts: [fallbackPost],
-    }
+    // Always return fallback data instead of throwing
+    return fallbackData
   }
 }
 
 export default async function Home() {
-  const countryCode = getServerCountry()
+  let countryCode = "sz" // Default fallback
+
+  try {
+    countryCode = getServerCountry()
+    console.log("[v0] Server country:", countryCode)
+  } catch (error) {
+    console.error("[v0] Failed to get server country:", error)
+  }
+
   try {
     const initialData = await getHomePageData(countryCode)
+    console.log("[v0] Rendering homepage with", initialData.featuredPosts.length, "featured posts")
+
     return (
       <HomeContent
         initialPosts={initialData.recentPosts}
         countryPosts={initialData.countryPosts}
         featuredPosts={initialData.featuredPosts}
-        initialData={initialData}
+        initialData={{
+          taggedPosts: initialData.taggedPosts,
+          featuredPosts: initialData.featuredPosts,
+          categories: [],
+          recentPosts: initialData.recentPosts,
+        }}
       />
     )
   } catch (error) {
-    console.error("Homepage data fetch failed:", error)
-    return <HomeContent initialPosts={[]} />
+    console.error("[v0] Homepage render failed:", error)
+    // Return a minimal working component even if everything fails
+    const fallbackPost = {
+      id: "error-fallback",
+      slug: "error",
+      title: "News On Africa",
+      excerpt: "We're experiencing technical difficulties. Please refresh the page.",
+      date: new Date().toISOString(),
+      country: countryCode,
+      featuredImage: {
+        node: {
+          sourceUrl: "/placeholder.svg?height=400&width=600",
+          altText: "News On Africa",
+        },
+      },
+    }
+
+    return (
+      <HomeContent
+        initialPosts={[fallbackPost]}
+        featuredPosts={[fallbackPost]}
+        countryPosts={{ [countryCode]: [fallbackPost] }}
+      />
+    )
   }
 }

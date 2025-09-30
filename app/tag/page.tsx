@@ -2,6 +2,8 @@ import { fetchAllTags } from "@/lib/wordpress-api"
 import Link from "next/link"
 import type { Metadata } from "next"
 
+export const runtime = "nodejs"
+
 export const metadata: Metadata = {
   title: "All Tags - News On Africa",
   description: "Browse all tags on News On Africa",

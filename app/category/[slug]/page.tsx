@@ -11,6 +11,8 @@ interface CategoryPageProps {
   searchParams?: Record<string, string | string[] | undefined>
 }
 
+export const runtime = "nodejs"
+
 // Static generation configuration
 export const revalidate = 300 // Revalidate every 5 minutes
 export const dynamicParams = true // Allow dynamic params not in generateStaticParams
@@ -57,11 +59,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     const result = await circuitBreaker.execute(
       "wordpress-category-metadata",
       async () => {
-        const { category, posts } = await getPostsByCategoryForCountry(
-          country,
-          params.slug,
-          10,
-        )
+        const { category, posts } = await getPostsByCategoryForCountry(country, params.slug, 10)
 
         if (!category) {
           log.info(`Category not found for metadata generation: ${params.slug}`)
@@ -74,7 +72,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
               noarchive: true,
             },
             alternates: {
-                canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
+              canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
             },
           }
         }
@@ -91,7 +89,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
         // Create canonical URL
-          const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`
+        const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`
 
         // Generate keywords
         const keywords = [
@@ -203,7 +201,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             follow: true,
           },
           alternates: {
-              canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
+            canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
           },
         }
       },
@@ -226,7 +224,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         follow: true,
       },
       alternates: {
-            canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
+        canonical: `${env.NEXT_PUBLIC_SITE_URL}${getCategoryUrl(params.slug, country)}`,
       },
     }
   }
@@ -245,11 +243,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
     const categoryData = await circuitBreaker.execute(
       "wordpress-category-data",
       async () => {
-        const data = await getPostsByCategoryForCountry(
-          country,
-          params.slug,
-          20,
-        )
+        const data = await getPostsByCategoryForCountry(country, params.slug, 20)
 
         if (!data.category) {
           notFound()

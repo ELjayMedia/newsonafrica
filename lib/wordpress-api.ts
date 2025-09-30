@@ -1,6 +1,5 @@
 import { getWpEndpoints } from "@/config/wp"
 import { wordpressQueries } from "./wordpress-queries"
-import { circuitBreaker } from "./api/circuit-breaker"
 import * as log from "./log"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
@@ -9,6 +8,15 @@ import { APIError } from "./utils/errorHandling"
 import type { HomePost } from "@/types/home"
 
 const gql = String.raw
+
+let circuitBreakerInstance: any = null
+async function getCircuitBreaker() {
+  if (!circuitBreakerInstance) {
+    const { circuitBreaker } = await import("./api/circuit-breaker")
+    circuitBreakerInstance = circuitBreaker
+  }
+  return circuitBreakerInstance
+}
 
 const mapPostFromWp = (post: WordPressPost, countryCode?: string): WordPressPost => mapWpPost(post, "rest", countryCode)
 
@@ -190,47 +198,37 @@ export async function fetchFromWpGraphQL<T>(
   variables?: Record<string, string | number | string[]>,
 ): Promise<T | null> {
   const base = getWpEndpoints(countryCode).graphql
-  const operation = async (): Promise<T | null> => {
-    try {
-      const res = await fetchWithTimeout(base, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ query, variables }),
-        next: { revalidate: CACHE_DURATIONS.MEDIUM },
-        timeout: 10000,
-      })
-      if (!res.ok) {
-        log.error(`[v0] WordPress GraphQL request failed for ${base}`, { status: res.status })
-        throw new APIError("GraphQL request failed", "GRAPHQL_HTTP_ERROR", res.status)
-      }
-
-      const json = (await res.json()) as WordPressGraphQLResponse<T>
-
-      if (json.errors && json.errors.length > 0) {
-        const graphQLError = new APIError("GraphQL response contained errors", "GRAPHQL_RESPONSE_ERROR", res.status, {
-          errors: json.errors,
-        })
-        log.error(`[v0] WordPress GraphQL errors for ${base}`, { errors: json.errors })
-        throw graphQLError
-      }
-
-      return (json.data ?? null) as T | null
-    } catch (error) {
-      if (
-        error instanceof APIError &&
-        (error.code === "GRAPHQL_RESPONSE_ERROR" || error.code === "GRAPHQL_HTTP_ERROR")
-      ) {
-        throw error
-      }
-      log.error(`[v0] WordPress GraphQL request failed for ${base}`, { error })
-      throw error
-    }
-  }
 
   try {
-    return await circuitBreaker.execute<T | null>(base, operation, async () => null)
+    console.log("[v0] GraphQL request to:", base)
+
+    const res = await fetchWithTimeout(base, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ query, variables }),
+      next: { revalidate: CACHE_DURATIONS.MEDIUM },
+      timeout: 10000,
+    })
+
+    if (!res.ok) {
+      console.error("[v0] GraphQL request failed:", res.status, res.statusText)
+      log.error(`WordPress GraphQL request failed for ${base}`, { status: res.status })
+      return null
+    }
+
+    const json = (await res.json()) as WordPressGraphQLResponse<T>
+
+    if (json.errors && json.errors.length > 0) {
+      console.error("[v0] GraphQL errors:", json.errors)
+      log.error(`WordPress GraphQL errors for ${base}`, { errors: json.errors })
+      return null
+    }
+
+    console.log("[v0] GraphQL request successful")
+    return (json.data ?? null) as T | null
   } catch (error) {
-    log.error(`[v0] Circuit breaker error for ${base}`, { error })
+    console.error("[v0] GraphQL request exception:", error)
+    log.error(`WordPress GraphQL request failed for ${base}`, { error })
     return null
   }
 }
@@ -534,26 +532,6 @@ export async function fetchFromWp<T>(
     method?: string
     payload?: unknown
   },
-  timeout?: number,
-): Promise<T | null>
-export async function fetchFromWp<T>(
-  countryCode: string,
-  query: {
-    endpoint: string
-    params?: Record<string, string | number | string[] | undefined>
-    method?: string
-    payload?: unknown
-  },
-  opts: { timeout?: number; withHeaders: true },
-): Promise<{ data: T; headers: Headers } | null>
-export async function fetchFromWp<T>(
-  countryCode: string,
-  query: {
-    endpoint: string
-    params?: Record<string, string | number | string[] | undefined>
-    method?: string
-    payload?: unknown
-  },
   opts: { timeout?: number; withHeaders?: boolean } = {},
 ): Promise<{ data: T; headers: Headers } | T | null> {
   const { timeout = 10000, withHeaders = false } =
@@ -569,45 +547,44 @@ export async function fetchFromWp<T>(
   ).toString()
   const url = `${base}/${endpoint}${params ? `?${params}` : ""}`
 
-  const operation = async (): Promise<T | null> => {
-    try {
-      const res = await fetchWithTimeout(url, {
-        method,
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        next: { revalidate: CACHE_DURATIONS.MEDIUM },
-        ...(payload ? { body: JSON.stringify(payload) } : {}),
-        timeout,
-      })
-      if (!res.ok) {
-        log.error(`[v0] WordPress API error ${res.status} for ${url}`)
-        return null
-      }
-      const rawData = await res.json()
-      let data: T
-      if (query.endpoint.startsWith("posts")) {
-        if (Array.isArray(rawData)) {
-          data = rawData.map((p: WordPressPost) => mapPostFromWp(p, countryCode)) as T
-        } else {
-          data = mapPostFromWp(rawData as WordPressPost, countryCode) as T
-        }
-      } else {
-        data = rawData as T
-      }
-
-      if (withHeaders) {
-        return { data: data as T, headers: res.headers }
-      }
-      return data as T
-    } catch (error) {
-      log.error(`[v0] WordPress API request failed for ${url}`, { error })
-      throw error
-    }
-  }
-
   try {
-    return await circuitBreaker.execute<T | null>(url, operation, async () => null)
+    console.log("[v0] REST request to:", url)
+
+    const res = await fetchWithTimeout(url, {
+      method,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      next: { revalidate: CACHE_DURATIONS.MEDIUM },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
+      timeout,
+    })
+
+    if (!res.ok) {
+      console.error("[v0] REST request failed:", res.status, res.statusText)
+      log.error(`WordPress API error ${res.status} for ${url}`)
+      return null
+    }
+
+    const rawData = await res.json()
+    let data: T
+
+    if (query.endpoint.startsWith("posts")) {
+      if (Array.isArray(rawData)) {
+        data = rawData.map((p: WordPressPost) => mapPostFromWp(p, countryCode)) as T
+      } else {
+        data = mapPostFromWp(rawData as WordPressPost, countryCode) as T
+      }
+    } else {
+      data = rawData as T
+    }
+
+    console.log("[v0] REST request successful")
+    if (withHeaders) {
+      return { data: data as T, headers: res.headers }
+    }
+    return data as T
   } catch (error) {
-    log.error(`[v0] Circuit breaker error for ${url}`, { error })
+    console.error("[v0] REST request exception:", error)
+    log.error(`WordPress API request failed for ${url}`, { error })
     return null
   }
 }
@@ -649,39 +626,51 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
     }
   }
 
-  const gqlData = await fetchFromWpGraphQL<FpTaggedPostsData>(countryCode, FP_TAGGED_POSTS_QUERY, {
-    country: countryCode,
-    tagSlugs: ["fp"],
-    first: limit,
-  })
+  try {
+    console.log("[v0] Fetching FP tagged posts for:", countryCode)
 
-  if (gqlData?.posts?.nodes?.length) {
-    return gqlData.posts.nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
-  }
+    const gqlData = await fetchFromWpGraphQL<FpTaggedPostsData>(countryCode, FP_TAGGED_POSTS_QUERY, {
+      country: countryCode,
+      tagSlugs: ["fp"],
+      first: limit,
+    })
 
-  const tags = await executeRestFallback(
-    () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("fp")),
-    `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
-    { countryCode },
-  )
+    if (gqlData?.posts?.nodes?.length) {
+      console.log("[v0] Found", gqlData.posts.nodes.length, "FP tagged posts via GraphQL")
+      return gqlData.posts.nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
+    }
 
-  const tag = tags[0]
-  if (!tag) {
+    console.log("[v0] No GraphQL results, trying REST fallback")
+
+    const tags = await executeRestFallback(
+      () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("fp")),
+      `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
+      { countryCode },
+    )
+
+    const tag = tags[0]
+    if (!tag) {
+      console.log("[v0] No FP tag found")
+      return []
+    }
+
+    const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
+    const posts = await executeRestFallback(
+      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
+      `[v0] FP tagged posts REST fallback failed for ${countryCode}`,
+      { countryCode, tagId: tag.id, limit, endpoint, params },
+    )
+
+    const normalizedPosts = Array.isArray(posts)
+      ? posts.map((post) => mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode))
+      : []
+
+    console.log("[v0] Found", normalizedPosts.length, "FP tagged posts via REST")
+    return normalizedPosts
+  } catch (error) {
+    console.error("[v0] Failed to fetch FP tagged posts:", error)
     return []
   }
-
-  const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-  const posts = await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
-    `[v0] FP tagged posts REST fallback failed for ${countryCode}`,
-    { countryCode, tagId: tag.id, limit, endpoint, params },
-  )
-
-  const normalizedPosts = Array.isArray(posts)
-    ? posts.map((post) => mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode))
-    : []
-
-  return normalizedPosts
 }
 
 export async function getLatestPostsForCountry(countryCode: string, limit = 20, cursor?: string | null) {
@@ -695,32 +684,49 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20, 
     }
   }
 
-  const gqlData = await fetchFromWpGraphQL<LatestPostsData>(countryCode, LATEST_POSTS_QUERY, {
-    country: countryCode,
-    first: limit,
-    ...(cursor ? { after: cursor } : {}),
-  })
-  if (gqlData?.posts) {
-    const posts = gqlData.posts.nodes.map((p) => mapWpPost(p, "gql", countryCode))
+  try {
+    console.log("[v0] Fetching latest posts for:", countryCode)
+
+    const gqlData = await fetchFromWpGraphQL<LatestPostsData>(countryCode, LATEST_POSTS_QUERY, {
+      country: countryCode,
+      first: limit,
+      ...(cursor ? { after: cursor } : {}),
+    })
+
+    if (gqlData?.posts) {
+      const posts = gqlData.posts.nodes.map((p) => mapWpPost(p, "gql", countryCode))
+      console.log("[v0] Found", posts.length, "latest posts via GraphQL")
+      return {
+        posts,
+        hasNextPage: gqlData.posts.pageInfo.hasNextPage,
+        endCursor: gqlData.posts.pageInfo.endCursor,
+      }
+    }
+
+    console.log("[v0] No GraphQL results, trying REST fallback")
+
+    const { endpoint, params } = wordpressQueries.recentPosts(limit)
+    const offset = cursorToOffset(cursor ?? null)
+    const restParams = offset !== null ? { ...params, offset } : params
+    const posts = await executeRestFallback(
+      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }),
+      `[v0] Latest posts REST fallback failed for ${countryCode}`,
+      { countryCode, limit, endpoint, params: restParams },
+    )
+
+    console.log("[v0] Found", posts.length, "latest posts via REST")
     return {
       posts,
-      hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-      endCursor: gqlData.posts.pageInfo.endCursor,
+      hasNextPage: posts.length === limit,
+      endCursor: null,
     }
-  }
-
-  const { endpoint, params } = wordpressQueries.recentPosts(limit)
-  const offset = cursorToOffset(cursor ?? null)
-  const restParams = offset !== null ? { ...params, offset } : params
-  const posts = await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }),
-    `[v0] Latest posts REST fallback failed for ${countryCode}`,
-    { countryCode, limit, endpoint, params: restParams },
-  )
-  return {
-    posts,
-    hasNextPage: posts.length === limit,
-    endCursor: null,
+  } catch (error) {
+    console.error("[v0] Failed to fetch latest posts:", error)
+    return {
+      posts: [],
+      hasNextPage: false,
+      endCursor: null,
+    }
   }
 }
 
