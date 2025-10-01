@@ -294,14 +294,13 @@ const HOME_POST_FIELDS = gql`
 
 const LATEST_POSTS_QUERY = gql`
   ${POST_FIELDS}
-  query LatestPosts($country: String!, $first: Int!, $after: String) {
+  query LatestPosts($first: Int!, $after: String) {
     posts(
       first: $first
       after: $after
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        countrySlugIn: [$country]
       }
     ) {
       pageInfo {
@@ -317,13 +316,12 @@ const LATEST_POSTS_QUERY = gql`
 
 const FP_TAGGED_POSTS_QUERY = gql`
   ${HOME_POST_FIELDS}
-  query FpTaggedPosts($country: String!, $tagSlugs: [String!]!, $first: Int!) {
+  query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
     posts(
       first: $first
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        countrySlugIn: [$country]
         tagSlugIn: $tagSlugs
       }
     ) {
@@ -336,7 +334,7 @@ const FP_TAGGED_POSTS_QUERY = gql`
 
 const POSTS_BY_CATEGORY_QUERY = gql`
   ${POST_FIELDS}
-  query PostsByCategory($country: String!, $category: String!, $first: Int!) {
+  query PostsByCategory($category: String!, $first: Int!) {
     categories(where: { slug: [$category] }) {
       nodes {
         databaseId
@@ -351,7 +349,6 @@ const POSTS_BY_CATEGORY_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        countrySlugIn: [$country]
         categoryName: $category
       }
     ) {
@@ -368,7 +365,7 @@ const POSTS_BY_CATEGORY_QUERY = gql`
 
 const CATEGORY_POSTS_BATCH_QUERY = gql`
   ${POST_FIELDS}
-  query CategoryPostsBatch($country: String!, $slugs: [String!]!, $first: Int!) {
+  query CategoryPostsBatch($slugs: [String!]!, $first: Int!) {
     categories(where: { slugIn: $slugs }) {
       nodes {
         databaseId
@@ -381,7 +378,6 @@ const CATEGORY_POSTS_BATCH_QUERY = gql`
           where: {
             status: PUBLISH
             orderby: { field: DATE, order: DESC }
-            countrySlugIn: [$country]
           }
         ) {
           pageInfo {
@@ -412,6 +408,7 @@ const CATEGORIES_QUERY = gql`
 `
 
 const POST_CATEGORIES_QUERY = gql`
+  ${POST_FIELDS}
   query PostCategories($id: ID!) {
     post(id: $id, idType: DATABASE_ID) {
       categories {
@@ -426,7 +423,6 @@ const POST_CATEGORIES_QUERY = gql`
 const RELATED_POSTS_QUERY = gql`
   ${POST_FIELDS}
   query RelatedPosts(
-    $country: String!
     $catIds: [ID!]
     $exclude: ID!
     $first: Int!
@@ -437,7 +433,6 @@ const RELATED_POSTS_QUERY = gql`
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
         notIn: [$exclude]
-        countrySlugIn: [$country]
         categoryIn: $catIds
       }
     ) {
@@ -450,13 +445,12 @@ const RELATED_POSTS_QUERY = gql`
 
 const FEATURED_POSTS_QUERY = gql`
   ${POST_FIELDS}
-  query FeaturedPosts($country: String!, $tag: String!, $first: Int!) {
+  query FeaturedPosts($tag: String!, $first: Int!) {
     posts(
       first: $first
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        countrySlugIn: [$country]
         tagSlugIn: [$tag]
       }
     ) {
@@ -493,7 +487,7 @@ const AUTHOR_DATA_QUERY = gql`
 
 const CATEGORY_POSTS_QUERY = gql`
   ${POST_FIELDS}
-  query CategoryPosts($country: String!, $slug: String!, $after: String, $first: Int!) {
+  query CategoryPosts($slug: String!, $after: String, $first: Int!) {
     categories(where: { slug: [$slug] }) {
       nodes {
         databaseId
@@ -509,7 +503,6 @@ const CATEGORY_POSTS_QUERY = gql`
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
-        countrySlugIn: [$country]
         categoryName: $slug
       }
     ) {
@@ -630,7 +623,6 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
     console.log("[v0] Fetching FP tagged posts for:", countryCode)
 
     const gqlData = await fetchFromWpGraphQL<FpTaggedPostsData>(countryCode, FP_TAGGED_POSTS_QUERY, {
-      country: countryCode,
       tagSlugs: ["fp"],
       first: limit,
     })
@@ -688,7 +680,6 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20, 
     console.log("[v0] Fetching latest posts for:", countryCode)
 
     const gqlData = await fetchFromWpGraphQL<LatestPostsData>(countryCode, LATEST_POSTS_QUERY, {
-      country: countryCode,
       first: limit,
       ...(cursor ? { after: cursor } : {}),
     })
@@ -776,7 +767,6 @@ export async function getPostsForCategories(
   }
 
   const gqlData = await fetchFromWpGraphQL<CategoryPostsBatchData>(countryCode, CATEGORY_POSTS_BATCH_QUERY, {
-    country: countryCode,
     slugs: normalizedSlugs,
     first: limit,
   })
@@ -884,7 +874,6 @@ export async function getPostsByCategoryForCountry(
   limit = 20,
 ): Promise<CategoryPostsResult> {
   const gqlData = await fetchFromWpGraphQL<any>(countryCode, POSTS_BY_CATEGORY_QUERY, {
-    country: countryCode,
     category: categorySlug,
     first: limit,
   })
@@ -950,7 +939,6 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     const catIds = gqlPost.post.categories.nodes.map((c: any) => c.databaseId)
     if (catIds.length > 0) {
       const gqlData = await fetchFromWpGraphQL<any>(countryCode, RELATED_POSTS_QUERY, {
-        country: countryCode,
         catIds,
         exclude: Number(postId),
         first: limit,
@@ -979,7 +967,6 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
   const gqlData = await fetchFromWpGraphQL<any>(countryCode, FEATURED_POSTS_QUERY, {
-    country: countryCode,
     tag: "featured",
     first: limit,
   })
@@ -1289,7 +1276,6 @@ export async function getAuthorBySlug(
 
 export async function fetchCategoryPosts(slug: string, cursor: string | null = null, countryCode = DEFAULT_COUNTRY) {
   const data = await fetchFromWpGraphQL<any>(countryCode, CATEGORY_POSTS_QUERY, {
-    country: countryCode,
     slug,
     after: cursor,
     first: 10,

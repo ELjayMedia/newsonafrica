@@ -58,18 +58,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const {
-    id,
-    title,
-    content,
-    date,
-    featuredImage,
-    author,
-    categories,
-    readingTime,
-    excerpt,
-    slug,
-  } = post
+  const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
@@ -89,8 +78,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
     categories: categoryIds,
     tags: [], // Add tags if available in your post data structure
     limit: 8, // Increased limit for carousel
-    enableAI: true, // Enable AI-powered recommendations
-    enablePopularityBoost: true, // Enable popularity-based sorting
+    enableAI: false, // Disabled AI recommendations
+    enablePopularityBoost: true, // Keep popularity-based sorting
   })
 
   // Use our custom hook to manage scroll position
@@ -426,10 +415,9 @@ export default function ArticleView({ post }: ArticleViewProps) {
           title="You might also like"
           layout="carousel"
           showMetadata={true}
-          enableAI={true}
+          enableAI={false}
           className="px-0"
         />
-
       </div>
 
       {/* Comments Section would go here */}

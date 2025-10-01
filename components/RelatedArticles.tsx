@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Clock, TrendingUp, Sparkles } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getArticleUrl } from "@/lib/utils/routing"
 
@@ -149,14 +149,7 @@ export function RelatedArticles({
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-          {/* AI and popularity badges */}
           <div className="absolute top-3 left-3 flex gap-2">
-            {enableAI && post.similarity && post.similarity > 0.8 && (
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                AI Pick
-              </div>
-            )}
             {post.isPopular && (
               <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
@@ -211,11 +204,6 @@ export function RelatedArticles({
                 </div>
                 {post.author?.node?.name && <span className="text-gray-400">by {post.author.node.name}</span>}
               </div>
-
-              {/* Similarity score for AI recommendations */}
-              {enableAI && post.similarity && (
-                <div className="text-purple-600 font-medium">{Math.round(post.similarity * 100)}% match</div>
-              )}
             </div>
           )}
         </div>
@@ -226,26 +214,31 @@ export function RelatedArticles({
   const EmptyState = () => (
     <div className="text-center py-12 px-6">
       <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-        <Sparkles className="w-8 h-8 text-gray-400" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-8 h-8 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+          />
+        </svg>
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">No related articles yet</h3>
       <p className="text-gray-600 mb-4">We're working on finding the perfect content for you.</p>
-      <p className="text-sm text-gray-500">Check back soon for personalized recommendations!</p>
+      <p className="text-sm text-gray-500">Check back soon for recommendations!</p>
     </div>
   )
 
   return (
     <section className={cn("my-12", className)}>
-      {/* Enhanced header with AI indicator */}
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          {title}
-          {enableAI && (
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-              AI Powered
-            </div>
-          )}
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">{title}</h2>
 
         {posts.length > 0 && layout === "carousel" && (
           <div className="text-sm text-gray-500">

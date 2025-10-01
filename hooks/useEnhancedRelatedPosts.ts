@@ -45,8 +45,7 @@ export function useEnhancedRelatedPosts({
 
   const calculateSimilarity = useCallback(
     (post: WordPressPost, targetCategories: string[], targetTags: string[]): number => {
-      if (!enableAI) return 0
-
+      // Basic similarity based on category and tag matching
       let score = 0
       const postCategories = post.categories?.nodes?.map((cat) => cat.slug) || []
       const postTags = post.tags?.nodes?.map((tag) => tag.slug) || []
@@ -67,7 +66,7 @@ export function useEnhancedRelatedPosts({
 
       return Math.min(1, score + recencyBoost)
     },
-    [enableAI],
+    [],
   )
 
   const estimateReadingTime = useCallback((content: string): number => {
@@ -116,8 +115,8 @@ export function useEnhancedRelatedPosts({
       }))
 
       const sortedPosts = enhancedPosts.sort((a, b) => {
-        // Primary sort: AI similarity (if enabled)
-        if (enableAI && a.similarity !== b.similarity) {
+        // Primary sort: basic similarity
+        if (a.similarity !== b.similarity) {
           return (b.similarity || 0) - (a.similarity || 0)
         }
 
@@ -158,7 +157,6 @@ export function useEnhancedRelatedPosts({
     tags,
     limit,
     countryCode,
-    enableAI,
     enablePopularityBoost,
     calculateSimilarity,
     detectPopularity,

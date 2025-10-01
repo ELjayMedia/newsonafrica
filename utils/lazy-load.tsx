@@ -60,5 +60,4 @@ export function createResponsiveSrcSet(
   }
 }
 
-// Re-export the client-side lazy loading functions
-export { lazyLoadComponent, lazyLoadSkeleton } from "./lazy-load-client"
+// If you need lazyLoadComponent or lazyLoadSkeleton, import directly from './lazy-load-client'
