@@ -32,3 +32,8 @@ export default async function Page({ params }: ArticlePageProps) {
 
   return <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
 }
+
+export async function generateStaticParams(): Promise<RouteParams[]> {
+  // Avoid build-time network I/O by deferring article fetching to runtime
+  return []
+}
