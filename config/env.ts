@@ -8,6 +8,7 @@ const envSchema = z.object({
   WP_APP_USERNAME: z.string().optional(),
   WP_APP_PASSWORD: z.string().optional(),
   NEXT_PUBLIC_DEFAULT_SITE: z.string().default("sz"),
+  ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
 })
 
 let env: z.infer<typeof envSchema>
@@ -25,6 +26,8 @@ try {
     WP_APP_USERNAME: process.env.WP_APP_USERNAME,
     WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     NEXT_PUBLIC_DEFAULT_SITE: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
+    ANALYTICS_API_BASE_URL:
+      process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
   }
 }
 

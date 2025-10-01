@@ -1,39 +1,17 @@
 "use client"
 
 import useSWR from "swr"
-import { fetchRecentPosts } from "@/lib/wordpress-api"
+import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
 import Image from "next/image"
 import { Clock, AlertCircle } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
-// Function to get view counts for posts
-const getViewCounts = (posts) => {
-  if (!posts || !Array.isArray(posts) || posts.length === 0) {
-    return []
-  }
-
-  const twentyDaysAgo = new Date()
-  twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20)
-
-  return posts
-    .filter((post) => {
-      const postDate = new Date(post.date)
-      return postDate >= twentyDaysAgo
-    })
-    .map((post) => ({
-      ...post,
-      viewCount: Math.floor(Math.random() * 1000), // Simulated view count
-    }))
-}
-
 export function SidebarContent() {
-  const [mostReadPosts, setMostReadPosts] = useState([])
-
   const country = getCurrentCountry()
   const { preferences } = useUserPreferences()
 
@@ -44,6 +22,15 @@ export function SidebarContent() {
     error,
     isLoading,
   } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
+    revalidateOnFocus: false,
+    dedupingInterval: 1000 * 60 * 5,
+  })
+
+  const {
+    data: mostReadData,
+    error: mostReadError,
+    isLoading: isMostReadLoading,
+  } = useSWR(["mostRead", country], () => fetchMostReadPosts(country), {
     revalidateOnFocus: false,
     dedupingInterval: 1000 * 60 * 5,
   })
@@ -68,19 +55,11 @@ export function SidebarContent() {
     return matches.length > 0 ? matches : data
   }, [data, preferredSections])
 
-  useEffect(() => {
-    if (personalizedPosts.length > 0) {
-      const postsWithViews = getViewCounts(personalizedPosts)
-      const sortedPosts = postsWithViews.sort((a, b) => b.viewCount - a.viewCount).slice(0, 5)
-      setMostReadPosts(sortedPosts)
-    } else {
-      setMostReadPosts([])
-    }
-  }, [personalizedPosts])
+  const mostReadPosts = Array.isArray(mostReadData) ? mostReadData : []
 
-  if (isLoading) return <SidebarSkeleton />
+  if (isLoading || isMostReadLoading) return <SidebarSkeleton />
 
-  if (error) {
+  if (error || mostReadError) {
     return (
       <div className="p-4 bg-red-50 rounded-lg">
         <div className="flex items-center mb-2">
@@ -93,7 +72,7 @@ export function SidebarContent() {
   }
 
   // Handle empty data
-  if (personalizedPosts.length === 0) {
+  if (personalizedPosts.length === 0 && mostReadPosts.length === 0) {
     return (
       <div className="space-y-6">
         <section className="bg-white shadow-md rounded-lg p-4">
