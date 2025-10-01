@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.string().url(),
-  NEXT_PUBLIC_WORDPRESS_API_URL: z.string().url(),
+  NEXT_PUBLIC_WORDPRESS_API_URL: z.string().url().optional(),
   WORDPRESS_REST_API_URL: z.string().url().optional(),
   WORDPRESS_AUTH_TOKEN: z.string().optional(),
   WP_APP_USERNAME: z.string().optional(),

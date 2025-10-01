@@ -63,11 +63,14 @@ Create a `.env.local` file with the following variables:
 
 \`\`\`
 # WordPress
-NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-site/graphql
+NEXT_PUBLIC_WORDPRESS_API_URL_SZ=https://your-wordpress-site/sz/graphql
+NEXT_PUBLIC_WORDPRESS_API_URL_ZA=https://your-wordpress-site/za/graphql
+# Optional shared GraphQL endpoint if all sites use the same URL
+# NEXT_PUBLIC_WORDPRESS_API_URL=https://your-wordpress-site/graphql
 WORDPRESS_REST_API_URL=https://your-wordpress-site/wp-json/wp/v2
-# Optional overrides for multisite support
-# NEXT_PUBLIC_WORDPRESS_API_URL_NG=https://nigeria-site/graphql
-# WORDPRESS_REST_API_URL_NG=https://nigeria-site/wp-json/wp/v2
+# Optional REST overrides for multisite support
+# WORDPRESS_REST_API_URL_SZ=https://your-wordpress-site/sz/wp-json/wp/v2
+# WORDPRESS_REST_API_URL_ZA=https://your-wordpress-site/za/wp-json/wp/v2
 WP_APP_USERNAME=your_app_username
 WP_APP_PASSWORD=your_app_password
 

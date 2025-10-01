@@ -5,6 +5,8 @@ import type { Metadata } from "next"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "Sitemap | News On Africa",

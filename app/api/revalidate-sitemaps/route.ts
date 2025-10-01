@@ -1,9 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
-// Cache policy: short (1 minute)
-export const revalidate = 60
-
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   logRequest(request)

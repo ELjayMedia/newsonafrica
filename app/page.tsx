@@ -68,7 +68,8 @@ export const metadata: Metadata = {
   },
 }
 
-export const revalidate = 60
+export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 async function getHomePageData(countryCode: string): Promise<HomePageData> {
   const fallbackPost = {

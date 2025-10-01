@@ -12,6 +12,7 @@ interface CategoryPageProps {
 }
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 // Static generation configuration
 export const revalidate = 300 // Revalidate every 5 minutes

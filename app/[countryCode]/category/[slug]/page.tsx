@@ -12,6 +12,7 @@ interface Params {
 }
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 export const revalidate = 300
 export const dynamicParams = true
 
