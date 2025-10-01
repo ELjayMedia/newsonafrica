@@ -1,9 +1,12 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
+
+// Node.js runtime declaration for revalidatePath API
+export const runtime = "nodejs"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
-
 
 export async function GET(request: NextRequest) {
   logRequest(request)

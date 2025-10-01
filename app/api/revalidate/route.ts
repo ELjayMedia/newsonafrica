@@ -1,13 +1,14 @@
 import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { applyRateLimit, handleApiError, successResponse, jsonWithCors as withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
+export const runtime = "nodejs"
+
 // Cache policy: none (manual revalidation endpoint)
 export const revalidate = 0
-
 
 // Input validation schema
 const revalidateSchema = z.object({
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
         results.actions.push(`Revalidated path: ${path}`)
       }
       if (tag) {
-          revalidateByTag(tag)
+        revalidateByTag(tag)
         results.actions.push(`Revalidated tag: ${tag}`)
       }
       return withCors(request, successResponse(results))
@@ -56,30 +57,16 @@ export async function GET(request: NextRequest) {
     // Handle bulk revalidation based on type
     if (type === "content" || type === "all") {
       // Revalidate main content paths
-      const contentPaths = [
-        "/",
-        "/sport",
-        "/entertainment",
-        "/life",
-        "/health",
-        "/politics",
-        "/food",
-        "/opinion",
-      ]
+      const contentPaths = ["/", "/sport", "/entertainment", "/life", "/health", "/politics", "/food", "/opinion"]
 
       contentPaths.forEach((path) => {
         revalidatePath(path)
       })
 
       // Revalidate content tags
-      const contentTags = [
-        CACHE_TAGS.POSTS,
-        CACHE_TAGS.CATEGORIES,
-        CACHE_TAGS.FEATURED,
-        CACHE_TAGS.TRENDING,
-      ]
+      const contentTags = [CACHE_TAGS.POSTS, CACHE_TAGS.CATEGORIES, CACHE_TAGS.FEATURED, CACHE_TAGS.TRENDING]
       contentTags.forEach((tag) => {
-          revalidateByTag(tag)
+        revalidateByTag(tag)
       })
 
       results.actions.push("Revalidated all content paths and tags")

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import crypto from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
@@ -6,10 +5,13 @@ import { startWebhookTunnel } from "../../../../lib/paystack-utils"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
+
+// Node.js runtime declaration for crypto module
+export const runtime = "nodejs"
 
 // Cache policy: none (webhook endpoint)
 export const revalidate = 0
-
 
 interface PaystackCustomer {
   email: string
@@ -140,21 +142,16 @@ export async function POST(request: Request) {
 }
 
 // Event handlers
-export async function handleChargeSuccess(
-  data: ChargeSuccessData,
-  client: SupabaseClient = createAdminClient(),
-) {
+export async function handleChargeSuccess(data: ChargeSuccessData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing successful charge:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
-  const { error: txnError } = await (client as any)
-    .from("transactions")
-    .insert({
-      id: data.reference,
-      user_id: userId,
-      amount: data.amount / 100,
-      status: data.status,
-      metadata: data,
-    })
+  const { error: txnError } = await (client as any).from("transactions").insert({
+    id: data.reference,
+    user_id: userId,
+    amount: data.amount / 100,
+    status: data.status,
+    metadata: data,
+  })
   if (txnError) throw new Error("Failed to save transaction")
 
   revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
@@ -225,23 +222,14 @@ export async function handleSubscriptionDisabled(
   }
 }
 
-export async function handlePaymentFailed(
-  data: PaymentFailedData,
-  client: SupabaseClient = createAdminClient(),
-) {
+export async function handlePaymentFailed(data: PaymentFailedData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing failed payment:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
-  const { error } = await (client as any)
-    .from("transactions")
-    .update({ status: "failed" })
-    .eq("id", data.reference)
+  const { error } = await (client as any).from("transactions").update({ status: "failed" }).eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
 }
 
-export async function handleInvoiceUpdate(
-  data: InvoiceUpdateData,
-  client: SupabaseClient = createAdminClient(),
-) {
+export async function handleInvoiceUpdate(data: InvoiceUpdateData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing invoice update:", data.invoice_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
@@ -258,10 +246,7 @@ export async function handleInvoiceUpdate(
   }
 }
 
-export async function handleTransferSuccess(
-  data: TransferData,
-  client: SupabaseClient = createAdminClient(),
-) {
+export async function handleTransferSuccess(data: TransferData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing successful transfer:", data.reference)
   const { error } = await (client as any).from("transfers").insert({
     id: data.reference,
@@ -272,10 +257,7 @@ export async function handleTransferSuccess(
   if (error) throw new Error("Failed to save transfer")
 }
 
-export async function handleTransferFailed(
-  data: TransferData,
-  client: SupabaseClient = createAdminClient(),
-) {
+export async function handleTransferFailed(data: TransferData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing failed transfer:", data.reference)
   const { error } = await (client as any)
     .from("transfers")

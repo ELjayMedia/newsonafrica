@@ -1,14 +1,15 @@
-import type { NextRequest } from "next/server"
+import type { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { z } from "zod"
-import { applyRateLimit, handleApiError, successResponse } from "@/lib/api-utils"
+import { applyRateLimit, handleApiError, successResponse, jsonWithCors as withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
+export const runtime = "nodejs"
+
 // Cache policy: short (1 minute)
 export const revalidate = 60
-
 
 // Input validation schemas
 const getCommentsSchema = z.object({
@@ -26,7 +27,7 @@ const createCommentSchema = z.object({
 })
 
 // Get comments for a post with pagination
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
   try {
     // Apply rate limiting
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Create a new comment
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
   try {
     // Apply rate limiting
@@ -260,14 +261,13 @@ export async function POST(request: NextRequest) {
         avatar_url: profile.avatar_url,
       },
     })
-
   } catch (error) {
     return withCors(request, handleApiError(error))
   }
 }
 
 // Update comment status (report, delete, approve)
-export async function PATCH(request: NextRequest) {
+export async function PATCH(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
   try {
     // Apply rate limiting
@@ -360,7 +360,6 @@ export async function PATCH(request: NextRequest) {
 
     revalidateByTag(CACHE_TAGS.COMMENTS)
     return successResponse({ success: true, action })
-
   } catch (error) {
     return withCors(request, handleApiError(error))
   }

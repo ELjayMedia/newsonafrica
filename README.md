@@ -82,6 +82,7 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 
 # Site
 NEXT_PUBLIC_SITE_URL=https://app.newsonafrica.com
+NEXT_PUBLIC_DEFAULT_SITE=sz
 \`\`\`
 
 ### Installation

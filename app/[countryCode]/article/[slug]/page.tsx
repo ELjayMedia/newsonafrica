@@ -14,6 +14,11 @@ type ArticlePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
+// This prevents preview/build flakiness when WP endpoints are slow/unreachable
+export async function generateStaticParams() {
+  return []
+}
+
 export default async function Page({ params }: ArticlePageProps) {
   const { slug, countryCode } = await params
   const country = (countryCode || "DEFAULT").toLowerCase()
@@ -31,9 +36,4 @@ export default async function Page({ params }: ArticlePageProps) {
   }
 
   return <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
-}
-
-export async function generateStaticParams(): Promise<RouteParams[]> {
-  // Avoid build-time network I/O by deferring article fetching to runtime
-  return []
 }

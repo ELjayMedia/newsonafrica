@@ -5,7 +5,7 @@ export interface WordPressEndpoints {
   rest: string
 }
 
-const DEFAULT_SITE = env.NEXT_PUBLIC_DEFAULT_SITE || 'sz'
+const DEFAULT_SITE = env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 
 interface CachedEndpoints {
   endpoints: WordPressEndpoints
@@ -15,27 +15,14 @@ interface CachedEndpoints {
 const cache = new Map<string, CachedEndpoints>()
 
 function buildEndpoints(site: string): WordPressEndpoints {
-  const upper = site.toUpperCase()
   return {
-      graphql:
-        process.env[`NEXT_PUBLIC_WORDPRESS_API_URL_${upper}`] ||
-        env.NEXT_PUBLIC_WORDPRESS_API_URL ||
-        `https://newsonafrica.com/${site}/graphql`,
-      rest:
-        process.env[`WORDPRESS_REST_API_URL_${upper}`] ||
-        env.WORDPRESS_REST_API_URL ||
-        `https://newsonafrica.com/${site}/wp-json/wp/v2`,
+    graphql: env.NEXT_PUBLIC_WORDPRESS_API_URL || `https://newsonafrica.com/${site}/graphql`,
+    rest: env.WORDPRESS_REST_API_URL || `https://newsonafrica.com/${site}/wp-json/wp/v2`,
   }
 }
 
 function buildSignature(site: string): string {
-  const upper = site.toUpperCase()
-  return [
-    process.env[`NEXT_PUBLIC_WORDPRESS_API_URL_${upper}`],
-    process.env[`WORDPRESS_REST_API_URL_${upper}`],
-    env.NEXT_PUBLIC_WORDPRESS_API_URL,
-    env.WORDPRESS_REST_API_URL,
-  ].join("|")
+  return [env.NEXT_PUBLIC_WORDPRESS_API_URL, env.WORDPRESS_REST_API_URL, site].join("|")
 }
 
 export function getWpEndpoints(site: string = DEFAULT_SITE): WordPressEndpoints {

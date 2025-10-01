@@ -6,14 +6,14 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 
+export const runtime = "nodejs"
+
 // Cache policy: short (1 minute)
 export const revalidate = 60
-
 
 type CommentRouteContext = {
   params?: Promise<Record<string, string | string[] | undefined>>
 }
-
 
 // Update a comment
 export async function PATCH(request: NextRequest, context: CommentRouteContext) {
@@ -112,7 +112,6 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     // Return the updated comment with profile data
     revalidateByTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({
-
       ...data,
       profile: {
         username: profile.username,
@@ -191,7 +190,6 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
 
     revalidateByTag(CACHE_TAGS.COMMENTS)
     return NextResponse.json({ success: true })
-
   } catch (error) {
     console.error("Error deleting comment:", error)
     return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })

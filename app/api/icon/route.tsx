@@ -5,6 +5,7 @@ import { logRequest, withCors } from "@/lib/api-utils"
 // Cache policy: very long (24 hours)
 export const revalidate = 86400
 
+export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   logRequest(request)

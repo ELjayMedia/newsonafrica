@@ -1,13 +1,15 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import { jsonWithCors, logRequest } from "@/lib/api-utils"
+
+export const runtime = "nodejs"
 
 // Cache policy: none (webhook endpoint)
 export const revalidate = 0
-
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
 
@@ -55,18 +57,18 @@ export async function POST(request: NextRequest) {
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
-            revalidateByTag(CACHE_TAGS.POST(post.id))
+          revalidateByTag(CACHE_TAGS.POST(post.id))
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
             for (const categoryId of post.categories) {
-                revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
+              revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
             }
           }
 
           // Revalidate home page to show latest posts
           revalidatePath("/")
-            revalidateByTag(CACHE_TAGS.POSTS)
+          revalidateByTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated post: ${post.slug}`)
         }
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
             revalidatePath(getArticleUrl(post.slug, country))
           }
           revalidatePath("/")
-            revalidateByTag(CACHE_TAGS.POSTS)
+          revalidateByTag(CACHE_TAGS.POSTS)
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
           }
           // Legacy path
           revalidatePath(`/category/${post.slug}`)
-            revalidateByTag(CACHE_TAGS.CATEGORY(post.id))
+          revalidateByTag(CACHE_TAGS.CATEGORY(post.id))
 
           console.log(`Revalidated category: ${post.slug}`)
         }

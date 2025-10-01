@@ -5,6 +5,8 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { createAdminClient } from "@/lib/supabase"
 
+export const runtime = "nodejs"
+
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
@@ -71,14 +73,11 @@ export async function GET(request: NextRequest) {
 
         if (userId) {
           const startDate = data.data.paid_at ? new Date(data.data.paid_at).toISOString() : new Date().toISOString()
-          const renewalDate = data.data.next_payment_date
-            ? new Date(data.data.next_payment_date).toISOString()
-            : null
+          const renewalDate = data.data.next_payment_date ? new Date(data.data.next_payment_date).toISOString() : null
           const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
 
-          await supabase
-            .from("subscriptions")
-            .upsert({
+          await supabase.from("subscriptions").upsert(
+            {
               id: data.data.reference,
               user_id: userId,
               plan: planName,
@@ -90,12 +89,17 @@ export async function GET(request: NextRequest) {
               payment_id: data.data.reference,
               metadata: data.data,
               updated_at: new Date().toISOString(),
-            }, { onConflict: "id" })
+            },
+            { onConflict: "id" },
+          )
 
           revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
           revalidatePath("/subscriptions")
         } else {
-          console.warn("Unable to map Paystack transaction to a Supabase user", { reference: data.data.reference, email: customer.email })
+          console.warn("Unable to map Paystack transaction to a Supabase user", {
+            reference: data.data.reference,
+            email: customer.email,
+          })
         }
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)

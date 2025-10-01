@@ -9,6 +9,9 @@ import { env } from "@/config/env"
 // Cache policy: long (30 minutes)
 export const revalidate = 1800
 
+// Node.js runtime declaration for consistency
+export const runtime = "nodejs"
+
 export async function GET(request: Request) {
   logRequest(request)
   const baseUrl = env.NEXT_PUBLIC_SITE_URL
