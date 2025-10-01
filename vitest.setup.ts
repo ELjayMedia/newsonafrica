@@ -7,6 +7,7 @@ expect.extend(matchers)
 process.env.NEXT_PUBLIC_SITE_URL ||= 'https://example.com'
 process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||= 'https://wp.example.com/graphql'
 process.env.WORDPRESS_REST_API_URL ||= 'https://wp.example.com/wp-json'
+process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
 
 class ResizeObserver {
   observe() {}

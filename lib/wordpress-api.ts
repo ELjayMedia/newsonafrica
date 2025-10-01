@@ -1025,6 +1025,133 @@ export const getRelatedPosts = async (
   return posts.filter((p) => p.id !== Number(postId))
 }
 
+const resolveRenderedText = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value
+  }
+  if (value && typeof value === "object" && "rendered" in value && typeof (value as any).rendered === "string") {
+    return (value as any).rendered
+  }
+  return ""
+}
+
+type MaybeMostReadPost = Partial<HomePost> & {
+  id?: string | number
+  slug?: string
+  title?: string | { rendered?: string }
+  excerpt?: string | { rendered?: string }
+  date?: string
+  country?: string
+  featuredImage?: HomePost["featuredImage"] | { node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string } }
+  featured_image?: { node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string } }
+  featuredImageUrl?: string
+  featured_image_url?: string
+}
+
+const normalizeFeaturedImage = (post: MaybeMostReadPost): HomePost["featuredImage"] | undefined => {
+  const candidate = post.featuredImage || post.featured_image
+  if (candidate && typeof candidate === "object" && "node" in candidate && candidate.node) {
+    const node = candidate.node as Record<string, unknown>
+    const sourceUrl =
+      typeof node?.sourceUrl === "string"
+        ? (node.sourceUrl as string)
+        : typeof node?.source_url === "string"
+          ? (node.source_url as string)
+          : typeof node?.url === "string"
+            ? (node.url as string)
+            : undefined
+    const altText =
+      typeof node?.altText === "string"
+        ? (node.altText as string)
+        : typeof node?.alt_text === "string"
+          ? (node.alt_text as string)
+          : typeof node?.alt === "string"
+            ? (node.alt as string)
+            : undefined
+
+    if (sourceUrl) {
+      return {
+        node: {
+          sourceUrl,
+          altText,
+        },
+      }
+    }
+  }
+
+  const directSource =
+    typeof post.featuredImageUrl === "string"
+      ? post.featuredImageUrl
+      : typeof post.featured_image_url === "string"
+        ? post.featured_image_url
+        : undefined
+
+  if (directSource) {
+    return {
+      node: {
+        sourceUrl: directSource,
+      },
+    }
+  }
+
+  return undefined
+}
+
+const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost | null => {
+  if (!post || typeof post !== "object") {
+    return null
+  }
+
+  const item = post as MaybeMostReadPost
+  const slug = typeof item.slug === "string" ? item.slug : ""
+  const title = resolveRenderedText(item.title)
+  if (!slug || !title) {
+    return null
+  }
+
+  const idValue = item.id ?? slug
+  const id = typeof idValue === "string" ? idValue : String(idValue)
+  const excerpt = resolveRenderedText(item.excerpt)
+  const date = typeof item.date === "string" ? item.date : ""
+  const country = typeof item.country === "string" ? item.country : fallbackCountry
+  const featuredImage = normalizeFeaturedImage(item)
+
+  return {
+    id,
+    slug,
+    title,
+    excerpt,
+    date,
+    country,
+    featuredImage,
+  }
+}
+
+export const fetchMostReadPosts = async (
+  countryCode = DEFAULT_COUNTRY,
+  limit = 5,
+): Promise<HomePost[]> => {
+  const params = new URLSearchParams({ country: countryCode })
+  if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
+    params.set("limit", String(Math.floor(limit)))
+  }
+
+  const response = await fetch(`/api/most-read?${params.toString()}`)
+  if (!response.ok) {
+    const message = await response.text().catch(() => "")
+    throw new Error(message || "Failed to load most-read posts")
+  }
+
+  const payload = await response.json().catch(() => [])
+  if (!Array.isArray(payload)) {
+    return []
+  }
+
+  return payload
+    .map((post) => normalizeMostReadPost(post, countryCode))
+    .filter((post): post is HomePost => Boolean(post))
+}
+
 export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY) => {
   const { posts } = await getLatestPostsForCountry(countryCode, limit)
   return posts
