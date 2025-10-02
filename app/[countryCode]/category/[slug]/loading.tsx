@@ -1,3 +1,5 @@
-import CategoryLoading from "../../../category/[slug]/loading"
+import { CategoryPageSkeleton } from "@/components/CategoryPageSkeleton"
 
-export default CategoryLoading
+export default function CategoryLoading() {
+  return <CategoryPageSkeleton />
+}
