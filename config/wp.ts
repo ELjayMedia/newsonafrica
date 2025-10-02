@@ -20,9 +20,12 @@ function resolveGraphqlEndpoint(site: string): string {
   const endpoint = process.env[`NEXT_PUBLIC_WORDPRESS_API_URL_${upper}`] || globalGraphql
 
   if (!endpoint) {
-    throw new Error(
-      `Missing WordPress GraphQL endpoint for site "${site}". Set NEXT_PUBLIC_WORDPRESS_API_URL_${upper} or NEXT_PUBLIC_WORDPRESS_API_URL.`,
-    )
+    const guidance = [
+      `Missing WordPress GraphQL endpoint for site "${site}".`,
+      `Set NEXT_PUBLIC_WORDPRESS_API_URL_${upper} or NEXT_PUBLIC_WORDPRESS_API_URL.`,
+    ].join(" ")
+
+    throw new Error(guidance)
   }
 
   return endpoint
