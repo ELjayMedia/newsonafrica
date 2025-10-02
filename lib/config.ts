@@ -1,7 +1,7 @@
-import { getWpEndpoints } from "@/config/wp"
+import { getRestBase } from "@/lib/wp-endpoints"
 import { env } from "@/config/env"
 
-const { rest } = getWpEndpoints()
+const rest = getRestBase()
 const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
 
 export const appConfig = {

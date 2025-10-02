@@ -1,4 +1,4 @@
-import { getWpEndpoints } from "@/config/wp"
+import { getRestBase } from "@/lib/wp-endpoints"
 
 const CACHE_DURATION = 5 * 60 * 1000
 let lastCheck = 0
@@ -13,7 +13,7 @@ const cachedHealth = {
  */
 export async function checkRESTHealth(): Promise<boolean> {
   const now = Date.now()
-  const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
+  const WORDPRESS_REST_API_URL = getRestBase()
 
   // Return cached result if it's recent enough
   if (now - lastCheck < CACHE_DURATION) {

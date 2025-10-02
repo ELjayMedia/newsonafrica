@@ -1,7 +1,7 @@
-import { getWpEndpoints } from "@/config/wp"
+import { getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
-const { rest: WORDPRESS_REST_API_URL } = getWpEndpoints()
+const WORDPRESS_REST_API_URL = getRestBase()
 
 // Search result interface
 export interface WordPressSearchResult {

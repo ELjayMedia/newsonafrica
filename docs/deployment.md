@@ -14,7 +14,8 @@ Add these secrets to your repository settings:
 
 Ensure the following environment variables are configured in GitHub and Vercel:
 
-- `NEXT_PUBLIC_WORDPRESS_API_URL`
+- WordPress endpoints: either the global fallbacks `NEXT_PUBLIC_WP_GRAPHQL` / `NEXT_PUBLIC_WP_REST_BASE` or country specific
+  pairs such as `NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

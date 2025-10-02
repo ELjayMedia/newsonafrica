@@ -1,6 +1,6 @@
-import { getWpEndpoints } from "@/config/wp"
+import { getRestBase } from "@/lib/wp-endpoints"
 
-const { rest } = getWpEndpoints()
+const rest = getRestBase()
 const WORDPRESS_API_URL = rest.replace(/\/wp-json\/wp\/v2$/, "")
 
 if (!WORDPRESS_API_URL) {

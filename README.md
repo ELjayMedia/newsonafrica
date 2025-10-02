@@ -6,9 +6,12 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 
 **If you're seeing 404 errors or "GraphQL endpoint appears to be REST API" warnings:**
 
-The environment variables `NEXT_PUBLIC_WORDPRESS_API_URL` and `WORDPRESS_REST_API_URL` may be set incorrectly. 
+Your WordPress endpoint environment variables may be misconfigured. Each edition now supports dedicated pairs like
+`NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE` with global fallbacks (`NEXT_PUBLIC_WP_GRAPHQL` /
+`NEXT_PUBLIC_WP_REST_BASE`).
 
-**Quick Solution:** Delete these variables from your Vercel Environment Variables and redeploy. The app will use correct defaults automatically.
+**Quick Solution:** Delete any malformed GraphQL/REST variables from your Vercel Environment Variables and redeploy. The app will
+use correct defaults automatically.
 
 See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
@@ -87,14 +90,14 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 # Just set NEXT_PUBLIC_DEFAULT_SITE above and skip these
 
 # Option 2: Country-specific endpoints (for multi-site)
-NEXT_PUBLIC_WORDPRESS_API_URL_SZ=https://newsonafrica.com/sz/graphql
-NEXT_PUBLIC_WORDPRESS_API_URL_ZA=https://newsonafrica.com/za/graphql
-WORDPRESS_REST_API_URL_SZ=https://newsonafrica.com/sz/wp-json/wp/v2
-WORDPRESS_REST_API_URL_ZA=https://newsonafrica.com/za/wp-json/wp/v2
+NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
+NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
+NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
+NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 
 # Option 3: Single endpoint override (not recommended for multisite)
-# NEXT_PUBLIC_WORDPRESS_API_URL=https://newsonafrica.com/sz/graphql
-# WORDPRESS_REST_API_URL=https://newsonafrica.com/sz/wp-json/wp/v2
+# NEXT_PUBLIC_WP_GRAPHQL=https://newsonafrica.com/sz/graphql
+# NEXT_PUBLIC_WP_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 
 # --- WordPress Authentication ---
 WP_APP_USERNAME=your_wordpress_username
@@ -147,8 +150,9 @@ The application is deployed on Vercel with the following configuration:
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
 **Important:** For WordPress endpoints, either:
-- Leave `NEXT_PUBLIC_WORDPRESS_API_URL` and `WORDPRESS_REST_API_URL` unset (recommended)
-- Or ensure they follow the correct format with country slugs
+- Leave the global fallbacks `NEXT_PUBLIC_WP_GRAPHQL` and `NEXT_PUBLIC_WP_REST_BASE` unset (recommended)
+- Or ensure both the global fallbacks and any country overrides (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follow the correct format with
+  country slugs
 
 See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-fallback-issues) for details.
 
