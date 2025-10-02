@@ -6,6 +6,7 @@ import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { mapWpPost } from "./utils/mapWpPost"
 import { APIError } from "./utils/errorHandling"
 import type { HomePost } from "@/types/home"
+import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "./editions"
 
 const gql = String.raw
 
@@ -155,6 +156,7 @@ export interface CountryConfig {
   flag: string
   apiEndpoint: string
   restEndpoint: string
+  type?: "country"
 }
 
 export const COUNTRIES: Record<string, CountryConfig> = {
@@ -173,6 +175,7 @@ export const COUNTRIES: Record<string, CountryConfig> = {
     restEndpoint: getRestBase("za"),
   },
 }
+
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
@@ -997,6 +1000,78 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
 }
 
 export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
+
+export interface AggregatedHomeData {
+  heroPost: HomePost | null
+  secondaryPosts: HomePost[]
+  remainingPosts: HomePost[]
+}
+
+const getPostTimestamp = (post: HomePost): number => {
+  const timestamp = new Date(post.date).getTime()
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<AggregatedHomeData> {
+  const fallback: AggregatedHomeData = {
+    heroPost: null,
+    secondaryPosts: [],
+    remainingPosts: [],
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      SUPPORTED_COUNTRY_EDITIONS.map(async (country) => {
+        const { posts } = await getLatestPostsForCountry(country.code, limitPerCountry)
+        return mapPostsToHomePosts(posts, country.code)
+      }),
+    )
+
+    const aggregatedPosts: HomePost[] = []
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        aggregatedPosts.push(...result.value)
+      } else {
+        const failedCountry = SUPPORTED_COUNTRY_EDITIONS[index]
+        log.error("[v0] Failed to fetch aggregated latest posts", {
+          country: failedCountry?.code,
+          error: result.reason instanceof Error ? result.reason.message : result.reason,
+        })
+      }
+    })
+
+    if (aggregatedPosts.length === 0) {
+      return fallback
+    }
+
+    aggregatedPosts.sort((a, b) => getPostTimestamp(b) - getPostTimestamp(a))
+
+    const uniquePosts: HomePost[] = []
+    const seen = new Set<string>()
+
+    for (const post of aggregatedPosts) {
+      const key = `${post.country ?? ""}:${post.slug}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        uniquePosts.push(post)
+      }
+    }
+
+    const heroPost = uniquePosts[0] ?? null
+    const secondaryPosts = uniquePosts.slice(1, 4)
+    const remainingPosts = uniquePosts.slice(4)
+
+    return {
+      heroPost,
+      secondaryPosts,
+      remainingPosts,
+    }
+  } catch (error) {
+    log.error("[v0] Aggregated latest posts request failed", error)
+    return fallback
+  }
+}
 export const getPostsByCategory = (slug: string, limit = 20) =>
   getPostsByCategoryForCountry(DEFAULT_COUNTRY, slug, limit)
 export const getCategories = () => getCategoriesForCountry(DEFAULT_COUNTRY)

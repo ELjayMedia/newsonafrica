@@ -13,6 +13,7 @@ interface SecondaryStoriesProps {
     title: string
     slug: string
     date: string
+    country?: string
     featuredImage?: {
       node?: {
         sourceUrl?: string
@@ -54,7 +55,7 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
         return (
           <Link
             key={post.id}
-            href={getArticleUrl(post.slug)}
+            href={getArticleUrl(post.slug, post.country)}
             className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200`}
           >
             {post.featuredImage && (
