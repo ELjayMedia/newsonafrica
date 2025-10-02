@@ -14,6 +14,7 @@ interface CountryPageProps {
 }
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 export const revalidate = 300
 
 // Generate static params for all supported countries

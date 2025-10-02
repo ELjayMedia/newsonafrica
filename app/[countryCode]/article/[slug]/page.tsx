@@ -5,6 +5,7 @@ import { ArticleClientContent } from "./ArticleClientContent"
 import * as log from "@/lib/log"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 export const revalidate = 300
 
 type RouteParams = { countryCode: string; slug: string }

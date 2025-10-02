@@ -153,25 +153,25 @@ export interface CountryConfig {
   code: string
   name: string
   flag: string
-  apiEndpoint: string
-  restEndpoint: string
+  readonly apiEndpoint: string
+  readonly restEndpoint: string
 }
 
+const createCountryConfig = (code: string, name: string, flag: string): CountryConfig => ({
+  code,
+  name,
+  flag,
+  get apiEndpoint() {
+    return getWpEndpoints(code).graphql
+  },
+  get restEndpoint() {
+    return getWpEndpoints(code).rest
+  },
+})
+
 export const COUNTRIES: Record<string, CountryConfig> = {
-  sz: {
-    code: "sz",
-    name: "Eswatini",
-    flag: "🇸🇿",
-    apiEndpoint: getWpEndpoints("sz").graphql,
-    restEndpoint: getWpEndpoints("sz").rest,
-  },
-  za: {
-    code: "za",
-    name: "South Africa",
-    flag: "🇿🇦",
-    apiEndpoint: getWpEndpoints("za").graphql,
-    restEndpoint: getWpEndpoints("za").rest,
-  },
+  sz: createCountryConfig("sz", "Eswatini", "🇸🇿"),
+  za: createCountryConfig("za", "South Africa", "🇿🇦"),
 }
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"

@@ -14,7 +14,9 @@ Add these secrets to your repository settings:
 
 Ensure the following environment variables are configured in GitHub and Vercel:
 
-- `NEXT_PUBLIC_WORDPRESS_API_URL`
+- `NEXT_PUBLIC_WORDPRESS_API_URL_SZ`
+- `NEXT_PUBLIC_WORDPRESS_API_URL_ZA`
+- `NEXT_PUBLIC_WORDPRESS_API_URL` (optional shared fallback)
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

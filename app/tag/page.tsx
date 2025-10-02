@@ -3,6 +3,8 @@ import Link from "next/link"
 import type { Metadata } from "next"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "All Tags - News On Africa",
