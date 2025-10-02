@@ -15,13 +15,13 @@ interface FeaturedHeroProps {
     slug: string
     date: string
     featuredImage?: {
-      node: {
-        sourceUrl: string
+      node?: {
+        sourceUrl?: string
       }
     }
     author?: {
-      node: {
-        name: string
+      node?: {
+        name?: string
       }
     }
   }
@@ -34,12 +34,14 @@ export const FeaturedHero = memo(function FeaturedHero({ post }: FeaturedHeroPro
 
   const blurDataURL = useMemo(() => generateBlurDataURL(800, 450), [])
 
+  const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
+
   return (
     <Link href={getArticleUrl(post.slug)} className="block group">
       <div className="grid md:grid-cols-2 gap-3 md:gap-4">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image
-            src={post.featuredImage?.node.sourceUrl || "/placeholder.svg"}
+            src={imageUrl || "/placeholder.svg"}
             alt={post.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"

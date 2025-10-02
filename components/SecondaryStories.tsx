@@ -14,8 +14,8 @@ interface SecondaryStoriesProps {
     slug: string
     date: string
     featuredImage?: {
-      node: {
-        sourceUrl: string
+      node?: {
+        sourceUrl?: string
       }
     }
   }>
@@ -48,40 +48,44 @@ export const SecondaryStories = memo(function SecondaryStories({ posts, layout =
     <div
       className={`grid gap-2 md:gap-4 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-2 lg:grid-cols-3"}`}
     >
-      {formattedPosts.map((post, index) => (
-        <Link
-          key={post.id}
-          href={getArticleUrl(post.slug)}
-          className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200`}
-        >
-          {post.featuredImage && (
-            <div
-              className={`relative ${layout === "horizontal" ? "w-24 md:w-full h-20 md:h-auto md:aspect-video" : "w-full aspect-video"} overflow-hidden`}
-            >
-              <Image
-                src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={post.title}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-md transition-transform duration-300 group-hover:scale-105"
-                priority={index === 0}
-                loading={index === 0 ? "eager" : "lazy"}
-                placeholder="blur"
-                blurDataURL={post.blurDataURL}
-              />
+      {formattedPosts.map((post, index) => {
+        const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
+
+        return (
+          <Link
+            key={post.id}
+            href={getArticleUrl(post.slug)}
+            className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200`}
+          >
+            {post.featuredImage && (
+              <div
+                className={`relative ${layout === "horizontal" ? "w-24 md:w-full h-20 md:h-auto md:aspect-video" : "w-full aspect-video"} overflow-hidden`}
+              >
+                <Image
+                  src={imageUrl || "/placeholder.svg"}
+                  alt={post.title}
+                  layout="fill"
+                  objectFit="cover"
+                  className="rounded-md transition-transform duration-300 group-hover:scale-105"
+                  priority={index === 0}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  placeholder="blur"
+                  blurDataURL={post.blurDataURL}
+                />
+              </div>
+            )}
+            <div className={`p-2 md:p-3 flex-1 flex flex-col ${layout === "horizontal" ? "ml-2 md:ml-0" : ""}`}>
+              <h3 className="text-xs md:text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200">
+                {post.title}
+              </h3>
+              <div className="flex items-center gap-1 text-xs text-gray-500 mt-auto pt-1">
+                <Clock className="h-3 w-3" />
+                <span>{post.formattedDate}</span>
+              </div>
             </div>
-          )}
-          <div className={`p-2 md:p-3 flex-1 flex flex-col ${layout === "horizontal" ? "ml-2 md:ml-0" : ""}`}>
-            <h3 className="text-xs md:text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200">
-              {post.title}
-            </h3>
-            <div className="flex items-center gap-1 text-xs text-gray-500 mt-auto pt-1">
-              <Clock className="h-3 w-3" />
-              <span>{post.formattedDate}</span>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        )
+      })}
     </div>
   )
 })

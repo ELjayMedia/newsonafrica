@@ -772,6 +772,7 @@ export async function getPostsForCategories(
   })
 
   if (gqlData?.categories?.nodes?.length) {
+    console.log("[v0] Category posts fetched:", gqlData.categories.nodes.length, "categories")
     gqlData.categories.nodes.forEach((node) => {
       if (!node?.slug) {
         return
@@ -800,72 +801,79 @@ export async function getPostsForCategories(
     return results
   }
 
-  const categories = await executeRestFallback(
-    () => fetchFromWp<any[]>(countryCode, wordpressQueries.categoriesBySlugs(normalizedSlugs)),
-    `[v0] Category batch REST fallback failed for ${normalizedSlugs.join(", ")} (${countryCode})`,
-    { countryCode, categorySlugs: normalizedSlugs },
-  )
+  console.log("[v0] GraphQL failed, falling back to REST for categories")
 
-  const categoriesBySlug = new Map<string, WordPressCategory>()
-  categories.forEach((cat: any) => {
-    if (!cat?.slug) {
-      return
+  try {
+    const categories = await fetchFromWp<any[]>(countryCode, wordpressQueries.categoriesBySlugs(normalizedSlugs))
+
+    if (!categories || categories.length === 0) {
+      console.log("[v0] No categories found via REST")
+      normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+      return results
     }
 
-    const slug = String(cat.slug).toLowerCase()
-    categoriesBySlug.set(slug, {
-      id: cat.id ?? cat.databaseId,
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description ?? undefined,
-      count: cat.count ?? undefined,
+    const categoriesBySlug = new Map<string, WordPressCategory>()
+    categories.forEach((cat: any) => {
+      if (!cat?.slug) {
+        return
+      }
+
+      const slug = String(cat.slug).toLowerCase()
+      categoriesBySlug.set(slug, {
+        id: cat.id ?? cat.databaseId,
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description ?? undefined,
+        count: cat.count ?? undefined,
+      })
     })
-  })
 
-  for (const slug of normalizedSlugs) {
-    const category = categoriesBySlug.get(slug) ?? null
+    for (const slug of normalizedSlugs) {
+      const category = categoriesBySlug.get(slug) ?? null
 
-    if (!category) {
-      ensureEntry(results, slug)
-      continue
-    }
+      if (!category) {
+        ensureEntry(results, slug)
+        continue
+      }
 
-    const cacheKey = buildCategoryCacheKey(countryCode, category.id, limit)
-    const cached = restCategoryPostsCache.get(cacheKey)
-    let posts: WordPressPost[] = []
+      const cacheKey = buildCategoryCacheKey(countryCode, category.id, limit)
+      const cached = restCategoryPostsCache.get(cacheKey)
+      let posts: WordPressPost[] = []
 
-    if (cached && cached.expiresAt > Date.now()) {
-      posts = cached.posts
-    } else {
-      const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
-      try {
-        posts = await executeRestFallback(
-          () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }),
-          `[v0] Posts by category REST fallback failed for ${category.slug} (${countryCode})`,
-          { countryCode, categorySlug: category.slug, categoryId: category.id, limit, endpoint, params },
-        )
+      if (cached && cached.expiresAt > Date.now()) {
+        posts = cached.posts
+      } else {
+        const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
+        try {
+          const fetchedPosts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params })
+          posts = fetchedPosts || []
 
-        restCategoryPostsCache.set(cacheKey, {
-          posts,
-          expiresAt: Date.now() + REST_CATEGORY_CACHE_TTL_MS,
-        })
-      } catch (error) {
-        restCategoryPostsCache.delete(cacheKey)
-        posts = []
+          restCategoryPostsCache.set(cacheKey, {
+            posts,
+            expiresAt: Date.now() + REST_CATEGORY_CACHE_TTL_MS,
+          })
+        } catch (error) {
+          console.error(`[v0] Failed to fetch posts for category ${category.slug}:`, error)
+          restCategoryPostsCache.delete(cacheKey)
+          posts = []
+        }
+      }
+
+      results[slug] = {
+        category,
+        posts,
+        hasNextPage: posts.length === limit,
+        endCursor: null,
       }
     }
 
-    results[slug] = {
-      category,
-      posts,
-      hasNextPage: posts.length === limit,
-      endCursor: null,
-    }
+    normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+    return results
+  } catch (error) {
+    console.error("[v0] REST fallback failed for categories:", error)
+    normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+    return results
   }
-
-  normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
-
-  return results
 }
 
 export async function getPostsByCategoryForCountry(
@@ -1042,8 +1050,21 @@ type MaybeMostReadPost = Partial<HomePost> & {
   excerpt?: string | { rendered?: string }
   date?: string
   country?: string
-  featuredImage?: HomePost["featuredImage"] | { node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string } }
-  featured_image?: { node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string } }
+  featuredImage?:
+    | HomePost["featuredImage"]
+    | {
+        node?: {
+          sourceUrl?: string
+          altText?: string
+          source_url?: string
+          alt_text?: string
+          url?: string
+          alt?: string
+        }
+      }
+  featured_image?: {
+    node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string }
+  }
   featuredImageUrl?: string
   featured_image_url?: string
 }
@@ -1127,10 +1148,7 @@ const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost
   }
 }
 
-export const fetchMostReadPosts = async (
-  countryCode = DEFAULT_COUNTRY,
-  limit = 5,
-): Promise<HomePost[]> => {
+export const fetchMostReadPosts = async (countryCode = DEFAULT_COUNTRY, limit = 5): Promise<HomePost[]> => {
   const params = new URLSearchParams({ country: countryCode })
   if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
     params.set("limit", String(Math.floor(limit)))

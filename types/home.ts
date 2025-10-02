@@ -6,7 +6,7 @@ export interface HomePost {
   date: string
   country?: string
   featuredImage?: {
-    node: {
+    node?: {
       sourceUrl?: string
       altText?: string
     }

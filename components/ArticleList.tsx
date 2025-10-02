@@ -102,21 +102,26 @@ function ArticleCardSkeleton({ layout = "standard" }: { layout?: ArticleCardLayo
 
 const extractArticles = (data?: InfiniteFetcherResult | null): ArticleItem[] => {
   if (!data) {
+    console.log("[v0] No data to extract articles from")
     return []
   }
 
   if (Array.isArray(data)) {
+    console.log("[v0] Extracted", data.length, "articles from array")
     return data as ArticleItem[]
   }
 
   if (data.posts && Array.isArray(data.posts)) {
+    console.log("[v0] Extracted", data.posts.length, "articles from posts")
     return data.posts
   }
 
   if (data.items && Array.isArray(data.items)) {
+    console.log("[v0] Extracted", data.items.length, "articles from items")
     return data.items
   }
 
+  console.log("[v0] No articles found in data structure")
   return []
 }
 
@@ -141,7 +146,9 @@ function InfiniteArticleList({
 
   useEffect(() => {
     if (initialData) {
-      setArticles(extractArticles(initialData))
+      const extracted = extractArticles(initialData)
+      console.log("[v0] Setting initial articles:", extracted.length)
+      setArticles(extracted)
       setHasMore(initialData.hasNextPage ?? false)
       setEndCursor(initialData.endCursor ?? null)
       setIsLoading(false)
@@ -157,18 +164,22 @@ function InfiniteArticleList({
       return
     }
 
+    console.log("[v0] Loading more articles, cursor:", endCursor)
     setIsLoading(true)
     setError(null)
 
     try {
       const result = await fetcher(endCursor ?? undefined)
       const nextArticles = extractArticles(result)
+      console.log("[v0] Loaded", nextArticles.length, "more articles")
+
       if (nextArticles.length > 0) {
         setArticles((prev) => [...prev, ...nextArticles])
       }
       setHasMore(result.hasNextPage ?? false)
       setEndCursor(result.endCursor ?? null)
     } catch (err) {
+      console.error("[v0] Error loading more articles:", err)
       setError(err instanceof Error ? err : new Error(errorMessage))
     } finally {
       setIsLoading(false)
@@ -177,18 +188,21 @@ function InfiniteArticleList({
 
   useEffect(() => {
     if (articles.length === 0 && hasMore && !isLoading && !error && endCursor) {
+      console.log("[v0] No articles yet, loading initial batch")
       loadMore()
     }
   }, [articles.length, hasMore, isLoading, error, endCursor, loadMore])
 
   useEffect(() => {
     if (inView && hasMore && !isLoading) {
+      console.log("[v0] Scroll triggered, loading more")
       loadMore()
     }
   }, [inView, hasMore, isLoading, loadMore])
 
   const handleRetry = () => {
     if (!isLoading) {
+      console.log("[v0] Retrying article load")
       loadMore()
     }
   }
@@ -230,12 +244,7 @@ function InfiniteArticleList({
     <div className="space-y-8">
       <div className={cn("grid gap-6", className)}>
         {articles.map((article, index) => (
-          <ArticleCard
-            key={`${article.id}-${index}`}
-            article={article}
-            layout={layout}
-            priority={index < 3}
-          />
+          <ArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
         ))}
       </div>
 
@@ -287,16 +296,13 @@ function StaticArticleList({
     )
   }
 
+  console.log("[v0] Rendering", articles.length, "static articles")
+
   return (
     <div className="space-y-8">
       <div className={cn("grid gap-6", className)}>
         {articles.map((article, index) => (
-          <ArticleCard
-            key={`${article.id}-${index}`}
-            article={article}
-            layout={layout}
-            priority={index < 3}
-          />
+          <ArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
         ))}
       </div>
 

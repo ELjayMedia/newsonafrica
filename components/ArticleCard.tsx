@@ -110,21 +110,55 @@ function inferArticleCountry(article: Article | Post) {
   return undefined
 }
 
+function extractImageUrl(article: Article | Post): string | null {
+  const source = article as any
+
+  // Try multiple possible image sources
+  const imageSources = [
+    source?.featuredImage?.node?.sourceUrl,
+    source?.featured_image_url,
+    source?.featuredImage?.sourceUrl,
+    source?.featured_image?.url,
+    source?._embedded?.["wp:featuredmedia"]?.[0]?.source_url,
+    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.full?.source_url,
+    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.large?.source_url,
+    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.medium?.source_url,
+  ]
+
+  for (const imageUrl of imageSources) {
+    if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
+      // Validate it's a proper URL
+      try {
+        new URL(imageUrl)
+        return imageUrl
+      } catch {
+        // If it's a relative path, it might still be valid
+        if (imageUrl.startsWith("/")) {
+          return imageUrl
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 function normalizeArticleData(article: Article | Post) {
   // Check if it's a WordPress Post or Article
   const isWordPressPost = "title" in article && typeof article.title === "object"
 
   const country = inferArticleCountry(article)
+  const featuredImage = extractImageUrl(article)
 
   if (isWordPressPost) {
     const post = article as Post
     return {
       id: post.id.toString(),
-      title: post.title.rendered,
-      excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, ""), // Strip HTML
+      title: post.title.rendered || "Untitled Article",
+      excerpt: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "", // Strip HTML
       slug: post.slug,
       date: post.date,
-      featuredImage: post.featured_image_url || post.featuredImage?.node?.sourceUrl,
+      featuredImage,
       author: post.author_data?.name,
       categories: post.category_data?.map((cat) => ({ name: cat.name, slug: cat.slug })) || [],
       link: getArticleUrl(post.slug, country),
@@ -133,11 +167,11 @@ function normalizeArticleData(article: Article | Post) {
     const art = article as Article
     return {
       id: art.id,
-      title: art.title,
+      title: art.title || "Untitled Article",
       excerpt: art.excerpt || "",
       slug: art.slug,
       date: art.date,
-      featuredImage: art.featuredImage?.node?.sourceUrl,
+      featuredImage,
       author: art.author?.node?.name,
       categories:
         art.categories?.edges?.map((edge) => ({
@@ -150,7 +184,21 @@ function normalizeArticleData(article: Article | Post) {
 }
 
 export function ArticleCard({ article, layout = "standard", className, priority = false }: ArticleCardProps) {
-  const data = normalizeArticleData(article)
+  let data
+  try {
+    data = normalizeArticleData(article)
+  } catch (error) {
+    console.error("[v0] Error normalizing article data:", error, article)
+    // Return a minimal error card
+    return (
+      <Card className={cn("group", className)}>
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">Unable to display article</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const primaryCategory = data.categories[0]
 
   const fallbackImage = "/placeholder.svg?height=400&width=600&text=News+Article"
@@ -173,6 +221,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                 loading={priority ? "eager" : "lazy"}
                 sizes="64px"
                 quality={75}
+                onError={(e) => {
+                  console.error("[v0] Image load error:", imageUrl)
+                  e.currentTarget.src = fallbackImage
+                }}
               />
             </div>
             <div className="flex-1 min-w-0">
@@ -209,6 +261,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
             loading={priority ? "eager" : "lazy"}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 448px"
             quality={85}
+            onError={(e) => {
+              console.error("[v0] Image load error:", imageUrl)
+              e.currentTarget.src = fallbackImage
+            }}
           />
           {primaryCategory && (
             <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-xs">
@@ -246,6 +302,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
           loading={priority ? "eager" : "lazy"}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
           quality={80}
+          onError={(e) => {
+            console.error("[v0] Image load error:", imageUrl)
+            e.currentTarget.src = fallbackImage
+          }}
         />
       </div>
       <CardContent className="p-3">

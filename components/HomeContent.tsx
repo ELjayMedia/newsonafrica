@@ -46,7 +46,6 @@ const isOnline = () => {
   return true // Assume online in SSR context
 }
 
-// Update the fetchHomeData function to use new WordPress API
 const fetchHomeData = async (
   country: string,
 ): Promise<{
@@ -59,6 +58,8 @@ const fetchHomeData = async (
     if (!isOnline()) {
       throw new Error("Device is offline")
     }
+
+    console.log("[v0] Fetching home data for country:", country)
 
     // Use Promise.allSettled to handle partial failures
     const results = await Promise.allSettled([
@@ -77,6 +78,12 @@ const fetchHomeData = async (
 
     const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
 
+    console.log("[v0] Fetched home data:", {
+      taggedPosts: taggedPosts.length,
+      recentPosts: recentPosts.length,
+      categories: categories.length,
+    })
+
     return {
       taggedPosts,
       featuredPosts,
@@ -84,7 +91,7 @@ const fetchHomeData = async (
       recentPosts,
     }
   } catch (error) {
-    console.error("Error fetching home data:", error)
+    console.error("[v0] Error fetching home data:", error)
     throw error
   }
 }
@@ -133,22 +140,21 @@ export function HomeContent({
           recentPosts: [],
         })
 
-  // Update the useSWR configuration for better error handling
   const { data, error, isLoading } = useSWR<{
     taggedPosts: HomePost[]
     featuredPosts: HomePost[]
     categories: Category[]
     recentPosts: HomePost[]
-  }>([" homepage-data", currentCountry], () => fetchHomeData(currentCountry), {
+  }>(["/homepage-data", currentCountry], ([_, country]) => fetchHomeData(country), {
     fallbackData,
-    revalidateOnMount: !initialData && !baselinePosts.length, // Only revalidate if no initial data
+    revalidateOnMount: !initialData && !baselinePosts.length,
     revalidateOnFocus: false,
     refreshInterval: isOffline ? 0 : 300000, // Only refresh every 5 minutes if online
     dedupingInterval: 60000,
     errorRetryCount: 3,
     errorRetryInterval: 5000,
     onError: (err) => {
-      console.error("SWR Error:", err)
+      console.error("[v0] SWR Error:", err)
       if (!initialData && !initialPosts.length) {
         setIsOffline(true)
       }
@@ -156,7 +162,6 @@ export function HomeContent({
     shouldRetryOnError: !isOffline,
   })
 
-  // Fetch category-specific posts
   useEffect(() => {
     let isCancelled = false
 
@@ -164,6 +169,7 @@ export function HomeContent({
       if (isOffline) return
 
       try {
+        console.log("[v0] Fetching category posts for country:", currentCountry)
         const slugs = categoryConfigs.map((config) => config.name.toLowerCase())
         const batchedPosts = await getPostsForCategories(currentCountry, slugs, 5)
 
@@ -180,9 +186,10 @@ export function HomeContent({
           }
         })
 
+        console.log("[v0] Category posts fetched:", Object.keys(mappedPosts).length, "categories")
         setCategoryPosts(mappedPosts)
       } catch (error) {
-        console.error("Error fetching batched category posts:", error)
+        console.error("[v0] Error fetching batched category posts:", error)
         if (!isCancelled) {
           setCategoryPosts({})
         }
@@ -349,27 +356,27 @@ export function HomeContent({
       <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
         {renderOfflineNotification()}
 
-        {/* Pan-African Country Navigation */}
+        {/* Pan-African Country Navigation - Always shows all countries */}
         <CountryNavigation />
 
-        {/* Hero Section - Show the latest post */}
+        {/* Hero Section - Shows content from selected country */}
         {mainStory && (
           <section className="bg-gray-50 px-2 py-2 rounded-lg">
             <FeaturedHero post={mainStory} />
           </section>
         )}
 
-        {/* Country Spotlight - Show posts from different countries */}
-        {Object.keys(countryPosts).length > 0 && <CountrySpotlight countryPosts={countryPosts} />}
+        {/* Pan-African Spotlight - Shows posts from different countries (not selected country) */}
+        <CountrySpotlight countryPosts={countryPosts} />
 
-        {/* Secondary Stories - Show featured posts */}
+        {/* Secondary Stories - Shows featured posts from selected country */}
         {secondaryStories.length > 0 && (
           <section className="bg-white p-2 md:p-3 rounded-lg md:flex md:flex-col">
             <SecondaryStories posts={secondaryStories} layout="horizontal" />
           </section>
         )}
 
-        {/* Category Sections - Show posts from each category */}
+        {/* Category Sections - Shows posts from selected country */}
         <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => (
             <CategorySection key={config.name} {...config} />

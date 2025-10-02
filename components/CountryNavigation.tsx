@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Globe, ChevronRight, MapPin } from "lucide-react"
-import { COUNTRIES } from "@/lib/wordpress-api"
+import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
+import { COUNTRIES, getLatestPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
 import type { CountryPosts } from "@/types/home"
+import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
   const [showAll, setShowAll] = useState(false)
@@ -61,10 +62,86 @@ export function CountryNavigation() {
   )
 }
 
-export function CountrySpotlight({ countryPosts }: { countryPosts: CountryPosts }) {
+export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countryPosts?: CountryPosts }) {
+  const currentCountry = getCurrentCountry()
+  const [countryPosts, setCountryPosts] = useState<CountryPosts>(initialCountryPosts || {})
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Fetch posts from all countries for Pan-African section
+  useEffect(() => {
+    let isCancelled = false
+
+    const fetchPanAfricanPosts = async () => {
+      // If we already have posts from multiple countries, don't refetch
+      if (Object.keys(countryPosts).length > 1) {
+        return
+      }
+
+      setIsLoading(true)
+
+      try {
+        const allCountries = Object.keys(COUNTRIES)
+        // Fetch posts from all countries except the current one (to show diversity)
+        const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
+
+        const results = await Promise.allSettled(
+          otherCountries.map(async (countryCode) => {
+            const result = await getLatestPostsForCountry(countryCode, 2)
+            return {
+              countryCode,
+              posts: mapPostsToHomePosts(result.posts || [], countryCode),
+            }
+          }),
+        )
+
+        if (isCancelled) return
+
+        const newCountryPosts: CountryPosts = {}
+
+        results.forEach((result) => {
+          if (result.status === "fulfilled" && result.value.posts.length > 0) {
+            newCountryPosts[result.value.countryCode] = result.value.posts
+          }
+        })
+
+        setCountryPosts(newCountryPosts)
+      } catch (error) {
+        console.error("[v0] Error fetching Pan-African posts:", error)
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchPanAfricanPosts()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentCountry])
+
   const spotlightCountries = Object.entries(countryPosts)
-    .filter(([_, posts]) => posts.length > 0)
+    .filter(([_, posts]) => posts && posts.length > 0)
     .slice(0, 3)
+
+  if (isLoading) {
+    return (
+      <section className="space-y-6">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
+          <Badge variant="secondary" className="ml-2">
+            Pan-African
+          </Badge>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading stories from across Africa...</span>
+        </div>
+      </section>
+    )
+  }
 
   if (spotlightCountries.length === 0) return null
 
@@ -72,16 +149,17 @@ export function CountrySpotlight({ countryPosts }: { countryPosts: CountryPosts 
     <section className="space-y-6">
       <div className="flex items-center gap-2">
         <MapPin className="h-5 w-5 text-primary" />
-        <h2 className="text-2xl font-bold">Country Spotlight</h2>
+        <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
         <Badge variant="secondary" className="ml-2">
           Pan-African
         </Badge>
       </div>
+      <p className="text-sm text-muted-foreground">Discover the latest stories from across the African continent</p>
 
       <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
         {spotlightCountries.map(([countryCode, posts]) => {
           const country = COUNTRIES[countryCode]
-          if (!country || posts.length === 0) return null
+          if (!country || !posts || posts.length === 0) return null
 
           return (
             <Card
