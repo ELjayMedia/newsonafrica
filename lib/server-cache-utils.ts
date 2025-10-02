@@ -24,3 +24,13 @@ export function revalidateByTag(tag: string): void {
     console.error(`Error revalidating tag ${tag}:`, error)
   }
 }
+
+export function revalidateByTags(tags: string[]): void {
+  tags.forEach((tag) => {
+    try {
+      revalidateTag(tag)
+    } catch (error) {
+      console.error(`Error revalidating tag ${tag}:`, error)
+    }
+  })
+}

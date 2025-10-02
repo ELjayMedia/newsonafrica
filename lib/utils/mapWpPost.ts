@@ -1,5 +1,5 @@
-import { rewriteLegacyLinks } from './routing'
-import type { WordPressPost } from '../wordpress-api'
+import { rewriteLegacyLinks } from "./routing"
+import type { WordPressPost } from "../wordpress-api"
 
 function decodeGlobalId(id: string): number {
   try {
@@ -16,22 +16,29 @@ export function mapWpPost(
   source: 'rest' | 'gql',
   countryCode?: string,
 ): WordPressPost {
-  if (source === 'rest') {
-    const featured = post._embedded?.['wp:featuredmedia']?.[0]
-    const author = post._embedded?.['wp:author']?.[0]
-    const categoryTerms = post._embedded?.['wp:term']?.[0] || []
-    const tagTerms = post._embedded?.['wp:term']?.[1] || []
+  if (source === "rest") {
+    const featured = post._embedded?.["wp:featuredmedia"]?.[0]
+    const author = post._embedded?.["wp:author"]?.[0]
+    const categoryTerms = post._embedded?.["wp:term"]?.[0] || []
+    const tagTerms = post._embedded?.["wp:term"]?.[1] || []
+    const numericId = typeof post.id === "number" ? post.id : Number.parseInt(String(post.id), 10)
+    const normalizedId = Number.isFinite(numericId) ? numericId : undefined
+    const restIdentifier = normalizedId ?? post.slug ?? ""
+    const countrySegment = countryCode?.toLowerCase() || "global"
 
     return {
       ...post,
+      id: normalizedId ?? 0,
+      databaseId: normalizedId ?? undefined,
+      globalId: `rest:${countrySegment}:${restIdentifier}`,
       content: post.content
-        ? { rendered: rewriteLegacyLinks(post.content.rendered || '', countryCode) }
+        ? { rendered: rewriteLegacyLinks(post.content.rendered || "", countryCode) }
         : undefined,
       featuredImage: featured
         ? {
             node: {
               sourceUrl: featured.source_url,
-              altText: featured.alt_text || '',
+              altText: featured.alt_text || "",
               mediaDetails: {
                 width: featured.media_details?.width,
                 height: featured.media_details?.height,
@@ -61,10 +68,12 @@ export function mapWpPost(
 
   return {
     id: post.databaseId ?? decodeGlobalId(post.id),
+    databaseId: post.databaseId ?? decodeGlobalId(post.id),
+    globalId: typeof post.id === "string" ? post.id : undefined,
     date: post.date,
     slug: post.slug,
-    title: { rendered: post.title ?? '' },
-    excerpt: { rendered: post.excerpt ?? '' },
+    title: { rendered: post.title ?? "" },
+    excerpt: { rendered: post.excerpt ?? "" },
     content: post.content
       ? { rendered: rewriteLegacyLinks(post.content, countryCode) }
       : undefined,
@@ -72,7 +81,7 @@ export function mapWpPost(
       ? {
           node: {
             sourceUrl: post.featuredImage.node.sourceUrl,
-            altText: post.featuredImage.node.altText || '',
+            altText: post.featuredImage.node.altText || "",
             mediaDetails: {
               width: post.featuredImage.node.mediaDetails?.width,
               height: post.featuredImage.node.mediaDetails?.height,

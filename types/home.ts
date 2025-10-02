@@ -1,5 +1,6 @@
 export interface HomePost {
   id: string
+  globalId?: string
   slug: string
   title: string
   excerpt: string

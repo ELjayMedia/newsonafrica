@@ -11,6 +11,8 @@ const envSchema = z.object({
   WP_APP_USERNAME: z.string().optional(),
   WP_APP_PASSWORD: z.string().optional(),
   ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 })
 
 let env: z.infer<typeof envSchema>
@@ -32,6 +34,8 @@ try {
     WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     ANALYTICS_API_BASE_URL:
       process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   }
 }
 

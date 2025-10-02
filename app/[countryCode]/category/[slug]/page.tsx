@@ -25,6 +25,7 @@ export async function generateStaticParams(): Promise<Params[]> {
           `wordpress-categories-static-${country}`,
           async () => await getCategoriesForCountry(country),
           async () => [],
+          { context: { country, endpoint: "categories" } },
         )
         params.push(
           ...categories.slice(0, 50).map((category) => ({
@@ -59,6 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       "wordpress-category-metadata",
       async () => await getPostsByCategoryForCountry(countryCode, slug, 10),
       async () => ({ category: null, posts: [] }),
+      { context: { country: countryCode, endpoint: `category:${slug}` } },
     )
     const { category, posts } = result
     if (!category) {

@@ -82,6 +82,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
         hasMore: page < Math.ceil(filteredResults.length / perPage),
       }
     },
+    { context: { endpoint: "search" } },
   )
 }
 

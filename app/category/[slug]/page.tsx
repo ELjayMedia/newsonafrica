@@ -22,13 +22,15 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
 
   try {
+    const country = getServerCountry()
     const categories = await circuitBreaker.execute(
       "wordpress-categories-static",
-      async () => await getCategoriesForCountry(getServerCountry()),
+      async () => await getCategoriesForCountry(country),
       async () => {
         log.info("[v0] Categories static generation: Using fallback due to WordPress unavailability")
         return []
       },
+      { context: { country, endpoint: "categories" } },
     )
 
     return categories.slice(0, 50).map((category) => ({
@@ -205,6 +207,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
           },
         }
       },
+      { context: { country, endpoint: `category:${params.slug}` } },
     )
 
     enhancedCache.set(cacheKey, result, 600000, 1800000) // 10min fresh, 30min stale
@@ -279,6 +282,7 @@ export default async function CategoryServerPage({ params }: CategoryPageProps) 
           ],
         }
       },
+      { context: { country, endpoint: `category:${params.slug}` } },
     )
 
     if (categoryData && !cached.isStale) {

@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { AfricanHomeContent } from "@/components/AfricanHomeContent"
-import { getAggregatedLatestHome } from "@/lib/wordpress-api"
+import { getAggregatedLatestHome, type AggregatedHomeData } from "@/lib/wordpress-api"
+import { env } from "@/config/env"
+import { CACHE_TAGS } from "@/lib/cache/constants"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -69,7 +71,26 @@ export const metadata: Metadata = {
 export const revalidate = 60
 
 export default async function Home() {
-  const aggregatedHome = await getAggregatedLatestHome(6)
+  const feedUrl = new URL("/api/home-feed", env.NEXT_PUBLIC_SITE_URL).toString()
 
+  try {
+    const response = await fetch(feedUrl, {
+      next: { revalidate: 45, tags: [CACHE_TAGS.HOME] },
+    })
+
+    if (response.ok) {
+      const aggregatedHome = (await response.json()) as AggregatedHomeData
+      return <AfricanHomeContent {...aggregatedHome} />
+    }
+
+    console.error("[home] Failed to fetch cached home feed", {
+      status: response.status,
+      statusText: response.statusText,
+    })
+  } catch (error) {
+    console.error("[home] Home feed request failed", error)
+  }
+
+  const aggregatedHome = await getAggregatedLatestHome(6)
   return <AfricanHomeContent {...aggregatedHome} />
 }

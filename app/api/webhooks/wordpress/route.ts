@@ -3,8 +3,9 @@ import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { CACHE_TAGS } from "@/lib/cache/constants"
-import { revalidateByTag } from "@/lib/server-cache-utils"
+import { revalidateByTag, revalidateByTags } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { composeCountrySectionTags } from "@/lib/cache/tags"
 
 export const runtime = "nodejs"
 
@@ -56,8 +57,14 @@ export async function POST(request: NextRequest) {
           // Revalidate the specific post page for all supported countries
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
+            revalidateByTags([
+              ...composeCountrySectionTags(country, "latest"),
+              CACHE_TAGS.POSTS,
+            ])
           }
           revalidateByTag(CACHE_TAGS.POST(post.id))
+
+          revalidateByTag(CACHE_TAGS.HOME)
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
@@ -79,9 +86,14 @@ export async function POST(request: NextRequest) {
           // Revalidate pages that might have referenced this post
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
+            revalidateByTags([
+              ...composeCountrySectionTags(country, "latest"),
+              CACHE_TAGS.POSTS,
+            ])
           }
           revalidatePath("/")
           revalidateByTag(CACHE_TAGS.POSTS)
+          revalidateByTag(CACHE_TAGS.HOME)
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
