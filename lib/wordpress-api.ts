@@ -1,4 +1,4 @@
-import { getWpEndpoints } from "@/config/wp"
+import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { wordpressQueries } from "./wordpress-queries"
 import * as log from "./log"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
@@ -159,13 +159,23 @@ export interface CountryConfig {
   type?: "country"
 }
 
-export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIONS.reduce(
-  (accumulator, country) => {
-    accumulator[country.code] = country
-    return accumulator
+export const COUNTRIES: Record<string, CountryConfig> = {
+  sz: {
+    code: "sz",
+    name: "Eswatini",
+    flag: "🇸🇿",
+    apiEndpoint: getGraphQLEndpoint("sz"),
+    restEndpoint: getRestBase("sz"),
   },
-  {} as Record<string, CountryConfig>,
-)
+  za: {
+    code: "za",
+    name: "South Africa",
+    flag: "🇿🇦",
+    apiEndpoint: getGraphQLEndpoint("za"),
+    restEndpoint: getRestBase("za"),
+  },
+}
+
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
@@ -190,7 +200,7 @@ export async function fetchFromWpGraphQL<T>(
   query: string,
   variables?: Record<string, string | number | string[]>,
 ): Promise<T | null> {
-  const base = getWpEndpoints(countryCode).graphql
+  const base = getGraphQLEndpoint(countryCode)
 
   try {
     console.log("[v0] GraphQL request to:", base)
@@ -525,7 +535,7 @@ export async function fetchFromWp<T>(
 
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
-  const base = getWpEndpoints(countryCode).rest
+  const base = getRestBase(countryCode)
   const params = new URLSearchParams(
     Object.entries(queryParams)
       .filter(([, v]) => v !== undefined)
@@ -1323,7 +1333,7 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
 }
 
 export async function resolveCountryTermId(slug: string): Promise<number | null> {
-  const base = getWpEndpoints(process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY).rest
+  const base = getRestBase(process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY)
   const res = await fetch(`${base}/countries?slug=${slug}`)
   if (!res.ok) return null
   const data = await res.json()

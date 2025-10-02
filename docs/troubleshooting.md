@@ -10,7 +10,9 @@
 - Missing country slug in API URLs (e.g., `/wp-json/wp/v2/posts` instead of `/sz/wp-json/wp/v2/posts`)
 
 **Root Cause:**
-The environment variables `NEXT_PUBLIC_WORDPRESS_API_URL` and `WORDPRESS_REST_API_URL` are set to incorrect values that don't include the country slug or point to the wrong endpoint type.
+The WordPress GraphQL/REST environment variables (for example `NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE` or the
+fallbacks `NEXT_PUBLIC_WP_GRAPHQL` / `NEXT_PUBLIC_WP_REST_BASE`) are set to incorrect values that don't include the country
+slug or point to the wrong endpoint type.
 
 **Solution:**
 
@@ -19,9 +21,11 @@ The application has built-in defaults that construct the correct URLs. Simply re
 
 In Vercel:
 1. Go to Project Settings → Environment Variables
-2. Delete or unset:
-   - `NEXT_PUBLIC_WORDPRESS_API_URL`
-   - `WORDPRESS_REST_API_URL`
+2. Delete or unset any WordPress endpoint overrides, such as:
+   - `NEXT_PUBLIC_WP_GRAPHQL`
+   - `NEXT_PUBLIC_WP_REST_BASE`
+   - `NEXT_PUBLIC_WP_<COUNTRY>_GRAPHQL`
+   - `NEXT_PUBLIC_WP_<COUNTRY>_REST_BASE`
 3. Redeploy your application
 
 The app will automatically use the correct defaults:
@@ -33,12 +37,12 @@ If you need to override the defaults, ensure the URLs follow this pattern:
 
 \`\`\`bash
 # For Eswatini (sz)
-NEXT_PUBLIC_WORDPRESS_API_URL=https://newsonafrica.com/sz/graphql
-WORDPRESS_REST_API_URL=https://newsonafrica.com/sz/wp-json/wp/v2
+NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
+NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 
 # For South Africa (za)
-NEXT_PUBLIC_WORDPRESS_API_URL=https://newsonafrica.com/za/graphql
-WORDPRESS_REST_API_URL=https://newsonafrica.com/za/wp-json/wp/v2
+NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
+NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 \`\`\`
 
 **Important:** 
@@ -50,10 +54,10 @@ WORDPRESS_REST_API_URL=https://newsonafrica.com/za/wp-json/wp/v2
 For multi-country setups, use country-specific environment variables:
 
 \`\`\`bash
-NEXT_PUBLIC_WORDPRESS_API_URL_SZ=https://newsonafrica.com/sz/graphql
-NEXT_PUBLIC_WORDPRESS_API_URL_ZA=https://newsonafrica.com/za/graphql
-WORDPRESS_REST_API_URL_SZ=https://newsonafrica.com/sz/wp-json/wp/v2
-WORDPRESS_REST_API_URL_ZA=https://newsonafrica.com/za/wp-json/wp/v2
+NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
+NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
+NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
+NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 \`\`\`
 
 ### Verifying the Fix
