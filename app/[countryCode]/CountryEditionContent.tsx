@@ -1,16 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import useSWR from "swr"
-import { getLatestPostsForCountry, getCategoriesForCountry, type CountryConfig } from "@/lib/wordpress-api"
+import {
+  getLatestPostsForCountry,
+  getCategoriesForCountry,
+  getPostsForCategories,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
+  COUNTRIES,
+  type CountryConfig,
+  type WordPressPost,
+} from "@/lib/wordpress-api"
+import { FeaturedHero } from "@/components/FeaturedHero"
+import { SecondaryStories } from "@/components/SecondaryStories"
 import { ArticleCard } from "@/components/ArticleCard"
 import { ArticleList } from "@/components/ArticleList"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus } from "lucide-react"
+import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus, MapPin } from "lucide-react"
 import Link from "next/link"
 import { getCategoryUrl } from "@/lib/utils/routing"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { CountryPosts, HomePost } from "@/types/home"
 
 interface CountryEditionContentProps {
   countryCode: string
@@ -19,17 +32,27 @@ interface CountryEditionContentProps {
 
 export function CountryEditionContent({ countryCode, country }: CountryEditionContentProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
+  const [panAfricanPosts, setPanAfricanPosts] = useState<CountryPosts>({})
 
-  // Fetch hero/featured posts (first 3 latest posts)
+  const {
+    data: fpData,
+    error: fpError,
+    isLoading: fpLoading,
+  } = useSWR([`fp-tagged`, countryCode], () => getFpTaggedPostsForCountry(countryCode, 8), {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  })
+
+  // Fetch hero/featured posts (first 3 latest posts as fallback)
   const {
     data: heroData,
     error: heroError,
     isLoading: heroLoading,
-  } = useSWR(
-    [`hero`, countryCode],
-    () => getLatestPostsForCountry(countryCode, 3),
-    { revalidateOnFocus: false, dedupingInterval: 300000 }, // 5 minutes
-  )
+  } = useSWR([`hero`, countryCode], () => getLatestPostsForCountry(countryCode, 3), {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  })
 
   const {
     data: trendingData,
@@ -59,14 +82,14 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
     data: categories,
     error: categoriesError,
     isLoading: categoriesLoading,
-  } = useSWR(
-    `categories-${countryCode}`,
-    () => getCategoriesForCountry(countryCode),
-    { revalidateOnFocus: false, dedupingInterval: 600000 }, // 10 minutes
-  )
+  } = useSWR(`categories-${countryCode}`, () => getCategoriesForCountry(countryCode), {
+    revalidateOnFocus: false,
+    dedupingInterval: 600000,
+  })
 
-  const heroPost = heroData?.posts[0]
-  const featuredPosts = heroData?.posts.slice(1, 3) || []
+  const heroSource = fpData && fpData.length > 0 ? fpData : heroData?.posts || []
+  const heroPost = heroSource[0]
+  const secondaryStories = heroSource.slice(1, 5)
   const trendingPosts = trendingData?.posts || []
   const latestPosts = latestData?.posts || []
   const moreForYouInitialData = latestData
@@ -76,6 +99,84 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
         endCursor: latestData.endCursor,
       }
     : undefined
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const fetchCategoryPosts = async () => {
+      try {
+        console.log("[v0] Fetching category posts for country:", countryCode)
+        const slugs = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
+        const batchedPosts = await getPostsForCategories(countryCode, slugs, 5)
+
+        if (isCancelled) return
+
+        const mappedPosts: Record<string, HomePost[]> = {}
+
+        slugs.forEach((slug) => {
+          const categoryData = batchedPosts[slug]
+          if (categoryData?.posts?.length) {
+            mappedPosts[slug] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], countryCode)
+          }
+        })
+
+        console.log("[v0] Category posts fetched:", Object.keys(mappedPosts).length, "categories")
+        setCategoryPosts(mappedPosts)
+      } catch (error) {
+        console.error("[v0] Error fetching batched category posts:", error)
+        if (!isCancelled) {
+          setCategoryPosts({})
+        }
+      }
+    }
+
+    fetchCategoryPosts()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [countryCode])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const fetchPanAfricanPosts = async () => {
+      try {
+        const allCountries = Object.keys(COUNTRIES)
+        const otherCountries = allCountries.filter((code) => code !== countryCode).slice(0, 3)
+
+        const results = await Promise.allSettled(
+          otherCountries.map(async (code) => {
+            const result = await getLatestPostsForCountry(code, 2)
+            return {
+              countryCode: code,
+              posts: mapPostsToHomePosts(result.posts || [], code),
+            }
+          }),
+        )
+
+        if (isCancelled) return
+
+        const newCountryPosts: CountryPosts = {}
+
+        results.forEach((result) => {
+          if (result.status === "fulfilled" && result.value.posts.length > 0) {
+            newCountryPosts[result.value.countryCode] = result.value.posts
+          }
+        })
+
+        setPanAfricanPosts(newCountryPosts)
+      } catch (error) {
+        console.error("[v0] Error fetching Pan-African posts:", error)
+      }
+    }
+
+    fetchPanAfricanPosts()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [countryCode])
 
   // Error state
   if (heroError && trendingError && latestError) {
@@ -91,14 +192,13 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
-      {/* Hero Section */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 mb-6">
           <div className="h-1 w-8 bg-primary rounded-full" />
           <h2 className="text-2xl font-bold">Featured Story</h2>
         </div>
 
-        {heroLoading ? (
+        {fpLoading || heroLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Skeleton className="aspect-video w-full mb-4" />
@@ -114,21 +214,72 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
             </div>
           </div>
         ) : heroPost ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Hero Post */}
-            <div className="lg:col-span-2">
-              <ArticleCard article={heroPost} layout="featured" className="h-full" />
-            </div>
-
-            {/* Side Featured Posts */}
-            <div className="space-y-4">
-              {featuredPosts.map((post) => (
-                <ArticleCard key={post.id} article={post} layout="compact" />
-              ))}
-            </div>
+          <div className="bg-gray-50 px-2 py-2 rounded-lg">
+            <FeaturedHero post={heroPost} />
           </div>
         ) : null}
       </section>
+
+      {secondaryStories.length > 0 && (
+        <section className="bg-white p-2 md:p-3 rounded-lg">
+          <SecondaryStories posts={secondaryStories} layout="horizontal" />
+        </section>
+      )}
+
+      {Object.keys(panAfricanPosts).length > 0 && (
+        <section className="space-y-6">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
+            <Badge variant="secondary" className="ml-2">
+              Pan-African
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">Discover the latest stories from across the African continent</p>
+
+          <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
+            {Object.entries(panAfricanPosts).map(([code, posts]) => {
+              const spotlightCountry = COUNTRIES[code]
+              if (!spotlightCountry || !posts || posts.length === 0) return null
+
+              return (
+                <Card
+                  key={code}
+                  className="flex-none w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[300px] overflow-hidden hover:shadow-lg transition-shadow snap-start"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl" role="img" aria-label={`${spotlightCountry.name} flag`}>
+                        {spotlightCountry.flag}
+                      </span>
+                      <CardTitle className="text-lg">{spotlightCountry.name}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {posts.slice(0, 2).map((post) => (
+                      <Link key={post.id} href={`/${code}/article/${post.slug}`} className="block group">
+                        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                          {post.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">{new Date(post.date).toLocaleDateString()}</p>
+                      </Link>
+                    ))}
+                    <Link
+                      href={`/${code}`}
+                      className="inline-flex items-center text-sm text-primary hover:text-primary/80 font-medium"
+                    >
+                      View all {spotlightCountry.name} news
+                      <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Trending Section */}
       <section className="space-y-6">
@@ -156,11 +307,44 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
         )}
       </section>
 
+      {Object.keys(categoryPosts).length > 0 && (
+        <section className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Grid3X3 className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">Browse by Category</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {Object.entries(categoryPosts).map(([categorySlug, posts]) => {
+              if (!posts || posts.length === 0) return null
+
+              return (
+                <div key={categorySlug} className="bg-white rounded-lg p-4">
+                  <h3 className="text-lg md:text-xl font-bold capitalize mb-4">
+                    <Link
+                      href={getCategoryUrl(categorySlug, countryCode)}
+                      className="hover:text-blue-600 transition-colors"
+                    >
+                      {categorySlug}
+                    </Link>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {posts.slice(0, 3).map((post) => (
+                      <ArticleCard key={post.id} article={post} layout="compact" />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Categories Rail */}
       <section className="space-y-6">
         <div className="flex items-center gap-2">
           <Grid3X3 className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Browse Categories</h2>
+          <h2 className="text-2xl font-bold">All Categories</h2>
         </div>
 
         {categoriesLoading ? (

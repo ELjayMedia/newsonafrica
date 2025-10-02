@@ -1062,9 +1062,18 @@ type MaybeMostReadPost = Partial<HomePost> & {
           alt?: string
         }
       }
-  featured_image?: {
-    node?: { sourceUrl?: string; altText?: string; source_url?: string; alt_text?: string; url?: string; alt?: string }
-  }
+  featured_image?:
+    | HomePost["featuredImage"]
+    | {
+        node?: {
+          sourceUrl?: string
+          altText?: string
+          source_url?: string
+          alt_text?: string
+          url?: string
+          alt?: string
+        }
+      }
   featuredImageUrl?: string
   featured_image_url?: string
 }
