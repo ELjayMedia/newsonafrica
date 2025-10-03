@@ -1,5 +1,17 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
-import { wordpressQueries } from "./wordpress-queries"
+import {
+  wordpressQueries,
+  LATEST_POSTS_QUERY,
+  FP_TAGGED_POSTS_QUERY,
+  POSTS_BY_CATEGORY_QUERY,
+  CATEGORY_POSTS_BATCH_QUERY,
+  CATEGORIES_QUERY,
+  POST_CATEGORIES_QUERY,
+  RELATED_POSTS_QUERY,
+  FEATURED_POSTS_QUERY,
+  AUTHOR_DATA_QUERY,
+  CATEGORY_POSTS_QUERY,
+} from "./wordpress-queries"
 import * as log from "./log"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
@@ -8,8 +20,27 @@ import { APIError } from "./utils/errorHandling"
 import type { HomePost } from "@/types/home"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "./editions"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import type {
+  AuthorDataQuery,
+  CategoryPostsBatchQuery,
+  CategoryPostsQuery,
+  CategoriesQuery,
+  FeaturedPostsQuery,
+  FpTaggedPostsQuery,
+  LatestPostsQuery,
+  PostCategoriesQuery,
+  PostsByCategoryQuery,
+  RelatedPostsQuery,
+  PostFieldsFragment,
+} from "@/types/wpgraphql"
 
-const gql = String.raw
+type DeepMutable<T> = T extends ReadonlyArray<infer U>
+  ? DeepMutable<U>[]
+  : T extends object
+    ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+    : T
+
+export type WordPressPost = DeepMutable<PostFieldsFragment> & { globalRelayId?: string | null }
 
 let circuitBreakerInstance: any = null
 async function getCircuitBreaker() {
@@ -20,18 +51,23 @@ async function getCircuitBreaker() {
   return circuitBreakerInstance
 }
 
-const mapPostFromWp = (post: WordPressPost, countryCode?: string): WordPressPost => mapWpPost(post, "rest", countryCode)
+const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost =>
+  mapWpPost(post as WordPressPost, "rest", countryCode)
 
 const resolveHomePostId = (post: WordPressPost): string => {
   if (post.globalRelayId) {
     return post.globalRelayId
   }
 
-  if (typeof post.id === "number") {
-    return String(post.id)
+  if (typeof post.id === "string" && post.id.length > 0) {
+    return post.id
   }
 
-  if (post.slug) {
+  if (typeof post.databaseId === "number") {
+    return String(post.databaseId)
+  }
+
+  if (post.slug && post.slug.length > 0) {
     return post.slug
   }
 
@@ -42,8 +78,8 @@ const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): H
   id: resolveHomePostId(post),
   globalRelayId: post.globalRelayId,
   slug: post.slug ?? "",
-  title: post.title?.rendered ?? "",
-  excerpt: post.excerpt?.rendered ?? "",
+  title: post.title ?? "",
+  excerpt: post.excerpt ?? "",
   date: post.date ?? "",
   country: countryCode,
   featuredImage: post.featuredImage?.node
@@ -56,8 +92,8 @@ const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): H
     : undefined,
 })
 
-const mapGraphqlNodeToHomePost = (post: WordPressPost, countryCode: string): HomePost => {
-  const mapped = mapWpPost(post, "gql", countryCode)
+const mapGraphqlNodeToHomePost = (post: unknown, countryCode: string): HomePost => {
+  const mapped = mapWpPost(post as WordPressPost, "gql", countryCode)
   return mapWordPressPostToHomePost(mapped, countryCode)
 }
 
@@ -133,24 +169,6 @@ export interface WordPressTag {
   id: number
   name: string
   slug: string
-}
-
-export interface WordPressPost {
-  id: number
-  globalRelayId?: string
-  date: string
-  slug: string
-  title: { rendered: string }
-  excerpt: { rendered: string }
-  content?: { rendered: string }
-  _embedded?: {
-    "wp:term"?: Array<Array<{ id: number; name: string; slug: string }>>
-    [key: string]: unknown
-  }
-  categories?: { nodes: WordPressCategory[] }
-  tags?: { nodes: WordPressTag[] }
-  author?: { node: WordPressAuthor }
-  featuredImage?: { node: WordPressImage }
 }
 
 export interface CategoryPostsResult {
@@ -259,290 +277,6 @@ export async function fetchFromWpGraphQL<T>(
   }
 }
 
-const POST_FIELDS = gql`
-  fragment PostFields on Post {
-    databaseId
-    id
-    slug
-    date
-    title
-    excerpt
-    content
-    featuredImage {
-      node {
-        sourceUrl
-        altText
-        mediaDetails {
-          width
-          height
-        }
-      }
-    }
-    categories {
-      nodes {
-        databaseId
-        name
-        slug
-      }
-    }
-    tags {
-      nodes {
-        databaseId
-        name
-        slug
-      }
-    }
-    author {
-      node {
-        databaseId
-        name
-        slug
-      }
-    }
-  }
-`
-
-const HOME_POST_FIELDS = gql`
-  fragment HomePostFields on Post {
-    databaseId
-    slug
-    date
-    title
-    excerpt
-    featuredImage {
-      node {
-        sourceUrl
-        altText
-      }
-    }
-  }
-`
-
-const LATEST_POSTS_QUERY = gql`
-  ${POST_FIELDS}
-  query LatestPosts($first: Int!, $after: String) {
-    posts(
-      first: $first
-      after: $after
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-      }
-    ) {
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-      nodes {
-        ...PostFields
-      }
-    }
-  }
-`
-
-const FP_TAGGED_POSTS_QUERY = gql`
-  ${HOME_POST_FIELDS}
-  query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
-    posts(
-      first: $first
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-        tagSlugIn: $tagSlugs
-      }
-    ) {
-      nodes {
-        ...HomePostFields
-      }
-    }
-  }
-`
-
-const POSTS_BY_CATEGORY_QUERY = gql`
-  ${POST_FIELDS}
-  query PostsByCategory($category: String!, $first: Int!) {
-    categories(where: { slug: [$category] }) {
-      nodes {
-        databaseId
-        name
-        slug
-        description
-        count
-      }
-    }
-    posts(
-      first: $first
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-        categoryName: $category
-      }
-    ) {
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-      nodes {
-        ...PostFields
-      }
-    }
-  }
-`
-
-const CATEGORY_POSTS_BATCH_QUERY = gql`
-  ${POST_FIELDS}
-  query CategoryPostsBatch($slugs: [String!]!, $first: Int!) {
-    categories(where: { slugIn: $slugs }) {
-      nodes {
-        databaseId
-        name
-        slug
-        description
-        count
-        posts(
-          first: $first
-          where: {
-            status: PUBLISH
-            orderby: { field: DATE, order: DESC }
-          }
-        ) {
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
-          nodes {
-            ...PostFields
-          }
-        }
-      }
-    }
-  }
-`
-
-const CATEGORIES_QUERY = gql`
-  query AllCategories($first: Int = 100) {
-    categories(first: $first, where: { hideEmpty: true }) {
-      nodes {
-        databaseId
-        name
-        slug
-        description
-        count
-      }
-    }
-  }
-`
-
-const POST_CATEGORIES_QUERY = gql`
-  ${POST_FIELDS}
-  query PostCategories($id: ID!) {
-    post(id: $id, idType: DATABASE_ID) {
-      categories {
-        nodes {
-          databaseId
-        }
-      }
-    }
-  }
-`
-
-const RELATED_POSTS_QUERY = gql`
-  ${POST_FIELDS}
-  query RelatedPosts(
-    $catIds: [ID!]
-    $exclude: ID!
-    $first: Int!
-  ) {
-    posts(
-      first: $first
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-        notIn: [$exclude]
-        categoryIn: $catIds
-      }
-    ) {
-      nodes {
-        ...PostFields
-      }
-    }
-  }
-`
-
-const FEATURED_POSTS_QUERY = gql`
-  ${POST_FIELDS}
-  query FeaturedPosts($tag: String!, $first: Int!) {
-    posts(
-      first: $first
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-        tagSlugIn: [$tag]
-      }
-    ) {
-      nodes {
-        ...PostFields
-      }
-    }
-  }
-`
-
-const AUTHOR_DATA_QUERY = gql`
-  ${POST_FIELDS}
-  query AuthorData($slug: String!, $after: String, $first: Int!) {
-    user(id: $slug, idType: SLUG) {
-      databaseId
-      name
-      slug
-      description
-      avatar {
-        url
-      }
-      posts(first: $first, after: $after, where: { orderby: { field: DATE, order: DESC } }) {
-        pageInfo {
-          endCursor
-          hasNextPage
-        }
-        nodes {
-          ...PostFields
-        }
-      }
-    }
-  }
-`
-
-const CATEGORY_POSTS_QUERY = gql`
-  ${POST_FIELDS}
-  query CategoryPosts($slug: String!, $after: String, $first: Int!) {
-    categories(where: { slug: [$slug] }) {
-      nodes {
-        databaseId
-        name
-        slug
-        description
-        count
-      }
-    }
-    posts(
-      first: $first
-      after: $after
-      where: {
-        status: PUBLISH
-        orderby: { field: DATE, order: DESC }
-        categoryName: $slug
-      }
-    ) {
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-      nodes {
-        ...PostFields
-      }
-    }
-  }
-`
-
 export async function fetchFromWp<T>(
   countryCode: string,
   query: {
@@ -648,16 +382,10 @@ const cursorToOffset = (cursor: string | null | undefined) => {
 export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {
   const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: ["tag:fp"] })
 
-  interface FpTaggedPostsData {
-    posts: {
-      nodes: WordPressPost[]
-    }
-  }
-
   try {
     console.log("[v0] Fetching FP tagged posts for:", countryCode)
 
-    const gqlData = await fetchFromWpGraphQL<FpTaggedPostsData>(
+    const gqlData = await fetchFromWpGraphQL<FpTaggedPostsQuery>(
       countryCode,
       FP_TAGGED_POSTS_QUERY,
       {
@@ -667,9 +395,10 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
       tags,
     )
 
-    if (gqlData?.posts?.nodes?.length) {
-      console.log("[v0] Found", gqlData.posts.nodes.length, "FP tagged posts via GraphQL")
-      return gqlData.posts.nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
+    const nodes = gqlData?.posts?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
+    if (nodes && nodes.length > 0) {
+      console.log("[v0] Found", nodes.length, "FP tagged posts via GraphQL")
+      return nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
     }
 
     console.log("[v0] No GraphQL results, trying REST fallback")
@@ -708,20 +437,10 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
 export async function getLatestPostsForCountry(countryCode: string, limit = 20, cursor?: string | null) {
   const tags = buildCacheTags({ country: countryCode, section: "news" })
 
-  interface LatestPostsData {
-    posts: {
-      nodes: WordPressPost[]
-      pageInfo: {
-        hasNextPage: boolean
-        endCursor: string | null
-      }
-    }
-  }
-
   try {
     console.log("[v0] Fetching latest posts for:", countryCode)
 
-    const gqlData = await fetchFromWpGraphQL<LatestPostsData>(
+    const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
       countryCode,
       LATEST_POSTS_QUERY,
       {
@@ -732,12 +451,13 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20, 
     )
 
     if (gqlData?.posts) {
-      const posts = gqlData.posts.nodes.map((p) => mapWpPost(p, "gql", countryCode))
+      const nodes = gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+      const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
       console.log("[v0] Found", posts.length, "latest posts via GraphQL")
       return {
         posts,
         hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-        endCursor: gqlData.posts.pageInfo.endCursor,
+        endCursor: gqlData.posts.pageInfo.endCursor ?? null,
       }
     }
 
@@ -800,26 +520,7 @@ export async function getPostsForCategories(
 
   const results: Record<string, CategoryPostsResult> = {}
 
-  interface CategoryPostsBatchData {
-    categories: {
-      nodes: Array<{
-        databaseId: number
-        name: string
-        slug: string
-        description?: string
-        count?: number
-        posts?: {
-          nodes: WordPressPost[]
-          pageInfo: {
-            hasNextPage: boolean
-            endCursor: string | null
-          }
-        }
-      }>
-    }
-  }
-
-  const gqlData = await fetchFromWpGraphQL<CategoryPostsBatchData>(
+  const gqlData = await fetchFromWpGraphQL<CategoryPostsBatchQuery>(
     countryCode,
     CATEGORY_POSTS_BATCH_QUERY,
     {
@@ -838,14 +539,15 @@ export async function getPostsForCategories(
 
       const slug = String(node.slug).toLowerCase()
       const category: WordPressCategory = {
-        id: node.databaseId,
-        name: node.name,
+        id: node.databaseId ?? 0,
+        name: node.name ?? "",
         slug: node.slug,
         description: node.description ?? undefined,
         count: node.count ?? undefined,
       }
 
-      const posts = (node.posts?.nodes ?? []).map((post) => mapWpPost(post, "gql", countryCode))
+      const nodes = node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)) ?? []
+      const posts = nodes.map((post) => mapWpPost(post, "gql", countryCode))
 
       results[slug] = {
         category,
@@ -950,7 +652,7 @@ export async function getPostsByCategoryForCountry(
     extra: slug ? [`category:${slug}`] : undefined,
   })
 
-  const gqlData = await fetchFromWpGraphQL<any>(
+  const gqlData = await fetchFromWpGraphQL<PostsByCategoryQuery>(
     countryCode,
     POSTS_BY_CATEGORY_QUERY,
     {
@@ -960,22 +662,23 @@ export async function getPostsByCategoryForCountry(
     tags,
   )
   if (gqlData?.posts && gqlData?.categories) {
-    const catNode = gqlData.categories.nodes[0]
+    const catNode = gqlData.categories.nodes?.[0] ?? null
     const category = catNode
       ? {
-          id: catNode.databaseId,
-          name: catNode.name,
-          slug: catNode.slug,
+          id: catNode.databaseId ?? 0,
+          name: catNode.name ?? "",
+          slug: catNode.slug ?? slug,
           description: catNode.description ?? undefined,
           count: catNode.count ?? undefined,
         }
       : null
-    const posts = gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
+    const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+    const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
     return {
       category,
       posts,
       hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-      endCursor: gqlData.posts.pageInfo.endCursor,
+      endCursor: gqlData.posts.pageInfo.endCursor ?? null,
     }
   }
   const categories = await executeRestFallback(
@@ -999,15 +702,17 @@ export async function getPostsByCategoryForCountry(
 export async function getCategoriesForCountry(countryCode: string) {
   const tags = buildCacheTags({ country: countryCode, section: "categories" })
 
-  const gqlData = await fetchFromWpGraphQL<any>(countryCode, CATEGORIES_QUERY, undefined, tags)
-  if (gqlData?.categories) {
-    return gqlData.categories.nodes.map((c: any) => ({
-      id: c.databaseId,
-      name: c.name,
-      slug: c.slug,
-      description: c.description ?? undefined,
-      count: c.count ?? undefined,
-    })) as WordPressCategory[]
+  const gqlData = await fetchFromWpGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags)
+  if (gqlData?.categories?.nodes) {
+    return gqlData.categories.nodes
+      .filter((c): c is NonNullable<typeof c> => Boolean(c))
+      .map((c) => ({
+        id: c.databaseId ?? 0,
+        name: c.name ?? "",
+        slug: c.slug ?? "",
+        description: c.description ?? undefined,
+        count: c.count ?? undefined,
+      }))
   }
   const { endpoint, params } = wordpressQueries.categories()
   return await executeRestFallback(
@@ -1020,16 +725,19 @@ export async function getCategoriesForCountry(countryCode: string) {
 export async function getRelatedPostsForCountry(countryCode: string, postId: string, limit = 6) {
   const tags = buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postId}`] })
 
-  const gqlPost = await fetchFromWpGraphQL<any>(
+  const gqlPost = await fetchFromWpGraphQL<PostCategoriesQuery>(
     countryCode,
     POST_CATEGORIES_QUERY,
     { id: Number(postId) },
     tags,
   )
   if (gqlPost?.post) {
-    const catIds = gqlPost.post.categories.nodes.map((c: any) => c.databaseId)
+    const catIds =
+      gqlPost.post.categories?.nodes
+        ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
+        .map((c) => Number(c!.databaseId)) ?? []
     if (catIds.length > 0) {
-      const gqlData = await fetchFromWpGraphQL<any>(
+      const gqlData = await fetchFromWpGraphQL<RelatedPostsQuery>(
         countryCode,
         RELATED_POSTS_QUERY,
         {
@@ -1040,8 +748,9 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
         tags,
       )
       if (gqlData?.posts) {
-        const posts = gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
-        return posts.filter((p) => p.id !== Number(postId))
+        const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+        const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
+        return posts.filter((p) => p.databaseId !== Number(postId))
       }
     }
   }
@@ -1050,7 +759,10 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     `[v0] Related posts REST fallback failed for base post ${postId} (${countryCode})`,
     { countryCode, postId },
   )
-  const categoryIds: number[] = post._embedded?.["wp:term"]?.[0]?.map((cat: any) => cat.id) || []
+  const categoryIds: number[] =
+    post.categories?.nodes
+      ?.map((cat) => (typeof cat?.databaseId === "number" ? Number(cat.databaseId) : null))
+      .filter((id): id is number => id !== null) || []
   if (categoryIds.length === 0) return []
   const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
   const posts = await executeRestFallback(
@@ -1058,13 +770,13 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     `[v0] Related posts REST fallback failed for ${postId} (${countryCode})`,
     { countryCode, postId, categoryIds, limit, endpoint, params },
   )
-  return posts.filter((p) => p.id !== Number(postId))
+  return posts.filter((p) => p.databaseId !== Number(postId))
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
   const cacheTags = buildCacheTags({ country: countryCode, section: "featured", extra: ["tag:featured"] })
 
-  const gqlData = await fetchFromWpGraphQL<any>(
+  const gqlData = await fetchFromWpGraphQL<FeaturedPostsQuery>(
     countryCode,
     FEATURED_POSTS_QUERY,
     {
@@ -1074,7 +786,8 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     cacheTags,
   )
   if (gqlData?.posts) {
-    return gqlData.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode))
+    const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+    return nodes.map((p) => mapWpPost(p, "gql", countryCode))
   }
   const tags = await executeRestFallback(
     () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("featured"), { tags: cacheTags }),
@@ -1518,7 +1231,7 @@ export async function fetchAuthorData(
     extra: [`author:${slug}`],
   })
 
-  const data = await fetchFromWpGraphQL<any>(
+  const data = await fetchFromWpGraphQL<AuthorDataQuery>(
     countryCode,
     AUTHOR_DATA_QUERY,
     {
@@ -1529,11 +1242,15 @@ export async function fetchAuthorData(
     tags,
   )
   if (!data?.user) return null
+  const nodes = data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     ...data.user,
     posts: {
-      nodes: data.user.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode)),
-      pageInfo: data.user.posts.pageInfo,
+      nodes: nodes.map((p) => mapWpPost(p, "gql", countryCode)),
+      pageInfo: {
+        ...data.user.posts.pageInfo,
+        endCursor: data.user.posts.pageInfo.endCursor ?? null,
+      },
     },
   }
 }
@@ -1665,7 +1382,7 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
     extra: [`category:${slug}`],
   })
 
-  const data = await fetchFromWpGraphQL<any>(
+  const data = await fetchFromWpGraphQL<CategoryPostsQuery>(
     countryCode,
     CATEGORY_POSTS_QUERY,
     {
@@ -1676,20 +1393,24 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
     tags,
   )
   if (!data?.posts || !data?.categories) return null
-  const catNode = data.categories.nodes[0]
+  const catNode = data.categories.nodes?.[0] ?? null
   const category = catNode
     ? {
-        id: catNode.databaseId,
-        name: catNode.name,
-        slug: catNode.slug,
+        id: catNode.databaseId ?? 0,
+        name: catNode.name ?? "",
+        slug: catNode.slug ?? slug,
         description: catNode.description ?? undefined,
         count: catNode.count ?? undefined,
       }
     : null
+  const nodes = data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     category,
-    posts: data.posts.nodes.map((p: any) => mapWpPost(p, "gql", countryCode)),
-    pageInfo: data.posts.pageInfo,
+    posts: nodes.map((p) => mapWpPost(p, "gql", countryCode)),
+    pageInfo: {
+      ...data.posts.pageInfo,
+      endCursor: data.posts.pageInfo.endCursor ?? null,
+    },
   }
 }
 

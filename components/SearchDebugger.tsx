@@ -72,9 +72,9 @@ export function SearchDebugger() {
             <div className="space-y-2">
               {results.results.slice(0, 3).map((post: any, index: number) => (
                 <div key={index} className="p-2 bg-white border rounded text-sm">
-                  <div className="font-medium">{post.title?.rendered || "No title"}</div>
+                  <div className="font-medium">{post.title || "No title"}</div>
                   <div className="text-gray-600 text-xs">
-                    {post.excerpt?.rendered?.replace(/<[^>]*>/g, "").slice(0, 100) || "No excerpt"}...
+                    {(post.excerpt || "").replace(/<[^>]*>/g, "").slice(0, 100) || "No excerpt"}...
                   </div>
                 </div>
               ))}

@@ -22,7 +22,7 @@ describe("fetchPost", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPost }))
     const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "test" })
     expect(result?.featuredImage?.node.sourceUrl).toBe("img.jpg")
-    expect(result?.title?.rendered).toBe("Test")
+    expect(result?.title).toBe("Test")
   })
 
   it("returns null on 503 response", async () => {
@@ -75,7 +75,7 @@ describe("getRelatedPosts", () => {
       expect.anything(),
     )
     expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
-    expect(result[0].content?.rendered).toContain('/sz/article/old')
+    expect(result[0].content).toContain('/sz/article/old')
   })
 })
 

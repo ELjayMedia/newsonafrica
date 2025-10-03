@@ -1,3 +1,289 @@
+const gql = String.raw
+
+export const POST_FIELDS_FRAGMENT = gql`
+  fragment PostFields on Post {
+    databaseId
+    id
+    slug
+    date
+    title
+    excerpt
+    content
+    featuredImage {
+      node {
+        sourceUrl
+        altText
+        mediaDetails {
+          width
+          height
+        }
+      }
+    }
+    categories {
+      nodes {
+        databaseId
+        name
+        slug
+      }
+    }
+    tags {
+      nodes {
+        databaseId
+        name
+        slug
+      }
+    }
+    author {
+      node {
+        databaseId
+        name
+        slug
+      }
+    }
+  }
+`
+
+export const HOME_POST_FIELDS_FRAGMENT = gql`
+  fragment HomePostFields on Post {
+    databaseId
+    slug
+    date
+    title
+    excerpt
+    featuredImage {
+      node {
+        sourceUrl
+        altText
+      }
+    }
+  }
+`
+
+export const LATEST_POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query LatestPosts($first: Int!, $after: String) {
+    posts(
+      first: $first
+      after: $after
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const FP_TAGGED_POSTS_QUERY = gql`
+  ${HOME_POST_FIELDS_FRAGMENT}
+  query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        tagSlugIn: $tagSlugs
+      }
+    ) {
+      nodes {
+        ...HomePostFields
+      }
+    }
+  }
+`
+
+export const POSTS_BY_CATEGORY_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query PostsByCategory($category: String!, $first: Int!) {
+    categories(where: { slug: [$category] }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        categoryName: $category
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const CATEGORY_POSTS_BATCH_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query CategoryPostsBatch($slugs: [String!]!, $first: Int!) {
+    categories(where: { slugIn: $slugs }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+        posts(
+          first: $first
+          where: {
+            status: PUBLISH
+            orderby: { field: DATE, order: DESC }
+          }
+        ) {
+          pageInfo {
+            endCursor
+            hasNextPage
+          }
+          nodes {
+            ...PostFields
+          }
+        }
+      }
+    }
+  }
+`
+
+export const CATEGORIES_QUERY = gql`
+  query AllCategories($first: Int = 100) {
+    categories(first: $first, where: { hideEmpty: true }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+  }
+`
+
+export const POST_CATEGORIES_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query PostCategories($id: ID!) {
+    post(id: $id, idType: DATABASE_ID) {
+      categories {
+        nodes {
+          databaseId
+        }
+      }
+    }
+  }
+`
+
+export const RELATED_POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query RelatedPosts(
+    $catIds: [ID!]
+    $exclude: ID!
+    $first: Int!
+  ) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        notIn: [$exclude]
+        categoryIn: $catIds
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const FEATURED_POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query FeaturedPosts($tag: String!, $first: Int!) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        tagSlugIn: [$tag]
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const AUTHOR_DATA_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query AuthorData($slug: String!, $after: String, $first: Int!) {
+    user(id: $slug, idType: SLUG) {
+      databaseId
+      name
+      slug
+      description
+      avatar {
+        url
+      }
+      posts(first: $first, after: $after, where: { orderby: { field: DATE, order: DESC } }) {
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+        nodes {
+          ...PostFields
+        }
+      }
+    }
+  }
+`
+
+export const CATEGORY_POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query CategoryPosts($slug: String!, $after: String, $first: Int!) {
+    categories(where: { slug: [$slug] }) {
+      nodes {
+        databaseId
+        name
+        slug
+        description
+        count
+      }
+    }
+    posts(
+      first: $first
+      after: $after
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        categoryName: $slug
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
 export const wordpressQueries = {
   recentPosts: (limit = 20) => ({
     endpoint: 'posts',

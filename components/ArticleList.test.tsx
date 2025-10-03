@@ -8,7 +8,7 @@ vi.mock("react-intersection-observer", () => ({
 
 vi.mock("./ArticleCard", () => ({
   ArticleCard: ({ article, layout }: any) => (
-    <div data-testid={`article-card-${layout}`}>{article.title?.rendered ?? article.title}</div>
+    <div data-testid={`article-card-${layout}`}>{article.title}</div>
   ),
 }))
 
@@ -17,8 +17,8 @@ describe("ArticleList", () => {
     id,
     date: new Date().toISOString(),
     slug: id,
-    title: { rendered: title },
-    excerpt: { rendered: `${title} excerpt` },
+    title,
+    excerpt: `${title} excerpt`,
   })
 
   beforeEach(() => {

@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`WordPress webhook received: ${action}`, {
       postId: post?.id,
-      postTitle: post?.title?.rendered,
+      postTitle: post?.title?.rendered ?? post?.title,
       postSlug: post?.slug,
     })
 

@@ -69,11 +69,11 @@ export function SearchResults({
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{
-                      __html: highlightSearchTerms(result.title.rendered, query),
+                      __html: highlightSearchTerms(result.title, query),
                     }}
                   />
                 ) : (
-                  result.title.rendered
+                  result.title
                 )}
               </h3>
               <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
@@ -86,13 +86,13 @@ export function SearchResults({
                 {isClient ? (
                   <div
                     dangerouslySetInnerHTML={{
-                      __html: highlightSearchTerms(stripHtml(result.excerpt.rendered).slice(0, 200), query),
+                      __html: highlightSearchTerms(stripHtml(result.excerpt).slice(0, 200), query),
                     }}
                   />
                 ) : (
-                  stripHtml(result.excerpt.rendered).slice(0, 200)
+                  stripHtml(result.excerpt).slice(0, 200)
                 )}
-                {stripHtml(result.excerpt.rendered).length > 200 ? "..." : ""}
+                {stripHtml(result.excerpt).length > 200 ? "..." : ""}
               </p>
             </Link>
           </div>
