@@ -3,9 +3,10 @@ import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
 import { wordpressQueries } from "@/lib/wordpress-queries"
 import { ArticleClientContent } from "./ArticleClientContent"
 import * as log from "@/lib/log"
+import { buildCacheTags } from "@/lib/cache/tag-utils"
 
 export const runtime = "nodejs"
-export const revalidate = 300
+export const dynamic = "error"
 
 type RouteParams = { countryCode: string; slug: string }
 
@@ -25,7 +26,14 @@ export default async function Page({ params }: ArticlePageProps) {
   let post: WordPressPost | null = null
 
   try {
-    const restPosts = (await fetchFromWp<WordPressPost[]>(country, wordpressQueries.postBySlug(slug))) || []
+    const cacheTags = buildCacheTags({
+      country,
+      section: "article",
+      extra: [`post:${slug}`, `article:${slug}`],
+    })
+
+    const restPosts =
+      (await fetchFromWp<WordPressPost[]>(country, wordpressQueries.postBySlug(slug), { tags: cacheTags })) || []
     post = restPosts[0] || null
   } catch (error) {
     log.error("REST postBySlug fetch failed", { error })
