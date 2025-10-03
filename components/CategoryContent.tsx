@@ -2,7 +2,7 @@
 
 import useSWRInfinite from "swr/infinite"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
-import { NewsGrid } from "@/components/NewsGrid"
+import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import { useEffect, useCallback } from "react"
 import { HorizontalCard } from "./HorizontalCard"
 import ErrorBoundary from "@/components/ErrorBoundary"

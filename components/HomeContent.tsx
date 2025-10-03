@@ -1,8 +1,8 @@
 "use client"
 
-import { FeaturedHero } from "@/components/FeaturedHero"
-import { SecondaryStories } from "@/components/SecondaryStories"
-import { NewsGrid } from "@/components/NewsGrid"
+import { FeaturedHeroClient as FeaturedHero } from "@/components/client/FeaturedHeroClient"
+import { SecondaryStoriesClient as SecondaryStories } from "@/components/client/SecondaryStoriesClient"
+import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"

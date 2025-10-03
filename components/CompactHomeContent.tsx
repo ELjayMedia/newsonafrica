@@ -1,6 +1,6 @@
 "use client"
 
-import { FeaturedHero } from "@/components/FeaturedHero"
+import { FeaturedHeroClient as FeaturedHero } from "@/components/client/FeaturedHeroClient"
 import { CompactCard } from "@/components/CompactCard"
 import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"

@@ -1,13 +1,28 @@
 export function generateBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
-  // Create a simple SVG with the specified dimensions
   const svg = `
     <svg width="${width}" height="${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${color}"/>
       <text x="${width / 2}" y="${height / 2}" font-size="16" text-anchor="middle" alignment-baseline="middle" fill="#9ca3af">Loading...</text>
     </svg>
   `
-  // Convert the SVG to a base64 data URL
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+
+  let base64: string
+
+  if (typeof Buffer !== "undefined") {
+    base64 = Buffer.from(svg).toString("base64")
+  } else if (typeof globalThis.btoa === "function" && typeof TextEncoder !== "undefined") {
+    const encoder = new TextEncoder()
+    const bytes = encoder.encode(svg)
+    let binary = ""
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte)
+    })
+    base64 = globalThis.btoa(binary)
+  } else {
+    base64 = ""
+  }
+
+  return `data:image/svg+xml;base64,${base64}`
 }
 
 /**

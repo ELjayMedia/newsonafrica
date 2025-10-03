@@ -2,7 +2,7 @@
 
 import useSWR from "swr"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
-import { NewsGrid } from "@/components/NewsGrid"
+import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 
 export function SpecialProjectsContent() {

@@ -12,12 +12,12 @@ vi.mock("@/hooks/useMediaQuery", () => ({
   useMediaQuery: () => false,
 }))
 
-vi.mock("@/components/FeaturedHero", () => ({
-  FeaturedHero: ({ post }: any) => <div data-testid="featured-hero">{post.title}</div>,
+vi.mock("@/components/client/FeaturedHeroClient", () => ({
+  FeaturedHeroClient: ({ post }: any) => <div data-testid="featured-hero">{post.title}</div>,
 }))
 
-vi.mock("@/components/SecondaryStories", () => ({
-  SecondaryStories: ({ posts }: any) => (
+vi.mock("@/components/client/SecondaryStoriesClient", () => ({
+  SecondaryStoriesClient: ({ posts }: any) => (
     <div data-testid="secondary-stories">
       {posts.map((post: any) => (
         <span key={post.slug}>{post.title}</span>
@@ -26,8 +26,8 @@ vi.mock("@/components/SecondaryStories", () => ({
   ),
 }))
 
-vi.mock("@/components/NewsGrid", () => ({
-  NewsGrid: ({ posts }: any) => (
+vi.mock("@/components/client/NewsGridClient", () => ({
+  NewsGridClient: ({ posts }: any) => (
     <div data-testid="news-grid">
       {posts.map((post: any) => (
         <div key={post.slug}>{post.title}</div>
