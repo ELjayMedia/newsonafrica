@@ -1,6 +1,6 @@
 // Custom service worker functionality for News On Africa PWA
 
-const CACHE_NAME = "news-on-africa-v1.0.1"
+const CACHE_NAME = "news-on-africa-v1.0.2"
 const OFFLINE_URL = "/offline"
 
 // Background sync for news updates
