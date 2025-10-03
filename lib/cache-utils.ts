@@ -1,14 +1,22 @@
 import { cache } from "react"
 import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+import { fetchWithTimeout } from "./utils/fetchWithTimeout"
+import type { NextFetchRequestConfig } from "next/server"
 
 export { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
 
 // Cached fetch function with revalidation
+type CachedFetchOptions = RequestInit & {
+  timeout?: number
+  next?: NextFetchRequestConfig
+}
+
 export const cachedFetch = cache(
   async <T,>(
     url: string,
-    options?: RequestInit,
-    cacheDuration = CACHE_DURATIONS.MEDIUM
+    options?: CachedFetchOptions,
+    cacheDuration = CACHE_DURATIONS.MEDIUM,
+    tags?: string[],
   ): Promise<T> => {
     try {
       if (typeof navigator !== "undefined" && "onLine" in navigator && !navigator.onLine) {
@@ -20,16 +28,18 @@ export const cachedFetch = cache(
 
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s
+          const { timeout = 10000, next, ...restOptions } = options ?? {}
+          const nextOptions: NextFetchRequestConfig = {
+            revalidate: cacheDuration,
+            ...(next ?? {}),
+            ...(tags && tags.length > 0 ? { tags } : {}),
+          }
 
-          const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-            next: { revalidate: cacheDuration },
+          const response = await fetchWithTimeout(url, {
+            ...restOptions,
+            next: nextOptions,
+            timeout,
           })
-
-          clearTimeout(timeoutId)
 
           if (!response.ok) {
             throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)

@@ -20,6 +20,22 @@ vi.mock("@/components/ArticleCard", () => ({
 const wpMocks = vi.hoisted(() => ({
   getLatestPostsForCountry: vi.fn(),
   getCategoriesForCountry: vi.fn(),
+  getPostsForCategories: vi.fn().mockResolvedValue({}),
+  getFpTaggedPostsForCountry: vi.fn().mockResolvedValue([]),
+  mapPostsToHomePosts: vi.fn((posts: any[], countryCode: string) =>
+    posts.map((post) => ({
+      id: String(post.id ?? post.slug ?? ""),
+      slug: post.slug ?? "",
+      title: post.title?.rendered ?? post.title ?? "",
+      excerpt: post.excerpt?.rendered ?? "",
+      date: post.date ?? "",
+      country: countryCode,
+      featuredImage: undefined,
+    })),
+  ),
+  COUNTRIES: {
+    za: { code: "za", name: "South Africa", flag: "🇿🇦", apiEndpoint: "", restEndpoint: "" },
+  },
 }))
 
 vi.mock("@/lib/wordpress-api", () => wpMocks)
@@ -30,8 +46,8 @@ const createPost = (id: number, prefix: string) => ({
   id,
   date: new Date().toISOString(),
   slug: `${prefix}-${id}`,
-  title: { rendered: `${prefix} ${id}` },
-  excerpt: { rendered: `${prefix} ${id} excerpt` },
+  title: `${prefix} ${id}`,
+  excerpt: `${prefix} ${id} excerpt`,
 })
 
 describe("CountryEditionContent", () => {
