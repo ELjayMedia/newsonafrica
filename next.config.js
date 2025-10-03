@@ -10,8 +10,20 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   },
   runtimeCaching: [
     {
-      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+      urlPattern: ({ request }) => request.destination === "document",
       handler: "NetworkFirst",
+      options: {
+        cacheName: "html-cache",
+        networkTimeoutSeconds: 20,
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+      handler: "StaleWhileRevalidate",
       options: {
         cacheName: "api-cache",
         expiration: {
@@ -22,13 +34,26 @@ const withPWA = require("@ducanh2912/next-pwa").default({
     },
     {
       urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "image-cache",
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-        },
+      handler: ({ url, event, request, params }) => {
+        const hostname = url?.hostname || "default";
+        const cacheName = `image-cache-${hostname}`;
+        self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {};
+        let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName];
+
+        if (!strategy) {
+          strategy = new workbox.strategies.StaleWhileRevalidate({
+            cacheName,
+            plugins: [
+              new workbox.expiration.ExpirationPlugin({
+                maxEntries: 100,
+                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+              }),
+            ],
+          });
+          self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy;
+        }
+
+        return strategy.handle({ event, request, url, params });
       },
     },
     {
