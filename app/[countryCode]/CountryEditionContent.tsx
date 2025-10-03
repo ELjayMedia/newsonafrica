@@ -24,6 +24,7 @@ import type { CountryPosts, HomePost } from "@/types/home"
 import type { CategoryPostsResult } from "@/lib/wordpress-api"
 import { MoreForYouSection } from "./MoreForYouSection.client"
 
+
 const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
 
 interface HeroSectionData {
@@ -465,7 +466,7 @@ async function MoreForYouWrapper({
         <Plus className="h-5 w-5 text-primary" />
         <h2 className="text-2xl font-bold">More for You</h2>
       </div>
-      <MoreForYouSection countryCode={countryCode} initialData={initialData} />
+      <MoreForYouShell countryCode={countryCode} initialData={initialData} />
     </section>
   )
 }
