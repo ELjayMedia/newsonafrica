@@ -191,7 +191,7 @@ export function useBookmarks() {
 }
 
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUser()
+  const { user, ensureSessionFreshness } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
@@ -246,6 +246,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      await ensureSessionFreshness()
+
       const { data, error } = await supabase
         .from("bookmarks")
         .select("*")
@@ -298,7 +300,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [supabase, toast, user])
+  }, [ensureSessionFreshness, supabase, toast, user])
 
   // Fetch bookmarks when user changes
   useEffect(() => {
@@ -322,6 +324,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
+        await ensureSessionFreshness()
+
         const postData = post as any
         const insertPayload = {
           user_id: user.id,
@@ -386,7 +390,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [isBookmarked, toast, user],
+    [ensureSessionFreshness, isBookmarked, toast, user],
   )
 
   const removeBookmark = useCallback(
@@ -395,6 +399,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
+        await ensureSessionFreshness()
+
         let response: Response
         try {
           const params = new URLSearchParams({ postId })
@@ -432,7 +438,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [toast, user],
+    [ensureSessionFreshness, toast, user],
   )
 
   const updateBookmark = useCallback(
@@ -441,6 +447,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
+        await ensureSessionFreshness()
+
         const sanitizedUpdates = { ...updates }
         if ("featured_image" in sanitizedUpdates) {
           sanitizedUpdates.featured_image =
@@ -489,12 +497,14 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [toast, user],
+    [ensureSessionFreshness, toast, user],
   )
 
   const bulkRemoveBookmarks = useCallback(
     async (postIds: string[]) => {
       if (!user || postIds.length === 0) return
+
+      await ensureSessionFreshness()
 
       setIsLoading(true)
       try {
@@ -538,7 +548,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [toast, user],
+    [ensureSessionFreshness, toast, user],
   )
 
   useEffect(() => {
@@ -656,7 +666,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-  }, [user])
+  }, [fetchBookmarks])
 
   const contextValue = useMemo(
     () => ({
