@@ -1,9 +1,16 @@
 import type { Metadata } from "next"
 import { headers } from "next/headers"
+import { Suspense } from "react"
+
 import { siteConfig } from "@/config/site"
-import { AfricanHomeContent } from "@/components/AfricanHomeContent"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
-import { getAggregatedLatestHome, type AggregatedHomeData } from "@/lib/wordpress-api"
+
+import { HeroSection } from "./(home)/HeroSection"
+import { TrendingSection } from "./(home)/TrendingSection"
+import { LatestGridSection } from "./(home)/LatestGridSection"
+import { HeroSkeleton } from "./(home)/HeroSkeleton"
+import { TrendingSkeleton } from "./(home)/TrendingSkeleton"
+import { LatestGridSkeleton } from "./(home)/LatestGridSkeleton"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -68,35 +75,70 @@ export const metadata: Metadata = {
   },
 }
 
+export const experimental_ppr = true
+
 export const revalidate = 60
 
 export default async function Home() {
-  const headerList = headers()
+  const headerList = await headers()
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host")
   const protocolHeader = headerList.get("x-forwarded-proto")
   const protocol = protocolHeader ?? (host?.includes("localhost") ? "http" : "https")
   const baseUrl = host ? `${protocol}://${host}` : siteConfig.url
   const cacheTags = buildCacheTags({ country: "all", section: "home" })
 
-  let aggregatedHome: AggregatedHomeData | null = null
+  return (
+    <div className="space-y-6 md:space-y-8 lg:space-y-10">
+      <header className="space-y-1">
+        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Latest coverage
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          News across Africa
+        </h1>
+      </header>
 
-  try {
-    const response = await fetch(`${baseUrl}/api/home-feed`, {
-      next: {
-        tags: cacheTags,
-      },
-    })
+      <section aria-labelledby="home-top-story-heading" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2
+            id="home-top-story-heading"
+            className="text-lg font-semibold tracking-tight"
+          >
+            Top story
+          </h2>
+        </div>
+        <Suspense fallback={<HeroSkeleton />}>
+          <HeroSection baseUrl={baseUrl} cacheTags={cacheTags} />
+        </Suspense>
+      </section>
 
-    if (response.ok) {
-      aggregatedHome = (await response.json()) as AggregatedHomeData
-    }
-  } catch (error) {
-    console.error("Failed to fetch home feed from API", { error })
-  }
+      <section aria-labelledby="home-trending-heading" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2
+            id="home-trending-heading"
+            className="text-lg font-semibold tracking-tight"
+          >
+            Trending now
+          </h2>
+        </div>
+        <Suspense fallback={<TrendingSkeleton />}>
+          <TrendingSection baseUrl={baseUrl} cacheTags={cacheTags} />
+        </Suspense>
+      </section>
 
-  if (!aggregatedHome) {
-    aggregatedHome = await getAggregatedLatestHome(6)
-  }
-
-  return <AfricanHomeContent {...aggregatedHome} />
+      <section aria-labelledby="home-latest-heading" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2
+            id="home-latest-heading"
+            className="text-lg font-semibold tracking-tight"
+          >
+            Latest from across the continent
+          </h2>
+        </div>
+        <Suspense fallback={<LatestGridSkeleton />}>
+          <LatestGridSection baseUrl={baseUrl} cacheTags={cacheTags} />
+        </Suspense>
+      </section>
+    </div>
+  )
 }
