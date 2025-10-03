@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { siteConfig } from "@/config/site"
 import { AfricanHomeContent } from "@/components/AfricanHomeContent"
-import { getAggregatedLatestHome } from "@/lib/wordpress-api"
+import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { getAggregatedLatestHome, type AggregatedHomeData } from "@/lib/wordpress-api"
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -69,7 +71,32 @@ export const metadata: Metadata = {
 export const revalidate = 60
 
 export default async function Home() {
-  const aggregatedHome = await getAggregatedLatestHome(6)
+  const headerList = headers()
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host")
+  const protocolHeader = headerList.get("x-forwarded-proto")
+  const protocol = protocolHeader ?? (host?.includes("localhost") ? "http" : "https")
+  const baseUrl = host ? `${protocol}://${host}` : siteConfig.url
+  const cacheTags = buildCacheTags({ country: "all", section: "home" })
+
+  let aggregatedHome: AggregatedHomeData | null = null
+
+  try {
+    const response = await fetch(`${baseUrl}/api/home-feed`, {
+      next: {
+        tags: cacheTags,
+      },
+    })
+
+    if (response.ok) {
+      aggregatedHome = (await response.json()) as AggregatedHomeData
+    }
+  } catch (error) {
+    console.error("Failed to fetch home feed from API", { error })
+  }
+
+  if (!aggregatedHome) {
+    aggregatedHome = await getAggregatedLatestHome(6)
+  }
 
   return <AfricanHomeContent {...aggregatedHome} />
 }

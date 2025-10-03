@@ -2,10 +2,11 @@ import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { CACHE_TAGS, KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { kvCache } from "@/lib/cache/kv"
 
 export const runtime = "nodejs"
 
@@ -197,6 +198,11 @@ export async function POST(request: NextRequest) {
           // Revalidate home page to show latest posts
           revalidatePath("/")
           revalidateByTag(CACHE_TAGS.POSTS)
+          buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
+            tagsToRevalidate.add(tag),
+          )
+
+          await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 
           tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
 
@@ -249,6 +255,11 @@ export async function POST(request: NextRequest) {
           }
           revalidatePath("/")
           revalidateByTag(CACHE_TAGS.POSTS)
+          buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
+            tagsToRevalidate.add(tag),
+          )
+
+          await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 
           if (postId) {
             revalidateByTag(CACHE_TAGS.POST(postId))
