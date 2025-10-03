@@ -22,7 +22,8 @@ import { getCategoryUrl } from "@/lib/utils/routing"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CountryPosts, HomePost } from "@/types/home"
 import type { CategoryPostsResult } from "@/lib/wordpress-api"
-import { MoreForYouShell } from "./MoreForYouShell.client"
+import { MoreForYouSection } from "./MoreForYouSection.client"
+
 
 const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
 
