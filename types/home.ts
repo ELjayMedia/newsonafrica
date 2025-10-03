@@ -1,5 +1,6 @@
 export interface HomePost {
   id: string
+  globalRelayId?: string
   slug: string
   title: string
   excerpt: string
