@@ -5,6 +5,7 @@ import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { buildCacheTags } from "@/lib/cache/tag-utils"
 
 export const runtime = "nodejs"
 
@@ -12,6 +13,72 @@ export const runtime = "nodejs"
 export const revalidate = 0
 
 const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
+
+const extractTermSlugs = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  const slugs = new Set<string>()
+  for (const item of value) {
+    if (item && typeof item === "object" && "slug" in item) {
+      const slug = (item as { slug?: string }).slug
+      if (typeof slug === "string" && slug.trim()) {
+        slugs.add(slug.trim().toLowerCase())
+      }
+    } else if (typeof item === "string" && item.trim()) {
+      slugs.add(item.trim().toLowerCase())
+    }
+  }
+
+  return Array.from(slugs)
+}
+
+const extractCategorySlugs = (post: any): string[] => {
+  const slugs = new Set<string>()
+
+  extractTermSlugs(post?.terms?.category).forEach((slug) => slugs.add(slug))
+
+  const embeddedTerms = post?._embedded?.["wp:term"]
+  if (Array.isArray(embeddedTerms)) {
+    for (const group of embeddedTerms) {
+      if (!Array.isArray(group)) continue
+      for (const term of group) {
+        if (term && typeof term === "object" && term.taxonomy === "category") {
+          const slug = typeof term.slug === "string" ? term.slug.trim().toLowerCase() : null
+          if (slug) {
+            slugs.add(slug)
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(slugs)
+}
+
+const extractTagSlugs = (post: any): string[] => {
+  const slugs = new Set<string>()
+
+  extractTermSlugs(post?.terms?.post_tag).forEach((slug) => slugs.add(slug))
+
+  const embeddedTerms = post?._embedded?.["wp:term"]
+  if (Array.isArray(embeddedTerms)) {
+    for (const group of embeddedTerms) {
+      if (!Array.isArray(group)) continue
+      for (const term of group) {
+        if (term && typeof term === "object" && term.taxonomy === "post_tag") {
+          const slug = typeof term.slug === "string" ? term.slug.trim().toLowerCase() : null
+          if (slug) {
+            slugs.add(slug)
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(slugs)
+}
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
@@ -53,11 +120,72 @@ export async function POST(request: NextRequest) {
       case "post_published":
       case "post_updated":
         if (post?.slug) {
+          const categorySlugs = extractCategorySlugs(post)
+          const tagSlugs = extractTagSlugs(post)
+          const tagsToRevalidate = new Set<string>()
+          const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
+
           // Revalidate the specific post page for all supported countries
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
+
+            buildCacheTags({
+              country,
+              section: "news",
+            }).forEach((tag) => tagsToRevalidate.add(tag))
+
+            buildCacheTags({
+              country,
+              section: "posts",
+            }).forEach((tag) => tagsToRevalidate.add(tag))
+
+            buildCacheTags({
+              country,
+              section: "post",
+              extra: [`slug:${post.slug}`],
+            }).forEach((tag) => tagsToRevalidate.add(tag))
+
+            if (postId) {
+              buildCacheTags({
+                country,
+                section: "related",
+                extra: [`post:${postId}`],
+              }).forEach((tag) => tagsToRevalidate.add(tag))
+            }
+
+            buildCacheTags({ country, section: "categories" }).forEach((tag) => tagsToRevalidate.add(tag))
+            categorySlugs.forEach((slug) => {
+              buildCacheTags({
+                country,
+                section: "categories",
+                extra: [`category:${slug}`],
+              }).forEach((tag) => tagsToRevalidate.add(tag))
+            })
+
+            buildCacheTags({ country, section: "tags" }).forEach((tag) => tagsToRevalidate.add(tag))
+            tagSlugs.forEach((slug) => {
+              buildCacheTags({
+                country,
+                section: "tags",
+                extra: [`tag:${slug}`],
+              }).forEach((tag) => tagsToRevalidate.add(tag))
+            })
+
+            if (tagSlugs.includes("fp")) {
+              buildCacheTags({ country, section: "frontpage", extra: ["tag:fp"] }).forEach((tag) =>
+                tagsToRevalidate.add(tag),
+              )
+            }
+
+            if (tagSlugs.includes("featured")) {
+              buildCacheTags({ country, section: "featured", extra: ["tag:featured"] }).forEach((tag) =>
+                tagsToRevalidate.add(tag),
+              )
+            }
           }
-          revalidateByTag(CACHE_TAGS.POST(post.id))
+          if (postId) {
+            revalidateByTag(CACHE_TAGS.POST(postId))
+          }
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
@@ -70,18 +198,63 @@ export async function POST(request: NextRequest) {
           revalidatePath("/")
           revalidateByTag(CACHE_TAGS.POSTS)
 
+          tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
+
           console.log(`Revalidated post: ${post.slug}`)
         }
         break
 
       case "post_deleted":
         if (post?.slug) {
+          const categorySlugs = extractCategorySlugs(post)
+          const tagSlugs = extractTagSlugs(post)
+          const tagsToRevalidate = new Set<string>()
+          const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
+
           // Revalidate pages that might have referenced this post
           for (const country of SUPPORTED_COUNTRIES) {
             revalidatePath(getArticleUrl(post.slug, country))
+
+            buildCacheTags({ country, section: "news" }).forEach((tag) => tagsToRevalidate.add(tag))
+            buildCacheTags({ country, section: "posts" }).forEach((tag) => tagsToRevalidate.add(tag))
+            buildCacheTags({ country, section: "post", extra: [`slug:${post.slug}`] }).forEach((tag) =>
+              tagsToRevalidate.add(tag),
+            )
+
+            if (postId) {
+              buildCacheTags({ country, section: "related", extra: [`post:${postId}`] }).forEach((tag) =>
+                tagsToRevalidate.add(tag),
+              )
+            }
+
+            buildCacheTags({ country, section: "categories" }).forEach((tag) => tagsToRevalidate.add(tag))
+            categorySlugs.forEach((slug) => {
+              buildCacheTags({ country, section: "categories", extra: [`category:${slug}`] }).forEach((tag) =>
+                tagsToRevalidate.add(tag),
+              )
+            })
+
+            buildCacheTags({ country, section: "tags" }).forEach((tag) => tagsToRevalidate.add(tag))
+            tagSlugs.forEach((slug) => {
+              buildCacheTags({ country, section: "tags", extra: [`tag:${slug}`] }).forEach((tag) =>
+                tagsToRevalidate.add(tag),
+              )
+            })
+          }
+
+          if (post.categories?.length > 0) {
+            for (const categoryId of post.categories) {
+              revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
+            }
           }
           revalidatePath("/")
           revalidateByTag(CACHE_TAGS.POSTS)
+
+          if (postId) {
+            revalidateByTag(CACHE_TAGS.POST(postId))
+          }
+
+          tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
 
           console.log(`Revalidated after deletion: ${post.slug}`)
         }
