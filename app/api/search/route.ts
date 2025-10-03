@@ -12,6 +12,8 @@ export const runtime = "nodejs"
 // Cache policy: medium (5 minutes)
 export const revalidate = 300
 
+const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
+
 // Rate limiting
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
@@ -54,8 +56,9 @@ function checkRateLimit(request: NextRequest): { limited: boolean; retryAfter?: 
 
 // Search WordPress posts
 async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
+  const breakerKey = `wordpress-search-api-${DEFAULT_COUNTRY}`
   return await circuitBreaker.execute(
-    "wordpress-search-api",
+    breakerKey,
     async () => {
       const response = await wpSearchPosts(query, { page, perPage })
       return {
@@ -82,6 +85,7 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
         hasMore: page < Math.ceil(filteredResults.length / perPage),
       }
     },
+    { country: DEFAULT_COUNTRY, endpoint: "rest:search-posts" },
   )
 }
 
