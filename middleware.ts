@@ -5,6 +5,7 @@ import {
   DEFAULT_COUNTRY,
   SUPPORTED_COUNTRIES,
 } from "@/lib/utils/routing"
+import { getLegacyPostRoute } from "@/lib/legacy-routes"
 
 
 // Legacy routes that should be redirected to their category equivalents
@@ -23,28 +24,38 @@ function getCountryFromRequest(request: NextRequest): string {
   return DEFAULT_COUNTRY
 }
 
-function handleLegacyPostRedirect(
+async function handleLegacyPostRedirect(
   pathname: string,
   request: NextRequest,
   country: string,
-): NextResponse | null {
+): Promise<NextResponse | null> {
   // Check if it's a legacy /post/ route
   if (pathname.startsWith("/post/")) {
     const slug = pathname.replace("/post/", "")
-    const newUrl = `/${country}/article/${slug}`
+    const legacyRoute = await getLegacyPostRoute(slug)
+
+    if (!legacyRoute) {
+      return null
+    }
+
+    if (legacyRoute.country !== country) {
+      return null
+    }
+
+    const newUrl = `/${legacyRoute.country}/${legacyRoute.primaryCategory}/${legacyRoute.slug}`
     console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
     return NextResponse.redirect(new URL(newUrl, request.url))
   }
   return null
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const { pathname } = url
 
   const country = getCountryFromRequest(request)
 
-  const legacyRedirect = handleLegacyPostRedirect(pathname, request, country)
+  const legacyRedirect = await handleLegacyPostRedirect(pathname, request, country)
   if (legacyRedirect) {
     return legacyRedirect
   }
