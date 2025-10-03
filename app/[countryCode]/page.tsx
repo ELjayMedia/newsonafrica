@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { Suspense } from "react"
 import { COUNTRIES } from "@/lib/wordpress-api"
 import { CountryEditionContent } from "./CountryEditionContent"
-import { CountryEditionSkeleton } from "./CountryEditionSkeleton"
 import * as log from "@/lib/log"
 
 interface CountryPageProps {
@@ -15,6 +13,7 @@ interface CountryPageProps {
 
 export const runtime = "nodejs"
 export const revalidate = 300
+export const experimental_ppr = true
 
 // Generate static params for all supported countries
 export async function generateStaticParams(): Promise<{ countryCode: string }[]> {
@@ -89,9 +88,7 @@ export default async function CountryPage({ params }: CountryPageProps) {
       </div>
 
       {/* Main Content */}
-      <Suspense fallback={<CountryEditionSkeleton />}>
-        <CountryEditionContent countryCode={countryCode} country={country} />
-      </Suspense>
+      <CountryEditionContent countryCode={countryCode} country={country} />
     </div>
   )
 }

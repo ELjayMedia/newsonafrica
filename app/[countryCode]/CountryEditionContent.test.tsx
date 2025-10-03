@@ -1,20 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react"
-import { SWRConfig } from "swr"
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import type { CountryConfig } from "@/lib/wordpress-api"
+import { CountryEditionContent, __TESTING__ } from "./CountryEditionContent"
 
-vi.mock("next/link", () => ({
-  default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
-}))
-
-vi.mock("react-intersection-observer", () => ({
-  useInView: () => ({ ref: () => {}, inView: false }),
-}))
-
-vi.mock("@/components/ArticleCard", () => ({
-  ArticleCard: ({ article, layout }: any) => (
-    <div data-testid={`article-card-${layout}`}>{article.title}</div>
-  ),
+vi.mock("next/dynamic", () => ({
+  __esModule: true,
+  default: () => () => null,
 }))
 
 const wpMocks = vi.hoisted(() => ({
@@ -40,7 +30,7 @@ const wpMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/wordpress-api", () => wpMocks)
 
-import { CountryEditionContent } from "./CountryEditionContent"
+const { fetchHeroSectionData, fetchTrendingSectionData, fetchLatestSectionData, fetchCategoriesData } = __TESTING__
 
 const createPost = (id: number, prefix: string) => ({
   id,
@@ -63,7 +53,7 @@ describe("CountryEditionContent", () => {
     vi.clearAllMocks()
   })
 
-  it("loads sequential batches using cursors and renders distinct sections", async () => {
+  it("loads sequential batches using cursors and returns section data", async () => {
     const heroPosts = [createPost(1, "Hero Story"), createPost(2, "Hero Story"), createPost(3, "Hero Story")]
     const trendingPosts = Array.from({ length: 7 }, (_, index) => createPost(index + 1, "Trending Story"))
     const latestPosts = Array.from({ length: 20 }, (_, index) => createPost(index + 1, "Latest Story"))
@@ -71,6 +61,15 @@ describe("CountryEditionContent", () => {
     wpMocks.getCategoriesForCountry.mockResolvedValue([
       { id: 1, name: "Politics", slug: "politics" },
     ])
+
+    wpMocks.getPostsForCategories.mockResolvedValue({
+      news: {
+        category: { id: 2, name: "News", slug: "news" },
+        posts: [createPost(99, "News Story")],
+        hasNextPage: false,
+        endCursor: null,
+      },
+    })
 
     wpMocks.getLatestPostsForCountry.mockImplementation((code: string, limit: number, cursor?: string | null) => {
       if (limit === 3) {
@@ -94,23 +93,24 @@ describe("CountryEditionContent", () => {
       throw new Error(`Unexpected call: limit=${limit}, cursor=${cursor}`)
     })
 
-    render(
-      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
-        <CountryEditionContent countryCode="za" country={country} />
-      </SWRConfig>,
-    )
+    const heroData = await fetchHeroSectionData(country.code)
+    const trendingData = await fetchTrendingSectionData(country.code, heroData.heroLatestEndCursor)
+    const latestData = await fetchLatestSectionData(country.code, trendingData.endCursor)
+    const categoriesData = await fetchCategoriesData(country.code)
 
-    await waitFor(() => expect(wpMocks.getLatestPostsForCountry).toHaveBeenCalledTimes(3))
-
-    expect(screen.getByText("Hero Story 1")).toBeInTheDocument()
-    expect(screen.getByText("Trending Story 1")).toBeInTheDocument()
-    expect(screen.getByText("Latest Story 1")).toBeInTheDocument()
-    expect(screen.getByText("Latest Story 9")).toBeInTheDocument()
-    expect(screen.getByText("Politics")).toBeInTheDocument()
+    expect(heroData.heroPost?.title).toBe("Hero Story 1")
+    expect(trendingData.posts[0].title).toBe("Trending Story 1")
+    expect(latestData.posts[8].title).toBe("Latest Story 9")
+    expect(categoriesData.categories.map((category) => category.name)).toContain("Politics")
+    expect(Object.keys(categoriesData.categoryPosts)).toContain("news")
 
     const calls = wpMocks.getLatestPostsForCountry.mock.calls
     expect(calls[0]).toEqual(["za", 3])
     expect(calls[1]).toEqual(["za", 7, "hero-cursor"])
     expect(calls[2]).toEqual(["za", 20, "trending-cursor"])
+  })
+
+  it("renders without throwing when invoked as a server component", async () => {
+    await expect(CountryEditionContent({ countryCode: country.code, country })).resolves.toBeTruthy()
   })
 })
