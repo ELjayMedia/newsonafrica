@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
-import { fetchById, insertRecords, updateRecord, deleteRecord, clearQueryCache } from "@/utils/supabase-query-utils"
+import { clearQueryCache } from "@/utils/supabase-query-utils"
+import { toast } from "@/hooks/use-toast"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
@@ -12,6 +13,79 @@ const RATE_LIMIT_SECONDS = 10
 // Cache TTLs
 const COMMENTS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
 const SCHEMA_CHECK_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
+const COMMENT_SYNC_QUEUE = "comments-write-queue"
+
+type ApiResult<T> = {
+  success?: boolean
+  data?: T
+  error?: string
+  meta?: Record<string, any>
+}
+
+const isOfflineError = (error: unknown) => {
+  if (typeof navigator === "undefined") return false
+  if (!navigator.onLine) return true
+  if (error instanceof TypeError && error.message?.includes("Failed to fetch")) {
+    return true
+  }
+  return false
+}
+
+const readJson = async <T = any>(response: Response): Promise<T | null> => {
+  try {
+    const text = await response.text()
+    if (!text) return null
+    return JSON.parse(text) as T
+  } catch {
+    return null
+  }
+}
+
+let commentSyncListenerRegistered = false
+
+const registerCommentSyncListener = () => {
+  if (commentSyncListenerRegistered) return
+  if (typeof window === "undefined") return
+  if (!("serviceWorker" in navigator)) return
+
+  const handleMessage = (event: MessageEvent) => {
+    const data = event.data as { type?: string; queue?: string; error?: string } | null
+    if (!data || typeof data !== "object") return
+    if (data.queue !== COMMENT_SYNC_QUEUE) return
+
+    switch (data.type) {
+      case "BACKGROUND_SYNC_ENQUEUE":
+        toast({
+          title: "Comment queued",
+          description: "We'll post your comment once you're back online.",
+        })
+        break
+      case "BACKGROUND_SYNC_QUEUE_REPLAYED":
+        toast({
+          title: "Comments synced",
+          description: "Your offline comments have been posted.",
+        })
+        break
+      case "BACKGROUND_SYNC_QUEUE_ERROR":
+        toast({
+          title: "Comment sync failed",
+          description: data.error || "We couldn't sync your pending comments.",
+          variant: "destructive",
+        })
+        break
+      default:
+        break
+    }
+  }
+
+  navigator.serviceWorker.addEventListener("message", handleMessage)
+  commentSyncListenerRegistered = true
+}
+
+if (typeof window !== "undefined") {
+  registerCommentSyncListener()
+}
 
 // Check if a user is rate limited
 export function isRateLimited(userId: string): boolean {
@@ -323,112 +397,115 @@ export async function fetchComments(
 }
 
 // Add a new comment
-export async function addComment(comment: NewComment): Promise<Comment> {
+export async function addComment(comment: NewComment): Promise<Comment | undefined> {
+  const { hasRichText } = await checkColumns()
+
   try {
-    // Check if columns exist
-    const { hasStatus, hasRichText } = await checkColumns()
-
-    // Build comment data based on available columns
-    const commentData: any = {
-      post_id: comment.post_id,
-      user_id: comment.user_id,
+    const payload: Record<string, any> = {
+      postId: comment.post_id,
       content: comment.content,
-      parent_id: comment.parent_id || null,
+      parentId: comment.parent_id ?? null,
     }
 
-    // Add status if the column exists
-    if (hasStatus) {
-      commentData.status = "active"
-    }
-
-    // Add is_rich_text if the column exists
     if (hasRichText && comment.is_rich_text !== undefined) {
-      commentData.is_rich_text = comment.is_rich_text
+      payload.isRichText = comment.is_rich_text
     }
 
-    // Insert the comment using our optimized function
-    const [newComment] = await insertRecords("comments", commentData, {
-      clearCache: new RegExp(`^comments:.*${comment.post_id}`),
-    })
-
-    if (!newComment) {
-      throw new Error("Failed to create comment")
+    let response: Response
+    try {
+      response = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Comment creation queued for background sync", error)
+        return undefined
+      }
+      throw error
     }
 
-    // Fetch the profile for this user
-    const profile = await fetchById("profiles", comment.user_id, {
-      columns: "username, avatar_url",
-    })
+    const result = await readJson<ApiResult<Comment>>(response)
 
-    // Record this submission for rate limiting
+    if (!response.ok || !result?.success || !result.data) {
+      const message = result?.error || `Failed to create comment (HTTP ${response.status})`
+      throw new Error(message)
+    }
+
+    const createdComment = result.data
+
     recordSubmission(comment.user_id)
+    clearCommentCache(comment.post_id)
 
-    // Return the comment with profile data
     return {
-      ...newComment,
-      // Add status if it doesn't exist
-      status: newComment.status || "active",
-      // Add is_rich_text if it doesn't exist
-      is_rich_text: hasRichText ? newComment.is_rich_text : false,
-      profile: profile
-        ? {
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-          }
-        : undefined,
-      reactions: [],
+      ...createdComment,
+      status: createdComment.status || "active",
+      is_rich_text: hasRichText ? createdComment.is_rich_text ?? Boolean(comment.is_rich_text) : false,
     }
   } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Comment creation will retry when back online", error)
+      return undefined
+    }
     console.error("Error in addComment:", error)
     throw error
   }
 }
 
 // Update an existing comment
-export async function updateComment(id: string, content: string, isRichText?: boolean): Promise<Comment> {
+export async function updateComment(
+  id: string,
+  content: string,
+  isRichText?: boolean,
+): Promise<Comment | undefined> {
+  const { hasRichText } = await checkColumns()
+
+  const payload: Record<string, any> = { content }
+  if (hasRichText && isRichText !== undefined) {
+    payload.isRichText = isRichText
+  }
+
   try {
-    // Check if columns exist
-    const { hasRichText } = await checkColumns()
-
-    // Build update data
-    const updateData: any = { content }
-
-    // Add is_rich_text if the column exists and value is provided
-    if (hasRichText && isRichText !== undefined) {
-      updateData.is_rich_text = isRichText
+    let response: Response
+    try {
+      response = await fetch(`/api/comments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Comment update queued for background sync", error)
+        return undefined
+      }
+      throw error
     }
 
-    // Get the comment first to get its post_id for cache invalidation
-    const existingComment = await fetchById("comments", id)
-    if (!existingComment) {
-      throw new Error("Comment not found")
+    const result = await readJson<Comment | { error?: string }>(response)
+
+    if (!response.ok || !result) {
+      const message = typeof result === "object" && "error" in result && result.error
+        ? result.error
+        : `Failed to update comment (HTTP ${response.status})`
+      throw new Error(message)
     }
 
-    // Update the comment using our optimized function
-    const updatedComment = await updateRecord("comments", id, updateData, {
-      clearCache: new RegExp(`^comments:.*${existingComment.post_id}`),
-    })
+    const updatedComment = result as Comment
+    clearCommentCache(updatedComment.post_id)
 
-    if (!updatedComment) {
-      throw new Error("Failed to update comment")
-    }
-
-    // Fetch the profile for this user
-    const profile = await fetchById("profiles", updatedComment.user_id, {
-      columns: "username, avatar_url",
-    })
-
-    // Return the updated comment with profile data
     return {
       ...updatedComment,
-      profile: profile
-        ? {
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-          }
-        : undefined,
+      status: updatedComment.status || "active",
+      is_rich_text: hasRichText ? updatedComment.is_rich_text ?? Boolean(isRichText) : false,
     }
   } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Comment update will retry when online", error)
+      return undefined
+    }
     console.error("Error in updateComment:", error)
     throw error
   }
@@ -436,33 +513,36 @@ export async function updateComment(id: string, content: string, isRichText?: bo
 
 // Delete a comment (soft delete by updating status if the column exists, otherwise hard delete)
 export async function deleteComment(id: string): Promise<void> {
+  await checkColumns() // Ensure schema cache warmed, though deletion handled via API
+
   try {
-    // Check if status column exists
-    const { hasStatus } = await checkColumns()
-
-    // Get the comment first to get its post_id for cache invalidation
-    const comment = await fetchById("comments", id)
-    if (!comment) {
-      throw new Error("Comment not found")
-    }
-
-    if (hasStatus) {
-      // Soft delete
-      await updateRecord(
-        "comments",
-        id,
-        { status: "deleted" },
-        {
-          clearCache: new RegExp(`^comments:.*${comment.post_id}`),
-        },
-      )
-    } else {
-      // Hard delete
-      await deleteRecord("comments", id, {
-        clearCache: new RegExp(`^comments:.*${comment.post_id}`),
+    let response: Response
+    try {
+      response = await fetch(`/api/comments/${id}`, {
+        method: "DELETE",
+        credentials: "include",
       })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Comment delete queued for background sync", error)
+        return
+      }
+      throw error
     }
+
+    const result = await readJson<{ success?: boolean; error?: string }>(response)
+
+    if (!response.ok || result?.success === false) {
+      const message = result?.error || `Failed to delete comment (HTTP ${response.status})`
+      throw new Error(message)
+    }
+
+    clearCommentCache()
   } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Comment delete will retry when online", error)
+      return
+    }
     console.error("Error in deleteComment:", error)
     throw error
   }
@@ -479,16 +559,34 @@ export async function reportComment(data: ReportCommentData): Promise<void> {
 
   const { commentId, reportedBy, reason } = data
 
-  const { error } = await supabase
-    .from("comments")
-    .update({
-      status: "flagged",
-      reported_by: reportedBy,
-      report_reason: reason,
-    })
-    .eq("id", commentId)
+  try {
+    let response: Response
+    try {
+      response = await fetch("/api/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: commentId, action: "report", reason }),
+        credentials: "include",
+      })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Comment report queued for background sync", error)
+        return
+      }
+      throw error
+    }
 
-  if (error) {
+    const result = await readJson<ApiResult<{ success: boolean }>>(response)
+
+    if (!response.ok || !result?.success) {
+      const message = result?.error || `Failed to report comment (HTTP ${response.status})`
+      throw new Error(message)
+    }
+  } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Comment report will retry when online", error)
+      return
+    }
     console.error("Error reporting comment:", error)
     throw error
   }
