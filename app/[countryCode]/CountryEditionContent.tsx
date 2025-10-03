@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import dynamic from "next/dynamic"
 import Link from "next/link"
 import {
   getLatestPostsForCountry,
@@ -23,6 +22,7 @@ import { getCategoryUrl } from "@/lib/utils/routing"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CountryPosts, HomePost } from "@/types/home"
 import type { CategoryPostsResult } from "@/lib/wordpress-api"
+import { MoreForYouShell } from "./MoreForYouShell.client"
 
 const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
 
@@ -48,24 +48,6 @@ interface CategoriesSectionData {
   categories: WordPressCategory[]
   categoryPosts: Record<string, HomePost[]>
 }
-
-const MoreForYouSection = dynamic(() => import("./MoreForYouSection.client"), {
-  loading: () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="flex gap-4">
-          <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  ),
-  ssr: false,
-})
 
 interface CountryEditionContentProps {
   countryCode: string
@@ -483,7 +465,7 @@ async function MoreForYouWrapper({
         <Plus className="h-5 w-5 text-primary" />
         <h2 className="text-2xl font-bold">More for You</h2>
       </div>
-      <MoreForYouSection countryCode={countryCode} initialData={initialData} />
+      <MoreForYouShell countryCode={countryCode} initialData={initialData} />
     </section>
   )
 }
