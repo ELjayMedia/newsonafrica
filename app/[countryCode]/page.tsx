@@ -12,6 +12,7 @@ interface CountryPageProps {
 }
 
 export const runtime = "nodejs"
+export const dynamic = "force-static"
 export const revalidate = 300
 export const experimental_ppr = true
 
