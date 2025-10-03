@@ -31,25 +31,28 @@ export default function ServiceWorkerRegistration() {
           // If the file exists, register the service worker
           return navigator.serviceWorker.register("/sw.js").then((reg) => {
             console.log("Service Worker registered with scope:", reg.scope)
-            setRegistration(reg)
 
-            // Check for updates
+            const notifyWaiting = (serviceWorkerRegistration: ServiceWorkerRegistration) => {
+              if (serviceWorkerRegistration.waiting) {
+                setRegistration(serviceWorkerRegistration)
+                setUpdateAvailable(true)
+              }
+            }
+
+            // Listen for new service workers entering the waiting state
             reg.addEventListener("updatefound", () => {
               const newWorker = reg.installing
-              if (newWorker) {
-                newWorker.addEventListener("statechange", () => {
-                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-                    // New content is available
-                    setUpdateAvailable(true)
-                  }
-                })
-              }
+              if (!newWorker) return
+
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  notifyWaiting(reg)
+                }
+              })
             })
 
-            // Listen for waiting service worker
-            if (reg.waiting) {
-              setUpdateAvailable(true)
-            }
+            // Capture any already waiting worker on registration
+            notifyWaiting(reg)
           })
         })
         .catch((error) => {
@@ -68,27 +71,30 @@ export default function ServiceWorkerRegistration() {
   }, [])
 
   const handleUpdate = () => {
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: "SKIP_WAITING" })
+    if (!registration?.waiting) {
+      return
+    }
+
+    registration.waiting.postMessage({ type: "SKIP_WAITING" })
+
+    const onControllerChange = () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange)
       window.location.reload()
     }
+
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange)
   }
 
   if (updateAvailable) {
     return (
-      <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50">
-        <p className="text-sm mb-2">New content available!</p>
-        <div className="flex gap-2">
-          <button onClick={handleUpdate} className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium">
-            Update
-          </button>
-          <button
-            onClick={() => setUpdateAvailable(false)}
-            className="bg-blue-700 text-white px-3 py-1 rounded text-sm"
-          >
-            Later
-          </button>
-        </div>
+      <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-blue-600 text-white shadow-lg">
+        <button
+          type="button"
+          onClick={handleUpdate}
+          className="flex items-center gap-2 px-4 py-3 text-sm font-medium hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+        >
+          <span>New version available → Refresh</span>
+        </button>
       </div>
     )
   }
