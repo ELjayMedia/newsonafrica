@@ -22,8 +22,25 @@ async function getCircuitBreaker() {
 
 const mapPostFromWp = (post: WordPressPost, countryCode?: string): WordPressPost => mapWpPost(post, "rest", countryCode)
 
+const resolveHomePostId = (post: WordPressPost): string => {
+  if (post.globalRelayId) {
+    return post.globalRelayId
+  }
+
+  if (typeof post.id === "number") {
+    return String(post.id)
+  }
+
+  if (post.slug) {
+    return post.slug
+  }
+
+  return ""
+}
+
 const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): HomePost => ({
-  id: String(post.id ?? post.slug ?? ""),
+  id: resolveHomePostId(post),
+  globalRelayId: post.globalRelayId,
   slug: post.slug ?? "",
   title: post.title?.rendered ?? "",
   excerpt: post.excerpt?.rendered ?? "",
@@ -120,6 +137,7 @@ export interface WordPressTag {
 
 export interface WordPressPost {
   id: number
+  globalRelayId?: string
   date: string
   slug: string
   title: { rendered: string }
@@ -1125,7 +1143,7 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
     const seen = new Set<string>()
 
     for (const post of aggregatedPosts) {
-      const key = `${post.country ?? ""}:${post.slug}`
+      const key = post.globalRelayId ?? `${post.country ?? ""}:${post.slug}`
       if (!seen.has(key)) {
         seen.add(key)
         uniquePosts.push(post)

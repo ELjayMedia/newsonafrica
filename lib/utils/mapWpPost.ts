@@ -16,6 +16,18 @@ export function mapWpPost(
   source: 'rest' | 'gql',
   countryCode?: string,
 ): WordPressPost {
+  const resolveRelayId = () => {
+    if (typeof post?.globalRelayId === 'string' && post.globalRelayId.length > 0) {
+      return post.globalRelayId
+    }
+
+    if (typeof post?.id === 'string' && post.id.length > 0) {
+      return post.id
+    }
+
+    return undefined
+  }
+
   if (source === 'rest') {
     const featured = post._embedded?.['wp:featuredmedia']?.[0]
     const author = post._embedded?.['wp:author']?.[0]
@@ -24,6 +36,7 @@ export function mapWpPost(
 
     return {
       ...post,
+      globalRelayId: resolveRelayId(),
       content: post.content
         ? { rendered: rewriteLegacyLinks(post.content.rendered || '', countryCode) }
         : undefined,
@@ -59,8 +72,11 @@ export function mapWpPost(
     }
   }
 
+  const globalRelayId = resolveRelayId()
+
   return {
     id: post.databaseId ?? decodeGlobalId(post.id),
+    globalRelayId,
     date: post.date,
     slug: post.slug,
     title: { rendered: post.title ?? '' },
