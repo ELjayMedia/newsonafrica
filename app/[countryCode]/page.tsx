@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { AFRICAN_EDITION } from "@/lib/editions"
 import { COUNTRIES } from "@/lib/wordpress-api"
 import { CountryEditionContent } from "./CountryEditionContent"
 import * as log from "@/lib/log"
@@ -40,6 +41,11 @@ export async function generateMetadata({ params }: CountryPageProps): Promise<Me
     }
   }
 
+  const alternatesLanguages: Record<string, string> = {
+    [country.hreflang]: country.canonicalUrl,
+    [AFRICAN_EDITION.hreflang]: AFRICAN_EDITION.canonicalUrl,
+  }
+
   return {
     title: `${country.name} News - News On Africa`,
     description: `Latest news, trending stories, and breaking updates from ${country.name}. Stay informed with News On Africa's ${country.name} edition.`,
@@ -56,7 +62,8 @@ export async function generateMetadata({ params }: CountryPageProps): Promise<Me
       description: `Latest news and updates from ${country.name}`,
     },
     alternates: {
-      canonical: `/${countryCode}`,
+      canonical: country.canonicalUrl,
+      languages: alternatesLanguages,
     },
   }
 }
