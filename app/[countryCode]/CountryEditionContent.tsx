@@ -1,7 +1,6 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import useSWR from "swr"
+import { Suspense } from "react"
+import dynamic from "next/dynamic"
+import Link from "next/link"
 import {
   getLatestPostsForCountry,
   getCategoriesForCountry,
@@ -11,309 +10,358 @@ import {
   COUNTRIES,
   type CountryConfig,
   type WordPressPost,
+  type WordPressCategory,
 } from "@/lib/wordpress-api"
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
 import { ArticleCard } from "@/components/ArticleCard"
-import { ArticleList } from "@/components/ArticleList"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Clock, Grid3X3, Plus, MapPin } from "lucide-react"
-import Link from "next/link"
 import { getCategoryUrl } from "@/lib/utils/routing"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CountryPosts, HomePost } from "@/types/home"
+import type { CategoryPostsResult } from "@/lib/wordpress-api"
+
+const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
+
+interface HeroSectionData {
+  heroPost?: WordPressPost
+  secondaryStories: WordPressPost[]
+  heroLatestEndCursor: string | null
+}
+
+interface TrendingSectionData {
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}
+
+interface LatestSectionData {
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}
+
+interface CategoriesSectionData {
+  categories: WordPressCategory[]
+  categoryPosts: Record<string, HomePost[]>
+}
+
+const MoreForYouSection = dynamic(() => import("./MoreForYouSection.client"), {
+  loading: () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="flex gap-4">
+          <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+  ssr: false,
+})
 
 interface CountryEditionContentProps {
   countryCode: string
   country: CountryConfig
 }
 
-export function CountryEditionContent({ countryCode, country }: CountryEditionContentProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
-  const [panAfricanPosts, setPanAfricanPosts] = useState<CountryPosts>({})
+async function fetchHeroSectionData(countryCode: string): Promise<HeroSectionData> {
+  try {
+    const [fpPosts, heroLatest] = await Promise.allSettled([
+      getFpTaggedPostsForCountry(countryCode, 8),
+      getLatestPostsForCountry(countryCode, 3),
+    ])
 
-  const {
-    data: fpData,
-    error: fpError,
-    isLoading: fpLoading,
-  } = useSWR([`fp-tagged`, countryCode], () => getFpTaggedPostsForCountry(countryCode, 8), {
-    revalidateOnFocus: false,
-    dedupingInterval: 300000,
-  })
+    const heroLatestValue = heroLatest.status === "fulfilled" ? heroLatest.value : { posts: [], endCursor: null }
+    const featuredPosts =
+      fpPosts.status === "fulfilled" && fpPosts.value.length > 0
+        ? fpPosts.value
+        : (heroLatestValue.posts ?? [])
 
-  // Fetch hero/featured posts (first 3 latest posts as fallback)
-  const {
-    data: heroData,
-    error: heroError,
-    isLoading: heroLoading,
-  } = useSWR([`hero`, countryCode], () => getLatestPostsForCountry(countryCode, 3), {
-    revalidateOnFocus: false,
-    dedupingInterval: 300000,
-  })
+    const normalized = featuredPosts.map((post) => ({
+      ...post,
+      country: (post as WordPressPost & { country?: string }).country ?? countryCode,
+    }))
 
-  const {
-    data: trendingData,
-    error: trendingError,
-    isLoading: trendingSWRLoading,
-  } = useSWR(
-    heroData?.endCursor ? [`trending`, countryCode, heroData.endCursor] : null,
-    ([, code, cursor]) => getLatestPostsForCountry(code, 7, cursor),
-    { revalidateOnFocus: false, dedupingInterval: 300000 },
-  )
+    return {
+      heroPost: normalized[0],
+      secondaryStories: normalized.slice(1, 5),
+      heroLatestEndCursor: heroLatestValue.endCursor ?? null,
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch hero section", error)
+    return { heroPost: undefined, secondaryStories: [], heroLatestEndCursor: null }
+  }
+}
 
-  const {
-    data: latestData,
-    error: latestError,
-    isLoading: latestSWRLoading,
-  } = useSWR(
-    trendingData?.endCursor ? [`latest`, countryCode, trendingData.endCursor] : null,
-    ([, code, cursor]) => getLatestPostsForCountry(code, 20, cursor),
-    { revalidateOnFocus: false, dedupingInterval: 300000 },
-  )
+async function fetchTrendingSectionData(
+  countryCode: string,
+  afterCursor: string | null,
+): Promise<TrendingSectionData> {
+  try {
+    const result = await getLatestPostsForCountry(countryCode, 7, afterCursor ?? undefined)
+    return {
+      posts: result.posts ?? [],
+      hasNextPage: result.hasNextPage ?? false,
+      endCursor: result.endCursor ?? null,
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch trending section", error)
+    return { posts: [], hasNextPage: false, endCursor: null }
+  }
+}
 
-  const trendingLoading = heroLoading || trendingSWRLoading
-  const latestLoading = trendingLoading || latestSWRLoading
+async function fetchLatestSectionData(
+  countryCode: string,
+  afterCursor: string | null,
+): Promise<LatestSectionData> {
+  try {
+    const result = await getLatestPostsForCountry(countryCode, 20, afterCursor ?? undefined)
+    return {
+      posts: result.posts ?? [],
+      hasNextPage: result.hasNextPage ?? false,
+      endCursor: result.endCursor ?? null,
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch latest section", error)
+    return { posts: [], hasNextPage: false, endCursor: null }
+  }
+}
 
-  // Fetch categories
-  const {
-    data: categories,
-    error: categoriesError,
-    isLoading: categoriesLoading,
-  } = useSWR(`categories-${countryCode}`, () => getCategoriesForCountry(countryCode), {
-    revalidateOnFocus: false,
-    dedupingInterval: 600000,
-  })
+async function fetchCategoriesData(countryCode: string): Promise<CategoriesSectionData> {
+  try {
+    const [categories, categoryResults] = await Promise.all([
+      getCategoriesForCountry(countryCode),
+      getPostsForCategories(countryCode, CATEGORY_SLUGS, 5),
+    ])
 
-  const heroSource = fpData && fpData.length > 0 ? fpData : heroData?.posts || []
-  const heroPost = heroSource[0]
-  const secondaryStories = heroSource.slice(1, 5)
-  const trendingPosts = trendingData?.posts || []
-  const latestPosts = latestData?.posts || []
-  const moreForYouInitialData = latestData
-    ? {
-        posts: latestData.posts.slice(8),
-        hasNextPage: latestData.hasNextPage,
-        endCursor: latestData.endCursor,
+    const mappedPosts: Record<string, HomePost[]> = {}
+
+    CATEGORY_SLUGS.forEach((slug) => {
+      const categoryData: CategoryPostsResult | undefined = categoryResults?.[slug]
+      if (categoryData?.posts?.length) {
+        mappedPosts[slug] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], countryCode)
       }
-    : undefined
+    })
 
-  useEffect(() => {
-    let isCancelled = false
+    return {
+      categories: categories ?? [],
+      categoryPosts: mappedPosts,
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch category data", error)
+    return { categories: [], categoryPosts: {} }
+  }
+}
 
-    const fetchCategoryPosts = async () => {
-      try {
-        console.log("[v0] Fetching category posts for country:", countryCode)
-        const slugs = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
-        const batchedPosts = await getPostsForCategories(countryCode, slugs, 5)
+async function fetchPanAfricanPosts(countryCode: string): Promise<CountryPosts> {
+  try {
+    const allCountries = Object.keys(COUNTRIES)
+    const otherCountries = allCountries.filter((code) => code !== countryCode).slice(0, 3)
 
-        if (isCancelled) return
-
-        const mappedPosts: Record<string, HomePost[]> = {}
-
-        slugs.forEach((slug) => {
-          const categoryData = batchedPosts[slug]
-          if (categoryData?.posts?.length) {
-            mappedPosts[slug] = mapPostsToHomePosts(categoryData.posts as WordPressPost[], countryCode)
-          }
-        })
-
-        console.log("[v0] Category posts fetched:", Object.keys(mappedPosts).length, "categories")
-        setCategoryPosts(mappedPosts)
-      } catch (error) {
-        console.error("[v0] Error fetching batched category posts:", error)
-        if (!isCancelled) {
-          setCategoryPosts({})
+    const results = await Promise.allSettled(
+      otherCountries.map(async (code) => {
+        const result = await getLatestPostsForCountry(code, 2)
+        return {
+          countryCode: code,
+          posts: mapPostsToHomePosts(result.posts ?? [], code),
         }
+      }),
+    )
+
+    const mapped: CountryPosts = {}
+
+    results.forEach((result) => {
+      if (result.status === "fulfilled" && result.value.posts.length > 0) {
+        mapped[result.value.countryCode] = result.value.posts
       }
+    })
+
+    return mapped
+  } catch (error) {
+    console.error("[v0] Failed to fetch Pan-African posts", error)
+    return {}
+  }
+}
+
+async function computeMoreForYouInitialData(
+  promise: Promise<LatestSectionData>,
+): Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null } | undefined> {
+  try {
+    const latest = await promise
+    if (!latest.posts.length) {
+      return undefined
     }
 
-    fetchCategoryPosts()
-
-    return () => {
-      isCancelled = true
+    return {
+      posts: latest.posts.slice(8),
+      hasNextPage: latest.hasNextPage,
+      endCursor: latest.endCursor,
     }
-  }, [countryCode])
+  } catch (error) {
+    console.error("[v0] Failed to compute more-for-you initial data", error)
+    return undefined
+  }
+}
 
-  useEffect(() => {
-    let isCancelled = false
+function HeroSectionFallback({ country }: { country: CountryConfig }) {
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="h-1 w-8 bg-primary rounded-full" />
+        <h2 className="text-2xl font-bold">Top Stories from {country.name}</h2>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Skeleton className="aspect-video w-full mb-4" />
+          <Skeleton className="h-8 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="aspect-video w-full" />
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="aspect-video w-full" />
+          <Skeleton className="h-6 w-full" />
+        </div>
+      </div>
+    </section>
+  )
+}
 
-    const fetchPanAfricanPosts = async () => {
-      try {
-        const allCountries = Object.keys(COUNTRIES)
-        const otherCountries = allCountries.filter((code) => code !== countryCode).slice(0, 3)
+function TrendingSectionFallback({ country }: { country: CountryConfig }) {
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-bold">Trending in {country.name}</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="aspect-video w-full mb-3" />
+            <Skeleton className="h-6 w-full mb-2" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 
-        const results = await Promise.allSettled(
-          otherCountries.map(async (code) => {
-            const result = await getLatestPostsForCountry(code, 2)
-            return {
-              countryCode: code,
-              posts: mapPostsToHomePosts(result.posts || [], code),
-            }
-          }),
-        )
+function MoreForYouFallback() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex gap-4">
+          <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
-        if (isCancelled) return
+async function HeroSection({ promise, country }: { promise: Promise<HeroSectionData>; country: CountryConfig }) {
+  const { heroPost, secondaryStories } = await promise
 
-        const newCountryPosts: CountryPosts = {}
-
-        results.forEach((result) => {
-          if (result.status === "fulfilled" && result.value.posts.length > 0) {
-            newCountryPosts[result.value.countryCode] = result.value.posts
-          }
-        })
-
-        setPanAfricanPosts(newCountryPosts)
-      } catch (error) {
-        console.error("[v0] Error fetching Pan-African posts:", error)
-      }
-    }
-
-    fetchPanAfricanPosts()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [countryCode])
-
-  // Error state
-  if (heroError && trendingError && latestError) {
+  if (!heroPost) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <section className="space-y-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load content for {country.name}. Please try again later.</AlertDescription>
+          <AlertDescription>We could not load featured stories for {country.name} right now.</AlertDescription>
         </Alert>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-12">
+    <>
       <section className="space-y-6">
         <div className="flex items-center gap-2 mb-6">
           <div className="h-1 w-8 bg-primary rounded-full" />
           <h2 className="text-2xl font-bold">Featured Story</h2>
         </div>
-
-        {fpLoading || heroLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Skeleton className="aspect-video w-full mb-4" />
-              <Skeleton className="h-8 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-2/3" />
-            </div>
-            <div className="space-y-4">
-              <Skeleton className="aspect-video w-full" />
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="aspect-video w-full" />
-              <Skeleton className="h-6 w-full" />
-            </div>
-          </div>
-        ) : heroPost ? (
-          <div className="bg-gray-50 px-2 py-2 rounded-lg">
-            <FeaturedHero post={heroPost} />
-          </div>
-        ) : null}
+        <div className="bg-gray-50 px-2 py-2 rounded-lg">
+          <FeaturedHero post={heroPost} />
+        </div>
       </section>
-
       {secondaryStories.length > 0 && (
         <section className="bg-white p-2 md:p-3 rounded-lg">
           <SecondaryStories posts={secondaryStories} layout="horizontal" />
         </section>
       )}
+    </>
+  )
+}
 
-      {Object.keys(panAfricanPosts).length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
-            <Badge variant="secondary" className="ml-2">
-              Pan-African
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">Discover the latest stories from across the African continent</p>
+async function TrendingSection({ promise }: { promise: Promise<TrendingSectionData> }) {
+  const { posts } = await promise
 
-          <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
-            {Object.entries(panAfricanPosts).map(([code, posts]) => {
-              const spotlightCountry = COUNTRIES[code]
-              if (!spotlightCountry || !posts || posts.length === 0) return null
+  if (!posts.length) {
+    return null
+  }
 
-              return (
-                <Card
-                  key={code}
-                  className="flex-none w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[300px] overflow-hidden hover:shadow-lg transition-shadow snap-start"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl" role="img" aria-label={`${spotlightCountry.name} flag`}>
-                        {spotlightCountry.flag}
-                      </span>
-                      <CardTitle className="text-lg">{spotlightCountry.name}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {posts.slice(0, 2).map((post) => (
-                      <Link key={post.id} href={`/${code}/article/${post.slug}`} className="block group">
-                        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                          {post.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1">{new Date(post.date).toLocaleDateString()}</p>
-                      </Link>
-                    ))}
-                    <Link
-                      href={`/${code}`}
-                      className="inline-flex items-center text-sm text-primary hover:text-primary/80 font-medium"
-                    >
-                      View all {spotlightCountry.name} news
-                      <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
-      )}
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-bold">Trending Now</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {posts.slice(0, 6).map((post) => (
+          <ArticleCard key={post.id ?? post.slug} article={post} layout="standard" />
+        ))}
+      </div>
+    </section>
+  )
+}
 
-      {/* Trending Section */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Trending Now</h2>
-        </div>
+async function LatestSection({ promise }: { promise: Promise<LatestSectionData> }) {
+  const { posts } = await promise
 
-        {trendingLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="aspect-video w-full mb-3" />
-                <Skeleton className="h-6 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingPosts.slice(0, 6).map((post) => (
-              <ArticleCard key={post.id} article={post} layout="standard" />
-            ))}
-          </div>
-        )}
-      </section>
+  if (!posts.length) {
+    return null
+  }
 
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Clock className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-bold">Latest News</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {posts.slice(0, 8).map((post) => (
+          <ArticleCard key={post.id ?? post.slug} article={post} layout="compact" />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+async function CategoriesSection({ promise, countryCode }: { promise: Promise<CategoriesSectionData>; countryCode: string }) {
+  const { categories, categoryPosts } = await promise
+
+  return (
+    <>
       {Object.keys(categoryPosts).length > 0 && (
         <section className="space-y-6">
           <div className="flex items-center gap-2">
             <Grid3X3 className="h-5 w-5 text-primary" />
             <h2 className="text-2xl font-bold">Browse by Category</h2>
           </div>
-
           <div className="grid grid-cols-1 gap-6">
             {Object.entries(categoryPosts).map(([categorySlug, posts]) => {
               if (!posts || posts.length === 0) return null
@@ -321,10 +369,7 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
               return (
                 <div key={categorySlug} className="bg-white rounded-lg p-4">
                   <h3 className="text-lg md:text-xl font-bold capitalize mb-4">
-                    <Link
-                      href={getCategoryUrl(categorySlug, countryCode)}
-                      className="hover:text-blue-600 transition-colors"
-                    >
+                    <Link href={getCategoryUrl(categorySlug, countryCode)} className="hover:text-blue-600 transition-colors">
                       {categorySlug}
                     </Link>
                   </h3>
@@ -339,33 +384,21 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
           </div>
         </section>
       )}
-
-      {/* Categories Rail */}
       <section className="space-y-6">
         <div className="flex items-center gap-2">
           <Grid3X3 className="h-5 w-5 text-primary" />
           <h2 className="text-2xl font-bold">All Categories</h2>
         </div>
-
-        {categoriesLoading ? (
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-20 rounded-full flex-shrink-0" />
-            ))}
-          </div>
-        ) : categoriesError ? (
+        {categories.length === 0 ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>Failed to load categories. Using default navigation.</AlertDescription>
           </Alert>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories?.slice(0, 10).map((category) => (
+            {categories.slice(0, 10).map((category) => (
               <Link key={category.id} href={getCategoryUrl(category.slug, countryCode)} className="flex-shrink-0">
-                <Badge
-                  variant="secondary"
-                  className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                >
+                <Badge variant="secondary" className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
                   {category.name}
                 </Badge>
               </Link>
@@ -373,50 +406,132 @@ export function CountryEditionContent({ countryCode, country }: CountryEditionCo
           </div>
         )}
       </section>
+    </>
+  )
+}
 
-      {/* Latest News */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Latest News</h2>
-        </div>
+async function PanAfricanSection({ promise }: { promise: Promise<CountryPosts> }) {
+  const panAfricanPosts = await promise
+  const entries = Object.entries(panAfricanPosts)
 
-        {latestLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <Skeleton className="w-24 h-24 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+  if (!entries.length) {
+    return null
+  }
+
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <MapPin className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
+        <Badge variant="secondary" className="ml-2">
+          Pan-African
+        </Badge>
+      </div>
+      <p className="text-sm text-muted-foreground">Discover the latest stories from across the African continent</p>
+      <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
+        {entries.map(([code, posts]) => {
+          const spotlightCountry = COUNTRIES[code]
+          if (!spotlightCountry || !posts || posts.length === 0) return null
+
+          return (
+            <Card
+              key={code}
+              className="flex-none w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[300px] overflow-hidden hover:shadow-lg transition-shadow snap-start"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl" role="img" aria-label={`${spotlightCountry.name} flag`}>
+                    {spotlightCountry.flag}
+                  </span>
+                  <CardTitle className="text-lg">{spotlightCountry.name}</CardTitle>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {latestPosts.slice(0, 8).map((post) => (
-              <ArticleCard key={post.id} article={post} layout="compact" />
-            ))}
-          </div>
-        )}
-      </section>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {posts.slice(0, 2).map((post) => (
+                  <Link key={post.id} href={`/${code}/article/${post.slug}`} className="block group">
+                    <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(post.date).toLocaleDateString()}</p>
+                  </Link>
+                ))}
+                <Link href={`/${code}`} className="inline-flex items-center text-sm text-primary hover:text-primary/80 font-medium">
+                  View all {spotlightCountry.name} news
+                  <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 
-      {/* More for You - Infinite Scroll */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Plus className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">More for You</h2>
-        </div>
+async function MoreForYouWrapper({
+  promise,
+  countryCode,
+}: {
+  promise: Promise<{ posts: WordPressPost[]; hasNextPage: boolean; endCursor: string | null } | undefined>
+  countryCode: string
+}) {
+  const initialData = await promise
 
-        <ArticleList
-          fetcher={(cursor) => getLatestPostsForCountry(countryCode, 20, cursor)}
-          initialData={moreForYouInitialData}
-          layout="standard"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        />
-      </section>
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Plus className="h-5 w-5 text-primary" />
+        <h2 className="text-2xl font-bold">More for You</h2>
+      </div>
+      <MoreForYouSection countryCode={countryCode} initialData={initialData} />
+    </section>
+  )
+}
+
+export async function CountryEditionContent({ countryCode, country }: CountryEditionContentProps) {
+  const heroPromise = fetchHeroSectionData(countryCode)
+  const trendingPromise = heroPromise.then((data) => fetchTrendingSectionData(countryCode, data.heroLatestEndCursor))
+  const latestPromise = trendingPromise.then((data) => fetchLatestSectionData(countryCode, data.endCursor))
+  const categoriesPromise = fetchCategoriesData(countryCode)
+  const panAfricanPromise = fetchPanAfricanPosts(countryCode)
+  const moreForYouPromise = computeMoreForYouInitialData(latestPromise)
+
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-12">
+      <Suspense fallback={<HeroSectionFallback country={country} />}>
+        <HeroSection promise={heroPromise} country={country} />
+      </Suspense>
+
+      <Suspense fallback={<TrendingSectionFallback country={country} />}>
+        <TrendingSection promise={trendingPromise} />
+      </Suspense>
+
+      <Suspense>
+        <PanAfricanSection promise={panAfricanPromise} />
+      </Suspense>
+
+      <Suspense>
+        <CategoriesSection promise={categoriesPromise} countryCode={countryCode} />
+      </Suspense>
+
+      <Suspense>
+        <LatestSection promise={latestPromise} />
+      </Suspense>
+
+      <Suspense fallback={<MoreForYouFallback />}>
+        <MoreForYouWrapper promise={moreForYouPromise} countryCode={countryCode} />
+      </Suspense>
     </div>
   )
+}
+
+export default CountryEditionContent
+
+export const __TESTING__ = {
+  fetchHeroSectionData,
+  fetchTrendingSectionData,
+  fetchLatestSectionData,
+  fetchCategoriesData,
+  fetchPanAfricanPosts,
+  computeMoreForYouInitialData,
 }
