@@ -9,12 +9,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
-import type { Post } from "@/types/wordpress"
+import type { WordPressPost } from "@/lib/wordpress-api"
 
 type ArticleCardLayout = "compact" | "standard" | "featured"
 
 interface ArticleCardProps {
-  article: Article | Post
+  article: Article | WordPressPost
   layout?: ArticleCardLayout
   className?: string
   priority?: boolean
@@ -85,7 +85,7 @@ function extractCountrySlug(value: unknown): string | undefined {
   return undefined
 }
 
-function inferArticleCountry(article: Article | Post) {
+function inferArticleCountry(article: Article | WordPressPost) {
   const source = article as any
   const potentialSources: unknown[] = [
     source?.country,
@@ -110,7 +110,7 @@ function inferArticleCountry(article: Article | Post) {
   return undefined
 }
 
-function extractImageUrl(article: Article | Post): string | null {
+function extractImageUrl(article: Article | WordPressPost): string | null {
   const source = article as any
 
   // Try multiple possible image sources
@@ -144,42 +144,46 @@ function extractImageUrl(article: Article | Post): string | null {
 }
 
 function normalizeArticleData(article: Article | Post) {
-  // Check if it's a WordPress Post or Article
-  const isWordPressPost = "title" in article && typeof article.title === "object"
-
   const country = inferArticleCountry(article)
   const featuredImage = extractImageUrl(article)
 
-  if (isWordPressPost) {
+  if ("categories" in article && Array.isArray((article as any).categories?.nodes)) {
     const post = article as Post
+    const categories =
+      post.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
+        .map((node) => ({
+          name: node.name ?? "",
+          slug: node.slug ?? "",
+        })) ?? []
+
     return {
-      id: post.id.toString(),
-      title: post.title.rendered || "Untitled Article",
-      excerpt: post.excerpt?.rendered?.replace(/<[^>]*>/g, "") || "", // Strip HTML
-      slug: post.slug,
-      date: post.date,
+      id: String(post.id ?? post.databaseId ?? post.slug ?? ""),
+      title: post.title || "Untitled Article",
+      excerpt: (post.excerpt || "").replace(/<[^>]*>/g, ""),
+      slug: post.slug ?? "",
+      date: post.date ?? "",
       featuredImage,
-      author: post.author_data?.name,
-      categories: post.category_data?.map((cat) => ({ name: cat.name, slug: cat.slug })) || [],
-      link: getArticleUrl(post.slug, country),
+      author: post.author?.node?.name,
+      categories,
+      link: getArticleUrl(post.slug ?? "", country),
     }
-  } else {
-    const art = article as Article
-    return {
-      id: art.id,
-      title: art.title || "Untitled Article",
-      excerpt: art.excerpt || "",
-      slug: art.slug,
-      date: art.date,
-      featuredImage,
-      author: art.author?.node?.name,
-      categories:
-        art.categories?.edges?.map((edge) => ({
-          name: edge.node.name,
-          slug: edge.node.slug,
-        })) || [],
-      link: getArticleUrl(art.slug, country),
-    }
+  }
+
+  const art = article as Article
+  return {
+    id: art.id,
+    title: art.title || "Untitled Article",
+    excerpt: art.excerpt || "",
+    slug: art.slug,
+    date: art.date,
+    featuredImage,
+    author: art.author?.node?.name,
+    categories:
+      art.categories?.edges?.map((edge) => ({
+        name: edge.node.name,
+        slug: edge.node.slug,
+      })) || [],
+    link: getArticleUrl(art.slug, country),
   }
 }
 

@@ -70,8 +70,8 @@ async function searchWordPressPosts(query: string, page = 1, perPage = 20) {
       console.log("[v0] Search API: Using enhanced fallback due to WordPress unavailability")
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
-          item.title.rendered.toLowerCase().includes(query.toLowerCase()) ||
-          item.excerpt.rendered.toLowerCase().includes(query.toLowerCase()),
+          item.title.toLowerCase().includes(query.toLowerCase()) ||
+          item.excerpt.toLowerCase().includes(query.toLowerCase()),
       )
 
       return {
@@ -94,8 +94,8 @@ async function getSearchSuggestions(query: string): Promise<string[]> {
 const FALLBACK_POSTS = [
   {
     id: 1,
-    title: { rendered: "Welcome to News On Africa" },
-    excerpt: { rendered: "Your premier source for African news, politics, business, and culture." },
+    title: "Welcome to News On Africa",
+    excerpt: "Your premier source for African news, politics, business, and culture.",
     slug: "welcome-to-news-on-africa",
     date: new Date().toISOString(),
     link: getArticleUrl("welcome-to-news-on-africa"),
@@ -103,14 +103,11 @@ const FALLBACK_POSTS = [
     categories: [],
     tags: [],
     author: 1,
-    _embedded: {
-      author: [{ name: "News On Africa Team" }],
-    },
   },
   {
     id: 2,
-    title: { rendered: "Search Service Information" },
-    excerpt: { rendered: "Our search is powered by WordPress and provides comprehensive coverage of African news." },
+    title: "Search Service Information",
+    excerpt: "Our search is powered by WordPress and provides comprehensive coverage of African news.",
     slug: "search-service-info",
     date: new Date().toISOString(),
     link: getArticleUrl("search-service-info"),
@@ -118,9 +115,6 @@ const FALLBACK_POSTS = [
     categories: [],
     tags: [],
     author: 1,
-    _embedded: {
-      author: [{ name: "News On Africa Team" }],
-    },
   },
 ]
 
@@ -192,8 +186,8 @@ export async function GET(request: NextRequest) {
       // Fallback to mock data
       const filteredResults = FALLBACK_POSTS.filter(
         (item) =>
-          item.title.rendered.toLowerCase().includes(queryParam.toLowerCase()) ||
-          item.excerpt.rendered.toLowerCase().includes(queryParam.toLowerCase()),
+          item.title.toLowerCase().includes(queryParam.toLowerCase()) ||
+          item.excerpt.toLowerCase().includes(queryParam.toLowerCase()),
       )
 
       const startIndex = (page - 1) * perPage

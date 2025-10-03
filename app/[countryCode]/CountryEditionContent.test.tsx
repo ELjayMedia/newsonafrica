@@ -13,7 +13,7 @@ vi.mock("react-intersection-observer", () => ({
 
 vi.mock("@/components/ArticleCard", () => ({
   ArticleCard: ({ article, layout }: any) => (
-    <div data-testid={`article-card-${layout}`}>{article.title?.rendered ?? article.title}</div>
+    <div data-testid={`article-card-${layout}`}>{article.title}</div>
   ),
 }))
 
@@ -26,8 +26,8 @@ const wpMocks = vi.hoisted(() => ({
     posts.map((post) => ({
       id: String(post.id ?? post.slug ?? ""),
       slug: post.slug ?? "",
-      title: post.title?.rendered ?? post.title ?? "",
-      excerpt: post.excerpt?.rendered ?? "",
+      title: post.title ?? "",
+      excerpt: post.excerpt ?? "",
       date: post.date ?? "",
       country: countryCode,
       featuredImage: undefined,

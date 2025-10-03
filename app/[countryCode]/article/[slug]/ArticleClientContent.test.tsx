@@ -18,9 +18,9 @@ import { getRelatedPostsForCountry } from '@/lib/wordpress-api'
 const baseInitialData = {
   categories: { nodes: [] },
   date: new Date().toISOString(),
-  title: { rendered: 'Test Title' },
+  title: 'Test Title',
   author: { node: { name: 'Author Name' } },
-  content: { rendered: '<p>Content</p>' },
+  content: '<p>Content</p>',
   featuredImage: { node: { sourceUrl: 'https://example.com/image.jpg', altText: 'Alt text' } },
 }
 

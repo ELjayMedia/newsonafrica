@@ -13,16 +13,14 @@ vi.mock("@/hooks/useMediaQuery", () => ({
 }))
 
 vi.mock("@/components/FeaturedHero", () => ({
-  FeaturedHero: ({ post }: any) => (
-    <div data-testid="featured-hero">{post.title?.rendered ?? post.title}</div>
-  ),
+  FeaturedHero: ({ post }: any) => <div data-testid="featured-hero">{post.title}</div>,
 }))
 
 vi.mock("@/components/SecondaryStories", () => ({
   SecondaryStories: ({ posts }: any) => (
     <div data-testid="secondary-stories">
       {posts.map((post: any) => (
-        <span key={post.slug}>{post.title?.rendered ?? post.title}</span>
+        <span key={post.slug}>{post.title}</span>
       ))}
     </div>
   ),
@@ -32,7 +30,7 @@ vi.mock("@/components/NewsGrid", () => ({
   NewsGrid: ({ posts }: any) => (
     <div data-testid="news-grid">
       {posts.map((post: any) => (
-        <div key={post.slug}>{post.title?.rendered ?? post.title}</div>
+        <div key={post.slug}>{post.title}</div>
       ))}
     </div>
   ),
@@ -101,8 +99,8 @@ describe("HomeContent", () => {
           id: 1,
           slug: "latest-story",
           date: new Date().toISOString(),
-          title: { rendered: "Latest Story" },
-          excerpt: { rendered: "Latest Story excerpt" },
+          title: "Latest Story",
+          excerpt: "Latest Story excerpt",
         },
       ],
     })
@@ -111,8 +109,8 @@ describe("HomeContent", () => {
         id: String(post.id ?? post.slug),
         slug: post.slug,
         date: post.date || new Date().toISOString(),
-        title: post.title?.rendered ?? post.title ?? "",
-        excerpt: post.excerpt?.rendered ?? post.excerpt ?? "",
+        title: post.title ?? "",
+        excerpt: post.excerpt ?? "",
       })),
     )
     wpMocks.getCategoriesForCountry.mockResolvedValue({ categories: [] })

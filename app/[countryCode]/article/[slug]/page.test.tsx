@@ -7,7 +7,7 @@ vi.mock('@/lib/wordpress-api', () => ({
 
 vi.mock('./ArticleClientContent', () => ({
   ArticleClientContent: ({ initialData }: { initialData: any }) => (
-    <div>{initialData.title.rendered}</div>
+    <div>{initialData.title}</div>
   ),
 }))
 
@@ -17,7 +17,7 @@ import { fetchFromWp } from '@/lib/wordpress-api'
 describe('ArticlePage', () => {
   it('renders post content', async () => {
     vi.mocked(fetchFromWp).mockResolvedValue([
-      { title: { rendered: 'Hello' }, slug: 'test' },
+      { title: 'Hello', slug: 'test' },
     ])
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
