@@ -53,6 +53,7 @@
     "@types/debug": "latest",
     "@vitest/browser": "latest",
     "@vitest/ui": "latest",
+    "algoliasearch": "^5.39.0",
     "autoprefixer": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -112,6 +112,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
 PAYSTACK_SECRET_KEY=your_paystack_secret_key
 
+# --- Algolia Search ---
+ALGOLIA_APP_ID=your_algolia_application_id
+ALGOLIA_ADMIN_KEY=your_algolia_admin_api_key
+ALGOLIA_SEARCH_API_KEY=your_algolia_search_only_api_key
+ALGOLIA_INDEX_PREFIX=newsonafrica
+# Optional secret for protected reindex route
+# ALGOLIA_INDEXING_SECRET=custom_reindex_token
+
 # --- Security & Webhooks ---
 CSRF_SECRET=your_random_csrf_secret_min_32_chars
 REVALIDATION_SECRET=your_random_revalidation_secret
@@ -155,6 +163,26 @@ The application is deployed on Vercel with the following configuration:
   country slugs
 
 See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-fallback-issues) for details.
+
+## 🔍 Algolia Search Setup
+
+The search API is powered by Algolia. To enable it:
+
+1. **Provision indexes** using the `ALGOLIA_INDEX_PREFIX` (defaults to `newsonafrica`). The app expects:
+   - One primary index per country edition named `${PREFIX}_${COUNTRY_CODE}` (for example `newsonafrica_sz`).
+   - One pan-African index named `${PREFIX}_africa`.
+   - Each primary index automatically manages two replicas: `${INDEX}_latest` (ranked by `published_at` descending) and `${INDEX}_relevance` (default text relevance).
+2. **Set environment variables** `ALGOLIA_APP_ID`, `ALGOLIA_ADMIN_KEY`, `ALGOLIA_SEARCH_API_KEY`, and optionally override `ALGOLIA_INDEX_PREFIX`.
+3. **Seed or refresh content** by calling the protected indexing route:
+
+   ```bash
+   curl -X POST "https://<your-domain>/api/search/reindex" \
+     -H "x-api-key: $ALGOLIA_INDEXING_SECRET" # falls back to ALGOLIA_ADMIN_KEY when unset
+   ```
+
+   The reindexer fetches WordPress content for every supported country, normalises it to `{ objectID, title, excerpt, categories, country, published_at }`, and populates each index plus the pan-African aggregate.
+
+4. **Consume the search API** by passing `country` (`all`, `sz`, `za`, …) and `sort` (`relevance` or `latest`) query parameters to `/api/search`. Responses include the normalised hits along with pagination metadata and suggestions.
 
 ## 📱 Future Web2Native Conversion
 
