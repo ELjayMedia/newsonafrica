@@ -4,6 +4,7 @@ import { Suspense } from "react"
 
 import { siteConfig } from "@/config/site"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 
 import { HeroSection } from "./(home)/HeroSection"
 import { TrendingSection } from "./(home)/TrendingSection"
@@ -12,17 +13,19 @@ import { HeroSkeleton } from "./(home)/HeroSkeleton"
 import { TrendingSkeleton } from "./(home)/TrendingSkeleton"
 import { LatestGridSkeleton } from "./(home)/LatestGridSkeleton"
 
+const homepageLanguageAlternates = SUPPORTED_EDITIONS.reduce<Record<string, string>>((acc, edition) => {
+  acc[edition.hreflang] = edition.canonicalUrl
+  return acc
+}, {})
+
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
   keywords: "African News, News On Africa, Latest News, Breaking News, African Politics, Business News",
 
   alternates: {
-    canonical: siteConfig.url,
-    languages: {
-      "en-US": siteConfig.url,
-      en: siteConfig.url,
-    },
+    canonical: AFRICAN_EDITION.canonicalUrl,
+    languages: homepageLanguageAlternates,
   },
 
   robots: {

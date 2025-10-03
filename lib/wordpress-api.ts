@@ -199,25 +199,27 @@ export interface CountryConfig {
   flag: string
   apiEndpoint: string
   restEndpoint: string
+  canonicalUrl: string
+  hreflang: string
   type?: "country"
 }
 
-export const COUNTRIES: Record<string, CountryConfig> = {
-  sz: {
-    code: "sz",
-    name: "Eswatini",
-    flag: "🇸🇿",
-    apiEndpoint: getGraphQLEndpoint("sz"),
-    restEndpoint: getRestBase("sz"),
+export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIONS.reduce(
+  (acc, edition) => {
+    acc[edition.code] = {
+      code: edition.code,
+      name: edition.name,
+      flag: edition.flag,
+      apiEndpoint: getGraphQLEndpoint(edition.code),
+      restEndpoint: getRestBase(edition.code),
+      canonicalUrl: edition.canonicalUrl,
+      hreflang: edition.hreflang,
+      type: "country",
+    }
+    return acc
   },
-  za: {
-    code: "za",
-    name: "South Africa",
-    flag: "🇿🇦",
-    apiEndpoint: getGraphQLEndpoint("za"),
-    restEndpoint: getRestBase("za"),
-  },
-}
+  {} as Record<string, CountryConfig>,
+)
 
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
