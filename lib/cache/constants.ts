@@ -21,3 +21,7 @@ export const CACHE_TAGS = {
   USERS: "users",
   SUBSCRIPTIONS: "subscriptions",
 } as const
+
+export const KV_CACHE_KEYS = {
+  HOME_FEED: "kv:home-feed:aggregated:v1",
+} as const
