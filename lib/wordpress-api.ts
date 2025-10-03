@@ -13,6 +13,7 @@ import {
   CATEGORY_POSTS_QUERY,
 } from "./wordpress-queries"
 import * as log from "./log"
+import type { CircuitBreakerManager } from "./api/circuit-breaker"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { mapWpPost } from "./utils/mapWpPost"
@@ -42,8 +43,8 @@ type DeepMutable<T> = T extends ReadonlyArray<infer U>
 
 export type WordPressPost = DeepMutable<PostFieldsFragment> & { globalRelayId?: string | null }
 
-let circuitBreakerInstance: any = null
-async function getCircuitBreaker() {
+let circuitBreakerInstance: CircuitBreakerManager | null = null
+async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   if (!circuitBreakerInstance) {
     const { circuitBreaker } = await import("./api/circuit-breaker")
     circuitBreakerInstance = circuitBreaker
@@ -238,41 +239,63 @@ export async function fetchFromWpGraphQL<T>(
   variables?: Record<string, string | number | string[]>,
   tags?: string[],
 ): Promise<T | null> {
-  const base = getGraphQLEndpoint(countryCode)
+  const breaker = await getCircuitBreaker()
+  const breakerKey = `wordpress-graphql-${countryCode}`
+  const endpointMeta = { country: countryCode, endpoint: "graphql" }
 
   try {
-    console.log("[v0] GraphQL request to:", base)
+    return await breaker.execute(
+      breakerKey,
+      async () => {
+        const base = getGraphQLEndpoint(countryCode)
+        console.log("[v0] GraphQL request to:", base)
 
-    const res = await fetchWithTimeout(base, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query, variables }),
-      next: {
-        revalidate: CACHE_DURATIONS.MEDIUM,
-        ...(tags && tags.length > 0 ? { tags } : {}),
+        let logged = false
+        try {
+          const res = await fetchWithTimeout(base, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ query, variables }),
+            next: {
+              revalidate: CACHE_DURATIONS.MEDIUM,
+              ...(tags && tags.length > 0 ? { tags } : {}),
+            },
+            timeout: 10000,
+          })
+
+          if (!res.ok) {
+            logged = true
+            console.error("[v0] GraphQL request failed:", res.status, res.statusText)
+            log.error(`WordPress GraphQL request failed for ${base}`, {
+              status: res.status,
+              statusText: res.statusText,
+            })
+            throw new Error(`WordPress GraphQL request failed with status ${res.status}`)
+          }
+
+          const json = (await res.json()) as WordPressGraphQLResponse<T>
+
+          if (json.errors && json.errors.length > 0) {
+            logged = true
+            console.error("[v0] GraphQL errors:", json.errors)
+            log.error(`WordPress GraphQL errors for ${base}`, { errors: json.errors })
+            throw new Error("WordPress GraphQL response contained errors")
+          }
+
+          console.log("[v0] GraphQL request successful")
+          return (json.data ?? null) as T | null
+        } catch (error) {
+          if (!logged) {
+            console.error("[v0] GraphQL request exception:", error)
+            log.error(`WordPress GraphQL request failed for ${base}`, { error })
+          }
+          throw error instanceof Error ? error : new Error("WordPress GraphQL request failed")
+        }
       },
-      timeout: 10000,
-    })
-
-    if (!res.ok) {
-      console.error("[v0] GraphQL request failed:", res.status, res.statusText)
-      log.error(`WordPress GraphQL request failed for ${base}`, { status: res.status })
-      return null
-    }
-
-    const json = (await res.json()) as WordPressGraphQLResponse<T>
-
-    if (json.errors && json.errors.length > 0) {
-      console.error("[v0] GraphQL errors:", json.errors)
-      log.error(`WordPress GraphQL errors for ${base}`, { errors: json.errors })
-      return null
-    }
-
-    console.log("[v0] GraphQL request successful")
-    return (json.data ?? null) as T | null
-  } catch (error) {
-    console.error("[v0] GraphQL request exception:", error)
-    log.error(`WordPress GraphQL request failed for ${base}`, { error })
+      undefined,
+      endpointMeta,
+    )
+  } catch {
     return null
   }
 }
@@ -304,47 +327,69 @@ export async function fetchFromWp<T>(
   ).toString()
   const url = `${base}/${endpoint}${params ? `?${params}` : ""}`
 
+  const breaker = await getCircuitBreaker()
+  const sanitizedEndpoint = query.endpoint.replace(/[^a-zA-Z0-9:_-]/g, "-")
+  const breakerKey = `wordpress-rest-${countryCode}-${sanitizedEndpoint}`
+  const endpointMeta = { country: countryCode, endpoint: `rest:${query.endpoint}` }
+
   try {
-    console.log("[v0] REST request to:", url)
+    return await breaker.execute(
+      breakerKey,
+      async () => {
+        console.log("[v0] REST request to:", url)
 
-    const res = await fetchWithTimeout(url, {
-      method,
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      next: {
-        revalidate: CACHE_DURATIONS.MEDIUM,
-        ...(tags && tags.length > 0 ? { tags } : {}),
+        let logged = false
+        try {
+          const res = await fetchWithTimeout(url, {
+            method,
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            next: {
+              revalidate: CACHE_DURATIONS.MEDIUM,
+              ...(tags && tags.length > 0 ? { tags } : {}),
+            },
+            ...(payload ? { body: JSON.stringify(payload) } : {}),
+            timeout,
+          })
+
+          if (!res.ok) {
+            logged = true
+            console.error("[v0] REST request failed:", res.status, res.statusText)
+            log.error(`WordPress API error ${res.status} for ${url}`, {
+              statusText: res.statusText,
+            })
+            throw new Error(`WordPress REST request failed with status ${res.status}`)
+          }
+
+          const rawData = await res.json()
+          let data: T
+
+          if (query.endpoint.startsWith("posts")) {
+            if (Array.isArray(rawData)) {
+              data = rawData.map((p: WordPressPost) => mapPostFromWp(p, countryCode)) as T
+            } else {
+              data = mapPostFromWp(rawData as WordPressPost, countryCode) as T
+            }
+          } else {
+            data = rawData as T
+          }
+
+          console.log("[v0] REST request successful")
+          if (withHeaders) {
+            return { data: data as T, headers: res.headers }
+          }
+          return data as T
+        } catch (error) {
+          if (!logged) {
+            console.error("[v0] REST request exception:", error)
+            log.error(`WordPress API request failed for ${url}`, { error })
+          }
+          throw error instanceof Error ? error : new Error("WordPress REST request failed")
+        }
       },
-      ...(payload ? { body: JSON.stringify(payload) } : {}),
-      timeout,
-    })
-
-    if (!res.ok) {
-      console.error("[v0] REST request failed:", res.status, res.statusText)
-      log.error(`WordPress API error ${res.status} for ${url}`)
-      return null
-    }
-
-    const rawData = await res.json()
-    let data: T
-
-    if (query.endpoint.startsWith("posts")) {
-      if (Array.isArray(rawData)) {
-        data = rawData.map((p: WordPressPost) => mapPostFromWp(p, countryCode)) as T
-      } else {
-        data = mapPostFromWp(rawData as WordPressPost, countryCode) as T
-      }
-    } else {
-      data = rawData as T
-    }
-
-    console.log("[v0] REST request successful")
-    if (withHeaders) {
-      return { data: data as T, headers: res.headers }
-    }
-    return data as T
-  } catch (error) {
-    console.error("[v0] REST request exception:", error)
-    log.error(`WordPress API request failed for ${url}`, { error })
+      undefined,
+      endpointMeta,
+    )
+  } catch {
     return null
   }
 }
