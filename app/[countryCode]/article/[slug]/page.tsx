@@ -13,13 +13,14 @@ import { stripHtml } from "@/lib/search"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 
 export const runtime = "nodejs"
-export const dynamic = "error"
+export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 type RouteParams = { countryCode: string; slug: string }
 
 type ArticlePageProps = {
-  params: Promise<RouteParams>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  params: RouteParams
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 const FALLBACK_IMAGE = "/news-placeholder.png"
@@ -60,7 +61,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
-  const { slug, countryCode } = await params
+  const { slug, countryCode } = params
   const country = (countryCode || "DEFAULT").toLowerCase()
   const badge = resolveCountryOgBadge(country)
 
@@ -157,7 +158,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 }
 
 export default async function Page({ params }: ArticlePageProps) {
-  const { slug, countryCode } = await params
+  const { slug, countryCode } = params
   const country = (countryCode || "DEFAULT").toLowerCase()
   const post = await fetchArticle(country, slug)
 
