@@ -173,7 +173,12 @@ export default function RetryBanner({
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 p-4">
+    <div
+      className="fixed top-0 left-0 right-0 z-50 p-4"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <Alert variant={getVariant()} className="shadow-lg border-2">
         <div className="flex items-center gap-3">
           {getStatusIcon()}
@@ -189,13 +194,25 @@ export default function RetryBanner({
 
           <div className="flex items-center gap-2">
             {!isRetrying && retryCount < maxRetries && (
-              <Button onClick={handleRetry} size="sm" variant={isOnline ? "default" : "secondary"} className="text-xs">
+              <Button
+                onClick={handleRetry}
+                size="sm"
+                variant={isOnline ? "default" : "secondary"}
+                className="text-xs"
+                aria-label="Retry connection"
+              >
                 <RefreshCw className="w-3 h-3 mr-1" />
                 Retry
               </Button>
             )}
 
-            <Button onClick={handleDismiss} size="sm" variant="ghost" className="p-1 h-auto">
+            <Button
+              onClick={handleDismiss}
+              size="sm"
+              variant="ghost"
+              className="p-1 h-auto"
+              aria-label="Dismiss network status message"
+            >
               <X className="w-4 h-4" />
             </Button>
           </div>
