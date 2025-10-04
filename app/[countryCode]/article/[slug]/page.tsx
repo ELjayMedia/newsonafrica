@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
 import { wordpressQueries } from "@/lib/wordpress-queries"
@@ -8,6 +9,8 @@ import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import type { Post as ArticlePost } from "@/lib/types"
 import { env } from "@/config/env"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { stripHtml } from "@/lib/search"
+import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 
 export const runtime = "nodejs"
 export const dynamic = "error"
@@ -19,16 +22,11 @@ type ArticlePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
-// This prevents preview/build flakiness when WP endpoints are slow/unreachable
-export async function generateStaticParams() {
-  return []
-}
+const FALLBACK_IMAGE = "/news-placeholder.png"
+const OG_IMAGE_WIDTH = 1200
+const OG_IMAGE_HEIGHT = 630
 
-export default async function Page({ params }: ArticlePageProps) {
-  const { slug, countryCode } = await params
-  const country = (countryCode || "DEFAULT").toLowerCase()
-  let post: WordPressPost | null = null
-
+async function fetchArticle(country: string, slug: string): Promise<WordPressPost | null> {
   try {
     const cacheTags = buildCacheTags({
       country,
@@ -38,10 +36,130 @@ export default async function Page({ params }: ArticlePageProps) {
 
     const restPosts =
       (await fetchFromWp<WordPressPost[]>(country, wordpressQueries.postBySlug(slug), { tags: cacheTags })) || []
-    post = restPosts[0] || null
+
+    return restPosts[0] ?? null
   } catch (error) {
     log.error("REST postBySlug fetch failed", { error })
+    return null
   }
+}
+
+const toAbsoluteUrl = (path: string): string => {
+  if (!path) return ""
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`
+}
+
+// This prevents preview/build flakiness when WP endpoints are slow/unreachable
+export async function generateStaticParams() {
+  return []
+}
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug, countryCode } = await params
+  const country = (countryCode || "DEFAULT").toLowerCase()
+  const badge = resolveCountryOgBadge(country)
+
+  const canonicalUrl = toAbsoluteUrl(getArticleUrl(slug, country))
+  const dynamicImageUrl = `${canonicalUrl}/opengraph-image`
+
+  const post = await fetchArticle(country, slug)
+
+  if (!post) {
+    const fallbackDescription = `Latest headlines for the ${badge.label} edition of News On Africa.`
+    return {
+      title: "Article - News On Africa",
+      description: fallbackDescription,
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        type: "article",
+        title: "Article - News On Africa",
+        description: fallbackDescription,
+        url: canonicalUrl,
+        siteName: "News On Africa",
+        images: [
+          {
+            url: dynamicImageUrl,
+            width: OG_IMAGE_WIDTH,
+            height: OG_IMAGE_HEIGHT,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Article - News On Africa",
+        description: fallbackDescription,
+        images: [dynamicImageUrl],
+      },
+    }
+  }
+
+  const title = stripHtml(post.title ?? "")
+  const excerpt = stripHtml(post.excerpt ?? "")
+  const resolvedTitle = title ? `${title} - News On Africa` : `News On Africa - ${badge.label}`
+  const description =
+    excerpt || `Breaking news and in-depth reporting for the ${badge.label} edition of News On Africa.`
+
+  const fallbackImageUrl = toAbsoluteUrl(post.featuredImage?.node?.sourceUrl ?? FALLBACK_IMAGE)
+  const openGraphImages = [
+    {
+      url: dynamicImageUrl,
+      width: OG_IMAGE_WIDTH,
+      height: OG_IMAGE_HEIGHT,
+      alt: title ? `${title} - News On Africa` : "News On Africa article",
+    },
+  ]
+
+  if (fallbackImageUrl && fallbackImageUrl !== dynamicImageUrl) {
+    openGraphImages.push({
+      url: fallbackImageUrl,
+      width: OG_IMAGE_WIDTH,
+      height: OG_IMAGE_HEIGHT,
+      alt: title ? `${title} featured image` : "News On Africa article image",
+    })
+  }
+
+  const twitterImages = [dynamicImageUrl]
+  if (fallbackImageUrl && fallbackImageUrl !== dynamicImageUrl) {
+    twitterImages.push(fallbackImageUrl)
+  }
+
+  const authorName = (post.author as WordPressPost["author"])?.node?.name
+  const publishedTime = post.date ?? undefined
+  const modifiedTime = (post as WordPressPost & { modified?: string }).modified ?? post.date ?? undefined
+
+  return {
+    title: resolvedTitle,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "article",
+      title: resolvedTitle,
+      description,
+      url: canonicalUrl,
+      siteName: "News On Africa",
+      publishedTime,
+      modifiedTime,
+      authors: authorName ? [authorName] : undefined,
+      images: openGraphImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: resolvedTitle,
+      description,
+      images: twitterImages,
+    },
+  }
+}
+
+export default async function Page({ params }: ArticlePageProps) {
+  const { slug, countryCode } = await params
+  const country = (countryCode || "DEFAULT").toLowerCase()
+  const post = await fetchArticle(country, slug)
 
   if (!post) {
     return notFound()
