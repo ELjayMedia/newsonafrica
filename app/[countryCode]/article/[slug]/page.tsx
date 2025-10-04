@@ -14,7 +14,9 @@ import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+
 export const revalidate = 60
+
 
 type RouteParams = { countryCode: string; slug: string }
 
