@@ -61,6 +61,21 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
     setFocusedIndex((prev) => (prev === nextIndex ? prev : nextIndex))
   }, [activeCategoryIndex, sortedCategories])
 
+  useEffect(() => {
+    categoryRefs.current = categoryRefs.current.slice(0, sortedCategories.length)
+  }, [sortedCategories.length])
+
+  useEffect(() => {
+    if (focusedIndex < 0 || focusedIndex >= sortedCategories.length) {
+      return
+    }
+
+    const focusedCategory = categoryRefs.current[focusedIndex]
+    if (focusedCategory && document.activeElement !== focusedCategory) {
+      focusedCategory.focus()
+    }
+  }, [focusedIndex, sortedCategories])
+
   const moveFocus = (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= sortedCategories.length) {
       return
@@ -72,10 +87,6 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
       }
       return nextIndex
     })
-
-    setTimeout(() => {
-      categoryRefs.current[nextIndex]?.focus()
-    }, 0)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLAnchorElement>, index: number) => {
