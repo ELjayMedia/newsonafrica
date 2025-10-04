@@ -2,7 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { KeyboardEvent } from "react"
 import { usePathname, useRouter } from "next/navigation"
 
 import CountrySelector from "@/components/CountrySelector"
@@ -29,7 +30,87 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
 
-  const sortedCategories = categories && categories.length > 0 ? categories : []
+  const sortedCategories = useMemo(
+    () => (categories && categories.length > 0 ? categories : []),
+    [categories],
+  )
+
+  const categoryRefs = useRef<(HTMLAnchorElement | null)[]>([])
+
+  const activeCategoryIndex = useMemo(() => {
+    return sortedCategories.findIndex(
+      (category) => getCategoryUrl(category.slug, countryCode) === pathname,
+    )
+  }, [countryCode, pathname, sortedCategories])
+
+  const [focusedIndex, setFocusedIndex] = useState(() => {
+    if (sortedCategories.length === 0) {
+      return -1
+    }
+
+    return activeCategoryIndex >= 0 ? activeCategoryIndex : 0
+  })
+
+  useEffect(() => {
+    if (sortedCategories.length === 0) {
+      setFocusedIndex(-1)
+      return
+    }
+
+    const nextIndex = activeCategoryIndex >= 0 ? activeCategoryIndex : 0
+    setFocusedIndex((prev) => (prev === nextIndex ? prev : nextIndex))
+  }, [activeCategoryIndex, sortedCategories])
+
+  const moveFocus = (nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= sortedCategories.length) {
+      return
+    }
+
+    setFocusedIndex((prev) => {
+      if (prev === nextIndex) {
+        return prev
+      }
+      return nextIndex
+    })
+
+    setTimeout(() => {
+      categoryRefs.current[nextIndex]?.focus()
+    }, 0)
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLAnchorElement>, index: number) => {
+    if (sortedCategories.length === 0) {
+      return
+    }
+
+    const lastIndex = sortedCategories.length - 1
+    let nextIndex = index
+
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        event.preventDefault()
+        nextIndex = index === lastIndex ? 0 : index + 1
+        break
+      case "ArrowLeft":
+      case "ArrowUp":
+        event.preventDefault()
+        nextIndex = index === 0 ? lastIndex : index - 1
+        break
+      case "Home":
+        event.preventDefault()
+        nextIndex = 0
+        break
+      case "End":
+        event.preventDefault()
+        nextIndex = lastIndex
+        break
+      default:
+        return
+    }
+
+    moveFocus(nextIndex)
+  }
 
   const currentDate = useMemo(
     () =>
@@ -116,14 +197,22 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           <nav className="mt-4 md:mt-0 bg-white">
             <div className="overflow-x-auto">
               <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-                {sortedCategories.map((category) => {
+                {sortedCategories.map((category, index) => {
                   const url = getCategoryUrl(category.slug, countryCode)
+                  const isCurrentRoute = pathname === url
+                  const isFocusable = index === focusedIndex
                   return (
                     <li key={category.slug}>
                       <Link
                         href={url}
-                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
-                          pathname === url
+                        ref={(element) => {
+                          categoryRefs.current[index] = element
+                        }}
+                        aria-current={isCurrentRoute ? "page" : undefined}
+                        tabIndex={isFocusable ? 0 : -1}
+                        onKeyDown={(event) => handleKeyDown(event, index)}
+                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                          isCurrentRoute
                             ? "text-blue-600 border-b-2 border-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
                         }`}
