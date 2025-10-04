@@ -1,10 +1,18 @@
 import { createServerClient } from "@supabase/ssr"
 import type { CookieOptions } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
+
+let hasWarned = false
 
 export function createClient(cookieStore: any) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("Missing Supabase environment variables")
+  if (!isSupabaseConfigured()) {
+    if (!hasWarned) {
+      hasWarned = true
+      console.warn("Supabase environment variables are not configured. Using fallback client.")
+    }
+
+    return getSupabaseClient()
   }
 
   return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
@@ -36,7 +44,12 @@ export function createClient(cookieStore: any) {
 // IMPORTANT: This should only be used in server-side code
 export function createAdminClient(cookieStore: any) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Missing Supabase environment variables")
+    if (!hasWarned) {
+      hasWarned = true
+      console.warn("Supabase admin environment variables are not configured. Using fallback client.")
+    }
+
+    return getSupabaseClient()
   }
 
   return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {

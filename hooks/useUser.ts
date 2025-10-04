@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import { supabaseClient } from "@/lib/api/supabase"
+import { isSupabaseConfigured, supabaseClient } from "@/lib/api/supabase"
 import type { UserProfile } from "@/lib/api/supabase"
 
 // Hook return type
@@ -40,42 +40,51 @@ export function useUser(): UseUserReturn {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const supabaseAvailable = useMemo(() => isSupabaseConfigured(), [])
 
   /**
    * Fetch user profile with caching
    */
-  const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
-    try {
-      // Check cache first
-      const now = Date.now()
-      const cachedProfile = profileCache[userId]
-      const cacheTimestamp = profileCacheTimestamp[userId]
+  const fetchUserProfile = useCallback(
+    async (userId: string): Promise<UserProfile | null> => {
+      try {
+        if (!supabaseAvailable) {
+          setError("Authentication is unavailable at the moment.")
+          return null
+        }
 
-      if (cachedProfile && cacheTimestamp && now - cacheTimestamp < PROFILE_CACHE_DURATION) {
-        return cachedProfile
-      }
+        // Check cache first
+        const now = Date.now()
+        const cachedProfile = profileCache[userId]
+        const cacheTimestamp = profileCacheTimestamp[userId]
 
-      // Fetch from Supabase
-      const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single()
+        if (cachedProfile && cacheTimestamp && now - cacheTimestamp < PROFILE_CACHE_DURATION) {
+          return cachedProfile
+        }
 
-      if (error) {
-        console.error("Error fetching user profile:", error)
+        // Fetch from Supabase
+        const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single()
+
+        if (error) {
+          console.error("Error fetching user profile:", error)
+          return null
+        }
+
+        if (data) {
+          // Update cache
+          profileCache[userId] = data as UserProfile
+          profileCacheTimestamp[userId] = now
+          return data as UserProfile
+        }
+
+        return null
+      } catch (error) {
+        console.error("Error in fetchUserProfile:", error)
         return null
       }
-
-      if (data) {
-        // Update cache
-        profileCache[userId] = data as UserProfile
-        profileCacheTimestamp[userId] = now
-        return data as UserProfile
-      }
-
-      return null
-    } catch (error) {
-      console.error("Error in fetchUserProfile:", error)
-      return null
-    }
-  }, [])
+    },
+    [supabaseAvailable],
+  )
 
   /**
    * Handle auth state changes
@@ -117,6 +126,12 @@ export function useUser(): UseUserReturn {
    * Refresh user data manually
    */
   const refreshUser = useCallback(async () => {
+    if (!supabaseAvailable) {
+      setError("Authentication is unavailable at the moment.")
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -150,7 +165,7 @@ export function useUser(): UseUserReturn {
     } finally {
       setLoading(false)
     }
-  }, [fetchUserProfile])
+  }, [fetchUserProfile, supabaseAvailable])
 
   /**
    * Initialize auth state and set up listener
@@ -160,6 +175,13 @@ export function useUser(): UseUserReturn {
     let authListener: { subscription: { unsubscribe: () => void } } | null = null
 
     const initializeAuth = async () => {
+      if (!supabaseAvailable) {
+        setError("Authentication is unavailable at the moment.")
+        setLoading(false)
+        setInitialLoadComplete(true)
+        return
+      }
+
       try {
         // Get initial session
         const {
@@ -215,7 +237,7 @@ export function useUser(): UseUserReturn {
         authListener.subscription.unsubscribe()
       }
     }
-  }, [fetchUserProfile, handleAuthStateChange])
+  }, [fetchUserProfile, handleAuthStateChange, supabaseAvailable])
 
   /**
    * Memoized return value to prevent unnecessary re-renders

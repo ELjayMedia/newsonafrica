@@ -1,24 +1,134 @@
 import { createClient } from "@supabase/supabase-js"
-import type { User, Session, AuthError } from "@supabase/supabase-js"
+import type { SupabaseClient, User, Session, AuthError } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables")
+const SUPABASE_CONFIG_WARNING =
+  "Supabase environment variables are not configured. Authentication features are disabled."
+
+let supabaseInstance: SupabaseClient<Database> | null = null
+let hasLoggedConfigWarning = false
+
+function createStubSupabaseClient(): SupabaseClient<Database> {
+  const createStubError = () => new Error(SUPABASE_CONFIG_WARNING)
+
+  const createStubQueryPromise = () =>
+    Promise.resolve({ data: null, error: createStubError(), count: 0 })
+
+  const createQueryBuilder = () => {
+    const builder: any = {
+      select: () => builder,
+      eq: () => builder,
+      or: () => builder,
+      in: () => builder,
+      is: () => builder,
+      ilike: () => builder,
+      limit: () => builder,
+      range: () => builder,
+      order: () => builder,
+      returns: () => builder,
+      single: () => createStubQueryPromise(),
+      maybeSingle: () => createStubQueryPromise(),
+      insert: () => builder,
+      update: () => builder,
+      delete: () => builder,
+      upsert: () => builder,
+      selectQuery: () => builder,
+    }
+
+    const promise = createStubQueryPromise()
+    builder.then = promise.then.bind(promise)
+    builder.catch = promise.catch.bind(promise)
+    builder.finally = promise.finally.bind(promise)
+
+    return builder
+  }
+
+  const stubClient = {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: createStubError() }),
+      signInWithPassword: async () => ({
+        data: { user: null, session: null },
+        error: createStubError(),
+      }),
+      signUp: async () => ({
+        data: { user: null, session: null },
+        error: createStubError(),
+      }),
+      signOut: async () => ({ error: createStubError() }),
+      getUser: async () => ({ data: { user: null }, error: createStubError() }),
+      resetPasswordForEmail: async () => ({ error: createStubError() }),
+      signInWithOAuth: async () => ({ data: null, error: createStubError() }),
+      exchangeCodeForSession: async () => ({
+        data: { user: null, session: null },
+        error: createStubError(),
+      }),
+      refreshSession: async () => ({
+        data: { user: null, session: null },
+        error: createStubError(),
+      }),
+      verifyOtp: async () => ({
+        data: { user: null, session: null },
+        error: createStubError(),
+      }),
+      updateUser: async () => ({ data: { user: null }, error: createStubError() }),
+      onAuthStateChange: () => ({
+        data: {
+          subscription: {
+            unsubscribe: () => void 0,
+          },
+        },
+        error: createStubError(),
+      }),
+    },
+    from: () => createQueryBuilder(),
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: null, error: createStubError() }),
+        getPublicUrl: () => ({ data: { publicUrl: null }, error: createStubError() }),
+        remove: async () => ({ data: null, error: createStubError() }),
+      }),
+    },
+  }
+
+  return stubClient as unknown as SupabaseClient<Database>
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: "noa_supabase_auth",
-    flowType: "pkce",
-  },
-})
+function initializeSupabaseClient(): SupabaseClient<Database> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (!hasLoggedConfigWarning) {
+      hasLoggedConfigWarning = true
+      console.warn(SUPABASE_CONFIG_WARNING)
+    }
+    return createStubSupabaseClient()
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: "noa_supabase_auth",
+      flowType: "pkce",
+    },
+  })
+}
+
+export function getSupabaseClient(): SupabaseClient<Database> {
+  if (!supabaseInstance) {
+    supabaseInstance = initializeSupabaseClient()
+  }
+
+  return supabaseInstance
+}
+
+export const supabase = getSupabaseClient()
+
+export function isSupabaseConfigured(): boolean {
+  return Boolean(supabaseUrl && supabaseAnonKey)
+}
 
 // TypeScript types for API responses
 export interface SupabaseResponse<T = any> {
