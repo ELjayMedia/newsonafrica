@@ -42,7 +42,7 @@ describe('ArticlePage', () => {
       },
     ])
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
+    const metadata = await generateMetadata({ params: { countryCode: 'sz', slug: 'test' } })
 
     const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
