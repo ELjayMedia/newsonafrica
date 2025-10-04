@@ -52,7 +52,7 @@ export function HorizontalCard({ post, className = "", allowHtml = false }: Hori
             />
           ) : (
             <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-              <span className="text-gray-400 dark:text-gray-500 text-sm">No image</span>
+              <span className="text-gray-600 dark:text-gray-300 text-sm">No image</span>
             </div>
           )}
         </div>

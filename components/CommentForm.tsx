@@ -191,7 +191,7 @@ export function CommentForm({
 
   const renderPreview = () => {
     if (!content.trim()) {
-      return <p className="text-gray-400 italic">Nothing to preview</p>
+      return <p className="text-gray-600 dark:text-gray-300 italic">Nothing to preview</p>
     }
 
     if (!isRichText) {
@@ -272,7 +272,7 @@ export function CommentForm({
               aria-label="Comment text"
               maxLength={2000}
             />
-            <div className="absolute bottom-2 right-2 text-xs text-gray-400">{content.length}/2000</div>
+            <div className="absolute bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400">{content.length}/2000</div>
           </div>
 
           {isRichText && (

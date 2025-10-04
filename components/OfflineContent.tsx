@@ -223,9 +223,9 @@ export default function OfflineContent() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 mb-2">No cached content available</p>
-                <p className="text-sm text-gray-400">
+                <Search className="h-12 w-12 text-gray-600 dark:text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-300 mb-2">No cached content available</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   Browse some articles while online to have them available offline.
                 </p>
               </div>
