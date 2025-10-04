@@ -26,6 +26,6 @@ Contrast ratios were verified with a Node-based utility (`scripts/contrast-check
 
 To reproduce, run:
 
-```bash
+\`\`\`bash
 node scripts/contrast-check.mjs
-```
+\`\`\`
