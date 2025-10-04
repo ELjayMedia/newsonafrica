@@ -19,7 +19,7 @@ export const stripHtml = (value: string): string => value.replace(/<[^>]*>/g, ""
 
 export const formatTitle = (value: string | null | undefined): string => {
   const plain = stripHtml(value ?? "").replace(/\s+/g, " ").trim()
-  return escapeXml(plain)
+  return plain.length > 0 ? escapeXml(plain) : ""
 }
 
 export const formatKeywords = (keywords: string[]): string => {
@@ -35,7 +35,7 @@ export const formatKeywords = (keywords: string[]): string => {
     return ""
   }
 
-  return escapeXml(normalized.join(", "))
+  return normalized.length > 0 ? escapeXml(normalized.join(", ")) : ""
 }
 
 export const deriveLanguageFromHreflang = (hreflang?: string): string => {
@@ -100,7 +100,16 @@ export const buildNewsUrlElement = (
       : undefined) || fallbackCountry || DEFAULT_COUNTRY
 
   const loc = `${baseUrl}${getArticleUrl(post.slug, countryCode)}`
+  const title = formatTitle(post.title)
+  if (!title) {
+    return ""
+  }
+
   const keywordsValue = formatKeywords(extractKeywords(post))
+  const keywordsXml = keywordsValue
+    ? `
+      <news:keywords>${keywordsValue}</news:keywords>`
+    : ""
 
   return `  <url>
     <loc>${escapeXml(loc)}</loc>
@@ -111,8 +120,7 @@ export const buildNewsUrlElement = (
         <news:language>${escapeXml(language)}</news:language>
       </news:publication>
       <news:publication_date>${publicationDate.toISOString()}</news:publication_date>
-      <news:title>${formatTitle(post.title)}</news:title>
-      <news:keywords>${keywordsValue}</news:keywords>
+      <news:title>${title}</news:title>${keywordsXml}
     </news:news>
   </url>`
 }
