@@ -1,4 +1,5 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
@@ -59,7 +60,9 @@ export default function RootLayout({
               <UserPreferencesProvider>
                 <BookmarksProvider>
                   <ClientWrapper>
-                    <ScrollToTop />
+                    <Suspense fallback={null}>
+                      <ScrollToTop />
+                    </Suspense>
                     <ClientDynamicComponents />
                     <TopBar />
                     <div className="flex-grow">
