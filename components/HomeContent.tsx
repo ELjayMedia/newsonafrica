@@ -207,7 +207,11 @@ export function HomeContent({
   const renderOfflineNotification = () => {
     if (isOffline) {
       return (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
+        <div
+          className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3"
+          role="status"
+          aria-live="polite"
+        >
           <div className="flex">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
