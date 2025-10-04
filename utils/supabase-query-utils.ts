@@ -323,16 +323,20 @@ export async function countRecords(
   options: {
     cache?: boolean
     ttl?: number
+    cacheKeySuffix?: string
   } = {},
 ): Promise<number> {
-  const { cache = true, ttl = DEFAULT_CACHE_TTL } = options
+  const { cache = true, ttl = DEFAULT_CACHE_TTL, cacheKeySuffix } = options
   const supabase = createClient()
 
-  // Create a unique cache key based on the table and filters
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
-  const cacheKey = `${table}:count:${filterKey}`
+  const hasFilters = typeof filters === "function"
+  const hasDeterministicKey = !hasFilters || cacheKeySuffix !== undefined
+  const shouldUseCache = cache && hasDeterministicKey
+  const cacheKey = shouldUseCache
+    ? `${table}:count:${hasFilters ? cacheKeySuffix : "none"}`
+    : null
 
-  if (cache) {
+  if (shouldUseCache && cacheKey) {
     const cached = queryCache.get(cacheKey)
     if (cached && Date.now() < cached.expiresAt) {
       return cached.data as number
@@ -352,7 +356,7 @@ export async function countRecords(
     throw error
   }
 
-  if (cache) {
+  if (shouldUseCache && cacheKey) {
     queryCache.set(cacheKey, {
       data: count,
       timestamp: Date.now(),
@@ -381,6 +385,7 @@ export async function fetchPaginated<T>(
     filters?: (query: any) => any
     cache?: boolean
     ttl?: number
+    cacheKeySuffix?: string
   } = {},
 ): Promise<{
   data: T[]
@@ -397,15 +402,20 @@ export async function fetchPaginated<T>(
     filters,
     cache = true,
     ttl = DEFAULT_CACHE_TTL,
+    cacheKeySuffix,
   } = options
 
   const supabase = createClient()
 
   // Create a unique cache key
-  const filterKey = filters ? Math.random().toString(36).substring(2, 15) : "none"
-  const cacheKey = `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${filterKey}`
+  const hasFilters = typeof filters === "function"
+  const hasDeterministicKey = !hasFilters || cacheKeySuffix !== undefined
+  const shouldUseCache = cache && hasDeterministicKey
+  const cacheKey = shouldUseCache
+    ? `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${hasFilters ? cacheKeySuffix : "none"}`
+    : null
 
-  if (cache) {
+  if (shouldUseCache && cacheKey) {
     const cached = queryCache.get(cacheKey)
     if (cached && Date.now() < cached.expiresAt) {
       return cached.data
@@ -439,7 +449,7 @@ export async function fetchPaginated<T>(
     hasMore: (count || 0) > page * pageSize,
   }
 
-  if (cache) {
+  if (shouldUseCache && cacheKey) {
     queryCache.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
