@@ -7,8 +7,7 @@ A Progressive Web App for delivering news content across Africa with a focus on 
 **If you're seeing 404 errors or "GraphQL endpoint appears to be REST API" warnings:**
 
 Your WordPress endpoint environment variables may be misconfigured. Each edition now supports dedicated pairs like
-`NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE` with global fallbacks (`NEXT_PUBLIC_WP_GRAPHQL` /
-`NEXT_PUBLIC_WP_REST_BASE`).
+`NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`.
 
 **Quick Solution:** Delete any malformed GraphQL/REST variables from your Vercel Environment Variables and redeploy. The app will
 use correct defaults automatically.
@@ -80,24 +79,14 @@ NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 # --- WordPress Endpoints ---
-# IMPORTANT: These are OPTIONAL. The app has smart defaults.
-# Only set these if you need to override the defaults.
-# Correct format:
-#   GraphQL: https://newsonafrica.com/{country}/graphql
-#   REST:    https://newsonafrica.com/{country}/wp-json/wp/v2
-
-# Option 1: Let the app use defaults (recommended)
-# Just set NEXT_PUBLIC_DEFAULT_SITE above and skip these
-
-# Option 2: Country-specific endpoints (for multi-site)
+# Country-specific endpoints (for multi-site)
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
 NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
 NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 
-# Option 3: Single endpoint override (not recommended for multisite)
-# NEXT_PUBLIC_WP_GRAPHQL=https://newsonafrica.com/sz/graphql
-# NEXT_PUBLIC_WP_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
+# --- Feature flags ---
+MVP_MODE=1
 
 # --- WordPress Authentication ---
 WP_APP_USERNAME=your_wordpress_username
@@ -157,10 +146,10 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
-**Important:** For WordPress endpoints, either:
-- Leave the global fallbacks `NEXT_PUBLIC_WP_GRAPHQL` and `NEXT_PUBLIC_WP_REST_BASE` unset (recommended)
-- Or ensure both the global fallbacks and any country overrides (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follow the correct format with
-  country slugs
+**Important:** For WordPress endpoints, ensure every country override (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follows the correct
+format with the country slug:
+- GraphQL: `https://newsonafrica.com/{country}/graphql`
+- REST: `https://newsonafrica.com/{country}/wp-json/wp/v2`
 
 See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-fallback-issues) for details.
 
@@ -175,10 +164,10 @@ The search API is powered by Algolia. To enable it:
 2. **Set environment variables** `ALGOLIA_APP_ID`, `ALGOLIA_ADMIN_KEY`, `ALGOLIA_SEARCH_API_KEY`, and optionally override `ALGOLIA_INDEX_PREFIX`.
 3. **Seed or refresh content** by calling the protected indexing route:
 
-   ```bash
+   \`\`\`bash
    curl -X POST "https://<your-domain>/api/search/reindex" \
      -H "x-api-key: $ALGOLIA_INDEXING_SECRET" # falls back to ALGOLIA_ADMIN_KEY when unset
-   ```
+   \`\`\`
 
    The reindexer fetches WordPress content for every supported country, normalises it to `{ objectID, title, excerpt, categories, country, published_at }`, and populates each index plus the pan-African aggregate.
 

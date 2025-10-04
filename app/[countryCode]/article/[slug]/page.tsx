@@ -13,7 +13,10 @@ import { stripHtml } from "@/lib/search"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 
 export const runtime = "nodejs"
-export const dynamic = "error"
+export const dynamic = "force-dynamic"
+
+export const revalidate = 60
+
 
 type RouteParams = { countryCode: string; slug: string }
 
@@ -49,6 +52,7 @@ const toAbsoluteUrl = (path: string): string => {
   if (/^https?:\/\//i.test(path)) {
     return path
   }
+}
 
   const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
   return `${base}${path.startsWith("/") ? path : `/${path}`}`
@@ -171,66 +175,187 @@ export default async function Page({ params }: ArticlePageProps) {
     return notFound()
   }
 
-  const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(slug, country)}`
-  const articleUrl = `${canonicalUrl}#article-content`
+  const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`
+}
 
-  const resolvedAuthor = (post.author?.node ?? {}) as {
-    name?: string
-    slug?: string
-    description?: string
-    avatar?: { url?: string }
+// This prevents preview/build flakiness when WP endpoints are slow/unreachable
+export async function generateStaticParams() {
+  return []
+}
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug, countryCode } = params
+  const country = (countryCode || "DEFAULT").toLowerCase()
+  const badge = resolveCountryOgBadge(country)
+
+  const canonicalUrl = toAbsoluteUrl(getArticleUrl(slug, country))
+  const dynamicImageUrl = `${canonicalUrl}/opengraph-image`
+
+  const post = await fetchArticle(country, slug)
+
+  if (!post) {
+    const fallbackDescription = `Latest headlines for the ${badge.label} edition of News On Africa.`
+    return {
+      title: "Article - News On Africa",
+      description: fallbackDescription,
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        type: "article",
+        title: "Article - News On Africa",
+        description: fallbackDescription,
+        url: canonicalUrl,
+        siteName: "News On Africa",
+        images: [
+          {
+            url: dynamicImageUrl,
+            width: OG_IMAGE_WIDTH,
+            height: OG_IMAGE_HEIGHT,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Article - News On Africa",
+        description: fallbackDescription,
+        images: [dynamicImageUrl],
+      },
+    }
   }
 
-  const resolvedId =
-    post.id ?? (post.databaseId != null ? String(post.databaseId) : post.slug ?? "")
+  const title = stripHtml(post.title ?? "")
+  const excerpt = stripHtml(post.excerpt ?? "")
+  const resolvedTitle = title ? `${title} - News On Africa` : `News On Africa - ${badge.label}`
+  const description =
+    excerpt || `Breaking news and in-depth reporting for the ${badge.label} edition of News On Africa.`
 
-  const articlePost: ArticlePost = {
-    id: resolvedId,
-    title: post.title ?? "",
-    excerpt: post.excerpt ?? "",
-    slug: post.slug ?? "",
-    date: post.date ?? "",
-    modified: (post as WordPressPost & { modified?: string }).modified ?? post.date ?? "",
-    featuredImage: post.featuredImage?.node
-      ? {
-          node: {
-            sourceUrl: post.featuredImage.node.sourceUrl ?? "",
-            altText: post.featuredImage.node.altText ?? "",
+  const fallbackImageUrl = toAbsoluteUrl(post.featuredImage?.node?.sourceUrl ?? FALLBACK_IMAGE)
+  const openGraphImages = [
+    {
+      url: dynamicImageUrl,
+      width: OG_IMAGE_WIDTH,
+      height: OG_IMAGE_HEIGHT,
+      alt: title ? `${title} - News On Africa` : "News On Africa article",
+    },
+  ]
+
+  if (fallbackImageUrl && fallbackImageUrl !== dynamicImageUrl) {
+    openGraphImages.push({
+      url: fallbackImageUrl,
+      width: OG_IMAGE_WIDTH,
+      height: OG_IMAGE_HEIGHT,
+      alt: title ? `${title} featured image` : "News On Africa article image",
+    })
+  }
+
+  const twitterImages = [dynamicImageUrl]
+  if (fallbackImageUrl && fallbackImageUrl !== dynamicImageUrl) {
+    twitterImages.push(fallbackImageUrl)
+  }
+
+  const authorName = (post.author as WordPressPost["author"])?.node?.name
+  const publishedTime = post.date ?? undefined
+  const modifiedTime = (post as WordPressPost & { modified?: string }).modified ?? post.date ?? undefined
+
+  return {
+    title: resolvedTitle,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "article",
+      title: resolvedTitle,
+      description,
+      url: canonicalUrl,
+      siteName: "News On Africa",
+      publishedTime,
+      modifiedTime,
+      authors: authorName ? [authorName] : undefined,
+      images: openGraphImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: resolvedTitle,
+      description,
+      images: twitterImages,
+    },
+  }
+}
+
+export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { slug, countryCode } = params
+  const country = (countryCode || "DEFAULT").toLowerCase()
+
+  try {
+    const post = await fetchArticle(country, slug)
+
+    if (!post) {
+      return notFound()
+    }
+
+    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(slug, country)}`
+    const articleUrl = `${canonicalUrl}#article-content`
+
+    const resolvedAuthor = (post.author?.node ?? {}) as {
+      name?: string
+      slug?: string
+      description?: string
+      avatar?: { url?: string }
+    }
+
+    const resolvedId =
+      post.id ?? (post.databaseId != null ? String(post.databaseId) : post.slug ?? "")
+
+    const articlePost: ArticlePost = {
+      id: resolvedId,
+      title: post.title ?? "",
+      excerpt: post.excerpt ?? "",
+      slug: post.slug ?? "",
+      date: post.date ?? "",
+      modified: (post as WordPressPost & { modified?: string }).modified ?? post.date ?? "",
+      featuredImage: post.featuredImage?.node
+        ? {
+            node: {
+              sourceUrl: post.featuredImage.node.sourceUrl ?? "",
+              altText: post.featuredImage.node.altText ?? "",
+            },
+          }
+        : undefined,
+      author: {
+        node: {
+          name: resolvedAuthor.name ?? "",
+          slug: resolvedAuthor.slug ?? "",
+          description: resolvedAuthor.description ?? "",
+          avatar: {
+            url: resolvedAuthor.avatar?.url ?? "",
           },
-        }
-      : undefined,
-    author: {
-      node: {
-        name: resolvedAuthor.name ?? "",
-        slug: resolvedAuthor.slug ?? "",
-        description: resolvedAuthor.description ?? "",
-        avatar: {
-          url: resolvedAuthor.avatar?.url ?? "",
         },
       },
-    },
-    categories: {
-      nodes:
-        post.categories?.nodes?.map((category) => ({
-          name: category?.name ?? "",
-          slug: category?.slug ?? "",
-        })) ?? [],
-    },
-    tags: {
-      nodes:
-        post.tags?.nodes?.map((tag) => ({
-          name: tag?.name ?? "",
-          slug: tag?.slug ?? "",
-        })) ?? [],
-    },
-    seo: undefined,
-    content: post.content ?? "",
-  }
+      categories: {
+        nodes:
+          post.categories?.nodes?.map((category) => ({
+            name: category?.name ?? "",
+            slug: category?.slug ?? "",
+          })) ?? [],
+      },
+      tags: {
+        nodes:
+          post.tags?.nodes?.map((tag) => ({
+            name: tag?.name ?? "",
+            slug: tag?.slug ?? "",
+          })) ?? [],
+      },
+      seo: undefined,
+      content: post.content ?? "",
+    }
 
-  return (
-    <>
-      <ArticleJsonLd post={articlePost} url={articleUrl} />
-      <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
-    </>
-  )
+    return (
+      <>
+        <ArticleJsonLd post={articlePost} url={articleUrl} />
+        <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
+      </>
+    )
+  } catch (error) {
+    log.error("ArticlePage fetch failed", { error, country, slug })
+    return notFound()
+  }
 }

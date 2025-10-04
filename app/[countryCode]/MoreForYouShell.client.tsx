@@ -13,7 +13,10 @@ interface MoreForYouShellProps {
   }
 }
 
-export function MoreForYouShell({ countryCode, initialData }: MoreForYouShellProps) {
+export const MoreForYouShell = ({
+  countryCode,
+  initialData,
+}: MoreForYouShellProps) => {
   return <MoreForYouSection countryCode={countryCode} initialData={initialData} />
 }
 

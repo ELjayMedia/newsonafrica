@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
 
+import { cn, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 
@@ -57,7 +58,10 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
           <Link
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
-            className={`flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200`}
+            className={cn(
+              "flex flex-row md:flex-col items-center md:items-start group bg-gray-50 rounded-lg overflow-hidden transition-all duration-200",
+              motionSafe.transition,
+            )}
           >
             {post.featuredImage && (
               <div
@@ -67,7 +71,10 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
                   src={imageUrl}
                   alt={post.title}
                   fill
-                  className="object-cover rounded-md transition-transform duration-300 group-hover:scale-105"
+                  className={cn(
+                    "object-cover rounded-md transition-transform duration-300 group-hover:scale-105",
+                    motionSafe.transform,
+                  )}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                   priority={index === 0}
                   loading={index === 0 ? "eager" : "lazy"}
@@ -77,7 +84,12 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
               </div>
             )}
             <div className={`p-2 md:p-3 flex-1 flex flex-col ${layout === "horizontal" ? "ml-2 md:ml-0" : ""}`}>
-              <h3 className="text-xs md:text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200">
+              <h3
+                className={cn(
+                  "text-xs md:text-sm font-semibold group-hover:text-blue-600 transition-colors duration-200",
+                  motionSafe.transition,
+                )}
+              >
                 {post.title}
               </h3>
               <div className="flex items-center gap-1 text-xs text-gray-500 mt-auto pt-1">
@@ -91,4 +103,3 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
     </div>
   )
 }
-

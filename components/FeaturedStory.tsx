@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { cn, motionSafe } from "@/lib/utils"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 interface FeaturedStoryProps {
@@ -32,12 +33,20 @@ export function FeaturedStory({ post }: FeaturedStoryProps) {
               alt={post.title}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className={cn(
+                "object-cover transition-transform duration-300 group-hover:scale-105",
+                motionSafe.transform,
+              )}
               priority
             />
           </div>
           <div>
-            <h1 className="text-xl md:text-3xl font-bold mb-3 group-hover:text-blue-600 transition-colors">
+            <h1
+              className={cn(
+                "text-xl md:text-3xl font-bold mb-3 group-hover:text-blue-600 transition-colors",
+                motionSafe.transition,
+              )}
+            >
               {post.title}
             </h1>
             <div

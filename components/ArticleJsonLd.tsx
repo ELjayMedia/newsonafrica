@@ -21,6 +21,7 @@ export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
     dateModified: post.modified,
     authorName: post.author.node.name,
     authorUrl: authorSlug ? `${env.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}` : undefined,
+    speakableSelectors: ["article#article-content h1", "article#article-content .prose"],
   })
 
   return <JsonLd data={schema} />

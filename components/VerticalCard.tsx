@@ -6,6 +6,7 @@ import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { cn, motionSafe } from "@/lib/utils"
 
 interface VerticalCardProps {
   post: {
@@ -54,15 +55,23 @@ export const VerticalCard = memo(function VerticalCard({ post, className = "" }:
   })()
 
   return (
-    <Link href={getArticleUrl(post.slug)} className={`group block h-full ${className}`}>
-      <article className="flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+    <Link href={getArticleUrl(post.slug)} className={cn("group block h-full", className)}>
+      <article
+        className={cn(
+          "flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200",
+          motionSafe.transition,
+        )}
+      >
         {post.featuredImage && (
           <div className="relative h-32 overflow-hidden">
             <Image
               src={imageUrl || "/placeholder.svg"}
               alt={post.title}
               fill
-              className="transition-transform duration-300 group-hover:scale-105 object-cover"
+              className={cn(
+                "transition-transform duration-300 group-hover:scale-105 object-cover",
+                motionSafe.transform,
+              )}
               placeholder="blur"
               blurDataURL={blurDataURL}
             />
@@ -70,7 +79,12 @@ export const VerticalCard = memo(function VerticalCard({ post, className = "" }:
         )}
         <div className="p-3 flex-1 flex flex-col">
           {post.type && <div className="text-sm font-bold text-red-600 mb-1">{post.type}</div>}
-          <h3 className="font-bold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-200">
+          <h3
+            className={cn(
+              "font-bold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-200",
+              motionSafe.transition,
+            )}
+          >
             {post.title}
           </h3>
           <div className="flex items-center gap-1 text-gray-500 text-xs mt-auto pt-2">

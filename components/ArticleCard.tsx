@@ -2,11 +2,10 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { formatDate } from "@/lib/utils"
+import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/lib/wordpress-api"
@@ -210,7 +209,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   if (layout === "compact") {
     return (
-      <Card className={cn("group hover:shadow-md transition-shadow", className)}>
+      <Card className={cn("group hover:shadow-md transition-shadow", motionSafe.transition, className)}>
         <CardContent className="p-3">
           <div className="flex gap-3">
             <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
@@ -218,7 +217,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                 src={imageUrl || "/placeholder.svg"}
                 alt={data.title}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-200"
+                className={cn(
+                  "object-cover group-hover:scale-105 transition-transform duration-200",
+                  motionSafe.transform,
+                )}
                 placeholder="blur"
                 blurDataURL={generateBlurDataURL(64, 64)}
                 priority={priority}
@@ -238,7 +240,12 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                 </Badge>
               )}
               <Link href={data.link} className="block">
-                <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                <h3
+                  className={cn(
+                    "font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors",
+                    motionSafe.transition,
+                  )}
+                >
                   {data.title}
                 </h3>
               </Link>
@@ -252,13 +259,22 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   if (layout === "featured") {
     return (
-      <Card className={cn("group hover:shadow-lg transition-all duration-300 max-w-md", className)}>
+      <Card
+        className={cn(
+          "group hover:shadow-lg transition-all duration-300 max-w-md",
+          motionSafe.transition,
+          className,
+        )}
+      >
         <div className="relative aspect-[16/9] overflow-hidden rounded-t-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}
             alt={data.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className={cn(
+              "object-cover group-hover:scale-105 transition-transform duration-300",
+              motionSafe.transform,
+            )}
             placeholder="blur"
             blurDataURL={generateBlurDataURL(600, 400)}
             priority={priority}
@@ -278,7 +294,12 @@ export function ArticleCard({ article, layout = "standard", className, priority 
         </div>
         <CardContent className="p-4">
           <Link href={data.link} className="block">
-            <h2 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+            <h2
+              className={cn(
+                "text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors",
+                motionSafe.transition,
+              )}
+            >
               {data.title}
             </h2>
           </Link>
@@ -293,13 +314,22 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   // Standard layout
   return (
-    <Card className={cn("group hover:shadow-md transition-shadow max-w-xs", className)}>
+    <Card
+      className={cn(
+        "group hover:shadow-md transition-shadow max-w-xs",
+        motionSafe.transition,
+        className,
+      )}
+    >
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
         <Image
           src={imageUrl || "/placeholder.svg"}
           alt={data.title}
           fill
-          className="object-cover group-hover:scale-105 transition-transform duration-200"
+          className={cn(
+            "object-cover group-hover:scale-105 transition-transform duration-200",
+            motionSafe.transform,
+          )}
           placeholder="blur"
           blurDataURL={generateBlurDataURL(400, 300)}
           priority={priority}
@@ -314,7 +344,12 @@ export function ArticleCard({ article, layout = "standard", className, priority 
       </div>
       <CardContent className="p-3">
         <Link href={data.link} className="block">
-          <h3 className="font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors text-sm">
+          <h3
+            className={cn(
+              "font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors text-sm",
+              motionSafe.transition,
+            )}
+          >
             {data.title}
           </h3>
         </Link>

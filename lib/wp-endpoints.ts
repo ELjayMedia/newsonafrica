@@ -31,14 +31,14 @@ const getEnvValue = (key: string): string | undefined => trimTrailingSlashes(pro
 const getDefaultGraphQLEndpoint = (country: string): string => `${BASE_URL}/${country}/graphql`
 const getDefaultRestBase = (country: string): string => `${BASE_URL}/${country}/wp-json/wp/v2`
 
+const looksLikeGraphQLEndpoint = (value?: string | null) =>
+  Boolean(value && value.toLowerCase().includes("/graphql"))
+
 const toSignature = (country: string) =>
   [
     process.env[buildEnvKey(country, GRAPHQL_SUFFIX)],
     process.env[buildEnvKey(country, REST_SUFFIX)],
-    process.env.NEXT_PUBLIC_WP_GRAPHQL,
-    process.env.NEXT_PUBLIC_WORDPRESS_API_URL,
-    process.env.NEXT_PUBLIC_WP_REST_BASE,
-    process.env.WORDPRESS_REST_API_URL,
+    process.env.NEXT_PUBLIC_DEFAULT_SITE,
     country,
   ].join("|")
 
@@ -52,21 +52,25 @@ const cache = new Map<string, CachedEndpoints>()
 export function getGraphQLEndpoint(country: string = DEFAULT_SITE): string {
   const normalized = normalizeCountry(country)
   const specific = getEnvValue(buildEnvKey(normalized, GRAPHQL_SUFFIX))
-  const fallback =
-    trimTrailingSlashes(process.env.NEXT_PUBLIC_WP_GRAPHQL || env.NEXT_PUBLIC_WP_GRAPHQL) ||
-    trimTrailingSlashes(process.env.NEXT_PUBLIC_WORDPRESS_API_URL || env.NEXT_PUBLIC_WORDPRESS_API_URL)
 
-  return specific || fallback || getDefaultGraphQLEndpoint(normalized)
+  return specific || getDefaultGraphQLEndpoint(normalized)
 }
 
 export function getRestBase(country: string = DEFAULT_SITE): string {
   const normalized = normalizeCountry(country)
+  const defaultRestBase = getDefaultRestBase(normalized)
   const specific = getEnvValue(buildEnvKey(normalized, REST_SUFFIX))
-  const fallback =
-    trimTrailingSlashes(process.env.NEXT_PUBLIC_WP_REST_BASE || env.NEXT_PUBLIC_WP_REST_BASE) ||
-    trimTrailingSlashes(process.env.WORDPRESS_REST_API_URL || env.WORDPRESS_REST_API_URL)
 
-  return specific || fallback || getDefaultRestBase(normalized)
+  if (looksLikeGraphQLEndpoint(specific)) {
+    console.warn("Ignoring WP REST override because it appears to be a GraphQL endpoint", {
+      country: normalized,
+      restOverride: specific,
+      defaultRestBase,
+    })
+    return defaultRestBase
+  }
+
+  return specific || defaultRestBase
 }
 
 export function getWpEndpoints(country: string = DEFAULT_SITE): WordPressEndpoints {

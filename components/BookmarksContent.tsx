@@ -307,9 +307,9 @@ export default function BookmarksContent() {
         {filteredBookmarks.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <BookmarkCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <BookmarkCheck className="h-12 w-12 text-gray-600 dark:text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No bookmarks found</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 {searchQuery ? "Try adjusting your search terms" : "Start bookmarking articles to see them here"}
               </p>
             </CardContent>
