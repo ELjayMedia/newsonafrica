@@ -4,7 +4,9 @@ import "./globals.css"
 import { Inter } from "next/font/google"
 import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
-import { Header } from "@/components/Header"
+import { useEffect, useMemo } from "react"
+
+import { HeaderClient } from "@/components/HeaderClient"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Sidebar } from "@/components/Sidebar"
 import Footer from "@/components/Footer"
@@ -14,10 +16,56 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 import { AuthProvider } from "@/contexts/AuthContext"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
-import { useEffect } from "react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import ErrorFallback from "@/components/ErrorFallback"
 import Link from "next/link"
+import { useCategories } from "@/lib/hooks/useWordPressData"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { getCurrentCountry } from "@/lib/utils/routing"
+import { usePathname } from "next/navigation"
+
+function LegacyHeader() {
+  const pathname = usePathname()
+  const countryCode = getCurrentCountry(pathname)
+  const { categories } = useCategories(countryCode)
+  const { preferences } = useUserPreferences()
+
+  const sortedCategories = useMemo(() => {
+    if (!categories || categories.length === 0) {
+      return []
+    }
+
+    const favouriteSlugs = preferences.sections.map((section) => section.toLowerCase())
+    if (!favouriteSlugs.length) {
+      return [...categories].sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    return [...categories].sort((a, b) => {
+      const aFavIndex = favouriteSlugs.indexOf(a.slug.toLowerCase())
+      const bFavIndex = favouriteSlugs.indexOf(b.slug.toLowerCase())
+
+      if (aFavIndex === -1 && bFavIndex === -1) {
+        return a.name.localeCompare(b.name)
+      }
+
+      if (aFavIndex === -1) {
+        return 1
+      }
+
+      if (bFavIndex === -1) {
+        return -1
+      }
+
+      if (aFavIndex !== bFavIndex) {
+        return aFavIndex - bFavIndex
+      }
+
+      return a.name.localeCompare(b.name)
+    })
+  }, [categories, preferences.sections])
+
+  return <HeaderClient categories={sortedCategories} countryCode={countryCode} />
+}
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
@@ -69,7 +117,7 @@ export function ClientLayout({
                     <ScrollToTop />
                     <TopBar />
                     <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
-                      <Header />
+                      <LegacyHeader />
                       <div className="mt-4 md:mt-6">
                         <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
                           <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
