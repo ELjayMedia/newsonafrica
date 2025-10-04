@@ -10,25 +10,25 @@ afterEach(() => {
 })
 
 describe("getRestBase", () => {
-  it("falls back to the per-country default when the global fallback looks like GraphQL", () => {
-    process.env.NEXT_PUBLIC_WP_REST_BASE = "https://example.com/graphql"
+  it("falls back to the per-country default when the override looks like GraphQL", () => {
+    process.env.NEXT_PUBLIC_WP_NG_REST_BASE = "https://example.com/graphql"
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
     const restBase = getRestBase("ng")
 
     expect(restBase).toBe("https://newsonafrica.com/ng/wp-json/wp/v2")
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Ignoring WP REST fallback"),
+      expect.stringContaining("Ignoring WP REST override"),
       expect.objectContaining({
         country: "ng",
-        fallback: "https://example.com/graphql",
+        restOverride: "https://example.com/graphql",
         defaultRestBase: "https://newsonafrica.com/ng/wp-json/wp/v2",
       }),
     )
   })
 
   it("returns the fallback REST base when it does not resemble a GraphQL endpoint", () => {
-    process.env.NEXT_PUBLIC_WP_REST_BASE = "https://example.com/wp-json/wp/v2/"
+    process.env.NEXT_PUBLIC_WP_NG_REST_BASE = "https://example.com/wp-json/wp/v2/"
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
     const restBase = getRestBase("ng")

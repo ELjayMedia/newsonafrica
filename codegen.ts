@@ -1,9 +1,11 @@
 import type { CodegenConfig } from "@graphql-codegen/cli"
 
+const defaultSite = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
+const defaultGraphQLKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_GRAPHQL`
+
 const defaultSchema =
-  process.env.NEXT_PUBLIC_WP_GRAPHQL ||
-  process.env.NEXT_PUBLIC_WORDPRESS_API_URL ||
-  "https://newsonafrica.com/sz/graphql"
+  process.env[defaultGraphQLKey] ||
+  `https://newsonafrica.com/${defaultSite}/graphql`
 
 const config: CodegenConfig = {
   overwrite: true,
