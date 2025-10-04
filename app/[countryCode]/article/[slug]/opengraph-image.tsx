@@ -1,8 +1,12 @@
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+
 import { ImageResponse } from "next/og"
 import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
 import { wordpressQueries } from "@/lib/wordpress-queries"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
+import { stripHtml } from "@/lib/search"
 
 export const runtime = "nodejs"
 export const size = { width: 1200, height: 630 }
@@ -17,35 +21,33 @@ const TITLE_MAX_LENGTH = 140
 
 const fontFamily = "'Inter', 'Helvetica Neue', Arial, sans-serif"
 
-async function loadPublicAsset(path: string): Promise<string | null> {
+const assetCache = new Map<string, string | null>()
+
+async function loadPublicAsset(assetPath: string): Promise<string | null> {
+  const normalizedPath = assetPath.startsWith("/") ? assetPath.slice(1) : assetPath
+  const absolutePath = path.join(process.cwd(), "public", normalizedPath)
+
+  if (assetCache.has(absolutePath)) {
+    return assetCache.get(absolutePath) ?? null
+  }
+
   try {
-    const response = await fetch(new URL(`../../../../../public${path}`, import.meta.url))
-    if (!response.ok) {
-      return null
-    }
+    const fileBuffer = await readFile(absolutePath)
+    const extension = path.extname(absolutePath).slice(1).toLowerCase()
+    const mimeType =
+      extension === "svg"
+        ? "image/svg+xml"
+        : extension === "png"
+          ? "image/png"
+          : "application/octet-stream"
 
-    const buffer = Buffer.from(await response.arrayBuffer())
-    const extension = path.endsWith(".svg")
-      ? "svg+xml"
-      : path.endsWith(".png")
-        ? "png"
-        : "octet-stream"
-
-    return `data:image/${extension};base64,${buffer.toString("base64")}`
+    const dataUri = `data:${mimeType};base64,${fileBuffer.toString("base64")}`
+    assetCache.set(absolutePath, dataUri)
+    return dataUri
   } catch {
+    assetCache.set(absolutePath, null)
     return null
   }
-}
-
-function stripHtml(html: string | null | undefined): string {
-  if (!html) return ""
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&[^;]+;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
 }
 
 function formatHeadline(title: string, excerpt: string): string {
@@ -83,7 +85,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
     post = null
   }
 
-  const headline = formatHeadline(stripHtml(post?.title), stripHtml(post?.excerpt))
+  const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 
   return new ImageResponse(
     (

@@ -42,7 +42,7 @@ describe('ArticlePage', () => {
       },
     ])
 
-    const metadata = await generateMetadata({ params: { countryCode: 'sz', slug: 'test' } })
+    const metadata = await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
 
     const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
@@ -51,5 +51,22 @@ describe('ArticlePage', () => {
     expect(metadata.openGraph?.images?.[1]?.url).toBe('https://example.com/feature.jpg')
     expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
     expect(metadata.twitter?.images?.[1]).toBe('https://example.com/feature.jpg')
+  })
+
+  it('falls back to the placeholder image when the article is missing', async () => {
+    vi.mocked(fetchFromWp).mockResolvedValue([])
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ countryCode: 'za', slug: 'missing-post' }),
+    })
+
+    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const dynamicUrl = `${baseUrl}/za/article/missing-post/opengraph-image`
+    const fallbackUrl = `${baseUrl}/news-placeholder.png`
+
+    expect(metadata.openGraph?.images?.[0]?.url).toBe(dynamicUrl)
+    expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
+    expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
+    expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
   })
 })
