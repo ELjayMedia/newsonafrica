@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Clock, TrendingUp } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, motionSafe } from "@/lib/utils"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 interface RelatedPost {
@@ -131,7 +131,12 @@ export function RelatedArticles({
       href={getArticleUrl(post.slug, countryCode)}
       className={cn("group block", layout === "carousel" ? "flex-shrink-0 w-72" : "")}
     >
-      <article className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col group-hover:scale-[1.02] group-hover:-translate-y-1">
+      <article
+        className={cn(
+          "bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col group-hover:scale-[1.02] group-hover:-translate-y-1",
+          motionSafe.transform,
+        )}
+      >
         {/* Enhanced image with overlay and badges */}
         <div className="relative aspect-[16/10] overflow-hidden">
           <Image
@@ -142,12 +147,20 @@ export function RelatedArticles({
             alt={post.featuredImage?.node?.altText || post.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover transition-all duration-700 group-hover:scale-110"
+            className={cn(
+              "object-cover transition-all duration-700 group-hover:scale-110",
+              motionSafe.transform,
+            )}
             loading="lazy"
           />
 
           {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+              motionSafe.transition,
+            )}
+          />
 
           <div className="absolute top-3 left-3 flex gap-2">
             {post.isPopular && (
@@ -178,7 +191,12 @@ export function RelatedArticles({
           )}
 
           {/* Title with better typography */}
-          <h3 className="font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300 text-lg leading-tight">
+          <h3
+            className={cn(
+              "font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300 text-lg leading-tight",
+              motionSafe.transition,
+            )}
+          >
             {post.title}
           </h3>
 
