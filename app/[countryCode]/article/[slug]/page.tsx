@@ -13,13 +13,14 @@ import { stripHtml } from "@/lib/search"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 
 export const runtime = "nodejs"
-export const dynamic = "error"
+export const dynamic = "force-dynamic"
+export const revalidate = 60
 
 type RouteParams = { countryCode: string; slug: string }
 
 type ArticlePageProps = {
-  params: Promise<RouteParams>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  params: RouteParams
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 const FALLBACK_IMAGE = "/news-placeholder.png"
@@ -60,7 +61,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
-  const { slug, countryCode } = await params
+  const { slug, countryCode } = params
   const country = (countryCode || "DEFAULT").toLowerCase()
   const badge = resolveCountryOgBadge(country)
 
@@ -156,75 +157,81 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   }
 }
 
-export default async function Page({ params }: ArticlePageProps) {
-  const { slug, countryCode } = await params
+export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { slug, countryCode } = params
   const country = (countryCode || "DEFAULT").toLowerCase()
-  const post = await fetchArticle(country, slug)
 
-  if (!post) {
-    return notFound()
-  }
+  try {
+    const post = await fetchArticle(country, slug)
 
-  const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(slug, country)}`
-  const articleUrl = `${canonicalUrl}#article-content`
+    if (!post) {
+      return notFound()
+    }
 
-  const resolvedAuthor = (post.author?.node ?? {}) as {
-    name?: string
-    slug?: string
-    description?: string
-    avatar?: { url?: string }
-  }
+    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}${getArticleUrl(slug, country)}`
+    const articleUrl = `${canonicalUrl}#article-content`
 
-  const resolvedId =
-    post.id ?? (post.databaseId != null ? String(post.databaseId) : post.slug ?? "")
+    const resolvedAuthor = (post.author?.node ?? {}) as {
+      name?: string
+      slug?: string
+      description?: string
+      avatar?: { url?: string }
+    }
 
-  const articlePost: ArticlePost = {
-    id: resolvedId,
-    title: post.title ?? "",
-    excerpt: post.excerpt ?? "",
-    slug: post.slug ?? "",
-    date: post.date ?? "",
-    modified: (post as WordPressPost & { modified?: string }).modified ?? post.date ?? "",
-    featuredImage: post.featuredImage?.node
-      ? {
-          node: {
-            sourceUrl: post.featuredImage.node.sourceUrl ?? "",
-            altText: post.featuredImage.node.altText ?? "",
+    const resolvedId =
+      post.id ?? (post.databaseId != null ? String(post.databaseId) : post.slug ?? "")
+
+    const articlePost: ArticlePost = {
+      id: resolvedId,
+      title: post.title ?? "",
+      excerpt: post.excerpt ?? "",
+      slug: post.slug ?? "",
+      date: post.date ?? "",
+      modified: (post as WordPressPost & { modified?: string }).modified ?? post.date ?? "",
+      featuredImage: post.featuredImage?.node
+        ? {
+            node: {
+              sourceUrl: post.featuredImage.node.sourceUrl ?? "",
+              altText: post.featuredImage.node.altText ?? "",
+            },
+          }
+        : undefined,
+      author: {
+        node: {
+          name: resolvedAuthor.name ?? "",
+          slug: resolvedAuthor.slug ?? "",
+          description: resolvedAuthor.description ?? "",
+          avatar: {
+            url: resolvedAuthor.avatar?.url ?? "",
           },
-        }
-      : undefined,
-    author: {
-      node: {
-        name: resolvedAuthor.name ?? "",
-        slug: resolvedAuthor.slug ?? "",
-        description: resolvedAuthor.description ?? "",
-        avatar: {
-          url: resolvedAuthor.avatar?.url ?? "",
         },
       },
-    },
-    categories: {
-      nodes:
-        post.categories?.nodes?.map((category) => ({
-          name: category?.name ?? "",
-          slug: category?.slug ?? "",
-        })) ?? [],
-    },
-    tags: {
-      nodes:
-        post.tags?.nodes?.map((tag) => ({
-          name: tag?.name ?? "",
-          slug: tag?.slug ?? "",
-        })) ?? [],
-    },
-    seo: undefined,
-    content: post.content ?? "",
-  }
+      categories: {
+        nodes:
+          post.categories?.nodes?.map((category) => ({
+            name: category?.name ?? "",
+            slug: category?.slug ?? "",
+          })) ?? [],
+      },
+      tags: {
+        nodes:
+          post.tags?.nodes?.map((tag) => ({
+            name: tag?.name ?? "",
+            slug: tag?.slug ?? "",
+          })) ?? [],
+      },
+      seo: undefined,
+      content: post.content ?? "",
+    }
 
-  return (
-    <>
-      <ArticleJsonLd post={articlePost} url={articleUrl} />
-      <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
-    </>
-  )
+    return (
+      <>
+        <ArticleJsonLd post={articlePost} url={articleUrl} />
+        <ArticleClientContent slug={slug} countryCode={country} initialData={post} />
+      </>
+    )
+  } catch (error) {
+    log.error("ArticlePage fetch failed", { error, country, slug })
+    return notFound()
+  }
 }

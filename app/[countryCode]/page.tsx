@@ -6,15 +6,15 @@ import { CountryEditionContent } from "./CountryEditionContent"
 import * as log from "@/lib/log"
 
 interface CountryPageProps {
-  params: Promise<{
+  params: {
     countryCode: string
-  }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  }
+  searchParams?: Record<string, string | string[] | undefined>
 }
 
 export const runtime = "nodejs"
 export const dynamic = "force-static"
-export const revalidate = 300
+export const revalidate = 60
 export const experimental_ppr = true
 
 // Generate static params for all supported countries
@@ -31,7 +31,7 @@ export async function generateStaticParams(): Promise<{ countryCode: string }[]>
 
 // Generate metadata for each country
 export async function generateMetadata({ params }: CountryPageProps): Promise<Metadata> {
-  const { countryCode } = await params
+  const { countryCode } = params
   const country = COUNTRIES[countryCode]
 
   if (!country) {
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: CountryPageProps): Promise<Me
 }
 
 export default async function CountryPage({ params }: CountryPageProps) {
-  const { countryCode } = await params
+  const { countryCode } = params
 
   // Check if country code is valid
   if (!COUNTRIES[countryCode]) {
