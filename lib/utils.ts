@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const motionSafe = {
+  transition: "motion-reduce:transition-none",
+  transform: "motion-reduce:transform-none motion-reduce:transition-none",
+  animation: "motion-reduce:animate-none motion-reduce:transition-none",
+}
+
 export function formatDate(date: string | Date): string {
   const dateObj = typeof date === "string" ? new Date(date) : date
 

@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
+import { cn, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 
@@ -39,7 +40,10 @@ export function FeaturedHeroContent({ post }: FeaturedHeroProps) {
             src={imageUrl}
             alt={post.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className={cn(
+              "object-cover transition-transform duration-300 group-hover:scale-105",
+              motionSafe.transform,
+            )}
             sizes="(max-width: 768px) 100vw, 50vw"
             priority
             placeholder="blur"
@@ -47,7 +51,12 @@ export function FeaturedHeroContent({ post }: FeaturedHeroProps) {
           />
         </div>
         <div className="flex flex-col justify-center">
-          <h1 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-blue-600 transition-colors duration-200">
+          <h1
+            className={cn(
+              "text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-blue-600 transition-colors duration-200",
+              motionSafe.transition,
+            )}
+          >
             {post.title}
           </h1>
           <div className="text-gray-600 text-xs md:text-sm line-clamp-3" style={{ marginBottom: "1vw" }}>
