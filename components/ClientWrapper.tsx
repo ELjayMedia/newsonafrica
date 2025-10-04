@@ -2,14 +2,10 @@
 
 import type React from "react"
 import { SWRConfig } from "swr"
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 
 export function ClientWrapper({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
-
   useEffect(() => {
-    setMounted(true)
-
     if (process.env.NODE_ENV === "development") {
       const startTime = performance.now()
       return () => {
@@ -18,10 +14,6 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
       }
     }
   }, [])
-
-  if (!mounted) {
-    return null
-  }
 
   return (
     <SWRConfig
