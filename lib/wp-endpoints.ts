@@ -61,12 +61,22 @@ export function getGraphQLEndpoint(country: string = DEFAULT_SITE): string {
 
 export function getRestBase(country: string = DEFAULT_SITE): string {
   const normalized = normalizeCountry(country)
+  const defaultRestBase = getDefaultRestBase(normalized)
   const specific = getEnvValue(buildEnvKey(normalized, REST_SUFFIX))
-  const fallback =
+  let fallback =
     trimTrailingSlashes(process.env.NEXT_PUBLIC_WP_REST_BASE || env.NEXT_PUBLIC_WP_REST_BASE) ||
     trimTrailingSlashes(process.env.WORDPRESS_REST_API_URL || env.WORDPRESS_REST_API_URL)
 
-  return specific || fallback || getDefaultRestBase(normalized)
+  if (fallback?.toLowerCase().includes("/graphql")) {
+    console.warn("Ignoring WP REST fallback because it appears to be a GraphQL endpoint", {
+      country: normalized,
+      fallback,
+      defaultRestBase,
+    })
+    fallback = undefined
+  }
+
+  return specific || fallback || defaultRestBase
 }
 
 export function getWpEndpoints(country: string = DEFAULT_SITE): WordPressEndpoints {
