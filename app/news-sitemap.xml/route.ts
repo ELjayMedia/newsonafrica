@@ -9,17 +9,14 @@ export async function GET() {
   const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
   const lastMod = new Date().toISOString()
 
-  const sitemapEntries = [
-    `${baseUrl}/sitemap.xml`,
-    `${baseUrl}/server-sitemap.xml`,
-    `${baseUrl}/news-sitemap.xml`,
+  const entries = [
     `${baseUrl}/news-sitemap/root`,
     ...SUPPORTED_COUNTRIES.map((country) => `${baseUrl}/news-sitemap/${country.code}`),
   ]
 
   const sitemapIndex = `${XML_DECLARATION}
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${sitemapEntries
+${entries
   .map(
     (loc) => `  <sitemap>
     <loc>${escapeXml(loc)}</loc>
