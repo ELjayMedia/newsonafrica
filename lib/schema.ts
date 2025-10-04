@@ -12,6 +12,7 @@ export interface SchemaOrgProps {
   publisherName?: string
   publisherLogo?: string
   type?: string
+  speakableSelectors?: string[]
 }
 
 // Base NewsMediaOrganization schema for the entire site
@@ -84,6 +85,7 @@ export function getNewsArticleSchema({
   authorUrl,
   publisherName = "News On Africa",
   publisherLogo = `${siteConfig.url}/logo.png`,
+  speakableSelectors,
 }: SchemaOrgProps) {
   return {
     "@context": "https://schema.org",
@@ -116,6 +118,12 @@ export function getNewsArticleSchema({
       "@type": "WebPage",
       "@id": url,
     },
+    speakable: speakableSelectors?.length
+      ? {
+          "@type": "SpeakableSpecification",
+          cssSelector: speakableSelectors,
+        }
+      : undefined,
   }
 }
 

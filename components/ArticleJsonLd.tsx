@@ -1,6 +1,6 @@
 import { JsonLd } from "@/components/JsonLd"
 import { getNewsArticleSchema } from "@/lib/schema"
-import type { Post } from "@/lib/wordpress-api"
+import type { Post } from "@/lib/types"
 import { env } from "@/config/env"
 
 interface ArticleJsonLdProps {
@@ -9,15 +9,19 @@ interface ArticleJsonLdProps {
 }
 
 export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
+  const authorSlug = post.author.node.slug
+  const imageUrl =
+    post.featuredImage?.node?.sourceUrl ?? `${env.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`
   const schema = getNewsArticleSchema({
-    url: url,
+    url,
     title: post.title,
     description: post.excerpt,
-    images: [post.featuredImage?.node?.sourceUrl || "/default-og-image.jpg"],
+    images: [imageUrl],
     datePublished: post.date,
     dateModified: post.modified,
     authorName: post.author.node.name,
-      authorUrl: `${env.NEXT_PUBLIC_SITE_URL}/author/${post.author.node.slug}`,
+    authorUrl: authorSlug ? `${env.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}` : undefined,
+    speakableSelectors: ["article#article-content h1", "article#article-content .prose"],
   })
 
   return <JsonLd data={schema} />
