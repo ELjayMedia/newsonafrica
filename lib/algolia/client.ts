@@ -1,4 +1,44 @@
-import algoliasearch, { type SearchClient, type SearchIndex } from "algoliasearch"
+import type { SearchClient, SearchIndex } from "algoliasearch"
+
+type AlgoliaSearchCreator = (appId: string, apiKey: string) => SearchClient
+
+let cachedAlgoliaCreator: AlgoliaSearchCreator | null | undefined
+
+function getAlgoliaCreator(): AlgoliaSearchCreator | null {
+  if (cachedAlgoliaCreator !== undefined) {
+    return cachedAlgoliaCreator
+  }
+
+  try {
+    const required = (eval("require") as (id: string) => unknown)("algoliasearch") as unknown
+
+    const creator =
+      typeof required === "function"
+        ? (required as AlgoliaSearchCreator)
+        : typeof (required as { default?: unknown })?.default === "function"
+          ? ((required as { default: unknown }).default as AlgoliaSearchCreator)
+          : null
+
+    if (!creator && process.env.NODE_ENV !== "production") {
+      console.warn(
+        "Algolia search module resolved without a callable default export. Search routes will fall back to WordPress.",
+      )
+    }
+
+    cachedAlgoliaCreator = creator
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "Algolia search client is not installed. Search functionality depending on Algolia will be disabled.",
+        error,
+      )
+    }
+
+    cachedAlgoliaCreator = null
+  }
+
+  return cachedAlgoliaCreator ?? null
+}
 
 export type AlgoliaSortMode = "relevance" | "latest"
 
@@ -27,11 +67,13 @@ const ALGOLIA_SEARCH_KEY = process.env.ALGOLIA_SEARCH_API_KEY || process.env.ALG
 export const ALGOLIA_INDEX_PREFIX = process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica"
 
 function createClient(apiKey?: string | null): SearchClient | null {
-  if (!ALGOLIA_APP_ID || !apiKey) {
+  const creator = getAlgoliaCreator()
+
+  if (!ALGOLIA_APP_ID || !apiKey || !creator) {
     return null
   }
 
-  return algoliasearch(ALGOLIA_APP_ID, apiKey)
+  return creator(ALGOLIA_APP_ID, apiKey)
 }
 
 export const algoliaAdminClient = createClient(ALGOLIA_ADMIN_KEY)
