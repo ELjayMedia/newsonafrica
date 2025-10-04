@@ -1,10 +1,22 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createSupabaseClient> | null = null
+let hasWarned = false
 
 export const createClient = () => {
   if (clientInstance) return clientInstance
+
+  if (!isSupabaseConfigured()) {
+    if (!hasWarned) {
+      hasWarned = true
+      console.warn("Supabase environment variables are not configured. Using fallback client.")
+    }
+
+    clientInstance = getSupabaseClient()
+    return clientInstance
+  }
 
   clientInstance = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

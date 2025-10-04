@@ -2,48 +2,22 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import type { Session } from "@supabase/supabase-js"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Missing Supabase environment variables. Please check your .env file.")
-}
+const supabaseConfigured = isSupabaseConfigured()
 
 // Create a single instance of the Supabase client to be reused
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: "noa_supabase_auth",
-    flowType: "pkce", // Better security for OAuth
-    debug: process.env.NODE_ENV === "development", // Enable debug logs in development
-    // Define OAuth providers we're using
-    providers: ["facebook", "google"],
-  },
-  global: {
-    headers: {
-      "x-application-name": "news-on-africa",
-    },
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10, // Limit realtime events to avoid rate limiting
-    },
-  },
-  db: {
-    schema: "public",
-  },
-})
+export const supabase = getSupabaseClient()
 
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
 export const createAdminClient = () => {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseServiceKey) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.warn("Supabase admin environment variables are not configured. Returning default client instance.")
+    return getSupabaseClient()
   }
 
   return createClient<Database>(supabaseUrl, supabaseServiceKey, {
