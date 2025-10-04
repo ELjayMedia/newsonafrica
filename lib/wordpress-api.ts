@@ -124,11 +124,6 @@ const handleRestFallbackFailure = (message: string, context: RestFallbackContext
   throw new APIError(message, "REST_FALLBACK_FAILED", undefined, details)
 }
 
-const buildCacheTagParam = (tags: string[]): string =>
-  Array.from(new Set(tags))
-    .sort()
-    .join("|")
-
 async function executeRestFallback<T>(
   operation: () => Promise<T | null | undefined>,
   message: string,
@@ -199,27 +194,25 @@ export interface CountryConfig {
   flag: string
   apiEndpoint: string
   restEndpoint: string
-  canonicalUrl: string
-  hreflang: string
   type?: "country"
 }
 
-export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIONS.reduce(
-  (acc, edition) => {
-    acc[edition.code] = {
-      code: edition.code,
-      name: edition.name,
-      flag: edition.flag,
-      apiEndpoint: getGraphQLEndpoint(edition.code),
-      restEndpoint: getRestBase(edition.code),
-      canonicalUrl: edition.canonicalUrl,
-      hreflang: edition.hreflang,
-      type: "country",
-    }
-    return acc
+export const COUNTRIES: Record<string, CountryConfig> = {
+  sz: {
+    code: "sz",
+    name: "Eswatini",
+    flag: "🇸🇿",
+    apiEndpoint: getGraphQLEndpoint("sz"),
+    restEndpoint: getRestBase("sz"),
   },
-  {} as Record<string, CountryConfig>,
-)
+  za: {
+    code: "za",
+    name: "South Africa",
+    flag: "🇿🇦",
+    apiEndpoint: getGraphQLEndpoint("za"),
+    restEndpoint: getRestBase("za"),
+  },
+}
 
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
@@ -327,16 +320,11 @@ export async function fetchFromWp<T>(
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)
-  const cacheTag = tags && tags.length > 0 ? buildCacheTagParam(tags) : undefined
-  const searchParamsEntries = Object.entries(queryParams)
-    .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => [k, String(v)])
-
-  if (cacheTag) {
-    searchParamsEntries.push(["cacheTag", cacheTag])
-  }
-
-  const params = new URLSearchParams(searchParamsEntries).toString()
+  const params = new URLSearchParams(
+    Object.entries(queryParams)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)]),
+  ).toString()
   const url = `${base}/${endpoint}${params ? `?${params}` : ""}`
 
   const breaker = await getCircuitBreaker()

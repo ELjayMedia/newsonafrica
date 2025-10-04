@@ -95,7 +95,7 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
         />
       </div>
 
-      <article id="article-content" className="max-w-4xl mx-auto px-4 py-8" ref={contentRef}>
+      <article className="max-w-4xl mx-auto px-4 py-8" ref={contentRef}>
         <header className="mb-8">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <div className="flex flex-wrap gap-2">

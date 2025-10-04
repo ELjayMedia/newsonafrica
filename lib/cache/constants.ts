@@ -24,5 +24,4 @@ export const CACHE_TAGS = {
 
 export const KV_CACHE_KEYS = {
   HOME_FEED: "kv:home-feed:aggregated:v1",
-  LEGACY_POST_ROUTES: "kv:legacy-post-routes",
 } as const

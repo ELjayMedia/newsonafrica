@@ -15,8 +15,6 @@ interface SearchFormProps {
   showSuggestions?: boolean
   autoFocus?: boolean
   size?: "sm" | "md" | "lg"
-  country?: string
-  sort?: "relevance" | "latest"
 }
 
 interface SearchSuggestion {
@@ -31,8 +29,6 @@ export function SearchForm({
   showSuggestions = true,
   autoFocus = false,
   size = "md",
-  country = "all",
-  sort = "relevance",
 }: SearchFormProps) {
   const [query, setQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -82,13 +78,7 @@ export function SearchForm({
 
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, suggestions: "true" })
-        if (country) {
-          params.set("country", country)
-        }
-        params.set("sort", sort)
-
-        const response = await fetch(`/api/search?${params.toString()}`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
         if (response.ok) {
           const data = await response.json()
           const searchSuggestions: SearchSuggestion[] = [
@@ -106,7 +96,7 @@ export function SearchForm({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [query, showSuggestions, recentSearches, country, sort])
+  }, [query, showSuggestions, recentSearches])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -123,12 +113,7 @@ export function SearchForm({
         if (onSearch) {
           onSearch(query.trim())
         } else {
-          const params = new URLSearchParams({ q: query.trim() })
-          if (country) {
-            params.set("country", country)
-          }
-          params.set("sort", sort)
-          router.push(`/search?${params.toString()}`)
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
         }
       } catch (error) {
         console.error("Search form error:", error)
@@ -136,7 +121,7 @@ export function SearchForm({
         setIsLoading(false)
       }
     },
-    [query, onSearch, router, saveToRecentSearches, country, sort],
+    [query, onSearch, router, saveToRecentSearches],
   )
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,12 +139,7 @@ export function SearchForm({
     if (onSearch) {
       onSearch(suggestion.text)
     } else {
-      const params = new URLSearchParams({ q: suggestion.text })
-      if (country) {
-        params.set("country", country)
-      }
-      params.set("sort", sort)
-      router.push(`/search?${params.toString()}`)
+      router.push(`/search?q=${encodeURIComponent(suggestion.text)}`)
     }
   }
 

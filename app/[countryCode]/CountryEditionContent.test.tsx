@@ -24,15 +24,7 @@ const wpMocks = vi.hoisted(() => ({
     })),
   ),
   COUNTRIES: {
-    za: {
-      code: "za",
-      name: "South Africa",
-      flag: "🇿🇦",
-      apiEndpoint: "",
-      restEndpoint: "",
-      canonicalUrl: "https://example.com/za",
-      hreflang: "en-ZA",
-    },
+    za: { code: "za", name: "South Africa", flag: "🇿🇦", apiEndpoint: "", restEndpoint: "" },
   },
 }))
 
@@ -55,8 +47,6 @@ describe("CountryEditionContent", () => {
     flag: "🇿🇦",
     apiEndpoint: "https://example.com/graphql",
     restEndpoint: "https://example.com/rest",
-    canonicalUrl: "https://example.com/za",
-    hreflang: "en-ZA",
   }
 
   beforeEach(() => {

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
@@ -13,7 +13,6 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 // Session refresh settings
 const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
 const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
-const VISIBILITY_REFRESH_DEBOUNCE = 1000
 
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/auth", "/sport", "/entertainment", "/search", "/post"]
@@ -26,7 +25,6 @@ interface UserContextType {
   profile: Profile | null
   session: Session | null
   loading: boolean
-  isRefreshingSession: boolean
   isAuthenticated: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<void>
@@ -36,7 +34,6 @@ interface UserContextType {
   signInWithGoogle: () => Promise<void>
   signInWithFacebook: () => Promise<void>
   refreshSession: () => Promise<boolean>
-  ensureSessionFreshness: () => Promise<boolean>
   requireAuth: (fallbackUrl?: string) => boolean
 }
 
@@ -54,12 +51,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isRefreshingSession, setIsRefreshingSession] = useState(false)
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-  const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
-  const visibilityRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /**
    * Fetch user profile from Supabase
@@ -90,84 +84,57 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
    * Refresh the session if needed
    */
   const refreshSession = useCallback(async (): Promise<boolean> => {
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current
-    }
+    try {
+      const { data, error } = await supabase.auth.refreshSession()
 
-    const refreshPromise = (async () => {
-      setIsRefreshingSession(true)
-      try {
-        const { data, error } = await supabase.auth.refreshSession()
-
-        if (error || !data.session) {
-          // If refresh failed but we still have a user in state,
-          // we'll keep them signed in until they explicitly sign out
-          if (user) {
-            console.log("Session refresh failed, but keeping existing user state")
-            return true
-          }
-
-          // Otherwise clear the session
-          setUser(null)
-          setSession(null)
-          setProfile(null)
-          setIsAuthenticated(false)
-          return false
+      if (error || !data.session) {
+        // If refresh failed but we still have a user in state,
+        // we'll keep them signed in until they explicitly sign out
+        if (user) {
+          console.log("Session refresh failed, but keeping existing user state")
+          return true
         }
 
-        setSession(data.session)
-        setUser(data.session.user)
-        setIsAuthenticated(!!data.session.user)
-
-        if (data.session.user) {
-          await fetchProfile(data.session.user.id)
-        }
-
-        return true
-      } catch (error) {
-        console.error("Error refreshing session:", error)
-        return !!user
-      } finally {
-        setIsRefreshingSession(false)
-        refreshPromiseRef.current = null
+        // Otherwise clear the session
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+        setIsAuthenticated(false)
+        return false
       }
-    })()
 
-    refreshPromiseRef.current = refreshPromise
-    return refreshPromise
-  }, [user, fetchProfile, supabase])
+      setSession(data.session)
+      setUser(data.session.user)
+      setIsAuthenticated(!!data.session.user)
 
-  const sessionExpiresSoon = useCallback(() => {
-    if (!session) return false
+      if (data.session.user) {
+        await fetchProfile(data.session.user.id)
+      }
 
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
-    if (!expiresAt) return false
-
-    const now = Date.now()
-    const timeUntilExpiry = expiresAt - now
-
-    return timeUntilExpiry <= SESSION_REFRESH_BUFFER
-  }, [session])
-
-  const ensureSessionFreshness = useCallback(async () => {
-    if (!session) return true
-
-    if (!sessionExpiresSoon()) {
       return true
+    } catch (error) {
+      console.error("Error refreshing session:", error)
+      return !!user
     }
-
-    return refreshSession()
-  }, [refreshSession, session, sessionExpiresSoon])
+  }, [user, fetchProfile, supabase])
 
   /**
    * Check if the session needs to be refreshed
    */
   const checkSessionExpiry = useCallback(async () => {
-    if (!sessionExpiresSoon()) return
+    if (!session) return
 
-    console.log("Session expiring soon, refreshing...")
-    await refreshSession()
-  }, [refreshSession, sessionExpiresSoon])
+    // Calculate time until session expires
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+    const now = Date.now()
+    const timeUntilExpiry = expiresAt - now
+
+    // If session will expire within the buffer time, refresh it
+    if (timeUntilExpiry > 0 && timeUntilExpiry < SESSION_REFRESH_BUFFER) {
+      console.log("Session expiring soon, refreshing...")
+      await refreshSession()
+    }
+  }, [session, refreshSession])
 
   /**
    * Initialize auth state
@@ -222,53 +189,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     initAuth()
   }, [fetchProfile, supabase])
 
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return
-    }
-
-    const scheduleRefresh = () => {
-      if (!session) return
-
-      if (visibilityRefreshTimeoutRef.current) {
-        clearTimeout(visibilityRefreshTimeoutRef.current)
-      }
-
-      visibilityRefreshTimeoutRef.current = setTimeout(() => {
-        refreshSession()
-      }, VISIBILITY_REFRESH_DEBOUNCE)
-    }
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        scheduleRefresh()
-      }
-    }
-
-    const handleFocus = () => {
-      scheduleRefresh()
-    }
-
-    document.addEventListener("visibilitychange", handleVisibility)
-    window.addEventListener("focus", handleFocus)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility)
-      window.removeEventListener("focus", handleFocus)
-      if (visibilityRefreshTimeoutRef.current) {
-        clearTimeout(visibilityRefreshTimeoutRef.current)
-        visibilityRefreshTimeoutRef.current = null
-      }
-    }
-  }, [refreshSession, session])
-
   /**
    * Check if the current route requires authentication
    */
   const requireAuth = useCallback(
     (fallbackUrl = "/auth"): boolean => {
       // Don't check during initial loading
-      if (loading || isRefreshingSession || !initialAuthCheckComplete) return true
+      if (loading || !initialAuthCheckComplete) return true
 
       // If authenticated, allow access
       if (isAuthenticated) return true
@@ -282,7 +209,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       router.push(`${fallbackUrl}?returnTo=${returnUrl}`)
       return false
     },
-    [initialAuthCheckComplete, isAuthenticated, isRefreshingSession, loading, router],
+    [loading, initialAuthCheckComplete, isAuthenticated, router],
   )
 
   // Set up interval to check session expiry
@@ -294,8 +221,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      await ensureSessionFreshness()
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -323,8 +248,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, username: string) => {
     try {
       setLoading(true)
-
-      await ensureSessionFreshness()
 
       // Check if username is already taken
       const { data: existingUser, error: checkError } = await supabase
@@ -411,8 +334,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
       setLoading(true)
-      await ensureSessionFreshness()
-
       if (!user) throw new Error("User not authenticated")
 
       const { data, error } = await supabase.from("profiles").update(updates).eq("id", user.id).select().single()
@@ -435,8 +356,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       setLoading(true)
-      await ensureSessionFreshness()
-
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       })
@@ -456,8 +375,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true)
-      await ensureSessionFreshness()
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -481,8 +398,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const signInWithFacebook = async () => {
     try {
       setLoading(true)
-      await ensureSessionFreshness()
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "facebook",
         options: {
@@ -506,8 +421,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         session,
-        loading: loading || (isAuthenticated && isRefreshingSession),
-        isRefreshingSession,
+        loading,
         isAuthenticated,
         signIn,
         signUp,
@@ -517,7 +431,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signInWithFacebook,
         refreshSession,
-        ensureSessionFreshness,
         requireAuth,
       }}
     >

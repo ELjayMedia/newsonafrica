@@ -4,13 +4,12 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import { highlightSearchTerms } from "@/lib/search"
+import { stripHtml, highlightSearchTerms } from "@/lib/search"
 import { formatDistanceToNow } from "date-fns"
 import { getArticleUrl } from "@/lib/utils/routing"
-import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
 
 interface SearchResultsProps {
-  results: AlgoliaSearchRecord[]
+  results: any[]
   query: string
   total: number
   currentPage: number
@@ -18,23 +17,6 @@ interface SearchResultsProps {
   hasMore: boolean
   isLoading: boolean
   onLoadMore: () => void
-  country?: string
-}
-
-const extractSlug = (objectID: string): { country?: string; slug: string } => {
-  if (!objectID) {
-    return { slug: objectID }
-  }
-
-  const [country, ...rest] = objectID.split(":")
-  if (rest.length === 0) {
-    return { slug: objectID }
-  }
-
-  return {
-    country,
-    slug: rest.join(":"),
-  }
 }
 
 export function SearchResults({
@@ -46,7 +28,6 @@ export function SearchResults({
   hasMore,
   isLoading,
   onLoadMore,
-  country,
 }: SearchResultsProps) {
   const [isClient, setIsClient] = useState(false)
 
@@ -81,56 +62,41 @@ export function SearchResults({
       </div>
 
       <div className="space-y-4">
-        {results.map((result) => {
-          const parsed = extractSlug(result.objectID)
-          const resolvedCountry = result.country || parsed.country || country
-          const slug = parsed.slug || result.objectID
-          const href = getArticleUrl(slug, resolvedCountry)
-
-          return (
-            <div key={result.objectID} className="border-b border-gray-200 pb-4 last:border-0">
-              <Link href={href} className="block group">
-                <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {isClient ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: highlightSearchTerms(result.title, query),
-                      }}
-                    />
-                  ) : (
-                    result.title
-                  )}
-                </h3>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mt-1">
-                  <span>
-                    {result.published_at
-                      ? formatDistanceToNow(new Date(result.published_at), { addSuffix: true })
-                      : "Unknown date"}
-                  </span>
-                  {resolvedCountry && <span className="uppercase">• {resolvedCountry}</span>}
-                  {result.categories?.length > 0 && (
-                    <span className="truncate">
-                      • {result.categories.slice(0, 3).join(", ")}
-                      {result.categories.length > 3 ? "…" : ""}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-gray-600">
-                  {isClient ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: highlightSearchTerms(result.excerpt.slice(0, 220), query),
-                      }}
-                    />
-                  ) : (
-                    result.excerpt.slice(0, 220)
-                  )}
-                  {result.excerpt.length > 220 ? "…" : ""}
-                </p>
-              </Link>
-            </div>
-          )
-        })}
+        {results.map((result) => (
+          <div key={result.id} className="border-b border-gray-200 pb-4 last:border-0">
+            <Link href={getArticleUrl(result.slug)} className="block group">
+              <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                {isClient ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: highlightSearchTerms(result.title, query),
+                    }}
+                  />
+                ) : (
+                  result.title
+                )}
+              </h3>
+              <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                <span>
+                  {result.date ? formatDistanceToNow(new Date(result.date), { addSuffix: true }) : "Unknown date"}
+                </span>
+                {result._embedded?.author && <span>• {result._embedded.author[0]?.name}</span>}
+              </div>
+              <p className="mt-1 text-gray-600">
+                {isClient ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: highlightSearchTerms(stripHtml(result.excerpt).slice(0, 200), query),
+                    }}
+                  />
+                ) : (
+                  stripHtml(result.excerpt).slice(0, 200)
+                )}
+                {stripHtml(result.excerpt).length > 200 ? "..." : ""}
+              </p>
+            </Link>
+          </div>
+        ))}
       </div>
 
       {hasMore && (

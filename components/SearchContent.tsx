@@ -4,8 +4,7 @@ import { useState, useCallback, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SearchBox } from "./SearchBox"
 import { SearchResults } from "./SearchResults"
-import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
-import { SUPPORTED_COUNTRIES } from "@/lib/editions"
+import type { WordPressSearchResult } from "@/lib/wordpress-search"
 
 interface SearchContentProps {
   initialQuery?: string
@@ -15,7 +14,7 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [results, setResults] = useState<AlgoliaSearchRecord[]>([])
+  const [results, setResults] = useState<WordPressSearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [currentQuery, setCurrentQuery] = useState(initialQuery)
   const [currentPage, setCurrentPage] = useState(1)
@@ -23,85 +22,60 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
   const [totalPages, setTotalPages] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
-  const [country, setCountry] = useState(() => searchParams.get("country") || "all")
-  const [sort, setSort] = useState<"relevance" | "latest">(
-    (searchParams.get("sort") === "latest" ? "latest" : "relevance") as "relevance" | "latest",
-  )
-
-  const normalizedCountry = country?.toLowerCase() || "all"
-  const isSupportedCountry = SUPPORTED_COUNTRIES.some((entry) => entry.code === normalizedCountry)
-  const effectiveCountry = isSupportedCountry ? normalizedCountry : "all"
 
   // Perform search
-  const performSearch = useCallback(
-    async (query: string, page = 1, append = false, countryParam = effectiveCountry, sortParam = sort) => {
-      if (!query.trim()) {
+  const performSearch = useCallback(async (query: string, page = 1, append = false) => {
+    if (!query.trim()) {
+      setResults([])
+      setTotal(0)
+      setHasSearched(false)
+      return
+    }
+
+    setIsLoading(true)
+    console.log(`Performing search for: "${query}", page: ${page}, append: ${append}`)
+
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}&per_page=20`)
+      console.log(`Search API response status: ${response.status}`)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Search API error:", errorData)
+        throw new Error(errorData.message || `HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("Search API response data:", data)
+
+      // Handle the response format from our API
+      if (append) {
+        setResults((prev) => [...prev, ...(data.results || [])])
+      } else {
+        setResults(data.results || [])
+      }
+
+      setTotal(data.total || 0)
+      setTotalPages(data.totalPages || 0)
+      setCurrentPage(data.currentPage || page)
+      setHasMore(data.hasMore || false)
+      setHasSearched(true)
+
+      console.log(`Search completed: ${data.results?.length || 0} results found`)
+    } catch (error) {
+      console.error("Search error:", error)
+      if (!append) {
         setResults([])
         setTotal(0)
-        setHasSearched(false)
-        return
+        setTotalPages(0)
+        setHasMore(false)
+        setHasSearched(true) // Still mark as searched to show "no results"
       }
-
-      setIsLoading(true)
-      console.log(`Performing search for: "${query}", page: ${page}, append: ${append}`)
-
-      try {
-        const params = new URLSearchParams({
-          q: query,
-          page: page.toString(),
-          per_page: "20",
-        })
-
-        if (countryParam && countryParam !== "all") {
-          params.set("country", countryParam)
-        } else {
-          params.set("country", "all")
-        }
-
-        params.set("sort", sortParam)
-
-        const response = await fetch(`/api/search?${params.toString()}`)
-        console.log(`Search API response status: ${response.status}`)
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error("Search API error:", errorData)
-          throw new Error(errorData.message || `HTTP ${response.status}`)
-        }
-
-        const data = await response.json()
-        console.log("Search API response data:", data)
-
-        // Handle the response format from our API
-        if (append) {
-          setResults((prev) => [...prev, ...((data.results as AlgoliaSearchRecord[]) || [])])
-        } else {
-          setResults((data.results as AlgoliaSearchRecord[]) || [])
-        }
-
-        setTotal(data.total || 0)
-        setTotalPages(data.totalPages || 0)
-        setCurrentPage(data.currentPage || page)
-        setHasMore(data.hasMore || false)
-        setHasSearched(true)
-
-        console.log(`Search completed: ${data.results?.length || 0} results found`)
-      } catch (error) {
-        console.error("Search error:", error)
-        if (!append) {
-          setResults([])
-          setTotal(0)
-          setTotalPages(0)
-          setHasMore(false)
-          setHasSearched(true) // Still mark as searched to show "no results"
-        }
-        // You could add a toast notification here to show the error to users
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [effectiveCountry, sort],
-  )
+      // You could add a toast notification here to show the error to users
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   // Handle search
   const handleSearch = useCallback(
@@ -119,55 +93,37 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
         params.delete("page")
       }
 
-      if (effectiveCountry) {
-        params.set("country", effectiveCountry)
-      } else {
-        params.delete("country")
-      }
-
-      params.set("sort", sort)
-
       const newUrl = params.toString() ? `/search?${params.toString()}` : "/search"
       router.replace(newUrl, { scroll: false })
 
       if (query.trim()) {
-        performSearch(query, 1, false, effectiveCountry, sort)
+        performSearch(query, 1, false)
       } else {
         setResults([])
         setTotal(0)
         setHasSearched(false)
       }
     },
-    [router, searchParams, performSearch, effectiveCountry, sort],
+    [router, searchParams, performSearch],
   )
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
     if (hasMore && !isLoading && currentQuery) {
-      performSearch(currentQuery, currentPage + 1, true, effectiveCountry, sort)
+      performSearch(currentQuery, currentPage + 1, true)
     }
-  }, [hasMore, isLoading, currentQuery, currentPage, performSearch, effectiveCountry, sort])
+  }, [hasMore, isLoading, currentQuery, currentPage, performSearch])
 
   // Initialize from URL params
   useEffect(() => {
     const urlQuery = searchParams.get("q") || ""
     const urlPage = Number.parseInt(searchParams.get("page") || "1", 10)
-    const urlCountry = searchParams.get("country") || "all"
-    const urlSort = searchParams.get("sort") === "latest" ? "latest" : "relevance"
 
     if (urlQuery && urlQuery !== currentQuery) {
       setCurrentQuery(urlQuery)
-      performSearch(urlQuery, urlPage, false, urlCountry, urlSort)
+      performSearch(urlQuery, urlPage, false)
     }
-
-    if (urlCountry !== country) {
-      setCountry(urlCountry)
-    }
-
-    if (urlSort !== sort) {
-      setSort(urlSort)
-    }
-  }, [searchParams, currentQuery, performSearch, country, sort])
+  }, [searchParams, currentQuery, performSearch])
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -179,8 +135,6 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
           initialValue={currentQuery}
           className="w-full"
           showSuggestions={true}
-          country={effectiveCountry}
-          sort={sort}
         />
       </div>
 
@@ -196,7 +150,6 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
             hasMore={hasMore}
             isLoading={isLoading}
             onLoadMore={handleLoadMore}
-            country={effectiveCountry}
           />
         </div>
       )}

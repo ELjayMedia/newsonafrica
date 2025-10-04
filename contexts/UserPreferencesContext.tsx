@@ -131,7 +131,7 @@ function resolveTheme(theme: ThemePreference) {
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), [])
-  const { user, profile, ensureSessionFreshness } = useUser()
+  const { user, profile } = useUser()
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -176,8 +176,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
       setUpdating(true)
       try {
-        await ensureSessionFreshness()
-
         const { error } = await supabase.from("profiles").update({ preferences: nextRaw }).eq("id", user.id)
 
         if (error) {
@@ -189,7 +187,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setUpdating(false)
       }
     },
-    [applyProfilePreferenceState, ensureSessionFreshness, supabase, user],
+    [applyProfilePreferenceState, supabase, user],
   )
 
   const applyTheme = useCallback((theme: ThemePreference) => {
@@ -224,8 +222,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
     setLoading(true)
     try {
-      await ensureSessionFreshness()
-
       const [{ data: settingsData, error: settingsError }, { data: prefsData, error: prefsError }] = await Promise.all([
         supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle<UserSettingsRow>(),
         supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle<UserPreferencesRow>(),
@@ -241,8 +237,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
       let settingsRow = settingsData
       if (!settingsRow) {
-        await ensureSessionFreshness()
-
         const { data: insertedSettings, error: insertError } = await supabase
           .from("user_settings")
           .upsert({ user_id: user.id }, { onConflict: "user_id" })
@@ -258,8 +252,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       let contentRow = prefsData
       if (!contentRow) {
         const defaultSections = Array.isArray(profile?.interests) ? (profile?.interests as string[]) : []
-        await ensureSessionFreshness()
-
         const { data: insertedPreferences, error: preferencesError } = await supabase
           .from("user_preferences")
           .upsert(
@@ -364,7 +356,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
       if (shouldSyncProfilePrefs) {
         try {
-          await ensureSessionFreshness()
           await supabase.from("profiles").update({ preferences: profileRaw }).eq("id", user.id)
         } catch (preferencesSyncError) {
           console.error("Failed to sync profile preferences:", preferencesSyncError)
@@ -376,7 +367,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       setInitialized(true)
     }
-  }, [ensureSessionFreshness, profile?.interests, profile?.preferences, supabase, user])
+  }, [profile?.interests, profile?.preferences, supabase, user])
 
   useEffect(() => {
     loadPreferences()
@@ -405,8 +396,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       }
       setUpdating(true)
       try {
-        await ensureSessionFreshness()
-
         const payload: Partial<UserSettingsRow> & { user_id: string; updated_at?: string } = {
           user_id: user.id,
           updated_at: new Date().toISOString(),
@@ -438,7 +427,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setUpdating(false)
       }
     },
-    [ensureSessionFreshness, supabase, user],
+    [supabase, user],
   )
 
   const updateContentPreferences = useCallback(
@@ -446,8 +435,6 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       if (!user) return
       setUpdating(true)
       try {
-        await ensureSessionFreshness()
-
         const payload: UserPreferencesRow = {
           user_id: user.id,
           sections: updates.sections ?? preferences.sections,
@@ -477,14 +464,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         setUpdating(false)
       }
     },
-    [
-      ensureSessionFreshness,
-      preferences.blockedTopics,
-      preferences.countries,
-      preferences.sections,
-      supabase,
-      user,
-    ],
+    [preferences.blockedTopics, preferences.countries, preferences.sections, supabase, user],
   )
 
   const setTheme = useCallback(

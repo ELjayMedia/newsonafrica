@@ -64,4 +64,3 @@ export function FeaturedHeroContent({ post }: FeaturedHeroProps) {
     </Link>
   )
 }
-

@@ -67,26 +67,6 @@ type BookmarkHydrationMap = Record<
 >
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
-const BOOKMARK_SYNC_QUEUE = "bookmarks-write-queue"
-
-const isOfflineError = (error: unknown) => {
-  if (typeof navigator === "undefined") return false
-  if (!navigator.onLine) return true
-  if (error instanceof TypeError && error.message?.includes("Failed to fetch")) {
-    return true
-  }
-  return false
-}
-
-const readJson = async <T = any>(response: Response): Promise<T | null> => {
-  try {
-    const text = await response.text()
-    if (!text) return null
-    return JSON.parse(text) as T
-  } catch {
-    return null
-  }
-}
 
 const extractText = (value: unknown): string => {
   if (!value) return ""
@@ -191,7 +171,7 @@ export function useBookmarks() {
 }
 
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
-  const { user, ensureSessionFreshness } = useUser()
+  const { user } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
@@ -237,7 +217,17 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     [bookmarks], // Keep dependency for reactivity
   )
 
-  const fetchBookmarks = useCallback(async () => {
+  // Fetch bookmarks when user changes
+  useEffect(() => {
+    if (user) {
+      fetchBookmarks()
+    } else {
+      setBookmarks([])
+      setLoading(false)
+    }
+  }, [user])
+
+  const fetchBookmarks = async () => {
     try {
       setLoading(true)
 
@@ -245,8 +235,6 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setBookmarks([])
         return
       }
-
-      await ensureSessionFreshness()
 
       const { data, error } = await supabase
         .from("bookmarks")
@@ -300,17 +288,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [ensureSessionFreshness, supabase, toast, user])
-
-  // Fetch bookmarks when user changes
-  useEffect(() => {
-    if (user) {
-      fetchBookmarks()
-    } else {
-      setBookmarks([])
-      setLoading(false)
-    }
-  }, [fetchBookmarks, user])
+  }
 
   const addBookmark = useCallback(
     async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
@@ -324,8 +302,6 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
-        await ensureSessionFreshness()
-
         const postData = post as any
         const insertPayload = {
           user_id: user.id,
@@ -341,56 +317,23 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           read_status: "unread" as const,
           notes: post.notes || null,
         }
-        let response: Response
-        try {
-          response = await fetch("/api/bookmarks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              postId: insertPayload.post_id,
-              title: insertPayload.title,
-              slug: insertPayload.slug,
-              excerpt: insertPayload.excerpt,
-              featuredImage: insertPayload.featured_image,
-              category: insertPayload.category,
-              tags: insertPayload.tags,
-              notes: insertPayload.notes,
-              country: insertPayload.country,
-            }),
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark request queued for background sync", error)
-            return
-          }
+
+        const { data, error } = await supabase
+          .from("bookmarks")
+          .insert(insertPayload)
+          .select()
+          .single()
+
+        if (error) {
           throw error
         }
 
-        const result = await readJson<{ bookmark?: SupabaseBookmarkRow; error?: string }>(response)
-
-        if (!response.ok || !result?.bookmark) {
-          const message = result?.error || `Failed to add bookmark (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
-        setBookmarks((prev) => [formatBookmarkRow(result.bookmark as SupabaseBookmarkRow), ...prev])
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark add operation queued due to offline mode", error)
-          return
-        }
-        console.error("Error adding bookmark:", error)
-        toast({
-          title: "Bookmark failed",
-          description: error?.message || "Failed to add bookmark.",
-          variant: "destructive",
-        })
-        throw error
+        setBookmarks((prev) => [formatBookmarkRow(data as SupabaseBookmarkRow), ...prev])
       } finally {
         setIsLoading(false)
       }
     },
-    [ensureSessionFreshness, isBookmarked, toast, user],
+    [user, supabase, isBookmarked],
   )
 
   const removeBookmark = useCallback(
@@ -399,46 +342,18 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
-        await ensureSessionFreshness()
+        const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId)
 
-        let response: Response
-        try {
-          const params = new URLSearchParams({ postId })
-          response = await fetch(`/api/bookmarks?${params.toString()}`, {
-            method: "DELETE",
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark delete queued for background sync", error)
-            return
-          }
+        if (error) {
           throw error
         }
 
-        const result = await readJson<{ success?: boolean; error?: string }>(response)
-        if (!response.ok || result?.success === false) {
-          const message = result?.error || `Failed to remove bookmark (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
         setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark delete operation queued due to offline mode", error)
-          return
-        }
-        console.error("Error removing bookmark:", error)
-        toast({
-          title: "Bookmark removal failed",
-          description: error?.message || "Failed to remove bookmark.",
-          variant: "destructive",
-        })
-        throw error
       } finally {
         setIsLoading(false)
       }
     },
-    [ensureSessionFreshness, toast, user],
+    [user, supabase],
   )
 
   const updateBookmark = useCallback(
@@ -447,8 +362,6 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true)
       try {
-        await ensureSessionFreshness()
-
         const sanitizedUpdates = { ...updates }
         if ("featured_image" in sanitizedUpdates) {
           sanitizedUpdates.featured_image =
@@ -457,75 +370,36 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
               : null
         }
 
-        let response: Response
-        try {
-          response = await fetch("/api/bookmarks", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ postId, updates: sanitizedUpdates }),
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark update queued for background sync", error)
-            return
-          }
+        const { data, error } = await supabase
+          .from("bookmarks")
+          .update(sanitizedUpdates)
+          .eq("user_id", user.id)
+          .eq("post_id", postId)
+          .select()
+          .single()
+
+        if (error) {
           throw error
         }
 
-        const result = await readJson<{ bookmark?: SupabaseBookmarkRow; error?: string }>(response)
-        if (!response.ok || !result?.bookmark) {
-          const message = result?.error || `Failed to update bookmark (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
-        setBookmarks((prev) =>
-          prev.map((b) => (b.post_id === postId ? formatBookmarkRow(result.bookmark as SupabaseBookmarkRow) : b)),
-        )
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark update queued due to offline mode", error)
-          return
-        }
-        console.error("Error updating bookmark:", error)
-        toast({
-          title: "Bookmark update failed",
-          description: error?.message || "Failed to update bookmark.",
-          variant: "destructive",
-        })
-        throw error
+        setBookmarks((prev) => prev.map((b) => (b.post_id === postId ? { ...b, ...data } : b)))
       } finally {
         setIsLoading(false)
       }
     },
-    [ensureSessionFreshness, toast, user],
+    [user, supabase],
   )
 
   const bulkRemoveBookmarks = useCallback(
     async (postIds: string[]) => {
       if (!user || postIds.length === 0) return
 
-      await ensureSessionFreshness()
-
       setIsLoading(true)
       try {
-        let response: Response
-        try {
-          const params = new URLSearchParams({ postIds: postIds.join(",") })
-          response = await fetch(`/api/bookmarks?${params.toString()}`, {
-            method: "DELETE",
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bulk bookmark removal queued for background sync", error)
-            return
-          }
-          throw error
-        }
+        const { error } = await supabase.from("bookmarks").delete().eq("user_id", user.id).in("post_id", postIds)
 
-        const result = await readJson<{ success?: boolean; error?: string }>(response)
-        if (!response.ok || result?.success === false) {
-          const message = result?.error || `Failed to remove bookmarks (HTTP ${response.status})`
-          throw new Error(message)
+        if (error) {
+          throw error
         }
 
         setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
@@ -535,10 +409,6 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           description: `${postIds.length} bookmarks removed successfully`,
         })
       } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bulk bookmark removal queued due to offline mode", error)
-          return
-        }
         toast({
           title: "Error",
           description: `Failed to remove bookmarks: ${error.message}`,
@@ -548,47 +418,8 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     },
-    [ensureSessionFreshness, toast, user],
+    [user, supabase, toast],
   )
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    if (!("serviceWorker" in navigator)) return
-
-    const handleMessage = (event: MessageEvent) => {
-      const data = event.data as { type?: string; queue?: string; error?: string } | null
-      if (!data || typeof data !== "object") return
-      if (data.queue !== BOOKMARK_SYNC_QUEUE) return
-
-      switch (data.type) {
-        case "BACKGROUND_SYNC_ENQUEUE":
-          toast({
-            title: "Bookmark queued",
-            description: "We'll sync your bookmark once you're back online.",
-          })
-          break
-        case "BACKGROUND_SYNC_QUEUE_REPLAYED":
-          toast({
-            title: "Bookmarks synced",
-            description: "Your offline bookmark changes have been saved.",
-          })
-          fetchBookmarks()
-          break
-        case "BACKGROUND_SYNC_QUEUE_ERROR":
-          toast({
-            title: "Sync failed",
-            description: data.error || "We couldn't sync your bookmark changes.",
-            variant: "destructive",
-          })
-          break
-        default:
-          break
-      }
-    }
-
-    navigator.serviceWorker.addEventListener("message", handleMessage)
-    return () => navigator.serviceWorker.removeEventListener("message", handleMessage)
-  }, [fetchBookmarks, toast])
 
   const markAsRead = useCallback(
     async (postId: string) => {
@@ -666,7 +497,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBookmarks = useCallback(async () => {
     await fetchBookmarks()
-  }, [fetchBookmarks])
+  }, [user])
 
   const contextValue = useMemo(
     () => ({

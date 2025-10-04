@@ -1,5 +1,4 @@
 import { getWpEndpoints } from "@/config/wp"
-import { SITE_BASE_URL } from "@/lib/site-url"
 
 export type EditionType = "country" | "african"
 
@@ -7,8 +6,6 @@ interface BaseEdition {
   code: string
   name: string
   flag: string
-  canonicalUrl: string
-  hreflang: string
 }
 
 export interface CountryEdition extends BaseEdition {
@@ -28,15 +25,11 @@ const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint" | "
     code: "sz",
     name: "Eswatini",
     flag: "🇸🇿",
-    canonicalUrl: `${SITE_BASE_URL}/sz`,
-    hreflang: "en-SZ",
   },
   {
     code: "za",
     name: "South Africa",
     flag: "🇿🇦",
-    canonicalUrl: `${SITE_BASE_URL}/za`,
-    hreflang: "en-ZA",
   },
 ]
 
@@ -52,8 +45,6 @@ export const AFRICAN_EDITION: AfricanEdition = {
   code: "african-edition",
   name: "African Edition",
   flag: "🌍",
-  canonicalUrl: SITE_BASE_URL,
-  hreflang: "x-default",
 }
 
 export const SUPPORTED_EDITIONS: SupportedEdition[] = [AFRICAN_EDITION, ...SUPPORTED_COUNTRIES]

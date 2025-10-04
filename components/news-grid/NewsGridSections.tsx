@@ -242,4 +242,3 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
     </div>
   )
 }
-

@@ -7,10 +7,6 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { kvCache } from "@/lib/cache/kv"
-import {
-  deleteLegacyPostRoute,
-  setLegacyPostRoute,
-} from "@/lib/legacy-routes"
 
 export const runtime = "nodejs"
 
@@ -85,109 +81,6 @@ const extractTagSlugs = (post: any): string[] => {
   return Array.from(slugs)
 }
 
-const normalizeCountry = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-  if (!normalized) {
-    return null
-  }
-
-  return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : null
-}
-
-const deriveCountryFromPost = (post: any): string | null => {
-  const candidates: unknown[] = [
-    post?.meta?.country,
-    post?.meta?.Country,
-    post?.meta?._country,
-    post?.meta?._nc_country,
-    post?.meta?._nc_default_country,
-    post?.meta?.country_code,
-    post?.country,
-    post?.Country,
-    post?.country_code,
-    post?.primary_country,
-  ]
-
-  for (const candidate of candidates) {
-    const normalized = normalizeCountry(candidate)
-    if (normalized) {
-      return normalized
-    }
-  }
-
-  const linkCandidates = [post?.link, post?.permalink, post?.guid?.rendered]
-  for (const link of linkCandidates) {
-    if (typeof link !== "string" || !link.trim()) {
-      continue
-    }
-
-    try {
-      const parsed = new URL(link, "https://placeholder.local")
-      const segments = parsed.pathname.split("/").filter(Boolean)
-      if (segments.length > 0) {
-        const normalized = normalizeCountry(segments[0])
-        if (normalized) {
-          return normalized
-        }
-      }
-    } catch {
-      // ignore parsing errors and continue
-    }
-  }
-
-  return null
-}
-
-const normalizeSlug = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-  return normalized || null
-}
-
-const derivePrimaryCategorySlug = (
-  post: any,
-  categorySlugs: string[],
-): string | null => {
-  const candidates: unknown[] = [
-    post?.primary_category,
-    post?.primaryCategory,
-    post?.primary_category_slug,
-    post?.primaryCategorySlug,
-    post?.yoast_head_json?.primary_category,
-    post?.yoast_head_json?.primary_category_slug,
-    post?.meta?._primary_category,
-    post?.meta?._primary_category_slug,
-    post?.meta?._yoast_wpseo_primary_category_slug,
-  ]
-
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate === "object" && "slug" in candidate) {
-      const normalized = normalizeSlug((candidate as { slug?: string }).slug)
-      if (normalized) {
-        return normalized
-      }
-    }
-
-    const normalized = normalizeSlug(candidate)
-    if (normalized) {
-      return normalized
-    }
-  }
-
-  if (categorySlugs.length > 0) {
-    return categorySlugs[0]
-  }
-
-  return null
-}
-
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
@@ -232,17 +125,6 @@ export async function POST(request: NextRequest) {
           const tagSlugs = extractTagSlugs(post)
           const tagsToRevalidate = new Set<string>()
           const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
-
-          const resolvedCountry = deriveCountryFromPost(post)
-          const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
-
-          if (resolvedCountry && primaryCategorySlug) {
-            await setLegacyPostRoute({
-              slug: post.slug,
-              country: resolvedCountry,
-              primaryCategory: primaryCategorySlug,
-            })
-          }
 
           // Revalidate the specific post page for all supported countries
           for (const country of SUPPORTED_COUNTRIES) {
@@ -334,8 +216,6 @@ export async function POST(request: NextRequest) {
           const tagSlugs = extractTagSlugs(post)
           const tagsToRevalidate = new Set<string>()
           const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
-
-          await deleteLegacyPostRoute(post.slug)
 
           // Revalidate pages that might have referenced this post
           for (const country of SUPPORTED_COUNTRIES) {

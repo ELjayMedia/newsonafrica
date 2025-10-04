@@ -3,16 +3,12 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
 
 export function SearchDebugger() {
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [country, setCountry] = useState("all")
-  const [sort, setSort] = useState<"relevance" | "latest">("relevance")
 
   const testSearch = async () => {
     if (!query.trim()) return
@@ -24,8 +20,7 @@ export function SearchDebugger() {
     try {
       console.log("Testing search API with query:", query)
 
-      const params = new URLSearchParams({ q: query, country, sort })
-      const response = await fetch(`/api/search?${params.toString()}`)
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
       console.log("Response status:", response.status)
 
       const data = await response.json()
@@ -48,46 +43,16 @@ export function SearchDebugger() {
     <div className="p-4 border rounded-lg bg-gray-50">
       <h3 className="font-semibold mb-4">Search API Debugger</h3>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex gap-2 mb-4">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Enter search query..."
           onKeyDown={(e) => e.key === "Enter" && testSearch()}
-          className="flex-1 min-w-[200px]"
         />
         <Button onClick={testSearch} disabled={loading}>
           {loading ? "Testing..." : "Test Search"}
         </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-4 mb-4 text-sm">
-        <label className="flex items-center gap-2">
-          <span>Country:</span>
-          <select
-            value={country}
-            onChange={(event) => setCountry(event.target.value)}
-            className="border rounded px-2 py-1"
-          >
-            <option value="all">All / Pan-African</option>
-            {SUPPORTED_COUNTRIES.map((entry) => (
-              <option key={entry.code} value={entry.code}>
-                {entry.code.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2">
-          <span>Sort:</span>
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as "relevance" | "latest")}
-            className="border rounded px-2 py-1"
-          >
-            <option value="relevance">Relevance</option>
-            <option value="latest">Latest</option>
-          </select>
-        </label>
       </div>
 
       {error && (
@@ -105,14 +70,11 @@ export function SearchDebugger() {
 
           {results.results && results.results.length > 0 ? (
             <div className="space-y-2">
-              {results.results.slice(0, 3).map((post: AlgoliaSearchRecord, index: number) => (
+              {results.results.slice(0, 3).map((post: any, index: number) => (
                 <div key={index} className="p-2 bg-white border rounded text-sm">
                   <div className="font-medium">{post.title || "No title"}</div>
                   <div className="text-gray-600 text-xs">
-                    {(post.excerpt || "").slice(0, 120) || "No excerpt"}
-                  </div>
-                  <div className="text-gray-500 text-xs mt-1">
-                    {post.country?.toUpperCase() || "N/A"} • {post.published_at || "Unknown"}
+                    {(post.excerpt || "").replace(/<[^>]*>/g, "").slice(0, 100) || "No excerpt"}...
                   </div>
                 </div>
               ))}

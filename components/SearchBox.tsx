@@ -16,8 +16,6 @@ interface SearchBoxProps {
   showSuggestions?: boolean
   autoFocus?: boolean
   size?: "default" | "compact"
-  country?: string
-  sort?: "relevance" | "latest"
 }
 
 export function SearchBox({
@@ -28,8 +26,6 @@ export function SearchBox({
   showSuggestions = true,
   autoFocus = false,
   size = "default",
-  country = "all",
-  sort = "relevance",
 }: SearchBoxProps) {
   const [query, setQuery] = useState(initialValue)
   const [isLoading, setIsLoading] = useState(false)
@@ -47,13 +43,7 @@ export function SearchBox({
 
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, suggestions: "true" })
-        if (country) {
-          params.set("country", country)
-        }
-        params.set("sort", sort)
-
-        const response = await fetch(`/api/search?${params.toString()}`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&suggestions=true`)
         if (response.ok) {
           const data = await response.json()
           setSuggestions(data.suggestions || [])
@@ -64,7 +54,7 @@ export function SearchBox({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [query, showSuggestions, country, sort])
+  }, [query, showSuggestions])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -79,12 +69,7 @@ export function SearchBox({
         if (onSearch) {
           onSearch(query.trim())
         } else {
-          const params = new URLSearchParams({ q: query.trim() })
-          if (country) {
-            params.set("country", country)
-          }
-          params.set("sort", sort)
-          router.push(`/search?${params.toString()}`)
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
         }
       } catch (error) {
         console.error("Search error:", error)
@@ -92,7 +77,7 @@ export function SearchBox({
         setIsLoading(false)
       }
     },
-    [query, onSearch, router, country, sort],
+    [query, onSearch, router],
   )
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -102,12 +87,7 @@ export function SearchBox({
     if (onSearch) {
       onSearch(suggestion)
     } else {
-      const params = new URLSearchParams({ q: suggestion })
-      if (country) {
-        params.set("country", country)
-      }
-      params.set("sort", sort)
-      router.push(`/search?${params.toString()}`)
+      router.push(`/search?q=${encodeURIComponent(suggestion)}`)
     }
   }
 
