@@ -15,6 +15,7 @@ const envSchema = z.object({
   ALGOLIA_ADMIN_KEY: z.string().optional(),
   ALGOLIA_SEARCH_API_KEY: z.string().optional(),
   ALGOLIA_INDEX_PREFIX: z.string().default("newsonafrica"),
+  MVP_MODE: z.string().default("1"),
 })
 
 let env: z.infer<typeof envSchema>
@@ -40,6 +41,7 @@ try {
     ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
     ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
     ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
+    MVP_MODE: process.env.MVP_MODE || "1",
   }
 }
 
