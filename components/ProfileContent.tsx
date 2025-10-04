@@ -158,9 +158,9 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <MessageSquare className="h-12 w-12 mx-auto text-gray-600 dark:text-gray-300 mb-4" />
                   <h3 className="text-lg font-medium mb-2">Manage your bookmarks</h3>
-                  <p className="text-gray-500 mb-4">
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
                     View and manage your bookmarked articles in the dedicated bookmarks section.
                   </p>
                   <Button asChild>

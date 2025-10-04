@@ -204,8 +204,8 @@ export function SearchContent({ initialQuery = "" }: SearchContentProps) {
       {/* No search performed yet */}
       {!hasSearched && !isLoading && (
         <div className="text-center py-12">
-          <div className="text-gray-500 text-lg mb-2">Start searching</div>
-          <p className="text-gray-400">Enter a search term above to find articles, categories, and tags</p>
+          <div className="text-gray-600 dark:text-gray-300 text-lg mb-2">Start searching</div>
+          <p className="text-gray-600 dark:text-gray-300">Enter a search term above to find articles, categories, and tags</p>
         </div>
       )}
     </div>

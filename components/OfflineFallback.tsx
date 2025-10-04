@@ -127,11 +127,11 @@ export default function OfflineFallback({
   const getIcon = () => {
     switch (type) {
       case "article":
-        return <BookOpen className="w-12 h-12 text-gray-400" />
+        return <BookOpen className="w-12 h-12 text-gray-600 dark:text-gray-300" />
       case "list":
-        return <List className="w-12 h-12 text-gray-400" />
+        return <List className="w-12 h-12 text-gray-600 dark:text-gray-300" />
       default:
-        return <WifiOff className="w-12 h-12 text-gray-400" />
+        return <WifiOff className="w-12 h-12 text-gray-600 dark:text-gray-300" />
     }
   }
 
@@ -225,8 +225,8 @@ export default function OfflineFallback({
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-gray-500 mb-2">No cached content available</p>
-                <p className="text-sm text-gray-400">Browse articles while online to access them offline later.</p>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">No cached content available</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Browse articles while online to access them offline later.</p>
               </div>
             )}
           </CardContent>

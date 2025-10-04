@@ -33,7 +33,7 @@ export function NetworkStatusHandler() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-yellow-500 text-white p-2 text-center z-50"
+      className="fixed bottom-0 left-0 right-0 bg-warning-dark text-warning-foreground p-2 text-center z-50"
       role="status"
       aria-live="polite"
     >
