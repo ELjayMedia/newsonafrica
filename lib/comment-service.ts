@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
-import { clearQueryCache } from "@/utils/supabase-query-utils"
+import { clearQueryCache, columnExists } from "@/utils/supabase-query-utils"
 import { toast } from "@/hooks/use-toast"
 
 // Store recent comment submissions for rate limiting
@@ -115,95 +115,22 @@ export function recordSubmission(userId: string): void {
   )
 }
 
-// Check if the status column exists in the comments table
+// Check if the status and is_rich_text columns exist in the comments table
 let hasStatusColumn: boolean | null = null
 let hasRichTextColumn: boolean | null = null
 
 async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
-  if (hasStatusColumn !== null && hasRichTextColumn !== null) {
-    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
+  if (hasStatusColumn === null) {
+    hasStatusColumn = await columnExists("comments", "status")
   }
 
-  try {
-    // Check for status column
-    try {
-      const { data: statusData, error: statusError } = await supabase
-        .from("comments")
-        .select("id") // Select a column we know exists
-        .limit(1)
+  if (hasRichTextColumn === null) {
+    hasRichTextColumn = await columnExists("comments", "is_rich_text")
+  }
 
-      // Try to access the status column to see if it exists
-      try {
-        const { data: statusCheckData, error: statusCheckError } = await supabase
-          .rpc("column_exists", { table_name: "comments", column_name: "status" })
-          .single()
-
-        hasStatusColumn = statusCheckData?.exists || false
-
-        if (statusCheckError) {
-          // Fallback method if RPC is not available
-          try {
-            await supabase.from("comments").select("status").limit(1)
-            hasStatusColumn = true
-          } catch (e) {
-            hasStatusColumn = false
-          }
-        }
-      } catch (e) {
-        // If RPC fails, try direct query
-        try {
-          await supabase.from("comments").select("status").limit(1)
-          hasStatusColumn = true
-        } catch (e) {
-          hasStatusColumn = false
-        }
-      }
-    } catch (error) {
-      console.error("Error checking status column:", error)
-      hasStatusColumn = false
-    }
-
-    // Check for rich_text column
-    try {
-      try {
-        const { data: richTextCheckData, error: richTextCheckError } = await supabase
-          .rpc("column_exists", { table_name: "comments", column_name: "is_rich_text" })
-          .single()
-
-        hasRichTextColumn = richTextCheckData?.exists || false
-
-        if (richTextCheckError) {
-          // Fallback method if RPC is not available
-          try {
-            await supabase.from("comments").select("is_rich_text").limit(1)
-            hasRichTextColumn = true
-          } catch (e) {
-            hasRichTextColumn = false
-          }
-        }
-      } catch (e) {
-        // If RPC fails, try direct query
-        try {
-          await supabase.from("comments").select("is_rich_text").limit(1)
-          hasRichTextColumn = true
-        } catch (e) {
-          hasRichTextColumn = false
-        }
-      }
-    } catch (error) {
-      console.error("Error checking is_rich_text column:", error)
-      hasRichTextColumn = false
-    }
-
-    return {
-      hasStatus: hasStatusColumn,
-      hasRichText: hasRichTextColumn,
-    }
-  } catch (error) {
-    console.error("Error checking columns:", error)
-    hasStatusColumn = false
-    hasRichTextColumn = false
-    return { hasStatus: false, hasRichText: false }
+  return {
+    hasStatus: hasStatusColumn,
+    hasRichText: hasRichTextColumn,
   }
 }
 
