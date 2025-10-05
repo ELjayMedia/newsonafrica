@@ -523,8 +523,8 @@ export async function columnExists(table: string, column: string): Promise<boole
 
     // Fallback: try selecting the column
     try {
-      await supabase.from(table).select(column).limit(1)
-      return true
+      const { error: fallbackError } = await supabase.from(table).select(column).limit(1)
+      return !fallbackError
     } catch (e) {
       return false
     }
