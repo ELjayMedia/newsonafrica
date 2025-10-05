@@ -26,6 +26,7 @@ export const metadata: Metadata = {
   description: "Your trusted source for news across Africa",
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   applicationName: "News On Africa",
+  manifest: "/manifest.json",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
   creator: "News On Africa",
