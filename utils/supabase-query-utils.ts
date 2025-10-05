@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createClient } from "./supabase/client"
+import { createClient } from "./supabase-client"
 
 // Cache for storing query results
 interface QueryCacheEntry<T> {
@@ -332,9 +332,8 @@ export async function countRecords(
   const hasFilters = typeof filters === "function"
   const hasDeterministicKey = !hasFilters || cacheKeySuffix !== undefined
   const shouldUseCache = cache && hasDeterministicKey
-  const cacheKey = shouldUseCache
-    ? `${table}:count:${hasFilters ? cacheKeySuffix : "none"}`
-    : null
+  const suffixSegment = hasFilters ? cacheKeySuffix : cacheKeySuffix ?? "none"
+  const cacheKey = shouldUseCache ? `${table}:count:${suffixSegment}` : null
 
   if (shouldUseCache && cacheKey) {
     const cached = queryCache.get(cacheKey)
@@ -411,8 +410,9 @@ export async function fetchPaginated<T>(
   const hasFilters = typeof filters === "function"
   const hasDeterministicKey = !hasFilters || cacheKeySuffix !== undefined
   const shouldUseCache = cache && hasDeterministicKey
+  const suffixSegment = hasFilters ? cacheKeySuffix : cacheKeySuffix ?? "none"
   const cacheKey = shouldUseCache
-    ? `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${hasFilters ? cacheKeySuffix : "none"}`
+    ? `${table}:paginated:${page}:${pageSize}:${columns}:${orderBy}:${ascending}:${suffixSegment}`
     : null
 
   if (shouldUseCache && cacheKey) {
