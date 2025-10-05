@@ -152,9 +152,27 @@
         });
 
         // Display cached pages
+        async function getAppCache() {
+            const cacheNames = await caches.keys();
+            const appCacheName = cacheNames.find(name => name.startsWith('news-on-africa-'))
+                || cacheNames.find(name => name.includes('news-on-africa'));
+
+            if (!appCacheName) {
+                return null;
+            }
+
+            return caches.open(appCacheName);
+        }
+
         async function displayCachedPages() {
             try {
-                const cache = await caches.open('news-on-africa-v1.0.1');
+                const cache = await getAppCache();
+
+                if (!cache) {
+                    document.getElementById('cached-list').innerHTML = '<li class="cached-item">No cached content available</li>';
+                    return;
+                }
+
                 const cachedRequests = await cache.keys();
                 const cachedPages = cachedRequests.filter(request => {
                     const url = new URL(request.url);
