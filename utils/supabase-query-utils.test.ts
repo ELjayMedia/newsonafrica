@@ -11,7 +11,7 @@ const hoisted = vi.hoisted(() => {
   return { mockClient, createClientMock }
 })
 
-vi.mock("./supabase/client", () => ({
+vi.mock("./supabase-client", () => ({
   createClient: hoisted.createClientMock,
 }))
 

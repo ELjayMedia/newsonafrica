@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createClient } from "./supabase/client"
+import { createClient } from "./supabase-client"
 
 // Cache for storing query results
 interface QueryCacheEntry<T> {
