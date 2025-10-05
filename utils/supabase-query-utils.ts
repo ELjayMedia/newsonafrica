@@ -512,22 +512,21 @@ export async function upsertRecords<T>(
  */
 export async function columnExists(table: string, column: string): Promise<boolean> {
   const supabase = createClient()
+  const clientWithRpc = supabase as unknown as { rpc?: (...args: any[]) => any }
 
   try {
-    // First try using RPC if available
-    const { data, error } = await supabase.rpc("column_exists", { table_name: table, column_name: column }).single()
+    if (typeof clientWithRpc.rpc === "function") {
+      const { data, error } = await clientWithRpc
+        .rpc("column_exists", { table_name: table, column_name: column })
+        .single()
 
-    if (!error && data) {
-      return data.exists
+      if (!error && data) {
+        return Boolean(data.exists)
+      }
     }
 
-    // Fallback: try selecting the column
-    try {
-      const { error: fallbackError } = await supabase.from(table).select(column).limit(1)
-      return !fallbackError
-    } catch (e) {
-      return false
-    }
+    const { error: fallbackError } = await supabase.from(table).select(column).limit(1)
+    return !fallbackError
   } catch (error) {
     console.error(`Error checking if column ${column} exists in table ${table}:`, error)
     return false
