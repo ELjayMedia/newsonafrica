@@ -10,8 +10,7 @@ const recentSubmissions = new Map<string, number>()
 // Rate limit configuration
 const RATE_LIMIT_SECONDS = 10
 
-// Cache TTLs
-const COMMENTS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+// Cache TTL
 const SCHEMA_CHECK_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
 const COMMENT_SYNC_QUEUE = "comments-write-queue"
@@ -118,19 +117,42 @@ export function recordSubmission(userId: string): void {
 // Check if the status and is_rich_text columns exist in the comments table
 let hasStatusColumn: boolean | null = null
 let hasRichTextColumn: boolean | null = null
+let schemaCheckExpiresAt: number | null = null
+let schemaCheckPromise: Promise<{ hasStatus: boolean; hasRichText: boolean }> | null = null
 
 async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
-  if (hasStatusColumn === null) {
-    hasStatusColumn = await columnExists("comments", "status")
+  const now = Date.now()
+
+  if (
+    hasStatusColumn !== null &&
+    hasRichTextColumn !== null &&
+    schemaCheckExpiresAt !== null &&
+    now < schemaCheckExpiresAt
+  ) {
+    return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
   }
 
-  if (hasRichTextColumn === null) {
-    hasRichTextColumn = await columnExists("comments", "is_rich_text")
+  if (schemaCheckPromise) {
+    return schemaCheckPromise
   }
 
-  return {
-    hasStatus: hasStatusColumn,
-    hasRichText: hasRichTextColumn,
+  schemaCheckPromise = (async () => {
+    const [statusExists, richTextExists] = await Promise.all([
+      columnExists("comments", "status"),
+      columnExists("comments", "is_rich_text"),
+    ])
+
+    hasStatusColumn = statusExists
+    hasRichTextColumn = richTextExists
+    schemaCheckExpiresAt = Date.now() + SCHEMA_CHECK_CACHE_TTL
+
+    return { hasStatus: statusExists, hasRichText: richTextExists }
+  })()
+
+  try {
+    return await schemaCheckPromise
+  } finally {
+    schemaCheckPromise = null
   }
 }
 
