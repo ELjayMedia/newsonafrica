@@ -46,10 +46,17 @@ export function useEnhancedRelatedPosts({
   const calculateSimilarity = useCallback(
     (
       post: WordPressPost,
-      targetCategorySet: Set<string>,
-      targetTagSet: Set<string>,
-      targetCategoryCount: number,
-      targetTagCount: number,
+      {
+        targetCategorySet,
+        targetTagSet,
+        targetCategoryCount,
+        targetTagCount,
+      }: {
+        targetCategorySet: Set<string>
+        targetTagSet: Set<string>
+        targetCategoryCount: number
+        targetTagCount: number
+      },
     ): number => {
       // Basic similarity based on category and tag matching
       let score = 0
@@ -129,13 +136,12 @@ export function useEnhancedRelatedPosts({
 
       const enhancedPosts: RelatedPost[] = rawPosts.map((post) => ({
         ...post,
-        similarity: calculateSimilarity(
-          post,
+        similarity: calculateSimilarity(post, {
           targetCategorySet,
           targetTagSet,
           targetCategoryCount,
           targetTagCount,
-        ),
+        }),
         isPopular: detectPopularity(post),
         readingTime: post.excerpt ? estimateReadingTime(post.excerpt) : undefined,
       }))
