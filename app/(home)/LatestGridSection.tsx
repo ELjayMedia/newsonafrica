@@ -1,17 +1,13 @@
 import { NewsGrid } from "@/components/NewsGrid"
 
-import { fetchAggregatedHome } from "./home-data"
+import type { AggregatedHomeData } from "./home-data"
 
 interface LatestGridSectionProps {
-  baseUrl: string
-  cacheTags: string[]
+  data: AggregatedHomeData
 }
 
-export async function LatestGridSection({
-  baseUrl,
-  cacheTags,
-}: LatestGridSectionProps) {
-  const { remainingPosts } = await fetchAggregatedHome(baseUrl, cacheTags)
+export function LatestGridSection({ data }: LatestGridSectionProps) {
+  const { remainingPosts } = data
 
   if (!remainingPosts.length) {
     return (

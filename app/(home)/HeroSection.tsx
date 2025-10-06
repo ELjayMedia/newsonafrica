@@ -1,14 +1,13 @@
 import { FeaturedHero } from "@/components/FeaturedHero"
 
-import { fetchAggregatedHome } from "./home-data"
+import type { AggregatedHomeData } from "./home-data"
 
 interface HeroSectionProps {
-  baseUrl: string
-  cacheTags: string[]
+  data: AggregatedHomeData
 }
 
-export async function HeroSection({ baseUrl, cacheTags }: HeroSectionProps) {
-  const { heroPost } = await fetchAggregatedHome(baseUrl, cacheTags)
+export function HeroSection({ data }: HeroSectionProps) {
+  const { heroPost } = data
 
   if (!heroPost) {
     return (
