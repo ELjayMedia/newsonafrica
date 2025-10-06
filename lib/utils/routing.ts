@@ -3,31 +3,67 @@
  * Converts from generic /post/ routes to /[country]/article/ routes
  */
 
+import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "@/lib/editions"
+
 // Default country mapping based on user preferences or URL structure
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
 
 // Supported countries
-export const SUPPORTED_COUNTRIES = ["sz", "za"]
+export const SUPPORTED_COUNTRIES = SUPPORTED_COUNTRY_EDITIONS.map((country) => country.code)
 
 /**
  * Get the current country code from various sources
  * Priority: URL path > user preference > default
  */
 export function getCurrentCountry(pathname?: string): string {
-  // Try to extract from current pathname
-  if (pathname) {
-    const pathSegments = pathname.split("/")
-    const potentialCountry = pathSegments[1]
-    if (SUPPORTED_COUNTRIES.includes(potentialCountry)) {
-      return potentialCountry
-    }
+  const normalizeCountry = (value?: string | null) =>
+    value?.toLowerCase() ?? undefined
+
+  const matchSupportedCountry = (value?: string | null) => {
+    const normalized = normalizeCountry(value)
+    return normalized && SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
   }
 
-  // Try to get from localStorage (user preference)
+  const extractFromPath = (path?: string | null) => {
+    if (!path) return undefined
+    const pathSegments = path.split("/").filter(Boolean)
+    if (!pathSegments.length) return undefined
+    return matchSupportedCountry(pathSegments[0])
+  }
+
+  // Try to extract from provided pathname first
+  const fromProvidedPath = extractFromPath(pathname)
+  if (fromProvidedPath) {
+    return fromProvidedPath
+  }
+
   if (typeof window !== "undefined") {
-    const savedCountry = localStorage.getItem("preferredCountry")
-    if (savedCountry && SUPPORTED_COUNTRIES.includes(savedCountry)) {
-      return savedCountry
+    // Inspect the current browser location when available
+    const fromWindowPath = extractFromPath(window.location?.pathname)
+    if (fromWindowPath) {
+      return fromWindowPath
+    }
+
+    // Read preferred country from cookies if present
+    const preferredCookie = window.document?.cookie
+      ?.split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith("preferredCountry="))
+    const cookieCountry = preferredCookie?.split("=")?.[1]
+    const fromCookie = matchSupportedCountry(cookieCountry && decodeURIComponent(cookieCountry))
+    if (fromCookie) {
+      return fromCookie
+    }
+
+    // Try to get from localStorage (user preference)
+    try {
+      const savedCountry = window.localStorage?.getItem("preferredCountry")
+      const fromStorage = matchSupportedCountry(savedCountry)
+      if (fromStorage) {
+        return fromStorage
+      }
+    } catch {
+      // Access to localStorage can throw in some environments; ignore and continue
     }
   }
 
