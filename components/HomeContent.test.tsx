@@ -1,6 +1,6 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react"
 import { SWRConfig } from "swr"
-import { describe, it, expect, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import type { ReactNode } from "react"
 import { categoryConfigs } from "@/config/homeConfig"
 
@@ -59,11 +59,18 @@ const wpMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/wordpress-api", () => wpMocks)
 
-vi.mock("@/lib/utils/routing", () => ({
-  getCurrentCountry: () => "sz",
-  getArticleUrl: (slug: string) => `/article/${slug}`,
-  getCategoryUrl: (slug: string) => `/category/${slug}`,
-}))
+vi.mock("@/lib/utils/routing", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/utils/routing")>(
+    "@/lib/utils/routing",
+  )
+
+  return {
+    ...actual,
+    getCurrentCountry: vi.fn(actual.getCurrentCountry),
+    getArticleUrl: vi.fn(actual.getArticleUrl),
+    getCategoryUrl: vi.fn(actual.getCategoryUrl),
+  }
+})
 
 import { HomeContent } from "./HomeContent"
 
@@ -84,6 +91,12 @@ const createPost = (slug: string, title: string): HomePost => ({
 })
 
 describe("HomeContent", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/sz")
+    window.localStorage.clear()
+    document.cookie = "preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+  })
+
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
@@ -130,6 +143,7 @@ describe("HomeContent", () => {
     )
 
     await waitFor(() => expect(wpMocks.getPostsForCategories).toHaveBeenCalled())
+    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
   }
 
   it("renders posts for every configured category when data is available", async () => {
@@ -152,6 +166,7 @@ describe("HomeContent", () => {
     await waitFor(() =>
       expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
     )
+    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
 
     categoryConfigs.forEach((config) => {
@@ -183,6 +198,7 @@ describe("HomeContent", () => {
     await waitFor(() =>
       expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
     )
+    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
     expect(screen.queryByText("Business Story")).not.toBeInTheDocument()
   })

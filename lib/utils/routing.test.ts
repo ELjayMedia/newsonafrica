@@ -1,5 +1,51 @@
-import { describe, it, expect } from 'vitest'
-import { convertLegacyUrl, rewriteLegacyLinks, getArticleUrl, getCategoryUrl } from './routing'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  convertLegacyUrl,
+  rewriteLegacyLinks,
+  getArticleUrl,
+  getCategoryUrl,
+  getCurrentCountry,
+  DEFAULT_COUNTRY,
+} from './routing'
+
+const resetClientState = () => {
+  window.history.pushState({}, '', '/')
+  window.localStorage.clear()
+  document.cookie = 'preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+}
+
+describe('getCurrentCountry', () => {
+  beforeEach(() => {
+    resetClientState()
+  })
+
+  afterEach(() => {
+    resetClientState()
+  })
+
+  it('returns the country from a provided pathname', () => {
+    expect(getCurrentCountry('/za/news')).toBe('za')
+  })
+
+  it('derives the country from the current window location when no pathname is supplied', () => {
+    window.history.pushState({}, '', '/za/category/news')
+    expect(getCurrentCountry()).toBe('za')
+  })
+
+  it('falls back to cookies before local storage when no pathname is supplied', () => {
+    document.cookie = 'preferredCountry=za; path=/'
+    expect(getCurrentCountry()).toBe('za')
+  })
+
+  it('falls back to local storage when no path or cookie is present', () => {
+    window.localStorage.setItem('preferredCountry', 'za')
+    expect(getCurrentCountry()).toBe('za')
+  })
+
+  it('returns the default country when no sources resolve', () => {
+    expect(getCurrentCountry()).toBe(DEFAULT_COUNTRY)
+  })
+})
 
 const country = 'za'
 
