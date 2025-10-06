@@ -12,11 +12,14 @@ export const metadata: Metadata = {
 }
 
 export default async function SitemapPage() {
-  // Fetch data
-  const [categories, tags, recentPosts] = await Promise.all([
-    fetchCategories(),
-    fetchTags(),
-    fetchRecentPosts(50), // Get the 50 most recent posts
+  const [categories, tags, recentPosts] = await Promise.allSettled([
+    fetchCategories().catch(() => []),
+    fetchTags().catch(() => []),
+    fetchRecentPosts(50).catch(() => []),
+  ]).then((results) => [
+    results[0].status === "fulfilled" ? results[0].value : [],
+    results[1].status === "fulfilled" ? results[1].value : [],
+    results[2].status === "fulfilled" ? results[2].value : [],
   ])
 
   return (
@@ -89,45 +92,55 @@ export default async function SitemapPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Categories</h2>
-          <ul className="grid grid-cols-2 gap-2">
-            {categories.map((category) => (
-              <li key={category.slug}>
-                <Link href={getCategoryUrl(category.slug)} className="text-blue-600 hover:underline">
-                  {category.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {categories.length > 0 && (
+            <>
+              <h2 className="text-2xl font-semibold mb-4">Categories</h2>
+              <ul className="grid grid-cols-2 gap-2">
+                {categories.map((category) => (
+                  <li key={category.slug}>
+                    <Link href={getCategoryUrl(category.slug)} className="text-blue-600 hover:underline">
+                      {category.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
-          <h2 className="text-2xl font-semibold mt-8 mb-4">Popular Tags</h2>
-          <div className="flex flex-wrap gap-2">
-            {tags.slice(0, 30).map((tag) => (
-              <Link
-                key={tag.slug}
-                href={`/tag/${tag.slug}`}
-                className="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm"
-              >
-                {tag.name}
-              </Link>
-            ))}
-          </div>
+          {tags.length > 0 && (
+            <>
+              <h2 className="text-2xl font-semibold mt-8 mb-4">Popular Tags</h2>
+              <div className="flex flex-wrap gap-2">
+                {tags.slice(0, 30).map((tag) => (
+                  <Link
+                    key={tag.slug}
+                    href={`/tag/${tag.slug}`}
+                    className="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm"
+                  >
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-4">Recent Articles</h2>
-        <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recentPosts.map((post) => (
-            <li key={post.slug} className="border-b pb-2">
-              <Link href={getArticleUrl(post.slug, (post as any)?.country)} className="text-blue-600 hover:underline">
-                {post.title}
-              </Link>
-              <p className="text-sm text-gray-500">{new Date(post.date).toLocaleDateString()}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {recentPosts.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold mb-4">Recent Articles</h2>
+          <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentPosts.map((post) => (
+              <li key={post.slug} className="border-b pb-2">
+                <Link href={getArticleUrl(post.slug, (post as any)?.country)} className="text-blue-600 hover:underline">
+                  {post.title}
+                </Link>
+                <p className="text-sm text-gray-500">{new Date(post.date).toLocaleDateString()}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getAggregatedLatestHome, type AggregatedHomeData } from "@/lib/wordpress-api"
 import { KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { createCacheEntry, getEntryAge, kvCache } from "@/lib/cache/kv"
@@ -22,7 +22,7 @@ async function fetchAndPersistHomeFeed(): Promise<AggregatedHomeData> {
   return data
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse<AggregatedHomeData>> {
+export async function GET(request: NextRequest) {
   const cacheKey = KV_CACHE_KEYS.HOME_FEED
   const cached = await kvCache.get<AggregatedHomeData>(cacheKey)
   const age = getEntryAge(cached)

@@ -124,10 +124,7 @@ const handleRestFallbackFailure = (message: string, context: RestFallbackContext
   throw new APIError(message, "REST_FALLBACK_FAILED", undefined, details)
 }
 
-const buildCacheTagParam = (tags: string[]): string =>
-  Array.from(new Set(tags))
-    .sort()
-    .join("|")
+const buildCacheTagParam = (tags: string[]): string => Array.from(new Set(tags)).sort().join("|")
 
 async function executeRestFallback<T>(
   operation: () => Promise<T | null | undefined>,
@@ -220,7 +217,6 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
   },
   {} as Record<string, CountryConfig>,
 )
-
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
@@ -320,7 +316,7 @@ export async function fetchFromWp<T>(
   const normalizedOpts =
     typeof opts === "number"
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
-      : opts ?? {}
+      : (opts ?? {})
 
   const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
 
@@ -460,31 +456,33 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
 
     console.log("[v0] No GraphQL results, trying REST fallback")
 
-    const tags = await executeRestFallback(
-      () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("fp"), { tags }),
-      `[v0] FP tag lookup REST fallback failed for ${countryCode}`,
-      { countryCode },
-    )
+    try {
+      const tagResult = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("fp"), { tags })
 
-    const tag = tags[0]
-    if (!tag) {
-      console.log("[v0] No FP tag found")
+      if (!tagResult || !Array.isArray(tagResult) || tagResult.length === 0) {
+        console.log("[v0] No FP tag found")
+        return []
+      }
+
+      const tag = tagResult[0]
+      const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
+      const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags })
+
+      if (!posts || !Array.isArray(posts)) {
+        console.log("[v0] No FP tagged posts found via REST")
+        return []
+      }
+
+      const normalizedPosts = posts.map((post) =>
+        mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode),
+      )
+
+      console.log("[v0] Found", normalizedPosts.length, "FP tagged posts via REST")
+      return normalizedPosts
+    } catch (restError) {
+      console.error("[v0] REST fallback failed for FP tagged posts:", restError)
       return []
     }
-
-    const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-    const posts = await executeRestFallback(
-      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
-      `[v0] FP tagged posts REST fallback failed for ${countryCode}`,
-      { countryCode, tagId: tag.id, limit, endpoint, params },
-    )
-
-    const normalizedPosts = Array.isArray(posts)
-      ? posts.map((post) => mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode))
-      : []
-
-    console.log("[v0] Found", normalizedPosts.length, "FP tagged posts via REST")
-    return normalizedPosts
   } catch (error) {
     console.error("[v0] Failed to fetch FP tagged posts:", error)
     return []
@@ -621,11 +619,9 @@ export async function getPostsForCategories(
   console.log("[v0] GraphQL failed, falling back to REST for categories")
 
   try {
-    const categories = await fetchFromWp<any[]>(
-      countryCode,
-      wordpressQueries.categoriesBySlugs(normalizedSlugs),
-      { tags },
-    )
+    const categories = await fetchFromWp<any[]>(countryCode, wordpressQueries.categoriesBySlugs(normalizedSlugs), {
+      tags,
+    })
 
     if (!categories || categories.length === 0) {
       console.log("[v0] No categories found via REST")
@@ -1122,8 +1118,13 @@ export const fetchMostReadPosts = async (countryCode = DEFAULT_COUNTRY, limit = 
 }
 
 export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY) => {
-  const { posts } = await getLatestPostsForCountry(countryCode, limit)
-  return posts
+  try {
+    const { posts } = await getLatestPostsForCountry(countryCode, limit)
+    return posts
+  } catch (error) {
+    console.error("[v0] Failed to fetch recent posts during build:", error)
+    return []
+  }
 }
 
 export const fetchTaggedPosts = async (tagSlug: string, limit = 10, countryCode = DEFAULT_COUNTRY) => {
@@ -1140,9 +1141,7 @@ export const fetchTaggedPosts = async (tagSlug: string, limit = 10, countryCode 
   const tag = tags[0]
   if (!tag) return []
   const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-  return (
-    await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags })
-  ) || []
+  return (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags })) || []
 }
 
 export async function fetchPosts(
@@ -1164,9 +1163,7 @@ export async function fetchPosts(
   if (typeof options === "number") {
     const { endpoint, params } = wordpressQueries.recentPosts(options)
     const tags = buildCacheTags({ country: DEFAULT_COUNTRY, section: "news" })
-    return (
-      await fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params }, { tags })
-    ) || []
+    return (await fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params }, { tags })) || []
   }
 
   const {
@@ -1213,12 +1210,25 @@ export async function fetchPosts(
   return { data, total }
 }
 
-export const fetchCategories = (countryCode = DEFAULT_COUNTRY) => getCategoriesForCountry(countryCode)
+export const fetchCategories = async (countryCode = DEFAULT_COUNTRY) => {
+  try {
+    return await getCategoriesForCountry(countryCode)
+  } catch (error) {
+    console.error("[v0] Failed to fetch categories during build:", error)
+    return []
+  }
+}
 
 export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.tags()
-  const tags = buildCacheTags({ country: countryCode, section: "tags" })
-  return (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params }, { tags })) || []
+  try {
+    const { endpoint, params } = wordpressQueries.tags()
+    const tags = buildCacheTags({ country: countryCode, section: "tags" })
+    const result = await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params }, { tags })
+    return result || []
+  } catch (error) {
+    console.error("[v0] Failed to fetch tags during build:", error)
+    return []
+  }
 }
 
 export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
