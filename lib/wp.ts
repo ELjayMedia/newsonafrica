@@ -34,8 +34,9 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`
-  const url = new URL(normalizedPath, restBase(country))
+  const base = restBase(country).replace(/\/+$/, "") + "/"
+  const resource = path.replace(/^\/+/, "")
+  const url = new URL(resource, base)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)))
 
   const res = await fetch(url.toString(), {
