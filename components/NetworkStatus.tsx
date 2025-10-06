@@ -1,26 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+
+import { isOnline as getIsOnlineStatus, setupNetworkListeners } from "@/utils/network-utils"
 
 export default function NetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true)
+  const [isOnline, setIsOnline] = useState(() => getIsOnlineStatus())
 
   useEffect(() => {
-    // Set initial state
-    setIsOnline(navigator.onLine)
-
-    // Add event listeners
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
 
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
+    // Sync state on mount in case the initial render occurred before hydration
+    setIsOnline(getIsOnlineStatus())
 
-    // Clean up
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
+    return setupNetworkListeners(handleOnline, handleOffline)
   }, [])
 
   if (isOnline) return null

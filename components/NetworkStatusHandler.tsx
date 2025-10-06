@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 
+import { isOnline as getIsOnlineStatus, setupNetworkListeners } from "@/utils/network-utils"
+
 export function NetworkStatusHandler() {
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true)
+  const [isOnline, setIsOnline] = useState(() => getIsOnlineStatus())
 
   useEffect(() => {
-    // Update network status
     const handleOnline = () => {
       setIsOnline(true)
       console.log("Application is online")
@@ -17,15 +18,10 @@ export function NetworkStatusHandler() {
       console.log("Application is offline")
     }
 
-    // Add event listeners
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
+    // Ensure state is synced when the component mounts
+    setIsOnline(getIsOnlineStatus())
 
-    // Clean up
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
+    return setupNetworkListeners(handleOnline, handleOffline)
   }, [])
 
   // Only render notification when offline
