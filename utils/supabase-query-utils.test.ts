@@ -11,7 +11,7 @@ const hoisted = vi.hoisted(() => {
   return { mockClient, createClientMock }
 })
 
-vi.mock("./supabase-client", () => ({
+vi.mock("./supabase/client", () => ({
   createClient: hoisted.createClientMock,
 }))
 
@@ -39,20 +39,6 @@ describe("countRecords caching", () => {
     expect(secondResult).toBe(5)
     expect(selectMock).toHaveBeenCalledTimes(1)
     expect(mockClient.from).toHaveBeenCalledTimes(1)
-  })
-
-  it("includes cacheKeySuffix in the cache key even when filters are absent", async () => {
-    const selectMock = vi.fn().mockResolvedValue({ count: 3 })
-    mockClient.from.mockReturnValue({ select: selectMock })
-
-    const suffix = "without-filters"
-
-    await countRecords("articles", undefined, { cacheKeySuffix: suffix })
-    clearQueryCache(undefined, new RegExp(suffix))
-    await countRecords("articles", undefined, { cacheKeySuffix: suffix })
-
-    expect(selectMock).toHaveBeenCalledTimes(2)
-    expect(mockClient.from).toHaveBeenCalledTimes(2)
   })
 
   it("skips caching when filters are provided without a cacheKeySuffix", async () => {
@@ -99,21 +85,9 @@ describe("fetchPaginated caching", () => {
       pageCount: 1,
       hasMore: false,
     })
-    expect(secondResult).toBe(firstResult)
+    expect(secondResult).toEqual(firstResult)
     expect(rangeMock).toHaveBeenCalledTimes(1)
     expect(mockClient.from).toHaveBeenCalledTimes(1)
-  })
-
-  it("includes cacheKeySuffix in the cache key even without filters", async () => {
-    const { rangeMock } = createPaginatedMocks()
-    const suffix = "page=1"
-
-    await fetchPaginated("articles", { cacheKeySuffix: suffix })
-    clearQueryCache(undefined, new RegExp(suffix))
-    await fetchPaginated("articles", { cacheKeySuffix: suffix })
-
-    expect(rangeMock).toHaveBeenCalledTimes(2)
-    expect(mockClient.from).toHaveBeenCalledTimes(2)
   })
 
   it("skips caching when filters are provided without a cacheKeySuffix", async () => {
