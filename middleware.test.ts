@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 vi.mock("@/lib/legacy-routes", () => ({
   getLegacyPostRoute: vi.fn(),
@@ -14,11 +15,12 @@ beforeAll(async () => {
   ;({ getLegacyPostRoute } = await import("@/lib/legacy-routes"))
 })
 
+beforeEach(() => {
+  vi.mocked(getLegacyPostRoute).mockReset()
+  vi.mocked(getLegacyPostRoute).mockResolvedValue(null)
+})
+
 describe("legacy post redirect", () => {
-  beforeEach(() => {
-    vi.mocked(getLegacyPostRoute).mockReset()
-    vi.mocked(getLegacyPostRoute).mockResolvedValue(null)
-  })
 
   it("redirects when the KV entry matches the resolved country", async () => {
     vi.mocked(getLegacyPostRoute).mockResolvedValue({
@@ -62,5 +64,29 @@ describe("legacy post redirect", () => {
 
     expect(res?.headers.get("location")).toBeNull()
     expect(getLegacyPostRoute).toHaveBeenCalledWith("missing")
+  })
+})
+
+describe("category redirects", () => {
+  it("uses the preferred country cookie for direct visits", async () => {
+    const req = new NextRequest("https://example.com/news", {
+      headers: { cookie: "preferredCountry=za" },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe("https://example.com/za/category/news")
+  })
+
+  it("falls back to the default country when no cookie is set", async () => {
+    const req = new NextRequest("https://example.com/news")
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe(
+      `https://example.com/${DEFAULT_COUNTRY}/category/news`,
+    )
   })
 })
