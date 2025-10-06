@@ -4,6 +4,8 @@ import type React from "react"
 import { SWRConfig } from "swr"
 import { useEffect } from "react"
 
+import { PreferredCountrySync } from "@/components/PreferredCountrySync"
+
 export function ClientWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
@@ -24,6 +26,7 @@ export function ClientWrapper({ children }: { children: React.ReactNode }) {
         revalidateOnMount: false,
       }}
     >
+      <PreferredCountrySync />
       {children}
     </SWRConfig>
   )
