@@ -130,14 +130,33 @@ async function executeRestFallback<T>(
   operation: () => Promise<T | null | undefined>,
   message: string,
   context: RestFallbackContext,
+  options?: { fallbackValue: T },
 ): Promise<T> {
+  const logFallbackUsage = (reason: "empty-result" | "error", error?: unknown) => {
+    const meta = {
+      ...context,
+      reason,
+      fallbackUsed: true,
+      ...(error ? { error: toErrorDetails(error) } : {}),
+    }
+    log.warn(message, meta)
+  }
+
   try {
     const result = await operation()
     if (result === null || result === undefined) {
+      if (options) {
+        logFallbackUsage("empty-result")
+        return options.fallbackValue
+      }
       throw new Error("REST fallback returned no data")
     }
     return result
   } catch (error) {
+    if (options) {
+      logFallbackUsage("error", error)
+      return options.fallbackValue
+    }
     handleRestFallbackFailure(message, context, error)
     throw error instanceof Error ? error : new Error("REST fallback failed")
   }
@@ -550,6 +569,7 @@ export async function getLatestPostsForCountry(countryCode: string, limit = 20, 
       () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }, { tags }),
       `[v0] Latest posts REST fallback failed for ${countryCode}`,
       { countryCode, limit, endpoint, params: restParams },
+      { fallbackValue: [] },
     )
 
     console.log("[v0] Found", posts.length, "latest posts via REST")
@@ -763,6 +783,7 @@ export async function getPostsByCategoryForCountry(
     () => fetchFromWp<WordPressCategory[]>(countryCode, wordpressQueries.categoryBySlug(categorySlug), { tags }),
     `[v0] Category REST fallback failed for ${categorySlug} (${countryCode})`,
     { countryCode, categorySlug },
+    { fallbackValue: [] },
   )
   const category = categories[0]
   if (!category) {
@@ -773,6 +794,7 @@ export async function getPostsByCategoryForCountry(
     () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
     `[v0] Posts by category REST fallback failed for ${categorySlug} (${countryCode})`,
     { countryCode, categorySlug, categoryId: category.id, limit, endpoint, params },
+    { fallbackValue: [] },
   )
   return { category, posts, hasNextPage: false, endCursor: null }
 }
@@ -797,6 +819,7 @@ export async function getCategoriesForCountry(countryCode: string) {
     () => fetchFromWp<WordPressCategory[]>(countryCode, { endpoint, params }, { tags }),
     `[v0] Categories REST fallback failed for ${countryCode}`,
     { countryCode, endpoint, params },
+    { fallbackValue: [] },
   )
 }
 
@@ -833,10 +856,14 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     }
   }
   const post = await executeRestFallback(
-    () => fetchFromWp<WordPressPost>(countryCode, wordpressQueries.postById(postId), { tags }),
+    () => fetchFromWp<WordPressPost | null>(countryCode, wordpressQueries.postById(postId), { tags }),
     `[v0] Related posts REST fallback failed for base post ${postId} (${countryCode})`,
     { countryCode, postId },
+    { fallbackValue: null },
   )
+  if (!post) {
+    return []
+  }
   const categoryIds: number[] =
     post.categories?.nodes
       ?.map((cat) => (typeof cat?.databaseId === "number" ? Number(cat.databaseId) : null))
@@ -847,6 +874,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
     `[v0] Related posts REST fallback failed for ${postId} (${countryCode})`,
     { countryCode, postId, categoryIds, limit, endpoint, params },
+    { fallbackValue: [] },
   )
   return posts.filter((p) => p.databaseId !== Number(postId))
 }
@@ -871,6 +899,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("featured"), { tags: cacheTags }),
     `[v0] Featured tag REST fallback failed for ${countryCode}`,
     { countryCode },
+    { fallbackValue: [] },
   )
   const tag = tags[0]
   if (!tag) return []
@@ -879,6 +908,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags }),
     `[v0] Featured posts REST fallback failed for ${countryCode}`,
     { countryCode, tagId: tag.id, limit, endpoint, params },
+    { fallbackValue: [] },
   )
 }
 
@@ -979,6 +1009,7 @@ export const getRelatedPosts = async (
         () => fetchFromWp<WordPressPost[]>(country, { endpoint, params }, { tags: cacheTags }),
         `[v0] Related posts by tags REST fallback failed for ${postId} (${country})`,
         { country, postId, tags, limit, endpoint, params },
+        { fallbackValue: [] },
       )
       return posts.filter((p) => p.id !== Number(postId))
     } catch (error) {
@@ -1430,6 +1461,7 @@ export async function getAuthorBySlug(
       ),
     `[v0] Author REST fallback failed for ${slug} (${countryCode})`,
     { countryCode, slug },
+    { fallbackValue: [] },
   )
 
   const restAuthor = restAuthors[0]
@@ -1453,6 +1485,7 @@ export async function getAuthorBySlug(
       endpoint: query.endpoint,
       params: query.params,
     },
+    { fallbackValue: [] },
   )
 
   return {
