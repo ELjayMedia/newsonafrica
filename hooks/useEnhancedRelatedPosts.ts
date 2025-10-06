@@ -44,19 +44,35 @@ export function useEnhancedRelatedPosts({
   })
 
   const calculateSimilarity = useCallback(
-    (post: WordPressPost, targetCategories: string[], targetTags: string[]): number => {
+    (
+      post: WordPressPost,
+      {
+        targetCategorySet,
+        targetTagSet,
+        targetCategoryCount,
+        targetTagCount,
+      }: {
+        targetCategorySet: Set<string>
+        targetTagSet: Set<string>
+        targetCategoryCount: number
+        targetTagCount: number
+      },
+    ): number => {
       // Basic similarity based on category and tag matching
       let score = 0
       const postCategories = post.categories?.nodes?.map((cat) => cat.slug) || []
       const postTags = post.tags?.nodes?.map((tag) => tag.slug) || []
 
       // Category similarity (weighted higher)
-      const categoryMatches = postCategories.filter((cat) => targetCategories.includes(cat)).length
-      const categoryScore = (categoryMatches / Math.max(targetCategories.length, 1)) * 0.7
+      const categoryMatches = postCategories.reduce(
+        (count, cat) => count + (targetCategorySet.has(cat) ? 1 : 0),
+        0,
+      )
+      const categoryScore = (categoryMatches / Math.max(targetCategoryCount, 1)) * 0.7
 
       // Tag similarity
-      const tagMatches = postTags.filter((tag) => targetTags.includes(tag)).length
-      const tagScore = (tagMatches / Math.max(targetTags.length, 1)) * 0.3
+      const tagMatches = postTags.reduce((count, tag) => count + (targetTagSet.has(tag) ? 1 : 0), 0)
+      const tagScore = (tagMatches / Math.max(targetTagCount, 1)) * 0.3
 
       score = categoryScore + tagScore
 
@@ -101,6 +117,11 @@ export function useEnhancedRelatedPosts({
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }))
 
+      const targetCategorySet = new Set(categories)
+      const targetTagSet = new Set(tags)
+      const targetCategoryCount = categories.length
+      const targetTagCount = tags.length
+
       // Fetch more posts than needed for better filtering
       const fetchLimit = Math.min(limit * 2, 20)
       let rawPosts = await getRelatedPosts(postId, categories, tags, fetchLimit, countryCode)
@@ -115,7 +136,12 @@ export function useEnhancedRelatedPosts({
 
       const enhancedPosts: RelatedPost[] = rawPosts.map((post) => ({
         ...post,
-        similarity: calculateSimilarity(post, categories, tags),
+        similarity: calculateSimilarity(post, {
+          targetCategorySet,
+          targetTagSet,
+          targetCategoryCount,
+          targetTagCount,
+        }),
         isPopular: detectPopularity(post),
         readingTime: post.excerpt ? estimateReadingTime(post.excerpt) : undefined,
       }))
