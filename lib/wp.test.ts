@@ -11,10 +11,15 @@ describe("wp client", () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
     const currentKeys = new Set(Object.keys(process.env))
     Object.entries(originalEnv).forEach(([key, value]) => {
-      process.env[key] = value
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
       currentKeys.delete(key)
     })
     currentKeys.forEach((key) => {
@@ -23,9 +28,7 @@ describe("wp client", () => {
   })
 
   it("calls the country-specific REST endpoint", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => [] })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
     vi.stubGlobal("fetch", fetchMock)
 
     const { getLatestPosts } = await import("./wp")
@@ -33,9 +36,26 @@ describe("wp client", () => {
     await getLatestPosts("sz")
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [requestUrl] = fetchMock.mock.calls[0]
+    const [requestUrl, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(requestUrl).toBe(
       "https://newsonafrica.com/sz/wp-json/wp/v2/posts?per_page=12&_embed=1&order=desc&orderby=date"
+    )
+    expect(requestInit?.next).toEqual({ revalidate: 60, tags: ["country:sz"] })
+  })
+
+  it("normalizes trailing and leading slashes when building URLs", async () => {
+    process.env.NEXT_PUBLIC_WP_SZ_REST_BASE = " https://newsonafrica.com/sz/wp-json/wp/v2" // missing trailing slash + padded
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getCategories } = await import("./wp")
+
+    await getCategories("sz")
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [requestUrl] = fetchMock.mock.calls[0] as [string]
+    expect(requestUrl).toBe(
+      "https://newsonafrica.com/sz/wp-json/wp/v2/categories?per_page=20&hide_empty=false"
     )
   })
 })

@@ -6,7 +6,7 @@ const REST_BASES: Record<CountryCode, string> = {
 }
 
 function restBase(country: CountryCode) {
-  const base = REST_BASES[country]
+  const base = REST_BASES[country]?.trim()
   if (!base) throw new Error(`Missing REST base for country ${country}`)
   return base.endsWith("/") ? base : `${base}/`
 }
