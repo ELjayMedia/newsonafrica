@@ -61,4 +61,18 @@ describe('ArticleClientContent', () => {
       expect(getRelatedPostsForCountry).not.toHaveBeenCalled()
     })
   })
+
+  it('renders without author data', () => {
+    const initialData = { ...baseInitialData, author: null }
+
+    expect(() =>
+      render(
+        <ArticleClientContent
+          slug="test-slug"
+          countryCode="ng"
+          initialData={initialData}
+        />,
+      ),
+    ).not.toThrow()
+  })
 })

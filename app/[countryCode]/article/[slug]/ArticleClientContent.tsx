@@ -85,6 +85,9 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  const authorName =
+    initialData?.author?.node?.name ?? initialData?.author?.name ?? null
+
   return (
     <>
       <div className="fixed top-0 left-0 w-full h-1 bg-muted/30 z-50 backdrop-blur-sm">
@@ -118,10 +121,12 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
           <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-left">{initialData.title}</h1>
 
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span className="font-medium">{initialData.author.node.name}</span>
-            </div>
+            {authorName && (
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span className="font-medium">{authorName}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>{estimatedReadTime} min read</span>
