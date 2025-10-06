@@ -8,8 +8,6 @@ import Link from "next/link"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
-import NetworkStatus from "@/components/NetworkStatus"
-import { NetworkStatusHandler } from "@/components/NetworkStatusHandler"
 import { UserProvider } from "@/contexts/UserContext"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -87,9 +85,7 @@ export default function RootLayout({
                         Sitemap
                       </Link>
                     </footer>
-                    <NetworkStatus />
                     <Toaster />
-                    <NetworkStatusHandler />
                   </ClientWrapper>
                 </BookmarksProvider>
               </UserPreferencesProvider>
