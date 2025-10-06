@@ -217,3 +217,66 @@ describe("getPostsForCategories", () => {
     graphQLSpy.mockRestore()
   })
 })
+
+describe("getFrontPageSlicesForCountry", () => {
+  const createNode = (id: number, prefix: string) => ({
+    databaseId: id,
+    id: `gid://post/${id}`,
+    slug: `${prefix.toLowerCase()}-${id}`,
+    date: "2024-05-01T00:00:00Z",
+    title: `${prefix} ${id}`,
+    excerpt: `${prefix} excerpt ${id}`,
+    content: null,
+    featuredImage: { node: null },
+    categories: { nodes: [] },
+    tags: { nodes: [] },
+    author: { node: null },
+  })
+
+  it("aggregates hero, trending, and latest slices in a single GraphQL call", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              hero: {
+                nodes: [createNode(201, "Hero"), createNode(202, "Hero")],
+              },
+              latest: {
+                pageInfo: { hasNextPage: true, endCursor: "cursor-30" },
+                edges: Array.from({ length: 30 }, (_, index) => ({
+                  cursor: `cursor-${index + 1}`,
+                  node: createNode(index + 1, "Latest"),
+                })),
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const result = await wordpressApi.getFrontPageSlicesForCountry("za")
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    expect(result.hero.heroPost?.slug).toBe("hero-201")
+    expect(result.hero.secondaryStories).toHaveLength(1)
+
+    expect(result.trending.posts).toHaveLength(7)
+    expect(result.trending.posts[0].slug).toBe("latest-4")
+    expect(result.trending.endCursor).toBe("cursor-10")
+    expect(result.trending.hasNextPage).toBe(true)
+
+    expect(result.latest.posts).toHaveLength(20)
+    expect(result.latest.posts[0].slug).toBe("latest-11")
+    expect(result.latest.endCursor).toBe("cursor-30")
+    expect(result.latest.hasNextPage).toBe(true)
+  })
+})

@@ -2,14 +2,16 @@ import { Suspense } from "react"
 import Link from "next/link"
 import {
   getLatestPostsForCountry,
+  getFrontPageSlicesForCountry,
   getCategoriesForCountry,
   getPostsForCategories,
-  getFpTaggedPostsForCountry,
   mapPostsToHomePosts,
   COUNTRIES,
   type CountryConfig,
   type WordPressPost,
   type WordPressCategory,
+  type FrontPageSlicesResult,
+  type PaginatedPostsResult,
 } from "@/lib/wordpress-api"
 import { FeaturedHero } from "@/components/FeaturedHero"
 import { SecondaryStories } from "@/components/SecondaryStories"
@@ -30,20 +32,11 @@ const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "h
 interface HeroSectionData {
   heroPost?: WordPressPost
   secondaryStories: WordPressPost[]
-  heroLatestEndCursor: string | null
 }
 
-interface TrendingSectionData {
-  posts: WordPressPost[]
-  hasNextPage: boolean
-  endCursor: string | null
-}
+type TrendingSectionData = PaginatedPostsResult
 
-interface LatestSectionData {
-  posts: WordPressPost[]
-  hasNextPage: boolean
-  endCursor: string | null
-}
+type LatestSectionData = PaginatedPostsResult
 
 interface CategoriesSectionData {
   categories: WordPressCategory[]
@@ -55,66 +48,54 @@ interface CountryEditionContentProps {
   country: CountryConfig
 }
 
-async function fetchHeroSectionData(countryCode: string): Promise<HeroSectionData> {
+const createEmptyPaginated = (): PaginatedPostsResult => ({
+  posts: [],
+  hasNextPage: false,
+  endCursor: null,
+})
+
+const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
+  hero: { heroPost: undefined, secondaryStories: [] },
+  trending: createEmptyPaginated(),
+  latest: createEmptyPaginated(),
+})
+
+async function fetchFrontPageSlices(countryCode: string): Promise<FrontPageSlicesResult> {
   try {
-    const [fpPosts, heroLatest] = await Promise.allSettled([
-      getFpTaggedPostsForCountry(countryCode, 8),
-      getLatestPostsForCountry(countryCode, 3),
-    ])
+    return await getFrontPageSlicesForCountry(countryCode)
+  } catch (error) {
+    console.error("[v0] Failed to fetch frontpage slices", error)
+    return createEmptyFrontPageSlices()
+  }
+}
 
-    const heroLatestValue = heroLatest.status === "fulfilled" ? heroLatest.value : { posts: [], endCursor: null }
-    const featuredPosts =
-      fpPosts.status === "fulfilled" && fpPosts.value.length > 0
-        ? fpPosts.value
-        : (heroLatestValue.posts ?? [])
-
-    const normalized = featuredPosts.map((post) => ({
-      ...post,
-      country: (post as WordPressPost & { country?: string }).country ?? countryCode,
-    }))
-
-    return {
-      heroPost: normalized[0],
-      secondaryStories: normalized.slice(1, 5),
-      heroLatestEndCursor: heroLatestValue.endCursor ?? null,
-    }
+async function fetchHeroSectionData(promise: Promise<FrontPageSlicesResult>): Promise<HeroSectionData> {
+  try {
+    const slices = await promise
+    return slices.hero
   } catch (error) {
     console.error("[v0] Failed to fetch hero section", error)
-    return { heroPost: undefined, secondaryStories: [], heroLatestEndCursor: null }
+    return { heroPost: undefined, secondaryStories: [] }
   }
 }
 
-async function fetchTrendingSectionData(
-  countryCode: string,
-  afterCursor: string | null,
-): Promise<TrendingSectionData> {
+async function fetchTrendingSectionData(promise: Promise<FrontPageSlicesResult>): Promise<TrendingSectionData> {
   try {
-    const result = await getLatestPostsForCountry(countryCode, 7, afterCursor ?? undefined)
-    return {
-      posts: result.posts ?? [],
-      hasNextPage: result.hasNextPage ?? false,
-      endCursor: result.endCursor ?? null,
-    }
+    const slices = await promise
+    return slices.trending
   } catch (error) {
     console.error("[v0] Failed to fetch trending section", error)
-    return { posts: [], hasNextPage: false, endCursor: null }
+    return createEmptyPaginated()
   }
 }
 
-async function fetchLatestSectionData(
-  countryCode: string,
-  afterCursor: string | null,
-): Promise<LatestSectionData> {
+async function fetchLatestSectionData(promise: Promise<FrontPageSlicesResult>): Promise<LatestSectionData> {
   try {
-    const result = await getLatestPostsForCountry(countryCode, 20, afterCursor ?? undefined)
-    return {
-      posts: result.posts ?? [],
-      hasNextPage: result.hasNextPage ?? false,
-      endCursor: result.endCursor ?? null,
-    }
+    const slices = await promise
+    return slices.latest
   } catch (error) {
     console.error("[v0] Failed to fetch latest section", error)
-    return { posts: [], hasNextPage: false, endCursor: null }
+    return createEmptyPaginated()
   }
 }
 
@@ -472,9 +453,10 @@ async function MoreForYouWrapper({
 }
 
 export async function CountryEditionContent({ countryCode, country }: CountryEditionContentProps) {
-  const heroPromise = fetchHeroSectionData(countryCode)
-  const trendingPromise = heroPromise.then((data) => fetchTrendingSectionData(countryCode, data.heroLatestEndCursor))
-  const latestPromise = trendingPromise.then((data) => fetchLatestSectionData(countryCode, data.endCursor))
+  const frontPagePromise = fetchFrontPageSlices(countryCode)
+  const heroPromise = fetchHeroSectionData(frontPagePromise)
+  const trendingPromise = fetchTrendingSectionData(frontPagePromise)
+  const latestPromise = fetchLatestSectionData(frontPagePromise)
   const categoriesPromise = fetchCategoriesData(countryCode)
   const panAfricanPromise = fetchPanAfricanPosts(countryCode)
   const moreForYouPromise = computeMoreForYouInitialData(latestPromise)
@@ -511,6 +493,7 @@ export async function CountryEditionContent({ countryCode, country }: CountryEdi
 export default CountryEditionContent
 
 export const __TESTING__ = {
+  fetchFrontPageSlices,
   fetchHeroSectionData,
   fetchTrendingSectionData,
   fetchLatestSectionData,

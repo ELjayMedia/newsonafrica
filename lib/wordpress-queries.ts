@@ -99,6 +99,46 @@ export const FP_TAGGED_POSTS_QUERY = gql`
   }
 `
 
+export const FRONT_PAGE_SLICES_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query FrontPageSlices(
+    $heroFirst: Int!
+    $heroTagSlugs: [String!]
+    $latestFirst: Int!
+  ) {
+    hero: posts(
+      first: $heroFirst
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        tagSlugIn: $heroTagSlugs
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+    latest: posts(
+      first: $latestFirst
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      edges {
+        cursor
+        node {
+          ...PostFields
+        }
+      }
+    }
+  }
+`
+
 export const POSTS_BY_CATEGORY_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
   query PostsByCategory($category: String!, $first: Int!) {
