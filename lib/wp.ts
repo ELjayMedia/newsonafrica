@@ -6,9 +6,9 @@ const REST_BASES: Record<CountryCode, string> = {
 }
 
 function restBase(country: CountryCode) {
-  const base = REST_BASES[country]
+  const base = REST_BASES[country]?.trim()
   if (!base) throw new Error(`Missing REST base for country ${country}`)
-  return base
+  return base.endsWith("/") ? base : `${base}/`
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -34,7 +34,7 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const normalizedPath = path.replace(/^\/+/, "")
   const url = new URL(normalizedPath, restBase(country))
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)))
 
