@@ -22,8 +22,7 @@ import { getCategoryUrl } from "@/lib/utils/routing"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CountryPosts, HomePost } from "@/types/home"
 import type { CategoryPostsResult } from "@/lib/wordpress-api"
-import { MoreForYouShell } from "./MoreForYouShell.client"
-
+import { MoreForYou } from "./MoreForYou"
 
 const CATEGORY_SLUGS = ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"]
 
@@ -64,9 +63,7 @@ async function fetchHeroSectionData(countryCode: string): Promise<HeroSectionDat
 
     const heroLatestValue = heroLatest.status === "fulfilled" ? heroLatest.value : { posts: [], endCursor: null }
     const featuredPosts =
-      fpPosts.status === "fulfilled" && fpPosts.value.length > 0
-        ? fpPosts.value
-        : (heroLatestValue.posts ?? [])
+      fpPosts.status === "fulfilled" && fpPosts.value.length > 0 ? fpPosts.value : (heroLatestValue.posts ?? [])
 
     const normalized = featuredPosts.map((post) => ({
       ...post,
@@ -84,10 +81,7 @@ async function fetchHeroSectionData(countryCode: string): Promise<HeroSectionDat
   }
 }
 
-async function fetchTrendingSectionData(
-  countryCode: string,
-  afterCursor: string | null,
-): Promise<TrendingSectionData> {
+async function fetchTrendingSectionData(countryCode: string, afterCursor: string | null): Promise<TrendingSectionData> {
   try {
     const result = await getLatestPostsForCountry(countryCode, 7, afterCursor ?? undefined)
     return {
@@ -101,10 +95,7 @@ async function fetchTrendingSectionData(
   }
 }
 
-async function fetchLatestSectionData(
-  countryCode: string,
-  afterCursor: string | null,
-): Promise<LatestSectionData> {
+async function fetchLatestSectionData(countryCode: string, afterCursor: string | null): Promise<LatestSectionData> {
   try {
     const result = await getLatestPostsForCountry(countryCode, 20, afterCursor ?? undefined)
     return {
@@ -334,7 +325,10 @@ async function LatestSection({ promise }: { promise: Promise<LatestSectionData> 
   )
 }
 
-async function CategoriesSection({ promise, countryCode }: { promise: Promise<CategoriesSectionData>; countryCode: string }) {
+async function CategoriesSection({
+  promise,
+  countryCode,
+}: { promise: Promise<CategoriesSectionData>; countryCode: string }) {
   const { categories, categoryPosts } = await promise
 
   return (
@@ -352,7 +346,10 @@ async function CategoriesSection({ promise, countryCode }: { promise: Promise<Ca
               return (
                 <div key={categorySlug} className="bg-white rounded-lg p-4">
                   <h3 className="text-lg md:text-xl font-bold capitalize mb-4">
-                    <Link href={getCategoryUrl(categorySlug, countryCode)} className="hover:text-blue-600 transition-colors">
+                    <Link
+                      href={getCategoryUrl(categorySlug, countryCode)}
+                      className="hover:text-blue-600 transition-colors"
+                    >
                       {categorySlug}
                     </Link>
                   </h3>
@@ -381,7 +378,10 @@ async function CategoriesSection({ promise, countryCode }: { promise: Promise<Ca
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.slice(0, 10).map((category) => (
               <Link key={category.id} href={getCategoryUrl(category.slug, countryCode)} className="flex-shrink-0">
-                <Badge variant="secondary" className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                <Badge
+                  variant="secondary"
+                  className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                >
                   {category.name}
                 </Badge>
               </Link>
@@ -432,11 +432,16 @@ async function PanAfricanSection({ promise }: { promise: Promise<CountryPosts> }
               <CardContent className="space-y-3">
                 {posts.slice(0, 2).map((post) => (
                   <Link key={post.id} href={`/${code}/article/${post.slug}`} className="block group">
-                    <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
+                    <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                      {post.title}
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-1">{new Date(post.date).toLocaleDateString()}</p>
                   </Link>
                 ))}
-                <Link href={`/${code}`} className="inline-flex items-center text-sm text-primary hover:text-primary/80 font-medium">
+                <Link
+                  href={`/${code}`}
+                  className="inline-flex items-center text-sm text-primary hover:text-primary/80 font-medium"
+                >
                   View all {spotlightCountry.name} news
                   <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -466,7 +471,7 @@ async function MoreForYouWrapper({
         <Plus className="h-5 w-5 text-primary" />
         <h2 className="text-2xl font-bold">More for You</h2>
       </div>
-      <MoreForYouShell countryCode={countryCode} initialData={initialData} />
+      <MoreForYou countryCode={countryCode} initialData={initialData} />
     </section>
   )
 }

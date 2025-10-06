@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, type SetStateAction } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 interface UseInfiniteScrollOptions {
   threshold?: number
@@ -14,34 +14,16 @@ export function useInfiniteScroll(callback: () => Promise<void> | void, options:
   const [error, setError] = useState<Error | null>(null)
   const observer = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const isFetchingRef = useRef(isFetching)
-  const handleObserverRef = useRef<IntersectionObserverCallback>(() => {})
-
-  const setFetchingState = useCallback((value: SetStateAction<boolean>) => {
-    setIsFetching(prev => {
-      const next = typeof value === "function" ? value(prev) : value
-      isFetchingRef.current = next
-      return next
-    })
-  }, [])
-
-  useEffect(() => {
-    isFetchingRef.current = isFetching
-  }, [isFetching])
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const [entry] = entries
-      if (entry.isIntersecting && !isFetchingRef.current && !disabled) {
-        setFetchingState(true)
+      if (entry.isIntersecting && !isFetching && !disabled) {
+        setIsFetching(true)
       }
     },
-    [disabled, setFetchingState],
+    [isFetching, disabled],
   )
-
-  useEffect(() => {
-    handleObserverRef.current = handleObserver
-  }, [handleObserver])
 
   useEffect(() => {
     // Disconnect previous observer if it exists
@@ -49,12 +31,8 @@ export function useInfiniteScroll(callback: () => Promise<void> | void, options:
       observer.current.disconnect()
     }
 
-    if (disabled) {
-      return
-    }
-
     // Create new observer
-    observer.current = new IntersectionObserver((entries, obs) => handleObserverRef.current(entries, obs), {
+    observer.current = new IntersectionObserver(handleObserver, {
       root: null,
       rootMargin,
       threshold,
@@ -70,7 +48,7 @@ export function useInfiniteScroll(callback: () => Promise<void> | void, options:
         observer.current.disconnect()
       }
     }
-  }, [threshold, rootMargin, disabled])
+  }, [handleObserver, rootMargin, threshold])
 
   useEffect(() => {
     async function fetchData() {
@@ -83,22 +61,22 @@ export function useInfiniteScroll(callback: () => Promise<void> | void, options:
         console.error("Error in infinite scroll:", err)
         setError(err instanceof Error ? err : new Error(String(err)))
       } finally {
-        setFetchingState(false)
+        setIsFetching(false)
       }
     }
 
     fetchData()
-  }, [isFetching, callback, setFetchingState])
+  }, [isFetching, callback])
 
   const manualFetch = useCallback(() => {
-    if (!isFetchingRef.current && !disabled) {
-      setFetchingState(true)
+    if (!isFetching && !disabled) {
+      setIsFetching(true)
     }
-  }, [disabled, setFetchingState])
+  }, [isFetching, disabled])
 
   return {
     isFetching,
-    setIsFetching: setFetchingState,
+    setIsFetching,
     loadMoreRef,
     error,
     manualFetch,

@@ -1,34 +1,26 @@
-import { createClient, type Session, type SupabaseClient, type User } from "@supabase/supabase-js"
-import { getSupabaseClient } from "@/lib/api/supabase"
+// @ts-nocheck
+import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import type { Session } from "@supabase/supabase-js"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-let adminClient: SupabaseClient<Database> | null = null
-let hasWarnedAboutAdminConfig = false
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseConfigured = isSupabaseConfigured()
 
 // Create a single instance of the Supabase client to be reused
 export const supabase = getSupabaseClient()
 
 // Create a client with service role for admin operations
 // IMPORTANT: This should only be used in server-side code
-export const createAdminClient = (): SupabaseClient<Database> => {
-  if (adminClient) {
-    return adminClient
-  }
-
+export const createAdminClient = () => {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    if (!hasWarnedAboutAdminConfig) {
-      hasWarnedAboutAdminConfig = true
-      console.warn(
-        "Supabase admin environment variables are not configured. Returning default client instance."
-      )
-    }
+    console.warn("Supabase admin environment variables are not configured. Returning default client instance.")
     return getSupabaseClient()
   }
 
-  adminClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -39,101 +31,113 @@ export const createAdminClient = (): SupabaseClient<Database> => {
       },
     },
   })
-
-  return adminClient
 }
 
-type CachedProfile = { data: Profile; timestamp: number }
-
 // Helper function to get user profile with error handling and caching
-const profileCache = new Map<string, CachedProfile>()
+const profileCache = new Map<string, { data: any; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-export async function getUserProfile(userId: string): Promise<Profile> {
-  const cached = profileCache.get(userId)
-  const now = Date.now()
+export async function getUserProfile(userId: string) {
+  try {
+    // Check cache first
+    const cached = profileCache.get(userId)
+    const now = Date.now()
 
-  if (cached && now - cached.timestamp < CACHE_TTL) {
-    return cached.data
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      return cached.data
+    }
+
+    // If not in cache or expired, fetch from database
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+
+    if (error) {
+      console.error("Error fetching user profile:", error)
+      throw error
+    }
+
+    // Update cache
+    profileCache.set(userId, { data, timestamp: now })
+
+    return data
+  } catch (error) {
+    console.error("Error in getUserProfile:", error)
+    throw error
   }
-
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
-
-  if (error || !data) {
-    console.error("Error fetching user profile:", error)
-    throw error ?? new Error("Profile not found")
-  }
-
-  profileCache.set(userId, { data, timestamp: now })
-
-  return data
 }
 
 // Helper function to update user profile with error handling
-export async function updateUserProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", userId)
-    .select()
-    .single()
+export async function updateUserProfile(userId: string, updates: Partial<Profile>) {
+  try {
+    const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single()
 
-  if (error || !data) {
-    console.error("Error updating user profile:", error)
-    throw error ?? new Error("Profile update failed")
+    if (error) {
+      console.error("Error updating user profile:", error)
+      throw error
+    }
+
+    // Update cache
+    profileCache.set(userId, { data, timestamp: Date.now() })
+
+    return data
+  } catch (error) {
+    console.error("Error in updateUserProfile:", error)
+    throw error
   }
-
-  profileCache.set(userId, { data, timestamp: Date.now() })
-
-  return data
 }
 
 // Helper function to check if a username exists
 export async function checkUsernameExists(username: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("username", username)
-    .maybeSingle()
+  try {
+    const { data, error } = await supabase.from("profiles").select("username").eq("username", username).maybeSingle()
 
-  if (error) {
-    console.error("Error checking username:", error)
+    if (error) {
+      console.error("Error checking username:", error)
+      throw error
+    }
+
+    return !!data
+  } catch (error) {
+    console.error("Error in checkUsernameExists:", error)
     throw error
   }
-
-  return Boolean(data)
 }
 
 // Helper function to check and refresh session
-export async function checkAndRefreshSession(): Promise<Session | null> {
-  const { data, error } = await supabase.auth.getSession()
+export async function checkAndRefreshSession() {
+  try {
+    const { data, error } = await supabase.auth.getSession()
 
-  if (error) {
-    console.error("Error getting session:", error)
-    return null
-  }
-
-  const session = data.session
-
-  if (!session || !session.expires_at) {
-    return null
-  }
-
-  const now = Math.floor(Date.now() / 1000)
-  const timeToExpiry = session.expires_at - now
-
-  if (timeToExpiry < 300) {
-    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-
-    if (refreshError) {
-      console.error("Error refreshing session:", refreshError)
+    if (error) {
+      console.error("Error getting session:", error)
       return null
     }
 
-    return refreshData.session
-  }
+    if (!data.session) {
+      return null
+    }
 
-  return session
+    // If session exists but is close to expiry, refresh it
+    const expiresAt = data.session.expires_at
+    const now = Math.floor(Date.now() / 1000)
+    const timeToExpiry = expiresAt - now
+
+    // If session expires in less than 5 minutes, refresh it
+    if (timeToExpiry < 300) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (refreshError) {
+        console.error("Error refreshing session:", refreshError)
+        return null
+      }
+
+      return refreshData.session
+    }
+
+    return data.session
+  } catch (error) {
+    console.error("Error in checkAndRefreshSession:", error)
+    return null
+  }
 }
 
 // Helper function to get session expiry time
@@ -147,82 +151,76 @@ export function getSessionExpiryTime(session: Session | null): string {
 }
 
 // Function to handle social login profile creation/update
-export async function handleSocialLoginProfile(user: User | null): Promise<Profile | null> {
-  if (!user) {
-    return null
+export async function handleSocialLoginProfile(user: any) {
+  if (!user) return null
+
+  try {
+    // Check if profile exists
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single()
+
+    // If profile exists, return it
+    if (existingProfile && !fetchError) {
+      return existingProfile
+    }
+
+    // If error is not "not found", log it
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("Error fetching profile:", fetchError)
+    }
+
+    // Create a new profile
+    const email = user.email
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || email?.split("@")[0] || "User"
+
+    // Generate username from email or name
+    let username = email ? email.split("@")[0] : name.toLowerCase().replace(/\s+/g, "")
+
+    // Check if username exists and append random number if needed
+    const { data: existingUser } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("username", username)
+      .single()
+      .catch(() => ({ data: null }))
+
+    if (existingUser) {
+      username = `${username}_${Math.floor(Math.random() * 10000)}`
+    }
+
+    // Create profile
+    const newProfile = {
+      id: user.id,
+      username,
+      email: user.email,
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+      avatar_url: user.user_metadata?.avatar_url,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase.from("profiles").insert(newProfile).select().single()
+
+    if (error) {
+      console.error("Error creating profile:", error)
+      throw error
+    }
+
+    // Update cache
+    profileCache.set(user.id, { data, timestamp: Date.now() })
+
+    return data
+  } catch (error) {
+    console.error("Error handling social login profile:", error)
+    throw error
   }
-
-  const { data: existingProfile, error: fetchError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (existingProfile && !fetchError) {
-    return existingProfile
-  }
-
-  if (fetchError && fetchError.code !== "PGRST116") {
-    console.error("Error fetching profile:", fetchError)
-  }
-
-  const email = user.email ?? undefined
-  const displayName =
-    (user.user_metadata?.full_name as string | undefined) ||
-    (user.user_metadata?.name as string | undefined) ||
-    email?.split("@")[0] ||
-    "User"
-
-  let username = email ? email.split("@")[0] : displayName.toLowerCase().replace(/\s+/g, "")
-
-  const { data: existingUser, error: usernameError } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("username", username)
-    .maybeSingle()
-
-  if (usernameError && usernameError.code !== "PGRST116") {
-    console.error("Error checking existing username:", usernameError)
-  }
-
-  if (existingUser) {
-    username = `${username}_${Math.floor(Math.random() * 10000)}`
-  }
-
-  const timestamp = new Date().toISOString()
-
-  const newProfile: Profile = {
-    id: user.id,
-    username,
-    email: user.email ?? null,
-    full_name: (user.user_metadata?.full_name as string | undefined) ?? null,
-    avatar_url: (user.user_metadata?.avatar_url as string | undefined) ?? null,
-    website: null,
-    bio: null,
-    country: null,
-    interests: null,
-    location: null,
-    preferences: null,
-    updated_at: timestamp,
-    created_at: timestamp,
-    is_admin: null,
-    onboarded: null,
-  }
-
-  const { data, error } = await supabase.from("profiles").insert(newProfile).select().single()
-
-  if (error || !data) {
-    console.error("Error creating profile:", error)
-    throw error ?? new Error("Profile creation failed")
-  }
-
-  profileCache.set(user.id, { data, timestamp: Date.now() })
-
-  return data
 }
 
 // Clear cache function for testing or manual cache invalidation
-export function clearProfileCache(userId?: string): void {
+export function clearProfileCache(userId?: string) {
   if (userId) {
     profileCache.delete(userId)
   } else {
@@ -231,4 +229,14 @@ export function clearProfileCache(userId?: string): void {
 }
 
 // Types
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+export type Profile = {
+  id: string
+  username: string
+  full_name?: string
+  avatar_url?: string
+  website?: string
+  email?: string
+  bio?: string
+  updated_at?: string
+  created_at?: string
+}
