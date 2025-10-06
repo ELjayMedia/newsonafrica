@@ -11,6 +11,7 @@ import {
   FEATURED_POSTS_QUERY,
   AUTHOR_DATA_QUERY,
   CATEGORY_POSTS_QUERY,
+  FRONT_PAGE_SLICES_QUERY,
 } from "./wordpress-queries"
 import * as log from "./log"
 import type { CircuitBreakerManager } from "./api/circuit-breaker"
@@ -103,6 +104,21 @@ export const mapPostsToHomePosts = (posts: WordPressPost[] | null | undefined, c
     return []
   }
   return posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
+}
+
+export interface PaginatedPostsResult {
+  posts: WordPressPost[]
+  hasNextPage: boolean
+  endCursor: string | null
+}
+
+export interface FrontPageSlicesResult {
+  hero: {
+    heroPost?: WordPressPost
+    secondaryStories: WordPressPost[]
+  }
+  trending: PaginatedPostsResult
+  latest: PaginatedPostsResult
 }
 
 type RestFallbackContext = Record<string, unknown>
@@ -476,6 +492,205 @@ const cursorToOffset = (cursor: string | null | undefined) => {
   return index + 1
 }
 
+type FrontPageSlicesQueryResult = {
+  hero?: {
+    nodes?: (PostFieldsFragment | null)[] | null
+  } | null
+  latest?: {
+    pageInfo?: {
+      endCursor?: string | null
+      hasNextPage?: boolean | null
+    } | null
+    edges?: ({ cursor?: string | null; node?: PostFieldsFragment | null } | null)[] | null
+  } | null
+}
+
+const FRONT_PAGE_HERO_LIMIT = 8
+const FRONT_PAGE_HERO_FALLBACK_LIMIT = 3
+const FRONT_PAGE_TRENDING_LIMIT = 7
+const FRONT_PAGE_LATEST_LIMIT = 20
+const FRONT_PAGE_HERO_TAGS = ["fp"] as const
+
+const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
+  hero: { heroPost: undefined, secondaryStories: [] },
+  trending: { posts: [], hasNextPage: false, endCursor: null },
+  latest: { posts: [], hasNextPage: false, endCursor: null },
+})
+
+type BuildFrontPageSlicesOptions = {
+  heroPosts: WordPressPost[]
+  generalPosts: WordPressPost[]
+  heroFallbackLimit: number
+  trendingLimit: number
+  latestLimit: number
+  cursors?: (string | null)[]
+  pageInfo?: { endCursor?: string | null; hasNextPage?: boolean | null } | null
+}
+
+const buildFrontPageSlices = ({
+  heroPosts,
+  generalPosts,
+  heroFallbackLimit,
+  trendingLimit,
+  latestLimit,
+  cursors,
+  pageInfo,
+}: BuildFrontPageSlicesOptions): FrontPageSlicesResult => {
+  const heroFallback = generalPosts.slice(0, heroFallbackLimit)
+  const heroSource = heroPosts.length > 0 ? heroPosts : heroFallback
+  const heroPost = heroSource[0]
+  const secondaryStories = heroSource.slice(1, 5)
+
+  const trendingPosts = generalPosts.slice(heroFallbackLimit, heroFallbackLimit + trendingLimit)
+  const latestPosts = generalPosts.slice(
+    heroFallbackLimit + trendingLimit,
+    heroFallbackLimit + trendingLimit + latestLimit,
+  )
+
+  const trendingEndIndex = heroFallbackLimit + trendingPosts.length - 1
+  const latestEndIndex = heroFallbackLimit + trendingLimit + latestPosts.length - 1
+
+  const safeCursorAt = (index: number) => {
+    if (!cursors || index < 0) {
+      return null
+    }
+    return cursors[index] ?? null
+  }
+
+  const trendingEndCursor = trendingPosts.length > 0 ? safeCursorAt(trendingEndIndex) : null
+  const latestEndCursor = latestPosts.length > 0 ? safeCursorAt(latestEndIndex) : null
+
+  const totalGeneral = generalPosts.length
+  const consumedForTrending = heroFallbackLimit + trendingPosts.length
+  const consumedForLatest = consumedForTrending + latestPosts.length
+
+  const trendingHasNextPage =
+    totalGeneral > consumedForTrending || Boolean(pageInfo?.hasNextPage)
+  const latestHasNextPage =
+    totalGeneral > consumedForLatest || Boolean(pageInfo?.hasNextPage)
+
+  return {
+    hero: { heroPost, secondaryStories },
+    trending: {
+      posts: trendingPosts,
+      hasNextPage: trendingHasNextPage,
+      endCursor: trendingEndCursor ?? pageInfo?.endCursor ?? null,
+    },
+    latest: {
+      posts: latestPosts,
+      hasNextPage: latestHasNextPage,
+      endCursor: latestEndCursor ?? pageInfo?.endCursor ?? null,
+    },
+  }
+}
+
+const fetchFrontPageSlicesViaRest = async (
+  countryCode: string,
+  {
+    heroFallbackLimit,
+    trendingLimit,
+    latestLimit,
+  }: { heroFallbackLimit: number; trendingLimit: number; latestLimit: number },
+  tags: string[],
+): Promise<FrontPageSlicesResult> => {
+  const totalLatest = heroFallbackLimit + trendingLimit + latestLimit
+
+  try {
+    const { endpoint, params } = wordpressQueries.recentPosts(totalLatest)
+    const posts = await executeRestFallback(
+      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
+      `[v0] Frontpage slices REST fallback failed for ${countryCode}`,
+      { countryCode, endpoint, params },
+      { fallbackValue: [] },
+    )
+
+    const mapped = posts.map((post) => mapPostFromWp(post, countryCode))
+    return buildFrontPageSlices({
+      heroPosts: [],
+      generalPosts: mapped,
+      heroFallbackLimit,
+      trendingLimit,
+      latestLimit,
+    })
+  } catch (error) {
+    console.error("[v0] Failed to fetch frontpage slices via REST:", error)
+    return createEmptyFrontPageSlices()
+  }
+}
+
+export async function getFrontPageSlicesForCountry(
+  countryCode: string,
+  options?: {
+    heroLimit?: number
+    heroFallbackLimit?: number
+    trendingLimit?: number
+    latestLimit?: number
+  },
+): Promise<FrontPageSlicesResult> {
+  const heroLimit = options?.heroLimit ?? FRONT_PAGE_HERO_LIMIT
+  const heroFallbackLimit = options?.heroFallbackLimit ?? FRONT_PAGE_HERO_FALLBACK_LIMIT
+  const trendingLimit = options?.trendingLimit ?? FRONT_PAGE_TRENDING_LIMIT
+  const latestLimit = options?.latestLimit ?? FRONT_PAGE_LATEST_LIMIT
+
+  const totalLatest = heroFallbackLimit + trendingLimit + latestLimit
+  const tags = buildCacheTags({
+    country: countryCode,
+    section: "frontpage",
+    extra: ["batched"],
+  })
+
+  try {
+    console.log("[v0] Fetching frontpage slices for:", countryCode)
+
+    const gqlData = await fetchFromWpGraphQL<FrontPageSlicesQueryResult>(
+      countryCode,
+      FRONT_PAGE_SLICES_QUERY,
+      {
+        heroFirst: heroLimit,
+        heroTagSlugs: FRONT_PAGE_HERO_TAGS,
+        latestFirst: totalLatest,
+      },
+      tags,
+    )
+
+    if (gqlData) {
+      const heroNodes =
+        gqlData.hero?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
+      const heroPosts = heroNodes.map((node) => mapWpPost(node, "gql", countryCode))
+
+      const latestEdges =
+        gqlData.latest?.edges?.filter(
+          (edge): edge is { cursor?: string | null; node: PostFieldsFragment } => Boolean(edge?.node),
+        ) ?? []
+
+      const generalPosts = latestEdges.map((edge) => mapWpPost(edge.node, "gql", countryCode))
+      const cursors = latestEdges.map((edge) => edge.cursor ?? null)
+
+      if (heroPosts.length > 0 || generalPosts.length > 0) {
+        return buildFrontPageSlices({
+          heroPosts,
+          generalPosts,
+          heroFallbackLimit,
+          trendingLimit,
+          latestLimit,
+          cursors,
+          pageInfo: gqlData.latest?.pageInfo ?? null,
+        })
+      }
+    }
+
+    console.log("[v0] GraphQL returned no data for frontpage slices, falling back to REST")
+  } catch (error) {
+    console.error("[v0] Failed to fetch frontpage slices via GraphQL:", error)
+  }
+
+  return fetchFrontPageSlicesViaRest(
+    countryCode,
+    { heroFallbackLimit, trendingLimit, latestLimit },
+    tags,
+  )
+}
+
 export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {
   const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: ["tag:fp"] })
 
@@ -533,7 +748,11 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
   }
 }
 
-export async function getLatestPostsForCountry(countryCode: string, limit = 20, cursor?: string | null) {
+export async function getLatestPostsForCountry(
+  countryCode: string,
+  limit = 20,
+  cursor?: string | null,
+): Promise<PaginatedPostsResult> {
   const tags = buildCacheTags({ country: countryCode, section: "news" })
 
   try {
