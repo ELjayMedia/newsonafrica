@@ -11,11 +11,38 @@ function restBase(country: CountryCode) {
   return base
 }
 
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {}
+
+  // Try Bearer token first (JWT or Auth Token)
+  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+    return headers
+  }
+
+  // Fall back to Basic Auth with Application Password
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
+  if (username && password) {
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
+    return headers
+  }
+
+  return headers
+}
+
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
   const url = new URL(normalizedPath, restBase(country))
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)))
-  const res = await fetch(url.toString(), { next: { revalidate: 60, tags: [`country:${country}`] } })
+
+  const res = await fetch(url.toString(), {
+    next: { revalidate: 60, tags: [`country:${country}`] },
+    headers: getAuthHeaders(),
+  })
+
   if (!res.ok) {
     throw new Error(`WP ${country} GET ${url} -> ${res.status}`)
   }

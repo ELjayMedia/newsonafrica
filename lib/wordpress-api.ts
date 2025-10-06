@@ -236,6 +236,31 @@ interface WordPressGraphQLResponse<T> {
   errors?: Array<{ message: string; [key: string]: unknown }>
 }
 
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  }
+
+  // Try Bearer token first (JWT or Auth Token)
+  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+    return headers
+  }
+
+  // Fall back to Basic Auth with Application Password
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
+  if (username && password) {
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
+    return headers
+  }
+
+  return headers
+}
+
 export async function fetchFromWpGraphQL<T>(
   countryCode: string,
   query: string,
@@ -257,7 +282,7 @@ export async function fetchFromWpGraphQL<T>(
         try {
           const res = await fetchWithTimeout(base, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ query, variables }),
             next: {
               revalidate: CACHE_DURATIONS.MEDIUM,
@@ -350,7 +375,7 @@ export async function fetchFromWp<T>(
         try {
           const res = await fetchWithTimeout(url, {
             method,
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            headers: getAuthHeaders(),
             next: {
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
