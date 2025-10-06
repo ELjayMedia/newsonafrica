@@ -98,11 +98,7 @@ export function SidebarContent() {
           {mostReadPosts.length > 0 ? (
             <div className="space-y-4">
               {mostReadPosts.map((post, index) => (
-                <Link
-                  key={post.id}
-                  href={getArticleUrl(post.slug, post.country ?? country)}
-                  className="flex items-start gap-3 group"
-                >
+                <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-3 group">
                   <span className="text-2xl font-light text-gray-300 leading-tight">{index + 1}</span>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
@@ -122,7 +118,7 @@ export function SidebarContent() {
           {personalizedPosts.length > 0 ? (
             <div className="space-y-4">
               {personalizedPosts.slice(0, 5).map((post) => (
-                <Link key={post.id} href={getArticleUrl(post.slug, country)} className="flex items-start gap-2 group">
+                <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-2 group">
                   {post.featuredImage && post.featuredImage.node && (
                     <div className="relative w-16 h-16 flex-shrink-0">
                       <Image

@@ -72,7 +72,6 @@ describe("SidebarContent", () => {
         title: "Top Story",
         excerpt: "",
         date: "2024-01-02",
-        country: "ng",
       },
       {
         id: "most-2",
@@ -92,12 +91,6 @@ describe("SidebarContent", () => {
     expect(await screen.findByText("Top Story")).toBeInTheDocument()
     expect(await screen.findByText("Second Story")).toBeInTheDocument()
     expect(screen.getByText("Latest News")).toBeInTheDocument()
-
-    await waitFor(() => {
-      expect(getArticleUrl).toHaveBeenCalledWith("top-story", "ng")
-      expect(getArticleUrl).toHaveBeenCalledWith("second-story", "sz")
-      expect(getArticleUrl).toHaveBeenCalledWith("breaking-news", "sz")
-    })
   })
 
   it("requests most-read posts for the current country", async () => {
