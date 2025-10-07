@@ -1,10 +1,36 @@
 import "server-only"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
-import { getAggregatedLatestHome, type AggregatedHomeData } from "@/lib/wordpress-api"
+import {
+  getAggregatedLatestHome,
+  getLatestPostsForCountry,
+  mapPostsToHomePosts,
+  type AggregatedHomeData,
+} from "@/lib/wordpress-api"
+import type { HomePost } from "@/types/home"
 
 export const HOME_FEED_REVALIDATE = 60
 const HOME_FEED_FALLBACK_LIMIT = 6
+
+const createEmptyAggregatedHome = (): AggregatedHomeData => ({
+  heroPost: null,
+  secondaryPosts: [],
+  remainingPosts: [],
+})
+
+const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => {
+  if (posts.length === 0) {
+    return createEmptyAggregatedHome()
+  }
+
+  const [heroPost, ...rest] = posts
+
+  return {
+    heroPost,
+    secondaryPosts: rest.slice(0, 3),
+    remainingPosts: rest.slice(3),
+  }
+}
 
 export const HOME_FEED_CACHE_TAGS = buildCacheTags({
   section: "home-feed",
@@ -58,6 +84,21 @@ export function fetchAggregatedHome(
 
   inflightRequests.set(cacheKey, request)
   return request
+}
+
+export async function fetchAggregatedHomeForCountry(
+  countryCode: string,
+  limit = HOME_FEED_FALLBACK_LIMIT,
+): Promise<AggregatedHomeData> {
+  try {
+    const latestPosts = await getLatestPostsForCountry(countryCode, limit)
+    const mappedPosts = mapPostsToHomePosts(latestPosts.posts, countryCode)
+
+    return buildAggregatedHomeFromPosts(mappedPosts)
+  } catch (error) {
+    console.error(`[v0] Failed to assemble home feed for country ${countryCode}`, { error })
+    return createEmptyAggregatedHome()
+  }
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
