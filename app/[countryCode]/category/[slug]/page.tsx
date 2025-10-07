@@ -199,6 +199,12 @@ export default async function CountryCategoryPage({ params }: CountryCategoryPag
     return <CategoryClientPage params={{ slug }} initialData={data} />
   } catch (error) {
     log.error(`Error fetching category ${slug} for ${countryCode}`, { error })
-    return notFound()
+    if (error instanceof Error) {
+      throw error
+    }
+
+    throw new Error(
+      `Error fetching category ${slug} for ${countryCode}: ${String(error)}`,
+    )
   }
 }
