@@ -1,14 +1,13 @@
 import { SecondaryStories } from "@/components/SecondaryStories"
 
-import { fetchAggregatedHome } from "./home-data"
+import type { AggregatedHomeData } from "./home-data"
 
 interface TrendingSectionProps {
-  baseUrl: string
-  cacheTags: string[]
+  data: AggregatedHomeData
 }
 
-export async function TrendingSection({ baseUrl, cacheTags }: TrendingSectionProps) {
-  const { secondaryPosts } = await fetchAggregatedHome(baseUrl, cacheTags)
+export function TrendingSection({ data }: TrendingSectionProps) {
+  const { secondaryPosts } = data
 
   if (!secondaryPosts.length) {
     return (
