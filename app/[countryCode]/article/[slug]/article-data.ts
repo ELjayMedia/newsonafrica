@@ -3,6 +3,7 @@ import { buildCacheTags } from "@/lib/cache/tag-utils"
 import {
   AFRICAN_EDITION,
   SUPPORTED_EDITIONS,
+  isCountryEdition,
   type SupportedEdition,
 } from "@/lib/editions"
 import { mapWpPost } from "@/lib/utils/mapWpPost"
@@ -113,7 +114,16 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const defaultSite = normalizeCountryCode(env.NEXT_PUBLIC_DEFAULT_SITE)
   const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
 
-  return unique([normalizedPrimary, defaultSite, africanEdition])
+  const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
+    normalizeCountryCode(edition.code),
+  )
+
+  return unique([
+    normalizedPrimary,
+    defaultSite,
+    ...supportedCountryEditions,
+    africanEdition,
+  ])
 }
 
 export async function loadArticleWithFallback(
