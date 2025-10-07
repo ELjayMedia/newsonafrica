@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR from "swr"
-import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress-api"
+import { fetchMostReadPosts } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,6 +12,7 @@ import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 import { Button } from "@/components/ui/button"
+import { useHomeData } from "@/hooks/useHomeData"
 
 export function SidebarContent() {
   const country = getCurrentCountry()
@@ -23,11 +24,11 @@ export function SidebarContent() {
   )
 
   const {
-    data: recentData,
-    error: recentError,
-    isLoading: isRecentLoading,
-    mutate: mutateRecent,
-  } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
+    data: homeData,
+    error: homeError,
+    isLoading: isHomeLoading,
+    mutate: mutateHomeData,
+  } = useHomeData(country, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 1000 * 60 * 5,
@@ -35,6 +36,8 @@ export function SidebarContent() {
     errorRetryCount: 3,
     errorRetryInterval: 5000,
   })
+
+  const recentPosts = homeData?.recentPosts ?? []
 
   const {
     data: mostReadData,
@@ -51,15 +54,15 @@ export function SidebarContent() {
   })
 
   const personalizedPosts = useMemo(() => {
-    if (!recentData || !Array.isArray(recentData)) {
+    if (!Array.isArray(recentPosts) || recentPosts.length === 0) {
       return []
     }
 
     if (!preferredSections.length) {
-      return recentData
+      return recentPosts
     }
 
-    const matches = recentData.filter((post) => {
+    const matches = recentPosts.filter((post) => {
       const categories = post.categories?.nodes || []
       return categories.some((category: any) => {
         const slug = (category?.slug || category?.name || "").toLowerCase()
@@ -67,21 +70,21 @@ export function SidebarContent() {
       })
     })
 
-    return matches.length > 0 ? matches : recentData
-  }, [recentData, preferredSections])
+    return matches.length > 0 ? matches : recentPosts
+  }, [preferredSections, recentPosts])
 
   const mostReadPosts = useMemo(() => (Array.isArray(mostReadData) ? mostReadData : []), [mostReadData])
 
   const handleRetry = useCallback(() => {
-    mutateRecent()
+    mutateHomeData()
     mutateMostRead()
-  }, [mutateRecent, mutateMostRead])
+  }, [mutateHomeData, mutateMostRead])
 
-  if (isRecentLoading || isMostReadLoading) {
+  if (isHomeLoading || isMostReadLoading) {
     return <SidebarSkeleton />
   }
 
-  if (recentError || mostReadError) {
+  if (homeError || mostReadError) {
     return (
       <div className="space-y-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
