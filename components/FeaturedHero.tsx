@@ -1,9 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-
-import { cn, motionSafe } from "@/lib/utils"
+import { cn, formatRelativeDateSafely, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 
@@ -28,7 +26,7 @@ export interface FeaturedHeroProps {
 }
 
 export function FeaturedHero({ post }: FeaturedHeroProps) {
-  const formattedDate = formatDistanceToNow(new Date(post.date), { addSuffix: true })
+  const formattedDate = formatRelativeDateSafely(post.date)
   const blurDataURL = generateBlurDataURL(800, 450)
   const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
 
