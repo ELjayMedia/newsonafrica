@@ -36,6 +36,29 @@ describe('ArticlePage', () => {
     expect(fetchFromWp).toHaveBeenCalled()
   })
 
+  it('falls back to the default site when the article is missing in the requested country', async () => {
+    vi.mocked(fetchFromWp)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ title: 'From fallback', slug: 'test' }])
+
+    const ui = await Page({ params: { countryCode: 'za', slug: 'test' } })
+    render(ui)
+
+    expect(screen.getByText('From fallback')).toBeInTheDocument()
+    expect(fetchFromWp).toHaveBeenNthCalledWith(
+      1,
+      'za',
+      expect.anything(),
+      expect.objectContaining({ tags: expect.any(Array) }),
+    )
+    expect(fetchFromWp).toHaveBeenNthCalledWith(
+      2,
+      'sz',
+      expect.anything(),
+      expect.objectContaining({ tags: expect.any(Array) }),
+    )
+  })
+
   it('generates metadata that prefers the dynamic OG image', async () => {
     vi.mocked(fetchFromWp).mockResolvedValue([
       {

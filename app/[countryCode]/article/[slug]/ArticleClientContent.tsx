@@ -16,10 +16,16 @@ import { rewriteLegacyLinks } from "@/lib/utils/routing"
 interface ArticleClientContentProps {
   slug: string
   countryCode: string
+  sourceCountryCode?: string
   initialData: any
 }
 
-export function ArticleClientContent({ slug, countryCode, initialData }: ArticleClientContentProps) {
+export function ArticleClientContent({
+  slug,
+  countryCode,
+  sourceCountryCode,
+  initialData,
+}: ArticleClientContentProps) {
   const [readingProgress, setReadingProgress] = useState(0)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -30,9 +36,11 @@ export function ArticleClientContent({ slug, countryCode, initialData }: Article
 
   const postId = initialData?.id != null ? String(initialData.id) : undefined
 
+  const relatedCountry = sourceCountryCode ?? countryCode
+
   const { data: relatedPosts, isLoading: relatedLoading } = useSWR(
-    postId ? `related-${countryCode}-${postId}` : null,
-    () => getRelatedPostsForCountry(countryCode, postId!, 6),
+    postId ? `related-${relatedCountry}-${postId}` : null,
+    () => getRelatedPostsForCountry(relatedCountry, postId!, 6),
     { fallbackData: [] },
   )
 
