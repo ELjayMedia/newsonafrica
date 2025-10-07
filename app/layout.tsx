@@ -1,21 +1,18 @@
 import type React from "react"
-import { Suspense } from "react"
 import type { Metadata } from "next"
-import { ClientWrapper } from "@/components/ClientWrapper"
-import { TopBar } from "@/components/TopBar"
-import { ScrollToTop } from "@/components/ScrollToTop"
-import Link from "next/link"
+import dynamic from "next/dynamic"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
-import { UserProvider } from "@/contexts/UserContext"
-import { AuthProvider } from "@/contexts/AuthContext"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { ClientDynamicComponents } from "@/components/ClientDynamicComponents"
-import { BookmarksProvider } from "@/contexts/BookmarksContext"
-import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
-import ClientLayoutComponents from "./ClientLayoutComponents"
+import { LayoutStructure } from "@/components/LayoutStructure"
+
+const ClientProviders = dynamic(() =>
+  import("@/components/ClientProviders").then((mod) => ({ default: mod.ClientProviders })),
+)
+
+const ClientLayoutComponents = dynamic(() =>
+  import("@/components/ClientLayoutComponents").then((mod) => ({ default: mod.ClientLayoutComponents })),
+)
 
 import "./globals.css"
 
@@ -52,46 +49,15 @@ export default function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="font-sans">
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <AuthProvider>
-            <UserProvider>
-              <UserPreferencesProvider>
-                <BookmarksProvider>
-                  <ClientWrapper>
-                    <Suspense fallback={null}>
-                      <ScrollToTop />
-                    </Suspense>
-                    <ClientDynamicComponents />
-                    <TopBar />
-                    <div className="flex-grow">
-                      <div className="mx-auto max-w-full md:max-w-[980px]">
-                        <ClientLayoutComponents>
-                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                            <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                          </main>
-                        </ClientLayoutComponents>
-                      </div>
-                    </div>
-                    <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-                      <Link href="/privacy-policy" className="hover:underline">
-                        Privacy Policy
-                      </Link>
-                      {" | "}
-                      <Link href="/terms-of-service" className="hover:underline">
-                        Terms of Service
-                      </Link>
-                      {" | "}
-                      <Link href="/sitemap.xml" className="hover:underline">
-                        Sitemap
-                      </Link>
-                    </footer>
-                    <Toaster />
-                  </ClientWrapper>
-                </BookmarksProvider>
-              </UserPreferencesProvider>
-            </UserProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ClientProviders>
+          <ClientLayoutComponents>
+            <LayoutStructure>
+              <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+              </main>
+            </LayoutStructure>
+          </ClientLayoutComponents>
+        </ClientProviders>
       </body>
     </html>
   )
