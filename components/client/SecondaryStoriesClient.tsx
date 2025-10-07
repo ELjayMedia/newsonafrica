@@ -1,10 +1,7 @@
 "use client"
 
-import {
-  SecondaryStoriesContent,
-  type SecondaryStoriesProps,
-} from "../secondary-stories/SecondaryStoriesContent"
+import { SecondaryStories, type SecondaryStoriesProps } from "../SecondaryStories"
 
 export function SecondaryStoriesClient(props: SecondaryStoriesProps) {
-  return <SecondaryStoriesContent {...props} />
+  return <SecondaryStories {...props} />
 }
