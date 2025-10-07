@@ -7,7 +7,7 @@ import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
 import { wordpressQueries } from "@/lib/wordpress-queries"
 import { mapWpPost } from "@/lib/utils/mapWpPost"
 import { stripHtml } from "@/lib/search"
-import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
@@ -19,9 +19,23 @@ type RouteParams = { params: { countryCode: string; slug: string } }
 type FetchResponse<T> = { data: T } | { data: T; headers: Headers } | T | null
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
-const SUPPORTED_COUNTRY_SET = new Set(SUPPORTED_COUNTRIES.map((code) => code.toLowerCase()))
+const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
 
-const isSupportedCountry = (countryCode: string): boolean => SUPPORTED_COUNTRY_SET.has(countryCode.toLowerCase())
+const normalizeSlug = (value: string): string => value.toLowerCase()
+
+const SUPPORTED_EDITION_LOOKUP = new Map(
+  SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]),
+)
+
+const resolveEdition = (countryCode: string) => {
+  const normalized = normalizeCountryCode(countryCode)
+
+  if (normalized === "african") {
+    return AFRICAN_EDITION
+  }
+
+  return SUPPORTED_EDITION_LOOKUP.get(normalized) ?? null
+}
 
 const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "")
 
@@ -83,12 +97,14 @@ const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_
 
 export async function generateMetadata({ params }: { params: Promise<RouteParams["params"]> }): Promise<Metadata> {
   const { countryCode, slug } = await params
-  const normalizedCountry = countryCode.toLowerCase()
-  const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
-  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, normalizedCountry, slug)
-  const placeholderImage = buildPlaceholderUrl(baseUrl)
+  const edition = resolveEdition(countryCode)
+  const normalizedSlug = normalizeSlug(slug)
 
-  if (!isSupportedCountry(normalizedCountry)) {
+  if (!edition) {
+    const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
+    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, normalizeCountryCode(countryCode), normalizedSlug)
+    const placeholderImage = buildPlaceholderUrl(baseUrl)
+
     return {
       title: "Article not found - News On Africa",
       description: "We couldn't find the requested article.",
@@ -103,11 +119,16 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     }
   }
 
-  const article = await loadArticle(normalizedCountry, slug)
+  const normalizedCountry = edition.code.toLowerCase()
+  const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
+  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, normalizedCountry, normalizedSlug)
+  const placeholderImage = buildPlaceholderUrl(baseUrl)
+
+  const article = await loadArticle(normalizedCountry, normalizedSlug)
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const canonicalUrl = `${baseUrl}/${normalizedCountry}/article/${slug}`
+  const canonicalUrl = `${baseUrl}/${normalizedCountry}/article/${normalizedSlug}`
 
   return {
     title: `${title} - News On Africa`,
@@ -131,17 +152,25 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
 
 export default async function ArticlePage({ params }: RouteParams) {
   const { countryCode, slug } = params
-  const normalizedCountry = countryCode.toLowerCase()
+  const edition = resolveEdition(countryCode)
 
-  if (!isSupportedCountry(normalizedCountry)) {
+  if (!edition) {
     notFound()
   }
 
-  const article = await loadArticle(normalizedCountry, slug)
+  const normalizedCountry = edition.code.toLowerCase()
+  const normalizedSlug = normalizeSlug(slug)
+  const article = await loadArticle(normalizedCountry, normalizedSlug)
 
   if (!article) {
     notFound()
   }
 
-  return <ArticleClientContent slug={slug} countryCode={normalizedCountry} initialData={article} />
+  return (
+    <ArticleClientContent
+      slug={normalizedSlug}
+      countryCode={isCountryEdition(edition) ? normalizedCountry : AFRICAN_EDITION.code}
+      initialData={article}
+    />
+  )
 }

@@ -5,6 +5,10 @@ vi.mock('@/lib/wordpress-api', () => ({
   fetchFromWp: vi.fn(),
 }))
 
+vi.mock('next/navigation', () => ({
+  notFound: vi.fn(),
+}))
+
 vi.mock('./ArticleClientContent', () => ({
   ArticleClientContent: ({ initialData }: { initialData: any }) => (
     <div>{initialData.title}</div>
@@ -14,10 +18,12 @@ vi.mock('./ArticleClientContent', () => ({
 import Page, { generateMetadata } from './page'
 import { fetchFromWp } from '@/lib/wordpress-api'
 import { env } from '@/config/env'
+import { notFound } from 'next/navigation'
 
 describe('ArticlePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(notFound).mockReset()
   })
 
   it('renders post content', async () => {
@@ -68,5 +74,20 @@ describe('ArticlePage', () => {
     expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
     expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
     expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
+  })
+
+  it('treats the African edition alias as valid', async () => {
+    vi.mocked(fetchFromWp).mockResolvedValue([
+      { title: 'African story', slug: 'african-story' },
+    ])
+
+    await Page({ params: { countryCode: 'african-edition', slug: 'African-Story' } })
+
+    expect(notFound).not.toHaveBeenCalled()
+    expect(fetchFromWp).toHaveBeenCalledWith(
+      'african-edition',
+      expect.anything(),
+      expect.objectContaining({ tags: expect.any(Array) }),
+    )
   })
 })
