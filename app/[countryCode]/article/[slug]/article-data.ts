@@ -71,6 +71,10 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       },
     )
 
+    if (!result) {
+      throw new Error("WordPress REST response for article was null")
+    }
+
     const posts = resolveFetchedData(result)
     const rawPost = posts?.[0]
 
@@ -85,7 +89,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
     return mapWpPost(rawPost, "rest", countryCode)
   } catch (error) {
     console.error("[v0] Failed to load article", { countryCode, slug, error })
-    return null
+    throw error instanceof Error ? error : new Error("Failed to load article")
   }
 }
 
