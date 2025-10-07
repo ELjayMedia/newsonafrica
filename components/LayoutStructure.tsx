@@ -1,14 +1,13 @@
 import { Suspense, type ReactNode } from "react"
 
-import { BottomNavigation } from "@/components/BottomNavigation"
 import { Header } from "@/components/Header"
 import { Sidebar } from "@/components/Sidebar"
 
-interface ClientLayoutComponentsProps {
+interface LayoutStructureProps {
   children: ReactNode
 }
 
-export default function ClientLayoutComponents({ children }: ClientLayoutComponentsProps) {
+export function LayoutStructure({ children }: LayoutStructureProps) {
   return (
     <>
       <Suspense fallback={<div className="h-16 bg-white shadow-md animate-pulse" />}>
@@ -34,7 +33,6 @@ export default function ClientLayoutComponents({ children }: ClientLayoutCompone
           </aside>
         </div>
       </div>
-      <BottomNavigation />
     </>
   )
 }
