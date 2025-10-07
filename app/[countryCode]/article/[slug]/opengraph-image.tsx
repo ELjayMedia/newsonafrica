@@ -2,11 +2,17 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { ImageResponse } from "next/og"
-import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
-import { wordpressQueries } from "@/lib/wordpress-queries"
-import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { env } from "@/config/env"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 import { stripHtml } from "@/lib/search"
+
+import {
+  buildArticleCountryPriority,
+  loadArticleWithFallback,
+  normalizeCountryCode,
+  normalizeSlug,
+  resolveEdition,
+} from "./article-data"
 
 export const runtime = "nodejs"
 export const size = { width: 1200, height: 630 }
@@ -60,31 +66,21 @@ function formatHeadline(title: string, excerpt: string): string {
 
 export default async function Image({ params }: { params: RouteParams }): Promise<ImageResponse> {
   const { countryCode, slug } = params
-  const country = (countryCode || "DEFAULT").toLowerCase()
+  const edition = resolveEdition(countryCode)
+  const normalizedCountry = edition
+    ? edition.code.toLowerCase()
+    : normalizeCountryCode(countryCode || env.NEXT_PUBLIC_DEFAULT_SITE)
+  const normalizedSlug = normalizeSlug(slug)
 
-  const badge = resolveCountryOgBadge(country)
+  const badge = resolveCountryOgBadge(normalizedCountry)
   const [badgeImage, logoImage] = await Promise.all([
     loadPublicAsset(badge.assetPath),
     loadPublicAsset("/news-on-africa-logo.png"),
   ])
 
-  let post: WordPressPost | null = null
-
-  try {
-    const cacheTags = buildCacheTags({
-      country,
-      section: "article",
-      extra: [`post:${slug}`, `article:${slug}`],
-    })
-
-    const data =
-      (await fetchFromWp<WordPressPost[]>(country, wordpressQueries.postBySlug(slug), { tags: cacheTags })) || []
-
-    post = data[0] ?? null
-  } catch {
-    post = null
-  }
-
+  const countryPriority = buildArticleCountryPriority(normalizedCountry)
+  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+  const post = resolvedArticle?.article ?? null
   const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 
   return new ImageResponse(
