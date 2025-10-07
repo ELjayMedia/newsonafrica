@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
-import type { AggregatedHomeData } from "../(home)/home-data"
+import { HOME_FEED_CACHE_TAGS, type AggregatedHomeData } from "../(home)/home-data"
 
 vi.mock("server-only", () => ({}))
 
@@ -10,6 +10,11 @@ const trendingMock = vi.fn(() => <div data-testid="trending">Trending</div>)
 const latestMock = vi.fn(() => <div data-testid="latest">Latest</div>)
 
 const notFoundMock = vi.fn<never, []>()
+
+const { fetchAggregatedHomeMock, fetchAggregatedHomeForCountryMock } = vi.hoisted(() => ({
+  fetchAggregatedHomeMock: vi.fn<Promise<AggregatedHomeData>, [string, string[]]>(),
+  fetchAggregatedHomeForCountryMock: vi.fn<Promise<AggregatedHomeData>, [string]>(),
+}))
 
 vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
@@ -31,9 +36,6 @@ vi.mock("../(home)/TrendingSection", () => ({
 vi.mock("../(home)/LatestGridSection", () => ({
   LatestGridSection: latestMock,
 }))
-
-const fetchAggregatedHomeMock = vi.fn<Promise<AggregatedHomeData>, [string, string[]]>()
-const fetchAggregatedHomeForCountryMock = vi.fn<Promise<AggregatedHomeData>, [string]>()
 
 vi.mock("../(home)/home-data", async () => {
   const actual = await vi.importActual<typeof import("../(home)/home-data")>("../(home)/home-data")
@@ -90,9 +92,9 @@ afterEach(() => {
 
 describe("CountryPage", () => {
   it.each([
-    ["sz"],
-    ["za"],
-  ])("renders the same structure as the home page for %s", async (countryCode) => {
+    ["sz", "sz"],
+    ["ZA", "za"],
+  ])("renders the same structure as the home page for %s", async (countryCode, expectedCode) => {
     const { default: HomePage } = await import("../page")
     const { default: CountryPage } = await import("./page")
 
@@ -106,7 +108,27 @@ describe("CountryPage", () => {
 
     expect(countryRender.container.innerHTML).toBe(homeHtml)
     expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(1)
-    expect(fetchAggregatedHomeForCountryMock).toHaveBeenCalledWith(countryCode)
+    expect(fetchAggregatedHomeForCountryMock).toHaveBeenCalledWith(expectedCode)
+    expect(notFoundMock).not.toHaveBeenCalled()
+  })
+
+  it("renders the African edition using the aggregated home feed", async () => {
+    const { default: HomePage } = await import("../page")
+    const { default: CountryPage } = await import("./page")
+
+    const homeUi = await HomePage()
+    const homeRender = render(homeUi)
+    const homeHtml = homeRender.container.innerHTML
+    homeRender.unmount()
+
+    const countryUi = await CountryPage({ params: { countryCode: "african-edition" } })
+    const countryRender = render(countryUi)
+
+    expect(countryRender.container.innerHTML).toBe(homeHtml)
+    expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(2)
+    expect(fetchAggregatedHomeMock).toHaveBeenNthCalledWith(1, "https://example.com", HOME_FEED_CACHE_TAGS)
+    expect(fetchAggregatedHomeMock).toHaveBeenNthCalledWith(2, "https://example.com", HOME_FEED_CACHE_TAGS)
+    expect(fetchAggregatedHomeForCountryMock).not.toHaveBeenCalled()
     expect(notFoundMock).not.toHaveBeenCalled()
   })
 
@@ -121,6 +143,7 @@ describe("CountryPage", () => {
     await expect(CountryPage({ params: { countryCode: "gh" } })).rejects.toThrow(notFoundError)
 
     expect(notFoundMock).toHaveBeenCalledTimes(1)
+    expect(fetchAggregatedHomeMock).not.toHaveBeenCalled()
     expect(fetchAggregatedHomeForCountryMock).not.toHaveBeenCalled()
   })
 })
