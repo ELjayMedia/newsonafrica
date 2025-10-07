@@ -1,5 +1,5 @@
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { getPostsByCountry } from "@/lib/wp-data"
+import { getPostsByCountry, normalizeCountryCode } from "@/lib/wp-data"
 import * as log from "@/lib/log"
 
 import { getLatestPostsForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
@@ -15,13 +15,14 @@ const formatError = (error: unknown) =>
 export async function GET(req: Request) {
   logRequest(req)
   const u = new URL(req.url)
-  const country = (u.searchParams.get("country") || "DEFAULT").toUpperCase()
+  const countryParam = u.searchParams.get("country")
+  const country = (countryParam || "DEFAULT").toUpperCase()
   const section = u.searchParams.get("section") || undefined
   try {
     const posts = await getPostsByCountry(country, { category: section, first: 20 })
     return jsonWithCors(req, posts?.nodes ?? [])
   } catch (primaryError) {
-    const countryCode = country.toLowerCase()
+    const countryCode = normalizeCountryCode(countryParam ?? undefined)
 
     try {
       const restData = section
