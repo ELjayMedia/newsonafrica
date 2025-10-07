@@ -1,13 +1,20 @@
 const runtimeCaching = [
   {
-    urlPattern: ({ request }) => request.destination === "document",
+    urlPattern: ({ request }) => {
+      if (request.destination === "document") {
+        return true
+      }
+
+      const acceptHeader = request.headers.get("accept") || ""
+      return acceptHeader.includes("text/html") || acceptHeader.includes("application/json")
+    },
     handler: "NetworkFirst",
     options: {
       cacheName: "document-cache",
-      networkTimeoutSeconds: 20,
+      networkTimeoutSeconds: 3,
       expiration: {
         maxEntries: 20,
-        maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        maxAgeSeconds: 60 * 30, // 30 minutes
       },
     },
   },
@@ -25,25 +32,26 @@ const runtimeCaching = [
   {
     urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
     handler: ({ url, event, request, params }) => {
-      const hostname = url?.hostname || "default";
-      const cacheName = `image-cache-${hostname}`;
-      self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {};
-      let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName];
+      const hostname = url?.hostname || "default"
+      const cacheName = `image-cache-${hostname}`
+      self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {}
+      let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName]
 
       if (!strategy) {
         strategy = new workbox.strategies.StaleWhileRevalidate({
           cacheName,
           plugins: [
             new workbox.expiration.ExpirationPlugin({
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+              maxEntries: 45,
+              maxAgeSeconds: 3 * 24 * 60 * 60, // 3 days
+              purgeOnQuotaError: true,
             }),
           ],
-        });
-        self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy;
+        })
+        self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy
       }
 
-      return strategy.handle({ event, request, url, params });
+      return strategy.handle({ event, request, url, params })
     },
   },
 ]
