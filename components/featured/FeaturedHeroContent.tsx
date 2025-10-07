@@ -44,8 +44,9 @@ export function FeaturedHeroContent({ post }: FeaturedHeroProps) {
               "object-cover transition-transform duration-300 group-hover:scale-105",
               motionSafe.transform,
             )}
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
             priority
+            fetchPriority="high"
             placeholder="blur"
             blurDataURL={blurDataURL}
           />

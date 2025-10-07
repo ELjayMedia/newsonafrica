@@ -48,7 +48,7 @@ export function HorizontalCard({ post, className = "", allowHtml = false }: Hori
               alt={post.title}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, 33vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
