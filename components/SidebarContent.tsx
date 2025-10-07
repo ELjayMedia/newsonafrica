@@ -5,46 +5,61 @@ import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, AlertCircle } from "lucide-react"
+import { Clock, AlertCircle, RefreshCw } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useMemo } from "react"
+import { useMemo, useCallback } from "react"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { SidebarSkeleton } from "./SidebarSkeleton"
+import { Button } from "@/components/ui/button"
 
 export function SidebarContent() {
   const country = getCurrentCountry()
   const { preferences } = useUserPreferences()
 
-  const preferredSections = useMemo(() => preferences.sections.map((section) => section.toLowerCase()), [preferences.sections])
+  const preferredSections = useMemo(
+    () => preferences.sections.map((section) => section.toLowerCase()),
+    [preferences.sections],
+  )
 
   const {
-    data,
-    error,
-    isLoading,
+    data: recentData,
+    error: recentError,
+    isLoading: isRecentLoading,
+    mutate: mutateRecent,
   } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
     revalidateOnFocus: false,
-    dedupingInterval: 1000 * 60 * 5,
+    revalidateOnReconnect: true,
+    dedupingInterval: 1000 * 60 * 5, // 5 minutes
+    shouldRetryOnError: true,
+    errorRetryCount: 3,
+    errorRetryInterval: 5000,
   })
 
   const {
     data: mostReadData,
     error: mostReadError,
     isLoading: isMostReadLoading,
+    mutate: mutateMostRead,
   } = useSWR(["mostRead", country], () => fetchMostReadPosts(country), {
     revalidateOnFocus: false,
-    dedupingInterval: 1000 * 60 * 5,
+    revalidateOnReconnect: true,
+    dedupingInterval: 1000 * 60 * 5, // 5 minutes
+    shouldRetryOnError: true,
+    errorRetryCount: 3,
+    errorRetryInterval: 5000,
   })
 
   const personalizedPosts = useMemo(() => {
-    if (!data || !Array.isArray(data)) {
+    if (!recentData || !Array.isArray(recentData)) {
       return []
     }
 
     if (!preferredSections.length) {
-      return data
+      return recentData
     }
 
-    const matches = data.filter((post) => {
+    const matches = recentData.filter((post) => {
       const categories = post.categories?.nodes || []
       return categories.some((category: any) => {
         const slug = (category?.slug || category?.name || "").toLowerCase()
@@ -52,38 +67,64 @@ export function SidebarContent() {
       })
     })
 
-    return matches.length > 0 ? matches : data
-  }, [data, preferredSections])
+    return matches.length > 0 ? matches : recentData
+  }, [recentData, preferredSections])
 
-  const mostReadPosts = Array.isArray(mostReadData) ? mostReadData : []
+  const mostReadPosts = useMemo(() => (Array.isArray(mostReadData) ? mostReadData : []), [mostReadData])
 
-  if (isLoading || isMostReadLoading) return <SidebarSkeleton />
+  const handleRetry = useCallback(() => {
+    mutateRecent()
+    mutateMostRead()
+  }, [mutateRecent, mutateMostRead])
 
-  if (error || mostReadError) {
+  if (isRecentLoading || isMostReadLoading) {
+    return <SidebarSkeleton />
+  }
+
+  if (recentError || mostReadError) {
     return (
-      <div className="p-4 bg-red-50 rounded-lg">
-        <div className="flex items-center mb-2">
-          <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-          <h3 className="font-medium text-red-800">Error loading content</h3>
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-red-800 mb-1">Unable to load content</h3>
+              <p className="text-sm text-red-700 mb-3">
+                We're having trouble loading the sidebar content. This might be a temporary issue.
+              </p>
+              <Button
+                onClick={handleRetry}
+                variant="outline"
+                size="sm"
+                className="text-red-700 border-red-300 hover:bg-red-100 bg-transparent"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-red-700">Please try again later.</p>
       </div>
     )
   }
 
-  // Handle empty data
   if (personalizedPosts.length === 0 && mostReadPosts.length === 0) {
     return (
       <div className="space-y-6">
-        <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
-          <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
+        <section className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
+          <h2 className="text-lg font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-sm mb-2">No articles available</p>
+            <p className="text-gray-400 text-xs">Check back soon for updates</p>
+          </div>
         </section>
 
-
-        <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
-          <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
+        <section className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
+          <h2 className="text-lg font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-sm mb-2">No articles available</p>
+            <p className="text-gray-400 text-xs">Check back soon for updates</p>
+          </div>
         </section>
       </div>
     )
@@ -92,52 +133,63 @@ export function SidebarContent() {
   return (
     <ErrorBoundary>
       <div className="space-y-6">
-        {/* Most Read Section */}
-        <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
-          {mostReadPosts.length > 0 ? (
-            <div className="space-y-4">
+        {mostReadPosts.length > 0 && (
+          <section className="bg-white shadow-sm rounded-lg p-4 border border-gray-100 transition-shadow hover:shadow-md">
+            <h2 className="text-lg font-bold mb-4 pb-2 border-b border-gray-200">Most Read</h2>
+            <div className="space-y-3">
               {mostReadPosts.map((post, index) => (
-                <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-3 group">
-                  <span className="text-2xl font-light text-gray-300 leading-tight">{index + 1}</span>
+                <Link
+                  key={post.id}
+                  href={getArticleUrl(post.slug)}
+                  className="flex items-start gap-3 group transition-colors hover:bg-gray-50 p-2 -mx-2 rounded"
+                >
+                  <span className="text-2xl font-light text-gray-300 leading-tight min-w-[1.5rem]">{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
+                    <h3 className="text-sm font-semibold leading-snug group-hover:text-blue-600 transition-colors line-clamp-3">
+                      {post.title}
+                    </h3>
                   </div>
                 </Link>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
-          )}
-        </section>
+          </section>
+        )}
 
-
-        {/* Latest News Section */}
-        <section className="bg-white shadow-md rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b border-gray-200">Latest News</h2>
-          {personalizedPosts.length > 0 ? (
-            <div className="space-y-4">
+        {personalizedPosts.length > 0 && (
+          <section className="bg-white shadow-sm rounded-lg p-4 border border-gray-100 transition-shadow hover:shadow-md">
+            <h2 className="text-lg font-bold mb-4 pb-2 border-b border-gray-200">
+              {preferredSections.length > 0 ? "For You" : "Latest News"}
+            </h2>
+            <div className="space-y-3">
               {personalizedPosts.slice(0, 5).map((post) => (
-                <Link key={post.id} href={getArticleUrl(post.slug)} className="flex items-start gap-2 group">
-                  {post.featuredImage && post.featuredImage.node && (
-                    <div className="relative w-16 h-16 flex-shrink-0">
+                <Link
+                  key={post.id}
+                  href={getArticleUrl(post.slug)}
+                  className="flex items-start gap-3 group transition-colors hover:bg-gray-50 p-2 -mx-2 rounded"
+                >
+                  {post.featuredImage?.node?.sourceUrl && (
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden bg-gray-100">
                       <Image
-                        src={post.featuredImage.node.sourceUrl || "/placeholder.png"}
-                        alt={post.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="rounded-sm"
+                        src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                        alt={post.featuredImage.node.altText || post.title}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform group-hover:scale-105"
+                        loading="lazy"
                       />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight group-hover:text-blue-600">{post.title}</h3>
-                    <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
-                      <Clock className="h-3 w-3" />
-                      <time dateTime={post.date}>
+                    <h3 className="text-sm font-semibold leading-snug group-hover:text-blue-600 transition-colors line-clamp-2 mb-1">
+                      {post.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      <time dateTime={post.date} className="truncate">
                         {new Date(post.date).toLocaleDateString("en-US", {
                           day: "2-digit",
                           month: "short",
+                          year: "numeric",
                         })}
                       </time>
                     </div>
@@ -145,43 +197,9 @@ export function SidebarContent() {
                 </Link>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-500 text-sm py-4 text-center">No articles available at this time.</p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </ErrorBoundary>
-  )
-}
-
-function SidebarSkeleton() {
-  return (
-    <div className="w-full md:w-80 space-y-8 animate-pulse">
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-3 mb-4">
-            <div className="w-6 h-6 bg-gray-200 rounded"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg p-4">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-start gap-2 mb-4">
-            <div className="w-16 h-16 bg-gray-200 rounded-sm"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }

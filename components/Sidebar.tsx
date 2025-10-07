@@ -4,12 +4,10 @@ import { SidebarSkeleton } from "./SidebarSkeleton"
 
 export function Sidebar() {
   return (
-    <aside className="hidden md:block w-full max-w-xs space-y-6">
-      {/* Main sidebar content */}
+    <aside className="hidden lg:block w-full max-w-sm xl:max-w-md space-y-6 sticky top-4 self-start">
       <Suspense fallback={<SidebarSkeleton />}>
         <SidebarContent />
       </Suspense>
-
     </aside>
   )
 }

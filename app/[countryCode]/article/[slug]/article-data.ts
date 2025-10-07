@@ -72,8 +72,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
     )
 
     if (!result) {
-      console.error("[v0] WordPress REST response for article was null", { countryCode, slug })
-      return null
+      throw new Error("WordPress REST response for article was null")
     }
 
     const posts = resolveFetchedData(result)
