@@ -58,7 +58,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     },
   )
 
-  const fetchNextPage = useCallback(() => setSize(size + 1), [size, setSize])
+  const fetchNextPage = useCallback(() => setSize((prev) => prev + 1), [setSize])
   const hasNextPage = data?.[data.length - 1]?.hasNextPage
   const isFetchingNextPage = isValidating && size > (data?.length || 0)
 
@@ -124,10 +124,10 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   }, [relatedCategoriesArray, prefetchRelatedCategories])
 
   useEffect(() => {
-    if (inView && hasNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage()
     }
-  }, [inView, hasNextPage, fetchNextPage])
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   if (isLoading && !initialData) {
     return <NewsGridSkeleton />
