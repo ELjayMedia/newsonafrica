@@ -61,6 +61,14 @@ describe('ArticlePage', () => {
     expect(screen.getByText('From South Africa')).toBeInTheDocument()
   })
 
+  it('propagates fetch failures to the error boundary', async () => {
+    vi.mocked(fetchFromWp).mockRejectedValue(new Error('Network down'))
+
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('Network down')
+
+    expect(notFound).not.toHaveBeenCalled()
+  })
+
   it('generates metadata that prefers the dynamic OG image', async () => {
     vi.mocked(fetchFromWp).mockResolvedValue([
       {

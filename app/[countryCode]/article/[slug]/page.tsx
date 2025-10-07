@@ -97,7 +97,7 @@ export default async function ArticlePage({ params }: RouteParams) {
   const countryPriority = buildArticleCountryPriority(normalizedCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
-  if (!resolvedArticle) {
+  if (resolvedArticle === null) {
     notFound()
   }
 
