@@ -1,7 +1,7 @@
 "use client"
 
-import { FeaturedHeroContent, type FeaturedHeroProps } from "../featured/FeaturedHeroContent"
+import { FeaturedHero, type FeaturedHeroProps } from "../FeaturedHero"
 
 export function FeaturedHeroClient(props: FeaturedHeroProps) {
-  return <FeaturedHeroContent {...props} />
+  return <FeaturedHero {...props} />
 }
