@@ -277,21 +277,13 @@ function getAuthHeaders(): HeadersInit {
     Accept: "application/json",
   }
 
-  // Try Bearer token first (JWT or Auth Token)
-  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`
-    return headers
-  }
-
-  // Fall back to Basic Auth with Application Password
   const username = process.env.WP_APP_USERNAME
   const password = process.env.WP_APP_PASSWORD
   if (username && password) {
     const credentials = Buffer.from(`${username}:${password}`).toString("base64")
     headers["Authorization"] = `Basic ${credentials}`
-    return headers
   }
+  // Note: If no credentials, WordPress allows public access to public posts
 
   return headers
 }
@@ -564,10 +556,8 @@ const buildFrontPageSlices = ({
   const consumedForTrending = heroFallbackLimit + trendingPosts.length
   const consumedForLatest = consumedForTrending + latestPosts.length
 
-  const trendingHasNextPage =
-    totalGeneral > consumedForTrending || Boolean(pageInfo?.hasNextPage)
-  const latestHasNextPage =
-    totalGeneral > consumedForLatest || Boolean(pageInfo?.hasNextPage)
+  const trendingHasNextPage = totalGeneral > consumedForTrending || Boolean(pageInfo?.hasNextPage)
+  const latestHasNextPage = totalGeneral > consumedForLatest || Boolean(pageInfo?.hasNextPage)
 
   return {
     hero: { heroPost, secondaryStories },
@@ -654,13 +644,12 @@ export async function getFrontPageSlicesForCountry(
     )
 
     if (gqlData) {
-      const heroNodes =
-        gqlData.hero?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
+      const heroNodes = gqlData.hero?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
       const heroPosts = heroNodes.map((node) => mapWpPost(node, "gql", countryCode))
 
       const latestEdges =
-        gqlData.latest?.edges?.filter(
-          (edge): edge is { cursor?: string | null; node: PostFieldsFragment } => Boolean(edge?.node),
+        gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostFieldsFragment } =>
+          Boolean(edge?.node),
         ) ?? []
 
       const generalPosts = latestEdges.map((edge) => mapWpPost(edge.node, "gql", countryCode))
@@ -684,11 +673,7 @@ export async function getFrontPageSlicesForCountry(
     console.error("[v0] Failed to fetch frontpage slices via GraphQL:", error)
   }
 
-  return fetchFrontPageSlicesViaRest(
-    countryCode,
-    { heroFallbackLimit, trendingLimit, latestLimit },
-    tags,
-  )
+  return fetchFrontPageSlicesViaRest(countryCode, { heroFallbackLimit, trendingLimit, latestLimit }, tags)
 }
 
 export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {

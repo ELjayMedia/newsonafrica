@@ -14,23 +14,14 @@ function restBase(country: CountryCode) {
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {}
 
-  // Try Basic Auth with Application Password first (more reliable)
   const username = process.env.WP_APP_USERNAME
   const password = process.env.WP_APP_PASSWORD
   if (username && password) {
     const credentials = Buffer.from(`${username}:${password}`).toString("base64")
     headers["Authorization"] = `Basic ${credentials}`
-    return headers
   }
+  // Note: If no credentials, WordPress allows public access to public posts
 
-  // Fall back to Bearer token only if Basic Auth is not available
-  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`
-    return headers
-  }
-
-  // No authentication - WordPress allows public access to public posts
   return headers
 }
 
