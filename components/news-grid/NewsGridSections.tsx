@@ -59,7 +59,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
               src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
               alt={mainPost.title}
               fill
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
               className={cn(
                 "object-cover rounded-md transition-transform duration-300 group-hover:scale-105",
                 motionSafe.transform,
@@ -159,7 +159,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
               src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
               alt={mainPost.title}
               fill
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
               className={cn(
                 "object-cover rounded-md transition-transform duration-300 group-hover:scale-105",
                 motionSafe.transform,
@@ -265,7 +265,7 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
                 src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                 alt={post.title}
                 fill
-                sizes="(max-width: 768px) 100vw, 33vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
                 className={cn(
                   "object-cover transition-transform duration-300 group-hover:scale-105",
                   motionSafe.transform,

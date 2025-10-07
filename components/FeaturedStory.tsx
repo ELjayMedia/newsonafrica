@@ -32,12 +32,13 @@ export function FeaturedStory({ post }: FeaturedStoryProps) {
               }
               alt={post.title}
               fill
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 600px"
               className={cn(
                 "object-cover transition-transform duration-300 group-hover:scale-105",
                 motionSafe.transform,
               )}
               priority
+              fetchPriority="high"
             />
           </div>
           <div>
