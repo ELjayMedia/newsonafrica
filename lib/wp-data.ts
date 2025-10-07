@@ -25,7 +25,7 @@ type PostsResponse = {
   category?: WordPressCategory | null
 }
 
-function normalizeCountryCode(country?: string | null): string {
+export function normalizeCountryCode(country?: string | null): string {
   if (!country) return DEFAULT_COUNTRY
   const normalized = country.toLowerCase()
   if (normalized === "default") {
