@@ -20,12 +20,7 @@ interface ArticleClientContentProps {
   initialData: any
 }
 
-export function ArticleClientContent({
-  slug,
-  countryCode,
-  sourceCountryCode,
-  initialData,
-}: ArticleClientContentProps) {
+export function ArticleClientContent({ slug, countryCode, sourceCountryCode, initialData }: ArticleClientContentProps) {
   const [readingProgress, setReadingProgress] = useState(0)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -93,8 +88,7 @@ export function ArticleClientContent({
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const authorName =
-    initialData?.author?.node?.name ?? initialData?.author?.name ?? null
+  const authorName = initialData?.author?.node?.name ?? initialData?.author?.name ?? null
 
   return (
     <>
@@ -106,15 +100,15 @@ export function ArticleClientContent({
         />
       </div>
 
-      <article id="article-content" className="max-w-4xl mx-auto px-4 py-8" ref={contentRef}>
-        <header className="mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+      <article id="article-content" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12" ref={contentRef}>
+        <header className="mb-8 lg:mb-12">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div className="flex flex-wrap gap-2">
               {initialData.categories?.nodes?.map((category: any) => (
                 <Badge
                   key={category.id}
                   variant="secondary"
-                  className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                 >
                   {category.name}
                 </Badge>
@@ -122,59 +116,86 @@ export function ArticleClientContent({
             </div>
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Calendar className="w-4 h-4" />
-              <span>{formatDistanceToNow(new Date(initialData.date))} ago</span>
+              <time dateTime={initialData.date}>{formatDistanceToNow(new Date(initialData.date))} ago</time>
             </div>
           </div>
 
-          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-left">{initialData.title}</h1>
+          <h1 className="font-bold mb-6 lg:mb-8 text-balance leading-tight text-3xl sm:text-4xl lg:text-5xl text-foreground">
+            {initialData.title}
+          </h1>
 
-          <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6 text-sm">
+          <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground mb-8 text-sm lg:text-base">
             {authorName && (
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 lg:w-5 lg:h-5" />
                 <span className="font-medium">{authorName}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>{estimatedReadTime} min read</span>
             </div>
             <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4" />
-              <span>Reading progress: {Math.round(readingProgress)}%</span>
+              <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
+              <span>Reading: {Math.round(readingProgress)}%</span>
             </div>
           </div>
 
-          {/* Featured image with better aspect ratio */}
           {initialData.featuredImage?.node?.sourceUrl && (
-            <div className="mb-8 rounded-xl overflow-hidden shadow-lg">
+            <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden shadow-xl">
               <img
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
                 alt={initialData.featuredImage.node.altText || initialData.title}
                 className="w-full h-auto aspect-video object-cover"
                 loading="eager"
               />
-            </div>
+              {initialData.featuredImage.node.caption && (
+                <figcaption className="text-sm text-muted-foreground text-center mt-3 px-4">
+                  {initialData.featuredImage.node.caption}
+                </figcaption>
+              )}
+            </figure>
           )}
         </header>
 
         <div
-          className="prose prose-lg prose-gray max-w-none mb-12
-                     prose-headings:font-bold prose-headings:text-foreground
-                     prose-p:text-foreground prose-p:leading-relaxed
-                     prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                     prose-img:rounded-lg prose-img:shadow-md
-                     prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg
-                     prose-code:bg-muted prose-code:px-1 prose-code:rounded"
+          className="prose prose-lg lg:prose-xl max-w-none mb-12 lg:mb-16
+                     prose-headings:font-bold prose-headings:text-foreground prose-headings:tracking-tight
+                     prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:leading-tight
+                     prose-h3:text-2xl prose-h3:mt-10 prose-h3:mb-4
+                     prose-h4:text-xl prose-h4:mt-8 prose-h4:mb-3
+                     prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-6 prose-p:text-lg
+                     prose-a:text-primary prose-a:no-underline prose-a:font-medium hover:prose-a:underline prose-a:transition-all
+                     prose-strong:text-foreground prose-strong:font-semibold
+                     prose-em:text-foreground prose-em:italic
+                     prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
+                     prose-figure:my-10
+                     prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-muted-foreground prose-figcaption:mt-3
+                     prose-blockquote:border-l-4 prose-blockquote:border-l-primary prose-blockquote:bg-muted/40 
+                     prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:my-8
+                     prose-blockquote:not-italic prose-blockquote:text-foreground/90
+                     prose-code:bg-muted prose-code:text-foreground prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
+                     prose-code:before:content-none prose-code:after:content-none
+                     prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
+                     prose-pre:overflow-x-auto prose-pre:text-sm
+                     prose-ol:my-6 prose-ol:pl-6 prose-ol:space-y-2
+                     prose-ul:my-6 prose-ul:pl-6 prose-ul:space-y-2
+                     prose-li:text-foreground prose-li:leading-relaxed prose-li:text-lg
+                     prose-li:marker:text-primary
+                     prose-table:my-8 prose-table:border-collapse
+                     prose-thead:border-b-2 prose-thead:border-border
+                     prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-th:text-foreground
+                     prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-border prose-td:text-foreground
+                     prose-hr:my-10 prose-hr:border-border"
           dangerouslySetInnerHTML={{
             __html: rewriteLegacyLinks(initialData.content || "", countryCode),
           }}
         />
 
-        <section className="border-t pt-8">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="h-1 w-8 bg-primary rounded-full" />
-            <h2 className="text-2xl font-bold">Related Articles</h2>
+        <section className="border-t border-border pt-10 lg:pt-12 mt-12 lg:mt-16">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="h-1 w-10 bg-primary rounded-full" />
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Related Articles</h2>
           </div>
 
           {relatedLoading ? (
@@ -192,15 +213,14 @@ export function ArticleClientContent({
           ) : relatedPosts.length > 0 ? (
             <ArticleList articles={relatedPosts} layout="compact" showLoadMore={false} />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No related articles found.</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg">No related articles found.</p>
             </div>
           )}
         </section>
       </article>
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
-        {/* Scroll to top button */}
         {showScrollTop && (
           <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <Button
@@ -215,7 +235,6 @@ export function ArticleClientContent({
           </Card>
         )}
 
-        {/* Navigation controls */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <div className="flex">
             <Button

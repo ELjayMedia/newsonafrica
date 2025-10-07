@@ -270,50 +270,52 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const primaryCategory = categories?.edges?.[0]?.node
 
   return (
-    <article ref={articleRef} className="max-w-4xl mx-auto">
+    <article ref={articleRef} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Article Header */}
-      <header className="mb-8">
+      <header className="mb-8 lg:mb-12">
         {primaryCategory && (
           <Link
             href={getCategoryUrl(primaryCategory.slug)}
-            className="text-primary font-medium text-sm mb-2 inline-block"
+            className="text-primary font-semibold text-sm uppercase tracking-wide mb-4 inline-block hover:underline transition-all"
           >
             {primaryCategory.name}
           </Link>
         )}
 
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">{title}</h1>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 lg:mb-8 leading-tight text-balance text-foreground">
+          {title}
+        </h1>
 
-        <div className="flex flex-wrap items-center text-sm text-gray-600 gap-4 mb-4">
+        <div className="flex flex-wrap items-center text-sm lg:text-base text-muted-foreground gap-4 lg:gap-6 mb-6">
           {author?.node && (
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               {author.node.avatar?.url && (
                 <Image
                   src={author.node.avatar.url || "/placeholder.svg"}
                   alt={author.node.name}
-                  width={24}
-                  height={24}
-                  className="rounded-full mr-2"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
                 />
               )}
-              <span>{author.node.firstName || author.node.name}</span>
+              <span className="font-medium">{author.node.firstName || author.node.name}</span>
             </div>
           )}
 
-          <div className="flex items-center">
-            <CalendarIcon className="h-4 w-4 mr-1" />
-            <span>{formattedDate}</span>
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4 lg:h-5 lg:w-5" />
+            <time dateTime={date}>{formattedDate}</time>
           </div>
 
           {readingTime && (
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 lg:h-5 lg:w-5" />
               <span>{formatReadingTime(readingTime)}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-3 mb-8">
           <ShareButtons
             title={title}
             url={pathname}
@@ -344,9 +346,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
         </div>
       </header>
 
-      {/* Featured Image */}
       {featuredImage?.node?.sourceUrl && (
-        <div className="relative w-full aspect-[16/9] mb-4 sm:mb-6">
+        <figure className="relative w-full aspect-[16/9] mb-8 lg:mb-10 rounded-xl lg:rounded-2xl overflow-hidden shadow-xl">
           <Image
             src={featuredImage.node.sourceUrl || "/placeholder.svg"}
             alt={title}
@@ -357,26 +358,51 @@ export default function ArticleView({ post }: ArticleViewProps) {
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             priority
           />
-        </div>
+        </figure>
       )}
 
       {/* Audio Player */}
-      <div className="mb-8">
+      <div className="mb-10">
         <AudioPlayer articleId={id} title={title} />
       </div>
 
-      {/* Article Content */}
       <div
-        className="prose prose-lg max-w-none mb-8"
+        className="prose prose-lg lg:prose-xl max-w-none mb-12 lg:mb-16
+                   prose-headings:font-bold prose-headings:text-foreground prose-headings:tracking-tight
+                   prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:leading-tight
+                   prose-h3:text-2xl prose-h3:mt-10 prose-h3:mb-4
+                   prose-h4:text-xl prose-h4:mt-8 prose-h4:mb-3
+                   prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-6 prose-p:text-lg
+                   prose-a:text-primary prose-a:no-underline prose-a:font-medium hover:prose-a:underline prose-a:transition-all
+                   prose-strong:text-foreground prose-strong:font-semibold
+                   prose-em:text-foreground prose-em:italic
+                   prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
+                   prose-figure:my-10
+                   prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-muted-foreground prose-figcaption:mt-3
+                   prose-blockquote:border-l-4 prose-blockquote:border-l-primary prose-blockquote:bg-muted/40 
+                   prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:my-8
+                   prose-blockquote:not-italic prose-blockquote:text-foreground/90
+                   prose-code:bg-muted prose-code:text-foreground prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
+                   prose-code:before:content-none prose-code:after:content-none
+                   prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
+                   prose-pre:overflow-x-auto prose-pre:text-sm
+                   prose-ol:my-6 prose-ol:pl-6 prose-ol:space-y-2
+                   prose-ul:my-6 prose-ul:pl-6 prose-ul:space-y-2
+                   prose-li:text-foreground prose-li:leading-relaxed prose-li:text-lg
+                   prose-li:marker:text-primary
+                   prose-table:my-8 prose-table:border-collapse
+                   prose-thead:border-b-2 prose-thead:border-border
+                   prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-th:text-foreground
+                   prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-border prose-td:text-foreground
+                   prose-hr:my-10 prose-hr:border-border"
         dangerouslySetInnerHTML={{
           __html: rewriteLegacyLinks(content || "", (post as any).country),
         }}
       />
 
-      {/* Article Footer with Sharing and Bookmarking */}
-      <footer className="border-t border-gray-200 pt-6 mt-8 mb-8">
+      <footer className="border-t border-border pt-8 mt-12 mb-10">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
             <ShareButtons
               title={title}
               url={pathname}
@@ -408,7 +434,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
         </div>
       </footer>
 
-      <div className="border-t border-gray-200 pt-8 mb-8">
+      <div className="border-t border-border pt-10 mb-12">
         <RelatedArticles
           posts={relatedPosts || []}
           loading={loadingRelated}
@@ -421,7 +447,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
       </div>
 
       {/* Comments Section would go here */}
-      <div id="comments-section" className="border-t border-gray-200 pt-8">
+      <div id="comments-section" className="border-t border-border pt-8">
         {/* Comments component will be rendered here */}
         <div className="text-center text-gray-500 py-8">
           <p>Comments section will appear here</p>

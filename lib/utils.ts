@@ -1,4 +1,3 @@
-import { formatDistanceToNow } from "date-fns"
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -50,28 +49,6 @@ export function formatDate(date: string | Date): string {
 
 export function formatRelativeTime(date: string | Date): string {
   return formatDate(date)
-}
-
-export function formatRelativeDateSafely(
-  date: string | Date | null | undefined,
-  options: Parameters<typeof formatDistanceToNow>[1] = { addSuffix: true },
-  fallbackLabel = "Recently",
-): string {
-  if (!date) {
-    return fallbackLabel
-  }
-
-  const parsedDate = date instanceof Date ? date : new Date(date)
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return fallbackLabel
-  }
-
-  try {
-    return formatDistanceToNow(parsedDate, options)
-  } catch {
-    return fallbackLabel
-  }
 }
 
 export function slugify(text: string): string {
