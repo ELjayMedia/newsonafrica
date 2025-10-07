@@ -1,3 +1,53 @@
+const runtimeCaching = [
+  {
+    urlPattern: ({ request }) => request.destination === "document",
+    handler: "NetworkFirst",
+    options: {
+      cacheName: "document-cache",
+      networkTimeoutSeconds: 20,
+      expiration: {
+        maxEntries: 20,
+        maxAgeSeconds: 60 * 60 * 24, // 24 hours
+      },
+    },
+  },
+  {
+    urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
+    handler: "StaleWhileRevalidate",
+    options: {
+      cacheName: "api-cache",
+      expiration: {
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 * 24, // 24 hours
+      },
+    },
+  },
+  {
+    urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
+    handler: ({ url, event, request, params }) => {
+      const hostname = url?.hostname || "default";
+      const cacheName = `image-cache-${hostname}`;
+      self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {};
+      let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName];
+
+      if (!strategy) {
+        strategy = new workbox.strategies.StaleWhileRevalidate({
+          cacheName,
+          plugins: [
+            new workbox.expiration.ExpirationPlugin({
+              maxEntries: 100,
+              maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+            }),
+          ],
+        });
+        self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy;
+      }
+
+      return strategy.handle({ event, request, url, params });
+    },
+  },
+]
+
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
@@ -8,88 +58,10 @@ const withPWA = require("@ducanh2912/next-pwa").default({
     document: "/offline",
     image: "/placeholder.png",
   },
-  runtimeCaching: [
-    {
-      urlPattern: ({ request }) => request.destination === "document",
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "html-cache",
-        networkTimeoutSeconds: 20,
-        expiration: {
-          maxEntries: 20,
-          maxAgeSeconds: 60 * 60 * 24, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
-      handler: "StaleWhileRevalidate",
-      options: {
-        cacheName: "api-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
-      handler: ({ url, event, request, params }) => {
-        const hostname = url?.hostname || "default";
-        const cacheName = `image-cache-${hostname}`;
-        self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {};
-        let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName];
-
-        if (!strategy) {
-          strategy = new workbox.strategies.StaleWhileRevalidate({
-            cacheName,
-            plugins: [
-              new workbox.expiration.ExpirationPlugin({
-                maxEntries: 100,
-                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-              }),
-            ],
-          });
-          self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy;
-        }
-
-        return strategy.handle({ event, request, url, params });
-      },
-    },
-    {
-      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "google-fonts",
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:js)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "js-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:css)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "css-cache",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-        },
-      },
-    },
-  ],
+  workboxOptions: {
+    runtimeCaching,
+  },
+  extendDefaultRuntimeCaching: false,
 })
 
 /** @type {import('next').NextConfig} */
