@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, waitFor, screen, fireEvent, cleanup } from '@testing-library/react'
 
 const mockBookmarkButton = vi.fn(() => null)
 const mockShareButtons = vi.fn(() => null)
@@ -57,6 +57,10 @@ describe('ArticleClientContent', () => {
     mockBookmarkButton.mockClear()
     mockShareButtons.mockClear()
     pushMock.mockClear()
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('requests related posts using the post id when available', async () => {
@@ -162,5 +166,25 @@ describe('ArticleClientContent', () => {
     )
 
     expect(screen.getByRole('heading', { name: /comments/i })).toBeInTheDocument()
+  })
+
+  it('sanitizes article html content before rendering', () => {
+    const initialData = {
+      ...baseInitialData,
+      content: '<p>Safe</p><script>alert("xss")</script><div onclick="alert(1)">Click</div>',
+    }
+
+    const { container } = render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,
+    )
+
+    expect(container.querySelector('script')).toBeNull()
+    const articleContent = container.querySelector('#article-content')
+    expect(articleContent?.innerHTML).not.toContain('onclick')
+    expect(articleContent?.textContent).toContain('Safe')
   })
 })

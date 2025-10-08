@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar, Gift } 
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
+import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 
 interface ArticleClientContentProps {
   slug: string
@@ -247,7 +248,9 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
                      prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-border prose-td:text-foreground
                      prose-hr:my-10 prose-hr:border-border"
           dangerouslySetInnerHTML={{
-            __html: rewriteLegacyLinks(initialData.content || "", countryCode),
+            __html: sanitizeArticleHtml(
+              rewriteLegacyLinks(initialData.content ?? "", countryCode),
+            ),
           }}
         />
 
