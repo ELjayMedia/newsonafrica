@@ -161,7 +161,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
               className={cn(
-                "object-cover rounded-md transition-transform duration-300 group-hover:scale-105",
+                "object-cover transition-transform duration-300 group-hover:scale-105 shadow-none rounded-xs",
                 motionSafe.transform,
               )}
               placeholder="blur"
@@ -169,7 +169,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
             />
           </div>
         )}
-        <div className="p-2 md:p-3">
+        <div className="p-2 md:p-3 md:px-2.5">
           <h2
             className={cn(
               "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
@@ -192,7 +192,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
             className={cn(
-              "flex gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px]",
+              "flex bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center",
               motionSafe.transition,
             )}
           >
