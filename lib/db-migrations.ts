@@ -121,7 +121,8 @@ export const migrations: Migration[] = [
         report_reason TEXT,
         reviewed_at TIMESTAMPTZ,
         reviewed_by UUID REFERENCES auth.users(id),
-        is_rich_text BOOLEAN NOT NULL DEFAULT false
+        is_rich_text BOOLEAN NOT NULL DEFAULT false,
+        reaction_count INTEGER NOT NULL DEFAULT 0
       );
 
       -- Create indexes for comments
@@ -166,6 +167,86 @@ export const migrations: Migration[] = [
         END IF;
       END
       $$;
+    `,
+  },
+  {
+    id: "004_comment_reactions",
+    name: "Comment Reactions",
+    description: "Creates the comment reactions table",
+    sql: `
+      -- Create comment_reactions table
+      CREATE TABLE IF NOT EXISTS public.comment_reactions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        reaction_type TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(comment_id, user_id)
+      );
+
+      -- Create indexes for comment_reactions
+      CREATE INDEX IF NOT EXISTS comment_reactions_comment_id_idx ON public.comment_reactions(comment_id);
+      CREATE INDEX IF NOT EXISTS comment_reactions_user_id_idx ON public.comment_reactions(user_id);
+
+      -- Set up RLS for comment_reactions
+      ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;
+
+      -- Create policies for comment_reactions
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'comment_reactions' AND policyname = 'Anyone can view reactions'
+        ) THEN
+          CREATE POLICY "Anyone can view reactions" ON public.comment_reactions
+            FOR SELECT USING (true);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'comment_reactions' AND policyname = 'Users can create own reactions'
+        ) THEN
+          CREATE POLICY "Users can create own reactions" ON public.comment_reactions
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'comment_reactions' AND policyname = 'Users can update own reactions'
+        ) THEN
+          CREATE POLICY "Users can update own reactions" ON public.comment_reactions
+            FOR UPDATE USING (auth.uid() = user_id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT FROM pg_policies WHERE tablename = 'comment_reactions' AND policyname = 'Users can delete own reactions'
+        ) THEN
+          CREATE POLICY "Users can delete own reactions" ON public.comment_reactions
+            FOR DELETE USING (auth.uid() = user_id);
+        END IF;
+      END
+      $$;
+
+      -- Create function to update comment reaction count
+      CREATE OR REPLACE FUNCTION update_comment_reaction_count()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF TG_OP = 'INSERT' THEN
+          UPDATE public.comments
+          SET reaction_count = reaction_count + 1
+          WHERE id = NEW.comment_id;
+        ELSIF TG_OP = 'DELETE' THEN
+          UPDATE public.comments
+          SET reaction_count = reaction_count - 1
+          WHERE id = OLD.comment_id;
+        END IF;
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      -- Create trigger for comment_reactions
+      DROP TRIGGER IF EXISTS update_comment_reaction_count_trigger ON public.comment_reactions;
+      CREATE TRIGGER update_comment_reaction_count_trigger
+      AFTER INSERT OR DELETE ON public.comment_reactions
+      FOR EACH ROW
+      EXECUTE FUNCTION update_comment_reaction_count();
     `,
   },
   {

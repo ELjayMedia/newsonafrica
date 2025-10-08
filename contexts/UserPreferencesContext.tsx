@@ -91,7 +91,7 @@ function parseProfilePreferences(value: unknown): RawProfilePreferences {
 function extractStoredPreferences(raw: RawProfilePreferences): StoredProfilePreferences {
   const stored: StoredProfilePreferences = {}
 
-  if (typeof raw.comment_sort === "string" && ["newest", "oldest"].includes(raw.comment_sort)) {
+  if (typeof raw.comment_sort === "string" && ["newest", "oldest", "popular"].includes(raw.comment_sort)) {
     stored.comment_sort = raw.comment_sort as CommentSortOption
   }
 

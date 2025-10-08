@@ -111,6 +111,40 @@ USING (auth.uid() = user_id);
 -- );
 
 -- =============================================================================
+-- COMMENT_REACTIONS TABLE
+-- =============================================================================
+
+-- Enable RLS for comment_reactions table
+ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view reactions" ON public.comment_reactions;
+DROP POLICY IF EXISTS "Users can create their own reactions" ON public.comment_reactions;
+DROP POLICY IF EXISTS "Users can update their own reactions" ON public.comment_reactions;
+DROP POLICY IF EXISTS "Users can delete their own reactions" ON public.comment_reactions;
+
+-- Create policies for comment_reactions
+CREATE POLICY "Anyone can view reactions"
+ON public.comment_reactions
+FOR SELECT
+USING (true);
+
+CREATE POLICY "Users can create their own reactions"
+ON public.comment_reactions
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own reactions"
+ON public.comment_reactions
+FOR UPDATE
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own reactions"
+ON public.comment_reactions
+FOR DELETE
+USING (auth.uid() = user_id);
+
+-- =============================================================================
 -- USER_SETTINGS TABLE
 -- =============================================================================
 
@@ -220,7 +254,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 SELECT schemaname, tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-AND tablename IN ('profiles', 'bookmarks', 'comments', 'user_settings');
+AND tablename IN ('profiles', 'bookmarks', 'comments', 'comment_reactions', 'user_settings');
 
 -- List all policies
 SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
