@@ -197,8 +197,6 @@ export function CommentList({ postId }: CommentListProps) {
         return "Newest First"
       case "oldest":
         return "Oldest First"
-      case "popular":
-        return "Most Popular"
       default:
         return "Sort"
     }
@@ -232,7 +230,6 @@ export function CommentList({ postId }: CommentListProps) {
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleSortChange("newest")}>Newest First</DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleSortChange("oldest")}>Oldest First</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSortChange("popular")}>Most Popular</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

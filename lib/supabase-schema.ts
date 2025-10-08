@@ -48,4 +48,4 @@ export interface CommentSubmission {
 }
 
 // Comment sort options
-export type CommentSortOption = "newest" | "oldest" | "popular"
+export type CommentSortOption = "newest" | "oldest"

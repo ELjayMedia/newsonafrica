@@ -44,23 +44,9 @@ CREATE TABLE IF NOT EXISTS public.comments (
   report_reason TEXT,
   reviewed_at TIMESTAMPTZ,
   reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  reaction_count INTEGER DEFAULT 0,
   is_rich_text BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- Create comment_reactions table if it doesn't exist
-CREATE TABLE IF NOT EXISTS public.comment_reactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  reaction_type TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(comment_id, user_id)
-);
-
--- Enable RLS on comment_reactions table
-ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;
 
 -- Create schema_versions table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.schema_versions (
@@ -110,8 +96,7 @@ CREATE POLICY "Users can update their own bookmarks"
 CREATE POLICY "Users can delete their own bookmarks" 
   ON public.bookmarks FOR DELETE USING (auth.uid() = user_id);
 
--- Comments: Everyone can view active comments
-CREATE POLICY "Anyone can view active comments" 
+CREATE POLICY "Anyone can view active comments"
   ON public.comments FOR SELECT USING (status = 'active' OR auth.uid() = user_id);
 
 CREATE POLICY "Authenticated users can create comments" 
@@ -120,21 +105,8 @@ CREATE POLICY "Authenticated users can create comments"
 CREATE POLICY "Users can update their own comments" 
   ON public.comments FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can delete their own comments" 
+CREATE POLICY "Users can delete their own comments"
   ON public.comments FOR DELETE USING (auth.uid() = user_id);
-
--- Comment Reactions: Users can view all reactions but only manage their own
-CREATE POLICY "Anyone can view comment reactions" 
-  ON public.comment_reactions FOR SELECT USING (true);
-
-CREATE POLICY "Users can add their own reactions" 
-  ON public.comment_reactions FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own reactions" 
-  ON public.comment_reactions FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own reactions"
-  ON public.comment_reactions FOR DELETE USING (auth.uid() = user_id);
 
 -- Subscriptions: Users can view/update their own subscriptions
 CREATE POLICY "Users can view their own subscriptions"

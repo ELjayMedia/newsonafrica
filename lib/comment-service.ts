@@ -258,12 +258,6 @@ export async function fetchComments(
       case "oldest":
         commentsQuery = commentsQuery.order("created_at", { ascending: true })
         break
-      case "popular":
-        // If we have a reaction_count column, use it
-        commentsQuery = commentsQuery
-          .order("reaction_count", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-        break
       default:
         commentsQuery = commentsQuery.order("created_at", { ascending: false })
     }
@@ -304,12 +298,6 @@ export async function fetchComments(
       throw repliesError
     }
 
-    // Combine all comment IDs (root comments and replies)
-    const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
-
-    // Fetch reactions for all comments in a single query
-    const reactions = []
-
     // Extract all user IDs from comments and replies
     const userIds = [
       ...new Set([...comments.map((comment) => comment.user_id), ...(replies?.map((reply) => reply.user_id) || [])]),
@@ -337,10 +325,7 @@ export async function fetchComments(
       profileMap.set(profile.id, profile)
     })
 
-    // Create a map of comment_id to reactions
-    const reactionMap = new Map()
-
-    // Process all comments with profile data and reactions
+    // Process all comments with profile data
     const processedComments = comments.map((comment) => {
       const profile = profileMap.get(comment.user_id)
       return {
@@ -355,11 +340,10 @@ export async function fetchComments(
               avatar_url: profile.avatar_url,
             }
           : undefined,
-        reactions: [],
       }
     })
 
-    // Process all replies with profile data and reactions
+    // Process all replies with profile data
     const processedReplies =
       replies?.map((reply) => {
         const profile = profileMap.get(reply.user_id)
@@ -375,7 +359,6 @@ export async function fetchComments(
                 avatar_url: profile.avatar_url,
               }
             : undefined,
-          reactions: [],
         }
       }) || []
 
@@ -630,13 +613,11 @@ export function createOptimisticComment(comment: NewComment, username: string, a
     created_at: new Date().toISOString(),
     status: "active",
     is_rich_text: comment.is_rich_text || false,
-    reaction_count: 0,
     isOptimistic: true, // Flag to identify optimistic comments
     profile: {
       username,
       avatar_url: avatarUrl || null,
     },
-    reactions: [],
     replies: [],
   }
 }
