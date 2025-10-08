@@ -38,10 +38,11 @@ describe("legacy post redirect", () => {
     expect(res?.headers.get("location")).toBe(
       "https://example.com/za/news/some-slug",
     )
+    expect(res?.cookies.get("preferredCountry")?.value).toBe("za")
     expect(getLegacyPostRoute).toHaveBeenCalledWith("some-slug")
   })
 
-  it("falls through when the stored country does not match", async () => {
+  it("redirects to the stored country when it differs from the cookie", async () => {
     vi.mocked(getLegacyPostRoute).mockResolvedValue({
       slug: "some-slug",
       country: "sz",
@@ -53,7 +54,28 @@ describe("legacy post redirect", () => {
     })
     const res = await middleware(req)
 
-    expect(res?.headers.get("location")).toBeNull()
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe(
+      "https://example.com/sz/news/some-slug",
+    )
+    expect(res?.cookies.get("preferredCountry")?.value).toBe("sz")
+  })
+
+  it("redirects to the stored country when no cookie is present", async () => {
+    vi.mocked(getLegacyPostRoute).mockResolvedValue({
+      slug: "some-slug",
+      country: "sz",
+      primaryCategory: "news",
+    })
+
+    const req = new NextRequest("https://example.com/post/some-slug")
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe(
+      "https://example.com/sz/news/some-slug",
+    )
+    expect(res?.cookies.get("preferredCountry")?.value).toBe("sz")
   })
 
   it("falls through when no KV entry exists", async () => {
