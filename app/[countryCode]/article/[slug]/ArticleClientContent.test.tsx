@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor, screen } from '@testing-library/react'
 
+const mockBookmarkButton = vi.fn(() => null)
+
+vi.mock('@/components/BookmarkButton', () => ({
+  BookmarkButton: (props: Record<string, unknown>) => {
+    mockBookmarkButton(props)
+    return <div data-testid="bookmark-button" />
+  },
+}))
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     back: vi.fn(),
@@ -32,6 +41,7 @@ describe('ArticleClientContent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    mockBookmarkButton.mockClear()
   })
 
   it('requests related posts using the post id when available', async () => {
@@ -48,6 +58,20 @@ describe('ArticleClientContent', () => {
     await waitFor(() => {
       expect(getRelatedPostsForCountry).toHaveBeenCalledWith('ng', '123', 6)
     })
+
+    expect(mockBookmarkButton).toHaveBeenCalledWith(
+      expect.objectContaining({
+        postId: '123',
+        country: 'ng',
+        slug: 'test-slug',
+        title: 'Test Title',
+        featuredImage: {
+          url: 'https://example.com/image.jpg',
+          width: 1200,
+          height: 800,
+        },
+      }),
+    )
   })
 
   it('does not request related posts until the id is available', async () => {
@@ -64,6 +88,8 @@ describe('ArticleClientContent', () => {
     await waitFor(() => {
       expect(getRelatedPostsForCountry).not.toHaveBeenCalled()
     })
+
+    expect(mockBookmarkButton).not.toHaveBeenCalled()
   })
 
   it('renders without author data', () => {

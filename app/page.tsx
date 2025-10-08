@@ -13,7 +13,7 @@ export default async function Page() {
   const aggregatedHome = await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS);
 
   return (
-    <main className="container mx-auto space-y-12 px-4 py-8">
+    <main className="container mx-auto px-0 space-y-9 py-0.5">
       <section>
         <HeroSection data={aggregatedHome} />
       </section>
