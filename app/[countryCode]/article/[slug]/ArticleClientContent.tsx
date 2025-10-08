@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
+import { BookmarkButton } from "@/components/BookmarkButton"
 
 interface ArticleClientContentProps {
   slug: string
@@ -22,7 +23,6 @@ interface ArticleClientContentProps {
 
 export function ArticleClientContent({ slug, countryCode, sourceCountryCode, initialData }: ArticleClientContentProps) {
   const [readingProgress, setReadingProgress] = useState(0)
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [estimatedReadTime, setEstimatedReadTime] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -30,6 +30,37 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
   const router = useRouter()
 
   const postId = initialData?.id != null ? String(initialData.id) : undefined
+
+  const resolvedTitle =
+    typeof initialData?.title === "string"
+      ? initialData.title
+      : typeof initialData?.title?.rendered === "string"
+        ? initialData.title.rendered
+        : "Untitled Post"
+  const resolvedExcerpt =
+    typeof initialData?.excerpt === "string"
+      ? initialData.excerpt
+      : typeof initialData?.excerpt?.rendered === "string"
+        ? initialData.excerpt.rendered
+        : ""
+  const bookmarkFeaturedImage = initialData?.featuredImage?.node?.sourceUrl
+    ? {
+        url: initialData.featuredImage.node.sourceUrl,
+        width: initialData.featuredImage.node.mediaDetails?.width || 1200,
+        height: initialData.featuredImage.node.mediaDetails?.height || 800,
+      }
+    : undefined
+
+  const bookmarkButtonProps = postId
+    ? {
+        postId,
+        country: countryCode,
+        title: resolvedTitle,
+        slug: initialData?.slug,
+        excerpt: resolvedExcerpt,
+        featuredImage: bookmarkFeaturedImage,
+      }
+    : null
 
   const relatedCountry = sourceCountryCode ?? countryCode
 
@@ -74,25 +105,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  useEffect(() => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    setIsBookmarked(bookmarks.includes(slug))
-  }, [slug])
-
-  const handleBookmark = () => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    let newBookmarks
-
-    if (isBookmarked) {
-      newBookmarks = bookmarks.filter((id: string) => id !== slug)
-    } else {
-      newBookmarks = [...bookmarks, slug]
-    }
-
-    localStorage.setItem("bookmarks", JSON.stringify(newBookmarks))
-    setIsBookmarked(!isBookmarked)
-  }
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -123,14 +135,24 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
                 </Badge>
               ))}
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Calendar className="w-4 h-4" />
-              <time dateTime={initialData.date}>{formatDistanceToNow(new Date(initialData.date))} ago</time>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Calendar className="w-4 h-4" />
+                <time dateTime={initialData.date}>{formatDistanceToNow(new Date(initialData.date))} ago</time>
+              </div>
+              {bookmarkButtonProps && (
+                <BookmarkButton
+                  {...bookmarkButtonProps}
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex"
+                />
+              )}
             </div>
           </div>
 
           <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground text-left leading-6 sm:text-3xl lg:mb-2.5">
-            {initialData.title}
+            {resolvedTitle}
           </h1>
 
           <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground text-sm lg:text-base mb-2.5">
@@ -148,13 +170,22 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
               <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>Reading: {Math.round(readingProgress)}%</span>
             </div>
+            {bookmarkButtonProps && (
+              <BookmarkButton
+                {...bookmarkButtonProps}
+                variant="ghost"
+                size="sm"
+                className="sm:hidden"
+                compact
+              />
+            )}
           </div>
 
           {initialData.featuredImage?.node?.sourceUrl && (
             <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden shadow-xl">
               <img
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={initialData.featuredImage.node.altText || initialData.title}
+                alt={initialData.featuredImage.node.altText || resolvedTitle}
                 className="w-full h-auto aspect-video object-cover"
                 loading="eager"
               />
