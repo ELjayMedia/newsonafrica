@@ -129,7 +129,7 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             </div>
           </div>
 
-          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground text-left leading-6 sm:text-3xl lg:mb-2.5">
+          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground sm:text-3xl text-left tracking-tight leading-4 mt-3 lg:mb-3">
             {initialData.title}
           </h1>
 
