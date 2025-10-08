@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
+import { BookmarkButton } from "@/components/BookmarkButton"
 
 interface ArticleClientContentProps {
   slug: string
@@ -22,7 +23,6 @@ interface ArticleClientContentProps {
 
 export function ArticleClientContent({ slug, countryCode, sourceCountryCode, initialData }: ArticleClientContentProps) {
   const [readingProgress, setReadingProgress] = useState(0)
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [estimatedReadTime, setEstimatedReadTime] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -64,25 +64,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  useEffect(() => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    setIsBookmarked(bookmarks.includes(slug))
-  }, [slug])
-
-  const handleBookmark = () => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]")
-    let newBookmarks
-
-    if (isBookmarked) {
-      newBookmarks = bookmarks.filter((id: string) => id !== slug)
-    } else {
-      newBookmarks = [...bookmarks, slug]
-    }
-
-    localStorage.setItem("bookmarks", JSON.stringify(newBookmarks))
-    setIsBookmarked(!isBookmarked)
-  }
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })
@@ -139,6 +120,18 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
               <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>Reading: {Math.round(readingProgress)}%</span>
             </div>
+            {postId && (
+              <div className="ml-auto">
+                <BookmarkButton
+                  postId={postId}
+                  country={countryCode}
+                  title={initialData.title}
+                  slug={initialData.slug}
+                  excerpt={initialData.excerpt}
+                  featuredImage={initialData.featuredImage?.node}
+                />
+              </div>
+            )}
           </div>
 
           {initialData.featuredImage?.node?.sourceUrl && (
