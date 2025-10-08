@@ -100,9 +100,9 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
         />
       </div>
 
-      <article id="article-content" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12" ref={contentRef}>
+      <article id="article-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:px-0 lg:py-0" ref={contentRef}>
         <header className="mb-8 lg:mb-12">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
             <div className="flex flex-wrap gap-2">
               {initialData.categories?.nodes?.map((category: any) => (
                 <Badge
@@ -120,11 +120,11 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             </div>
           </div>
 
-          <h1 className="font-bold mb-6 lg:mb-8 text-balance leading-tight text-3xl sm:text-4xl lg:text-5xl text-foreground">
+          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground text-left leading-6 sm:text-3xl lg:mb-2.5">
             {initialData.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground mb-8 text-sm lg:text-base">
+          <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground text-sm lg:text-base mb-2.5">
             {authorName && (
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -192,10 +192,10 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
           }}
         />
 
-        <section className="border-t border-border pt-10 lg:pt-12 mt-12 lg:mt-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="h-1 w-10 bg-primary rounded-full" />
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Related Articles</h2>
+        <section className="border-t border-border pt-10 lg:pt-12 mt-12 lg:mt-1.5">
+          <div className="flex items-center gap-3 mb-2.5">
+            
+            <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
           </div>
 
           {relatedLoading ? (

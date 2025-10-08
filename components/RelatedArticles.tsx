@@ -42,6 +42,7 @@ interface RelatedArticlesProps {
   className?: string
   layout?: "carousel" | "grid"
   showMetadata?: boolean
+  enableAI?: boolean
   countryCode?: string
 }
 
@@ -52,6 +53,7 @@ export function RelatedArticles({
   className,
   layout = "carousel",
   showMetadata = true,
+  enableAI = false,
   countryCode = "sz",
 }: RelatedArticlesProps) {
   const [currentIndex, setCurrentIndex] = useState(0)

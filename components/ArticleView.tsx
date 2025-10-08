@@ -78,6 +78,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
     categories: categoryIds,
     tags: [], // Add tags if available in your post data structure
     limit: 8, // Increased limit for carousel
+    enableAI: false, // Disabled AI recommendations
     enablePopularityBoost: true, // Keep popularity-based sorting
   })
 
@@ -440,6 +441,7 @@ export default function ArticleView({ post }: ArticleViewProps) {
           title="You might also like"
           layout="carousel"
           showMetadata={true}
+          enableAI={false}
           className="px-0"
         />
       </div>

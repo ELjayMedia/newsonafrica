@@ -53,8 +53,10 @@ export const appConfig = {
     bookmarks: process.env.FEATURE_BOOKMARKS === "true",
     subscriptions: process.env.FEATURE_SUBSCRIPTIONS === "true",
     advancedSearch: process.env.FEATURE_ADVANCED_SEARCH === "true",
-    // This feature is not implemented in the codebase
+    // These features were not implemented in the codebase
     // i18n: process.env.FEATURE_I18N === "true",
+    // aiRecommendations: process.env.FEATURE_AI_RECOMMENDATIONS === "true",
+    // aiContent: process.env.FEATURE_AI_CONTENT === "true",
   },
 
   // SEO Configuration

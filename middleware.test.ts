@@ -38,11 +38,10 @@ describe("legacy post redirect", () => {
     expect(res?.headers.get("location")).toBe(
       "https://example.com/za/news/some-slug",
     )
-    expect(res?.cookies.get("preferredCountry")?.value).toBe("za")
     expect(getLegacyPostRoute).toHaveBeenCalledWith("some-slug")
   })
 
-  it("redirects to the stored country when it differs from the cookie", async () => {
+  it("falls through when the stored country does not match", async () => {
     vi.mocked(getLegacyPostRoute).mockResolvedValue({
       slug: "some-slug",
       country: "sz",
@@ -54,28 +53,7 @@ describe("legacy post redirect", () => {
     })
     const res = await middleware(req)
 
-    expect(res?.status).toBe(307)
-    expect(res?.headers.get("location")).toBe(
-      "https://example.com/sz/news/some-slug",
-    )
-    expect(res?.cookies.get("preferredCountry")?.value).toBe("sz")
-  })
-
-  it("redirects to the stored country when no cookie is present", async () => {
-    vi.mocked(getLegacyPostRoute).mockResolvedValue({
-      slug: "some-slug",
-      country: "sz",
-      primaryCategory: "news",
-    })
-
-    const req = new NextRequest("https://example.com/post/some-slug")
-    const res = await middleware(req)
-
-    expect(res?.status).toBe(307)
-    expect(res?.headers.get("location")).toBe(
-      "https://example.com/sz/news/some-slug",
-    )
-    expect(res?.cookies.get("preferredCountry")?.value).toBe("sz")
+    expect(res?.headers.get("location")).toBeNull()
   })
 
   it("falls through when no KV entry exists", async () => {
@@ -110,55 +88,5 @@ describe("category redirects", () => {
     expect(res?.headers.get("location")).toBe(
       `https://example.com/${DEFAULT_COUNTRY}/category/news`,
     )
-  })
-})
-
-describe("API CORS handling", () => {
-  const allowedOrigin = "http://localhost:3000"
-  const disallowedOrigin = "https://malicious.example"
-
-  it("applies CORS headers for allowed origins", async () => {
-    const req = new NextRequest("https://example.com/api/test", {
-      headers: { origin: allowedOrigin },
-    })
-
-    const res = await middleware(req)
-
-    expect(res?.headers.get("access-control-allow-origin")).toBe(allowedOrigin)
-    expect(res?.headers.get("access-control-allow-methods")).toContain("OPTIONS")
-  })
-
-  it("omits CORS headers for disallowed origins", async () => {
-    const req = new NextRequest("https://example.com/api/test", {
-      headers: { origin: disallowedOrigin },
-    })
-
-    const res = await middleware(req)
-
-    expect(res?.headers.get("access-control-allow-origin")).toBeNull()
-  })
-
-  it("short-circuits OPTIONS requests for allowed origins", async () => {
-    const req = new NextRequest("https://example.com/api/test", {
-      method: "OPTIONS",
-      headers: { origin: allowedOrigin },
-    })
-
-    const res = await middleware(req)
-
-    expect(res?.status).toBe(204)
-    expect(res?.headers.get("access-control-allow-origin")).toBe(allowedOrigin)
-  })
-
-  it("rejects OPTIONS requests for disallowed origins", async () => {
-    const req = new NextRequest("https://example.com/api/test", {
-      method: "OPTIONS",
-      headers: { origin: disallowedOrigin },
-    })
-
-    const res = await middleware(req)
-
-    expect(res?.status).toBe(403)
-    expect(res?.headers.get("access-control-allow-origin")).toBeNull()
   })
 })

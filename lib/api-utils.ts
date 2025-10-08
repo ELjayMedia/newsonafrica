@@ -96,34 +96,19 @@ export function logRequest(req: Request) {
   logger.log(`[${req.method}] ${pathname}${search}`)
 }
 
-export function getAllowedOrigins() {
-  const origins =
+export function withCors(req: Request, res: Response) {
+  const allowedOrigins =
     process.env.NODE_ENV === "production"
       ? [env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]
       : ["http://localhost:3000"]
 
-  return origins.filter(Boolean)
-}
+  const origin = req.headers.get("origin") || ""
 
-export function getAllowedOrigin(originHeader: string | null | undefined) {
-  const origin = originHeader ?? ""
-  return getAllowedOrigins().includes(origin) ? origin : null
-}
-
-export function applyCorsHeaders(headers: Headers, origin: string) {
-  headers.set("Access-Control-Allow-Origin", origin)
-  headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-  headers.set("Access-Control-Max-Age", "86400")
-
-  return headers
-}
-
-export function withCors(req: Request, res: Response) {
-  const origin = getAllowedOrigin(req.headers.get("origin"))
-
-  if (origin) {
-    applyCorsHeaders(res.headers, origin)
+  if (allowedOrigins.includes(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin)
+    res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+    res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    res.headers.set("Access-Control-Max-Age", "86400")
   }
 
   return res
