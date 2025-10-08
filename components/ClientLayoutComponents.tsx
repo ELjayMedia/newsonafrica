@@ -22,7 +22,7 @@ export function ClientLayoutComponents({ children }: ClientLayoutComponentsProps
       </Suspense>
       <ClientDynamicComponents />
       <TopBar />
-      <div className="flex-grow bg-transparent">
+      <div className="flex-grow bg-transparent rounded-xs shadow-none">
         <div className="mx-auto max-w-full md:max-w-[980px]">{children}</div>
       </div>
       <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">

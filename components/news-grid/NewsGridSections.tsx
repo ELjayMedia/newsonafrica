@@ -186,13 +186,13 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         </div>
       </Link>
 
-      <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
+      <div className="md:grid md:grid-cols-1 md:gap-3 md:space-y-[9px]">
         {secondaryPosts.map((post, index) => (
           <Link
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
             className={cn(
-              "flex bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center",
+              "flex bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5",
               motionSafe.transition,
             )}
           >

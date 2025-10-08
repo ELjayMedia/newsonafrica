@@ -1,11 +1,6 @@
 import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
-import {
-  AFRICAN_EDITION,
-  SUPPORTED_EDITIONS,
-  isCountryEdition,
-  type SupportedEdition,
-} from "@/lib/editions"
+import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapWpPost } from "@/lib/utils/mapWpPost"
 import { fetchFromWp, type WordPressPost } from "@/lib/wordpress-api"
 import { wordpressQueries } from "@/lib/wordpress-queries"
@@ -18,9 +13,7 @@ export const normalizeCountryCode = (countryCode: string): string => countryCode
 
 export const normalizeSlug = (value: string): string => value.toLowerCase()
 
-const SUPPORTED_EDITION_LOOKUP = new Map(
-  SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]),
-)
+const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
 
 export const resolveEdition = (countryCode: string): SupportedEdition | null => {
   const normalized = normalizeCountryCode(countryCode)
@@ -63,16 +56,14 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       extra: [`slug:${slug}`],
     })
 
-    const result = await fetchFromWp<unknown[]>(
-      countryCode,
-      wordpressQueries.postBySlug(slug),
-      {
-        tags: cacheTags,
-      },
-    )
+    const result = await fetchFromWp<unknown[]>(countryCode, wordpressQueries.postBySlug(slug), {
+      tags: cacheTags,
+    })
 
+    // Return null instead of throwing when result is null
     if (!result) {
-      throw new Error("WordPress REST response for article was null")
+      console.log(`[v0] No article found for ${slug} in ${countryCode}`)
+      return null
     }
 
     const posts = resolveFetchedData(result)
@@ -88,8 +79,9 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
 
     return mapWpPost(rawPost, "rest", countryCode)
   } catch (error) {
+    // Log error but return null to allow fallback to other country editions
     console.error("[v0] Failed to load article", { countryCode, slug, error })
-    throw error instanceof Error ? error : new Error("Failed to load article")
+    return null
   }
 }
 
@@ -122,12 +114,7 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
     normalizeCountryCode(edition.code),
   )
 
-  return unique([
-    normalizedPrimary,
-    defaultSite,
-    ...supportedCountryEditions,
-    africanEdition,
-  ])
+  return unique([normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition])
 }
 
 export async function loadArticleWithFallback(
