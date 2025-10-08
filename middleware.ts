@@ -38,13 +38,14 @@ async function handleLegacyPostRedirect(
       return null
     }
 
-    if (legacyRoute.country !== country) {
-      return null
-    }
-
     const newUrl = `/${legacyRoute.country}/${legacyRoute.primaryCategory}/${legacyRoute.slug}`
     console.log(`[Middleware] Redirecting legacy post route: ${pathname} -> ${newUrl}`)
-    return NextResponse.redirect(new URL(newUrl, request.url))
+    const response = NextResponse.redirect(new URL(newUrl, request.url))
+    response.cookies.set("preferredCountry", legacyRoute.country, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    })
+    return response
   }
   return null
 }
