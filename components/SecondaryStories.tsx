@@ -52,7 +52,7 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
       className={`grid md:gap-1.5 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-2 lg:grid-cols-3"}`}
     >
       {formattedPosts.map((post, index) => {
-        const imageUrl = post.featuredImage?.node?.sourceUrl
+        const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
 
         return (
           <Link
@@ -63,12 +63,12 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
               motionSafe.transition,
             )}
           >
-            {imageUrl && (
+            {post.featuredImage && (
               <div
                 className={`relative ${layout === "horizontal" ? "w-24 md:w-full h-20 md:h-auto md:aspect-video" : "w-full aspect-video"} overflow-hidden`}
               >
                 <Image
-                  src={imageUrl}
+                  src={imageUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
                   className={cn(

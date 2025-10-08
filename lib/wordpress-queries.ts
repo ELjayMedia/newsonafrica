@@ -38,9 +38,6 @@ export const POST_FIELDS_FRAGMENT = gql`
         databaseId
         name
         slug
-        avatar {
-          url
-        }
       }
     }
   }

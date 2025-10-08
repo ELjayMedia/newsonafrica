@@ -12,13 +12,6 @@ function decodeGlobalId(id: string): number {
   }
 }
 
-type RestAuthor = {
-  id?: number
-  name?: string
-  slug?: string
-  avatar_urls?: Record<string, string>
-}
-
 type RestPost = {
   id?: number
   databaseId?: number
@@ -33,7 +26,7 @@ type RestPost = {
       alt_text?: string
       media_details?: { width?: number; height?: number }
     }>
-    'wp:author'?: Array<RestAuthor>
+    'wp:author'?: Array<{ id?: number; name?: string; slug?: string }>
     'wp:term'?: Array<Array<{ id?: number; databaseId?: number; name?: string; slug?: string }>>
   }
 }
@@ -46,20 +39,6 @@ const extractRendered = (value: string | { rendered?: string } | undefined): str
 }
 
 type GraphqlPostNode = PostFieldsFragment | HomePostFieldsFragment
-
-const selectRestAuthorAvatar = (author?: RestAuthor): { url?: string } | undefined => {
-  if (!author?.avatar_urls) return undefined
-  const url = author.avatar_urls['96'] ?? author.avatar_urls['48'] ?? author.avatar_urls['24']
-  return url ? { url } : undefined
-}
-
-const selectGraphqlAuthorAvatar = (
-  authorNode?: { avatar?: { url?: string | null } } | null,
-): { url?: string } | undefined => {
-  if (!authorNode?.avatar) return undefined
-  const url = authorNode.avatar.url ?? undefined
-  return url ? { url } : undefined
-}
 
 const resolveRelayId = (post: RestPost | GraphqlPostNode): string | undefined => {
   const candidate = (post as any)?.globalRelayId ?? (post as any)?.id
@@ -76,7 +55,6 @@ const mapRestPost = (post: RestPost, countryCode?: string): WordPressPost => {
   const tagTerms = post._embedded?.['wp:term']?.[1] ?? []
 
   const content = extractRendered(post.content)
-  const authorAvatar = selectRestAuthorAvatar(author)
 
   return {
     __typename: 'Post',
@@ -112,7 +90,6 @@ const mapRestPost = (post: RestPost, countryCode?: string): WordPressPost => {
             databaseId: author.id ?? undefined,
             name: author.name ?? undefined,
             slug: author.slug ?? undefined,
-            ...(authorAvatar ? { avatar: authorAvatar } : {}),
           },
         }
       : undefined,
@@ -154,9 +131,6 @@ export function mapWpPost(
   const gqlPost = post as GraphqlPostNode
   const content = gqlPost.content ? rewriteLegacyLinks(gqlPost.content, countryCode) : undefined
 
-  const gqlAuthorNode = gqlPost.author?.node
-  const gqlAuthorAvatar = selectGraphqlAuthorAvatar(gqlAuthorNode as { avatar?: { url?: string | null } } | null)
-
   return {
     __typename: gqlPost.__typename ?? 'Post',
     databaseId: gqlPost.databaseId ?? undefined,
@@ -194,7 +168,6 @@ export function mapWpPost(
                 databaseId: gqlPost.author.node.databaseId ?? undefined,
                 name: gqlPost.author.node.name ?? undefined,
                 slug: gqlPost.author.node.slug ?? undefined,
-                ...(gqlAuthorAvatar ? { avatar: gqlAuthorAvatar } : {}),
               }
             : undefined,
         }

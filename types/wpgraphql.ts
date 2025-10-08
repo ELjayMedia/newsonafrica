@@ -156,10 +156,6 @@ export type PostFieldsFragment = {
       readonly databaseId?: Maybe<Scalars["Int"]>
       readonly name?: Maybe<Scalars["String"]>
       readonly slug?: Maybe<Scalars["String"]>
-      readonly avatar?: Maybe<{
-        readonly __typename?: "Avatar"
-        readonly url?: Maybe<Scalars["String"]>
-      }>
     }>
   }>
 }
