@@ -4,22 +4,19 @@ import { SidebarContent } from "../SidebarContent"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { ReactElement } from "react"
 
+const fetchRecentPosts = vi.fn()
 const fetchMostReadPosts = vi.fn()
 const getCurrentCountry = vi.fn(() => "sz")
 const getArticleUrl = vi.fn((slug: string, country?: string) => `/${country || getCurrentCountry()}/article/${slug}`)
-const useHomeData = vi.fn()
 
 vi.mock("@/lib/wordpress-api", () => ({
+  fetchRecentPosts: (...args: unknown[]) => fetchRecentPosts(...args),
   fetchMostReadPosts: (...args: unknown[]) => fetchMostReadPosts(...args),
 }))
 
 vi.mock("@/lib/utils/routing", () => ({
   getCurrentCountry: () => getCurrentCountry(),
   getArticleUrl: (slug: string, country?: string) => getArticleUrl(slug, country),
-}))
-
-vi.mock("@/hooks/useHomeData", () => ({
-  useHomeData: (...args: unknown[]) => useHomeData(...args),
 }))
 
 vi.mock("@/contexts/UserPreferencesContext", () => ({
@@ -54,32 +51,19 @@ describe("SidebarContent", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getCurrentCountry.mockReturnValue("sz")
-    useHomeData.mockReturnValue({
-      data: { recentPosts: [] },
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    })
   })
 
   it("renders API provided most-read posts", async () => {
-    useHomeData.mockReturnValue({
-      data: {
-        recentPosts: [
-          {
-            id: "1",
-            slug: "breaking-news",
-            title: "Breaking News",
-            excerpt: "",
-            date: "2024-01-01",
-            categories: { nodes: [] },
-          },
-        ],
+    fetchRecentPosts.mockResolvedValue([
+      {
+        id: "1",
+        slug: "breaking-news",
+        title: "Breaking News",
+        excerpt: "",
+        date: "2024-01-01",
+        categories: { nodes: [] },
       },
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    })
+    ])
 
     fetchMostReadPosts.mockResolvedValue([
       {
@@ -112,23 +96,16 @@ describe("SidebarContent", () => {
   it("requests most-read posts for the current country", async () => {
     getCurrentCountry.mockReturnValue("za")
 
-    useHomeData.mockReturnValue({
-      data: {
-        recentPosts: [
-          {
-            id: "2",
-            slug: "regional-update",
-            title: "Regional Update",
-            excerpt: "",
-            date: "2024-01-04",
-            categories: { nodes: [] },
-          },
-        ],
+    fetchRecentPosts.mockResolvedValue([
+      {
+        id: "2",
+        slug: "regional-update",
+        title: "Regional Update",
+        excerpt: "",
+        date: "2024-01-04",
+        categories: { nodes: [] },
       },
-      error: undefined,
-      isLoading: false,
-      mutate: vi.fn(),
-    })
+    ])
 
     fetchMostReadPosts.mockResolvedValue([
       {
@@ -144,7 +121,7 @@ describe("SidebarContent", () => {
     renderWithSWR(<SidebarContent />)
 
     await waitFor(() => {
-      expect(fetchMostReadPosts).toHaveBeenCalledWith("za", 10)
+      expect(fetchMostReadPosts).toHaveBeenCalledWith("za")
     })
 
     expect(await screen.findByText("ZA Headline")).toBeInTheDocument()

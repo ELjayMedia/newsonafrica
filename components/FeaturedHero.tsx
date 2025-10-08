@@ -24,22 +24,10 @@ export interface FeaturedHeroProps {
         name?: string
       }
     }
-    tags?: {
-      nodes?: Array<{
-        slug: string
-        name?: string
-      }>
-    }
   }
 }
 
 export function FeaturedHero({ post }: FeaturedHeroProps) {
-  const hasFpTag = post.tags?.nodes?.some((tag) => tag.slug === "fp")
-
-  if (!hasFpTag) {
-    return null
-  }
-
   const formattedDate = formatDistanceToNow(new Date(post.date), { addSuffix: true })
   const blurDataURL = generateBlurDataURL(800, 450)
   const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"

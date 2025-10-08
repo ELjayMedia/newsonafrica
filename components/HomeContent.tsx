@@ -6,19 +6,25 @@ import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getWebPageSchema } from "@/lib/schema"
 import { siteConfig } from "@/config/site"
 import { HomePageSkeleton } from "./HomePageSkeleton"
-import { getPostsForCategories, mapPostsToHomePosts } from "@/lib/wordpress-api"
+import {
+  getLatestPostsForCountry,
+  getCategoriesForCountry,
+  getPostsForCategories,
+  getFpTaggedPostsForCountry,
+  mapPostsToHomePosts,
+} from "@/lib/wordpress-api"
 import type { WordPressPost } from "@/lib/wordpress-api"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import type { HomePost, CountryPosts } from "@/types/home"
-import { isOnline, useHomeData, type HomeData } from "@/hooks/useHomeData"
 
 interface HomeContentProps {
   initialPosts?: HomePost[]
@@ -29,6 +35,64 @@ interface HomeContentProps {
     featuredPosts: HomePost[]
     categories: Category[]
     recentPosts: HomePost[]
+  }
+}
+
+// Check if we're in a browser environment and if we're online
+const isOnline = () => {
+  if (typeof navigator !== "undefined" && "onLine" in navigator) {
+    return navigator.onLine
+  }
+  return true // Assume online in SSR context
+}
+
+const fetchHomeData = async (
+  country: string,
+): Promise<{
+  taggedPosts: HomePost[]
+  featuredPosts: HomePost[]
+  categories: Category[]
+  recentPosts: HomePost[]
+}> => {
+  try {
+    if (!isOnline()) {
+      throw new Error("Device is offline")
+    }
+
+    console.log("[v0] Fetching home data for country:", country)
+
+    // Use Promise.allSettled to handle partial failures
+    const results = await Promise.allSettled([
+      getFpTaggedPostsForCountry(country, 8),
+      getLatestPostsForCountry(country, 10),
+      getCategoriesForCountry(country),
+    ])
+
+    const taggedPosts = results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
+
+    const latestPostsResult = results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
+    const recentPosts = mapPostsToHomePosts(latestPostsResult.posts ?? [], country)
+
+    const categoriesResult = results[2].status === "fulfilled" ? results[2].value : { categories: [] }
+    const categories = categoriesResult.categories || []
+
+    const featuredPosts = taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
+
+    console.log("[v0] Fetched home data:", {
+      taggedPosts: taggedPosts.length,
+      recentPosts: recentPosts.length,
+      categories: categories.length,
+    })
+
+    return {
+      taggedPosts,
+      featuredPosts,
+      categories,
+      recentPosts,
+    }
+  } catch (error) {
+    console.error("[v0] Error fetching home data:", error)
+    throw error
   }
 }
 
@@ -60,7 +124,7 @@ export function HomeContent({
   // Create fallback data from initial posts based on current country
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
-  const fallbackData: HomeData =
+  const fallbackData =
     initialData ||
     (baselinePosts.length > 0
       ? {
@@ -76,7 +140,12 @@ export function HomeContent({
           recentPosts: [],
         })
 
-  const { data, error, isLoading } = useHomeData(currentCountry, {
+  const { data, error, isLoading } = useSWR<{
+    taggedPosts: HomePost[]
+    featuredPosts: HomePost[]
+    categories: Category[]
+    recentPosts: HomePost[]
+  }>(["/homepage-data", currentCountry], ([_, country]) => fetchHomeData(country), {
     fallbackData,
     revalidateOnMount: !initialData && !baselinePosts.length,
     revalidateOnFocus: false,
