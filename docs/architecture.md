@@ -133,7 +133,6 @@ Vercel serves as the hosting and CDN platform:
 
 ## Future Enhancements
 
-- **AI-Powered Recommendations**: Personalized content suggestions
 - **Push Notifications**: Browser-based push notifications
 - **Content Translation**: Automated translation between languages
 - **Audio Articles**: Text-to-speech functionality

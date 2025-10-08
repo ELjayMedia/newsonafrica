@@ -16,7 +16,6 @@ interface UseEnhancedRelatedPostsProps {
   tags?: string[]
   limit?: number
   countryCode?: string
-  enableAI?: boolean
   enablePopularityBoost?: boolean
 }
 
@@ -33,7 +32,6 @@ export function useEnhancedRelatedPosts({
   tags = [],
   limit = 6,
   countryCode,
-  enableAI = false,
   enablePopularityBoost = true,
 }: UseEnhancedRelatedPostsProps) {
   const [state, setState] = useState<RelatedPostsState>({
