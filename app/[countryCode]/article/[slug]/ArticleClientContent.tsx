@@ -203,7 +203,13 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
           }}
         />
 
-        <section className="border-t border-border pt-10 lg:pt-12 mt-12 lg:mt-1.5">
+        {postId && (
+          <section id="comments" className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
+            <CommentList postId={postId} />
+          </section>
+        )}
+
+        <section className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
           <div className="flex items-center gap-3 mb-2.5">
             <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
           </div>
@@ -236,11 +242,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             </div>
           )}
         </section>
-        {postId && (
-          <section id="comments" className="mt-12 lg:mt-16">
-            <CommentList postId={postId} />
-          </section>
-        )}
       </article>
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">

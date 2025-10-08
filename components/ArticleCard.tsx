@@ -142,14 +142,15 @@ function extractImageUrl(article: Article | WordPressPost): string | null {
   return null
 }
 
-function normalizeArticleData(article: Article | Post) {
+function normalizeArticleData(article: Article | WordPressPost) {
   const country = inferArticleCountry(article)
   const featuredImage = extractImageUrl(article)
 
   if ("categories" in article && Array.isArray((article as any).categories?.nodes)) {
-    const post = article as Post
+    const post = article as WordPressPost
     const categories =
-      post.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
+      post.categories?.nodes
+        ?.filter((node): node is NonNullable<typeof node> => Boolean(node))
         .map((node) => ({
           name: node.name ?? "",
           slug: node.slug ?? "",
@@ -211,8 +212,8 @@ export function ArticleCard({ article, layout = "standard", className, priority 
     return (
       <Card className={cn("group hover:shadow-md transition-shadow", motionSafe.transition, className)}>
         <CardContent className="p-3">
-          <div className="flex gap-3">
-            <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
+          <div className="flex gap-3 items-center">
+            <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
               <Image
                 src={imageUrl || "/placeholder.svg"}
                 alt={data.title}
@@ -222,10 +223,10 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                   motionSafe.transform,
                 )}
                 placeholder="blur"
-                blurDataURL={generateBlurDataURL(64, 64)}
+                blurDataURL={generateBlurDataURL(80, 80)}
                 priority={priority}
                 loading={priority ? "eager" : "lazy"}
-                sizes="64px"
+                sizes="80px"
                 quality={75}
                 onError={(e) => {
                   console.error("[v0] Image load error:", imageUrl)
@@ -260,21 +261,14 @@ export function ArticleCard({ article, layout = "standard", className, priority 
   if (layout === "featured") {
     return (
       <Card
-        className={cn(
-          "group hover:shadow-lg transition-all duration-300 max-w-md",
-          motionSafe.transition,
-          className,
-        )}
+        className={cn("group hover:shadow-lg transition-all duration-300 max-w-md", motionSafe.transition, className)}
       >
         <div className="relative aspect-[16/9] overflow-hidden rounded-t-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}
             alt={data.title}
             fill
-            className={cn(
-              "object-cover group-hover:scale-105 transition-transform duration-300",
-              motionSafe.transform,
-            )}
+            className={cn("object-cover group-hover:scale-105 transition-transform duration-300", motionSafe.transform)}
             placeholder="blur"
             blurDataURL={generateBlurDataURL(600, 400)}
             priority={priority}
@@ -314,22 +308,13 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   // Standard layout
   return (
-    <Card
-      className={cn(
-        "group hover:shadow-md transition-shadow max-w-xs",
-        motionSafe.transition,
-        className,
-      )}
-    >
+    <Card className={cn("group hover:shadow-md transition-shadow max-w-xs", motionSafe.transition, className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
         <Image
           src={imageUrl || "/placeholder.svg"}
           alt={data.title}
           fill
-          className={cn(
-            "object-cover group-hover:scale-105 transition-transform duration-200",
-            motionSafe.transform,
-          )}
+          className={cn("object-cover group-hover:scale-105 transition-transform duration-200", motionSafe.transform)}
           placeholder="blur"
           blurDataURL={generateBlurDataURL(400, 300)}
           priority={priority}
