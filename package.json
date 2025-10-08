@@ -106,6 +106,7 @@
     "@graphql-codegen/cli": "^5.0.2",
     "@graphql-codegen/typescript": "^4.0.9",
     "@graphql-codegen/typescript-operations": "^4.2.1",
+    "@tailwindcss/postcss": "^4.1.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.2.0",
     "@types/node": "^22",
@@ -115,7 +116,6 @@
     "eslint-config-next": "15.5.3",
     "jsdom": "^24.0.0",
     "postcss": "^8.5",
-    "@tailwindcss/postcss": "^4.1.0",
     "tailwindcss": "^4.1.9",
     "typescript": "^5",
     "vitest": "1.6.1"
