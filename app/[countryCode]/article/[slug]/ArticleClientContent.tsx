@@ -11,7 +11,7 @@ import { ArticleList } from "@/components/ArticleList"
 import { CommentList } from "@/components/CommentList"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ShareButtons } from "@/components/ShareButtons"
-import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar, Gift } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, ArrowUp, Eye, Calendar, Gift } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
@@ -93,6 +93,16 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
   }
 
   const authorName = initialData?.author?.node?.name ?? initialData?.author?.name ?? null
+  const authorAvatar =
+    initialData?.author?.node?.avatar?.url ?? initialData?.author?.avatar?.url ?? null
+  const authorInitials =
+    authorName
+      ?.split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0)?.toUpperCase() ?? "")
+      .join("") ?? ""
+  const publishedRelative = initialData?.date ? formatDistanceToNow(new Date(initialData.date)) : null
   const featuredImageNode = initialData?.featuredImage?.node
   const heroImage = featuredImageNode?.sourceUrl
     ? {
@@ -114,7 +124,7 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
       <article id="article-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:px-0 lg:py-0" ref={contentRef}>
         <header className="mb-8 lg:mb-12">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
+          <div className="flex flex-wrap items-center gap-3 mb-2.5">
             <div className="flex flex-wrap gap-2">
               {initialData.categories?.nodes?.map((category: any) => (
                 <Badge
@@ -126,23 +136,47 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
                 </Badge>
               ))}
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Calendar className="w-4 h-4" />
-              <time dateTime={initialData.date}>{formatDistanceToNow(new Date(initialData.date))} ago</time>
-            </div>
           </div>
 
           <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground sm:text-3xl text-left tracking-tight leading-4 mt-3 lg:mb-3">
             {initialData.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground text-sm lg:text-base mb-2.5">
-            {authorName && (
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 lg:w-5 lg:h-5" />
-                <span className="font-medium">{authorName}</span>
-              </div>
-            )}
+          {(authorName || publishedRelative) && (
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              {authorName && (
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                    {authorAvatar ? (
+                      <img
+                        src={authorAvatar}
+                        alt={authorName ? `${authorName}'s avatar` : "Author avatar"}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {authorInitials || "NA"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">By</span>
+                    <span className="text-base font-semibold text-foreground sm:text-lg">{authorName}</span>
+                  </div>
+                </div>
+              )}
+
+              {publishedRelative && (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm lg:text-base">
+                  <Calendar className="w-4 h-4 lg:w-5 lg:h-5" />
+                  <time dateTime={initialData.date}>{publishedRelative} ago</time>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-muted-foreground text-sm lg:text-base mb-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>{estimatedReadTime} min read</span>
