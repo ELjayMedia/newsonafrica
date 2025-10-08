@@ -7,7 +7,6 @@ import { formatDate } from "@/utils/date-utils"
 import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
-import AudioPlayer from "./AudioPlayer"
 import { useUser } from "@/contexts/UserContext"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
@@ -360,11 +359,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
           />
         </figure>
       )}
-
-      {/* Audio Player */}
-      <div className="mb-10">
-        <AudioPlayer articleId={id} title={title} />
-      </div>
 
       <div
         className="prose prose-lg lg:prose-xl max-w-none mb-12 lg:mb-16
