@@ -34,6 +34,10 @@ vi.mock('@/lib/wordpress-api', () => ({
   getRelatedPostsForCountry: vi.fn().mockResolvedValue([]),
 }))
 
+vi.mock('@/components/CommentList', () => ({
+  CommentList: ({ postId }: { postId: string }) => <h2>Comments for {postId}</h2>,
+}))
+
 import { ArticleClientContent } from './ArticleClientContent'
 import { getRelatedPostsForCountry } from '@/lib/wordpress-api'
 
@@ -144,5 +148,19 @@ describe('ArticleClientContent', () => {
         />,
       ),
     ).not.toThrow()
+  })
+
+  it('renders the comments heading when a post id is provided', () => {
+    const initialData = { ...baseInitialData, id: 456 }
+
+    render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: /comments/i })).toBeInTheDocument()
   })
 })

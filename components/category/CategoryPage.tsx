@@ -230,7 +230,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
                           alt={post.title}
                           fill
                           sizes="84px"
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105 rounded-xs"
                           placeholder="blur"
                           blurDataURL={generateBlurDataURL(84, 84)}
                         />

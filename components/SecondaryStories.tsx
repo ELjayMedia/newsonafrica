@@ -49,7 +49,7 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
 
   return (
     <div
-      className={`grid gap-2 md:gap-4 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-2 lg:grid-cols-3"}`}
+      className={`grid md:gap-1.5 ${layout === "horizontal" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-2 lg:grid-cols-3"}`}
     >
       {formattedPosts.map((post, index) => {
         const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"

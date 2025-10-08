@@ -300,7 +300,7 @@ function StaticArticleList({
 
   return (
     <div className="space-y-8">
-      <div className={cn("grid gap-6", className)}>
+      <div className={cn("grid gap-6 border-transparent shadow-xs", className)}>
         {articles.map((article, index) => (
           <ArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
         ))}
