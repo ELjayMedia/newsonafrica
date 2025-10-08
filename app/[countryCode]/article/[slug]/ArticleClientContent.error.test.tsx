@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
+const mockBookmarkButton = vi.fn(() => null)
+
+vi.mock('@/components/BookmarkButton', () => ({
+  BookmarkButton: (props: Record<string, unknown>) => {
+    mockBookmarkButton(props)
+    return <div data-testid="bookmark-button" />
+  },
+}))
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     back: vi.fn(),
@@ -30,6 +39,7 @@ describe('ArticleClientContent error state', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    mockBookmarkButton.mockClear()
   })
 
   it('renders an error state when fetching related posts fails', async () => {
