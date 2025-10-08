@@ -34,7 +34,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
 
   return (
     <Link href={getArticleUrl(post.slug, post.country)} className="block group">
-      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid md:grid-cols-2 gap-3 md:gap-4 bg-slate-50 shadow-none py-1">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}

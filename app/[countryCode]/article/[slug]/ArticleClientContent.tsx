@@ -152,11 +152,11 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
           </div>
 
           {initialData.featuredImage?.node?.sourceUrl && (
-            <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden shadow-xl">
+            <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden">
               <img
                 src={initialData.featuredImage.node.sourceUrl || "/placeholder.svg"}
                 alt={initialData.featuredImage.node.altText || initialData.title}
-                className="w-full h-auto aspect-video object-cover rounded-xs"
+                className="w-full h-auto aspect-video object-cover rounded-xs shadow-none"
                 loading="eager"
               />
               {initialData.featuredImage.node.caption && (
@@ -204,7 +204,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
         <section className="border-t border-border pt-10 lg:pt-12 mt-12 lg:mt-1.5">
           <div className="flex items-center gap-3 mb-2.5">
-            
             <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
           </div>
 
@@ -222,13 +221,9 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             </div>
           ) : relatedError ? (
             <div className="text-center py-12">
-              <p className="text-lg font-semibold text-destructive">
-                Failed to load related articles.
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Please check your connection and try again.
-              </p>
-              <Button className="mt-6" onClick={handleRetryRelatedPosts} variant="outline">
+              <p className="text-lg font-semibold text-destructive">Failed to load related articles.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Please check your connection and try again.</p>
+              <Button className="mt-6 bg-transparent" onClick={handleRetryRelatedPosts} variant="outline">
                 Retry
               </Button>
             </div>

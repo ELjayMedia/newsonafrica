@@ -149,7 +149,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
       <Link
         href={getArticleUrl(mainPost.slug ?? "", mainPost.country)}
         className={cn(
-          "md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200",
+          "p-2 md:p-3 md:px-2.5 shadow-sm rounded-sm",
           motionSafe.transition,
         )}
       >
@@ -169,7 +169,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
             />
           </div>
         )}
-        <div className="p-2 md:p-3 md:px-2.5">
+        <div className="p-2 md:p-3 md:px-2.5 shadow-none">
           <h2
             className={cn(
               "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
@@ -192,7 +192,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
             className={cn(
-              "flex bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5",
+              "flex bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
               motionSafe.transition,
             )}
           >
@@ -200,7 +200,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
               <div>
                 <h3
                   className={cn(
-                    "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-4",
+                    "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
                     motionSafe.transition,
                   )}
                 >
