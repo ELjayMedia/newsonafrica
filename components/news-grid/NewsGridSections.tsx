@@ -36,6 +36,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
   }
 
   const [mainPost, ...secondaryPosts] = sportCategoryPosts
+  const mainImageUrl = mainPost?.featuredImage?.node?.sourceUrl
 
   return (
     <>
@@ -53,10 +54,10 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
           motionSafe.transition,
         )}
       >
-        {mainPost?.featuredImage && (
+        {mainImageUrl && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={mainImageUrl}
               alt={mainPost.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
@@ -87,49 +88,53 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
       </Link>
 
       <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
-        {secondaryPosts.slice(0, 3).map((post, index) => (
-          <Link
-            key={post.id}
-            href={getArticleUrl(post.slug, post.country)}
-            className={cn(
-              "flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group",
-              motionSafe.transition,
-            )}
-          >
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3
-                className={cn(
-                  "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-                  motionSafe.transition,
-                )}
-              >
-                {post.title}
-              </h3>
-              <div className="flex items-center text-gray-500 text-xs">
-                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
-                </time>
-              </div>
-            </div>
-            {post.featuredImage && (
-              <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
-                <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                  alt={post.title}
-                  fill
-                  sizes="(max-width: 640px) 70px, 84px"
+        {secondaryPosts.slice(0, 3).map((post, index) => {
+          const imageUrl = post.featuredImage?.node?.sourceUrl
+
+          return (
+            <Link
+              key={post.id}
+              href={getArticleUrl(post.slug, post.country)}
+              className={cn(
+                "flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group",
+                motionSafe.transition,
+              )}
+            >
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <h3
                   className={cn(
-                    "object-cover transition-transform duration-300 group-hover:scale-105",
-                    motionSafe.transform,
+                    "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+                    motionSafe.transition,
                   )}
-                  placeholder="blur"
-                  blurDataURL={blurURLs.secondary[index]}
-                />
+                >
+                  {post.title}
+                </h3>
+                <div className="flex items-center text-gray-500 text-xs">
+                  <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
+                  <time dateTime={post.date} title={formatDate(post.date)}>
+                    {formatDate(post.date)}
+                  </time>
+                </div>
               </div>
-            )}
-          </Link>
-        ))}
+              {imageUrl && (
+                <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
+                  <Image
+                    src={imageUrl}
+                    alt={post.title}
+                    fill
+                    sizes="(max-width: 640px) 70px, 84px"
+                    className={cn(
+                      "object-cover transition-transform duration-300 group-hover:scale-105",
+                      motionSafe.transform,
+                    )}
+                    placeholder="blur"
+                    blurDataURL={blurURLs.secondary[index]}
+                  />
+                </div>
+              )}
+            </Link>
+          )
+        })}
       </div>
     </>
   )
@@ -144,6 +149,8 @@ interface RegularCategorySectionProps {
 export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: RegularCategorySectionProps) {
   if (!mainPost) return null
 
+  const mainImageUrl = mainPost.featuredImage?.node?.sourceUrl
+
   return (
     <>
       <Link
@@ -153,10 +160,10 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
           motionSafe.transition,
         )}
       >
-        {mainPost.featuredImage && (
+        {mainImageUrl && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={mainImageUrl}
               alt={mainPost.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
@@ -187,51 +194,55 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
       </Link>
 
       <div className="md:grid md:grid-cols-1 md:gap-3 md:space-y-[9px]">
-        {secondaryPosts.map((post, index) => (
-          <Link
-            key={post.id}
-            href={getArticleUrl(post.slug, post.country)}
-            className={cn(
-              "flex bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
-              motionSafe.transition,
-            )}
-          >
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div>
-                <h3
-                  className={cn(
-                    "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
-                    motionSafe.transition,
-                  )}
-                >
-                  {post.title}
-                </h3>
+        {secondaryPosts.map((post, index) => {
+          const imageUrl = post.featuredImage?.node?.sourceUrl
+
+          return (
+            <Link
+              key={post.id}
+              href={getArticleUrl(post.slug, post.country)}
+              className={cn(
+                "flex bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
+                motionSafe.transition,
+              )}
+            >
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  <h3
+                    className={cn(
+                      "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
+                      motionSafe.transition,
+                    )}
+                  >
+                    {post.title}
+                  </h3>
+                </div>
+                <div className="flex items-center text-gray-500 text-xs">
+                  <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
+                  <time dateTime={post.date} title={formatDate(post.date)}>
+                    {formatDate(post.date)}
+                  </time>
+                </div>
               </div>
-              <div className="flex items-center text-gray-500 text-xs">
-                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
-                </time>
-              </div>
-            </div>
-            {post.featuredImage && (
-              <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
-                <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                  alt={post.title}
-                  fill
-                  sizes="(max-width: 640px) 80px, 85px"
-                  className={cn(
-                    "object-cover transition-transform duration-300 group-hover:scale-105",
-                    motionSafe.transform,
-                  )}
-                  placeholder="blur"
-                  blurDataURL={blurURLs.secondary[index]}
-                />
-              </div>
-            )}
-          </Link>
-        ))}
+              {imageUrl && (
+                <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
+                  <Image
+                    src={imageUrl}
+                    alt={post.title}
+                    fill
+                    sizes="(max-width: 640px) 80px, 85px"
+                    className={cn(
+                      "object-cover transition-transform duration-300 group-hover:scale-105",
+                      motionSafe.transform,
+                    )}
+                    placeholder="blur"
+                    blurDataURL={blurURLs.secondary[index]}
+                  />
+                </div>
+              )}
+            </Link>
+          )
+        })}
       </div>
     </>
   )
@@ -250,50 +261,54 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
 
   return (
     <div className={cn("space-y-3", className)}>
-      {posts.map((post) => (
-        <Link
-          key={post.id}
-          href={getArticleUrl(post.slug, post.country)}
-          className={cn(
-            "flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden group",
-            motionSafe.transition,
-          )}
-        >
-          {post.featuredImage && (
-            <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
-              <Image
-                src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={post.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
-                className={cn(
-                  "object-cover transition-transform duration-300 group-hover:scale-105",
-                  motionSafe.transform,
-                )}
-                placeholder="blur"
-                blurDataURL={blurPlaceholder}
-              />
+      {posts.map((post) => {
+        const imageUrl = post.featuredImage?.node?.sourceUrl
+
+        return (
+          <Link
+            key={post.id}
+            href={getArticleUrl(post.slug, post.country)}
+            className={cn(
+              "flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden group",
+              motionSafe.transition,
+            )}
+          >
+            {imageUrl && (
+              <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
+                <Image
+                  src={imageUrl}
+                  alt={post.title}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+                  className={cn(
+                    "object-cover transition-transform duration-300 group-hover:scale-105",
+                    motionSafe.transform,
+                  )}
+                  placeholder="blur"
+                  blurDataURL={blurPlaceholder}
+                />
+              </div>
+            )}
+            <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
+              <div>
+                <h2
+                  className={cn(
+                    "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+                    motionSafe.transition,
+                  )}
+                >
+                  {post.title}
+                </h2>
+                <div className="text-gray-600 text-sm mb-3 line-clamp-3">{post.excerpt}</div>
+              </div>
+              <div className="flex items-center text-gray-500 text-xs">
+                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
+                <time dateTime={post.date}>{formatDate(post.date)}</time>
+              </div>
             </div>
-          )}
-          <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
-            <div>
-              <h2
-                className={cn(
-                  "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-                  motionSafe.transition,
-                )}
-              >
-                {post.title}
-              </h2>
-              <div className="text-gray-600 text-sm mb-3 line-clamp-3">{post.excerpt}</div>
-            </div>
-            <div className="flex items-center text-gray-500 text-xs">
-              <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-              <time dateTime={post.date}>{formatDate(post.date)}</time>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        )
+      })}
     </div>
   )
 }
