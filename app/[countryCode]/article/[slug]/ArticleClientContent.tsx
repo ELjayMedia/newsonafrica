@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
+import { ShareButtons } from "@/components/ShareButtons"
+import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar, Gift } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
@@ -44,6 +45,8 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
     { fallbackData: [] },
   )
 
+  const shareUrl = `/${countryCode}/article/${slug}`
+
   const handleRetryRelatedPosts = () => {
     void mutateRelatedPosts()
   }
@@ -76,6 +79,16 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleGiftArticle = () => {
+    const searchParams = new URLSearchParams({
+      intent: "gift",
+      article: slug,
+      country: countryCode,
+    })
+
+    router.push(`/subscribe?${searchParams.toString()}`)
   }
 
   const authorName = initialData?.author?.node?.name ?? initialData?.author?.name ?? null
@@ -137,6 +150,29 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
               <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>Reading: {Math.round(readingProgress)}%</span>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground">
+            <ShareButtons
+              title={initialData?.title ?? ""}
+              url={shareUrl}
+              description={initialData?.excerpt ?? initialData?.title ?? ""}
+              variant="outline"
+              size="sm"
+              className="flex items-center"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGiftArticle}
+              aria-label="Gift article"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              <Gift className="w-3 h-3 md:w-4 md:h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Gift article</span>
+              <span className="sm:hidden">Gift</span>
+            </Button>
             {postId && (
               <BookmarkButton
                 postId={postId}
