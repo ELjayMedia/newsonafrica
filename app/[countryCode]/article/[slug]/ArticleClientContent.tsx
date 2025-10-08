@@ -33,11 +33,20 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
   const relatedCountry = sourceCountryCode ?? countryCode
 
-  const { data: relatedPosts, isLoading: relatedLoading } = useSWR(
+  const {
+    data: relatedPosts = [],
+    isLoading: relatedLoading,
+    error: relatedError,
+    mutate: mutateRelatedPosts,
+  } = useSWR(
     postId ? `related-${relatedCountry}-${postId}` : null,
     () => getRelatedPostsForCountry(relatedCountry, postId!, 6),
     { fallbackData: [] },
   )
+
+  const handleRetryRelatedPosts = () => {
+    void mutateRelatedPosts()
+  }
 
   useEffect(() => {
     const calculateReadTime = () => {
@@ -209,6 +218,18 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          ) : relatedError ? (
+            <div className="text-center py-12">
+              <p className="text-lg font-semibold text-destructive">
+                Failed to load related articles.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Please check your connection and try again.
+              </p>
+              <Button className="mt-6" onClick={handleRetryRelatedPosts} variant="outline">
+                Retry
+              </Button>
             </div>
           ) : relatedPosts.length > 0 ? (
             <ArticleList articles={relatedPosts} layout="compact" showLoadMore={false} />
