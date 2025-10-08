@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { render, waitFor, screen } from '@testing-library/react'
 
 const mockBookmarkButton = vi.fn(() => null)
 
@@ -19,6 +19,10 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/wordpress-api', () => ({
   getRelatedPostsForCountry: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('@/components/CommentList', () => ({
+  CommentList: ({ postId }: { postId: string }) => <h2>Comments for {postId}</h2>,
 }))
 
 import { ArticleClientContent } from './ArticleClientContent'
@@ -100,5 +104,19 @@ describe('ArticleClientContent', () => {
         />,
       ),
     ).not.toThrow()
+  })
+
+  it('renders the comments heading when a post id is provided', () => {
+    const initialData = { ...baseInitialData, id: 456 }
+
+    render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: /comments/i })).toBeInTheDocument()
   })
 })

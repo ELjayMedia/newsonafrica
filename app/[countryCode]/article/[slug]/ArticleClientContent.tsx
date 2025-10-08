@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
+import { CommentList } from "@/components/CommentList"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -235,6 +236,11 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             </div>
           )}
         </section>
+        {postId && (
+          <section id="comments" className="mt-12 lg:mt-16">
+            <CommentList postId={postId} />
+          </section>
+        )}
       </article>
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
