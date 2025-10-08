@@ -2,11 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
 const mockBookmarkButton = vi.fn(() => null)
+const mockShareButtons = vi.fn(() => null)
 
 vi.mock('@/components/BookmarkButton', () => ({
   BookmarkButton: (props: Record<string, unknown>) => {
     mockBookmarkButton(props)
     return <div data-testid="bookmark-button" />
+  },
+}))
+
+vi.mock('@/components/ShareButtons', () => ({
+  ShareButtons: (props: Record<string, unknown>) => {
+    mockShareButtons(props)
+    return <div data-testid="share-buttons" />
   },
 }))
 
@@ -40,6 +48,7 @@ describe('ArticleClientContent error state', () => {
     vi.clearAllMocks()
     localStorage.clear()
     mockBookmarkButton.mockClear()
+    mockShareButtons.mockClear()
   })
 
   it('renders an error state when fetching related posts fails', async () => {

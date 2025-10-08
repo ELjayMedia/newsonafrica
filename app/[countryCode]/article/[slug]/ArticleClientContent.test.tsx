@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor, screen } from '@testing-library/react'
+import { render, waitFor, screen, fireEvent } from '@testing-library/react'
 
 const mockBookmarkButton = vi.fn(() => null)
+const mockShareButtons = vi.fn(() => null)
+const pushMock = vi.fn()
 
 vi.mock('@/components/BookmarkButton', () => ({
   BookmarkButton: (props: Record<string, unknown>) => {
@@ -10,10 +12,21 @@ vi.mock('@/components/BookmarkButton', () => ({
   },
 }))
 
+vi.mock('@/components/ShareButtons', () => ({
+  ShareButtons: (props: Record<string, unknown>) => {
+    mockShareButtons(props)
+    return (
+      <button type="button" data-testid="share-buttons">
+        Share
+      </button>
+    )
+  },
+}))
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     back: vi.fn(),
-    push: vi.fn(),
+    push: pushMock,
   }),
 }))
 
@@ -42,6 +55,8 @@ describe('ArticleClientContent', () => {
     vi.clearAllMocks()
     localStorage.clear()
     mockBookmarkButton.mockClear()
+    mockShareButtons.mockClear()
+    pushMock.mockClear()
   })
 
   it('requests related posts using the post id when available', async () => {
@@ -90,6 +105,35 @@ describe('ArticleClientContent', () => {
     })
 
     expect(mockBookmarkButton).not.toHaveBeenCalled()
+  })
+
+  it('renders the gift article button alongside bookmark controls and triggers gifting navigation', () => {
+    const initialData = { ...baseInitialData, id: 123 }
+
+    render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,
+    )
+
+    const giftButton = screen.getByRole('button', { name: /gift article/i })
+    const shareButton = screen.getByTestId('share-buttons')
+    const bookmark = screen.getByTestId('bookmark-button')
+
+    expect(shareButton.parentElement).toBe(giftButton.parentElement)
+    expect(bookmark.parentElement).toBe(giftButton.parentElement)
+
+    fireEvent.click(giftButton)
+
+    expect(pushMock).toHaveBeenCalledWith('/subscribe?intent=gift&article=test-slug&country=ng')
+    expect(mockShareButtons).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/ng/article/test-slug',
+        title: 'Test Title',
+      }),
+    )
   })
 
   it('renders without author data', () => {
