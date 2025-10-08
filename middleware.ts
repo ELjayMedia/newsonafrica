@@ -6,6 +6,7 @@ import {
   SUPPORTED_COUNTRIES,
 } from "@/lib/utils/routing"
 import { getLegacyPostRoute } from "@/lib/legacy-routes"
+import { applyCorsHeaders, getAllowedOrigin } from "@/lib/api-utils"
 
 
 // Legacy routes that should be redirected to their category equivalents
@@ -66,11 +67,24 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/")) {
+    const origin = getAllowedOrigin(request.headers.get("origin"))
+
+    if (request.method === "OPTIONS") {
+      if (!origin) {
+        return new NextResponse(null, { status: 403 })
+      }
+
+      const preflightResponse = new NextResponse(null, { status: 204 })
+      applyCorsHeaders(preflightResponse.headers, origin)
+      return preflightResponse
+    }
+
     const apiResponse = NextResponse.next()
-    apiResponse.headers.set("Access-Control-Allow-Origin", "*")
-    apiResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    apiResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-    apiResponse.headers.set("Access-Control-Max-Age", "86400")
+
+    if (origin) {
+      applyCorsHeaders(apiResponse.headers, origin)
+    }
+
     return apiResponse
   }
 

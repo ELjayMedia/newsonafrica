@@ -90,3 +90,53 @@ describe("category redirects", () => {
     )
   })
 })
+
+describe("API CORS handling", () => {
+  const allowedOrigin = "http://localhost:3000"
+  const disallowedOrigin = "https://malicious.example"
+
+  it("applies CORS headers for allowed origins", async () => {
+    const req = new NextRequest("https://example.com/api/test", {
+      headers: { origin: allowedOrigin },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.headers.get("access-control-allow-origin")).toBe(allowedOrigin)
+    expect(res?.headers.get("access-control-allow-methods")).toContain("OPTIONS")
+  })
+
+  it("omits CORS headers for disallowed origins", async () => {
+    const req = new NextRequest("https://example.com/api/test", {
+      headers: { origin: disallowedOrigin },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.headers.get("access-control-allow-origin")).toBeNull()
+  })
+
+  it("short-circuits OPTIONS requests for allowed origins", async () => {
+    const req = new NextRequest("https://example.com/api/test", {
+      method: "OPTIONS",
+      headers: { origin: allowedOrigin },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(204)
+    expect(res?.headers.get("access-control-allow-origin")).toBe(allowedOrigin)
+  })
+
+  it("rejects OPTIONS requests for disallowed origins", async () => {
+    const req = new NextRequest("https://example.com/api/test", {
+      method: "OPTIONS",
+      headers: { origin: disallowedOrigin },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(403)
+    expect(res?.headers.get("access-control-allow-origin")).toBeNull()
+  })
+})
