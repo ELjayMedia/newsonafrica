@@ -73,9 +73,9 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
                   <Image
                     src={post.featuredImage?.node?.sourceUrl || "/placeholder.jpg"}
                     alt={post.title}
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-lg"
+                    fill
+                    sizes="80px"
+                    className="rounded-lg object-cover"
                   />
                 </div>
                 <div className="flex-grow flex flex-col justify-between">
