@@ -1,5 +1,5 @@
 import { rewriteLegacyLinks } from './routing'
-import type { WordPressPost } from '../wordpress-api'
+import type { WordPressPost } from '../wordpress/client'
 import type { HomePostFieldsFragment, PostFieldsFragment } from '@/types/wpgraphql'
 
 function decodeGlobalId(id: string): number {

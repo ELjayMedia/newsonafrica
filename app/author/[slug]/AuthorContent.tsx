@@ -4,7 +4,8 @@ import { useState } from "react"
 import { OptimizedImage } from "@/components/OptimizedImage"
 import { PostList } from "@/components/PostList"
 import { Skeleton } from "@/components/Skeleton"
-import type { WordPressPost, WordPressAuthor } from "@/lib/wordpress-api"
+import type { WordPressAuthor } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress/client"
 
 interface AuthorContentProps {
   author: WordPressAuthor

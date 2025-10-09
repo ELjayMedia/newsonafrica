@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getRelatedPosts } from "@/lib/wordpress-api"
-import type { WordPressPost } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress/client"
 
 interface UseRelatedPostsProps {
   postId: string
