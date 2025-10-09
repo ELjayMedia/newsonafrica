@@ -12,9 +12,9 @@ Add these URLs to your Supabase project settings:
 - `https://app.newsonafrica.com/auth`
 
 ### Development URLs (if testing locally)
-- `http://localhost:3000/auth/callback`
-- `http://localhost:3000/`
-- `http://localhost:3000/auth`
+- `http://app.newsonafrica.com/auth/callback`
+- `http://app.newsonafrica.com/`
+- `http://app.newsonafrica.com/auth`
 
 ## Google OAuth Setup
 

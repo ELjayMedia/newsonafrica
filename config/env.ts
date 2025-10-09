@@ -2,7 +2,7 @@ import { z } from "zod"
 
 const envSchema = z
   .object({
-    NEXT_PUBLIC_SITE_URL: z.string().default("http://localhost:3000"),
+    NEXT_PUBLIC_SITE_URL: z.string().default("http://app.newsonafrica.com"),
     NEXT_PUBLIC_DEFAULT_SITE: z.string().default("sz"),
     NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().optional(),
     NEXT_PUBLIC_WP_SZ_REST_BASE: z.string().optional(),
@@ -28,7 +28,7 @@ try {
   console.error("⚠️ Environment variable validation failed, using defaults:", error)
   // Provide safe defaults if validation fails
   env = {
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || "http://app.newsonafrica.com",
     NEXT_PUBLIC_DEFAULT_SITE: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
     NEXT_PUBLIC_WP_SZ_GRAPHQL: process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL,
     NEXT_PUBLIC_WP_SZ_REST_BASE: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE,
