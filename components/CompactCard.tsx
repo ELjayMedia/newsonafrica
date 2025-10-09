@@ -6,6 +6,7 @@ import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
 interface CompactCardProps {
   post: {
@@ -62,6 +63,7 @@ export const CompactCard = memo(function CompactCard({
   }, [post.featuredImage])
 
   const category = post.categories?.nodes?.[0]
+  const sanitizedExcerpt = useMemo(() => sanitizeExcerpt(post.excerpt), [post.excerpt])
 
   if (layout === "minimal") {
     return (
@@ -120,7 +122,9 @@ export const CompactCard = memo(function CompactCard({
           </div>
           <div className="p-2">
             <h3 className="font-semibold text-sm line-clamp-2 mb-1 leading-tight">{post.title}</h3>
-            {showExcerpt && post.excerpt && <p className="text-xs text-gray-600 line-clamp-2 mb-1">{post.excerpt}</p>}
+            {showExcerpt && sanitizedExcerpt && (
+              <p className="text-xs text-gray-600 line-clamp-2 mb-1">{sanitizedExcerpt}</p>
+            )}
             <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -152,7 +156,9 @@ export const CompactCard = memo(function CompactCard({
         <div className="flex-1 min-w-0">
           {category && <span className="text-xs text-blue-600 font-medium">{category.name}</span>}
           <h3 className="font-semibold text-sm line-clamp-2 mb-1 leading-tight">{post.title}</h3>
-          {showExcerpt && post.excerpt && <p className="text-xs text-gray-600 line-clamp-1 mb-1">{post.excerpt}</p>}
+          {showExcerpt && sanitizedExcerpt && (
+            <p className="text-xs text-gray-600 line-clamp-1 mb-1">{sanitizedExcerpt}</p>
+          )}
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="h-3 w-3" />
             <span>{formattedDate}</span>

@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
@@ -315,10 +316,13 @@ export default function BookmarksContent() {
             </CardContent>
           </Card>
         ) : (
-          filteredBookmarks.map((bookmark) => (
-            <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-4">
+          filteredBookmarks.map((bookmark) => {
+            const sanitizedExcerpt = sanitizeExcerpt(bookmark.excerpt)
+
+            return (
+              <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-4">
                   <Checkbox
                     checked={selectedBookmarks.includes(bookmark.post_id)}
                     onCheckedChange={(checked) => {
@@ -342,8 +346,8 @@ export default function BookmarksContent() {
                           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
                         </Link>
 
-                        {bookmark.excerpt && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{bookmark.excerpt}</p>
+                        {sanitizedExcerpt && (
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{sanitizedExcerpt}</p>
                         )}
 
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
@@ -419,9 +423,10 @@ export default function BookmarksContent() {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { Clock } from "lucide-react"
 
 import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
 export interface NewsGridPost {
   id: string
@@ -36,6 +37,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
   }
 
   const [mainPost, ...secondaryPosts] = sportCategoryPosts
+  const sanitizedMainExcerpt = sanitizeExcerpt(mainPost?.excerpt)
 
   return (
     <>
@@ -78,7 +80,11 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
           >
             {mainPost?.title}
           </h2>
-          <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">{mainPost?.excerpt}</div>
+          {sanitizedMainExcerpt && (
+            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
+              {sanitizedMainExcerpt}
+            </div>
+          )}
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={mainPost?.date}>{formatDate(mainPost?.date)}</time>
@@ -144,6 +150,8 @@ interface RegularCategorySectionProps {
 export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: RegularCategorySectionProps) {
   if (!mainPost) return null
 
+  const sanitizedMainExcerpt = sanitizeExcerpt(mainPost.excerpt)
+
   return (
     <>
       <Link
@@ -178,7 +186,11 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
           >
             {mainPost.title}
           </h2>
-          <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">{mainPost.excerpt}</div>
+          {sanitizedMainExcerpt && (
+            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
+              {sanitizedMainExcerpt}
+            </div>
+          )}
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={mainPost.date}>{formatDate(mainPost.date)}</time>
@@ -250,50 +262,56 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
 
   return (
     <div className={cn("space-y-3", className)}>
-      {posts.map((post) => (
-        <Link
-          key={post.id}
-          href={getArticleUrl(post.slug, post.country)}
-          className={cn(
-            "flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden group",
-            motionSafe.transition,
-          )}
-        >
-          {post.featuredImage && (
-            <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
-              <Image
-                src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                alt={post.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
-                className={cn(
-                  "object-cover transition-transform duration-300 group-hover:scale-105",
-                  motionSafe.transform,
+      {posts.map((post) => {
+        const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
+
+        return (
+          <Link
+            key={post.id}
+            href={getArticleUrl(post.slug, post.country)}
+            className={cn(
+              "flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden group",
+              motionSafe.transition,
+            )}
+          >
+            {post.featuredImage && (
+              <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
+                <Image
+                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  alt={post.title}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+                  className={cn(
+                    "object-cover transition-transform duration-300 group-hover:scale-105",
+                    motionSafe.transform,
+                  )}
+                  placeholder="blur"
+                  blurDataURL={blurPlaceholder}
+                />
+              </div>
+            )}
+            <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
+              <div>
+                <h2
+                  className={cn(
+                    "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+                    motionSafe.transition,
+                  )}
+                >
+                  {post.title}
+                </h2>
+                {sanitizedExcerpt && (
+                  <div className="text-gray-600 text-sm mb-3 line-clamp-3">{sanitizedExcerpt}</div>
                 )}
-                placeholder="blur"
-                blurDataURL={blurPlaceholder}
-              />
+              </div>
+              <div className="flex items-center text-gray-500 text-xs">
+                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
+                <time dateTime={post.date}>{formatDate(post.date)}</time>
+              </div>
             </div>
-          )}
-          <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
-            <div>
-              <h2
-                className={cn(
-                  "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-                  motionSafe.transition,
-                )}
-              >
-                {post.title}
-              </h2>
-              <div className="text-gray-600 text-sm mb-3 line-clamp-3">{post.excerpt}</div>
-            </div>
-            <div className="flex items-center text-gray-500 text-xs">
-              <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-              <time dateTime={post.date}>{formatDate(post.date)}</time>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        )
+      })}
     </div>
   )
 }
