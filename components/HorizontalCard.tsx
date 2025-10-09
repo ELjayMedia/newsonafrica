@@ -3,12 +3,13 @@ import Image from "next/image"
 import { formatDistanceToNow } from "date-fns"
 import Fuse from "fuse.js"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
 interface HorizontalCardProps {
   post: {
     id: string
     title: string
-    excerpt: string
+    excerpt?: string
     slug: string
     featuredImage?: {
       node: {
@@ -23,11 +24,11 @@ interface HorizontalCardProps {
     }
   }
   className?: string
-  allowHtml?: boolean
 }
 
-export function HorizontalCard({ post, className = "", allowHtml = false }: HorizontalCardProps) {
+export function HorizontalCard({ post, className = "" }: HorizontalCardProps) {
   const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
+  const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
 
   // Implementing fuzzy search with Fuse.js
   const options = {
@@ -61,9 +62,9 @@ export function HorizontalCard({ post, className = "", allowHtml = false }: Hori
         <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{post.title}</h3>
-            <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
-              {allowHtml ? <span dangerouslySetInnerHTML={{ __html: post.excerpt }} /> : post.excerpt}
-            </p>
+            {sanitizedExcerpt && (
+              <p className="text-gray-600 dark:text-gray-400 line-clamp-3">{sanitizedExcerpt}</p>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500 dark:text-gray-300">{formattedDate}</span>

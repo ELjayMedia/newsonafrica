@@ -8,6 +8,7 @@ import { HorizontalCard } from "./HorizontalCard"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
 import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
+import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
 export function CategoryContent({ slug }: { slug: string }) {
   const {
@@ -69,9 +70,10 @@ export function CategoryContent({ slug }: { slug: string }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
           {horizontalPosts
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .map((post) => (
-              <HorizontalCard key={post.id} post={post} />
-            ))}
+            .map((post) => {
+              const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
+              return <HorizontalCard key={post.id} post={{ ...post, excerpt: sanitizedExcerpt }} />
+            })}
         </div>
         <div ref={ref} className="mt-12 text-center">
           {isFetchingNextPage ? (
