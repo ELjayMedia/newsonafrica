@@ -120,4 +120,68 @@ describe("fetchAggregatedHomeForCountry", () => {
     expect(result.secondaryPosts).toEqual(posts.slice(1, 4))
     expect(result.remainingPosts).toEqual([])
   })
+
+  it("uses the REST fallback when GraphQL returns no fp-tagged posts", async () => {
+    vi.resetModules()
+    vi.doMock("server-only", () => ({}))
+
+    const restPosts = [
+      {
+        id: 1,
+        slug: "fp-older",
+        title: { rendered: "Older story" },
+        excerpt: { rendered: "Older excerpt" },
+        content: { rendered: "<p>Older content</p>" },
+        date: "2024-05-01T00:00:00Z",
+        _embedded: { "wp:featuredmedia": [] },
+      },
+      {
+        id: 2,
+        slug: "fp-newer",
+        title: { rendered: "Newer story" },
+        excerpt: { rendered: "Newer excerpt" },
+        content: { rendered: "<p>Newer content</p>" },
+        date: "2024-05-02T00:00:00Z",
+        _embedded: { "wp:featuredmedia": [] },
+      },
+    ]
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({ data: { posts: { nodes: [] } } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/tags")) {
+        return new Response(JSON.stringify([{ id: 500, name: "Front Page", slug: "fp" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (url.includes("/posts")) {
+        return new Response(JSON.stringify(restPosts), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const homeDataModule = await import("./home-data")
+    const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 2)
+
+    expect(fetchMock).toHaveBeenCalled()
+    expect(result.heroPost?.slug).toBe("fp-older")
+    expect(result.secondaryPosts).toHaveLength(1)
+    expect(result.secondaryPosts[0].slug).toBe("fp-newer")
+    expect(result.remainingPosts).toEqual([])
+  })
 })

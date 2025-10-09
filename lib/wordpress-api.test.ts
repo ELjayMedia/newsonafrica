@@ -1,6 +1,41 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import * as wordpressApi from "./wordpress-api"
 
+const buildRestPost = (id: number, slugPrefix = "rest") => ({
+  id,
+  date: `2024-05-${String(id).padStart(2, "0")}T00:00:00Z`,
+  slug: `${slugPrefix}-${id}`,
+  title: { rendered: `${slugPrefix} title ${id}` },
+  excerpt: { rendered: `${slugPrefix} excerpt ${id}` },
+  content: { rendered: `<p>${slugPrefix} content ${id}</p>` },
+  _embedded: {
+    "wp:featuredmedia": [
+      {
+        source_url: `${slugPrefix}-${id}.jpg`,
+        alt_text: `${slugPrefix} alt ${id}`,
+        media_details: { width: 1200, height: 800 },
+      },
+    ],
+    "wp:author": [
+      {
+        id: id * 100,
+        name: `${slugPrefix} author ${id}`,
+        slug: `${slugPrefix}-author-${id}`,
+      },
+    ],
+    "wp:term": [
+      [
+        {
+          id: id * 10,
+          name: `${slugPrefix} category`,
+          slug: `${slugPrefix}-category`,
+        },
+      ],
+      [],
+    ],
+  },
+})
+
 // Restore global fetch after each test
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -406,5 +441,166 @@ describe("getFrontPageSlicesForCountry", () => {
     expect(result.latest.posts[0].slug).toBe("latest-11")
     expect(result.latest.endCursor).toBe("cursor-30")
     expect(result.latest.hasNextPage).toBe(true)
+  })
+
+  it("falls back to REST when GraphQL returns no slices", async () => {
+    const restPosts = Array.from({ length: 30 }, (_, index) => buildRestPost(index + 1, "fallback"))
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              hero: { nodes: [] },
+              latest: { pageInfo: { hasNextPage: false, endCursor: null }, edges: [] },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/posts")) {
+        return new Response(JSON.stringify(restPosts), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const result = await wordpressApi.getFrontPageSlicesForCountry("za")
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.hero.heroPost?.slug).toBe("fallback-1")
+    expect(result.trending.posts).toHaveLength(7)
+    expect(result.trending.posts[0].slug).toBe("fallback-4")
+    expect(result.latest.posts).toHaveLength(20)
+    expect(result.latest.posts[0].slug).toBe("fallback-11")
+  })
+})
+
+describe("getFpTaggedPostsForCountry", () => {
+  const createGraphqlNode = (id: number) => ({
+    databaseId: id,
+    id: `gid://post/${id}`,
+    slug: `fp-${id}`,
+    date: "2024-05-01T00:00:00Z",
+    title: `FP ${id}`,
+    excerpt: `FP excerpt ${id}`,
+    content: null,
+    featuredImage: { node: null },
+    categories: { nodes: [] },
+    tags: { nodes: [] },
+    author: { node: null },
+  })
+
+  it("returns GraphQL results when available", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              posts: {
+                nodes: [createGraphqlNode(1), createGraphqlNode(2)],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
+
+    expect(result).toHaveLength(2)
+    expect(result[0].slug).toBe("fp-1")
+    expect(result[1].slug).toBe("fp-2")
+  })
+
+  it("falls back to REST when GraphQL returns no posts", async () => {
+    const restPosts = [buildRestPost(1, "fp"), buildRestPost(2, "fp")]
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({ data: { posts: { nodes: [] } } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/tags")) {
+        return new Response(JSON.stringify([{ id: 101, name: "Front Page", slug: "fp" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      if (url.includes("/posts")) {
+        return new Response(JSON.stringify(restPosts), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(result).toHaveLength(2)
+    expect(result[0].slug).toBe("fp-1")
+    expect(result[1].slug).toBe("fp-2")
+  })
+})
+
+describe("getLatestPostsForCountry", () => {
+  it("falls back to REST when GraphQL returns no posts", async () => {
+    const restPosts = [buildRestPost(1, "latest"), buildRestPost(2, "latest")]
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({ data: { posts: null } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/posts")) {
+        return new Response(JSON.stringify(restPosts), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`)
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const result = await wordpressApi.getLatestPostsForCountry("za", 3)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.posts).toHaveLength(2)
+    expect(result.posts[0].slug).toBe("latest-1")
+    expect(result.hasNextPage).toBe(false)
+    expect(result.endCursor).toBeNull()
   })
 })

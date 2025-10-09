@@ -162,6 +162,70 @@ export async function fetchFromWpGraphQL<T>(
   }
 }
 
+export interface WithGraphqlFallbackLogMeta {
+  operation: string
+  [key: string]: unknown
+}
+
+interface WithGraphqlFallbackMessages {
+  empty?: string
+  error?: string
+}
+
+interface WithGraphqlFallbackOptions<TGraphqlResult, TResult> {
+  fetchGraphql: () => Promise<TGraphqlResult | null | undefined>
+  normalize: (data: TGraphqlResult | null | undefined) => TResult | null | undefined
+  makeRestFallback: () => Promise<TResult>
+  cacheTags?: string[]
+  logMeta: WithGraphqlFallbackLogMeta
+  messages?: WithGraphqlFallbackMessages
+  onGraphqlEmpty?: () => void
+  onGraphqlError?: (error: unknown) => void
+}
+
+export async function withGraphqlFallback<TGraphqlResult, TResult>({
+  fetchGraphql,
+  normalize,
+  makeRestFallback,
+  cacheTags,
+  logMeta,
+  messages,
+  onGraphqlEmpty,
+  onGraphqlError,
+}: WithGraphqlFallbackOptions<TGraphqlResult, TResult>): Promise<TResult> {
+  const { operation, ...meta } = logMeta
+  const context: Record<string, unknown> = {
+    ...meta,
+    ...(cacheTags && cacheTags.length > 0 ? { cacheTags } : {}),
+  }
+
+  const emptyMessage = messages?.empty ?? `[v0] GraphQL returned no data for ${operation}`
+  const errorMessage = messages?.error ?? `[v0] GraphQL request failed for ${operation}`
+
+  try {
+    const gqlResult = await fetchGraphql()
+    const normalized = normalize(gqlResult)
+
+    if (normalized !== null && normalized !== undefined) {
+      return normalized
+    }
+
+    onGraphqlEmpty?.()
+    if (messages?.empty !== undefined) {
+      log.warn(emptyMessage, context)
+    }
+  } catch (error) {
+    onGraphqlError?.(error)
+    log.error(errorMessage, {
+      ...context,
+      error: toErrorDetails(error),
+    })
+    return makeRestFallback()
+  }
+
+  return makeRestFallback()
+}
+
 export async function fetchFromWp<T>(
   countryCode: string,
   query: {
