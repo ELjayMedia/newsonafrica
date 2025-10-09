@@ -76,7 +76,7 @@ Create a `.env.local` file with the following variables:
 \`\`\`
 # --- App Configuration ---
 NEXT_PUBLIC_DEFAULT_SITE=sz
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
 
 # --- WordPress Endpoints ---
 # Country-specific endpoints (for multi-site)

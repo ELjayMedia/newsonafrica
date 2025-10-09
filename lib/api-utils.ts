@@ -100,7 +100,7 @@ export function withCors(req: Request, res: Response) {
   const allowedOrigins =
     process.env.NODE_ENV === "production"
       ? [env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]
-      : ["http://localhost:3000"]
+      : ["http://app.newsonafrica.com"]
 
   const origin = req.headers.get("origin") || ""
 
