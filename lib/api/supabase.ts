@@ -5,6 +5,8 @@ import type { Database } from "@/types/supabase"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+export const SUPABASE_AUTH_STORAGE_KEY = "noa_supabase_auth"
+
 const SUPABASE_CONFIG_WARNING =
   "Supabase environment variables are not configured. Authentication features are disabled."
 
@@ -110,7 +112,7 @@ function initializeSupabaseClient(): SupabaseClient<Database> {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: "noa_supabase_auth",
+      storageKey: SUPABASE_AUTH_STORAGE_KEY,
       flowType: "pkce",
     },
   })

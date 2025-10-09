@@ -1,5 +1,9 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
+import {
+  SUPABASE_AUTH_STORAGE_KEY,
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from "@/lib/api/supabase"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createSupabaseClient> | null = null
@@ -26,7 +30,7 @@ export const createClient = () => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "noa_supabase_auth",
+        storageKey: SUPABASE_AUTH_STORAGE_KEY,
       },
       global: {
         headers: {
