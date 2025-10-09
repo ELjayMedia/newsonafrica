@@ -36,15 +36,18 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
   const relatedCountry = sourceCountryCode ?? countryCode
 
   const {
-    data: relatedPosts = [],
+    data: relatedPostsData,
     isLoading: relatedLoading,
+    isValidating: relatedValidating,
     error: relatedError,
     mutate: mutateRelatedPosts,
   } = useSWR(
     postId ? `related-${relatedCountry}-${postId}` : null,
     () => getRelatedPostsForCountry(relatedCountry, postId!, 6),
-    { fallbackData: [] },
   )
+
+  const relatedPosts = relatedPostsData ?? []
+  const isFetchingRelated = relatedLoading || relatedValidating
 
   const shareUrl = `/${countryCode}/article/${slug}`
 
@@ -211,7 +214,7 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
             <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
           </div>
 
-          {relatedLoading ? (
+          {isFetchingRelated ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
