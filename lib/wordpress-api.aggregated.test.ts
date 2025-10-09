@@ -10,31 +10,32 @@ describe("getAggregatedLatestHome", () => {
 
   it("dedupes posts with identical relay ids across countries", async () => {
     const relayId = "relay-123"
+    const capturedRequests: Array<{ variables?: { tagSlugs?: string[] } }> = []
 
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString()
 
       if (url.endsWith("/graphql")) {
+        if (init?.body && typeof init.body === "string") {
+          capturedRequests.push(JSON.parse(init.body) as { variables?: { tagSlugs?: string[] } })
+        }
+
         return new Response(
           JSON.stringify({
             data: {
               posts: {
                 nodes: [
                   {
+                    __typename: "Post",
                     databaseId: 1,
                     id: relayId,
                     slug: "shared-slug",
                     date: "2024-05-01T00:00:00Z",
                     title: "Shared post",
                     excerpt: "Shared excerpt",
-                    content: null,
                     featuredImage: { node: null },
-                    categories: { nodes: [] },
-                    tags: { nodes: [] },
-                    author: { node: null },
                   },
                 ],
-                pageInfo: { hasNextPage: false, endCursor: null },
               },
             },
           }),
@@ -61,5 +62,10 @@ describe("getAggregatedLatestHome", () => {
     ].filter((post): post is NonNullable<typeof post> => Boolean(post))
 
     expect(aggregatedPosts).toHaveLength(1)
+
+    expect(capturedRequests).not.toHaveLength(0)
+    capturedRequests.forEach((request) => {
+      expect(request.variables?.tagSlugs).toEqual(["fp"])
+    })
   })
 })

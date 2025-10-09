@@ -163,6 +163,7 @@ export type PostFieldsFragment = {
 export type HomePostFieldsFragment = {
   readonly __typename?: "Post"
   readonly databaseId?: Maybe<Scalars["Int"]>
+  readonly id?: Maybe<Scalars["ID"]>
   readonly slug?: Maybe<Scalars["String"]>
   readonly date?: Maybe<Scalars["String"]>
   readonly title?: Maybe<Scalars["String"]>
