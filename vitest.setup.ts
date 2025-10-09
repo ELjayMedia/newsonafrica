@@ -1,7 +1,16 @@
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
+
+vi.mock('isomorphic-dompurify', () => ({
+  default: {
+    sanitize: (html: string) =>
+      html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/\son\w+="[^"]*"/gi, ''),
+  },
+}))
 
 // Provide default environment variables required by config/env.ts
 process.env.NEXT_PUBLIC_SITE_URL ||= 'https://example.com'
