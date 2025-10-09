@@ -2,7 +2,11 @@
 
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/api/supabase"
+import {
+  SUPABASE_AUTH_STORAGE_KEY,
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from "@/lib/api/supabase"
 
 // Use a singleton pattern to ensure we only create one client instance
 let clientInstance: ReturnType<typeof createBrowserClient<Database>> | null = null
@@ -28,7 +32,7 @@ export const createClient = () => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        storageKey: "news-on-africa-auth",
+        storageKey: SUPABASE_AUTH_STORAGE_KEY,
       },
       global: {
         headers: {
