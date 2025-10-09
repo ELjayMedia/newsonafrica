@@ -3,19 +3,21 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, X, Menu } from "lucide-react"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
 
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const homeHref = getHomeHref(pathname)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +49,7 @@ export default function Navbar() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <Link href="/" className="text-2xl font-bold">
+            <Link href={homeHref} className="text-2xl font-bold">
               News On Africa
             </Link>
           </div>

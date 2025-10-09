@@ -103,6 +103,22 @@ export function getCategoryUrl(slug: string, countryCode?: string): string {
 }
 
 /**
+ * Determine the appropriate home link for the current pathname.
+ * Returns the matched country edition path when available, otherwise falls back to the root.
+ */
+export function getHomeHref(pathname?: string | null): string {
+  if (pathname) {
+    const [firstSegment] = pathname.split("/").filter(Boolean)
+    const normalized = firstSegment?.toLowerCase()
+    if (normalized && SUPPORTED_COUNTRIES.includes(normalized)) {
+      return `/${normalized}`
+    }
+  }
+
+  return "/"
+}
+
+/**
  * Check if a URL is using the old /post/ format
  */
 export function isLegacyPostUrl(url: string): boolean {

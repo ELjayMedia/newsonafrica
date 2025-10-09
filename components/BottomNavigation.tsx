@@ -6,10 +6,12 @@ import { Home, Search, Bookmark, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
+import { getHomeHref } from "@/lib/utils/routing"
 
 export function BottomNavigation() {
   const pathname = usePathname()
   const { user, profile, loading } = useAuth()
+  const homeHref = getHomeHref(pathname)
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -26,8 +28,8 @@ export function BottomNavigation() {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 py-2 px-3 md:hidden">
       <div className="flex justify-around items-center">
-        <Link href="/" className="flex flex-col items-center">
-          <div className={cn("p-1 rounded-full", pathname === "/" ? "text-blue-600" : "text-gray-500")}>
+        <Link href={homeHref} className="flex flex-col items-center">
+          <div className={cn("p-1 rounded-full", pathname === homeHref ? "text-blue-600" : "text-gray-500")}>
             <Home size={20} />
           </div>
           <span className="text-xs mt-1">Home</span>
