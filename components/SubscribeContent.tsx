@@ -252,7 +252,7 @@ export function SubscribeContent() {
                     <CardFooter className="flex justify-center">
                       <button
                         onClick={goToNextStep}
-                        className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        className="w-full py-3 px-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
                       >
                         Select {plan.name} Plan
                       </button>
@@ -335,14 +335,14 @@ export function SubscribeContent() {
             <div className="mt-6 flex justify-between">
               <button
                 onClick={goToPreviousStep}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50"
               >
                 Back
               </button>
               <button
                 onClick={goToNextStep}
                 disabled={!isFormValid}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ${
+                className={`px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 ${
                   !isFormValid ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
@@ -416,7 +416,7 @@ export function SubscribeContent() {
             <div className="mt-6 flex justify-between">
               <button
                 onClick={goToPreviousStep}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50"
                 disabled={isRedirecting}
               >
                 Back
