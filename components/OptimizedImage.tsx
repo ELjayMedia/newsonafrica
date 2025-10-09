@@ -21,6 +21,8 @@ export const OptimizedImage = memo(function OptimizedImage({
   priority = false,
   loading = "lazy",
   sizes,
+  width,
+  height,
   ...props
 }: OptimizedImageProps) {
   const [imgSrc, setImgSrc] = useState<string>(src)
@@ -48,13 +50,17 @@ export const OptimizedImage = memo(function OptimizedImage({
   }
 
   const responsiveSizes = sizes || "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  const useFill = width === undefined || height === undefined
 
   return (
-    <div className={`relative overflow-hidden ${className}`} style={{ aspectRatio }}>
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={useFill ? { aspectRatio } : undefined}
+    >
       <Image
         src={imgSrc || "/placeholder.svg"}
         alt={alt}
-        fill
+        {...(useFill ? { fill: true } : { width, height })}
         className={`object-cover transition-opacity duration-300 ${
           isLoading ? "opacity-0" : "opacity-100"
         } ${error ? "opacity-70" : ""}`}
