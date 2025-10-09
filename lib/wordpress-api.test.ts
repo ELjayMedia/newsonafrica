@@ -218,6 +218,107 @@ describe("getPostsForCategories", () => {
   })
 })
 
+describe("getPostsByCategoryForCountry", () => {
+  it("requests only fp-tagged posts via GraphQL", async () => {
+    const capturedRequests: Array<{ variables?: Record<string, unknown> }> = []
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        if (init?.body && typeof init.body === "string") {
+          capturedRequests.push(JSON.parse(init.body) as { variables?: Record<string, unknown> })
+        }
+
+        return new Response(
+          JSON.stringify({
+            data: {
+              categories: {
+                nodes: [
+                  {
+                    databaseId: 1,
+                    name: "Politics",
+                    slug: "politics",
+                    description: null,
+                    count: 1,
+                  },
+                ],
+              },
+              posts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(null, { status: 404 })
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10)
+
+    expect(capturedRequests).not.toHaveLength(0)
+    capturedRequests.forEach((request) => {
+      expect(request.variables?.tagSlugs).toEqual(["fp"])
+    })
+  })
+
+  it("includes the fp tag when using the REST fallback", async () => {
+    const capturedPostUrls: string[] = []
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        return new Response(
+          JSON.stringify({ errors: [{ message: "GraphQL unavailable" }] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/categories")) {
+        return new Response(
+          JSON.stringify([
+            { id: 5, name: "Politics", slug: "politics", description: "", count: 1 },
+          ]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/tags")) {
+        return new Response(
+          JSON.stringify([{ id: 99, name: "Front Page", slug: "fp" }]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      if (url.includes("/posts")) {
+        capturedPostUrls.push(url)
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      return new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } })
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10)
+
+    expect(capturedPostUrls).not.toHaveLength(0)
+    capturedPostUrls.forEach((url) => {
+      const params = new URL(url).searchParams
+      expect(params.get("tags")).toBe("99")
+    })
+  })
+})
+
 describe("fetchMostReadPosts", () => {
   it("decodes HTML entities in normalized responses", async () => {
     const mockPayload = [

@@ -256,6 +256,7 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
 
 const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
+const FP_TAG_SLUG = "fp" as const
 
 interface CachedCategoryPosts {
   posts: WordPressPost[]
@@ -502,7 +503,7 @@ const FRONT_PAGE_HERO_LIMIT = 8
 const FRONT_PAGE_HERO_FALLBACK_LIMIT = 3
 const FRONT_PAGE_TRENDING_LIMIT = 7
 const FRONT_PAGE_LATEST_LIMIT = 20
-const FRONT_PAGE_HERO_TAGS = ["fp"] as const
+const FRONT_PAGE_HERO_TAGS = [FP_TAG_SLUG] as const
 
 const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
   hero: { heroPost: undefined, secondaryStories: [] },
@@ -678,7 +679,7 @@ export async function getFrontPageSlicesForCountry(
 }
 
 export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {
-  const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: ["tag:fp"] })
+  const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: [`tag:${FP_TAG_SLUG}`] })
 
   try {
     console.log("[v0] Fetching FP tagged posts for:", countryCode)
@@ -687,7 +688,7 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
       countryCode,
       FP_TAGGED_POSTS_QUERY,
       {
-        tagSlugs: ["fp"],
+        tagSlugs: [FP_TAG_SLUG],
         first: limit,
       },
       tags,
@@ -702,7 +703,9 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
     console.log("[v0] No GraphQL results, trying REST fallback")
 
     try {
-      const tagResult = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("fp"), { tags })
+      const tagResult = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(FP_TAG_SLUG), {
+        tags,
+      })
 
       if (!tagResult || !Array.isArray(tagResult) || tagResult.length === 0) {
         console.log("[v0] No FP tag found")
@@ -952,7 +955,7 @@ export async function getPostsByCategoryForCountry(
   const tags = buildCacheTags({
     country: countryCode,
     section: "categories",
-    extra: slug ? [`category:${slug}`] : undefined,
+    extra: [slug ? `category:${slug}` : null, `tag:${FP_TAG_SLUG}`],
   })
 
   const gqlData = await fetchFromWpGraphQL<PostsByCategoryQuery>(
@@ -961,6 +964,7 @@ export async function getPostsByCategoryForCountry(
     {
       category: categorySlug,
       first: limit,
+      tagSlugs: [FP_TAG_SLUG],
     },
     tags,
   )
@@ -994,7 +998,19 @@ export async function getPostsByCategoryForCountry(
   if (!category) {
     return { category: null, posts: [], hasNextPage: false, endCursor: null }
   }
-  const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit)
+  const fpTags = await executeRestFallback(
+    () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(FP_TAG_SLUG), { tags }),
+    `[v0] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
+    { countryCode, categorySlug, tagSlug: FP_TAG_SLUG },
+    { fallbackValue: [] },
+  )
+
+  const fpTag = fpTags[0]
+  if (!fpTag) {
+    return { category, posts: [], hasNextPage: false, endCursor: null }
+  }
+
+  const { endpoint, params } = wordpressQueries.postsByCategory(category.id, limit, { tagId: fpTag.id })
   const posts = await executeRestFallback(
     () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
     `[v0] Posts by category REST fallback failed for ${categorySlug} (${countryCode})`,
