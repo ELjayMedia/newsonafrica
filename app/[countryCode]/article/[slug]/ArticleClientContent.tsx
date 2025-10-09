@@ -26,10 +26,8 @@ interface ArticleClientContentProps {
 }
 
 export function ArticleClientContent({ slug, countryCode, sourceCountryCode, initialData }: ArticleClientContentProps) {
-  const [readingProgress, setReadingProgress] = useState(0)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
-  const progressBarRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   const postId = initialData?.id != null ? String(initialData.id) : undefined
@@ -55,15 +53,7 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!contentRef.current) return
-
-      const element = contentRef.current
-      const scrollTop = window.scrollY
-      const scrollHeight = element.scrollHeight - window.innerHeight
-      const progress = Math.min(Math.max((scrollTop / scrollHeight) * 100, 0), 100)
-
-      setReadingProgress(progress)
-      setShowScrollTop(scrollTop > 500)
+      setShowScrollTop(window.scrollY > 500)
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
@@ -107,14 +97,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
 
   return (
     <>
-      <div className="fixed top-0 left-0 w-full h-1 bg-muted/30 z-50 backdrop-blur-sm">
-        <div
-          ref={progressBarRef}
-          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-150 ease-out shadow-sm"
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
-
       <article id="article-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:px-0 lg:py-0" ref={contentRef}>
         <header className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
@@ -329,16 +311,6 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
         </Card>
       </div>
 
-      <div className="fixed bottom-20 left-4 md:hidden z-40">
-        <Card className="px-3 py-2 shadow-lg">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-150" style={{ width: `${readingProgress}%` }} />
-            </div>
-            <span>{Math.round(readingProgress)}%</span>
-          </div>
-        </Card>
-      </div>
     </>
   )
 }
