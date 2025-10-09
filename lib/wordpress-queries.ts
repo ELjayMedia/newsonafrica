@@ -46,6 +46,7 @@ export const POST_FIELDS_FRAGMENT = gql`
 export const HOME_POST_FIELDS_FRAGMENT = gql`
   fragment HomePostFields on Post {
     databaseId
+    id
     slug
     date
     title

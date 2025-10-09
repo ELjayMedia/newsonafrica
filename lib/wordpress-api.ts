@@ -1139,10 +1139,9 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
 
   try {
     const results = await Promise.allSettled(
-      SUPPORTED_COUNTRY_EDITIONS.map(async (country) => {
-        const { posts } = await getLatestPostsForCountry(country.code, limitPerCountry)
-        return mapPostsToHomePosts(posts, country.code)
-      }),
+      SUPPORTED_COUNTRY_EDITIONS.map((country) =>
+        getFpTaggedPostsForCountry(country.code, limitPerCountry),
+      ),
     )
 
     const aggregatedPosts: HomePost[] = []

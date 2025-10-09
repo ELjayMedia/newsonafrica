@@ -3,8 +3,7 @@ import "server-only"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import {
   getAggregatedLatestHome,
-  getLatestPostsForCountry,
-  mapPostsToHomePosts,
+  getFpTaggedPostsForCountry,
   type AggregatedHomeData,
 } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
@@ -91,10 +90,9 @@ export async function fetchAggregatedHomeForCountry(
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
   try {
-    const latestPosts = await getLatestPostsForCountry(countryCode, limit)
-    const mappedPosts = mapPostsToHomePosts(latestPosts.posts, countryCode)
+    const fpTaggedPosts = await getFpTaggedPostsForCountry(countryCode, limit)
 
-    return buildAggregatedHomeFromPosts(mappedPosts)
+    return buildAggregatedHomeFromPosts(fpTaggedPosts)
   } catch (error) {
     console.error(`[v0] Failed to assemble home feed for country ${countryCode}`, { error })
     return createEmptyAggregatedHome()
