@@ -32,7 +32,6 @@ export function PostList({ posts }: PostListProps) {
           key={post.id}
           post={post}
           className="border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
-          allowHtml={true}
         />
       ))}
     </div>
