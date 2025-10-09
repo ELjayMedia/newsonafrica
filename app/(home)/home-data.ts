@@ -1,12 +1,14 @@
 import "server-only"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import {
   getAggregatedLatestHome,
   getFpTaggedPostsForCountry,
   type AggregatedHomeData,
 } from "@/lib/wordpress-api"
-import type { HomePost } from "@/types/home"
+import type { Category } from "@/types/content"
+import type { CountryPosts, HomePost } from "@/types/home"
 
 export const HOME_FEED_REVALIDATE = 60
 const HOME_FEED_FALLBACK_LIMIT = 6
@@ -100,3 +102,83 @@ export async function fetchAggregatedHomeForCountry(
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
+
+const flattenAggregatedHome = ({
+  heroPost,
+  secondaryPosts,
+  remainingPosts,
+}: AggregatedHomeData): HomePost[] => {
+  const posts: HomePost[] = []
+
+  if (heroPost) {
+    posts.push(heroPost)
+  }
+
+  if (secondaryPosts?.length) {
+    posts.push(...secondaryPosts)
+  }
+
+  if (remainingPosts?.length) {
+    posts.push(...remainingPosts)
+  }
+
+  return posts
+}
+
+const FEATURED_POST_LIMIT = 6
+const TAGGED_POST_LIMIT = 8
+const RECENT_POST_LIMIT = 10
+
+type HomeContentInitialData = {
+  taggedPosts: HomePost[]
+  featuredPosts: HomePost[]
+  categories: Category[]
+  recentPosts: HomePost[]
+}
+
+const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData => {
+  const taggedPosts = posts.slice(0, TAGGED_POST_LIMIT)
+  const featuredPosts = posts.slice(0, FEATURED_POST_LIMIT)
+  const recentPosts = posts.slice(0, RECENT_POST_LIMIT)
+
+  return {
+    taggedPosts,
+    featuredPosts,
+    categories: [] as Category[],
+    recentPosts,
+  }
+}
+
+export interface HomeContentServerProps {
+  initialPosts: HomePost[]
+  featuredPosts: HomePost[]
+  countryPosts: CountryPosts
+  initialData: HomeContentInitialData
+}
+
+export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
+  const aggregatedHome = await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+  const initialPosts = flattenAggregatedHome(aggregatedHome)
+  const featuredPosts = initialPosts.slice(0, FEATURED_POST_LIMIT)
+  const initialData = buildInitialDataFromPosts(initialPosts)
+
+  const countryEntries = await Promise.all(
+    SUPPORTED_COUNTRIES.map(async (countryCode) => {
+      const countryAggregated = await fetchAggregatedHomeForCountry(countryCode)
+      const posts = flattenAggregatedHome(countryAggregated)
+      return [countryCode, posts] as const
+    }),
+  )
+
+  const countryPosts = countryEntries.reduce<CountryPosts>((acc, [countryCode, posts]) => {
+    acc[countryCode] = posts
+    return acc
+  }, {})
+
+  return {
+    initialPosts,
+    featuredPosts,
+    countryPosts,
+    initialData,
+  }
+}

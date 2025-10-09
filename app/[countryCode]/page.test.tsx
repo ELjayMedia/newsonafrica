@@ -94,40 +94,31 @@ describe("CountryPage", () => {
   it.each([
     ["sz", "sz"],
     ["ZA", "za"],
-  ])("renders the same structure as the home page for %s", async (countryCode, expectedCode) => {
-    const { default: HomePage } = await import("../page")
+  ])("renders the hero, trending and latest sections for %s", async (countryCode, expectedCode) => {
     const { default: CountryPage } = await import("./page")
 
-    const homeUi = await HomePage()
-    const homeRender = render(homeUi)
-    const homeHtml = homeRender.container.innerHTML
-    homeRender.unmount()
-
     const countryUi = await CountryPage({ params: { countryCode } })
-    const countryRender = render(countryUi)
+    const { getByTestId } = render(countryUi)
 
-    expect(countryRender.container.innerHTML).toBe(homeHtml)
-    expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(1)
+    expect(getByTestId("hero")).toBeInTheDocument()
+    expect(getByTestId("trending")).toBeInTheDocument()
+    expect(getByTestId("latest")).toBeInTheDocument()
+    expect(fetchAggregatedHomeMock).not.toHaveBeenCalled()
     expect(fetchAggregatedHomeForCountryMock).toHaveBeenCalledWith(expectedCode)
     expect(notFoundMock).not.toHaveBeenCalled()
   })
 
   it("renders the African edition using the aggregated home feed", async () => {
-    const { default: HomePage } = await import("../page")
     const { default: CountryPage } = await import("./page")
 
-    const homeUi = await HomePage()
-    const homeRender = render(homeUi)
-    const homeHtml = homeRender.container.innerHTML
-    homeRender.unmount()
-
     const countryUi = await CountryPage({ params: { countryCode: "african-edition" } })
-    const countryRender = render(countryUi)
+    const { getByTestId } = render(countryUi)
 
-    expect(countryRender.container.innerHTML).toBe(homeHtml)
-    expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(2)
-    expect(fetchAggregatedHomeMock).toHaveBeenNthCalledWith(1, "https://example.com", HOME_FEED_CACHE_TAGS)
-    expect(fetchAggregatedHomeMock).toHaveBeenNthCalledWith(2, "https://example.com", HOME_FEED_CACHE_TAGS)
+    expect(getByTestId("hero")).toBeInTheDocument()
+    expect(getByTestId("trending")).toBeInTheDocument()
+    expect(getByTestId("latest")).toBeInTheDocument()
+    expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(1)
+    expect(fetchAggregatedHomeMock).toHaveBeenCalledWith("https://example.com", HOME_FEED_CACHE_TAGS)
     expect(fetchAggregatedHomeForCountryMock).not.toHaveBeenCalled()
     expect(notFoundMock).not.toHaveBeenCalled()
   })
