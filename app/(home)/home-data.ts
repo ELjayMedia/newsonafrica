@@ -1,6 +1,12 @@
 import "server-only"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import {
+  AFRICAN_EDITION,
+  isAfricanEdition,
+  isCountryEdition,
+  type SupportedEdition,
+} from "@/lib/editions"
 import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import {
   getAggregatedLatestHome,
@@ -49,24 +55,12 @@ async function fetchAggregatedHomeUncached(
   baseUrl: string,
   cacheTags: string[],
 ): Promise<AggregatedHomeData> {
-  const endpoint = new URL("/api/home-feed", baseUrl)
-
   try {
-    const response = await fetch(endpoint, {
-      next: { tags: cacheTags, revalidate: HOME_FEED_REVALIDATE },
-    })
-
-    if (response.ok) {
-      const data = (await response.json()) as AggregatedHomeData | null
-      if (data) {
-        return data
-      }
-    }
+    return await getAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT)
   } catch (error) {
-    console.error("Failed to fetch home feed", { error })
+    console.error("Failed to fetch home feed", { error, baseUrl, cacheTags })
+    return createEmptyAggregatedHome()
   }
-
-  return getAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT)
 }
 
 export function fetchAggregatedHome(
@@ -156,24 +150,70 @@ export interface HomeContentServerProps {
   initialData: HomeContentInitialData
 }
 
-export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
-  const aggregatedHome = await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+const deriveHomeContentState = (
+  aggregatedHome: AggregatedHomeData,
+): Omit<HomeContentServerProps, "countryPosts"> => {
   const initialPosts = flattenAggregatedHome(aggregatedHome)
   const featuredPosts = initialPosts.slice(0, FEATURED_POST_LIMIT)
   const initialData = buildInitialDataFromPosts(initialPosts)
 
+  return {
+    initialPosts,
+    featuredPosts,
+    initialData,
+  }
+}
+
+const buildCountryPosts = async (
+  countryCodes: readonly string[],
+  preloaded: Partial<Record<string, AggregatedHomeData>> = {},
+): Promise<CountryPosts> => {
+  if (!countryCodes.length) {
+    return {}
+  }
+
   const countryEntries = await Promise.all(
-    SUPPORTED_COUNTRIES.map(async (countryCode) => {
-      const countryAggregated = await fetchAggregatedHomeForCountry(countryCode)
-      const posts = flattenAggregatedHome(countryAggregated)
+    countryCodes.map(async (countryCode) => {
+      const aggregated =
+        preloaded[countryCode] ?? (await fetchAggregatedHomeForCountry(countryCode))
+      const posts = flattenAggregatedHome(aggregated)
       return [countryCode, posts] as const
     }),
   )
 
-  const countryPosts = countryEntries.reduce<CountryPosts>((acc, [countryCode, posts]) => {
+  return countryEntries.reduce<CountryPosts>((acc, [countryCode, posts]) => {
     acc[countryCode] = posts
     return acc
   }, {})
+}
+
+export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
+  const aggregatedHome = await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+  const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
+
+  const countryPosts = await buildCountryPosts(SUPPORTED_COUNTRIES)
+
+  return {
+    initialPosts,
+    featuredPosts,
+    countryPosts,
+    initialData,
+  }
+}
+
+export async function buildHomeContentPropsForEdition(
+  baseUrl: string,
+  edition: SupportedEdition,
+): Promise<HomeContentServerProps> {
+  const aggregatedHome = isAfricanEdition(edition)
+    ? await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+    : await fetchAggregatedHomeForCountry(edition.code)
+
+  const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
+
+  const countryPosts = isCountryEdition(edition)
+    ? await buildCountryPosts([edition.code], { [edition.code]: aggregatedHome })
+    : { [AFRICAN_EDITION.code]: initialPosts }
 
   return {
     initialPosts,
