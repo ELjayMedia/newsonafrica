@@ -11,7 +11,7 @@ import { ArticleList } from "@/components/ArticleList"
 import { CommentList } from "@/components/CommentList"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ShareButtons } from "@/components/ShareButtons"
-import { ChevronLeft, ChevronRight, Clock, User, ArrowUp, Eye, Calendar, Gift } from "lucide-react"
+import { ChevronLeft, ChevronRight, User, ArrowUp, Calendar, Gift } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getRelatedPostsForCountry } from "@/lib/wordpress-api"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
@@ -27,7 +27,6 @@ interface ArticleClientContentProps {
 
 export function ArticleClientContent({ slug, countryCode, sourceCountryCode, initialData }: ArticleClientContentProps) {
   const [showScrollTop, setShowScrollTop] = useState(false)
-  const [estimatedReadTime, setEstimatedReadTime] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -53,20 +52,10 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
   }
 
   useEffect(() => {
-    const calculateReadTime = () => {
-      if (!contentRef.current) return
-      const text = contentRef.current.textContent || ""
-      const wordsPerMinute = 200
-      const wordCount = text.split(/\s+/).length
-      setEstimatedReadTime(Math.ceil(wordCount / wordsPerMinute))
-    }
-
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500)
     }
 
-    calculateReadTime()
-    handleScroll()
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
