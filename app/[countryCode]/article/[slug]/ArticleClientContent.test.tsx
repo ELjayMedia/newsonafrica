@@ -71,7 +71,7 @@ describe('ArticleClientContent', () => {
         slug="test-slug"
         countryCode="ng"
         initialData={initialData}
-      />,
+      />,    
     )
 
     await waitFor(() => {
@@ -91,6 +91,30 @@ describe('ArticleClientContent', () => {
         },
       }),
     )
+  })
+
+  it('renders skeleton placeholders while related posts are loading', () => {
+    vi.mocked(getRelatedPostsForCountry).mockImplementationOnce(
+      () => new Promise<any[]>((resolve) => {}),
+    )
+
+    const initialData = { ...baseInitialData, id: 789 }
+
+    const { container } = render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,   
+    )
+
+    const relatedSection = screen
+      .getByRole('heading', { name: /related articles/i })
+      .closest('section')
+
+    expect(relatedSection).not.toBeNull()
+    expect(relatedSection?.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('.animate-pulse')).not.toBeNull()
   })
 
   it('does not request related posts until the id is available', async () => {
