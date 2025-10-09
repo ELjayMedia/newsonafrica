@@ -218,6 +218,33 @@ describe("getPostsForCategories", () => {
   })
 })
 
+describe("fetchMostReadPosts", () => {
+  it("decodes HTML entities in normalized responses", async () => {
+    const mockPayload = [
+      {
+        id: 123,
+        slug: "encoded-title",
+        title: { rendered: "Leaders say &#39;hello&#39;" },
+        excerpt: { rendered: "It&#39;s a great day" },
+        date: "2024-05-01",
+      },
+    ]
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockPayload,
+    })
+
+    vi.stubGlobal("fetch", fetchMock)
+
+    const results = await wordpressApi.fetchMostReadPosts("sz", 1)
+
+    expect(results).toHaveLength(1)
+    expect(results[0].title).toBe("Leaders say 'hello'")
+    expect(results[0].excerpt).toBe("It's a great day")
+  })
+})
+
 describe("getFrontPageSlicesForCountry", () => {
   const createNode = (id: number, prefix: string) => ({
     databaseId: id,

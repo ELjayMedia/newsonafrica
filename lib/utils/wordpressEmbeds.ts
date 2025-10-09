@@ -1,3 +1,5 @@
+import { decodeHtmlEntities } from "./decodeHtmlEntities"
+
 export interface EmbedTransformer {
   name: string
   transform: (url: string) => string | null
