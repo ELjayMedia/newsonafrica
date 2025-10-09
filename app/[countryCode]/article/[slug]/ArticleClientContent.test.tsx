@@ -187,4 +187,26 @@ describe('ArticleClientContent', () => {
     expect(articleContent?.innerHTML).not.toContain('onclick')
     expect(articleContent?.textContent).toContain('Safe')
   })
+
+  it('transforms WordPress embed wrappers into responsive iframes', () => {
+    const initialData = {
+      ...baseInitialData,
+      content:
+        '<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube"><div class="wp-block-embed__wrapper">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div></figure>',
+    }
+
+    const { container } = render(
+      <ArticleClientContent
+        slug="test-slug"
+        countryCode="ng"
+        initialData={initialData}
+      />,
+    )
+
+    const iframe = container.querySelector('iframe')
+    expect(iframe).not.toBeNull()
+    expect(iframe).toHaveAttribute('src', 'https://www.youtube.com/embed/dQw4w9WgXcQ')
+    expect(iframe).toHaveAttribute('loading', 'lazy')
+    expect(iframe?.parentElement?.className).toContain('wp-embed-responsive')
+  })
 })
