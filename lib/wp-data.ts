@@ -1,10 +1,5 @@
-import {
-  COUNTRIES,
-  type WordPressCategory,
-  type WordPressPost,
-  getLatestPostsForCountry,
-  getPostsByCategoryForCountry,
-} from "@/lib/wordpress-api"
+import { type WordPressCategory, getLatestPostsForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { COUNTRIES, type WordPressPost } from "@/lib/wordpress/client"
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 

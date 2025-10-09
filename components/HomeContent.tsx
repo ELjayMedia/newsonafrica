@@ -19,7 +19,7 @@ import {
   getFpTaggedPostsForCountry,
   mapPostsToHomePosts,
 } from "@/lib/wordpress-api"
-import type { WordPressPost } from "@/lib/wordpress-api"
+import type { WordPressPost } from "@/lib/wordpress/client"
 import { getCurrentCountry, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
