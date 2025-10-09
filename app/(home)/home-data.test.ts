@@ -12,49 +12,121 @@ afterEach(() => {
 })
 
 describe("fetchAggregatedHome", () => {
-  it("falls back to WordPress aggregation when the API request fails", async () => {
+  const aggregatedWithContent: AggregatedHomeData = {
+    heroPost: {
+      id: "hero",
+      slug: "lead-story",
+      title: "Lead Story",
+      excerpt: "Lead",
+      date: "2024-01-01T00:00:00.000Z",
+    },
+    secondaryPosts: [
+      {
+        id: "secondary-1",
+        slug: "secondary-one",
+        title: "Secondary One",
+        excerpt: "Secondary One",
+        date: "2024-01-02T00:00:00.000Z",
+      },
+    ],
+    remainingPosts: [
+      {
+        id: "remaining-1",
+        slug: "more-one",
+        title: "More One",
+        excerpt: "More One",
+        date: "2024-01-03T00:00:00.000Z",
+      },
+    ],
+  }
+
+  it("returns aggregated WordPress content when it is available", async () => {
     vi.resetModules()
     vi.doMock("server-only", () => ({}))
 
-    const fallbackData: AggregatedHomeData = {
-      heroPost: null,
-      secondaryPosts: [],
-      remainingPosts: [],
-    }
-
-    const fetchMock = vi.fn().mockRejectedValue(new Error("network error"))
+    const fetchMock = vi.fn(() => {
+      throw new Error("API route should not be called when WordPress succeeds")
+    })
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
     const wordpressApi = await import("@/lib/wordpress-api")
-    const fallbackSpy = vi
+    const aggregatedSpy = vi
       .spyOn(wordpressApi, "getAggregatedLatestHome")
-      .mockResolvedValue(fallbackData)
+      .mockResolvedValue(aggregatedWithContent)
 
     const homeDataModule = await import("./home-data")
     const result = await homeDataModule.fetchAggregatedHome(BASE_URL, CACHE_TAGS)
 
-    expect(result).toBe(fallbackData)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fallbackSpy).toHaveBeenCalledTimes(1)
+    expect(result).toBe(aggregatedWithContent)
+    expect(aggregatedSpy).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("deduplicates requests so the fallback aggregation only runs once per render", async () => {
+  it("falls back to the API route when the WordPress aggregation fails", async () => {
     vi.resetModules()
     vi.doMock("server-only", () => ({}))
 
-    const fallbackData: AggregatedHomeData = {
-      heroPost: null,
+    const apiPayload: AggregatedHomeData = {
+      heroPost: {
+        id: "api-hero",
+        slug: "api-lead",
+        title: "API Lead",
+        excerpt: "API Lead",
+        date: "2024-02-01T00:00:00.000Z",
+      },
       secondaryPosts: [],
       remainingPosts: [],
     }
 
-    const fetchMock = vi.fn().mockRejectedValue(new Error("network error"))
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify(apiPayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
     const wordpressApi = await import("@/lib/wordpress-api")
-    const fallbackSpy = vi
+    const aggregatedSpy = vi
       .spyOn(wordpressApi, "getAggregatedLatestHome")
-      .mockResolvedValue(fallbackData)
+      .mockRejectedValue(new Error("wp error"))
+
+    const homeDataModule = await import("./home-data")
+    const result = await homeDataModule.fetchAggregatedHome(BASE_URL, CACHE_TAGS)
+
+    expect(result).toEqual(apiPayload)
+    expect(aggregatedSpy).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("deduplicates fallback API requests when the WordPress aggregation fails", async () => {
+    vi.resetModules()
+    vi.doMock("server-only", () => ({}))
+
+    const apiPayload: AggregatedHomeData = {
+      heroPost: {
+        id: "api-hero",
+        slug: "api-lead",
+        title: "API Lead",
+        excerpt: "API Lead",
+        date: "2024-02-01T00:00:00.000Z",
+      },
+      secondaryPosts: [],
+      remainingPosts: [],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify(apiPayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    const wordpressApi = await import("@/lib/wordpress-api")
+    const aggregatedSpy = vi
+      .spyOn(wordpressApi, "getAggregatedLatestHome")
+      .mockRejectedValue(new Error("wp error"))
 
     const homeDataModule = await import("./home-data")
 
@@ -63,10 +135,10 @@ describe("fetchAggregatedHome", () => {
       homeDataModule.fetchAggregatedHome(BASE_URL, CACHE_TAGS),
     ])
 
-    expect(first).toBe(fallbackData)
-    expect(second).toBe(fallbackData)
+    expect(first).toEqual(apiPayload)
+    expect(second).toEqual(apiPayload)
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fallbackSpy).toHaveBeenCalledTimes(1)
+    expect(aggregatedSpy).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -235,12 +307,9 @@ describe("buildHomeContentProps", () => {
       ],
     }
 
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify(aggregatedHome), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    )
+    const fetchMock = vi.fn(() => {
+      throw new Error("API route should not be called when WordPress succeeds")
+    })
     vi.stubGlobal("fetch", fetchMock)
 
     const countryPosts = SUPPORTED_COUNTRIES.reduce<Record<string, HomePost[]>>((acc, countryCode, index) => {
@@ -258,6 +327,9 @@ describe("buildHomeContentProps", () => {
     }, {})
 
     const wordpressApi = await import("@/lib/wordpress-api")
+    const aggregatedSpy = vi
+      .spyOn(wordpressApi, "getAggregatedLatestHome")
+      .mockResolvedValue(aggregatedHome)
     const fpSpy = vi
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockImplementation(async (countryCode: string) => countryPosts[countryCode] ?? [])
@@ -266,7 +338,8 @@ describe("buildHomeContentProps", () => {
 
     const result = await homeDataModule.buildHomeContentProps(BASE_URL)
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(aggregatedSpy).toHaveBeenCalledTimes(1)
     expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
     SUPPORTED_COUNTRIES.forEach((countryCode) => {
       expect(fpSpy).toHaveBeenCalledWith(countryCode, expect.any(Number))

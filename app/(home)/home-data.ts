@@ -51,16 +51,68 @@ const buildCacheKey = (baseUrl: string, cacheTags: string[]): string => {
   return `${baseUrl}|${normalizedTags.join("|")}`
 }
 
+const hasAggregatedHomeContent = ({
+  heroPost,
+  secondaryPosts,
+  remainingPosts,
+}: AggregatedHomeData): boolean =>
+  Boolean(heroPost || secondaryPosts.length > 0 || remainingPosts.length > 0)
+
 async function fetchAggregatedHomeUncached(
   baseUrl: string,
   cacheTags: string[],
 ): Promise<AggregatedHomeData> {
   try {
-    return await getAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT)
+    const aggregated = await getAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT)
+
+    if (hasAggregatedHomeContent(aggregated)) {
+      return aggregated
+    }
+
+    console.warn("[v0] Direct WordPress aggregation returned no content, falling back to API", {
+      baseUrl,
+      cacheTags,
+    })
   } catch (error) {
-    console.error("Failed to fetch home feed", { error, baseUrl, cacheTags })
-    return createEmptyAggregatedHome()
+    console.error("[v0] Failed to fetch aggregated home feed from WordPress", {
+      error,
+      baseUrl,
+      cacheTags,
+    })
   }
+
+  const endpoint = new URL("/api/home-feed", baseUrl)
+
+  try {
+    const response = await fetch(endpoint, {
+      next: { tags: cacheTags, revalidate: HOME_FEED_REVALIDATE },
+    })
+
+    if (response.ok) {
+      const data = (await response.json()) as AggregatedHomeData | null
+
+      if (data && hasAggregatedHomeContent(data)) {
+        return data
+      }
+
+      console.warn("[v0] Home feed API returned an empty payload", {
+        endpoint: endpoint.toString(),
+      })
+    } else {
+      console.error("[v0] Home feed API request failed", {
+        endpoint: endpoint.toString(),
+        status: response.status,
+        statusText: response.statusText,
+      })
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch home feed via API route", {
+      error,
+      endpoint: endpoint.toString(),
+    })
+  }
+
+  return createEmptyAggregatedHome()
 }
 
 export function fetchAggregatedHome(
