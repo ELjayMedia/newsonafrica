@@ -2,14 +2,49 @@ import { Suspense } from "react"
 import { SearchContent } from "@/components/SearchContent"
 import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
 import { SearchDebugger } from "@/components/SearchDebugger"
+import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 
-interface SearchPageProps {
-  searchParams: { q?: string; page?: string }
+const PAN_AFRICAN_CODE = "all"
+const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
+
+const normalizeCountryParam = (value?: string | null): string => {
+  if (!value) {
+    return PAN_AFRICAN_CODE
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (
+    normalized === PAN_AFRICAN_CODE ||
+    normalized === "pan" ||
+    normalized === "africa" ||
+    normalized === "pan-africa" ||
+    normalized === "african"
+  ) {
+    return PAN_AFRICAN_CODE
+  }
+
+  if (SUPPORTED_COUNTRY_CODES.has(normalized)) {
+    return normalized
+  }
+
+  return PAN_AFRICAN_CODE
 }
 
-export default function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams.q || ""
-  const page = Number.parseInt(searchParams.page || "1", 10)
+const normalizeSortParam = (value?: string | null): "relevance" | "latest" =>
+  value === "latest" ? "latest" : "relevance"
+
+interface SearchPageProps {
+  searchParams: Promise<{ q?: string; page?: string; country?: string; sort?: string }>
+}
+
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const resolvedParams = await searchParams
+  const query = resolvedParams.q || ""
+  const parsedPage = Number.parseInt(resolvedParams.page || "1", 10)
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
+  const country = normalizeCountryParam(resolvedParams.country)
+  const sort = normalizeSortParam(resolvedParams.sort)
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -24,7 +59,12 @@ export default function SearchPage({ searchParams }: SearchPageProps) {
         )}
 
         <Suspense fallback={<SearchPageSkeleton />}>
-          <SearchContent initialQuery={query} />
+          <SearchContent
+            initialQuery={query}
+            initialPage={page}
+            initialCountry={country}
+            initialSort={sort}
+          />
         </Suspense>
       </div>
     </div>
