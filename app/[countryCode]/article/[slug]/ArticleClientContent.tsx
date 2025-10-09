@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArticleList } from "@/components/ArticleList"
+import { ArticleBody } from "@/components/article/ArticleBody"
 import { CommentList } from "@/components/CommentList"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ShareButtons } from "@/components/ShareButtons"
@@ -197,39 +198,7 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
           )}
         </header>
 
-        <div
-          className="prose prose-lg lg:prose-xl max-w-none mb-12 lg:mb-16
-                     prose-headings:font-bold prose-headings:text-foreground prose-headings:tracking-tight
-                     prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:leading-tight
-                     prose-h3:text-2xl prose-h3:mt-10 prose-h3:mb-4
-                     prose-h4:text-xl prose-h4:mt-8 prose-h4:mb-3
-                     prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-6 prose-p:text-lg
-                     prose-a:text-primary prose-a:no-underline prose-a:font-medium hover:prose-a:underline prose-a:transition-all
-                     prose-strong:text-foreground prose-strong:font-semibold
-                     prose-em:text-foreground prose-em:italic
-                     prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
-                     prose-figure:my-10
-                     prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-muted-foreground prose-figcaption:mt-3
-                     prose-blockquote:border-l-4 prose-blockquote:border-l-primary prose-blockquote:bg-muted/40 
-                     prose-blockquote:rounded-r-lg prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:my-8
-                     prose-blockquote:not-italic prose-blockquote:text-foreground/90
-                     prose-code:bg-muted prose-code:text-foreground prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
-                     prose-code:before:content-none prose-code:after:content-none
-                     prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
-                     prose-pre:overflow-x-auto prose-pre:text-sm
-                     prose-ol:my-6 prose-ol:pl-6 prose-ol:space-y-2
-                     prose-ul:my-6 prose-ul:pl-6 prose-ul:space-y-2
-                     prose-li:text-foreground prose-li:leading-relaxed prose-li:text-lg
-                     prose-li:marker:text-primary
-                     prose-table:my-8 prose-table:border-collapse
-                     prose-thead:border-b-2 prose-thead:border-border
-                     prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-th:text-foreground
-                     prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-border prose-td:text-foreground
-                     prose-hr:my-10 prose-hr:border-border"
-          dangerouslySetInnerHTML={{
-            __html: articleHtml,
-          }}
-        />
+        <ArticleBody html={articleHtml} className="mb-12 lg:mb-16" />
 
         {postId && (
           <section id="comments" className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
