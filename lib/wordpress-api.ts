@@ -16,6 +16,7 @@ import {
 import * as log from "./log"
 import type { CircuitBreakerManager } from "./api/circuit-breaker"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
+import { decodeHtmlEntities } from "./utils/decodeHtmlEntities"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { mapWpPost } from "./utils/mapWpPost"
 import { APIError } from "./utils/errorHandling"
@@ -80,8 +81,8 @@ const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): H
   id: resolveHomePostId(post),
   globalRelayId: post.globalRelayId,
   slug: post.slug ?? "",
-  title: post.title ?? "",
-  excerpt: post.excerpt ?? "",
+  title: decodeHtmlEntities(typeof post.title === "string" ? post.title : ""),
+  excerpt: decodeHtmlEntities(typeof post.excerpt === "string" ? post.excerpt : ""),
   date: post.date ?? "",
   country: countryCode,
   featuredImage: post.featuredImage?.node
@@ -1233,10 +1234,15 @@ export const getRelatedPosts = async (
 
 const resolveRenderedText = (value: unknown): string => {
   if (typeof value === "string") {
-    return value
+    return decodeHtmlEntities(value)
   }
-  if (value && typeof value === "object" && "rendered" in value && typeof (value as any).rendered === "string") {
-    return (value as any).rendered
+  if (
+    value &&
+    typeof value === "object" &&
+    "rendered" in value &&
+    typeof (value as { rendered?: unknown }).rendered === "string"
+  ) {
+    return decodeHtmlEntities((value as { rendered?: string }).rendered ?? "")
   }
   return ""
 }

@@ -1,3 +1,5 @@
+import { decodeHtmlEntities } from "./decodeHtmlEntities"
+
 export interface EmbedTransformer {
   name: string
   transform: (url: string) => string | null
@@ -121,10 +123,6 @@ const EMBED_TRANSFORMERS: EmbedTransformer[] = [
     },
   },
 ]
-
-function decodeHtmlEntities(value: string): string {
-  return value.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-}
 
 export function transformWordPressEmbeds(html: string): string {
   if (!html) {

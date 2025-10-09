@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { env } from "@/config/env"
 import { fetchWithTimeout } from "@/lib/utils/fetchWithTimeout"
+import { decodeHtmlEntities } from "@/lib/utils/decodeHtmlEntities"
 import type { HomePost } from "@/types/home"
 
 const DEFAULT_LIMIT = 5
@@ -18,10 +19,15 @@ const extractPosts = (payload: unknown): unknown[] => {
 
 const resolveRenderedText = (value: unknown): string => {
   if (typeof value === "string") {
-    return value
+    return decodeHtmlEntities(value)
   }
-  if (value && typeof value === "object" && "rendered" in value && typeof (value as any).rendered === "string") {
-    return (value as any).rendered
+  if (
+    value &&
+    typeof value === "object" &&
+    "rendered" in value &&
+    typeof (value as { rendered?: unknown }).rendered === "string"
+  ) {
+    return decodeHtmlEntities((value as { rendered?: string }).rendered ?? "")
   }
   return ""
 }
