@@ -11,7 +11,10 @@ import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import {
   getAggregatedLatestHome,
   getFpTaggedPostsForCountry,
+  getFrontPageSlicesForCountry,
+  mapWordPressPostToHomePost,
   type AggregatedHomeData,
+  type WordPressPost,
 } from "@/lib/wordpress-api"
 import type { Category } from "@/types/content"
 import type { CountryPosts, HomePost } from "@/types/home"
@@ -25,12 +28,49 @@ const createEmptyAggregatedHome = (): AggregatedHomeData => ({
   remainingPosts: [],
 })
 
+const createHomePostKey = (post: HomePost): string => {
+  if (post.globalRelayId) {
+    return post.globalRelayId
+  }
+
+  if (post.id) {
+    return `${post.country ?? ""}:${post.id}`
+  }
+
+  if (post.slug) {
+    return `${post.country ?? ""}:${post.slug}`
+  }
+
+  return JSON.stringify({
+    title: post.title,
+    date: post.date,
+  })
+}
+
+const dedupeHomePosts = (posts: HomePost[]): HomePost[] => {
+  const seen = new Set<string>()
+  const unique: HomePost[] = []
+
+  for (const post of posts) {
+    const key = createHomePostKey(post)
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(post)
+    }
+  }
+
+  return unique
+}
+
 const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => {
-  if (posts.length === 0) {
+  const uniquePosts = dedupeHomePosts(posts)
+
+  if (uniquePosts.length === 0) {
     return createEmptyAggregatedHome()
   }
 
-  const [heroPost, ...rest] = posts
+  const [heroPost, ...rest] = uniquePosts
 
   return {
     heroPost,
@@ -57,6 +97,41 @@ const hasAggregatedHomeContent = ({
   remainingPosts,
 }: AggregatedHomeData): boolean =>
   Boolean(heroPost || secondaryPosts.length > 0 || remainingPosts.length > 0)
+
+const FEATURED_POST_LIMIT = 6
+const TAGGED_POST_LIMIT = 8
+const RECENT_POST_LIMIT = 10
+
+const mapFrontPageSlicesToHomePosts = (
+  countryCode: string,
+  slices: Awaited<ReturnType<typeof getFrontPageSlicesForCountry>>,
+): HomePost[] => {
+  const posts: HomePost[] = []
+
+  const pushPost = (post: WordPressPost | null | undefined) => {
+    if (!post) {
+      return
+    }
+
+    posts.push(mapWordPressPostToHomePost(post, countryCode))
+  }
+
+  pushPost(slices.hero?.heroPost)
+
+  if (slices.hero?.secondaryStories?.length) {
+    slices.hero.secondaryStories.forEach(pushPost)
+  }
+
+  if (slices.trending?.posts?.length) {
+    slices.trending.posts.forEach(pushPost)
+  }
+
+  if (slices.latest?.posts?.length) {
+    slices.latest.posts.forEach(pushPost)
+  }
+
+  return dedupeHomePosts(posts)
+}
 
 async function fetchAggregatedHomeUncached(
   baseUrl: string,
@@ -138,13 +213,49 @@ export async function fetchAggregatedHomeForCountry(
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
   try {
-    const fpTaggedPosts = await getFpTaggedPostsForCountry(countryCode, limit)
+    const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
+      heroLimit: Math.max(limit, FEATURED_POST_LIMIT),
+      heroFallbackLimit: Math.max(3, Math.min(limit, FEATURED_POST_LIMIT)),
+      trendingLimit: Math.max(limit, FEATURED_POST_LIMIT),
+      latestLimit: Math.max(RECENT_POST_LIMIT, limit * 2),
+    })
 
-    return buildAggregatedHomeFromPosts(fpTaggedPosts)
+    const frontPagePosts = mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices)
+    const aggregatedFromSlices = buildAggregatedHomeFromPosts(frontPagePosts)
+
+    if (hasAggregatedHomeContent(aggregatedFromSlices)) {
+      return aggregatedFromSlices
+    }
+
+    console.warn(
+      `[v0] Frontpage slices returned no content for ${countryCode}, falling back to fp-tag`,
+    )
   } catch (error) {
-    console.error(`[v0] Failed to assemble home feed for country ${countryCode}`, { error })
-    return createEmptyAggregatedHome()
+    console.error(
+      `[v0] Failed to assemble home feed for country ${countryCode} from frontpage slices`,
+      { error },
+    )
   }
+
+  try {
+    const fpTaggedPosts = await getFpTaggedPostsForCountry(countryCode, Math.max(limit, TAGGED_POST_LIMIT))
+
+    const aggregatedFromTags = buildAggregatedHomeFromPosts(fpTaggedPosts)
+
+    if (hasAggregatedHomeContent(aggregatedFromTags)) {
+      return aggregatedFromTags
+    }
+
+    console.warn(
+      `[v0] FP tag fallback returned no content for ${countryCode}, using empty aggregated home`,
+    )
+  } catch (error) {
+    console.error(`[v0] Failed to assemble home feed for country ${countryCode} from fp-tag`, {
+      error,
+    })
+  }
+
+  return createEmptyAggregatedHome()
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
@@ -170,10 +281,6 @@ const flattenAggregatedHome = ({
 
   return posts
 }
-
-const FEATURED_POST_LIMIT = 6
-const TAGGED_POST_LIMIT = 8
-const RECENT_POST_LIMIT = 10
 
 type HomeContentInitialData = {
   taggedPosts: HomePost[]
