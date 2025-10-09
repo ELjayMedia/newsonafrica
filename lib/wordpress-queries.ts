@@ -142,7 +142,7 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
 
 export const POSTS_BY_CATEGORY_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
-  query PostsByCategory($category: String!, $first: Int!) {
+  query PostsByCategory($category: String!, $first: Int!, $tagSlugs: [String!]!) {
     categories(where: { slug: [$category] }) {
       nodes {
         databaseId
@@ -158,6 +158,7 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
         categoryName: $category
+        tagSlugIn: $tagSlugs
       }
     ) {
       pageInfo {
@@ -369,9 +370,14 @@ export const wordpressQueries = {
     endpoint: 'categories',
     params: { slug },
   }),
-  postsByCategory: (id: number | string, limit = 20) => ({
+  postsByCategory: (id: number | string, limit = 20, options?: { tagId?: number | string }) => ({
     endpoint: 'posts',
-    params: { categories: id, per_page: limit, _embed: 1 },
+    params: {
+      categories: id,
+      per_page: limit,
+      _embed: 1,
+      ...(options?.tagId ? { tags: options.tagId } : {}),
+    },
   }),
   categoriesBySlugs: (slugs: string[]) => ({
     endpoint: 'categories',
