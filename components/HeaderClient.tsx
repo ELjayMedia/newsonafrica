@@ -9,7 +9,7 @@ import CountrySelector from "@/components/CountrySelector"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
 import { WeatherWidget } from "@/components/WeatherWidget"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
 
 export interface HeaderCategory {
   id: number
@@ -41,6 +41,8 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
     [],
   )
 
+  const homeHref = useMemo(() => getHomeHref(pathname), [pathname])
+
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <header
@@ -52,7 +54,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           {/* Top Bar */}
           <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
             <div className="flex items-center gap-2">
-              <Link href="/" className="flex items-center">
+              <Link href={homeHref} className="flex items-center">
                 <Image
                   src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
                   alt="News On Africa"

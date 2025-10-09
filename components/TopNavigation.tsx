@@ -4,14 +4,16 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sun, Moon, Search, Menu, User } from "lucide-react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { usePathname, useRouter } from "next/navigation"
+import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
 import { useUserPreferences, type ThemePreference } from "@/contexts/UserPreferencesContext"
 
 export function TopNavigation() {
   const [isDark, setIsDark] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+  const homeHref = getHomeHref(pathname)
   const { preferences, setTheme, updating } = useUserPreferences()
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function TopNavigation() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <Link href="/" className="text-2xl font-bold">
+            <Link href={homeHref} className="text-2xl font-bold">
               News On Africa
             </Link>
           </div>

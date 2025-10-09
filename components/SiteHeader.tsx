@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { getCategoryUrl } from "@/lib/utils/routing"
+import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
 import Image from "next/image"
 import { Menu, ChevronDown, Twitter, Facebook } from "lucide-react"
 import { useUser } from "@/contexts/UserContext"
@@ -193,6 +193,7 @@ export function SiteHeader() {
   const router = useRouter()
   const { user, signOut } = useUser()
   const pathname = usePathname()
+  const homeHref = getHomeHref(pathname)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [categoriesState, setCategoriesState] = useState<CategoriesState>({
     categories: [],
@@ -268,7 +269,7 @@ export function SiteHeader() {
                 <Menu className="h-5 w-5" />
               </button>
 
-              <Link href="/" className="flex items-center">
+              <Link href={homeHref} className="flex items-center">
                 <Image
                   src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
                   alt="News On Africa"
