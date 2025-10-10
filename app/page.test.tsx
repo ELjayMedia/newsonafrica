@@ -100,7 +100,15 @@ describe("HomePage", () => {
     const ui = await Page()
     const { getByTestId } = render(ui)
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const homeFeedCalls = fetchMock.mock.calls.filter(([input]) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input?.url ?? ""
+      return url.includes("/api/home-feed")
+    })
+    expect(homeFeedCalls).toHaveLength(2)
     expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length * 2)
     const [props] = homeContentMock.mock.calls.at(-1) ?? []
 
@@ -109,6 +117,7 @@ describe("HomePage", () => {
       featuredPosts: expected.featuredPosts,
       countryPosts: expected.countryPosts,
       initialData: expected.initialData,
+      editionCode: "african-edition",
     })
     expect(getByTestId("country-navigation")).toBeInTheDocument()
     expect(JSON.parse(getByTestId("initial-data").getAttribute("data-value") ?? "{}")).toEqual(

@@ -1,5 +1,6 @@
 import { HomeContent } from "@/components/HomeContent";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { AFRICAN_EDITION } from "@/lib/editions";
 
 import { buildHomeContentProps } from "./(home)/home-data";
 
@@ -17,6 +18,7 @@ export default async function Page() {
       featuredPosts={featuredPosts}
       countryPosts={countryPosts}
       initialData={initialData}
+      editionCode={AFRICAN_EDITION.code}
     />
   );
 }

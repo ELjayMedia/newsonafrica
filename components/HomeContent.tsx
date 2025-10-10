@@ -26,6 +26,8 @@ import type { Category } from "@/types/content"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import type { HomePost, CountryPosts } from "@/types/home"
 
+const HIDDEN_COUNTRY_NAVIGATION_CODES = new Set(["za", "sz"])
+
 interface HomeContentProps {
   initialPosts?: HomePost[]
   countryPosts?: CountryPosts
@@ -36,6 +38,7 @@ interface HomeContentProps {
     categories: Category[]
     recentPosts: HomePost[]
   }
+  editionCode?: string
 }
 
 // Check if we're in a browser environment and if we're online
@@ -101,6 +104,7 @@ export function HomeContent({
   countryPosts = {},
   featuredPosts = [],
   initialData,
+  editionCode,
 }: HomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
@@ -354,6 +358,10 @@ export function HomeContent({
     )
   }
 
+  const shouldShowCountryNavigation = !editionCode
+    ? true
+    : !HIDDEN_COUNTRY_NAVIGATION_CODES.has(editionCode)
+
   return (
     <ErrorBoundary>
       <SchemaOrg schemas={schemas} />
@@ -361,7 +369,7 @@ export function HomeContent({
         {renderOfflineNotification()}
 
         {/* Pan-African Country Navigation - Always shows all countries */}
-        <CountryNavigation />
+        {shouldShowCountryNavigation && <CountryNavigation />}
 
         {/* Hero Section - Shows content from selected country */}
         {mainStory && (

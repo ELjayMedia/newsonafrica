@@ -138,6 +138,7 @@ describe("HomeContent", () => {
             categories: [],
             recentPosts: [createPost("recent-post", "Recent Story")],
           }}
+          editionCode="sz"
         />
       </SWRConfig>,
     )
@@ -168,6 +169,7 @@ describe("HomeContent", () => {
     )
     expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
+    expect(screen.queryByTestId("country-navigation")).not.toBeInTheDocument()
 
     categoryConfigs.forEach((config) => {
       expect(screen.getByText(`${config.name} Story`)).toBeInTheDocument()
@@ -200,6 +202,7 @@ describe("HomeContent", () => {
     )
     expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
+    expect(screen.queryByTestId("country-navigation")).not.toBeInTheDocument()
     expect(screen.queryByText("Business Story")).not.toBeInTheDocument()
   })
 })

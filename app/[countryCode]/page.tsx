@@ -29,6 +29,7 @@ export default async function CountryPage({ params }: Props) {
       featuredPosts={featuredPosts}
       countryPosts={countryPosts}
       initialData={initialData}
+      editionCode={edition.code}
     />
   )
 }
