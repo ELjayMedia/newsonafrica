@@ -5,19 +5,11 @@ import { CompactCard } from "@/components/CompactCard"
 import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"
 import { getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import {
-  getLatestPostsForCountry,
-  getCategoriesForCountry,
-  getPostsForCategories,
-  getFpTaggedPostsForCountry,
-  mapPostsToHomePosts,
-} from "@/lib/wordpress-api"
-import type { WordPressPost } from "@/lib/wordpress/client"
-import { categoryConfigs } from "@/config/homeConfig"
+import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import type { Category } from "@/types/content"
 import type { HomePost } from "@/types/home"
 import { ChevronRight, TrendingUp } from "lucide-react"
@@ -29,6 +21,7 @@ interface CompactHomeContentProps {
     featuredPosts: HomePost[]
     categories: Category[]
     recentPosts: HomePost[]
+    categoryPosts?: Record<string, HomePost[]>
   }
 }
 
@@ -39,55 +32,87 @@ const isOnline = () => {
   return true
 }
 
-const fetchHomeData = async (): Promise<{
+type HomepageApiResponse = {
   taggedPosts: HomePost[]
   featuredPosts: HomePost[]
   categories: Category[]
   recentPosts: HomePost[]
-}> => {
+  categoryPosts?: Record<string, HomePost[]>
+}
+
+type FetchHomeDataOptions = {
+  country: string
+  categorySlugs?: string[]
+  categoryLimit?: number
+}
+
+const CATEGORY_POST_LIMIT = 4
+
+const fetchHomeData = async ({
+  country,
+  categorySlugs,
+  categoryLimit,
+}: FetchHomeDataOptions): Promise<HomepageApiResponse> => {
   try {
     if (!isOnline()) {
       throw new Error("Device is offline")
     }
 
-    const country = getCurrentCountry()
+    const params = new URLSearchParams({ country })
 
-    const results = await Promise.allSettled([
-      getFpTaggedPostsForCountry(country, 6),
-      getLatestPostsForCountry(country, 10),
-      getCategoriesForCountry(country),
-    ])
-
-    const taggedPosts =
-      results[0].status === "fulfilled" ? results[0].value : ([] as HomePost[])
-
-    const latestPostsResult =
-      results[1].status === "fulfilled" ? results[1].value : { posts: [] as any[] }
-    const recentPosts = mapPostsToHomePosts(latestPostsResult.posts ?? [], country)
-
-    const categoriesResult =
-      results[2].status === "fulfilled" ? results[2].value : { categories: [] }
-    const categories = categoriesResult.categories || []
-
-    const featuredPosts =
-      taggedPosts.length > 0 ? taggedPosts.slice(0, 6) : recentPosts.slice(0, 6)
-
-    return {
-      taggedPosts,
-      featuredPosts,
-      categories,
-      recentPosts,
+    if (categorySlugs?.length) {
+      params.set("categories", categorySlugs.join(","))
     }
+
+    if (categoryLimit) {
+      params.set("categoryLimit", String(categoryLimit))
+    }
+
+    const response = await fetch(`/api/homepage-data?${params.toString()}`)
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch homepage data: ${response.status}`)
+    }
+
+    return (await response.json()) as HomepageApiResponse
   } catch (error) {
     console.error("Error fetching home data:", error)
     throw error
   }
 }
 
+const mapCategoryPostsForConfigs = (
+  configs: CategoryConfig[],
+  categoryPostsBySlug?: Record<string, HomePost[]> | undefined,
+): Record<string, HomePost[]> => {
+  if (!categoryPostsBySlug) {
+    return {}
+  }
+
+  return configs.reduce<Record<string, HomePost[]>>((acc, config) => {
+    const slug = config.name.toLowerCase()
+    const posts = categoryPostsBySlug[slug] ?? categoryPostsBySlug[config.name]
+
+    if (posts?.length) {
+      acc[config.name] = posts
+    }
+
+    return acc
+  }, {})
+}
+
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>({})
+  const selectedConfigs = useMemo(() => categoryConfigs.slice(0, 3), [])
+  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>(() =>
+    mapCategoryPostsForConfigs(selectedConfigs, initialData?.categoryPosts),
+  )
+  const currentCountry = getCurrentCountry()
+  const categorySlugs = useMemo(
+    () => selectedConfigs.map((config) => config.name.toLowerCase()),
+    [selectedConfigs],
+  )
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -102,66 +127,85 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     }
   }, [])
 
-  const fallbackData =
-    initialData ||
-    (initialPosts.length > 0
+  const fallbackData: HomepageApiResponse = initialData
+    ? {
+        taggedPosts: initialData.taggedPosts,
+        featuredPosts: initialData.featuredPosts,
+        categories: initialData.categories,
+        recentPosts: initialData.recentPosts,
+        categoryPosts: initialData.categoryPosts ?? {},
+      }
+    : initialPosts.length > 0
       ? {
           taggedPosts: initialPosts.slice(0, 6),
           featuredPosts: initialPosts.slice(0, 6),
           categories: [],
           recentPosts: initialPosts.slice(0, 10),
+          categoryPosts: {},
         }
       : {
           taggedPosts: [],
           featuredPosts: [],
           categories: [],
           recentPosts: [],
-        })
+          categoryPosts: {},
+        }
 
-  const { data, error, isLoading } = useSWR<{
-    taggedPosts: HomePost[]
-    featuredPosts: HomePost[]
-    categories: Category[]
-    recentPosts: HomePost[]
-  }>("homepage-data", fetchHomeData, {
-    fallbackData,
-    revalidateOnMount: !initialData && !initialPosts.length,
-    revalidateOnFocus: false,
-    refreshInterval: isOffline ? 0 : 300000,
-    dedupingInterval: 60000,
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-    shouldRetryOnError: !isOffline,
-  })
+  const { data, error, isLoading } = useSWR<HomepageApiResponse>(
+    ["/homepage-data", currentCountry, categorySlugs.join(","), String(CATEGORY_POST_LIMIT)],
+    ([_, country]) =>
+      fetchHomeData({
+        country,
+        categorySlugs,
+        categoryLimit: CATEGORY_POST_LIMIT,
+      }),
+    {
+      fallbackData,
+      revalidateOnMount: !initialData && !initialPosts.length,
+      revalidateOnFocus: false,
+      refreshInterval: isOffline ? 0 : 300000,
+      dedupingInterval: 60000,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      shouldRetryOnError: !isOffline,
+    },
+  )
 
   useEffect(() => {
-    const fetchCategoryPosts = async () => {
+    let isCancelled = false
+
+    const updateCategoryPosts = async () => {
       if (isOffline) return
 
-      const country = getCurrentCountry()
-      const selectedConfigs = categoryConfigs.slice(0, 3)
-      const slugs = selectedConfigs.map((config) => config.name.toLowerCase())
-      const batchedPosts = await getPostsForCategories(country, slugs, 4)
+      if (data?.categoryPosts) {
+        setCategoryPosts(mapCategoryPostsForConfigs(selectedConfigs, data.categoryPosts))
+        return
+      }
 
-      const mapped: Record<string, HomePost[]> = {}
+      try {
+        const response = await fetchHomeData({
+          country: currentCountry,
+          categorySlugs,
+          categoryLimit: CATEGORY_POST_LIMIT,
+        })
 
-      selectedConfigs.forEach((config) => {
-        const slug = config.name.toLowerCase()
-        const categoryData = batchedPosts[slug]
+        if (isCancelled) return
 
-        if (categoryData?.posts?.length) {
-          mapped[config.name] = mapPostsToHomePosts(
-            categoryData.posts as WordPressPost[],
-            country,
-          )
+        setCategoryPosts(mapCategoryPostsForConfigs(selectedConfigs, response.categoryPosts))
+      } catch (error) {
+        console.error("Error fetching category posts:", error)
+        if (!isCancelled) {
+          setCategoryPosts({})
         }
-      })
-
-      setCategoryPosts(mapped)
+      }
     }
 
-    fetchCategoryPosts()
-  }, [isOffline])
+    updateCategoryPosts()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [isOffline, data?.categoryPosts, selectedConfigs, categorySlugs, currentCountry])
 
   const {
     taggedPosts = [],

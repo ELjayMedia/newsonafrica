@@ -49,16 +49,6 @@ vi.mock("@/components/ErrorBoundary", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
-const wpMocks = vi.hoisted(() => ({
-  getLatestPostsForCountry: vi.fn(),
-  getCategoriesForCountry: vi.fn(),
-  getPostsForCategories: vi.fn(),
-  getFpTaggedPostsForCountry: vi.fn(),
-  mapPostsToHomePosts: vi.fn((posts: any[]) => posts),
-}))
-
-vi.mock("@/lib/wordpress-api", () => wpMocks)
-
 vi.mock("@/lib/utils/routing", async () => {
   const actual = await vi.importActual<typeof import("@/lib/utils/routing")>(
     "@/lib/utils/routing",
@@ -90,43 +80,51 @@ const createPost = (slug: string, title: string): HomePost => ({
   excerpt: `${title} excerpt`,
 })
 
+const createFetchResponse = (data: unknown) =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(data),
+  } as Response)
+
 describe("HomeContent", () => {
+  const fetchMock = vi.fn()
+  const originalFetch = global.fetch
+
   beforeEach(() => {
     window.history.pushState({}, "", "/sz")
     window.localStorage.clear()
     document.cookie = "preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    fetchMock.mockReset()
+    global.fetch = fetchMock as unknown as typeof fetch
   })
 
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    global.fetch = originalFetch
   })
 
-  const renderHomeContent = async () => {
-    wpMocks.getFpTaggedPostsForCountry.mockResolvedValue([
-      createPost("fp-post", "Featured Story"),
-    ])
-    wpMocks.getLatestPostsForCountry.mockResolvedValue({
-      posts: [
-        {
-          id: 1,
-          slug: "latest-story",
-          date: new Date().toISOString(),
-          title: "Latest Story",
-          excerpt: "Latest Story excerpt",
-        },
-      ],
-    })
-    wpMocks.mapPostsToHomePosts.mockImplementation((posts: any[]) =>
-      posts.map((post) => ({
-        id: String(post.id ?? post.slug),
-        slug: post.slug,
-        date: post.date || new Date().toISOString(),
-        title: post.title ?? "",
-        excerpt: post.excerpt ?? "",
-      })),
-    )
-    wpMocks.getCategoriesForCountry.mockResolvedValue({ categories: [] })
+  const createApiPayload = (
+    overrides: Partial<{
+      taggedPosts: HomePost[]
+      featuredPosts: HomePost[]
+      categories: any[]
+      recentPosts: HomePost[]
+      categoryPosts: Record<string, HomePost[]>
+    }> = {},
+  ) => ({
+    taggedPosts: [createPost("fp-post", "Featured Story")],
+    featuredPosts: [createPost("feat-post", "Featured Story")],
+    categories: [],
+    recentPosts: [createPost("recent-post", "Recent Story")],
+    categoryPosts: overrides.categoryPosts ?? {},
+    ...overrides,
+  })
+
+  const renderHomeContent = async (overrides: Partial<ReturnType<typeof createApiPayload>> = {}) => {
+    const apiPayload = createApiPayload(overrides)
+    fetchMock.mockResolvedValueOnce(createFetchResponse(apiPayload))
 
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
@@ -142,31 +140,23 @@ describe("HomeContent", () => {
       </SWRConfig>,
     )
 
-    await waitFor(() => expect(wpMocks.getPostsForCategories).toHaveBeenCalled())
-    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    return apiPayload
   }
 
   it("renders posts for every configured category when data is available", async () => {
-    const batchedResponse: Record<string, any> = {}
+    const categoryPosts: Record<string, HomePost[]> = {}
 
-    categoryConfigs.forEach((config, index) => {
+    categoryConfigs.forEach((config) => {
       const slug = config.name.toLowerCase()
-      batchedResponse[slug] = {
-        category: { id: index + 1, name: config.name, slug },
-        posts: [createPost(`${slug}-post`, `${config.name} Story`)],
-        hasNextPage: false,
-        endCursor: null,
-      }
+      categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
     })
 
-    wpMocks.getPostsForCategories.mockResolvedValue(batchedResponse)
+    await renderHomeContent({ categoryPosts })
 
-    await renderHomeContent()
-
-    await waitFor(() =>
-      expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
-    )
-    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
+    await waitFor(() => expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0))
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("country=sz")
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("categories=")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
 
     categoryConfigs.forEach((config) => {
@@ -175,30 +165,20 @@ describe("HomeContent", () => {
   })
 
   it("continues rendering available categories when some responses are empty", async () => {
-    const batchedResponse: Record<string, any> = {}
+    const categoryPosts: Record<string, HomePost[]> = {}
 
-    categoryConfigs.forEach((config, index) => {
+    categoryConfigs.forEach((config) => {
       if (config.name === "Business") {
         return
       }
 
       const slug = config.name.toLowerCase()
-      batchedResponse[slug] = {
-        category: { id: index + 1, name: config.name, slug },
-        posts: [createPost(`${slug}-post`, `${config.name} Story`)],
-        hasNextPage: false,
-        endCursor: null,
-      }
+      categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
     })
 
-    wpMocks.getPostsForCategories.mockResolvedValue(batchedResponse)
+    await renderHomeContent({ categoryPosts })
 
-    await renderHomeContent()
-
-    await waitFor(() =>
-      expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0),
-    )
-    expect(wpMocks.getPostsForCategories.mock.calls[0]?.[0]).toBe("sz")
+    await waitFor(() => expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0))
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
     expect(screen.queryByText("Business Story")).not.toBeInTheDocument()
   })
