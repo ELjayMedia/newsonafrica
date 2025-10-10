@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import { SWRConfig } from "swr"
 import { SidebarContent } from "../SidebarContent"
 import { describe, it, expect, vi, beforeEach } from "vitest"
@@ -85,7 +85,8 @@ describe("SidebarContent", () => {
     renderWithSWR(<SidebarContent />)
 
     await waitFor(() => {
-      expect(fetchMostReadPosts).toHaveBeenCalled()
+      expect(fetchRecentPosts).toHaveBeenCalledWith(10, "sz")
+      expect(fetchMostReadPosts).toHaveBeenCalledWith("sz", 10)
     })
 
     expect(await screen.findByText("Top Story")).toBeInTheDocument()
@@ -93,7 +94,7 @@ describe("SidebarContent", () => {
     expect(screen.getByText("Latest News")).toBeInTheDocument()
   })
 
-  it("requests most-read posts for the current country", async () => {
+  it("requests sidebar content for the current country", async () => {
     getCurrentCountry.mockReturnValue("za")
 
     fetchRecentPosts.mockResolvedValue([
@@ -121,9 +122,53 @@ describe("SidebarContent", () => {
     renderWithSWR(<SidebarContent />)
 
     await waitFor(() => {
-      expect(fetchMostReadPosts).toHaveBeenCalledWith("za")
+      expect(fetchRecentPosts).toHaveBeenCalledWith(10, "za")
+      expect(fetchMostReadPosts).toHaveBeenCalledWith("za", 10)
     })
 
     expect(await screen.findByText("ZA Headline")).toBeInTheDocument()
+  })
+
+  it("retries loading data when the user requests it", async () => {
+    const error = new Error("Network error")
+
+    fetchRecentPosts
+      .mockRejectedValueOnce(error)
+      .mockResolvedValue([
+        {
+          id: "retry-1",
+          slug: "breaking-news",
+          title: "Recovered Story",
+          excerpt: "",
+          date: "2024-02-01",
+          categories: { nodes: [] },
+        },
+      ])
+
+    fetchMostReadPosts
+      .mockRejectedValueOnce(error)
+      .mockResolvedValue([
+        {
+          id: "retry-most",
+          slug: "top-story",
+          title: "Recovered Most Read",
+          excerpt: "",
+          date: "2024-02-02",
+        },
+      ])
+
+    renderWithSWR(<SidebarContent />)
+
+    expect(await screen.findByText("Unable to load content")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }))
+
+    await waitFor(() => {
+      expect(fetchRecentPosts.mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(fetchMostReadPosts.mock.calls.length).toBeGreaterThanOrEqual(2)
+    })
+
+    expect(await screen.findByText("Recovered Most Read")).toBeInTheDocument()
+    expect(await screen.findByText("Recovered Story")).toBeInTheDocument()
   })
 })

@@ -13,6 +13,23 @@ import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 import { Button } from "@/components/ui/button"
 
+type SidebarContentData = {
+  recent: any[]
+  mostRead: any[]
+}
+
+async function fetchSidebarContentData(country: string): Promise<SidebarContentData> {
+  const [recentResponse, mostReadResponse] = await Promise.all([
+    fetchRecentPosts(10, country),
+    fetchMostReadPosts(country, 10),
+  ])
+
+  const recent = Array.isArray(recentResponse) ? recentResponse : []
+  const mostRead = Array.isArray(mostReadResponse) ? mostReadResponse : []
+
+  return { recent, mostRead }
+}
+
 export function SidebarContent() {
   const country = getCurrentCountry()
   const { preferences } = useUserPreferences()
@@ -22,44 +39,32 @@ export function SidebarContent() {
     [preferences.sections],
   )
 
-  const {
-    data: recentData,
-    error: recentError,
-    isLoading: isRecentLoading,
-    mutate: mutateRecent,
-  } = useSWR(["recentPosts", country], () => fetchRecentPosts(10, country), {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 1000 * 60 * 5,
-    shouldRetryOnError: true,
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-  })
+  const { data, error, isLoading, mutate } = useSWR<SidebarContentData>(
+    ["sidebar-content", country],
+    () => fetchSidebarContentData(country),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 1000 * 60 * 3,
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+    },
+  )
 
-  const {
-    data: mostReadData,
-    error: mostReadError,
-    isLoading: isMostReadLoading,
-    mutate: mutateMostRead,
-  } = useSWR(["mostRead", country], () => fetchMostReadPosts(country, 10), {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 1000 * 60 * 3, // Reduced to 3 minutes for more frequent analytics updates
-    shouldRetryOnError: true,
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-  })
+  const recentPosts = Array.isArray(data?.recent) ? data.recent : []
+  const mostReadPosts = Array.isArray(data?.mostRead) ? data.mostRead : []
 
   const personalizedPosts = useMemo(() => {
-    if (!recentData || !Array.isArray(recentData)) {
+    if (!recentPosts.length) {
       return []
     }
 
     if (!preferredSections.length) {
-      return recentData
+      return recentPosts
     }
 
-    const matches = recentData.filter((post) => {
+    const matches = recentPosts.filter((post) => {
       const categories = post.categories?.nodes || []
       return categories.some((category: any) => {
         const slug = (category?.slug || category?.name || "").toLowerCase()
@@ -67,21 +72,18 @@ export function SidebarContent() {
       })
     })
 
-    return matches.length > 0 ? matches : recentData
-  }, [recentData, preferredSections])
-
-  const mostReadPosts = useMemo(() => (Array.isArray(mostReadData) ? mostReadData : []), [mostReadData])
+    return matches.length > 0 ? matches : recentPosts
+  }, [recentPosts, preferredSections])
 
   const handleRetry = useCallback(() => {
-    mutateRecent()
-    mutateMostRead()
-  }, [mutateRecent, mutateMostRead])
+    mutate()
+  }, [mutate])
 
-  if (isRecentLoading || isMostReadLoading) {
+  if (isLoading) {
     return <SidebarSkeleton />
   }
 
-  if (recentError || mostReadError) {
+  if (error) {
     return (
       <div className="space-y-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
