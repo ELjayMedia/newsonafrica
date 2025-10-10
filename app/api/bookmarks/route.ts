@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
 
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
@@ -15,8 +14,7 @@ export const revalidate = 60
 export async function GET(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const {
       data: { user },
@@ -107,8 +105,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const {
       data: { user },
@@ -171,8 +168,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const {
       data: { user },
@@ -229,8 +225,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   logRequest(request)
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const {
       data: { user },

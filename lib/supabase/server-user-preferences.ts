@@ -1,5 +1,3 @@
-import { cookies } from "next/headers"
-
 import { createClient } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
@@ -13,8 +11,7 @@ const EMPTY_PREFERENCES: ServerUserPreferences = {
 
 export async function getServerUserPreferences(): Promise<ServerUserPreferences> {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const {
       data: { session },
