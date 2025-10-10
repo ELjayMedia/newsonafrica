@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
 import { getLatestPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
-import { COUNTRIES } from "@/lib/wordpress/client"
+import {
+  COUNTRY_CODES,
+  COUNTRY_METADATA,
+  COUNTRY_METADATA_MAP,
+} from "@/lib/country-metadata"
 import type { CountryPosts } from "@/types/home"
 import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
   const [showAll, setShowAll] = useState(false)
-  const countries = Object.values(COUNTRIES)
+  const countries = COUNTRY_METADATA
   const displayedCountries = showAll ? countries : countries.slice(0, 6)
 
   return (
@@ -81,7 +85,7 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
       setIsLoading(true)
 
       try {
-        const allCountries = Object.keys(COUNTRIES)
+        const allCountries = COUNTRY_CODES
         // Fetch posts from all countries except the current one (to show diversity)
         const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
 
@@ -159,7 +163,7 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
 
       <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
         {spotlightCountries.map(([countryCode, posts]) => {
-          const country = COUNTRIES[countryCode]
+          const country = COUNTRY_METADATA_MAP[countryCode]
           if (!country || !posts || posts.length === 0) return null
 
           return (

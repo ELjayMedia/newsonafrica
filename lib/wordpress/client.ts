@@ -1,3 +1,5 @@
+import "server-only"
+
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"

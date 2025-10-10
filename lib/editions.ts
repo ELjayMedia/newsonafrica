@@ -23,7 +23,9 @@ export interface AfricanEdition extends BaseEdition {
 
 export type SupportedEdition = CountryEdition | AfricanEdition
 
-const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint" | "restEndpoint">> = [
+export const COUNTRY_DEFINITIONS: Array<
+  Omit<CountryEdition, "type" | "apiEndpoint" | "restEndpoint">
+> = [
   {
     code: "sz",
     name: "Eswatini",
