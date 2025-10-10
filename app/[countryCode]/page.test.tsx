@@ -1,86 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
-
-import { HOME_FEED_CACHE_TAGS, type AggregatedHomeData } from "../(home)/home-data"
 
 vi.mock("server-only", () => ({}))
 
-const heroMock = vi.fn(() => <div data-testid="hero">Hero</div>)
-const trendingMock = vi.fn(() => <div data-testid="trending">Trending</div>)
-const latestMock = vi.fn(() => <div data-testid="latest">Latest</div>)
-
+const homeContentMock = vi.fn(() => <div data-testid="home-content" />)
 const notFoundMock = vi.fn<never, []>()
-
-const { fetchAggregatedHomeMock, fetchAggregatedHomeForCountryMock } = vi.hoisted(() => ({
-  fetchAggregatedHomeMock: vi.fn<Promise<AggregatedHomeData>, [string, string[]]>(),
-  fetchAggregatedHomeForCountryMock: vi.fn<Promise<AggregatedHomeData>, [string]>(),
-}))
 
 vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
 }))
 
-vi.mock("@/lib/site-url", () => ({
-  getSiteBaseUrl: () => "https://example.com",
-  SITE_BASE_URL: "https://example.com",
+vi.mock("@/components/HomeContent", () => ({
+  HomeContent: homeContentMock,
 }))
 
-vi.mock("../(home)/HeroSection", () => ({
-  HeroSection: heroMock,
-}))
-
-vi.mock("../(home)/TrendingSection", () => ({
-  TrendingSection: trendingMock,
-}))
-
-vi.mock("../(home)/LatestGridSection", () => ({
-  LatestGridSection: latestMock,
-}))
-
-vi.mock("../(home)/home-data", async () => {
-  const actual = await vi.importActual<typeof import("../(home)/home-data")>("../(home)/home-data")
-
-  return {
-    ...actual,
-    fetchAggregatedHome: fetchAggregatedHomeMock,
-    fetchAggregatedHomeForCountry: fetchAggregatedHomeForCountryMock,
-  }
+beforeAll(() => {
+  process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://newsonafrica.com/sz/graphql"
+  process.env.NEXT_PUBLIC_WP_SZ_REST_BASE = "https://newsonafrica.com/sz/wp-json/wp/v2"
+  process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://newsonafrica.com/za/graphql"
+  process.env.NEXT_PUBLIC_WP_ZA_REST_BASE = "https://newsonafrica.com/za/wp-json/wp/v2"
 })
-
-const MOCK_AGGREGATED_HOME: AggregatedHomeData = {
-  heroPost: {
-    id: "hero",
-    slug: "hero-story",
-    title: "Hero Story",
-    excerpt: "<p>Lead</p>",
-    date: "2024-01-01T00:00:00.000Z",
-  },
-  secondaryPosts: [
-    {
-      id: "secondary",
-      slug: "secondary-story",
-      title: "Second Story",
-      excerpt: "<p>Summary</p>",
-      date: "2024-01-02T00:00:00.000Z",
-    },
-  ],
-  remainingPosts: [
-    {
-      id: "remaining",
-      slug: "more-story",
-      title: "More Story",
-      excerpt: "<p>More</p>",
-      date: "2024-01-03T00:00:00.000Z",
-    },
-  ],
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
-
-  fetchAggregatedHomeMock.mockResolvedValue(MOCK_AGGREGATED_HOME)
-  fetchAggregatedHomeForCountryMock.mockResolvedValue(MOCK_AGGREGATED_HOME)
-
   notFoundMock.mockImplementation(() => {
     throw new Error("notFound called")
   })
@@ -94,33 +36,44 @@ describe("CountryPage", () => {
   it.each([
     ["sz", "sz"],
     ["ZA", "za"],
-  ])("renders the hero, trending and latest sections for %s", async (countryCode, expectedCode) => {
+  ])("provides HomeContent props for the %s edition", async (countryCode, expectedCode) => {
+    const homeData = await import("../(home)/home-data")
+    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+
     const { default: CountryPage } = await import("./page")
 
     const countryUi = await CountryPage({ params: { countryCode } })
-    const { getByTestId } = render(countryUi)
+    render(countryUi)
 
-    expect(getByTestId("hero")).toBeInTheDocument()
-    expect(getByTestId("trending")).toBeInTheDocument()
-    expect(getByTestId("latest")).toBeInTheDocument()
-    expect(fetchAggregatedHomeMock).not.toHaveBeenCalled()
-    expect(fetchAggregatedHomeForCountryMock).toHaveBeenCalledWith(expectedCode)
+    expect(homeContentMock).toHaveBeenCalledTimes(1)
+    const [props] = homeContentMock.mock.calls[0]
+
+    const expectedProps = await propsSpy.mock.results[0]?.value
+    expect(expectedProps).toBeDefined()
+    expect(props).toEqual(expectedProps)
+    expect(props.countryPosts).toHaveProperty(expectedCode)
     expect(notFoundMock).not.toHaveBeenCalled()
+    propsSpy.mockRestore()
   })
 
-  it("renders the African edition using the aggregated home feed", async () => {
+  it("uses the aggregated home feed for the African edition fallback", async () => {
+    const homeData = await import("../(home)/home-data")
+    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+
     const { default: CountryPage } = await import("./page")
 
     const countryUi = await CountryPage({ params: { countryCode: "african-edition" } })
-    const { getByTestId } = render(countryUi)
+    render(countryUi)
 
-    expect(getByTestId("hero")).toBeInTheDocument()
-    expect(getByTestId("trending")).toBeInTheDocument()
-    expect(getByTestId("latest")).toBeInTheDocument()
-    expect(fetchAggregatedHomeMock).toHaveBeenCalledTimes(1)
-    expect(fetchAggregatedHomeMock).toHaveBeenCalledWith("https://example.com", HOME_FEED_CACHE_TAGS)
-    expect(fetchAggregatedHomeForCountryMock).not.toHaveBeenCalled()
+    expect(homeContentMock).toHaveBeenCalledTimes(1)
+    const [props] = homeContentMock.mock.calls[0]
+
+    const expectedProps = await propsSpy.mock.results[0]?.value
+    expect(expectedProps).toBeDefined()
+    expect(props).toEqual(expectedProps)
+    expect(props.countryPosts).toHaveProperty("african-edition")
     expect(notFoundMock).not.toHaveBeenCalled()
+    propsSpy.mockRestore()
   })
 
   it("invokes notFound for unsupported country codes", async () => {
@@ -134,7 +87,6 @@ describe("CountryPage", () => {
     await expect(CountryPage({ params: { countryCode: "gh" } })).rejects.toThrow(notFoundError)
 
     expect(notFoundMock).toHaveBeenCalledTimes(1)
-    expect(fetchAggregatedHomeMock).not.toHaveBeenCalled()
-    expect(fetchAggregatedHomeForCountryMock).not.toHaveBeenCalled()
+    expect(homeContentMock).not.toHaveBeenCalled()
   })
 })
