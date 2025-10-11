@@ -5,6 +5,8 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
 import { LayoutStructure } from "@/components/LayoutStructure"
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
+import { BookmarksProvider } from "@/contexts/BookmarksContext"
 
 const ClientProviders = dynamic(() =>
   import("@/components/ClientProviders").then((mod) => ({ default: mod.ClientProviders })),
@@ -51,13 +53,17 @@ export default function RootLayout({
       </head>
       <body className="font-sans">
         <ClientProviders>
-          <ClientLayoutComponents>
-            <LayoutStructure>
-              <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-              </main>
-            </LayoutStructure>
-          </ClientLayoutComponents>
+          <UserPreferencesProvider>
+            <BookmarksProvider>
+              <ClientLayoutComponents>
+                <LayoutStructure>
+                  <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                    <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                  </main>
+                </LayoutStructure>
+              </ClientLayoutComponents>
+            </BookmarksProvider>
+          </UserPreferencesProvider>
         </ClientProviders>
       </body>
     </html>

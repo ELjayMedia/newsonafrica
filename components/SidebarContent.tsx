@@ -9,7 +9,7 @@ import { Clock, AlertCircle, RefreshCw, TrendingUp } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useMemo, useCallback } from "react"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 import { Button } from "@/components/ui/button"
 

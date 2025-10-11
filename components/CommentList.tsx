@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useInView } from "react-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
-import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface CommentListProps {

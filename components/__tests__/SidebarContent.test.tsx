@@ -19,7 +19,7 @@ vi.mock("@/lib/utils/routing", () => ({
   getArticleUrl: (slug: string, country?: string) => getArticleUrl(slug, country),
 }))
 
-vi.mock("@/contexts/UserPreferencesContext", () => ({
+vi.mock("@/contexts/UserPreferencesClient", () => ({
   useUserPreferences: () => ({
     preferences: {
       sections: [],
