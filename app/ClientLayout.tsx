@@ -12,15 +12,16 @@ import { Sidebar } from "@/components/Sidebar"
 import Footer from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
-import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
+import { UserPreferencesClientProvider } from "@/contexts/UserPreferencesClient"
 import { AuthProvider } from "@/contexts/AuthContext"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
+import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import ErrorFallback from "@/components/ErrorFallback"
 import Link from "next/link"
 import { useCategories } from "@/lib/hooks/useWordPressData"
-import { useUserPreferences } from "@/contexts/UserPreferencesContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import { usePathname } from "next/navigation"
 
@@ -111,7 +112,13 @@ export function ClientLayout({
         >
           <AuthProvider>
             <UserProvider>
-              <UserPreferencesProvider>
+              <UserPreferencesClientProvider
+                initialData={{
+                  userId: null,
+                  preferences: { ...DEFAULT_USER_PREFERENCES },
+                  profilePreferences: {},
+                }}
+              >
                 <BookmarksProvider>
                   <ClientWrapper>
                     <ScrollToTop />
@@ -146,7 +153,7 @@ export function ClientLayout({
                     </div>
                   </ClientWrapper>
                 </BookmarksProvider>
-              </UserPreferencesProvider>
+              </UserPreferencesClientProvider>
             </UserProvider>
           </AuthProvider>
         </ErrorBoundary>

@@ -6,7 +6,8 @@ import { Sun, Moon, Search, Menu, User } from "lucide-react"
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
-import { useUserPreferences, type ThemePreference } from "@/contexts/UserPreferencesContext"
+import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import type { ThemePreference } from "@/types/user-preferences"
 
 export function TopNavigation() {
   const [isDark, setIsDark] = useState(false)
