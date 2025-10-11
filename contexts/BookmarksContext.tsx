@@ -1,11 +1,34 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useTransition,
+} from "react"
 import { useUser } from "@/contexts/UserContext"
-import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import type { Database } from "@/types/supabase"
+import {
+  addBookmark as addBookmarkAction,
+  bulkRemoveBookmarks as bulkRemoveBookmarksAction,
+  exportBookmarks as exportBookmarksAction,
+  listBookmarks as listBookmarksAction,
+  markRead as markReadAction,
+  markUnread as markUnreadAction,
+  removeBookmark as removeBookmarkAction,
+  updateBookmark as updateBookmarkAction,
+  type AddBookmarkInput,
+  type BookmarkListPayload,
+  type BookmarkRow,
+  type BookmarkStats as ServerBookmarkStats,
+  type UpdateBookmarkInput,
+} from "@/app/actions/bookmarks"
+import { ensureActionError } from "@/lib/supabase/action-result"
 
 interface Bookmark {
   id: string
@@ -23,11 +46,7 @@ interface Bookmark {
   notes?: string
 }
 
-interface BookmarkStats {
-  total: number
-  unread: number
-  categories: Record<string, number>
-}
+type BookmarkStats = ServerBookmarkStats
 
 interface BookmarksContextType {
   bookmarks: Bookmark[]
@@ -52,8 +71,6 @@ interface BookmarksContextType {
 
 const BookmarksContext = createContext<BookmarksContextType | undefined>(undefined)
 
-type SupabaseBookmarkRow = Database["public"]["Tables"]["bookmarks"]["Row"]
-
 type BookmarkHydrationMap = Record<
   string,
   {
@@ -68,6 +85,28 @@ type BookmarkHydrationMap = Record<
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 const BOOKMARK_SYNC_QUEUE = "bookmarks-write-queue"
+const DEFAULT_STATS: BookmarkStats = { total: 0, unread: 0, categories: {} }
+
+const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
+  const categories: Record<string, number> = {}
+  let unread = 0
+
+  for (const bookmark of items) {
+    if (bookmark.category) {
+      categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
+    }
+
+    if (bookmark.read_status !== "read") {
+      unread += 1
+    }
+  }
+
+  return {
+    total: items.length,
+    unread,
+    categories,
+  }
+}
 
 const isOfflineError = (error: unknown) => {
   if (typeof navigator === "undefined") return false
@@ -76,16 +115,6 @@ const isOfflineError = (error: unknown) => {
     return true
   }
   return false
-}
-
-const readJson = async <T = any>(response: Response): Promise<T | null> => {
-  try {
-    const text = await response.text()
-    if (!text) return null
-    return JSON.parse(text) as T
-  } catch {
-    return null
-  }
 }
 
 const extractText = (value: unknown): string => {
@@ -135,7 +164,7 @@ const extractFeaturedImage = (value: unknown): Bookmark["featured_image"] => {
 }
 
 const formatBookmarkRow = (
-  row: SupabaseBookmarkRow,
+  row: BookmarkRow,
   metadata?: BookmarkHydrationMap[string],
 ): Bookmark => {
   const metaTitle = metadata?.title ? extractText(metadata.title) : ""
@@ -165,7 +194,7 @@ const formatBookmarkRow = (
   }
 }
 
-const buildHydrationPayload = (bookmarks: SupabaseBookmarkRow[]) => {
+const buildHydrationPayload = (bookmarks: BookmarkRow[]) => {
   const grouped = new Map<string, Set<string>>()
 
   bookmarks.forEach((bookmark) => {
@@ -182,6 +211,16 @@ const buildHydrationPayload = (bookmarks: SupabaseBookmarkRow[]) => {
   }))
 }
 
+type BookmarkActionResult = Awaited<ReturnType<typeof addBookmarkAction>>
+
+interface MutationOptions {
+  offlineMessage?: string
+  errorTitle?: string
+  errorMessage?: string
+  onSuccess?: () => void
+  optimisticUpdate?: () => void | (() => void)
+}
+
 export function useBookmarks() {
   const context = useContext(BookmarksContext)
   if (!context) {
@@ -193,26 +232,16 @@ export function useBookmarks() {
 export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user, ensureSessionFreshness } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [stats, setStats] = useState<BookmarkStats>(DEFAULT_STATS)
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-  const supabase = createClient()
   const cacheRef = useRef<Map<string, Bookmark>>(new Map())
-
-  // Calculate stats
-  const stats = useMemo((): BookmarkStats => {
-    const total = bookmarks.length
-    const unread = bookmarks.filter((b) => b.read_status !== "read").length
-    const categories: Record<string, number> = {}
-
-    bookmarks.forEach((bookmark) => {
-      if (bookmark.category) {
-        categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
-      }
-    })
-
-    return { total, unread, categories }
-  }, [bookmarks])
+  const bookmarksRef = useRef<Bookmark[]>([])
+  const statsRef = useRef<BookmarkStats>(DEFAULT_STATS)
+  const mutationQueueRef = useRef<(() => Promise<void>)[]>([])
+  const processingQueueRef = useRef(false)
+  const [, startTransition] = useTransition()
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -221,6 +250,14 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       cacheRef.current.set(bookmark.post_id, bookmark)
     })
   }, [bookmarks])
+
+  useEffect(() => {
+    bookmarksRef.current = bookmarks
+  }, [bookmarks])
+
+  useEffect(() => {
+    statsRef.current = stats
+  }, [stats])
 
   const isBookmarked = useCallback(
     (postId: string) => {
@@ -237,80 +274,230 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     [bookmarks], // Keep dependency for reactivity
   )
 
-  const fetchBookmarks = useCallback(async () => {
+  const hydrateBookmarks = useCallback(async (rows: BookmarkRow[]): Promise<BookmarkHydrationMap> => {
+    if (rows.length === 0) {
+      return {}
+    }
+
+    const hydrationPayload = buildHydrationPayload(rows)
+
+    if (hydrationPayload.length === 0) {
+      return {}
+    }
+
     try {
-      setLoading(true)
+      const res = await fetch("/api/bookmarks/hydrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(hydrationPayload),
+      })
 
-      if (!user) {
-        setBookmarks([])
+      if (!res.ok) {
+        console.error("Failed to hydrate bookmarks: HTTP", res.status)
+        return {}
+      }
+
+      const json = (await res.json()) as { posts?: BookmarkHydrationMap }
+      return json.posts || {}
+    } catch (error) {
+      console.error("Failed to hydrate bookmarks", error)
+      return {}
+    }
+  }, [])
+
+  const applyServerPayload = useCallback(
+    async (payload: BookmarkListPayload) => {
+      const hydrationMap = await hydrateBookmarks(payload.bookmarks)
+      const hydrated = payload.bookmarks.map((row) =>
+        formatBookmarkRow(row, hydrationMap[row.post_id]),
+      )
+
+      setBookmarks(hydrated)
+      setStats(payload.stats ?? DEFAULT_STATS)
+    },
+    [hydrateBookmarks],
+  )
+
+  const processMutationQueue = useCallback(() => {
+    if (processingQueueRef.current) return
+
+    const runNext = async (): Promise<void> => {
+      const nextTask = mutationQueueRef.current.shift()
+      if (!nextTask) {
+        processingQueueRef.current = false
         return
       }
 
-      await ensureSessionFreshness()
+      try {
+        await nextTask()
+      } catch (error) {
+        if (isOfflineError(error)) {
+          mutationQueueRef.current.unshift(nextTask)
+          processingQueueRef.current = false
+          return
+        }
 
-      const { data, error } = await supabase
-        .from("bookmarks")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Error fetching bookmarks:", error)
-        toast({
-          title: "Error",
-          description: `Failed to load bookmarks: ${error.message}`,
-          variant: "destructive",
-        })
-        return
+        console.error("Bookmark mutation failed:", error)
       }
 
-      const fetched = (data || []) as SupabaseBookmarkRow[]
-      const hydrationPayload = buildHydrationPayload(fetched)
+      await runNext()
+    }
 
-      let hydrationMap: BookmarkHydrationMap = {}
-      if (hydrationPayload.length > 0) {
+    processingQueueRef.current = true
+    startTransition(() => {
+      void runNext()
+    })
+  }, [startTransition])
+
+  const enqueueMutation = useCallback(
+    (task: () => Promise<void>) => {
+      mutationQueueRef.current.push(task)
+      processMutationQueue()
+    },
+    [processMutationQueue],
+  )
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleOnline = () => {
+      processMutationQueue()
+    }
+
+    window.addEventListener("online", handleOnline)
+    return () => {
+      window.removeEventListener("online", handleOnline)
+    }
+  }, [processMutationQueue])
+
+  const executeMutation = useCallback(
+    (action: () => Promise<BookmarkActionResult>, options: MutationOptions = {}) => {
+      let resolveTask: () => void = () => {}
+      let rejectTask: (error: unknown) => void = () => {}
+
+      const taskPromise = new Promise<void>((resolve, reject) => {
+        resolveTask = resolve
+        rejectTask = reject
+      })
+
+      const task = async () => {
+        let rollback: void | (() => void)
+
+        if (options.optimisticUpdate) {
+          rollback = options.optimisticUpdate()
+        }
+
+        setIsLoading(true)
         try {
-          const res = await fetch("/api/bookmarks/hydrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(hydrationPayload),
-          })
-          if (res.ok) {
-            const json = (await res.json()) as { posts?: BookmarkHydrationMap }
-            hydrationMap = json.posts || {}
-          } else {
-            console.error("Failed to hydrate bookmarks: HTTP", res.status)
+          await ensureSessionFreshness()
+          const result = await action()
+
+          if (result?.error) {
+            throw result.error
           }
-        } catch (err) {
-          console.error("Failed to hydrate bookmarks", err)
+
+          if (result?.data) {
+            await applyServerPayload(result.data as BookmarkListPayload)
+          }
+
+          options.onSuccess?.()
+          resolveTask()
+        } catch (error) {
+          if (isOfflineError(error)) {
+            toast({
+              title: "Offline",
+              description:
+                options.offlineMessage || "We'll sync your bookmark once you're back online.",
+            })
+            resolveTask()
+            throw error
+          }
+
+          if (typeof rollback === "function") {
+            rollback()
+          }
+
+          const actionError = ensureActionError(
+            error,
+            options.errorMessage || "Failed to update bookmarks.",
+          )
+
+          toast({
+            title: options.errorTitle || "Bookmark error",
+            description: actionError.message,
+            variant: "destructive",
+          })
+
+          rejectTask(actionError)
+          throw actionError
+        } finally {
+          setIsLoading(false)
         }
       }
 
-      const hydrated = fetched.map((row) =>
-        formatBookmarkRow(row, hydrationMap[row.post_id]),
-      )
-      setBookmarks(hydrated)
-    } catch (error: any) {
-      console.error("Error fetching bookmarks:", error)
-      toast({
-        title: "Error",
-        description: `Failed to load bookmarks: ${error.message || "Unknown error"}`,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [ensureSessionFreshness, supabase, toast, user])
+      enqueueMutation(task)
+      return taskPromise
+    },
+    [applyServerPayload, enqueueMutation, ensureSessionFreshness, toast],
+  )
+
+  const fetchBookmarks = useCallback(
+    async (options?: { revalidate?: boolean }) => {
+      try {
+        setLoading(true)
+
+        if (!user) {
+          setBookmarks([])
+          setStats(DEFAULT_STATS)
+          return
+        }
+
+        await ensureSessionFreshness()
+        const result = await listBookmarksAction({ revalidate: options?.revalidate })
+
+        if (result.error) {
+          throw result.error
+        }
+
+        if (result.data) {
+          await applyServerPayload(result.data)
+        }
+      } catch (error) {
+        if (isOfflineError(error)) {
+          console.warn("Failed to fetch bookmarks due to offline mode", error)
+          toast({
+            title: "Offline",
+            description: "Bookmarks will sync once you're back online.",
+          })
+        } else {
+          const actionError = ensureActionError(error, "Failed to load bookmarks")
+          console.error("Error fetching bookmarks:", actionError)
+          toast({
+            title: "Error",
+            description: actionError.message,
+            variant: "destructive",
+          })
+        }
+      } finally {
+        setLoading(false)
+      }
+    },
+    [applyServerPayload, ensureSessionFreshness, toast, user],
+  )
 
   // Fetch bookmarks when user changes
   useEffect(() => {
-    if (user) {
-      fetchBookmarks()
-    } else {
+    if (!user) {
       setBookmarks([])
+      setStats(DEFAULT_STATS)
       setLoading(false)
+      return
     }
-  }, [fetchBookmarks, user])
+
+    startTransition(() => {
+      void fetchBookmarks()
+    })
+  }, [fetchBookmarks, startTransition, user])
 
   const addBookmark = useCallback(
     async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
@@ -319,236 +506,185 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isBookmarked(post.post_id)) {
-        return // Already bookmarked
+        return
       }
 
-      setIsLoading(true)
-      try {
-        await ensureSessionFreshness()
+      const postData = post as any
+      const payload: AddBookmarkInput = {
+        postId: post.post_id,
+        country: post.country || null,
+        title: extractText(postData.title) || "Untitled Post",
+        slug: typeof postData.slug === "string" ? postData.slug : "",
+        excerpt: extractText(postData.excerpt),
+        featuredImage:
+          extractFeaturedImage(postData.featured_image || postData.featuredImage) || null,
+        category: post.category || null,
+        tags: post.tags || null,
+        notes: post.notes || null,
+      }
 
-        const postData = post as any
-        const insertPayload = {
-          user_id: user.id,
-          post_id: post.post_id,
-          country: post.country || null,
-          title: extractText(postData.title) || "Untitled Post",
-          slug: typeof postData.slug === "string" ? postData.slug : "",
-          excerpt: extractText(postData.excerpt),
-          featured_image:
-            extractFeaturedImage(postData.featured_image || postData.featuredImage) || null,
-          category: post.category || null,
-          tags: post.tags || null,
-          read_status: "unread" as const,
-          notes: post.notes || null,
-        }
-        let response: Response
-        try {
-          response = await fetch("/api/bookmarks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              postId: insertPayload.post_id,
-              title: insertPayload.title,
-              slug: insertPayload.slug,
-              excerpt: insertPayload.excerpt,
-              featuredImage: insertPayload.featured_image,
-              category: insertPayload.category,
-              tags: insertPayload.tags,
-              notes: insertPayload.notes,
-              country: insertPayload.country,
-            }),
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark request queued for background sync", error)
-            return
+      const optimisticBookmark: Bookmark = {
+        id: `temp-${Date.now()}`,
+        user_id: user.id,
+        post_id: post.post_id,
+        country: post.country || undefined,
+        title: payload.title || "Untitled Post",
+        slug: payload.slug || undefined,
+        excerpt: payload.excerpt || undefined,
+        created_at: new Date().toISOString(),
+        featured_image: payload.featuredImage || null,
+        category: post.category || undefined,
+        tags: post.tags || undefined,
+        read_status: "unread",
+        notes: post.notes || undefined,
+      }
+
+      return executeMutation(() => addBookmarkAction(payload), {
+        offlineMessage: "We'll sync your bookmark once you're back online.",
+        errorTitle: "Bookmark failed",
+        errorMessage: "Failed to add bookmark.",
+        optimisticUpdate: () => {
+          const previousBookmarks = bookmarksRef.current
+          const previousStats = statsRef.current
+
+          const nextBookmarks = [optimisticBookmark, ...previousBookmarks]
+          setBookmarks(nextBookmarks)
+          setStats(deriveStatsFromBookmarks(nextBookmarks))
+
+          return () => {
+            setBookmarks(previousBookmarks)
+            setStats(previousStats)
           }
-          throw error
-        }
-
-        const result = await readJson<{ bookmark?: SupabaseBookmarkRow; error?: string }>(response)
-
-        if (!response.ok || !result?.bookmark) {
-          const message = result?.error || `Failed to add bookmark (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
-        setBookmarks((prev) => [formatBookmarkRow(result.bookmark as SupabaseBookmarkRow), ...prev])
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark add operation queued due to offline mode", error)
-          return
-        }
-        console.error("Error adding bookmark:", error)
-        toast({
-          title: "Bookmark failed",
-          description: error?.message || "Failed to add bookmark.",
-          variant: "destructive",
-        })
-        throw error
-      } finally {
-        setIsLoading(false)
-      }
+        },
+      })
     },
-    [ensureSessionFreshness, isBookmarked, toast, user],
+    [executeMutation, isBookmarked, user],
   )
 
   const removeBookmark = useCallback(
     async (postId: string) => {
       if (!user || !postId) return
 
-      setIsLoading(true)
-      try {
-        await ensureSessionFreshness()
+      const optimisticUpdate = () => {
+        const previousBookmarks = bookmarksRef.current
+        const previousStats = statsRef.current
 
-        let response: Response
-        try {
-          const params = new URLSearchParams({ postId })
-          response = await fetch(`/api/bookmarks?${params.toString()}`, {
-            method: "DELETE",
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark delete queued for background sync", error)
-            return
-          }
-          throw error
-        }
+        const nextBookmarks = previousBookmarks.filter((b) => b.post_id !== postId)
+        setBookmarks(nextBookmarks)
+        setStats(deriveStatsFromBookmarks(nextBookmarks))
 
-        const result = await readJson<{ success?: boolean; error?: string }>(response)
-        if (!response.ok || result?.success === false) {
-          const message = result?.error || `Failed to remove bookmark (HTTP ${response.status})`
-          throw new Error(message)
+        return () => {
+          setBookmarks(previousBookmarks)
+          setStats(previousStats)
         }
-
-        setBookmarks((prev) => prev.filter((b) => b.post_id !== postId))
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark delete operation queued due to offline mode", error)
-          return
-        }
-        console.error("Error removing bookmark:", error)
-        toast({
-          title: "Bookmark removal failed",
-          description: error?.message || "Failed to remove bookmark.",
-          variant: "destructive",
-        })
-        throw error
-      } finally {
-        setIsLoading(false)
       }
+
+      return executeMutation(() => removeBookmarkAction(postId), {
+        offlineMessage: "We'll remove this bookmark when you're back online.",
+        errorTitle: "Bookmark removal failed",
+        errorMessage: "Failed to remove bookmark.",
+        optimisticUpdate,
+      })
     },
-    [ensureSessionFreshness, toast, user],
+    [executeMutation, user],
   )
 
   const updateBookmark = useCallback(
     async (postId: string, updates: Partial<Bookmark>) => {
-      if (!user) return
+      if (!user || !postId) return
 
-      setIsLoading(true)
-      try {
-        await ensureSessionFreshness()
+      const sanitized: UpdateBookmarkInput["updates"] = {}
 
-        const sanitizedUpdates = { ...updates }
-        if ("featured_image" in sanitizedUpdates) {
-          sanitizedUpdates.featured_image =
-            sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
-              ? sanitizedUpdates.featured_image
-              : null
-        }
-
-        let response: Response
-        try {
-          response = await fetch("/api/bookmarks", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ postId, updates: sanitizedUpdates }),
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bookmark update queued for background sync", error)
-            return
-          }
-          throw error
-        }
-
-        const result = await readJson<{ bookmark?: SupabaseBookmarkRow; error?: string }>(response)
-        if (!response.ok || !result?.bookmark) {
-          const message = result?.error || `Failed to update bookmark (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
-        setBookmarks((prev) =>
-          prev.map((b) => (b.post_id === postId ? formatBookmarkRow(result.bookmark as SupabaseBookmarkRow) : b)),
-        )
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bookmark update queued due to offline mode", error)
-          return
-        }
-        console.error("Error updating bookmark:", error)
-        toast({
-          title: "Bookmark update failed",
-          description: error?.message || "Failed to update bookmark.",
-          variant: "destructive",
-        })
-        throw error
-      } finally {
-        setIsLoading(false)
+      if (Object.prototype.hasOwnProperty.call(updates, "country")) {
+        sanitized.country = updates.country ?? null
       }
+      if (Object.prototype.hasOwnProperty.call(updates, "title")) {
+        sanitized.title = updates.title ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "slug")) {
+        sanitized.slug = updates.slug ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "excerpt")) {
+        sanitized.excerpt = updates.excerpt ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "category")) {
+        sanitized.category = updates.category ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "tags")) {
+        sanitized.tags = updates.tags ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "read_status")) {
+        sanitized.read_status = updates.read_status ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
+        sanitized.notes = updates.notes ?? null
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, "featured_image")) {
+        const value = updates.featured_image
+        sanitized.featured_image = value && typeof value === "object" ? value : null
+      }
+
+      return executeMutation(
+        () => updateBookmarkAction({ postId, updates: sanitized }),
+        {
+          offlineMessage: "We'll update this bookmark when you're back online.",
+          errorTitle: "Bookmark update failed",
+          errorMessage: "Failed to update bookmark.",
+          optimisticUpdate: () => {
+            const previousBookmarks = bookmarksRef.current
+            const previousStats = statsRef.current
+
+            const nextBookmarks = previousBookmarks.map((bookmark) =>
+              bookmark.post_id === postId ? { ...bookmark, ...updates } : bookmark,
+            )
+
+            setBookmarks(nextBookmarks)
+            setStats(deriveStatsFromBookmarks(nextBookmarks))
+
+            return () => {
+              setBookmarks(previousBookmarks)
+              setStats(previousStats)
+            }
+          },
+        },
+      )
     },
-    [ensureSessionFreshness, toast, user],
+    [executeMutation, user],
   )
 
   const bulkRemoveBookmarks = useCallback(
     async (postIds: string[]) => {
       if (!user || postIds.length === 0) return
 
-      await ensureSessionFreshness()
+      return executeMutation(
+        () => bulkRemoveBookmarksAction({ postIds }),
+        {
+          offlineMessage: "We'll remove these bookmarks when you're back online.",
+          errorTitle: "Bulk removal failed",
+          errorMessage: "Failed to remove bookmarks.",
+          onSuccess: () => {
+            toast({
+              title: "Bookmarks removed",
+              description: `${postIds.length} bookmarks removed successfully`,
+            })
+          },
+          optimisticUpdate: () => {
+            const previousBookmarks = bookmarksRef.current
+            const previousStats = statsRef.current
 
-      setIsLoading(true)
-      try {
-        let response: Response
-        try {
-          const params = new URLSearchParams({ postIds: postIds.join(",") })
-          response = await fetch(`/api/bookmarks?${params.toString()}`, {
-            method: "DELETE",
-          })
-        } catch (error) {
-          if (isOfflineError(error)) {
-            console.warn("Bulk bookmark removal queued for background sync", error)
-            return
-          }
-          throw error
-        }
+            const nextBookmarks = previousBookmarks.filter((bookmark) => !postIds.includes(bookmark.post_id))
+            setBookmarks(nextBookmarks)
+            setStats(deriveStatsFromBookmarks(nextBookmarks))
 
-        const result = await readJson<{ success?: boolean; error?: string }>(response)
-        if (!response.ok || result?.success === false) {
-          const message = result?.error || `Failed to remove bookmarks (HTTP ${response.status})`
-          throw new Error(message)
-        }
-
-        setBookmarks((prev) => prev.filter((b) => !postIds.includes(b.post_id)))
-
-        toast({
-          title: "Bookmarks removed",
-          description: `${postIds.length} bookmarks removed successfully`,
-        })
-      } catch (error: any) {
-        if (isOfflineError(error)) {
-          console.warn("Bulk bookmark removal queued due to offline mode", error)
-          return
-        }
-        toast({
-          title: "Error",
-          description: `Failed to remove bookmarks: ${error.message}`,
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+            return () => {
+              setBookmarks(previousBookmarks)
+              setStats(previousStats)
+            }
+          },
+        },
+      )
     },
-    [ensureSessionFreshness, toast, user],
+    [executeMutation, toast, user],
   )
 
   useEffect(() => {
@@ -572,7 +708,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
             title: "Bookmarks synced",
             description: "Your offline bookmark changes have been saved.",
           })
-          fetchBookmarks()
+          fetchBookmarks({ revalidate: true })
           break
         case "BACKGROUND_SYNC_QUEUE_ERROR":
           toast({
@@ -592,16 +728,60 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
   const markAsRead = useCallback(
     async (postId: string) => {
-      await updateBookmark(postId, { read_status: "read" })
+      if (!user || !postId) return
+
+      return executeMutation(() => markReadAction(postId), {
+        offlineMessage: "We'll mark this bookmark as read when you're back online.",
+        errorTitle: "Bookmark update failed",
+        errorMessage: "Failed to mark bookmark as read.",
+        optimisticUpdate: () => {
+          const previousBookmarks = bookmarksRef.current
+          const previousStats = statsRef.current
+
+          const nextBookmarks = previousBookmarks.map((bookmark) =>
+            bookmark.post_id === postId ? { ...bookmark, read_status: "read" as const } : bookmark,
+          )
+
+          setBookmarks(nextBookmarks)
+          setStats(deriveStatsFromBookmarks(nextBookmarks))
+
+          return () => {
+            setBookmarks(previousBookmarks)
+            setStats(previousStats)
+          }
+        },
+      })
     },
-    [updateBookmark],
+    [executeMutation, user],
   )
 
   const markAsUnread = useCallback(
     async (postId: string) => {
-      await updateBookmark(postId, { read_status: "unread" })
+      if (!user || !postId) return
+
+      return executeMutation(() => markUnreadAction(postId), {
+        offlineMessage: "We'll mark this bookmark as unread when you're back online.",
+        errorTitle: "Bookmark update failed",
+        errorMessage: "Failed to mark bookmark as unread.",
+        optimisticUpdate: () => {
+          const previousBookmarks = bookmarksRef.current
+          const previousStats = statsRef.current
+
+          const nextBookmarks = previousBookmarks.map((bookmark) =>
+            bookmark.post_id === postId ? { ...bookmark, read_status: "unread" as const } : bookmark,
+          )
+
+          setBookmarks(nextBookmarks)
+          setStats(deriveStatsFromBookmarks(nextBookmarks))
+
+          return () => {
+            setBookmarks(previousBookmarks)
+            setStats(previousStats)
+          }
+        },
+      })
     },
-    [updateBookmark],
+    [executeMutation, user],
   )
 
   const addNote = useCallback(
@@ -646,26 +826,34 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   )
 
   const exportBookmarks = useCallback(async (): Promise<string> => {
-    const exportData = {
-      exported_at: new Date().toISOString(),
-      total_bookmarks: bookmarks.length,
-      bookmarks: bookmarks.map((bookmark) => ({
-        title: bookmark.title,
-        slug: bookmark.slug,
-        excerpt: bookmark.excerpt,
-        created_at: bookmark.created_at,
-        category: bookmark.category,
-        tags: bookmark.tags,
-        read_status: bookmark.read_status,
-        notes: bookmark.notes,
-      })),
-    }
+    try {
+      await ensureSessionFreshness()
+      const result = await exportBookmarksAction()
 
-    return JSON.stringify(exportData, null, 2)
-  }, [bookmarks])
+      if (result.error || !result.data) {
+        throw result.error || new Error("Failed to export bookmarks")
+      }
+
+      return result.data
+    } catch (error) {
+      if (isOfflineError(error)) {
+        const message = "Bookmark export is unavailable while offline."
+        toast({ title: "Offline", description: message })
+        throw new Error(message)
+      }
+
+      const actionError = ensureActionError(error, "Failed to export bookmarks.")
+      toast({
+        title: "Export failed",
+        description: actionError.message,
+        variant: "destructive",
+      })
+      throw actionError
+    }
+  }, [ensureSessionFreshness, toast])
 
   const refreshBookmarks = useCallback(async () => {
-    await fetchBookmarks()
+    await fetchBookmarks({ revalidate: true })
   }, [fetchBookmarks])
 
   const contextValue = useMemo(
