@@ -1,19 +1,36 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
-import type { User, Session } from "@supabase/supabase-js"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
+import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
-import { useInterval } from "@/hooks/useInterval"
-import type { Database } from "@/types/supabase"
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+import {
+  getCurrentSession,
+  refreshSession as refreshSessionAction,
+  resetPassword as resetPasswordAction,
+  signIn as signInAction,
+  signInWithOAuth as signInWithOAuthAction,
+  signOut as signOutAction,
+  signUp as signUpAction,
+  updateProfile as updateProfileAction,
+  type AuthStatePayload,
+  type Profile,
+} from "@/app/actions/auth"
+import type { Database } from "@/types/supabase"
+import type { ActionResult } from "@/lib/supabase/action-result"
 
 // Session refresh settings
 const SESSION_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
-const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
-const VISIBILITY_REFRESH_DEBOUNCE = 1000
 
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/", "/auth", "/sport", "/entertainment", "/search", "/post"]
@@ -31,7 +48,9 @@ interface UserContextType {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: (redirectTo?: string) => Promise<void>
-  updateProfile: (updates: Partial<Profile>) => Promise<void>
+  updateProfile: (
+    updates: Partial<Database["public"]["Tables"]["profiles"]["Update"]>,
+  ) => Promise<Profile>
   resetPassword: (email: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInWithFacebook: () => Promise<void>
@@ -45,6 +64,20 @@ interface UserContextType {
  */
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
+type AuthActionResult = ActionResult<AuthStatePayload>
+
+type OAuthProvider = "google" | "facebook"
+
+function getSafeUrl(url: string | null): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).toString()
+  } catch (error) {
+    console.error("Invalid OAuth redirect URL", error)
+    return null
+  }
+}
+
 /**
  * Provider component for user authentication and profile management
  */
@@ -52,105 +85,122 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false)
+  const [loadingState, setLoadingState] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const [isPending, startTransition] = useTransition()
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
-  const visibilityRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  /**
-   * Fetch user profile from Supabase
-   */
-  const fetchProfile = useCallback(
-    async (userId: string) => {
-      try {
-        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+  const applyAuthState = useCallback((next: AuthStatePayload | null) => {
+    const nextSession = (next?.session ?? null) as Session | null
+    const nextUser = (next?.user ?? null) as User | null
+    const nextProfile = next?.profile ?? null
 
-        if (error) {
-          console.error("Error fetching profile:", error)
-          return
-        }
+    setSession(nextSession)
+    setUser(nextUser)
+    setProfile(nextProfile)
+    setIsAuthenticated(!!nextUser)
+  }, [])
 
-        if (data) {
-          setProfile(data)
-        }
-      } catch (error) {
-        console.error("Error in fetchProfile:", error)
-      } finally {
-        setLoading(false)
+  const handleAuthResult = useCallback(
+    (result: AuthActionResult): AuthStatePayload | null => {
+      if (result.error) {
+        throw result.error
       }
+
+      const payload = result.data ?? null
+      applyAuthState(payload)
+      return payload
     },
-    [supabase],
+    [applyAuthState],
   )
 
-  /**
-   * Refresh the session if needed
-   */
-  const refreshSession = useCallback(async (): Promise<boolean> => {
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current
-    }
+  useEffect(() => {
+    let isMounted = true
+    setLoadingState(true)
 
-    const refreshPromise = (async () => {
-      setIsRefreshingSession(true)
-      try {
-        const { data, error } = await supabase.auth.refreshSession()
-
-        if (error || !data.session) {
-          // If refresh failed but we still have a user in state,
-          // we'll keep them signed in until they explicitly sign out
-          if (user) {
-            console.log("Session refresh failed, but keeping existing user state")
-            return true
+    startTransition(() => {
+      getCurrentSession()
+        .then((result) => {
+          if (!isMounted) return
+          try {
+            handleAuthResult(result)
+          } catch (error) {
+            console.error("Error getting current session:", error)
+            applyAuthState(null)
           }
+        })
+        .catch((error) => {
+          if (!isMounted) return
+          console.error("Unexpected error loading session:", error)
+          applyAuthState(null)
+        })
+        .finally(() => {
+          if (!isMounted) return
+          setLoadingState(false)
+          setInitialAuthCheckComplete(true)
+        })
+    })
 
-          // Otherwise clear the session
-          setUser(null)
-          setSession(null)
-          setProfile(null)
-          setIsAuthenticated(false)
-          return false
-        }
-
-        setSession(data.session)
-        setUser(data.session.user)
-        setIsAuthenticated(!!data.session.user)
-
-        if (data.session.user) {
-          await fetchProfile(data.session.user.id)
-        }
-
-        return true
-      } catch (error) {
-        console.error("Error refreshing session:", error)
-        return !!user
-      } finally {
-        setIsRefreshingSession(false)
-        refreshPromiseRef.current = null
-      }
-    })()
-
-    refreshPromiseRef.current = refreshPromise
-    return refreshPromise
-  }, [user, fetchProfile, supabase])
+    return () => {
+      isMounted = false
+    }
+  }, [applyAuthState, handleAuthResult, startTransition])
 
   const sessionExpiresSoon = useCallback(() => {
-    if (!session) return false
+    if (!session?.expires_at) return false
 
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
-    if (!expiresAt) return false
-
+    const expiresAt = session.expires_at * 1000
     const now = Date.now()
     const timeUntilExpiry = expiresAt - now
 
     return timeUntilExpiry <= SESSION_REFRESH_BUFFER
   }, [session])
 
+  const refreshSession = useCallback((): Promise<boolean> => {
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current
+    }
+
+    setIsRefreshingSession(true)
+
+    const refreshPromise = new Promise<boolean>((resolve) => {
+      startTransition(() => {
+        refreshSessionAction()
+          .then((result) => {
+            try {
+              handleAuthResult(result)
+              router.refresh()
+              resolve(true)
+            } catch (error) {
+              console.error("Failed to refresh session:", error)
+              if (!user) {
+                applyAuthState(null)
+              }
+              resolve(!!user)
+            }
+          })
+          .catch((error) => {
+            console.error("Unexpected error refreshing session:", error)
+            resolve(!!user)
+          })
+          .finally(() => {
+            setIsRefreshingSession(false)
+            refreshPromiseRef.current = null
+          })
+      })
+    })
+
+    refreshPromiseRef.current = refreshPromise
+    return refreshPromise
+  }, [applyAuthState, handleAuthResult, router, startTransition, user])
+
   const ensureSessionFreshness = useCallback(async () => {
-    if (!session) return true
+    if (!session) {
+      return true
+    }
 
     if (!sessionExpiresSoon()) {
       return true
@@ -159,346 +209,228 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return refreshSession()
   }, [refreshSession, session, sessionExpiresSoon])
 
-  /**
-   * Check if the session needs to be refreshed
-   */
-  const checkSessionExpiry = useCallback(async () => {
-    if (!sessionExpiresSoon()) return
+  const runAuthAction = useCallback(
+    (
+      action: () => Promise<ActionResult<AuthStatePayload>>,
+      { shouldRefreshRouter = true }: { shouldRefreshRouter?: boolean } = {},
+    ) => {
+      setLoadingState(true)
 
-    console.log("Session expiring soon, refreshing...")
-    await refreshSession()
-  }, [refreshSession, sessionExpiresSoon])
+      return new Promise<AuthStatePayload | null>((resolve, reject) => {
+        startTransition(() => {
+          action()
+            .then((result) => {
+              try {
+                const payload = handleAuthResult(result)
 
-  /**
-   * Initialize auth state
-   */
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Get initial session
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession()
+                if (shouldRefreshRouter) {
+                  router.refresh()
+                }
 
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
-        setIsAuthenticated(!!currentSession?.user)
-
-        if (currentSession?.user) {
-          fetchProfile(currentSession.user.id)
-        } else {
-          setLoading(false)
-        }
-
-        // Mark initial auth check as complete
-        setInitialAuthCheckComplete(true)
-
-        // Listen for auth changes
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-          console.log("Auth state changed:", event)
-
-          setSession(newSession)
-          setUser(newSession?.user ?? null)
-          setIsAuthenticated(!!newSession?.user)
-
-          if (newSession?.user) {
-            fetchProfile(newSession.user.id)
-          } else {
-            setProfile(null)
-            setLoading(false)
-          }
+                resolve(payload)
+              } catch (error) {
+                reject(error)
+              }
+            })
+            .catch(reject)
+            .finally(() => {
+              setLoadingState(false)
+            })
         })
+      })
+    },
+    [handleAuthResult, router, startTransition],
+  )
 
-        return () => {
-          authListener.subscription.unsubscribe()
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error)
-        setLoading(false)
-        setInitialAuthCheckComplete(true)
-      }
-    }
+  /**
+   * Sign in with email and password
+   */
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      await runAuthAction(() => signInAction({ email, password }))
+    },
+    [runAuthAction],
+  )
 
-    initAuth()
-  }, [fetchProfile, supabase])
+  /**
+   * Sign up with email, password and username
+   */
+  const signUp = useCallback(
+    async (email: string, password: string, username: string) => {
+      await runAuthAction(() => signUpAction({ email, password, username }))
+    },
+    [runAuthAction],
+  )
 
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return
-    }
+  /**
+   * Sign out the current user
+   */
+  const signOut = useCallback(
+    async (redirectTo = "/auth") => {
+      setLoadingState(true)
 
-    const scheduleRefresh = () => {
-      if (!session) return
+      return new Promise<void>((resolve, reject) => {
+        startTransition(() => {
+          signOutAction()
+            .then((result) => {
+              if (result.error) {
+                reject(result.error)
+                return
+              }
 
-      if (visibilityRefreshTimeoutRef.current) {
-        clearTimeout(visibilityRefreshTimeoutRef.current)
-      }
+              applyAuthState(null)
+              router.refresh()
 
-      visibilityRefreshTimeoutRef.current = setTimeout(() => {
-        refreshSession()
-      }, VISIBILITY_REFRESH_DEBOUNCE)
-    }
+              if (redirectTo) {
+                router.push(redirectTo)
+              }
 
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        scheduleRefresh()
-      }
-    }
+              resolve()
+            })
+            .catch(reject)
+            .finally(() => {
+              setLoadingState(false)
+            })
+        })
+      })
+    },
+    [applyAuthState, router, startTransition],
+  )
 
-    const handleFocus = () => {
-      scheduleRefresh()
-    }
+  /**
+   * Update the user profile
+   */
+  const updateProfile = useCallback(
+    async (updates: Partial<Database["public"]["Tables"]["profiles"]["Update"]>) => {
+      setLoadingState(true)
 
-    document.addEventListener("visibilitychange", handleVisibility)
-    window.addEventListener("focus", handleFocus)
+      return new Promise<Profile>((resolve, reject) => {
+        startTransition(() => {
+          updateProfileAction(updates)
+            .then((result) => {
+              if (result.error || !result.data) {
+                reject(result.error ?? new Error("Failed to update profile"))
+                return
+              }
 
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility)
-      window.removeEventListener("focus", handleFocus)
-      if (visibilityRefreshTimeoutRef.current) {
-        clearTimeout(visibilityRefreshTimeoutRef.current)
-        visibilityRefreshTimeoutRef.current = null
-      }
-    }
-  }, [refreshSession, session])
+              const nextProfile = result.data
+              setProfile(nextProfile)
+              router.refresh()
+              resolve(nextProfile)
+            })
+            .catch(reject)
+            .finally(() => {
+              setLoadingState(false)
+            })
+        })
+      })
+    },
+    [router, startTransition],
+  )
+
+  /**
+   * Reset the user password
+   */
+  const resetPassword = useCallback(
+    async (email: string) => {
+      setLoadingState(true)
+
+      return new Promise<void>((resolve, reject) => {
+        startTransition(() => {
+          resetPasswordAction(email)
+            .then((result) => {
+              if (result.error) {
+                reject(result.error)
+                return
+              }
+
+              resolve()
+            })
+            .catch(reject)
+            .finally(() => {
+              setLoadingState(false)
+            })
+        })
+      })
+    },
+    [startTransition],
+  )
+
+  const startOAuthSignIn = useCallback(
+    async (provider: OAuthProvider) => {
+      setLoadingState(true)
+
+      return new Promise<void>((resolve, reject) => {
+        startTransition(() => {
+          signInWithOAuthAction({ provider })
+            .then((result) => {
+              if (result.error) {
+                reject(result.error)
+                return
+              }
+
+              const redirectUrl = getSafeUrl(result.data?.url ?? null)
+              if (redirectUrl && typeof window !== "undefined") {
+                window.location.assign(redirectUrl)
+              }
+
+              resolve()
+            })
+            .catch(reject)
+            .finally(() => {
+              setLoadingState(false)
+            })
+        })
+      })
+    },
+    [startTransition],
+  )
+
+  /**
+   * Sign in with Google
+   */
+  const signInWithGoogle = useCallback(async () => {
+    await startOAuthSignIn("google")
+  }, [startOAuthSignIn])
+
+  /**
+   * Sign in with Facebook
+   */
+  const signInWithFacebook = useCallback(async () => {
+    await startOAuthSignIn("facebook")
+  }, [startOAuthSignIn])
 
   /**
    * Check if the current route requires authentication
    */
   const requireAuth = useCallback(
     (fallbackUrl = "/auth"): boolean => {
+      const isLoading = loadingState || isRefreshingSession || !initialAuthCheckComplete
+
       // Don't check during initial loading
-      if (loading || isRefreshingSession || !initialAuthCheckComplete) return true
+      if (isLoading) return true
 
       // If authenticated, allow access
       if (isAuthenticated) return true
 
       // If this is a public route, allow access
-      const pathname = window.location.pathname
+      const pathname = typeof window !== "undefined" ? window.location.pathname : null
       if (pathname && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return true
 
       // Otherwise redirect to auth page with return URL
-      const returnUrl = encodeURIComponent(pathname || "/")
-      router.push(`${fallbackUrl}?returnTo=${returnUrl}`)
+      if (typeof window !== "undefined") {
+        const returnUrl = encodeURIComponent(pathname || "/")
+        router.push(`${fallbackUrl}?returnTo=${returnUrl}`)
+      }
       return false
     },
-    [initialAuthCheckComplete, isAuthenticated, isRefreshingSession, loading, router],
+    [initialAuthCheckComplete, isAuthenticated, isRefreshingSession, loadingState, router],
   )
 
-  // Set up interval to check session expiry
-  useInterval(checkSessionExpiry, SESSION_CHECK_INTERVAL)
-
-  /**
-   * Sign in with email and password
-   */
-  const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true)
-      await ensureSessionFreshness()
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-
-      // Fetch user profile after successful sign-in
-      if (data.user) {
-        await fetchProfile(data.user.id)
-      }
-
-      return data
-    } catch (error) {
-      console.error("Error signing in:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Sign up with email, password and username
-   */
-  const signUp = async (email: string, password: string, username: string) => {
-    try {
-      setLoading(true)
-
-      await ensureSessionFreshness()
-
-      // Check if username is already taken
-      const { data: existingUser, error: checkError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .maybeSingle()
-
-      if (checkError) throw checkError
-      if (existingUser) throw new Error("Username is already taken")
-
-      // Register new user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-          },
-        },
-      })
-
-      if (error) throw error
-
-      // Create profile after successful sign-up
-      if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            username,
-            email,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError)
-        } else {
-          await fetchProfile(data.user.id)
-        }
-      }
-
-      return data
-    } catch (error) {
-      console.error("Error signing up:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Sign out the current user
-   */
-  const signOut = async (redirectTo = "/auth") => {
-    try {
-      setLoading(true)
-      const { error } = await supabase.auth.signOut()
-
-      if (error) throw error
-
-      // Clear local state
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-      setIsAuthenticated(false)
-
-      // Redirect after logout
-      if (redirectTo) {
-        router.push(redirectTo)
-      }
-    } catch (error) {
-      console.error("Error signing out:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Update the user profile
-   */
-  const updateProfile = async (updates: Partial<Profile>) => {
-    try {
-      setLoading(true)
-      await ensureSessionFreshness()
-
-      if (!user) throw new Error("User not authenticated")
-
-      const { data, error } = await supabase.from("profiles").update(updates).eq("id", user.id).select().single()
-
-      if (error) throw error
-
-      setProfile(data)
-      return data
-    } catch (error) {
-      console.error("Error updating profile:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Reset the user password
-   */
-  const resetPassword = async (email: string) => {
-    try {
-      setLoading(true)
-      await ensureSessionFreshness()
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      })
-
-      if (error) throw error
-    } catch (error) {
-      console.error("Error resetting password:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Sign in with Google
-   */
-  const signInWithGoogle = async () => {
-    try {
-      setLoading(true)
-      await ensureSessionFreshness()
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error signing in with Google:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Sign in with Facebook
-   */
-  const signInWithFacebook = async () => {
-    try {
-      setLoading(true)
-      await ensureSessionFreshness()
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error signing in with Facebook:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = useMemo(
+    () => loadingState || (isAuthenticated && isRefreshingSession) || isPending,
+    [isAuthenticated, isPending, isRefreshingSession, loadingState],
+  )
 
   return (
     <UserContext.Provider
@@ -506,7 +438,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         session,
-        loading: loading || (isAuthenticated && isRefreshingSession),
+        loading,
         isRefreshingSession,
         isAuthenticated,
         signIn,
