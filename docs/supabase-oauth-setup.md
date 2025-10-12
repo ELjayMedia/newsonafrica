@@ -11,7 +11,7 @@ Add these URLs to your Supabase project settings:
 - `https://app.newsonafrica.com/`
 - `https://app.newsonafrica.com/auth`
 
-### Development URLs (if testing locally)
+### Development URLs (shared staging environment)
 - `http://app.newsonafrica.com/auth/callback`
 - `http://app.newsonafrica.com/`
 - `http://app.newsonafrica.com/auth`

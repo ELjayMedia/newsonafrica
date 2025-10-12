@@ -1,8 +1,10 @@
 import { z } from "zod"
 
+const DEFAULT_SITE_URL = "http://app.newsonafrica.com"
+
 const envSchema = z
   .object({
-    NEXT_PUBLIC_SITE_URL: z.string().default("http://app.newsonafrica.com"),
+    NEXT_PUBLIC_SITE_URL: z.string().default(DEFAULT_SITE_URL),
     NEXT_PUBLIC_DEFAULT_SITE: z.string().default("sz"),
     NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().optional(),
     NEXT_PUBLIC_WP_SZ_REST_BASE: z.string().optional(),
@@ -28,7 +30,7 @@ try {
   console.error("⚠️ Environment variable validation failed, using defaults:", error)
   // Provide safe defaults if validation fails
   env = {
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || "http://app.newsonafrica.com",
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL,
     NEXT_PUBLIC_DEFAULT_SITE: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
     NEXT_PUBLIC_WP_SZ_GRAPHQL: process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL,
     NEXT_PUBLIC_WP_SZ_REST_BASE: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE,
@@ -44,7 +46,6 @@ try {
     ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
     ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
     ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
-    MVP_MODE: process.env.MVP_MODE || "1",
   }
 }
 
