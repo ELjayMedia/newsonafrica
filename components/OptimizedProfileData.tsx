@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabaseQuery"
-import { createClient } from "@/utils/supabase/client"
-import type { Profile } from "@/services/profile-service"
+import { getProfileById } from "@/app/actions/profile"
+import { updateProfile as updateProfileAction } from "@/app/actions/auth"
+import type { Database } from "@/types/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -13,8 +14,9 @@ interface ProfileDataProps {
   userId: string
 }
 
+type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+
 export function OptimizedProfileData({ userId }: ProfileDataProps) {
-  const supabase = createClient()
   const [isEditing, setIsEditing] = useState(false)
   const [bio, setBio] = useState("")
 
@@ -25,30 +27,37 @@ export function OptimizedProfileData({ userId }: ProfileDataProps) {
     isError,
     error,
     refetch,
-  } = useSupabaseQuery<Profile>(
-    () => supabase.from("profiles").select("id, username, bio").eq("id", userId).single(),
+  } = useSupabaseQuery<Profile | null>(
+    async () => {
+      const result = await getProfileById(userId)
+
+      if (result.error) {
+        throw result.error
+      }
+
+      return result.data ?? null
+    },
     ["profile", userId],
     {
       cacheTime: 5 * 60 * 1000, // 5 minutes
       refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
       onSuccess: (data) => {
-        setBio(data.bio || "")
+        setBio(data?.bio || "")
       },
+      select: (data) => data ?? null,
     },
   )
 
   // Optimized mutation for updating profile
   const { mutate: updateProfile, isLoading: isUpdating } = useSupabaseMutation<Profile, { bio: string }>(
     async (variables) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ bio: variables.bio, updated_at: new Date().toISOString() })
-        .eq("id", userId)
-        .select()
-        .single()
+      const result = await updateProfileAction({ bio: variables.bio })
 
-      if (error) throw error
-      return data
+      if (result.error || !result.data) {
+        throw result.error ?? new Error("Failed to update profile")
+      }
+
+      return result.data
     },
     {
       onSuccess: () => {

@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js"
-import { executeWithCache } from "@/utils/supabase-query-utils"
+import { useState, useEffect, useCallback, useTransition } from "react"
+import { clearQueryCache, executeWithCache } from "@/utils/supabase-query-utils"
 
 interface UseSupabaseQueryOptions<T> {
   enabled?: boolean
@@ -34,7 +33,7 @@ interface UseSupabaseQueryResult<T> {
  * @returns Query result with data, loading state, and refetch function
  */
 export function useSupabaseQuery<T = any>(
-  queryFn: () => PostgrestFilterBuilder<any, any, any[]>,
+  queryFn: () => Promise<T>,
   queryKey: string | string[],
   options: UseSupabaseQueryOptions<T> = {},
 ): UseSupabaseQueryResult<T> {
@@ -58,35 +57,37 @@ export function useSupabaseQuery<T = any>(
   const cacheKey = Array.isArray(queryKey) ? queryKey.join(":") : queryKey
 
   // Function to fetch data
-  const fetchData = useCallback(async () => {
-    if (!enabled) return
+  const fetchData = useCallback(
+    async (force = false) => {
+      if (!enabled) return
 
-    setIsLoading(true)
-    setError(null)
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      const query = queryFn()
-      const result = await executeWithCache(query, cacheKey, cacheTime)
+      try {
+        const result = await executeWithCache(queryFn, cacheKey, cacheTime, { force })
 
-      const processedData = select(result)
-      setData(processedData)
-      setIsSuccess(true)
+        const processedData = select(result)
+        setData(processedData)
+        setIsSuccess(true)
 
-      if (onSuccess) {
-        onSuccess(processedData)
-      }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err))
-      setError(error)
-      setIsSuccess(false)
+        if (onSuccess) {
+          onSuccess(processedData)
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        setError(error)
+        setIsSuccess(false)
 
       if (onError) {
         onError(error)
       }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [cacheKey, cacheTime, enabled, onError, onSuccess, queryFn, select])
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [cacheKey, cacheTime, enabled, onError, onSuccess, queryFn, select],
+  )
 
   // Initial fetch
   useEffect(() => {
@@ -126,7 +127,10 @@ export function useSupabaseQuery<T = any>(
     isLoading,
     isError: !!error,
     isSuccess,
-    refetch: fetchData,
+    refetch: async () => {
+      clearQueryCache(cacheKey)
+      await fetchData(true)
+    },
   }
 }
 
@@ -143,65 +147,67 @@ export function useSupabaseMutation<TData = any, TVariables = any>(
     onSuccess?: (data: TData, variables: TVariables) => void
     onError?: (error: Error, variables: TVariables) => void
     onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void
-    invalidateQueries?: string[]
+    invalidateQueries?: (string | RegExp)[]
   } = {},
 ) {
   const { onSuccess, onError, onSettled, invalidateQueries = [] } = options
   const [data, setData] = useState<TData | undefined>(undefined)
   const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const mutate = useCallback(
     async (variables: TVariables) => {
-      setIsLoading(true)
       setError(null)
 
-      try {
-        const result = await mutationFn(variables)
-        setData(result)
+      return new Promise<TData>((resolve, reject) => {
+        startTransition(() => {
+          mutationFn(variables)
+            .then((result) => {
+              setData(result)
 
-        if (onSuccess) {
-          onSuccess(result, variables)
-        }
+              invalidateQueries.forEach((queryKey) => {
+                if (queryKey instanceof RegExp) {
+                  clearQueryCache(undefined, queryKey)
+                } else {
+                  clearQueryCache(queryKey)
+                }
+              })
 
-        // Invalidate queries if specified
-        if (invalidateQueries.length > 0) {
-          invalidateQueries.forEach((queryKey) => {
-            // This would ideally use a query client, but for simplicity we're just clearing the cache
-            // In a real implementation, you'd want to trigger a refetch of affected queries
-          })
-        }
+              if (onSuccess) {
+                onSuccess(result, variables)
+              }
 
-        if (onSettled) {
-          onSettled(result, null, variables)
-        }
+              if (onSettled) {
+                onSettled(result, null, variables)
+              }
 
-        return result
-      } catch (err) {
-        const errorObj = err instanceof Error ? err : new Error(String(err))
-        setError(errorObj)
+              resolve(result)
+            })
+            .catch((err) => {
+              const errorObj = err instanceof Error ? err : new Error(String(err))
+              setError(errorObj)
 
-        if (onError) {
-          onError(errorObj, variables)
-        }
+              if (onError) {
+                onError(errorObj, variables)
+              }
 
-        if (onSettled) {
-          onSettled(undefined, errorObj, variables)
-        }
+              if (onSettled) {
+                onSettled(undefined, errorObj, variables)
+              }
 
-        throw errorObj
-      } finally {
-        setIsLoading(false)
-      }
+              reject(errorObj)
+            })
+        })
+      })
     },
-    [invalidateQueries, mutationFn, onError, onSettled, onSuccess],
+    [invalidateQueries, mutationFn, onError, onSettled, onSuccess, startTransition],
   )
 
   return {
     mutate,
     data,
     error,
-    isLoading,
+    isLoading: isPending,
     isError: !!error,
     isSuccess: !!data && !error,
     reset: () => {
