@@ -1,7 +1,5 @@
 "use client"
 
-import useSWR from "swr"
-import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress-api"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,23 +10,7 @@ import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 import { Button } from "@/components/ui/button"
-
-type SidebarContentData = {
-  recent: any[]
-  mostRead: any[]
-}
-
-async function fetchSidebarContentData(country: string): Promise<SidebarContentData> {
-  const [recentResponse, mostReadResponse] = await Promise.all([
-    fetchRecentPosts(10, country),
-    fetchMostReadPosts(country, 10),
-  ])
-
-  const recent = Array.isArray(recentResponse) ? recentResponse : []
-  const mostRead = Array.isArray(mostReadResponse) ? mostReadResponse : []
-
-  return { recent, mostRead }
-}
+import { useSidebarContent } from "@/hooks/useSidebarContent"
 
 export function SidebarContent() {
   const country = getCurrentCountry()
@@ -39,18 +21,7 @@ export function SidebarContent() {
     [preferences.sections],
   )
 
-  const { data, error, isLoading, mutate } = useSWR<SidebarContentData>(
-    ["sidebar-content", country],
-    () => fetchSidebarContentData(country),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 1000 * 60 * 3,
-      shouldRetryOnError: true,
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-    },
-  )
+  const { data, error, isLoading, mutate } = useSidebarContent(country)
 
   const recentPosts = Array.isArray(data?.recent) ? data.recent : []
   const mostReadPosts = Array.isArray(data?.mostRead) ? data.mostRead : []

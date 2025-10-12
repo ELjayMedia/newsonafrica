@@ -129,6 +129,20 @@ describe("SidebarContent", () => {
     expect(await screen.findByText("ZA Headline")).toBeInTheDocument()
   })
 
+  it("falls back to empty arrays when responses are missing", async () => {
+    fetchRecentPosts.mockResolvedValue(undefined)
+    fetchMostReadPosts.mockResolvedValue(null)
+
+    renderWithSWR(<SidebarContent />)
+
+    await waitFor(() => {
+      expect(fetchRecentPosts).toHaveBeenCalledWith(10, "sz")
+      expect(fetchMostReadPosts).toHaveBeenCalledWith("sz", 10)
+    })
+
+    expect(await screen.findAllByText("No articles available")).toHaveLength(2)
+  })
+
   it("retries loading data when the user requests it", async () => {
     const error = new Error("Network error")
 
