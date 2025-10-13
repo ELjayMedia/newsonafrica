@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase"
-import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "@/lib/supabase-schema"
+import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
 import { v4 as uuidv4 } from "uuid"
 import { clearQueryCache } from "@/utils/supabase-query-utils"
 import { toast } from "@/hooks/use-toast"
@@ -315,12 +315,58 @@ export async function fetchComments(
     // Combine all comment IDs (root comments and replies)
     const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
 
+    // Determine the current authenticated user (if any) for reaction metadata
+    let currentUserId: string | null = null
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (!authError && user) {
+        currentUserId = user.id
+      }
+    } catch (authError) {
+      console.error("Error fetching authenticated user for reactions:", authError)
+    }
+
     // Fetch reactions for all comments in a single query
-    const reactions = []
+    const reactionsByComment = new Map<string, Map<string, CommentReaction>>()
+
+    if (allCommentIds.length > 0) {
+      try {
+        const { data: reactionRows, error: reactionsError } = await supabase
+          .from("comment_reactions")
+          .select("comment_id, reaction_type, user_id")
+          .in("comment_id", allCommentIds)
+
+        if (reactionsError) {
+          console.error("Error fetching comment reactions:", reactionsError)
+        } else if (reactionRows) {
+          reactionRows.forEach((reaction) => {
+            const commentMap = reactionsByComment.get(reaction.comment_id) || new Map<string, CommentReaction>()
+            const existingReaction = commentMap.get(reaction.reaction_type) || {
+              type: reaction.reaction_type,
+              count: 0,
+              reactedByCurrentUser: false,
+            }
+
+            existingReaction.count += 1
+
+            if (currentUserId && reaction.user_id === currentUserId) {
+              existingReaction.reactedByCurrentUser = true
+            }
+
+            commentMap.set(reaction.reaction_type, existingReaction)
+            reactionsByComment.set(reaction.comment_id, commentMap)
+          })
+        }
+      } catch (reactionsError) {
+        console.error("Error loading comment reactions:", reactionsError)
+      }
+    }
 
     // Create a map of comment_id to reactions
-    const reactionMap = new Map()
-
     // Process all comments with profile data and reactions
     const processedComments = comments.map((comment) => {
       return {
@@ -412,6 +458,9 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
       ...createdComment,
       status: createdComment.status || "active",
       is_rich_text: hasRichText ? createdComment.is_rich_text ?? Boolean(comment.is_rich_text) : false,
+      reaction_count: createdComment.reaction_count ?? 0,
+      reactions: createdComment.reactions ?? [],
+      user_reaction: createdComment.user_reaction ?? null,
     }
   } catch (error) {
     if (isOfflineError(error)) {
@@ -469,6 +518,9 @@ export async function updateComment(
       ...updatedComment,
       status: updatedComment.status || "active",
       is_rich_text: hasRichText ? updatedComment.is_rich_text ?? Boolean(isRichText) : false,
+      reaction_count: updatedComment.reaction_count ?? 0,
+      reactions: updatedComment.reactions ?? [],
+      user_reaction: updatedComment.user_reaction ?? null,
     }
   } catch (error) {
     if (isOfflineError(error)) {
@@ -606,6 +658,7 @@ export function createOptimisticComment(comment: NewComment, username: string, a
       avatar_url: avatarUrl || null,
     },
     reactions: [],
+    user_reaction: null,
     replies: [],
   }
 }
