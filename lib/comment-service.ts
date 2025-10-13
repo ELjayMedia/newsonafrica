@@ -248,7 +248,11 @@ export async function fetchComments(
     }
 
     // Then fetch paginated comments
-    let commentsQuery = supabase.from("comments").select("*").eq("post_id", postId).is("parent_id", null) // Only fetch root comments for pagination
+    let commentsQuery = supabase
+      .from("comments")
+      .select("*, profile:profiles(username, avatar_url)")
+      .eq("post_id", postId)
+      .is("parent_id", null) // Only fetch root comments for pagination
 
     // Add sort order based on option
     switch (sortOption) {
@@ -290,7 +294,11 @@ export async function fetchComments(
     // Fetch all replies for these comments in a single query
     const rootCommentIds = comments.map((comment) => comment.id)
 
-    let repliesQuery = supabase.from("comments").select("*").eq("post_id", postId).in("parent_id", rootCommentIds)
+    let repliesQuery = supabase
+      .from("comments")
+      .select("*, profile:profiles(username, avatar_url)")
+      .eq("post_id", postId)
+      .in("parent_id", rootCommentIds)
 
     // Add status filter only if the column exists
     if (hasStatus) {
@@ -358,82 +366,31 @@ export async function fetchComments(
       }
     }
 
-    // Extract all user IDs from comments and replies
-    const userIds = [
-      ...new Set([...comments.map((comment) => comment.user_id), ...(replies?.map((reply) => reply.user_id) || [])]),
-    ]
-
-    // Fetch profiles for these users in a single query
-    let profiles = []
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username, avatar_url")
-        .in("id", userIds)
-
-      if (!profileError && profileData) {
-        profiles = profileData
-      }
-    } catch (error) {
-      console.error("Error fetching profiles:", error)
-      // Continue without profiles if there's an error
-    }
-
-    // Create a map of user_id to profile data
-    const profileMap = new Map()
-    profiles.forEach((profile) => {
-      profileMap.set(profile.id, profile)
-    })
-
     // Create a map of comment_id to reactions
     // Process all comments with profile data and reactions
     const processedComments = comments.map((comment) => {
-      const profile = profileMap.get(comment.user_id)
-      const reactionMap = reactionsByComment.get(comment.id)
-      const reactions = reactionMap ? Array.from(reactionMap.values()) : []
-      const reactionCount = reactions.reduce((total, reaction) => total + reaction.count, 0)
-      const userReaction = reactions.find((reaction) => reaction.reactedByCurrentUser)?.type || null
       return {
         ...comment,
         // Add status if it doesn't exist
         status: comment.status || "active",
         // Add is_rich_text if it doesn't exist
         is_rich_text: hasRichText ? comment.is_rich_text : false,
-        reaction_count: reactions.length > 0 ? reactionCount : comment.reaction_count ?? 0,
-        profile: profile
-          ? {
-              username: profile.username,
-              avatar_url: profile.avatar_url,
-            }
-          : undefined,
-        reactions,
-        user_reaction: userReaction,
+        profile: comment.profile ?? undefined,
+        reactions: [],
       }
     })
 
     // Process all replies with profile data and reactions
     const processedReplies =
       replies?.map((reply) => {
-        const profile = profileMap.get(reply.user_id)
-        const reactionMap = reactionsByComment.get(reply.id)
-        const reactions = reactionMap ? Array.from(reactionMap.values()) : []
-        const reactionCount = reactions.reduce((total, reaction) => total + reaction.count, 0)
-        const userReaction = reactions.find((reaction) => reaction.reactedByCurrentUser)?.type || null
         return {
           ...reply,
           // Add status if it doesn't exist
           status: reply.status || "active",
           // Add is_rich_text if it doesn't exist
           is_rich_text: hasRichText ? reply.is_rich_text : false,
-          reaction_count: reactions.length > 0 ? reactionCount : reply.reaction_count ?? 0,
-          profile: profile
-            ? {
-                username: profile.username,
-                avatar_url: profile.avatar_url,
-              }
-            : undefined,
-          reactions,
-          user_reaction: userReaction,
+          profile: reply.profile ?? undefined,
+          reactions: [],
         }
       }) || []
 

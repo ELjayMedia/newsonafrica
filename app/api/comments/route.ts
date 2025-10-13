@@ -60,7 +60,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const to = from + limit - 1
 
     // Build query
-    let query = supabase.from("comments").select("*", { count: "exact" }).eq("post_id", postId)
+    let query = supabase
+      .from("comments")
+      .select("*, profile:profiles(username, avatar_url)", { count: "exact" })
+      .eq("post_id", postId)
 
     // Filter by parent_id
     if (parentId === null) {
@@ -102,36 +105,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    // Extract all user IDs from comments
-    const userIds = [...new Set(comments.map((comment) => comment.user_id))]
-
-    // Fetch profiles for these users
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds)
-
-    if (profilesError) {
-      throw new Error(`Failed to fetch user profiles: ${profilesError.message}`)
-    }
-
-    // Create a map of user_id to profile data
-    const profileMap = new Map()
-    profiles?.forEach((profile) => {
-      profileMap.set(profile.id, profile)
-    })
-
     // Combine comments with profile data
     const commentsWithProfiles = comments.map((comment) => {
-      const profile = profileMap.get(comment.user_id)
       return {
         ...comment,
-        profile: profile
-          ? {
-              username: profile.username,
-              avatar_url: profile.avatar_url,
-            }
-          : undefined,
+        profile: comment.profile ?? undefined,
       }
     })
 

@@ -27,9 +27,9 @@ export type Comment = {
   isOptimistic?: boolean
   // Profile data
   profile?: {
-    username: string
+    username: string | null
     avatar_url: string | null
-  }
+  } | null
   // Replies
   replies?: Comment[]
   reactions: CommentReaction[]
