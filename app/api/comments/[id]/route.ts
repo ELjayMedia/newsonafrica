@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import { createRouteClient } from "@/utils/supabase/route-client"
 
 export const runtime = "nodejs"
 
@@ -26,20 +25,7 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set() {},
-        remove() {},
-      },
-    },
-  )
+  const supabase = createRouteClient()
 
   // Check if user is authenticated
   const {
@@ -135,20 +121,7 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set() {},
-        remove() {},
-      },
-    },
-  )
+  const supabase = createRouteClient()
 
   // Check if user is authenticated
   const {
