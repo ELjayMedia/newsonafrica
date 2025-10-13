@@ -13,7 +13,7 @@ export function createClient(): SupabaseClient<Database> {
   return getServerComponentSupabaseClient()
 }
 
-function getCookieAdapter() {
+export function createServerCookieAdapter() {
   const cookieStore = cookies()
 
   return {
@@ -53,7 +53,7 @@ export function createAdminClient(): SupabaseClient<Database> {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
-      cookies: getCookieAdapter(),
+      cookies: createServerCookieAdapter(),
     },
   )
 }
