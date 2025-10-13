@@ -64,7 +64,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   cacheOnFrontEndNav: true,
   fallbacks: {
     document: "/offline",
-    image: "/placeholder.png",
+    image: "/placeholder.svg",
   },
   workboxOptions: {
     runtimeCaching,
