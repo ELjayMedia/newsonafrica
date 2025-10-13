@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useTransition } from "react"
 import { usePathname } from "next/navigation"
 
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
+import { updateAuthCountry } from "@/app/actions/auth"
+import { useUser } from "@/contexts/UserContext"
 
 const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
 const STORAGE_KEY = "preferredCountry"
@@ -55,6 +57,9 @@ function persistPreferredCountry(countryCode: string) {
 
 export function PreferredCountrySync() {
   const pathname = usePathname()
+  const { user } = useUser()
+  const userId = user?.id ?? null
+  const [, startTransition] = useTransition()
 
   useEffect(() => {
     if (!pathname) return
@@ -73,7 +78,15 @@ export function PreferredCountrySync() {
     }
 
     persistPreferredCountry(normalized)
-  }, [pathname])
+
+    if (userId) {
+      startTransition(() => {
+        void updateAuthCountry(normalized).catch((error) => {
+          console.error("Failed to update Supabase auth country", error)
+        })
+      })
+    }
+  }, [pathname, startTransition, userId])
 
   return null
 }

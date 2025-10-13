@@ -20,15 +20,15 @@ WHERE country IS NULL;
 CREATE POLICY IF NOT EXISTS "Bookmarks are readable by owner" ON public.bookmarks
   FOR SELECT USING (
     auth.uid() = user_id
-    AND COALESCE(country, '') = COALESCE(current_setting('request.jwt.claims.country', true), '')
+    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
   );
 
 -- Bookmarks remain manageable by their owner when editions align
 CREATE POLICY IF NOT EXISTS "Bookmarks are manageable by owner" ON public.bookmarks
   USING (
     auth.uid() = user_id
-    AND COALESCE(country, '') = COALESCE(current_setting('request.jwt.claims.country', true), '')
+    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
   ) WITH CHECK (
     auth.uid() = user_id
-    AND COALESCE(country, '') = COALESCE(current_setting('request.jwt.claims.country', true), '')
+    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
   );

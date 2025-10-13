@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AFRICAN_EDITION, SUPPORTED_COUNTRIES, SUPPORTED_EDITIONS } from "@/lib/editions"
 import {
@@ -9,11 +9,15 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
+import { updateAuthCountry } from "@/app/actions/auth"
+import { useUser } from "@/contexts/UserContext"
 
 export default function CountrySelector() {
   const router = useRouter()
   const pathname = usePathname()
   const [selectedEdition, setSelectedEdition] = useState<string>(AFRICAN_EDITION.code)
+  const { user } = useUser()
+  const [, startTransition] = useTransition()
 
   useEffect(() => {
     if (!pathname) {
@@ -51,6 +55,13 @@ export default function CountrySelector() {
         localStorage.removeItem("preferredCountry")
         document.cookie = "preferredCountry=; path=/; max-age=0"
       }
+      if (user) {
+        startTransition(() => {
+          void updateAuthCountry(AFRICAN_EDITION.code).catch((error) => {
+            console.error("Failed to update Supabase auth country", error)
+          })
+        })
+      }
       router.push("/")
       return
     }
@@ -64,6 +75,14 @@ export default function CountrySelector() {
     if (typeof window !== "undefined") {
       localStorage.setItem("preferredCountry", country.code)
       document.cookie = `preferredCountry=${country.code}; path=/; max-age=${60 * 60 * 24 * 365}`
+    }
+
+    if (user) {
+      startTransition(() => {
+        void updateAuthCountry(country.code).catch((error) => {
+          console.error("Failed to update Supabase auth country", error)
+        })
+      })
     }
 
     router.push(`/${country.code}`)
