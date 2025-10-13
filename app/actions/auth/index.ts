@@ -5,6 +5,7 @@ import type { Session, User } from "@supabase/supabase-js"
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
+import { createAdminClient as createSupabaseAdminClient } from "@/utils/supabase/server"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
@@ -172,6 +173,56 @@ export async function signOut(): Promise<ActionResult<{ success: true }>> {
 
     if (error) {
       throw new ActionError(error.message, { cause: error })
+    }
+
+    return { success: true }
+  })
+}
+
+export async function updateAuthCountry(
+  countryCode: string | null,
+): Promise<ActionResult<{ success: true }>> {
+  return withSupabaseSession(async ({ supabase, session }) => {
+    const user = session?.user
+
+    if (!user) {
+      throw new ActionError("User not authenticated", { status: 401 })
+    }
+
+    const normalized = countryCode?.trim().toLowerCase() || null
+    const existingCountry =
+      typeof user.app_metadata?.country === "string" ? user.app_metadata.country.toLowerCase() : null
+
+    if (existingCountry === normalized) {
+      return { success: true }
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn("Cannot update auth country without SUPABASE_SERVICE_ROLE_KEY configured")
+      return { success: true }
+    }
+
+    const adminClient = createSupabaseAdminClient()
+    const nextAppMetadata = { ...(user.app_metadata ?? {}) }
+
+    if (normalized) {
+      nextAppMetadata.country = normalized
+    } else {
+      delete nextAppMetadata.country
+    }
+
+    const { error } = await adminClient.auth.admin.updateUserById(user.id, {
+      app_metadata: nextAppMetadata,
+    })
+
+    if (error) {
+      throw new ActionError("Failed to update user country", { cause: error })
+    }
+
+    try {
+      await supabase.auth.refreshSession()
+    } catch (refreshError) {
+      console.error("Failed to refresh Supabase session after updating country", refreshError)
     }
 
     return { success: true }
