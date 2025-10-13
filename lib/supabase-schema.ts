@@ -1,3 +1,9 @@
+export type CommentReaction = {
+  type: string
+  count: number
+  reactedByCurrentUser: boolean
+}
+
 export type Comment = {
   id: string
   post_id: string
@@ -13,6 +19,8 @@ export type Comment = {
   reviewed_by?: string
   // New fields
   is_rich_text: boolean
+  reaction_count: number
+  user_reaction?: string | null
   // For UI state
   isReplying?: boolean
   isEditing?: boolean
@@ -24,6 +32,7 @@ export type Comment = {
   }
   // Replies
   replies?: Comment[]
+  reactions: CommentReaction[]
 }
 
 export type NewComment = {
