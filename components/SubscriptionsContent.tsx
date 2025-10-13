@@ -1,53 +1,36 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "@/hooks/use-toast"
+import { getUserSubscriptions } from "@/app/actions/subscriptions"
+import { ActionError } from "@/lib/supabase/action-result"
 
-type Subscription = {
-  id: string
-  status: string
-  plan: string
-  renewal_date: string | null
-  created_at: string
+type Subscription = Awaited<ReturnType<typeof getUserSubscriptions>> extends {
+  data: infer T
 }
+  ? NonNullable<T>[number]
+  : never
 
-export function SubscriptionsContent({ userId }: { userId: string }) {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+export async function SubscriptionsContent({ userId }: { userId: string }) {
+  const result = await getUserSubscriptions(userId)
 
-  useEffect(() => {
-    async function loadSubscriptions() {
-      try {
-        const { data, error } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
+  if (result.error) {
+    const message = result.error instanceof ActionError ? result.error.message : "Failed to load subscriptions"
 
-        if (error) throw error
-        setSubscriptions(data || [])
-      } catch (error) {
-        console.error("Error loading subscriptions:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load subscription data. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadSubscriptions()
-  }, [userId, supabase])
-
-  if (loading) {
-    return <div className="animate-pulse h-96 bg-gray-100 rounded-md"></div>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Unable to load subscriptions</CardTitle>
+          <CardDescription>{message}</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button asChild>
+            <a href="/subscribe">View Subscription Plans</a>
+          </Button>
+        </CardFooter>
+      </Card>
+    )
   }
+
+  const subscriptions = result.data ?? []
 
   if (subscriptions.length === 0) {
     return (
@@ -69,7 +52,7 @@ export function SubscriptionsContent({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {subscriptions.map((subscription) => (
+      {subscriptions.map((subscription: Subscription) => (
         <Card key={subscription.id}>
           <CardHeader>
             <CardTitle>{subscription.plan}</CardTitle>

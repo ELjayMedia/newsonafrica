@@ -13,7 +13,6 @@ import Footer from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { UserPreferencesClientProvider } from "@/contexts/UserPreferencesClient"
-import { AuthProvider } from "@/contexts/AuthContext"
 import type React from "react"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
@@ -110,8 +109,7 @@ export function ClientLayout({
             />
           }
         >
-          <AuthProvider>
-            <UserProvider>
+          <UserProvider>
               <UserPreferencesClientProvider
                 initialData={{
                   userId: null,
@@ -155,7 +153,6 @@ export function ClientLayout({
                 </BookmarksProvider>
               </UserPreferencesClientProvider>
             </UserProvider>
-          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>

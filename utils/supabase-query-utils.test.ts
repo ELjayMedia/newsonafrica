@@ -1,102 +1,47 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { clearQueryCache, countRecords, fetchPaginated } from "./supabase-query-utils"
+import { clearQueryCache, executeWithCache } from "./supabase-query-utils"
 
-const hoisted = vi.hoisted(() => {
-  const mockClient: Record<string, any> = {
-    from: vi.fn(),
-  }
-  const createClientMock = vi.fn(() => mockClient)
-
-  return { mockClient, createClientMock }
-})
-
-vi.mock("./supabase/client", () => ({
-  createClient: hoisted.createClientMock,
-}))
-
-const { mockClient, createClientMock } = hoisted
-
-beforeEach(() => {
-  clearQueryCache()
-  mockClient.from = vi.fn()
-  createClientMock.mockClear()
-  createClientMock.mockReturnValue(mockClient)
-})
-
-describe("countRecords caching", () => {
-  it("reuses cached results when cacheKeySuffix is provided", async () => {
-    const selectMock = vi.fn().mockResolvedValue({ count: 5 })
-    mockClient.from.mockReturnValue({ select: selectMock })
-
-    const filtersFactory = () => (query: any) => query
-    const suffix = "status=published"
-
-    const firstResult = await countRecords("articles", filtersFactory(), { cacheKeySuffix: suffix })
-    const secondResult = await countRecords("articles", filtersFactory(), { cacheKeySuffix: suffix })
-
-    expect(firstResult).toBe(5)
-    expect(secondResult).toBe(5)
-    expect(selectMock).toHaveBeenCalledTimes(1)
-    expect(mockClient.from).toHaveBeenCalledTimes(1)
+describe("executeWithCache", () => {
+  beforeEach(() => {
+    clearQueryCache()
   })
 
-  it("skips caching when filters are provided without a cacheKeySuffix", async () => {
-    const selectMock = vi.fn().mockResolvedValue({ count: 2 })
-    mockClient.from.mockReturnValue({ select: selectMock })
+  it("returns cached data on subsequent calls", async () => {
+    const fetcher = vi.fn(async () => ({ value: Math.random() }))
 
-    await countRecords("articles", (query: any) => query)
-    await countRecords("articles", (query: any) => query)
+    const firstResult = await executeWithCache(fetcher, "test-key", 10_000)
+    const secondResult = await executeWithCache(fetcher, "test-key", 10_000)
 
-    expect(selectMock).toHaveBeenCalledTimes(2)
-    expect(mockClient.from).toHaveBeenCalledTimes(2)
-  })
-})
-
-describe("fetchPaginated caching", () => {
-  const createPaginatedMocks = (data = [{ id: 1 }], count = 1) => {
-    const rangeMock = vi.fn().mockResolvedValue({ data, count })
-    const orderMock = vi.fn(() => ({ range: rangeMock }))
-    const selectMock = vi.fn(() => ({ order: orderMock }))
-
-    mockClient.from.mockReturnValue({ select: selectMock })
-
-    return { rangeMock, selectMock }
-  }
-
-  it("reuses cached paginated results when cacheKeySuffix is provided", async () => {
-    const { rangeMock } = createPaginatedMocks()
-
-    const filtersFactory = () => (query: any) => query
-    const suffix = "status=published"
-
-    const firstResult = await fetchPaginated("articles", {
-      filters: filtersFactory(),
-      cacheKeySuffix: suffix,
-    })
-    const secondResult = await fetchPaginated("articles", {
-      filters: filtersFactory(),
-      cacheKeySuffix: suffix,
-    })
-
-    expect(firstResult).toEqual({
-      data: [{ id: 1 }],
-      count: 1,
-      pageCount: 1,
-      hasMore: false,
-    })
+    expect(fetcher).toHaveBeenCalledTimes(1)
     expect(secondResult).toEqual(firstResult)
-    expect(rangeMock).toHaveBeenCalledTimes(1)
-    expect(mockClient.from).toHaveBeenCalledTimes(1)
   })
 
-  it("skips caching when filters are provided without a cacheKeySuffix", async () => {
-    const { rangeMock } = createPaginatedMocks([], 0)
+  it("bypasses cache when force option is provided", async () => {
+    const fetcher = vi.fn(async () => ({ value: Math.random() }))
 
-    await fetchPaginated("articles", { filters: (query: any) => query })
-    await fetchPaginated("articles", { filters: (query: any) => query })
+    const first = await executeWithCache(fetcher, "force-key", 10_000)
+    const result = await executeWithCache(fetcher, "force-key", 10_000, { force: true })
 
-    expect(rangeMock).toHaveBeenCalledTimes(2)
-    expect(mockClient.from).toHaveBeenCalledTimes(2)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(result).not.toBe(first)
+  })
+})
+
+describe("clearQueryCache", () => {
+  it("removes matching cache keys", async () => {
+    clearQueryCache()
+
+    const fetcher = vi.fn(async () => ({ value: Math.random() }))
+
+    await executeWithCache(fetcher, "match-key-1", 10_000)
+    await executeWithCache(fetcher, "match-key-2", 10_000)
+
+    clearQueryCache(undefined, /^match-key-\d$/)
+
+    await executeWithCache(fetcher, "match-key-1", 10_000)
+    await executeWithCache(fetcher, "match-key-2", 10_000)
+
+    expect(fetcher).toHaveBeenCalledTimes(4)
   })
 })

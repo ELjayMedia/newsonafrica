@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, Lock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PAYSTACK_PUBLIC_KEY } from "@/config/paystack"
 import { generateTransactionReference, verifyPaystackTransaction } from "@/lib/paystack-utils"
-import type { PaystackOptions, SubscriptionPlan, SupabaseSubscription } from "@/config/paystack"
-import { createClient } from "@/utils/supabase/client"
+import type { PaystackOptions, SubscriptionPlan } from "@/config/paystack"
 import { useUser } from "@/contexts/UserContext"
+import { recordSubscription } from "@/app/actions/subscriptions"
+import { ActionError } from "@/lib/supabase/action-result"
 
 interface PaystackButtonProps {
   email: string
@@ -41,6 +42,7 @@ export function PaystackButton({
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const { toast } = useToast()
   const { user } = useUser()
+  const [, startTransition] = useTransition()
 
   // Load Paystack script
   useEffect(() => {
@@ -158,44 +160,44 @@ export function PaystackButton({
 
             if (verificationResult.status) {
               // Store subscription in Supabase
-              try {
-                const supabase = createClient()
-                const userId = verificationResult.data?.metadata?.user_id
-                if (userId) {
-                  const renewalDate = (() => {
-                    const date = new Date()
-                    switch (plan.interval) {
-                      case "biannually":
-                        date.setMonth(date.getMonth() + 6)
-                        break
-                      case "annually":
-                        date.setFullYear(date.getFullYear() + 1)
-                        break
-                      default:
-                        date.setMonth(date.getMonth() + 1)
-                    }
-                    return date.toISOString()
-                  })()
+              const userId = verificationResult.data?.metadata?.user_id ?? user?.id
 
-                  const record: SupabaseSubscription = {
-                    user_id: userId,
-                    plan: plan.name,
-                    status: "active",
-                    renewal_date: renewalDate,
-                    payment_id: verificationResult.data.reference,
+              if (userId) {
+                const renewalDate = (() => {
+                  const date = new Date()
+                  switch (plan.interval) {
+                    case "biannually":
+                      date.setMonth(date.getMonth() + 6)
+                      break
+                    case "annually":
+                      date.setFullYear(date.getFullYear() + 1)
+                      break
+                    default:
+                      date.setMonth(date.getMonth() + 1)
                   }
+                  return date.toISOString()
+                })()
 
-                  await supabase.from("subscriptions").upsert({
-                    id: verificationResult.data.reference,
-                    ...record,
-                    start_date: new Date().toISOString(),
-                    payment_provider: "paystack",
-                    metadata: verificationResult.data,
-                    updated_at: new Date().toISOString(),
-                  })
-                }
-              } catch (dbError) {
-                console.error("Error saving subscription:", dbError)
+                startTransition(async () => {
+                  try {
+                    const recordResult = await recordSubscription({
+                      userId,
+                      plan: plan.name,
+                      status: "active",
+                      renewalDate,
+                      paymentId: verificationResult.data.reference,
+                      paymentProvider: "paystack",
+                      metadata: verificationResult.data,
+                    })
+
+                    if (recordResult.error) {
+                      throw recordResult.error
+                    }
+                  } catch (dbError: unknown) {
+                    const message = dbError instanceof ActionError ? dbError.message : (dbError as Error)?.message
+                    console.error("Error saving subscription:", message)
+                  }
+                })
               }
 
               toast({

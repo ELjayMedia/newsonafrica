@@ -3,7 +3,6 @@
 import type { ReactNode } from "react"
 
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/AuthContext"
 import { UserProvider } from "@/contexts/UserContext"
 
 interface ClientProvidersProps {
@@ -13,9 +12,7 @@ interface ClientProvidersProps {
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
-      <AuthProvider>
-        <UserProvider>{children}</UserProvider>
-      </AuthProvider>
+      <UserProvider>{children}</UserProvider>
     </ThemeProvider>
   )
 }

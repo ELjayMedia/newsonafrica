@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Upload } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { uploadProfileAvatar } from "@/app/actions/profile"
+import { ActionError } from "@/lib/supabase/action-result"
 
 // List of African countries
 const AFRICAN_COUNTRIES = [
@@ -89,7 +90,6 @@ const INTEREST_CATEGORIES = [
 export function ProfileEditor() {
   const { user, profile, updateProfile } = useUser()
   const { toast } = useToast()
-  const supabase = createClient()
 
   const [formState, setFormState] = useState({
     username: "",
@@ -105,6 +105,7 @@ export function ProfileEditor() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [, startUploadTransition] = useTransition()
 
   // Initialize form with profile data when available
   useEffect(() => {
@@ -161,37 +162,39 @@ export function ProfileEditor() {
     }
 
     const file = e.target.files[0]
-    const fileExt = file.name.split(".").pop()
-    const fileName = `${user?.id}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    const filePath = `avatars/${fileName}`
 
     setUploading(true)
 
-    try {
-      // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage.from("profiles").upload(filePath, file)
+    startUploadTransition(async () => {
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
 
-      if (uploadError) throw uploadError
+        const result = await uploadProfileAvatar(formData)
 
-      // Get the public URL
-      const { data } = supabase.storage.from("profiles").getPublicUrl(filePath)
+        if (result.error || !result.data) {
+          throw (result.error ?? new Error("Failed to upload avatar"))
+        }
 
-      setAvatarUrl(data.publicUrl)
-      setHasChanges(true)
+        setAvatarUrl(result.data.avatarUrl)
+        setHasChanges(true)
 
-      toast({
-        title: "Avatar uploaded",
-        description: "Your profile picture has been updated.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload avatar",
-        variant: "destructive",
-      })
-    } finally {
-      setUploading(false)
-    }
+        toast({
+          title: "Avatar uploaded",
+          description: "Your profile picture has been updated.",
+        })
+      } catch (error: unknown) {
+        const message = error instanceof ActionError ? error.message : (error as Error)?.message
+
+        toast({
+          title: "Upload failed",
+          description: message || "Failed to upload avatar",
+          variant: "destructive",
+        })
+      } finally {
+        setUploading(false)
+      }
+    })
   }
 
   // Validate form
