@@ -266,48 +266,6 @@ describe("buildHomeContentProps", () => {
 
     const { SUPPORTED_COUNTRIES } = await import("@/lib/utils/routing")
 
-    const aggregatedHome: AggregatedHomeData = {
-      heroPost: {
-        id: "hero",
-        slug: "lead-story",
-        title: "Lead Story",
-        excerpt: "Lead",
-        date: "2024-01-01T00:00:00.000Z",
-      },
-      secondaryPosts: [
-        {
-          id: "secondary-1",
-          slug: "secondary-one",
-          title: "Secondary One",
-          excerpt: "Secondary One",
-          date: "2024-01-02T00:00:00.000Z",
-        },
-        {
-          id: "secondary-2",
-          slug: "secondary-two",
-          title: "Secondary Two",
-          excerpt: "Secondary Two",
-          date: "2024-01-03T00:00:00.000Z",
-        },
-      ],
-      remainingPosts: [
-        {
-          id: "remaining-1",
-          slug: "more-one",
-          title: "More One",
-          excerpt: "More One",
-          date: "2024-01-04T00:00:00.000Z",
-        },
-        {
-          id: "remaining-2",
-          slug: "more-two",
-          title: "More Two",
-          excerpt: "More Two",
-          date: "2024-01-05T00:00:00.000Z",
-        },
-      ],
-    }
-
     const fetchMock = vi.fn(() => {
       throw new Error("API route should not be called when WordPress succeeds")
     })
@@ -328,9 +286,7 @@ describe("buildHomeContentProps", () => {
     }, {})
 
     const wordpressApi = await import("@/lib/wordpress-api")
-    const aggregatedSpy = vi
-      .spyOn(wordpressApi, "getAggregatedLatestHome")
-      .mockResolvedValue(aggregatedHome)
+    const aggregatedSpy = vi.spyOn(wordpressApi, "getAggregatedLatestHome")
     const toWordPress = (post: HomePost): WordPressPost =>
       ({
         id: post.id,
@@ -376,15 +332,15 @@ describe("buildHomeContentProps", () => {
     const result = await homeDataModule.buildHomeContentProps(BASE_URL)
 
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(aggregatedSpy).toHaveBeenCalledTimes(1)
+    expect(aggregatedSpy).not.toHaveBeenCalled()
     expect(frontPageSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
     expect(fpSpy).not.toHaveBeenCalled()
 
-    expect(result.initialPosts).toEqual([
-      aggregatedHome.heroPost,
-      ...aggregatedHome.secondaryPosts,
-      ...aggregatedHome.remainingPosts,
-    ])
+    const expectedInitialPosts = SUPPORTED_COUNTRIES.flatMap(
+      (countryCode) => countryPosts[countryCode] ?? [],
+    )
+
+    expect(result.initialPosts).toEqual(expectedInitialPosts)
 
     expect(result.featuredPosts).toEqual(result.initialPosts.slice(0, 6))
     expect(result.initialData.taggedPosts).toEqual(result.initialPosts.slice(0, 8))
@@ -394,6 +350,9 @@ describe("buildHomeContentProps", () => {
 
     SUPPORTED_COUNTRIES.forEach((countryCode) => {
       expect(result.countryPosts[countryCode]).toEqual(countryPosts[countryCode])
+      expect(
+        frontPageSpy.mock.calls.filter(([code]) => code === countryCode).length,
+      ).toBe(1)
     })
     expect(Object.keys(result.countryPosts).sort()).toEqual([...SUPPORTED_COUNTRIES].sort())
   })
