@@ -11,30 +11,7 @@ function restBase(country: CountryCode) {
   return base.endsWith("/") ? base : `${base}/`
 }
 
-type HeaderOptions = { auth?: boolean; json?: boolean }
-
-function buildHeaders(options: HeaderOptions = {}): HeadersInit {
-  const { auth = false, json = false } = options
-  const headers: Record<string, string> = { Accept: "application/json" }
-
-  if (json) {
-    headers["Content-Type"] = "application/json"
-  }
-
-  if (auth) {
-    const username = process.env.WP_APP_USERNAME
-    const password = process.env.WP_APP_PASSWORD
-
-    if (!username || !password) {
-      throw new Error("WordPress credentials are required for authenticated REST requests")
-    }
-
-    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
-    headers["Authorization"] = `Basic ${credentials}`
-  }
-
-  return headers
-}
+const getAuthHeaders = (): HeadersInit => ({})
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
   const normalizedPath = path.replace(/^\/+/, "")

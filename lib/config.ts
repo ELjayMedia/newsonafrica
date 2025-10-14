@@ -9,7 +9,7 @@ export const appConfig = {
   wordpress: {
     baseUrl,
     restEndpoint: rest,
-    timeout: env.WORDPRESS_REQUEST_TIMEOUT_MS,
+    timeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000,
   },

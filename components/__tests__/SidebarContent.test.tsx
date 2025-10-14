@@ -1,10 +1,6 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import { SWRConfig } from "swr"
 import { SidebarContent } from "../SidebarContent"
-import { SidebarErrorState } from "../SidebarErrorState"
-import { SidebarEmptyState } from "../SidebarEmptyState"
-import { MostReadList } from "../MostReadList"
-import { PersonalizedList } from "../PersonalizedList"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { ReactElement } from "react"
 
@@ -20,11 +16,6 @@ type FetchMock = (input: RequestInfo | URL, init?: RequestInit) => Promise<Fetch
 const fetchMock = vi.fn<FetchMock>()
 const getCurrentCountry = vi.fn(() => "sz")
 const getArticleUrl = vi.fn((slug: string, country?: string) => `/${country || getCurrentCountry()}/article/${slug}`)
-const useUserPreferencesMock = vi.fn(() => ({
-  preferences: {
-    sections: [],
-  },
-}))
 
 vi.mock("@/lib/utils/routing", () => ({
   getCurrentCountry: () => getCurrentCountry(),
@@ -32,7 +23,11 @@ vi.mock("@/lib/utils/routing", () => ({
 }))
 
 vi.mock("@/contexts/UserPreferencesClient", () => ({
-  useUserPreferences: () => useUserPreferencesMock(),
+  useUserPreferences: () => ({
+    preferences: {
+      sections: [],
+    },
+  }),
 }))
 
 vi.mock("next/link", () => ({
@@ -68,11 +63,6 @@ describe("SidebarContent", () => {
     getCurrentCountry.mockReturnValue("sz")
     fetchMock.mockReset()
     global.fetch = fetchMock as unknown as typeof fetch
-    useUserPreferencesMock.mockReturnValue({
-      preferences: {
-        sections: [],
-      },
-    })
   })
 
   it("renders API provided most-read posts", async () => {
@@ -218,62 +208,5 @@ describe("SidebarContent", () => {
 
     expect(await screen.findByText("Recovered Most Read")).toBeInTheDocument()
     expect(await screen.findByText("Recovered Story")).toBeInTheDocument()
-  })
-})
-
-describe("Sidebar presentational components", () => {
-  it("renders retry action in the error state", () => {
-    const onRetry = vi.fn()
-
-    render(<SidebarErrorState onRetry={onRetry} />)
-
-    const button = screen.getByRole("button", { name: /try again/i })
-    expect(button).toBeInTheDocument()
-
-    fireEvent.click(button)
-    expect(onRetry).toHaveBeenCalled()
-  })
-
-  it("renders empty state messaging", () => {
-    render(<SidebarEmptyState />)
-
-    expect(screen.getAllByText("No articles available").length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText(/Check back soon for trending stories/i)[0]).toBeInTheDocument()
-  })
-
-  it("renders most read rankings", () => {
-    render(
-      <MostReadList
-        posts={[
-          { id: "1", title: "Top Story", href: "/article/top" },
-          { id: "2", title: "Second Story", href: "/article/second", date: "2024-01-01" },
-        ]}
-      />,
-    )
-
-    expect(screen.getAllByText("Top Story")[0]).toBeInTheDocument()
-    expect(screen.getAllByLabelText("Rank 1")[0]).toBeInTheDocument()
-    expect(screen.getAllByText("Updated every 3 minutes")[0]).toBeInTheDocument()
-  })
-
-  it("renders personalized list items with media", () => {
-    render(
-      <PersonalizedList
-        title="For You"
-        posts={[
-          {
-            id: "p1",
-            title: "Personalized Story",
-            href: "/article/personalized",
-            date: "2024-03-01",
-            imageUrl: "https://example.com/image.jpg",
-            imageAlt: "Alt text",
-          },
-        ]}
-      />,
-    )
-
-    expect(screen.getByText("Personalized Story")).toBeInTheDocument()
-    expect(screen.getByRole("img", { name: /alt text/i })).toBeInTheDocument()
   })
 })

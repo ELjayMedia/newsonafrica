@@ -11,19 +11,11 @@ const envSchema = z
     NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().optional(),
     NEXT_PUBLIC_WP_ZA_REST_BASE: z.string().optional(),
     MVP_MODE: z.string().default("0"),
-    WORDPRESS_AUTH_TOKEN: z.string().optional(),
-    WP_APP_USERNAME: z.string().optional(),
-    WP_APP_PASSWORD: z.string().optional(),
     ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
     ALGOLIA_APP_ID: z.string().optional(),
     ALGOLIA_ADMIN_KEY: z.string().optional(),
     ALGOLIA_SEARCH_API_KEY: z.string().optional(),
     ALGOLIA_INDEX_PREFIX: z.string().default("newsonafrica"),
-    WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce
-      .number()
-      .int()
-      .positive()
-      .default(30000),
   })
   .catchall(z.string().optional())
 
@@ -42,16 +34,12 @@ try {
     NEXT_PUBLIC_WP_ZA_GRAPHQL: process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL,
     NEXT_PUBLIC_WP_ZA_REST_BASE: process.env.NEXT_PUBLIC_WP_ZA_REST_BASE,
     MVP_MODE: process.env.MVP_MODE || "0",
-    WORDPRESS_AUTH_TOKEN: process.env.WORDPRESS_AUTH_TOKEN,
-    WP_APP_USERNAME: process.env.WP_APP_USERNAME,
-    WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     ANALYTICS_API_BASE_URL:
       process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
     ALGOLIA_APP_ID: process.env.ALGOLIA_APP_ID,
     ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
     ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
     ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
-    WORDPRESS_REQUEST_TIMEOUT_MS: Number(process.env.WORDPRESS_REQUEST_TIMEOUT_MS) || 30000,
   }
 }
 

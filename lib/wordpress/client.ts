@@ -1,6 +1,5 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { appConfig } from "@/lib/config"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
@@ -75,35 +74,10 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
-type HeaderOptions = {
-  auth?: boolean
-  json?: boolean
-}
-
-function buildRequestHeaders(options: HeaderOptions = {}): HeadersInit {
-  const { auth = false, json = false } = options
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-  }
-
-  if (json) {
-    headers["Content-Type"] = "application/json"
-  }
-
-  if (auth) {
-    const username = process.env.WP_APP_USERNAME
-    const password = process.env.WP_APP_PASSWORD
-
-    if (!username || !password) {
-      throw new Error("WordPress credentials are required for authenticated requests")
-    }
-
-    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
-    headers["Authorization"] = `Basic ${credentials}`
-  }
-
-  return headers
-}
+const getAuthHeaders = (): HeadersInit => ({
+  "Content-Type": "application/json",
+  Accept: "application/json",
+})
 
 export const buildCacheTagParam = (tags: string[]): string => Array.from(new Set(tags)).sort().join("|")
 
@@ -135,6 +109,7 @@ export async function fetchFromWpGraphQL<T>(
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
+            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -264,13 +239,7 @@ export async function fetchFromWp<T>(
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const {
-    timeout = appConfig.wordpress.timeout,
-    withHeaders = false,
-    tags,
-    auth = false,
-    revalidate,
-  } = normalizedOpts
+  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)

@@ -58,7 +58,6 @@ export function TopBar() {
           ) : (
             <>
               <Button
-                asChild
                 variant="outline"
                 size="sm"
                 className="bg-green-500 text-black border-green-500 hover:bg-green-600 hover:text-black hover:border-green-600 rounded-full"
@@ -70,33 +69,27 @@ export function TopBar() {
 
               {user ? (
                 <div className="flex items-center space-x-2">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full h-8 w-8 text-white hover:bg-white/20"
-                  >
-                    <Link href="/bookmarks">
+                  <Link href="/bookmarks">
+                    <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-white hover:bg-white/20">
                       <BookmarkIcon className="h-4 w-4" />
                       <span className="sr-only">Bookmarks</span>
-                    </Link>
-                  </Button>
+                    </Button>
+                  </Link>
 
                   <ProfileDropdown />
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5"
-                  >
-                    <Link href="/auth?tab=signin" className="no-underline">
+                  <Link href="/auth?tab=signin" className="no-underline">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5"
+                    >
                       <LogIn className="h-4 w-4" />
                       <span>Sign In</span>
-                    </Link>
-                  </Button>
+                    </Button>
+                  </Link>
                 </div>
               )}
             </>
