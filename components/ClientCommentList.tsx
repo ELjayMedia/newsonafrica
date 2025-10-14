@@ -4,8 +4,9 @@ import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { Button } from "@/components/ui/button"
 import { Trash2, Reply, ThumbsUp } from "lucide-react"
-import { deleteComment } from "@/lib/wordpress-api"
 import { Skeleton } from "@/components/ui/skeleton"
+import { wpProxyRequest } from "@/lib/wp-proxy-client"
+import { DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
 
 interface Comment {
   id: number
@@ -31,8 +32,12 @@ export function ClientCommentList({ postId, initialComments }: ClientCommentList
   const handleDeleteComment = async (commentId: number) => {
     try {
       setIsDeleting(commentId)
-      await deleteComment(commentId)
-      setComments(comments.filter((comment) => comment.id !== commentId))
+      await wpProxyRequest<Comment>({
+        endpoint: `comments/${commentId}`,
+        method: "DELETE",
+        countryCode: DEFAULT_COUNTRY,
+      })
+      setComments((current) => current.filter((comment) => comment.id !== commentId))
       setIsDeleting(null)
     } catch (error) {
       console.error("Failed to delete comment:", error)

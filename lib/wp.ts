@@ -20,7 +20,7 @@ async function wpGet<T>(country: CountryCode, path: string, params?: Record<stri
 
   const res = await fetch(url.toString(), {
     next: { revalidate: 60, tags: [`country:${country}`] },
-    headers: getAuthHeaders(),
+    headers: buildHeaders(),
   })
 
   if (!res.ok) {

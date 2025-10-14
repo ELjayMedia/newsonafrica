@@ -86,6 +86,7 @@ export async function fetchFromWpGraphQL<T>(
   query: string,
   variables?: Record<string, string | number | string[]>,
   tags?: string[],
+  options?: { auth?: boolean },
 ): Promise<T | null> {
   const breaker = await getCircuitBreaker()
   const breakerKey = `wordpress-graphql-${countryCode}`
@@ -102,7 +103,7 @@ export async function fetchFromWpGraphQL<T>(
         try {
           const res = await fetchWithTimeout(base, {
             method: "POST",
-            headers: getAuthHeaders(),
+            headers: buildRequestHeaders({ auth: options?.auth, json: true }),
             body: JSON.stringify({ query, variables }),
             next: {
               revalidate: CACHE_DURATIONS.MEDIUM,
@@ -223,7 +224,15 @@ export async function fetchFromWp<T>(
     method?: string
     payload?: unknown
   },
-  opts: { timeout?: number; withHeaders?: boolean; tags?: string[] } | number = {},
+  opts:
+    | number
+    | {
+        timeout?: number
+        withHeaders?: boolean
+        tags?: string[]
+        auth?: boolean
+        revalidate?: number | false
+      } = {},
 ): Promise<{ data: T; headers: Headers } | T | null> {
   const normalizedOpts =
     typeof opts === "number"
@@ -259,16 +268,23 @@ export async function fetchFromWp<T>(
 
         let logged = false
         try {
-          const res = await fetchWithTimeout(url, {
+          const requestInit: Parameters<typeof fetchWithTimeout>[1] = {
             method,
-            headers: getAuthHeaders(),
-            next: {
-              revalidate: CACHE_DURATIONS.MEDIUM,
-              ...(tags && tags.length > 0 ? { tags } : {}),
-            },
-            ...(payload ? { body: JSON.stringify(payload) } : {}),
+            headers: buildRequestHeaders({ auth, json: payload !== undefined }),
+            ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
             timeout,
-          })
+          }
+
+          if (revalidate === false) {
+            requestInit.cache = "no-store"
+          } else {
+            requestInit.next = {
+              revalidate: revalidate ?? CACHE_DURATIONS.MEDIUM,
+              ...(tags && tags.length > 0 ? { tags } : {}),
+            }
+          }
+
+          const res = await fetchWithTimeout(url, requestInit)
 
           if (!res.ok) {
             logged = true

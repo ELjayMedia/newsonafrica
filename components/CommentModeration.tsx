@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { fetchPendingComments, approveComment, deleteComment } from "@/lib/wordpress-api"
 import { Button } from "@/components/ui/button"
+import { wpProxyRequest } from "@/lib/wp-proxy-client"
+import { DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
 
 interface Comment {
   id: number
@@ -18,15 +19,30 @@ export function CommentModeration() {
 
   useEffect(() => {
     const loadPendingComments = async () => {
-      const comments = await fetchPendingComments()
-      setPendingComments(comments)
+      try {
+        const comments = await wpProxyRequest<Comment[]>({
+          endpoint: "comments",
+          method: "GET",
+          params: { status: "hold", per_page: 100, _embed: 1 },
+          countryCode: DEFAULT_COUNTRY,
+        })
+        setPendingComments(comments ?? [])
+      } catch (error) {
+        console.error("Failed to load pending comments:", error)
+        setPendingComments([])
+      }
     }
     loadPendingComments()
   }, [])
 
   const handleApprove = async (commentId: number) => {
     try {
-      await approveComment(commentId)
+      await wpProxyRequest<Comment>({
+        endpoint: `comments/${commentId}`,
+        method: "POST",
+        payload: { status: "approve" },
+        countryCode: DEFAULT_COUNTRY,
+      })
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
       console.error("Failed to approve comment:", error)
@@ -35,7 +51,11 @@ export function CommentModeration() {
 
   const handleDelete = async (commentId: number) => {
     try {
-      await deleteComment(commentId)
+      await wpProxyRequest<Comment>({
+        endpoint: `comments/${commentId}`,
+        method: "DELETE",
+        countryCode: DEFAULT_COUNTRY,
+      })
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
       console.error("Failed to delete comment:", error)

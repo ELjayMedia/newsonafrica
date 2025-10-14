@@ -1,3 +1,5 @@
+"use server"
+
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
 import { fetchFromWp } from "./client"
@@ -12,18 +14,22 @@ export async function fetchPendingComments(countryCode = DEFAULT_COUNTRY): Promi
       endpoint: "comments",
       params: { status: "hold", per_page: 100, _embed: 1 },
     },
-    { tags },
+    { tags, auth: true, revalidate: false },
   )
   return comments || []
 }
 
 export async function approveComment(commentId: number, countryCode = DEFAULT_COUNTRY) {
   try {
-    const res = await fetchFromWp<WordPressComment>(countryCode, {
-      endpoint: `comments/${commentId}`,
-      method: "POST",
-      payload: { status: "approve" },
-    })
+    const res = await fetchFromWp<WordPressComment>(
+      countryCode,
+      {
+        endpoint: `comments/${commentId}`,
+        method: "POST",
+        payload: { status: "approve" },
+      },
+      { auth: true, revalidate: false },
+    )
     if (!res) throw new Error(`Failed to approve comment ${commentId}`)
     return res
   } catch (error) {
@@ -34,10 +40,14 @@ export async function approveComment(commentId: number, countryCode = DEFAULT_CO
 
 export async function deleteComment(commentId: number, countryCode = DEFAULT_COUNTRY) {
   try {
-    const res = await fetchFromWp<WordPressComment>(countryCode, {
-      endpoint: `comments/${commentId}`,
-      method: "DELETE",
-    })
+    const res = await fetchFromWp<WordPressComment>(
+      countryCode,
+      {
+        endpoint: `comments/${commentId}`,
+        method: "DELETE",
+      },
+      { auth: true, revalidate: false },
+    )
     if (!res) throw new Error(`Failed to delete comment ${commentId}`)
     return res
   } catch (error) {
