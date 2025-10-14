@@ -10,6 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 
 export interface HeaderCategory {
   id: number
@@ -54,6 +55,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           {/* Top Bar */}
           <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
             <div className="flex items-center gap-2">
+              <SidebarTrigger className="md:hidden h-9 w-9 text-gray-700 hover:bg-gray-100" />
               <Link href={homeHref} className="flex items-center">
                 <Image
                   src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
