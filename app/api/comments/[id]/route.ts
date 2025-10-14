@@ -14,6 +14,22 @@ type CommentRouteContext = {
   params?: Promise<Record<string, string | string[] | undefined>>
 }
 
+type RouteSupabaseClient = ReturnType<typeof createSupabaseRouteClient>
+
+async function isModeratorUser(supabase: RouteSupabaseClient, userId: string): Promise<boolean> {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load profile: ${error.message}`)
+  }
+
+  return Boolean(profile?.is_admin)
+}
+
 // Update a comment
 export async function PATCH(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
@@ -148,13 +164,25 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
       return jsonWithCors(request, { error: "Comment not found" }, { status: 404 })
     }
 
-    // Verify ownership
-    if (comment.user_id !== session.user.id) {
+    const isModerator = await isModeratorUser(supabase, session.user.id)
+
+    if (comment.user_id !== session.user.id && !isModerator) {
       return jsonWithCors(request, { error: "Unauthorized" }, { status: 403 })
     }
 
     // Soft delete the comment by updating its status
-    const { error } = await supabase.from("comments").update({ status: "deleted" }).eq("id", commentId)
+    const { error } = await supabase
+      .from("comments")
+      .update({
+        status: "deleted",
+        ...(isModerator
+          ? {
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: session.user.id,
+            }
+          : {}),
+      })
+      .eq("id", commentId)
 
     if (error) {
       console.error("Error deleting comment:", error)

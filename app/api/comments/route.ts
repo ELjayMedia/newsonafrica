@@ -7,6 +7,22 @@ import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
 
 export const runtime = "nodejs"
 
+type RouteSupabaseClient = ReturnType<typeof createSupabaseRouteClient>
+
+async function isModeratorUser(supabase: RouteSupabaseClient, userId: string): Promise<boolean> {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load profile: ${error.message}`)
+  }
+
+  return Boolean(profile?.is_admin)
+}
+
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
@@ -45,6 +61,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const from = page * limit
     const to = from + limit - 1
 
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      throw new Error(`Failed to fetch session: ${sessionError.message}`)
+    }
+
+    const userId = session?.user?.id ?? null
+    const moderator = userId && status !== "active" ? await isModeratorUser(supabase, userId) : false
+
     // Build query
     let query = supabase
       .from("comments")
@@ -58,18 +86,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       query = query.eq("parent_id", parentId)
     }
 
-    // Filter by status if not 'all'
     if (status !== "all") {
-      // For non-authenticated users, only show active comments
-      // For authenticated users, show their own comments regardless of status
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (session?.user) {
-        query = query.or(`status.eq.${status},user_id.eq.${session.user.id}`)
+      if (status === "active") {
+        query = query.eq("status", "active")
+      } else if (userId) {
+        if (moderator) {
+          query = query.eq("status", status)
+        } else {
+          query = query.or(`status.eq.${status},user_id.eq.${userId}`)
+        }
       } else {
-        query = query.eq("status", status)
+        return withCors(request, handleApiError(new Error("Unauthorized")))
+      }
+    } else if (!moderator) {
+      if (userId) {
+        query = query.or(`status.eq.active,user_id.eq.${userId}`)
+      } else {
+        query = query.eq("status", "active")
       }
     }
 
@@ -258,6 +291,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       return withCors(request, handleApiError(new Error("Comment not found")))
     }
 
+    const isModerator = await isModeratorUser(supabase, session.user.id)
+
     let updateData = {}
 
     switch (action) {
@@ -269,16 +304,21 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         }
         break
       case "delete":
-        // Only allow the author to delete their own comment
-        if (comment.user_id !== session.user.id) {
-          return withCors(request, handleApiError(new Error("You can only delete your own comments")))
+        if (comment.user_id !== session.user.id && !isModerator) {
+          return withCors(request, handleApiError(new Error("You don't have permission to delete this comment")))
         }
-        updateData = { status: "deleted" }
+        updateData = {
+          status: "deleted",
+          ...(isModerator
+            ? {
+                reviewed_at: new Date().toISOString(),
+                reviewed_by: session.user.id,
+              }
+            : {}),
+        }
         break
       case "approve":
-        // Check if user is a moderator (implement your own logic)
-        // For now, we'll just check if the user is the author
-        if (comment.user_id !== session.user.id) {
+        if (!isModerator && comment.user_id !== session.user.id) {
           return withCors(request, handleApiError(new Error("You don't have permission to approve this comment")))
         }
         updateData = {
