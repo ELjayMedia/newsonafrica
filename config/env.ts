@@ -19,6 +19,11 @@ const envSchema = z
     ALGOLIA_ADMIN_KEY: z.string().optional(),
     ALGOLIA_SEARCH_API_KEY: z.string().optional(),
     ALGOLIA_INDEX_PREFIX: z.string().default("newsonafrica"),
+    WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30000),
   })
   .catchall(z.string().optional())
 
@@ -46,6 +51,7 @@ try {
     ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
     ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
     ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
+    WORDPRESS_REQUEST_TIMEOUT_MS: Number(process.env.WORDPRESS_REQUEST_TIMEOUT_MS) || 30000,
   }
 }
 
