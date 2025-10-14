@@ -14,19 +14,34 @@ export { useUserPreferences } from "./UserPreferencesClient"
 export type { UserPreferencesContextValue } from "./UserPreferencesClient"
 export type { ThemePreference, BookmarkSortPreference, UserPreferences }
 
-export async function UserPreferencesProvider({ children }: { children: ReactNode }) {
+function createDefaultSnapshot(): UserPreferencesSnapshot {
+  return {
+    userId: null,
+    preferences: { ...DEFAULT_USER_PREFERENCES },
+    profilePreferences: {},
+  }
+}
+
+export function UserPreferencesProvider({ children }: { children: ReactNode }) {
+  return (
+    <UserPreferencesClientProvider initialData={createDefaultSnapshot()}>
+      {children}
+    </UserPreferencesClientProvider>
+  )
+}
+
+export async function UserPreferencesHydrator({ children }: { children: ReactNode }) {
   const result = await getUserPreferences()
 
   if (result.error) {
     console.error("Failed to load user preferences:", result.error)
   }
 
-  const initialData: UserPreferencesSnapshot =
-    result.data ?? {
-      userId: null,
-      preferences: { ...DEFAULT_USER_PREFERENCES },
-      profilePreferences: {},
-    }
+  const initialData = result.data ?? createDefaultSnapshot()
 
-  return <UserPreferencesClientProvider initialData={initialData}>{children}</UserPreferencesClientProvider>
+  return (
+    <UserPreferencesClientProvider initialData={initialData}>
+      {children}
+    </UserPreferencesClientProvider>
+  )
 }
