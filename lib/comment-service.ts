@@ -569,6 +569,81 @@ export async function deleteComment(id: string): Promise<void> {
   }
 }
 
+export type ModerationStatus = "pending" | "flagged" | "deleted" | "active"
+
+export async function fetchModerationComments({
+  status = "pending",
+  limit = 100,
+}: { status?: ModerationStatus; limit?: number } = {}): Promise<Comment[]> {
+  try {
+    let response: Response
+    try {
+      const query = new URLSearchParams({ status, limit: limit.toString() })
+      response = await fetch(`/api/comments/moderation?${query.toString()}`, {
+        credentials: "include",
+      })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Moderation comment fetch failed while offline", error)
+        return []
+      }
+      throw error
+    }
+
+    const result = await readJson<ApiResult<{ comments: Comment[] }>>(response)
+
+    if (!response.ok || result?.success === false) {
+      const message = result?.error || `Failed to load moderation comments (HTTP ${response.status})`
+      throw new Error(message)
+    }
+
+    return result?.data?.comments ?? []
+  } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Moderation comment fetch will retry when online", error)
+      return []
+    }
+    console.error("Error fetching moderation comments:", error)
+    throw error
+  }
+}
+
+export async function approveComment(id: string): Promise<void> {
+  try {
+    let response: Response
+    try {
+      response = await fetch("/api/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "approve" }),
+        credentials: "include",
+      })
+    } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn("Comment approval queued for background sync", error)
+        return
+      }
+      throw error
+    }
+
+    const result = await readJson<ApiResult<{ success: boolean }>>(response)
+
+    if (!response.ok || result?.success === false) {
+      const message = result?.error || `Failed to approve comment (HTTP ${response.status})`
+      throw new Error(message)
+    }
+
+    clearCommentCache()
+  } catch (error) {
+    if (isOfflineError(error)) {
+      console.warn("Comment approval will retry when online", error)
+      return
+    }
+    console.error("Error approving comment:", error)
+    throw error
+  }
+}
+
 // Report a comment
 export async function reportComment(data: ReportCommentData): Promise<void> {
   // Check if status column exists

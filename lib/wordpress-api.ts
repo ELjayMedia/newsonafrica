@@ -18,7 +18,6 @@ export type {
   PaginatedPostsResult,
   WordPressAuthor,
   WordPressCategory,
-  WordPressComment,
   WordPressImage,
   WordPressTag,
 } from "./wordpress/types"
