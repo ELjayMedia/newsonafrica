@@ -1,27 +1,44 @@
 import useSWR from "swr"
-import { fetchRecentPosts, fetchMostReadPosts } from "@/lib/wordpress-api"
 
-export type SidebarContentData = {
-  recent: any[]
-  mostRead: any[]
-}
+import type { SidebarContentPayload } from "@/types/sidebar"
 
-export async function fetchSidebarContentData(country: string): Promise<SidebarContentData> {
-  const [recentResponse, mostReadResponse] = await Promise.all([
-    fetchRecentPosts(10, country),
-    fetchMostReadPosts(country, 10),
-  ])
+const SIDEBAR_ENDPOINT = "/api/sidebar"
+const RECENT_LIMIT = 10
+const MOST_READ_LIMIT = 10
 
-  const recent = Array.isArray(recentResponse) ? recentResponse : []
-  const mostRead = Array.isArray(mostReadResponse) ? mostReadResponse : []
+async function requestSidebarContent(country: string): Promise<SidebarContentPayload> {
+  const params = new URLSearchParams({
+    country,
+    recentLimit: String(RECENT_LIMIT),
+    mostReadLimit: String(MOST_READ_LIMIT),
+  })
+
+  const response = await fetch(`${SIDEBAR_ENDPOINT}?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => "")
+    throw new Error(message || "Failed to load sidebar content")
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as Partial<SidebarContentPayload> | undefined
+
+  const recent = Array.isArray(payload?.recent) ? payload.recent : []
+  const mostRead = Array.isArray(payload?.mostRead) ? payload.mostRead : []
 
   return { recent, mostRead }
 }
 
+export async function fetchSidebarContentData(country: string): Promise<SidebarContentPayload> {
+  return requestSidebarContent(country)
+}
+
 export function useSidebarContent(country: string) {
-  return useSWR<SidebarContentData>(
+  return useSWR<SidebarContentPayload>(
     ["sidebar-content", country],
-    () => fetchSidebarContentData(country),
+    () => requestSidebarContent(country),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
