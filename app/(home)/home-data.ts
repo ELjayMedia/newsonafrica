@@ -345,34 +345,92 @@ const deriveHomeContentState = (
   }
 }
 
-const buildCountryPosts = async (
+interface BuildCountryPostsOptions {
+  includeAggregates?: boolean
+  includeAfricanAggregate?: boolean
+}
+
+interface BuildCountryPostsResult {
+  countryPosts: CountryPosts
+  aggregatedByCountry: Record<string, AggregatedHomeData>
+  africanAggregate?: AggregatedHomeData
+}
+
+async function buildCountryPosts(
   countryCodes: readonly string[],
   preloaded: Partial<Record<string, AggregatedHomeData>> = {},
-): Promise<CountryPosts> => {
+): Promise<CountryPosts>
+async function buildCountryPosts(
+  countryCodes: readonly string[],
+  preloaded: Partial<Record<string, AggregatedHomeData>>,
+  options: BuildCountryPostsOptions & { includeAggregates: true },
+): Promise<BuildCountryPostsResult>
+async function buildCountryPosts(
+  countryCodes: readonly string[],
+  preloaded: Partial<Record<string, AggregatedHomeData>> = {},
+  options?: BuildCountryPostsOptions,
+): Promise<CountryPosts | BuildCountryPostsResult> {
   if (!countryCodes.length) {
+    if (options?.includeAggregates) {
+      return {
+        countryPosts: {},
+        aggregatedByCountry: {},
+        africanAggregate: options.includeAfricanAggregate
+          ? createEmptyAggregatedHome()
+          : undefined,
+      }
+    }
+
     return {}
   }
 
-  const countryEntries = await Promise.all(
+  const aggregatedEntries = await Promise.all(
     countryCodes.map(async (countryCode) => {
       const aggregated =
         preloaded[countryCode] ?? (await fetchAggregatedHomeForCountry(countryCode))
-      const posts = flattenAggregatedHome(aggregated)
-      return [countryCode, posts] as const
+      return [countryCode, aggregated] as const
     }),
   )
 
-  return countryEntries.reduce<CountryPosts>((acc, [countryCode, posts]) => {
-    acc[countryCode] = posts
+  const countryPosts = aggregatedEntries.reduce<CountryPosts>((acc, [countryCode, aggregated]) => {
+    acc[countryCode] = flattenAggregatedHome(aggregated)
     return acc
   }, {})
+
+  if (!options?.includeAggregates) {
+    return countryPosts
+  }
+
+  const aggregatedByCountry = aggregatedEntries.reduce<
+    Record<string, AggregatedHomeData>
+  >((acc, [countryCode, aggregated]) => {
+    acc[countryCode] = aggregated
+    return acc
+  }, {})
+
+  const africanAggregate = options.includeAfricanAggregate
+    ? buildAggregatedHomeFromPosts(Object.values(countryPosts).flat())
+    : undefined
+
+  return {
+    countryPosts,
+    aggregatedByCountry,
+    africanAggregate,
+  }
 }
 
 export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
-  const aggregatedHome = await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
-  const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
+  const { countryPosts, africanAggregate } =
+    (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
+      includeAggregates: true,
+      includeAfricanAggregate: true,
+    })) as BuildCountryPostsResult
 
-  const countryPosts = await buildCountryPosts(SUPPORTED_COUNTRIES)
+  const aggregatedFromCountries = africanAggregate ?? createEmptyAggregatedHome()
+  const aggregatedHome = hasAggregatedHomeContent(aggregatedFromCountries)
+    ? aggregatedFromCountries
+    : await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+  const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
   return {
     initialPosts,
