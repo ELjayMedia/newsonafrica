@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense, type ReactNode } from "react"
-import type React from "react"
 import Link from "next/link"
 
 import { ClientWrapper } from "@/components/ClientWrapper"
@@ -9,12 +8,6 @@ import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
 import { BottomNavigation } from "@/components/BottomNavigation"
-import { Sidebar as AppSidebar } from "@/components/Sidebar"
-import {
-  SidebarProvider,
-  Sidebar as SidebarRoot,
-  SidebarInset,
-} from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/toaster"
 
 interface ClientLayoutComponentsProps {
@@ -23,42 +16,30 @@ interface ClientLayoutComponentsProps {
 
 export function ClientLayoutComponents({ children }: ClientLayoutComponentsProps) {
   return (
-    <SidebarProvider>
-      <ClientWrapper>
-        <SidebarRoot
-          collapsible="offcanvas"
-          side="right"
-          className="bg-transparent"
-          style={{
-            "--sidebar-width": "20rem",
-          } as React.CSSProperties}
-        >
-          <AppSidebar />
-        </SidebarRoot>
-        <SidebarInset className="bg-transparent">
-          <Suspense fallback={null}>
-            <ScrollToTop />
-          </Suspense>
-          <ClientDynamicComponents />
-          <TopBar />
-          {children}
-          <footer className="mx-auto mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2 md:max-w-[980px]">
-            <Link href="/privacy-policy" className="hover:underline">
-              Privacy Policy
-            </Link>
-            {" | "}
-            <Link href="/terms-of-service" className="hover:underline">
-              Terms of Service
-            </Link>
-            {" | "}
-            <Link href="/sitemap.xml" className="hover:underline">
-              Sitemap
-            </Link>
-          </footer>
-          <BottomNavigation />
-          <Toaster />
-        </SidebarInset>
-      </ClientWrapper>
-    </SidebarProvider>
+    <ClientWrapper>
+      <Suspense fallback={null}>
+        <ScrollToTop />
+      </Suspense>
+      <ClientDynamicComponents />
+      <TopBar />
+      <div className="flex-grow rounded-xs shadow-none bg-transparent">
+        <div className="mx-auto max-w-full md:max-w-[980px]">{children}</div>
+      </div>
+      <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+        <Link href="/privacy-policy" className="hover:underline">
+          Privacy Policy
+        </Link>
+        {" | "}
+        <Link href="/terms-of-service" className="hover:underline">
+          Terms of Service
+        </Link>
+        {" | "}
+        <Link href="/sitemap.xml" className="hover:underline">
+          Sitemap
+        </Link>
+      </footer>
+      <BottomNavigation />
+      <Toaster />
+    </ClientWrapper>
   )
 }

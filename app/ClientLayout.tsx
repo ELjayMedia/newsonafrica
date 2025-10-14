@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react"
 
 import { HeaderClient } from "@/components/HeaderClient"
 import { BottomNavigation } from "@/components/BottomNavigation"
-import { Sidebar as AppSidebar } from "@/components/Sidebar"
+import { Sidebar } from "@/components/Sidebar"
 import Footer from "@/components/Footer"
 import { UserProvider } from "@/contexts/UserContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
@@ -23,12 +23,6 @@ import { useCategories } from "@/lib/hooks/useWordPressData"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import { usePathname } from "next/navigation"
-import {
-  SidebarProvider,
-  Sidebar as SidebarRoot,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
 
 function LegacyHeader() {
   const pathname = usePathname()
@@ -70,23 +64,7 @@ function LegacyHeader() {
     })
   }, [categories, preferences.sections])
 
-  const hideHeaderOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
-  const searchPage = pathname === "/search"
-  const fallbackTriggerBreakpoint = hideHeaderOnMobile ? "md:hidden" : searchPage ? "sm:hidden" : ""
-  const showFallbackTrigger = fallbackTriggerBreakpoint.length > 0
-
-  return (
-    <>
-      {showFallbackTrigger ? (
-        <div
-          className={`mx-auto flex max-w-full md:max-w-[980px] justify-end px-0 md:px-4 ${fallbackTriggerBreakpoint}`}
-        >
-          <SidebarTrigger className={`${fallbackTriggerBreakpoint} text-gray-700 hover:bg-gray-100`} />
-        </div>
-      ) : null}
-      <HeaderClient categories={sortedCategories} countryCode={countryCode} />
-    </>
-  )
+  return <HeaderClient categories={sortedCategories} countryCode={countryCode} />
 }
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -140,47 +118,38 @@ export function ClientLayout({
                 }}
               >
                 <BookmarksProvider>
-                  <SidebarProvider>
-                    <ClientWrapper>
-                      <SidebarRoot
-                        collapsible="offcanvas"
-                        side="right"
-                        className="bg-transparent"
-                        style={{
-                          "--sidebar-width": "20rem",
-                        } as React.CSSProperties}
-                      >
-                        <AppSidebar />
-                      </SidebarRoot>
-                      <SidebarInset className="bg-transparent">
-                        <ScrollToTop />
-                        <TopBar />
-                        <div className="mx-auto w-full max-w-full md:max-w-[980px] px-0 md:px-4">
-                          <LegacyHeader />
-                          <div className="mt-4 md:mt-6">
-                            <div className="bg-white shadow-md md:rounded-lg overflow-hidden">
-                              <div className="p-1 md:p-2">{children}</div>
-                            </div>
-                          </div>
+                  <ClientWrapper>
+                    <ScrollToTop />
+                    <TopBar />
+                    <div className="mx-auto max-w-full md:max-w-[980px] px-0 md:px-4">
+                      <LegacyHeader />
+                      <div className="mt-4 md:mt-6">
+                        <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
+                          <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                            <div className="p-1 md:p-2">{children}</div>
+                          </main>
+                          <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
+                            <Sidebar />
+                          </aside>
                         </div>
-                        <BottomNavigation />
-                        <Footer />
-                        <div className="text-center text-sm text-gray-500 mt-4">
-                          <Link href="/privacy-policy" className="hover:underline">
-                            Privacy Policy
-                          </Link>
-                          {" | "}
-                          <Link href="/terms-of-service" className="hover:underline">
-                            Terms of Service
-                          </Link>
-                          {" | "}
-                          <Link href="/sitemap.xml" className="hover:underline">
-                            Sitemap
-                          </Link>
-                        </div>
-                      </SidebarInset>
-                    </ClientWrapper>
-                  </SidebarProvider>
+                      </div>
+                    </div>
+                    <BottomNavigation />
+                    <Footer />
+                    <div className="text-center text-sm text-gray-500 mt-4">
+                      <Link href="/privacy-policy" className="hover:underline">
+                        Privacy Policy
+                      </Link>
+                      {" | "}
+                      <Link href="/terms-of-service" className="hover:underline">
+                        Terms of Service
+                      </Link>
+                      {" | "}
+                      <Link href="/sitemap.xml" className="hover:underline">
+                        Sitemap
+                      </Link>
+                    </div>
+                  </ClientWrapper>
                 </BookmarksProvider>
               </UserPreferencesClientProvider>
             </UserProvider>

@@ -56,7 +56,11 @@ export default function RootLayout({
           <UserPreferencesProvider>
             <BookmarksProvider>
               <ClientLayoutComponents>
-                <LayoutStructure>{children}</LayoutStructure>
+                <LayoutStructure>
+                  <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                    <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                  </main>
+                </LayoutStructure>
               </ClientLayoutComponents>
             </BookmarksProvider>
           </UserPreferencesProvider>
