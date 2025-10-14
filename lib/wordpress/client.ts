@@ -1,5 +1,6 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { appConfig } from "@/lib/config"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
@@ -74,10 +75,21 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
-const getAuthHeaders = (): HeadersInit => ({
-  "Content-Type": "application/json",
-  Accept: "application/json",
-})
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  }
+
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
+  if (username && password) {
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
+  }
+
+  return headers
+}
 
 export const buildCacheTagParam = (tags: string[]): string => Array.from(new Set(tags)).sort().join("|")
 
@@ -86,7 +98,6 @@ export async function fetchFromWpGraphQL<T>(
   query: string,
   variables?: Record<string, string | number | string[]>,
   tags?: string[],
-  options?: { auth?: boolean },
 ): Promise<T | null> {
   const breaker = await getCircuitBreaker()
   const breakerKey = `wordpress-graphql-${countryCode}`
@@ -103,13 +114,12 @@ export async function fetchFromWpGraphQL<T>(
         try {
           const res = await fetchWithTimeout(base, {
             method: "POST",
-            headers: buildRequestHeaders({ auth: options?.auth, json: true }),
+            headers: getAuthHeaders(),
             body: JSON.stringify({ query, variables }),
             next: {
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
-            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -224,22 +234,14 @@ export async function fetchFromWp<T>(
     method?: string
     payload?: unknown
   },
-  opts:
-    | number
-    | {
-        timeout?: number
-        withHeaders?: boolean
-        tags?: string[]
-        auth?: boolean
-        revalidate?: number | false
-      } = {},
+  opts: { timeout?: number; withHeaders?: boolean; tags?: string[] } | number = {},
 ): Promise<{ data: T; headers: Headers } | T | null> {
   const normalizedOpts =
     typeof opts === "number"
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
+  const { timeout = appConfig.wordpress.timeout, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)
@@ -268,23 +270,16 @@ export async function fetchFromWp<T>(
 
         let logged = false
         try {
-          const requestInit: Parameters<typeof fetchWithTimeout>[1] = {
+          const res = await fetchWithTimeout(url, {
             method,
-            headers: buildRequestHeaders({ auth, json: payload !== undefined }),
-            ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
-            timeout,
-          }
-
-          if (revalidate === false) {
-            requestInit.cache = "no-store"
-          } else {
-            requestInit.next = {
-              revalidate: revalidate ?? CACHE_DURATIONS.MEDIUM,
+            headers: getAuthHeaders(),
+            next: {
+              revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
-            }
-          }
-
-          const res = await fetchWithTimeout(url, requestInit)
+            },
+            ...(payload ? { body: JSON.stringify(payload) } : {}),
+            timeout,
+          })
 
           if (!res.ok) {
             logged = true
