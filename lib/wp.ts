@@ -11,19 +11,7 @@ function restBase(country: CountryCode) {
   return base.endsWith("/") ? base : `${base}/`
 }
 
-function getAuthHeaders(): HeadersInit {
-  const headers: HeadersInit = {}
-
-  const username = process.env.WP_APP_USERNAME
-  const password = process.env.WP_APP_PASSWORD
-  if (username && password) {
-    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
-    headers["Authorization"] = `Basic ${credentials}`
-  }
-  // Note: If no credentials, WordPress allows public access to public posts
-
-  return headers
-}
+const getAuthHeaders = (): HeadersInit => ({})
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
   const normalizedPath = path.replace(/^\/+/, "")
