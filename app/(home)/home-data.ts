@@ -85,6 +85,7 @@ export const HOME_FEED_CACHE_TAGS = buildCacheTags({
 })
 
 const inflightRequests = new Map<string, Promise<AggregatedHomeData>>()
+const countryInflightRequests = new Map<string, Promise<AggregatedHomeData>>()
 
 const buildCacheKey = (baseUrl: string, cacheTags: string[]): string => {
   const normalizedTags = Array.from(new Set(cacheTags)).sort()
@@ -208,7 +209,10 @@ export function fetchAggregatedHome(
   return request
 }
 
-export async function fetchAggregatedHomeForCountry(
+const buildCountryCacheKey = (countryCode: string, limit: number) =>
+  `${countryCode}|${limit}`
+
+async function fetchAggregatedHomeForCountryUncached(
   countryCode: string,
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
@@ -256,6 +260,24 @@ export async function fetchAggregatedHomeForCountry(
   }
 
   return createEmptyAggregatedHome()
+}
+
+export function fetchAggregatedHomeForCountry(
+  countryCode: string,
+  limit = HOME_FEED_FALLBACK_LIMIT,
+): Promise<AggregatedHomeData> {
+  const cacheKey = buildCountryCacheKey(countryCode, limit)
+  const existing = countryInflightRequests.get(cacheKey)
+  if (existing) {
+    return existing
+  }
+
+  const request = fetchAggregatedHomeForCountryUncached(countryCode, limit).finally(() => {
+    countryInflightRequests.delete(cacheKey)
+  })
+
+  countryInflightRequests.set(cacheKey, request)
+  return request
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
