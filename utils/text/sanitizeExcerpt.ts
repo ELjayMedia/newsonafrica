@@ -13,4 +13,3 @@ export function sanitizeExcerpt(value?: string | null): string {
 
   return decodeHtmlEntities(normalized)
 }
-

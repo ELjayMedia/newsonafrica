@@ -21,4 +21,3 @@ describe("sanitizeExcerpt", () => {
     expect(result).toBe("Hello World")
   })
 })
-

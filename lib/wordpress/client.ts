@@ -1,6 +1,5 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { appConfig } from "@/lib/config"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
@@ -120,6 +119,7 @@ export async function fetchFromWpGraphQL<T>(
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
+            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -241,7 +241,7 @@ export async function fetchFromWp<T>(
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const { timeout = appConfig.wordpress.timeout, withHeaders = false, tags } = normalizedOpts
+  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)

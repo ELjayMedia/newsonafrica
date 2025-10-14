@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto"
+import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
 
@@ -53,10 +53,8 @@ export async function createWPUser(username: string, email: string, password: st
 // Function to authenticate a WordPress user
 export async function authenticateWPUser(username: string, password: string): Promise<any> {
   const rest = getRestBase()
-  const normalizedBase = rest.replace(/\/wp-json\/wp\/v2\/?$/, "")
-  const baseUrl = normalizedBase || rest
-  const tokenUrl = new URL("/wp-json/jwt-auth/v1/token", baseUrl)
-  const response = await fetch(tokenUrl, {
+  const baseUrl = rest.replace(/\/wp-json\/wp\/v2$/, "")
+  const response = await fetch(`${baseUrl}/jwt-auth/v1/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
