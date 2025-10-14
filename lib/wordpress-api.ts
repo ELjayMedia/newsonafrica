@@ -2,8 +2,6 @@ export * from "./wordpress/frontpage"
 export * from "./wordpress/categories"
 export * from "./wordpress/posts"
 export * from "./wordpress/authors"
-export * from "./wordpress/comments"
-
 export {
   DEFAULT_COUNTRY,
   FP_TAG_SLUG,
