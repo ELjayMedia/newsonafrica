@@ -1,14 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton"
+import { SidebarSectionCard, SidebarSectionHeader } from "./sidebarShared"
 
 export function SidebarSkeleton() {
   return (
     <div className="w-full space-y-6 animate-pulse">
       {/* Most Read Skeleton */}
-      <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-100">
-        <div className="flex items-center gap-2 mb-5 pb-3 border-b-2 border-gray-200">
+      <SidebarSectionCard className="p-5">
+        <SidebarSectionHeader>
           <Skeleton className="h-5 w-5 rounded" />
           <Skeleton className="h-6 w-28" />
-        </div>
+        </SidebarSectionHeader>
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-start gap-3 p-2.5">
@@ -24,13 +25,13 @@ export function SidebarSkeleton() {
         <div className="mt-4 pt-3 border-t border-gray-100">
           <Skeleton className="h-3 w-32 mx-auto" />
         </div>
-      </div>
+      </SidebarSectionCard>
 
       {/* Latest News Skeleton */}
-      <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-100">
-        <div className="mb-5 pb-3 border-b-2 border-gray-200">
+      <SidebarSectionCard className="p-5">
+        <SidebarSectionHeader>
           <Skeleton className="h-6 w-32" />
-        </div>
+        </SidebarSectionHeader>
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-start gap-3 p-2.5">
@@ -43,7 +44,7 @@ export function SidebarSkeleton() {
             </div>
           ))}
         </div>
-      </div>
+      </SidebarSectionCard>
     </div>
   )
 }
