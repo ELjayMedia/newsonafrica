@@ -358,11 +358,11 @@ interface BuildCountryPostsResult {
 
 async function buildCountryPosts(
   countryCodes: readonly string[],
-  preloaded: Partial<Record<string, AggregatedHomeData>> = {},
+  preloaded?: Partial<Record<string, AggregatedHomeData>>,
 ): Promise<CountryPosts>
 async function buildCountryPosts(
   countryCodes: readonly string[],
-  preloaded: Partial<Record<string, AggregatedHomeData>>,
+  preloaded: Partial<Record<string, AggregatedHomeData>> | undefined,
   options: BuildCountryPostsOptions & { includeAggregates: true },
 ): Promise<BuildCountryPostsResult>
 async function buildCountryPosts(
