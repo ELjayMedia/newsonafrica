@@ -477,10 +477,13 @@ describe("getFrontPageSlicesForCountry", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(result.hero.heroPost?.slug).toBe("fallback-1")
+    expect(result.hero.heroPost?.featuredImage?.node?.sourceUrl).toBe("fallback-1.jpg")
     expect(result.trending.posts).toHaveLength(7)
     expect(result.trending.posts[0].slug).toBe("fallback-4")
+    expect(result.trending.posts[0].featuredImage?.node?.sourceUrl).toBe("fallback-4.jpg")
     expect(result.latest.posts).toHaveLength(20)
     expect(result.latest.posts[0].slug).toBe("fallback-11")
+    expect(result.latest.posts[0].featuredImage?.node?.sourceUrl).toBe("fallback-11.jpg")
   })
 })
 
@@ -565,7 +568,9 @@ describe("getFpTaggedPostsForCountry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(result).toHaveLength(2)
     expect(result[0].slug).toBe("fp-1")
+    expect(result[0].featuredImage?.node?.sourceUrl).toBe("fp-1.jpg")
     expect(result[1].slug).toBe("fp-2")
+    expect(result[1].featuredImage?.node?.sourceUrl).toBe("fp-2.jpg")
   })
 })
 
