@@ -1,8 +1,10 @@
+import { env } from "@/config/env"
+
 export type CountryCode = "sz" | "za"
 
 const REST_BASES: Record<CountryCode, string> = {
-  sz: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE || "",
-  za: process.env.NEXT_PUBLIC_WP_ZA_REST_BASE || "",
+  sz: env.NEXT_PUBLIC_WP_SZ_REST_BASE || "",
+  za: env.NEXT_PUBLIC_WP_ZA_REST_BASE || "",
 }
 
 function restBase(country: CountryCode) {
@@ -15,8 +17,8 @@ function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {}
 
   // Try Basic Auth with Application Password first (more reliable)
-  const username = process.env.WP_APP_USERNAME
-  const password = process.env.WP_APP_PASSWORD
+  const username = env.WP_APP_USERNAME
+  const password = env.WP_APP_PASSWORD
   if (username && password) {
     const credentials = Buffer.from(`${username}:${password}`).toString("base64")
     headers["Authorization"] = `Basic ${credentials}`
@@ -24,7 +26,7 @@ function getAuthHeaders(): HeadersInit {
   }
 
   // Fall back to Bearer token only if Basic Auth is not available
-  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
+  const authToken = env.WORDPRESS_AUTH_TOKEN
   if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`
     return headers
