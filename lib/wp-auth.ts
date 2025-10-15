@@ -1,4 +1,4 @@
-import { createHmac } from "crypto"
+import { createHmac } from "node:crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
 import { getWordPressBasicAuthHeader } from "@/config/env"
@@ -31,17 +31,12 @@ export function verifyWPAuthToken(token: string): boolean {
 // Function to create a WordPress user
 export async function createWPUser(username: string, email: string, password: string): Promise<any> {
   const rest = getRestBase()
-  const appUsername = env.WP_APP_USERNAME
-  const appPassword = env.WP_APP_PASSWORD
-  if (!appUsername || !appPassword) {
-    throw new Error("WordPress application credentials are not configured")
-  }
-  const basicAuth = encodeBasicAuth(appUsername, appPassword)
+  const authorization = getWordPressBasicAuthHeader()
   const response = await fetch(`${rest}/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: getWordPressBasicAuthHeader(),
+      Authorization: authorization,
     },
     body: JSON.stringify({
       username,
