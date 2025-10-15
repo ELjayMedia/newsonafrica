@@ -42,6 +42,64 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("updateUserProfile", () => {
+  it("returns success details when the profile update succeeds", async () => {
+    const mockResponse = { id: 1, avatar_url: "https://example.com/avatar.png" }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(mockResponse),
+    })
+
+    vi.stubGlobal("fetch", fetchMock)
+
+    const result = await wordpressApi.updateUserProfile("token-123", { avatar_url: "avatar" })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/users\/me$/),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer token-123" }),
+        body: JSON.stringify({ avatar_url: "avatar" }),
+      }),
+    )
+
+    expect(result).toEqual({ ok: true, status: 200, data: mockResponse })
+  })
+
+  it("returns error details when WordPress rejects the update", async () => {
+    const errorPayload = {
+      code: "rest_invalid_param",
+      message: "Invalid avatar",
+      data: { status: 400 },
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => JSON.stringify(errorPayload),
+      }),
+    )
+
+    const result = await wordpressApi.updateUserProfile("token-123", { avatar_url: "avatar" })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) {
+      throw new Error("Expected failure result")
+    }
+
+    expect(result.status).toBe(400)
+    expect(result.error).toMatchObject({
+      message: "Invalid avatar",
+      code: "rest_invalid_param",
+      data: { status: 400 },
+      raw: errorPayload,
+    })
+  })
+})
+
 describe("fetchPost", () => {
   it("returns post data with featured image", async () => {
     const mockPost = [
