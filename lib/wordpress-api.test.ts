@@ -92,6 +92,14 @@ describe("getRelatedPosts", () => {
   it("returns posts on 200 response", async () => {
     const mockPosts = [
       {
+        id: 1,
+        slug: "base-post",
+        title: { rendered: "Base Post" },
+        excerpt: { rendered: "" },
+        content: { rendered: "<p>Base content</p>" },
+        _embedded: { "wp:featuredmedia": [{ source_url: "base.jpg" }] },
+      },
+      {
         id: 2,
         slug: "hello",
         title: { rendered: "Hello" },
@@ -109,6 +117,9 @@ describe("getRelatedPosts", () => {
       expect.stringContaining("tags_relation=AND"),
       expect.anything(),
     )
+    expect(result).toHaveLength(1)
+    expect(result[0].databaseId).toBe(2)
+    expect(result.some((post) => post.databaseId === 1)).toBe(false)
     expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
     expect(result[0].content).toContain('/sz/article/old')
   })

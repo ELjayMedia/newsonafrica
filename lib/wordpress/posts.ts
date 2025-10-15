@@ -67,6 +67,19 @@ const cursorToOffset = (cursor: string | null | undefined) => {
   return index + 1
 }
 
+const createBasePostFilter = (postId: string) => {
+  const baseDatabaseId = Number(postId)
+
+  return (candidate: WordPressPost) => {
+    if (Number.isNaN(baseDatabaseId)) {
+      return true
+    }
+
+    const candidateDatabaseId = Number(candidate.databaseId)
+    return Number.isNaN(candidateDatabaseId) || candidateDatabaseId !== baseDatabaseId
+  }
+}
+
 export async function getLatestPostsForCountry(
   countryCode: string,
   limit = 20,
@@ -130,6 +143,7 @@ export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_C
 
 export async function getRelatedPostsForCountry(countryCode: string, postId: string, limit = 6) {
   const tags = buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postId}`] })
+  const filterOutBasePost = createBasePostFilter(postId)
 
   const gqlPost = await fetchFromWpGraphQL<PostCategoriesQuery>(
     countryCode,
@@ -156,7 +170,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
       if (gqlData?.posts) {
         const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
         const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
-        return posts.filter((p) => p.databaseId !== Number(postId))
+        return posts.filter(filterOutBasePost)
       }
     }
   }
@@ -181,7 +195,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     { countryCode, postId, categoryIds, limit, endpoint, params },
     { fallbackValue: [] },
   )
-  return posts.filter((p) => p.databaseId !== Number(postId))
+  return posts.filter(filterOutBasePost)
 }
 
 export const getRelatedPosts = async (
@@ -200,6 +214,7 @@ export const getRelatedPosts = async (
       section: "related",
       extra: [`post:${postId}`, ...tags.map((tagSlug) => `tag:${tagSlug}`)],
     })
+    const filterOutBasePost = createBasePostFilter(postId)
     try {
       const posts = await executeRestFallback(
         () => fetchFromWp<WordPressPost[]>(country, { endpoint, params }, { tags: cacheTags }),
@@ -207,7 +222,7 @@ export const getRelatedPosts = async (
         { country, postId, tags, limit, endpoint, params },
         { fallbackValue: [] },
       )
-      return posts.filter((p) => p.id !== Number(postId))
+      return posts.filter(filterOutBasePost)
     } catch (error) {
       console.error(`[v0] Related posts by tags request failed for ${postId}`, {
         country,
@@ -220,7 +235,8 @@ export const getRelatedPosts = async (
   }
 
   const posts = await getRelatedPostsForCountry(country, postId, limit)
-  return posts.filter((p) => p.id !== Number(postId))
+  const filterOutBasePost = createBasePostFilter(postId)
+  return posts.filter(filterOutBasePost)
 }
 
 const resolveRenderedText = (value: unknown): string => {
