@@ -10,6 +10,8 @@ const CACHE_TTL_SECONDS = 60
 const STALE_AFTER_MS = 30_000
 const POSTS_PER_COUNTRY = 6
 
+const refreshGuards = new Map<string, Promise<void>>()
+
 async function fetchAndPersistHomeFeed(): Promise<AggregatedHomeData> {
   const data = await getAggregatedLatestHome(POSTS_PER_COUNTRY)
 
@@ -41,10 +43,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (!isFresh) {
-    kvCache.runBackgroundRefresh(request, async () => {
-      const freshData = await getAggregatedLatestHome(POSTS_PER_COUNTRY)
-      await kvCache.set(cacheKey, createCacheEntry(freshData), CACHE_TTL_SECONDS)
-    })
+    if (refreshGuards.has(cacheKey)) {
+      console.log("Skipping home feed refresh; refresh already in progress")
+    } else {
+      const refreshPromise = (async () => {
+        try {
+          const freshData = await getAggregatedLatestHome(POSTS_PER_COUNTRY)
+          await kvCache.set(cacheKey, createCacheEntry(freshData), CACHE_TTL_SECONDS)
+        } finally {
+          refreshGuards.delete(cacheKey)
+        }
+      })()
+
+      refreshGuards.set(cacheKey, refreshPromise)
+
+      kvCache.runBackgroundRefresh(request, () => refreshPromise)
+    }
   }
 
   return NextResponse.json(cached.value, {
