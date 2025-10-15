@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const originalEnv = { ...process.env }
@@ -57,5 +58,24 @@ describe("wp client", () => {
     expect(requestUrl).toBe(
       "https://newsonafrica.com/sz/wp-json/wp/v2/categories?per_page=20&hide_empty=false"
     )
+  })
+
+
+
+  it("adds the Authorization header when credentials are provided", async () => {
+    process.env.WP_APP_USER = "app"
+    process.env.WP_APP_PASS = "secret"
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getLatestPosts } = await import("./wp")
+
+    await getLatestPosts("sz")
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(requestInit?.headers).toMatchObject({
+      Authorization: `Basic ${Buffer.from("app:secret", "utf8").toString("base64")}`,
+    })
   })
 })

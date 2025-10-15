@@ -1,3 +1,5 @@
+import { getWordPressAuthorizationHeader } from "./wordpress/auth"
+
 export type CountryCode = "sz" | "za"
 
 const REST_BASES: Record<CountryCode, string> = {

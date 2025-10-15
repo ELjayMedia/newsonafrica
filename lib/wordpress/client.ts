@@ -9,6 +9,7 @@ import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 import { getWordPressBasicAuthHeader } from "@/config/env"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
+import { getWordPressAuthorizationHeader } from "./auth"
 
 export type DeepMutable<T> = T extends ReadonlyArray<infer U>
   ? DeepMutable<U>[]
