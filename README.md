@@ -91,6 +91,7 @@ MVP_MODE=1
 
 # --- WordPress Authentication ---
 WORDPRESS_AUTH_TOKEN=your_wordpress_jwt_token_optional
+# Required: used for authenticated REST operations (user provisioning, admin actions)
 WP_APP_USERNAME=your_wordpress_application_username
 WP_APP_PASSWORD=your_wordpress_application_password
 
@@ -125,6 +126,8 @@ FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
 \`\`\`
+
+> **Note:** `WP_APP_USERNAME` and `WP_APP_PASSWORD` are required in every environment. The app fails fast if they're missing so WordPress REST operations can authenticate consistently.
 
 ### Installation
 

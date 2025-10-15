@@ -56,3 +56,49 @@ try {
 }
 
 export { env }
+
+export interface WordPressAppCredentials {
+  username: string
+  password: string
+}
+
+function encodeBasicAuth(username: string, password: string): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(`${username}:${password}`, "utf-8").toString("base64")
+  }
+
+  if (typeof btoa !== "undefined") {
+    return btoa(`${username}:${password}`)
+  }
+
+  throw new Error("Unable to encode WordPress credentials to base64 in the current runtime environment.")
+}
+
+export function requireWordPressAppCredentials(): WordPressAppCredentials {
+  const username = env.WP_APP_USERNAME
+  const password = env.WP_APP_PASSWORD
+
+  const missing: string[] = []
+
+  if (!username) {
+    missing.push("WP_APP_USERNAME")
+  }
+
+  if (!password) {
+    missing.push("WP_APP_PASSWORD")
+  }
+
+  if (missing.length > 0) {
+    const suffix = missing.length > 1 ? "s" : ""
+    throw new Error(
+      `Missing WordPress application credential${suffix}: ${missing.join(", ")} must be configured as environment variables to enable authenticated WordPress requests.`,
+    )
+  }
+
+  return { username, password }
+}
+
+export function getWordPressBasicAuthHeader(): string {
+  const { username, password } = requireWordPressAppCredentials()
+  return `Basic ${encodeBasicAuth(username, password)}`
+}

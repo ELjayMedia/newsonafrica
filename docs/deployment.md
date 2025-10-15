@@ -16,6 +16,7 @@ Ensure the following environment variables are configured in GitHub and Vercel:
 
 - WordPress endpoints: country specific
   pairs such as `NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`
+- `WP_APP_USERNAME` and `WP_APP_PASSWORD` (required for authenticated WordPress requests)
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
