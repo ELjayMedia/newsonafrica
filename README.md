@@ -89,6 +89,11 @@ NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 # --- Feature flags ---
 MVP_MODE=1
 
+# --- WordPress Authentication ---
+WORDPRESS_AUTH_TOKEN=your_wordpress_jwt_token_optional
+WP_APP_USERNAME=your_wordpress_application_username
+WP_APP_PASSWORD=your_wordpress_application_password
+
 # --- Supabase Configuration ---
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key

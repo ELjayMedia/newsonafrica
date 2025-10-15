@@ -40,6 +40,9 @@ export const siteConfig = {
   // WordPress API configuration
   wordpress: {
     apiUrl: WORDPRESS_REST_API_URL,
+    authToken: env.WORDPRESS_AUTH_TOKEN,
+    username: env.WP_APP_USERNAME,
+    password: env.WP_APP_PASSWORD,
   },
   // Search configuration
   search: {

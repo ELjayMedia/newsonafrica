@@ -11,7 +11,28 @@ function restBase(country: CountryCode) {
   return base.endsWith("/") ? base : `${base}/`
 }
 
-const getAuthHeaders = (): HeadersInit => ({})
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {}
+
+  // Try Basic Auth with Application Password first (more reliable)
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
+  if (username && password) {
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
+    return headers
+  }
+
+  // Fall back to Bearer token only if Basic Auth is not available
+  const authToken = process.env.WORDPRESS_AUTH_TOKEN || process.env.WP_JWT_TOKEN
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
+    return headers
+  }
+
+  // No authentication - WordPress allows public access to public posts
+  return headers
+}
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
   const normalizedPath = path.replace(/^\/+/, "")
@@ -20,7 +41,7 @@ async function wpGet<T>(country: CountryCode, path: string, params?: Record<stri
 
   const res = await fetch(url.toString(), {
     next: { revalidate: 60, tags: [`country:${country}`] },
-    headers: buildHeaders(),
+    headers: getAuthHeaders(),
   })
 
   if (!res.ok) {
