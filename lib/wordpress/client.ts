@@ -8,7 +8,9 @@ import { APIError } from "../utils/errorHandling"
 import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
+import { getWordPressBasicAuthHeader } from "@/config/env"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
+import { getWordPressAuthorizationHeader } from "./auth"
 
 export type DeepMutable<T> = T extends ReadonlyArray<infer U>
   ? DeepMutable<U>[]
@@ -94,17 +96,7 @@ function getAuthHeaders(): HeadersInit {
     Accept: "application/json",
   }
 
-  const username = env.WP_APP_USERNAME
-  const password = env.WP_APP_PASSWORD
-  if (username && password) {
-    headers["Authorization"] = `Basic ${encodeBasicAuth(username, password)}`
-    return headers
-  }
-
-  const authToken = env.WORDPRESS_AUTH_TOKEN
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`
-  }
+  headers["Authorization"] = getWordPressBasicAuthHeader()
 
   return headers
 }

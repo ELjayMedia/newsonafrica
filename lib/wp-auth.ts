@@ -1,19 +1,7 @@
 import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
-import { env } from "@/config/env"
-
-function encodeBasicAuth(username: string, password: string) {
-  const bufferCtor = (globalThis as { Buffer?: { from(value: string): { toString(encoding: string): string } } }).Buffer
-  if (bufferCtor?.from) {
-    return bufferCtor.from(`${username}:${password}`).toString("base64")
-  }
-  const btoaFn = (globalThis as { btoa?: (value: string) => string }).btoa
-  if (typeof btoaFn === "function") {
-    return btoaFn(`${username}:${password}`)
-  }
-  throw new Error("Unable to encode WordPress credentials: no base64 encoder available")
-}
+import { getWordPressBasicAuthHeader } from "@/config/env"
 
 // Function to generate a WordPress authentication token
 export function generateWPAuthToken(userId: string, expiration: number): string {
@@ -53,7 +41,7 @@ export async function createWPUser(username: string, email: string, password: st
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Basic ${basicAuth}`,
+      Authorization: getWordPressBasicAuthHeader(),
     },
     body: JSON.stringify({
       username,

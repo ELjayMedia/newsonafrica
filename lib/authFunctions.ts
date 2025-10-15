@@ -1,4 +1,5 @@
 import { getRestBase } from "@/lib/wp-endpoints"
+import { getWordPressBasicAuthHeader } from "@/config/env"
 
 const rest = getRestBase()
 const WORDPRESS_API_URL = rest.replace(/\/wp-json\/wp\/v2$/, "")
@@ -88,7 +89,7 @@ export async function signUp(username: string, email: string, password: string) 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`)}`,
+        Authorization: getWordPressBasicAuthHeader(),
       },
       body: JSON.stringify({
         username,
