@@ -1,6 +1,7 @@
 import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
+import { getWordPressBasicAuthHeader } from "@/config/env"
 
 // Function to generate a WordPress authentication token
 export function generateWPAuthToken(userId: string, expiration: number): string {
@@ -34,7 +35,7 @@ export async function createWPUser(username: string, email: string, password: st
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`).toString("base64")}`,
+      Authorization: getWordPressBasicAuthHeader(),
     },
     body: JSON.stringify({
       username,
