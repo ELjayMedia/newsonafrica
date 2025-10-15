@@ -1,5 +1,17 @@
 import { env } from "@/config/env"
 
+function encodeBasicAuth(username: string, password: string) {
+  const bufferCtor = (globalThis as { Buffer?: { from(value: string): { toString(encoding: string): string } } }).Buffer
+  if (bufferCtor?.from) {
+    return bufferCtor.from(`${username}:${password}`).toString("base64")
+  }
+  const btoaFn = (globalThis as { btoa?: (value: string) => string }).btoa
+  if (typeof btoaFn === "function") {
+    return btoaFn(`${username}:${password}`)
+  }
+  throw new Error("Unable to encode WordPress credentials: no base64 encoder available")
+}
+
 export type CountryCode = "sz" | "za"
 
 const REST_BASES: Record<CountryCode, string> = {
@@ -20,8 +32,7 @@ function getAuthHeaders(): HeadersInit {
   const username = env.WP_APP_USERNAME
   const password = env.WP_APP_PASSWORD
   if (username && password) {
-    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
-    headers["Authorization"] = `Basic ${credentials}`
+    headers["Authorization"] = `Basic ${encodeBasicAuth(username, password)}`
     return headers
   }
 

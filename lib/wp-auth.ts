@@ -1,6 +1,19 @@
 import { createHmac } from "crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
+import { env } from "@/config/env"
+
+function encodeBasicAuth(username: string, password: string) {
+  const bufferCtor = (globalThis as { Buffer?: { from(value: string): { toString(encoding: string): string } } }).Buffer
+  if (bufferCtor?.from) {
+    return bufferCtor.from(`${username}:${password}`).toString("base64")
+  }
+  const btoaFn = (globalThis as { btoa?: (value: string) => string }).btoa
+  if (typeof btoaFn === "function") {
+    return btoaFn(`${username}:${password}`)
+  }
+  throw new Error("Unable to encode WordPress credentials: no base64 encoder available")
+}
 
 // Function to generate a WordPress authentication token
 export function generateWPAuthToken(userId: string, expiration: number): string {
@@ -30,11 +43,17 @@ export function verifyWPAuthToken(token: string): boolean {
 // Function to create a WordPress user
 export async function createWPUser(username: string, email: string, password: string): Promise<any> {
   const rest = getRestBase()
+  const appUsername = env.WP_APP_USERNAME
+  const appPassword = env.WP_APP_PASSWORD
+  if (!appUsername || !appPassword) {
+    throw new Error("WordPress application credentials are not configured")
+  }
+  const basicAuth = encodeBasicAuth(appUsername, appPassword)
   const response = await fetch(`${rest}/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${process.env.WP_APP_USERNAME}:${process.env.WP_APP_PASSWORD}`).toString("base64")}`,
+      Authorization: `Basic ${basicAuth}`,
     },
     body: JSON.stringify({
       username,

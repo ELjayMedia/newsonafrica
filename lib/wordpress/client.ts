@@ -1,6 +1,7 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { appConfig } from "@/lib/config"
+import { env } from "@/config/env"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
@@ -75,17 +76,34 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
+function encodeBasicAuth(username: string, password: string) {
+  const bufferCtor = (globalThis as { Buffer?: { from(value: string): { toString(encoding: string): string } } }).Buffer
+  if (bufferCtor?.from) {
+    return bufferCtor.from(`${username}:${password}`).toString("base64")
+  }
+  const btoaFn = (globalThis as { btoa?: (value: string) => string }).btoa
+  if (typeof btoaFn === "function") {
+    return btoaFn(`${username}:${password}`)
+  }
+  throw new Error("Unable to encode WordPress credentials: no base64 encoder available")
+}
+
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     Accept: "application/json",
   }
 
-  const username = process.env.WP_APP_USERNAME
-  const password = process.env.WP_APP_PASSWORD
+  const username = env.WP_APP_USERNAME
+  const password = env.WP_APP_PASSWORD
   if (username && password) {
-    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
-    headers["Authorization"] = `Basic ${credentials}`
+    headers["Authorization"] = `Basic ${encodeBasicAuth(username, password)}`
+    return headers
+  }
+
+  const authToken = env.WORDPRESS_AUTH_TOKEN
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`
   }
 
   return headers
