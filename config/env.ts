@@ -17,11 +17,19 @@ const envSchema = z
     WP_APP_JWT_TOKEN: z.string().optional(),
     WP_APP_AUTH_HEADER: z.string().optional(),
     MVP_MODE: z.string().default("0"),
+    WORDPRESS_AUTH_TOKEN: z.string().optional(),
+    WP_APP_USERNAME: z.string().optional(),
+    WP_APP_PASSWORD: z.string().optional(),
     ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
     ALGOLIA_APP_ID: z.string().optional(),
     ALGOLIA_ADMIN_KEY: z.string().optional(),
     ALGOLIA_SEARCH_API_KEY: z.string().optional(),
     ALGOLIA_INDEX_PREFIX: z.string().default("newsonafrica"),
+    WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30000),
   })
   .catchall(z.string().optional())
 
@@ -46,13 +54,63 @@ try {
     WP_APP_JWT_TOKEN: process.env.WP_APP_JWT_TOKEN,
     WP_APP_AUTH_HEADER: process.env.WP_APP_AUTH_HEADER,
     MVP_MODE: process.env.MVP_MODE || "0",
+    WORDPRESS_AUTH_TOKEN: process.env.WORDPRESS_AUTH_TOKEN,
+    WP_APP_USERNAME: process.env.WP_APP_USERNAME,
+    WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     ANALYTICS_API_BASE_URL:
       process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
     ALGOLIA_APP_ID: process.env.ALGOLIA_APP_ID,
     ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
     ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
     ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
+    WORDPRESS_REQUEST_TIMEOUT_MS: Number(process.env.WORDPRESS_REQUEST_TIMEOUT_MS) || 30000,
   }
 }
 
 export { env }
+
+export interface WordPressAppCredentials {
+  username: string
+  password: string
+}
+
+function encodeBasicAuth(username: string, password: string): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(`${username}:${password}`, "utf-8").toString("base64")
+  }
+
+  if (typeof btoa !== "undefined") {
+    return btoa(`${username}:${password}`)
+  }
+
+  throw new Error("Unable to encode WordPress credentials to base64 in the current runtime environment.")
+}
+
+export function requireWordPressAppCredentials(): WordPressAppCredentials {
+  const username = env.WP_APP_USERNAME
+  const password = env.WP_APP_PASSWORD
+
+  const missing: string[] = []
+
+  if (!username) {
+    missing.push("WP_APP_USERNAME")
+  }
+
+  if (!password) {
+    missing.push("WP_APP_PASSWORD")
+  }
+
+  if (missing.length > 0) {
+    const suffix = missing.length > 1 ? "s" : ""
+    throw new Error(
+      `Missing WordPress application credential${suffix}: ${missing.join(", ")} must be configured as environment variables to enable authenticated WordPress requests.`,
+    )
+  }
+
+  return { username, password }
+}
+
+export function getWordPressBasicAuthHeader(): string {
+  const { username, password } = requireWordPressAppCredentials()
+  return `Basic ${encodeBasicAuth(username, password)}`
+}

@@ -1,11 +1,13 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { appConfig } from "@/lib/config"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
 import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
+import { getWordPressBasicAuthHeader } from "@/config/env"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 import { getWordPressAuthorizationHeader } from "./auth"
 
@@ -75,37 +77,13 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
-const JSON_HEADERS: Record<string, string> = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-}
-
-const buildJsonHeaders = (): Record<string, string> => ({ ...JSON_HEADERS })
-
-const buildAuthorizationHeaders = (): Record<string, string> => {
-  const authorization = getWordPressAuthorizationHeader()
-  if (!authorization) {
-    return {}
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
   }
 
-  return { Authorization: authorization }
-}
-
-export interface BuildRequestHeadersOptions {
-  auth?: boolean
-  json?: boolean
-}
-
-export const buildRequestHeaders = (options: BuildRequestHeadersOptions = {}): HeadersInit => {
-  const headers: Record<string, string> = {}
-
-  if (options.json) {
-    Object.assign(headers, buildJsonHeaders())
-  }
-
-  if (options.auth) {
-    Object.assign(headers, buildAuthorizationHeaders())
-  }
+  headers["Authorization"] = getWordPressBasicAuthHeader()
 
   return headers
 }
@@ -117,7 +95,6 @@ export async function fetchFromWpGraphQL<T>(
   query: string,
   variables?: Record<string, string | number | string[]>,
   tags?: string[],
-  options?: { auth?: boolean },
 ): Promise<T | null> {
   const breaker = await getCircuitBreaker()
   const breakerKey = `wordpress-graphql-${countryCode}`
@@ -134,13 +111,12 @@ export async function fetchFromWpGraphQL<T>(
         try {
           const res = await fetchWithTimeout(base, {
             method: "POST",
-            headers: buildRequestHeaders({ auth: options?.auth, json: true }),
+            headers: getAuthHeaders(),
             body: JSON.stringify({ query, variables }),
             next: {
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
-            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -255,28 +231,14 @@ export async function fetchFromWp<T>(
     method?: string
     payload?: unknown
   },
-  opts:
-    | number
-    | {
-        timeout?: number
-        withHeaders?: boolean
-        tags?: string[]
-        auth?: boolean
-        revalidate?: number | false
-      } = {},
+  opts: { timeout?: number; withHeaders?: boolean; tags?: string[] } | number = {},
 ): Promise<{ data: T; headers: Headers } | T | null> {
   const normalizedOpts =
     typeof opts === "number"
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const {
-    timeout = 10000,
-    withHeaders = false,
-    tags,
-    auth = false,
-    revalidate,
-  } = normalizedOpts
+  const { timeout = appConfig.wordpress.timeout, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)
@@ -305,23 +267,16 @@ export async function fetchFromWp<T>(
 
         let logged = false
         try {
-          const requestInit: Parameters<typeof fetchWithTimeout>[1] = {
+          const res = await fetchWithTimeout(url, {
             method,
-            headers: buildRequestHeaders({ auth, json: payload !== undefined }),
-            ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
-            timeout,
-          }
-
-          if (revalidate === false) {
-            requestInit.cache = "no-store"
-          } else {
-            requestInit.next = {
-              revalidate: revalidate ?? CACHE_DURATIONS.MEDIUM,
+            headers: getAuthHeaders(),
+            next: {
+              revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
-            }
-          }
-
-          const res = await fetchWithTimeout(url, requestInit)
+            },
+            ...(payload ? { body: JSON.stringify(payload) } : {}),
+            timeout,
+          })
 
           if (!res.ok) {
             logged = true
