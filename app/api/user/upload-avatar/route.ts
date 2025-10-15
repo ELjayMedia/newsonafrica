@@ -45,7 +45,19 @@ export async function POST(request: Request) {
 
     // Update user profile with new avatar URL
     const avatarUrl = `/uploads/${filename}`
-    await updateUserProfile(token, { avatar_url: avatarUrl })
+    const updateResult = await updateUserProfile(token, { avatar_url: avatarUrl })
+
+    if (!updateResult.ok) {
+      console.error("WordPress rejected the avatar update", {
+        error: updateResult.error,
+      })
+
+      return jsonWithCors(
+        request,
+        { error: updateResult.error.message },
+        { status: updateResult.status ?? 502 },
+      )
+    }
 
     revalidateByTag(CACHE_TAGS.USERS)
     revalidatePath("/profile")
