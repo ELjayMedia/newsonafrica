@@ -6,8 +6,19 @@ import type { WordPressPost } from "./client"
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const
 
-export const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost =>
-  mapWpPost(post as WordPressPost, "rest", countryCode)
+/**
+ * Normalizes raw REST API responses into the shared WordPressPost shape.
+ *
+ * Responses returned by {@link fetchFromWp} are already normalized, so we only
+ * remap objects that still contain REST-specific structures such as `_embedded`.
+ */
+export const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost => {
+  if (post && typeof post === "object" && "_embedded" in (post as Record<string, unknown>)) {
+    return mapWpPost(post as WordPressPost, "rest", countryCode)
+  }
+
+  return post as WordPressPost
+}
 
 export const resolveHomePostId = (post: WordPressPost): string => {
   if (post.globalRelayId) {
