@@ -1,3 +1,4 @@
+import { env, getWordPressBasicAuthHeader } from "@/config/env"
 import { getWordPressAuthorizationHeader } from "./wordpress/auth"
 
 export type CountryCode = "sz" | "za"
@@ -20,14 +21,20 @@ function getAuthHeaders(): HeadersInit {
   const username = env.WP_APP_USERNAME
   const password = env.WP_APP_PASSWORD
   if (username && password) {
-    headers["Authorization"] = `Basic ${encodeBasicAuth(username, password)}`
+    headers["Authorization"] = getWordPressBasicAuthHeader()
+    return headers
+  }
+
+  const legacyAuthorization = getWordPressAuthorizationHeader()
+  if (legacyAuthorization) {
+    headers["Authorization"] = legacyAuthorization
     return headers
   }
 
   // Fall back to Bearer token only if Basic Auth is not available
   const authToken = env.WORDPRESS_AUTH_TOKEN
   if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`
+    headers["Authorization"] = authToken.startsWith("Bearer ") ? authToken : `Bearer ${authToken}`
     return headers
   }
 
