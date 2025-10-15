@@ -4,14 +4,22 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { CountrySpotlight } from "./CountryNavigation"
 import type { PanAfricanSpotlightPayload } from "@/types/home"
 
-vi.mock("@/lib/wordpress/client", () => ({
-  COUNTRIES: {
-    sz: { code: "sz", name: "Eswatini", flag: "🇸🇿" },
-    ng: { code: "ng", name: "Nigeria", flag: "🇳🇬" },
-    za: { code: "za", name: "South Africa", flag: "🇿🇦" },
-    ke: { code: "ke", name: "Kenya", flag: "🇰🇪" },
-  },
-}))
+vi.mock("@/lib/countries-public", () => {
+  const mockCountries = [
+    { code: "sz", name: "Eswatini", flag: "🇸🇿", canonicalUrl: "https://example.com/sz", hreflang: "en-SZ" },
+    { code: "ng", name: "Nigeria", flag: "🇳🇬", canonicalUrl: "https://example.com/ng", hreflang: "en-NG" },
+    { code: "za", name: "South Africa", flag: "🇿🇦", canonicalUrl: "https://example.com/za", hreflang: "en-ZA" },
+    { code: "ke", name: "Kenya", flag: "🇰🇪", canonicalUrl: "https://example.com/ke", hreflang: "en-KE" },
+  ]
+
+  return {
+    PUBLIC_COUNTRIES_LIST: mockCountries,
+    PUBLIC_COUNTRIES_BY_CODE: mockCountries.reduce<Record<string, (typeof mockCountries)[number]>>((acc, country) => {
+      acc[country.code] = country
+      return acc
+    }, {}),
+  }
+})
 
 vi.mock("@/lib/utils/routing", () => ({
   getCurrentCountry: vi.fn(() => "sz"),
