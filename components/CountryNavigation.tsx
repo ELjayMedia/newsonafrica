@@ -6,9 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
-import { getLatestPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
 import { COUNTRIES } from "@/lib/wordpress/client"
-import type { CountryPosts } from "@/types/home"
+import type { CountryPosts, PanAfricanSpotlightPayload } from "@/types/home"
 import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
@@ -87,10 +86,22 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
 
         const results = await Promise.allSettled(
           otherCountries.map(async (countryCode) => {
-            const result = await getLatestPostsForCountry(countryCode, 2)
+            const response = await fetch(
+              `/api/pan-african-spotlight?country=${countryCode}&limit=2`,
+              {
+                headers: { Accept: "application/json" },
+              },
+            )
+
+            if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`)
+            }
+
+            const data = (await response.json()) as PanAfricanSpotlightPayload
+
             return {
               countryCode,
-              posts: mapPostsToHomePosts(result.posts || [], countryCode),
+              posts: Array.isArray(data.posts) ? data.posts : [],
             }
           }),
         )
