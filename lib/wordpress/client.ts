@@ -7,6 +7,7 @@ import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
+import { getWordPressAuthorizationHeader } from "./auth"
 
 export type DeepMutable<T> = T extends ReadonlyArray<infer U>
   ? DeepMutable<U>[]
@@ -74,10 +75,40 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
-const getAuthHeaders = (): HeadersInit => ({
+const JSON_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
   Accept: "application/json",
-})
+}
+
+const buildJsonHeaders = (): Record<string, string> => ({ ...JSON_HEADERS })
+
+const buildAuthorizationHeaders = (): Record<string, string> => {
+  const authorization = getWordPressAuthorizationHeader()
+  if (!authorization) {
+    return {}
+  }
+
+  return { Authorization: authorization }
+}
+
+export interface BuildRequestHeadersOptions {
+  auth?: boolean
+  json?: boolean
+}
+
+export const buildRequestHeaders = (options: BuildRequestHeadersOptions = {}): HeadersInit => {
+  const headers: Record<string, string> = {}
+
+  if (options.json) {
+    Object.assign(headers, buildJsonHeaders())
+  }
+
+  if (options.auth) {
+    Object.assign(headers, buildAuthorizationHeaders())
+  }
+
+  return headers
+}
 
 export const buildCacheTagParam = (tags: string[]): string => Array.from(new Set(tags)).sort().join("|")
 
@@ -239,7 +270,13 @@ export async function fetchFromWp<T>(
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
+  const {
+    timeout = 10000,
+    withHeaders = false,
+    tags,
+    auth = false,
+    revalidate,
+  } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)

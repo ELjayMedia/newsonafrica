@@ -1,3 +1,5 @@
+import { getWordPressAuthorizationHeader } from "./wordpress/auth"
+
 export type CountryCode = "sz" | "za"
 
 const REST_BASES: Record<CountryCode, string> = {
@@ -11,7 +13,26 @@ function restBase(country: CountryCode) {
   return base.endsWith("/") ? base : `${base}/`
 }
 
-const getAuthHeaders = (): HeadersInit => ({})
+const buildAuthorizationHeaders = (): Record<string, string> => {
+  const authorization = getWordPressAuthorizationHeader()
+  if (!authorization) {
+    return {}
+  }
+
+  return { Authorization: authorization }
+}
+
+interface BuildHeadersOptions {
+  auth?: boolean
+}
+
+export const buildHeaders = (options: BuildHeadersOptions = {}): HeadersInit => {
+  if (!options.auth) {
+    return {}
+  }
+
+  return buildAuthorizationHeaders()
+}
 
 async function wpGet<T>(country: CountryCode, path: string, params?: Record<string, any>) {
   const normalizedPath = path.replace(/^\/+/, "")
@@ -20,7 +41,7 @@ async function wpGet<T>(country: CountryCode, path: string, params?: Record<stri
 
   const res = await fetch(url.toString(), {
     next: { revalidate: 60, tags: [`country:${country}`] },
-    headers: buildHeaders(),
+    headers: buildHeaders({ auth: true }),
   })
 
   if (!res.ok) {
