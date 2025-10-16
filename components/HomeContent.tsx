@@ -5,7 +5,6 @@ import { SecondaryStoriesClient as SecondaryStories } from "@/components/client/
 import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
@@ -123,7 +122,6 @@ export function HomeContent({
   featuredPosts = [],
   initialData,
 }: HomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>(() =>
     mapCategoryPostsForConfigs(categoryConfigs, initialData?.categoryPosts),
