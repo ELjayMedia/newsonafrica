@@ -8,7 +8,6 @@ const mockJsonWithCors = vi.fn(
     }),
 )
 const mockLogRequest = vi.fn()
-const mockResolveSearchIndex = vi.fn()
 const mockWpSearchPosts = vi.fn()
 const mockWpGetSearchSuggestions = vi.fn()
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
@@ -27,10 +26,6 @@ vi.mock("@/lib/editions", () => ({
     { code: "SZ", name: "Eswatini" },
     { code: "NG", name: "Nigeria" },
   ],
-}))
-
-vi.mock("@/lib/algolia/client", () => ({
-  resolveSearchIndex: mockResolveSearchIndex,
 }))
 
 vi.mock("@/lib/wordpress-search", () => ({
@@ -52,7 +47,6 @@ describe("GET /api/search", () => {
         }),
     )
 
-    mockResolveSearchIndex.mockReturnValue(null)
     consoleErrorSpy.mockImplementation(() => {})
   })
 
@@ -80,6 +74,7 @@ describe("GET /api/search", () => {
       hasMore: false,
       query: "example",
       searchTime: 10,
+      suggestions: ["Example"],
     })
 
     const request = new Request(
@@ -87,9 +82,22 @@ describe("GET /api/search", () => {
     )
 
     const response = await GET(request)
+    const payload = (await response.json()) as Record<string, unknown>
 
     expect(response.status).toBe(200)
-    expect(mockWpSearchPosts).toHaveBeenCalledWith("example", { page: 1, perPage: 20 })
+    expect(mockWpSearchPosts).toHaveBeenCalledWith("example", {
+      page: 1,
+      perPage: 20,
+      country: "sz",
+    })
+    expect(payload).toMatchObject({
+      total: 1,
+      totalPages: 1,
+      currentPage: 1,
+      hasMore: false,
+      suggestions: ["Example"],
+      performance: { source: "wordpress" },
+    })
   })
 
   it("falls back to safe defaults when WordPress search fails", async () => {
@@ -108,6 +116,7 @@ describe("GET /api/search", () => {
     expect(payload).toMatchObject({
       currentPage: 1,
       performance: { source: "fallback" },
+      query: "welcome",
     })
     expect(Number.isFinite((payload.totalPages as number) ?? NaN)).toBe(true)
   })
