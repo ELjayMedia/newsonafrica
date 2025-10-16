@@ -3,6 +3,7 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import type { SearchRecord } from "@/types/search"
 
 export const runtime = "nodejs"
 export const revalidate = 0
@@ -12,16 +13,7 @@ const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-type SearchResponseRecord = {
-  objectID: string
-  title: string
-  excerpt: string
-  categories: string[]
-  country: string
-  published_at: string
-}
-
-const FALLBACK_RECORDS: SearchResponseRecord[] = [
+const FALLBACK_RECORDS: SearchRecord[] = [
   {
     objectID: "sz:welcome-to-news-on-africa",
     title: "Welcome to News On Africa",
@@ -98,7 +90,7 @@ const parseScope = (value: string | null | undefined): SearchScope => {
 const fromWordPressResults = (
   results: Awaited<ReturnType<typeof wpSearchPosts>>,
   country: string,
-): SearchResponseRecord[] =>
+): SearchRecord[] =>
   results.results.map((post) => ({
     objectID: `${country}:${post.slug || post.id}`,
     title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",

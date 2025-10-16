@@ -21,10 +21,6 @@ const envSchema = z
     WP_APP_USERNAME: z.string().optional(),
     WP_APP_PASSWORD: z.string().optional(),
     ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
-    ALGOLIA_APP_ID: z.string().optional(),
-    ALGOLIA_ADMIN_KEY: z.string().optional(),
-    ALGOLIA_SEARCH_API_KEY: z.string().optional(),
-    ALGOLIA_INDEX_PREFIX: z.string().default("newsonafrica"),
     WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce
       .number()
       .int()
@@ -40,7 +36,7 @@ try {
 } catch (error) {
   console.error("⚠️ Environment variable validation failed, using defaults:", error)
   // Provide safe defaults if validation fails
-  env = {
+  const fallbackEnv: Record<string, string | undefined> = {
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL,
     NEXT_PUBLIC_DEFAULT_SITE: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
     NEXT_PUBLIC_WP_SZ_GRAPHQL: process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL,
@@ -59,12 +55,10 @@ try {
     WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     ANALYTICS_API_BASE_URL:
       process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
-    ALGOLIA_APP_ID: process.env.ALGOLIA_APP_ID,
-    ALGOLIA_ADMIN_KEY: process.env.ALGOLIA_ADMIN_KEY,
-    ALGOLIA_SEARCH_API_KEY: process.env.ALGOLIA_SEARCH_API_KEY,
-    ALGOLIA_INDEX_PREFIX: process.env.ALGOLIA_INDEX_PREFIX || "newsonafrica",
-    WORDPRESS_REQUEST_TIMEOUT_MS: Number(process.env.WORDPRESS_REQUEST_TIMEOUT_MS) || 30000,
+    WORDPRESS_REQUEST_TIMEOUT_MS: process.env.WORDPRESS_REQUEST_TIMEOUT_MS || "30000",
   }
+
+  env = envSchema.parse(fallbackEnv)
 }
 
 export { env }
@@ -107,7 +101,7 @@ export function requireWordPressAppCredentials(): WordPressAppCredentials {
     )
   }
 
-  return { username, password }
+  return { username: username!, password: password! }
 }
 
 export function getWordPressBasicAuthHeader(): string {

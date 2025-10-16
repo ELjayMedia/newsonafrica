@@ -3,21 +3,12 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type FormEvent,
   type KeyboardEvent,
 } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import {
-  Configure,
-  InstantSearch,
-  useInfiniteHits,
-  useInstantSearch,
-  useSearchBox,
-  useStats,
-} from "react-instantsearch-hooks-web"
 import { formatDistanceToNow } from "date-fns"
 import { Loader2, Search as SearchIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -29,57 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { highlightSearchTerms } from "@/lib/search"
 import { getArticleUrl } from "@/lib/utils/routing"
+import type { SearchRecord } from "@/types/search"
 
 const PAN_AFRICAN_CODE = "all"
-const VIRTUAL_INDEX_NAME = "newsonafrica-proxy-search"
+const RESULTS_PER_PAGE = 12
 
 const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
 
 type SortOption = "relevance" | "latest"
-
-type InstantSearchResponse<TRecord> = {
-  hits: TRecord[]
-  nbHits: number
-  nbPages: number
-  page: number
-  hitsPerPage: number
-  processingTimeMS: number
-  query: string
-  params: string
-}
-
-type InstantSearchClient<TRecord> = {
-  search: (
-    requests: Array<{
-      indexName: string
-      params?: Record<string, unknown>
-    }>,
-  ) => Promise<{ results: Array<InstantSearchResponse<TRecord>> }>
-  searchForFacetValues?: (
-    requests: Array<{
-      indexName: string
-      params: Record<string, unknown>
-    }>,
-  ) => Promise<{ results: Array<{ facetHits: Array<{ value: string; count: number }> }> }>
-}
-
-const createEmptyResponse = <TRecord,>(
-  query: string,
-  hitsPerPage: number,
-): InstantSearchResponse<TRecord> => ({
-  hits: [],
-  nbHits: 0,
-  nbPages: 0,
-  page: 0,
-  hitsPerPage,
-  processingTimeMS: 0,
-  query,
-  params: `query=${encodeURIComponent(query)}`,
-})
+type SearchStatus = "idle" | "loading" | "loadingMore" | "error" | "success"
 
 const normalizeCountry = (value?: string | null): string => {
   if (!value) {
@@ -106,88 +58,6 @@ const normalizeCountry = (value?: string | null): string => {
 
 const normalizeSort = (value?: string | null): SortOption => (value === "latest" ? "latest" : "relevance")
 
-const createProxySearchClient = (
-  options: { country: string; sort: SortOption },
-): InstantSearchClient<AlgoliaSearchRecord> => {
-  return {
-    async search(requests) {
-      const results = await Promise.all(
-        requests.map(async (request) => {
-          const params = request.params ?? {}
-          const query = typeof params.query === "string" ? params.query : ""
-          const trimmedQuery = query.trim()
-          const hitsPerPage = Number.isFinite(Number(params.hitsPerPage))
-            ? Number(params.hitsPerPage)
-            : 12
-          const requestedPage = Number.isFinite(Number(params.page)) ? Number(params.page) : 0
-
-          if (!trimmedQuery) {
-            return createEmptyResponse<AlgoliaSearchRecord>(query, hitsPerPage)
-          }
-
-          const searchParams = new URLSearchParams({
-            q: trimmedQuery,
-            page: String(requestedPage + 1),
-            per_page: String(hitsPerPage),
-            sort: options.sort,
-          })
-
-          if (options.country && options.country !== PAN_AFRICAN_CODE) {
-            searchParams.set("country", options.country)
-          } else {
-            searchParams.set("country", PAN_AFRICAN_CODE)
-          }
-
-          try {
-            const response = await fetch(`/api/search?${searchParams.toString()}`, {
-              headers: { Accept: "application/json" },
-              cache: "no-store",
-            })
-
-            if (!response.ok) {
-              throw new Error(`Search request failed with status ${response.status}`)
-            }
-
-            const data = await response.json()
-            const hits = (Array.isArray(data.results) ? data.results : []) as AlgoliaSearchRecord[]
-            const total = Number.isFinite(Number(data.total)) ? Number(data.total) : hits.length
-            const nbPages = Number.isFinite(Number(data.totalPages))
-              ? Number(data.totalPages)
-              : Math.max(1, Math.ceil(total / Math.max(hitsPerPage, 1)))
-            const currentPage = Number.isFinite(Number(data.currentPage))
-              ? Math.max(0, Number(data.currentPage) - 1)
-              : Math.max(0, requestedPage)
-
-            return {
-              hits,
-              nbHits: total,
-              nbPages,
-              page: currentPage,
-              hitsPerPage,
-              processingTimeMS: Number.isFinite(Number(data.performance?.responseTime))
-                ? Number(data.performance.responseTime)
-                : 0,
-              query,
-              params: `query=${encodeURIComponent(query)}`,
-            }
-          } catch (error) {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("InstantSearch proxy search failed", error)
-            }
-
-            return createEmptyResponse<AlgoliaSearchRecord>(query, hitsPerPage)
-          }
-        }),
-      )
-
-      return { results }
-    },
-    async searchForFacetValues() {
-      return { results: [] }
-    },
-  }
-}
-
 interface SearchContentProps {
   initialQuery?: string
   initialPage?: number
@@ -206,118 +76,201 @@ export function SearchContent({
 
   const [country, setCountry] = useState(() => normalizeCountry(initialCountry))
   const [sort, setSort] = useState<SortOption>(() => normalizeSort(initialSort))
+  const [searchQuery, setSearchQuery] = useState(initialQuery.trim())
+  const [requestedPage, setRequestedPage] = useState(Math.max(initialPage, 1))
+  const [currentPage, setCurrentPage] = useState(Math.max(initialPage, 1))
+  const [results, setResults] = useState<SearchRecord[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [status, setStatus] = useState<SearchStatus>(() => (initialQuery.trim() ? "loading" : "idle"))
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const urlCountry = normalizeCountry(searchParams.get("country"))
+    const params = new URLSearchParams(searchParams.toString())
+
+    const urlCountry = normalizeCountry(params.get("country"))
     if (urlCountry !== country) {
       setCountry(urlCountry)
     }
 
-    const urlSort = normalizeSort(searchParams.get("sort"))
+    const urlSort = normalizeSort(params.get("sort"))
     if (urlSort !== sort) {
       setSort(urlSort)
     }
-  }, [searchParams, country, sort])
 
-  const searchClient = useMemo(
-    () => createProxySearchClient({ country, sort }),
-    [country, sort],
-  )
+    const urlQuery = (params.get("q") ?? "").trim()
+    if (urlQuery !== searchQuery) {
+      setSearchQuery(urlQuery)
+    }
 
-  const initialUiState = useMemo(
-    () => ({
-      [VIRTUAL_INDEX_NAME]: {
-        query: initialQuery,
-        page: Math.max(initialPage - 1, 0),
-      },
-    }),
-    [initialPage, initialQuery],
-  )
-
-  return (
-    <InstantSearch
-      searchClient={searchClient}
-      indexName={VIRTUAL_INDEX_NAME}
-      initialUiState={initialUiState}
-      future={{ preserveSharedStateOnUnmount: true }}
-    >
-      <Configure hitsPerPage={12} />
-      <SearchExperience
-        router={router}
-        country={country}
-        sort={sort}
-        onCountryChange={setCountry}
-        onSortChange={setSort}
-      />
-    </InstantSearch>
-  )
-}
-
-interface SearchExperienceProps {
-  router: ReturnType<typeof useRouter>
-  country: string
-  sort: SortOption
-  onCountryChange: (value: string) => void
-  onSortChange: (value: SortOption) => void
-}
-
-function SearchExperience({ router, country, sort, onCountryChange, onSortChange }: SearchExperienceProps) {
-  const searchParams = useSearchParams()
-  const { indexUiState, setIndexUiState, refresh } = useInstantSearch()
+    const parsedPage = Number.parseInt(params.get("page") ?? "", 10)
+    const urlPage = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1)
+    if (urlPage !== requestedPage) {
+      setRequestedPage(urlPage)
+    }
+    if (urlPage !== currentPage) {
+      setCurrentPage(urlPage)
+    }
+  }, [searchParams, country, sort, searchQuery, requestedPage, currentPage])
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams.toString())
-    const urlQuery = urlParams.get("q") ?? ""
-    const pageParam = Number.parseInt(urlParams.get("page") || "1", 10)
-    const urlPage = Number.isNaN(pageParam) ? 0 : Math.max(pageParam - 1, 0)
+    const trimmedQuery = searchQuery.trim()
+    if (!trimmedQuery) {
+      if (requestedPage !== 1) {
+        setRequestedPage(1)
+      }
+      if (currentPage !== 1) {
+        setCurrentPage(1)
+      }
+      setResults([])
+      setTotal(0)
+      setTotalPages(0)
+      setHasMore(false)
+      setError(null)
+      setStatus("idle")
+      return
+    }
 
-    const updates: Partial<typeof indexUiState> = {}
-    if ((indexUiState.query ?? "") !== urlQuery) {
-      updates.query = urlQuery
-    }
-    if ((indexUiState.page ?? 0) !== urlPage) {
-      updates.page = urlPage
+    const controller = new AbortController()
+    let cancelled = false
+
+    const fetchResults = async () => {
+      setError(null)
+      setStatus(requestedPage === 1 ? "loading" : "loadingMore")
+      if (requestedPage === 1) {
+        setResults([])
+        setCurrentPage(1)
+      }
+
+      try {
+        const params = new URLSearchParams({
+          q: trimmedQuery,
+          page: String(requestedPage),
+          per_page: String(RESULTS_PER_PAGE),
+          sort,
+        })
+
+        if (country && country !== PAN_AFRICAN_CODE) {
+          params.set("country", country)
+        } else {
+          params.set("country", PAN_AFRICAN_CODE)
+        }
+
+        const response = await fetch(`/api/search?${params.toString()}`, {
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          throw new Error(`Search request failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        if (cancelled) {
+          return
+        }
+
+        const hits = (Array.isArray(data.results) ? data.results : []) as SearchRecord[]
+        const resolvedTotal = Number.isFinite(Number(data.total)) ? Number(data.total) : hits.length
+        const resolvedPage = Number.isFinite(Number(data.currentPage))
+          ? Math.max(1, Number(data.currentPage))
+          : requestedPage
+        const resolvedTotalPages = Number.isFinite(Number(data.totalPages))
+          ? Math.max(1, Number(data.totalPages))
+          : Math.max(1, Math.ceil(resolvedTotal / RESULTS_PER_PAGE))
+
+        setResults((previous) => (requestedPage === 1 ? hits : [...previous, ...hits]))
+        setTotal(resolvedTotal)
+        setTotalPages(resolvedTotalPages)
+        setCurrentPage(resolvedPage)
+        setHasMore(
+          typeof data.hasMore === "boolean"
+            ? data.hasMore
+            : resolvedPage < resolvedTotalPages,
+        )
+        setStatus("success")
+      } catch (caughtError) {
+        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+          return
+        }
+
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Search request failed", caughtError)
+        }
+
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to fetch search results",
+        )
+        setStatus("error")
+
+        if (requestedPage > 1) {
+          setRequestedPage((previous) => Math.max(1, previous - 1))
+        } else {
+          setResults([])
+          setTotal(0)
+          setTotalPages(0)
+          setHasMore(false)
+        }
+      }
     }
 
-    if (Object.keys(updates).length > 0) {
-      setIndexUiState({ ...indexUiState, ...updates })
+    fetchResults()
+
+    return () => {
+      cancelled = true
+      controller.abort()
     }
-  }, [searchParams, indexUiState, setIndexUiState])
+  }, [searchQuery, country, sort, requestedPage, currentPage])
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    const query = (indexUiState.query ?? "").trim()
-    const page = (indexUiState.page ?? 0) + 1
+    const trimmedQuery = searchQuery.trim()
+    const params = new URLSearchParams()
 
-    if (query) {
-      params.set("q", query)
-    } else {
-      params.delete("q")
+    if (trimmedQuery) {
+      params.set("q", trimmedQuery)
     }
 
-    if (page > 1) {
-      params.set("page", String(page))
-    } else {
-      params.delete("page")
+    if (currentPage > 1) {
+      params.set("page", String(currentPage))
     }
 
     if (country && country !== PAN_AFRICAN_CODE) {
       params.set("country", country)
-    } else {
-      params.delete("country")
     }
 
     if (sort === "latest") {
       params.set("sort", "latest")
-    } else {
-      params.delete("sort")
     }
 
     const next = params.toString()
     if (next !== searchParams.toString()) {
       router.replace(next ? `/search?${next}` : "/search", { scroll: false })
     }
-  }, [country, sort, indexUiState.page, indexUiState.query, router, searchParams])
+  }, [router, searchParams, searchQuery, currentPage, country, sort])
+
+  const handleSearch = useCallback((value: string) => {
+    const trimmed = value.trim()
+    setRequestedPage(1)
+    setCurrentPage(1)
+    setSearchQuery(trimmed)
+    setError(null)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    setSearchQuery("")
+    setRequestedPage(1)
+    setCurrentPage(1)
+    setResults([])
+    setTotal(0)
+    setTotalPages(0)
+    setHasMore(false)
+    setStatus("idle")
+    setError(null)
+  }, [])
 
   const handleCountryChange = useCallback(
     (value: string) => {
@@ -325,11 +278,13 @@ function SearchExperience({ router, country, sort, onCountryChange, onSortChange
       if (normalized === country) {
         return
       }
-      onCountryChange(normalized)
-      setIndexUiState({ ...indexUiState, page: 0 })
-      refresh()
+
+      setCountry(normalized)
+      setRequestedPage(1)
+      setCurrentPage(1)
+      setError(null)
     },
-    [country, indexUiState, onCountryChange, refresh, setIndexUiState],
+    [country],
   )
 
   const handleSortChange = useCallback(
@@ -337,17 +292,37 @@ function SearchExperience({ router, country, sort, onCountryChange, onSortChange
       if (value === sort) {
         return
       }
-      onSortChange(value)
-      setIndexUiState({ ...indexUiState, page: 0 })
-      refresh()
+
+      setSort(value)
+      setRequestedPage(1)
+      setCurrentPage(1)
+      setError(null)
     },
-    [indexUiState, onSortChange, refresh, setIndexUiState, sort],
+    [sort],
   )
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || status === "loadingMore") {
+      return
+    }
+
+    setRequestedPage((previous) => previous + 1)
+  }, [hasMore, status])
+
+  const isSearching = status === "loading" || status === "loadingMore"
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <InstantSearchBox country={country} sort={sort} placeholder="Search articles, categories, and tags..." />
+        <SearchBox
+          query={searchQuery}
+          country={country}
+          sort={sort}
+          placeholder="Search articles, categories, and tags..."
+          onSearch={handleSearch}
+          onClear={handleClear}
+          isSearching={isSearching}
+        />
         <SearchFilters
           country={country}
           sort={sort}
@@ -356,26 +331,40 @@ function SearchExperience({ router, country, sort, onCountryChange, onSortChange
         />
       </div>
 
-      <SearchResultsPanel fallbackCountry={country} />
+      <SearchResultsPanel
+        query={searchQuery}
+        results={results}
+        status={status}
+        error={error}
+        total={total}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        fallbackCountry={country}
+      />
     </div>
   )
 }
 
-interface InstantSearchBoxProps {
+interface SearchBoxProps {
   placeholder?: string
   country: string
   sort: SortOption
+  query: string
+  onSearch: (value: string) => void
+  onClear: () => void
+  isSearching: boolean
 }
 
-function InstantSearchBox({ placeholder, country, sort }: InstantSearchBoxProps) {
-  const { query, refine, clear, isSearchStalled } = useSearchBox()
-  const [value, setValue] = useState(query ?? "")
+function SearchBox({ placeholder, country, sort, query, onSearch, onClear, isSearching }: SearchBoxProps) {
+  const [value, setValue] = useState(query)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
 
   useEffect(() => {
-    setValue(query ?? "")
+    setValue(query)
   }, [query])
 
   useEffect(() => {
@@ -412,12 +401,12 @@ function InstantSearchBox({ placeholder, country, sort }: InstantSearchBoxProps)
         if (!cancelled) {
           setSuggestions(Array.isArray(data.suggestions) ? data.suggestions.slice(0, 10) : [])
         }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+      } catch (caughtError) {
+        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
           return
         }
         if (process.env.NODE_ENV !== "production") {
-          console.error("Failed to fetch search suggestions", error)
+          console.error("Failed to fetch search suggestions", caughtError)
         }
       } finally {
         if (!cancelled) {
@@ -438,42 +427,39 @@ function InstantSearchBox({ placeholder, country, sort }: InstantSearchBoxProps)
       event.preventDefault()
       const trimmed = value.trim()
       if (!trimmed) {
-        clear()
+        onClear()
         return
       }
 
-      refine(trimmed)
+      onSearch(trimmed)
       setShowSuggestions(false)
     },
-    [clear, refine, value],
+    [onClear, onSearch, value],
   )
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       setValue(suggestion)
-      refine(suggestion)
+      onSearch(suggestion)
       setShowSuggestions(false)
     },
-    [refine],
+    [onSearch],
   )
 
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Escape") {
-        setShowSuggestions(false)
-      }
-    },
-    [],
-  )
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setShowSuggestions(false)
+    }
+  }, [])
 
   const handleClear = useCallback(() => {
     setValue("")
     setSuggestions([])
     setShowSuggestions(false)
-    clear()
-  }, [clear])
+    onClear()
+  }, [onClear])
 
-  const isSearching = isSearchStalled || isFetchingSuggestions
+  const busy = isSearching || isFetchingSuggestions
 
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -501,7 +487,7 @@ function InstantSearchBox({ placeholder, country, sort }: InstantSearchBoxProps)
         />
 
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          {isSearching && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+          {busy && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
 
           {value && (
             <Button
@@ -585,25 +571,40 @@ function SearchFilters({ country, sort, onCountryChange, onSortChange }: SearchF
 }
 
 interface SearchResultsPanelProps {
+  query: string
+  results: SearchRecord[]
+  status: SearchStatus
+  error: string | null
+  total: number
+  currentPage: number
+  totalPages: number
+  hasMore: boolean
+  onLoadMore: () => void
   fallbackCountry: string
 }
 
-function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
-  const { hits, isLastPage, showMore } = useInfiniteHits<AlgoliaSearchRecord>()
-  const { indexUiState, results, status, error } = useInstantSearch()
-  const { nbHits } = useStats()
+function SearchResultsPanel({
+  query,
+  results,
+  status,
+  error,
+  total,
+  currentPage,
+  totalPages,
+  hasMore,
+  onLoadMore,
+  fallbackCountry,
+}: SearchResultsPanelProps) {
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  const query = (indexUiState.query ?? "").trim()
-  const totalHits = nbHits ?? results?.nbHits ?? hits.length
-  const currentPage = (results?.page ?? 0) + 1
-  const totalPages = results?.nbPages ?? 0
+  const trimmedQuery = query.trim()
+  const totalHits = total > 0 ? total : results.length
 
-  if (!query) {
+  if (!trimmedQuery) {
     return (
       <div className="py-12 text-center text-gray-600">
         <div className="mb-2 text-lg">Start searching</div>
@@ -616,12 +617,12 @@ function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
         <h3 className="mb-2 font-semibold">We couldn't complete your search.</h3>
-        <p>{error?.message || "Please try again in a few moments."}</p>
+        <p>{error || "Please try again in a few moments."}</p>
       </div>
     )
   }
 
-  if (status === "loading" && hits.length === 0) {
+  if (status === "loading" && results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border bg-white py-12">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -630,11 +631,11 @@ function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
     )
   }
 
-  if (hits.length === 0) {
+  if (results.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-6 text-center">
         <h3 className="mb-2 text-lg font-medium text-gray-900">No results found</h3>
-        <p className="text-gray-500">We couldn't find any matches for "{query}". Try a different search term.</p>
+        <p className="text-gray-500">We couldn't find any matches for "{trimmedQuery}". Try a different search term.</p>
       </div>
     )
   }
@@ -642,30 +643,30 @@ function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
   return (
     <div className="rounded-lg border bg-white p-6 shadow-sm">
       <div className="text-sm text-gray-500">
-        Found {totalHits} {totalHits === 1 ? "result" : "results"} for "{query}"
+        Found {totalHits} {totalHits === 1 ? "result" : "results"} for "{trimmedQuery}"
       </div>
 
       <div className="mt-4 space-y-6">
-        {hits.map((hit) => (
+        {results.map((hit) => (
           <SearchResultHit
             key={hit.objectID}
             hit={hit}
-            query={query}
+            query={trimmedQuery}
             fallbackCountry={fallbackCountry}
             showHighlights={isClient}
           />
         ))}
       </div>
 
-      {!isLastPage && (
+      {hasMore && (
         <div className="flex justify-center pt-6">
           <Button
-            onClick={showMore}
+            onClick={onLoadMore}
             variant="outline"
             className="min-w-[140px] bg-transparent"
-            disabled={status === "loading" || status === "stalled"}
+            disabled={status === "loadingMore"}
           >
-            {status === "loading" || status === "stalled" ? (
+            {status === "loadingMore" ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
               </>
@@ -686,7 +687,7 @@ function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
 }
 
 interface SearchResultHitProps {
-  hit: AlgoliaSearchRecord
+  hit: SearchRecord
   query: string
   fallbackCountry: string
   showHighlights: boolean
@@ -710,7 +711,10 @@ const extractSlug = (objectID: string): { country?: string; slug: string } => {
 
 function SearchResultHit({ hit, query, fallbackCountry, showHighlights }: SearchResultHitProps) {
   const parsed = extractSlug(hit.objectID)
-  const resolvedCountry = hit.country || parsed.country || (fallbackCountry !== PAN_AFRICAN_CODE ? fallbackCountry : undefined)
+  const resolvedCountry =
+    hit.country ||
+    parsed.country ||
+    (fallbackCountry !== PAN_AFRICAN_CODE ? fallbackCountry : undefined)
   const slug = parsed.slug || hit.objectID
   const href = getArticleUrl(slug, resolvedCountry)
 

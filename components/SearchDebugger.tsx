@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
+import type { SearchRecord } from "@/types/search"
 
 export function SearchDebugger() {
   const [query, setQuery] = useState("")
@@ -105,7 +105,7 @@ export function SearchDebugger() {
 
           {results.results && results.results.length > 0 ? (
             <div className="space-y-2">
-              {results.results.slice(0, 3).map((post: AlgoliaSearchRecord, index: number) => (
+              {results.results.slice(0, 3).map((post: SearchRecord, index: number) => (
                 <div key={index} className="p-2 bg-white border rounded text-sm">
                   <div className="font-medium">{post.title || "No title"}</div>
                   <div className="text-gray-600 text-xs">
