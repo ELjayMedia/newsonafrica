@@ -6,7 +6,6 @@ import { CollapsibleSection } from "@/components/CollapsibleSection"
 import Link from "next/link"
 import { getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
 import { useEffect, useMemo, useState } from "react"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import useSWR from "swr"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
@@ -102,7 +101,6 @@ const mapCategoryPostsForConfigs = (
 }
 
 export function CompactHomeContent({ initialPosts = [], initialData }: CompactHomeContentProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const selectedConfigs = useMemo(() => categoryConfigs.slice(0, 3), [])
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>(() =>
