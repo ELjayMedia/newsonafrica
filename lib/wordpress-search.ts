@@ -1,8 +1,6 @@
 import { getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
-const WORDPRESS_REST_API_URL = getRestBase()
-
 // Search result interface
 export interface WordPressSearchResult {
   id: number
@@ -60,24 +58,47 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 /**
  * Search WordPress posts using REST API
  */
+export interface SearchWordPressPostsOptions {
+  page?: number
+  perPage?: number
+  categories?: number[]
+  tags?: number[]
+  author?: number
+  orderBy?: "relevance" | "date" | "title"
+  order?: "asc" | "desc"
+  country?: string
+}
+
 export async function searchWordPressPosts(
   query: string,
-  options: {
-    page?: number
-    perPage?: number
-    categories?: number[]
-    tags?: number[]
-    author?: number
-    orderBy?: "relevance" | "date" | "title"
-    order?: "asc" | "desc"
-  } = {},
+  options: SearchWordPressPostsOptions = {},
 ): Promise<SearchResponse> {
   const startTime = Date.now()
 
-  const { page = 1, perPage = 20, categories = [], tags = [], author, orderBy = "relevance", order = "desc" } = options
+  const {
+    page = 1,
+    perPage = 20,
+    categories = [],
+    tags = [],
+    author,
+    orderBy = "relevance",
+    order = "desc",
+    country,
+  } = options
+
+  const restBase = getRestBase(country)
 
   // Create cache key
-  const cacheKey = `search:${query}:${JSON.stringify(options)}`
+  const cacheKey = `search:${query}:${JSON.stringify({
+    page,
+    perPage,
+    categories,
+    tags,
+    author,
+    orderBy,
+    order,
+    country,
+  })}`
 
   // Check cache first
   const cached = searchCache.get(cacheKey)
@@ -114,7 +135,7 @@ export async function searchWordPressPosts(
       searchParams.append("author", author.toString())
     }
 
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
+    const response = await fetch(`${restBase}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -168,13 +189,13 @@ export async function searchWordPressPosts(
 /**
  * Get search suggestions from WordPress
  */
-export async function getSearchSuggestions(query: string, limit = 8): Promise<string[]> {
+export async function getSearchSuggestions(query: string, limit = 8, country?: string): Promise<string[]> {
   if (!query || query.length < 2) return []
 
   try {
     // Search for posts to extract suggestions
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${getRestBase(country)}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -221,10 +242,10 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 /**
  * Search categories
  */
-export async function searchCategories(query: string): Promise<any[]> {
+export async function searchCategories(query: string, country?: string): Promise<any[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${getRestBase(country)}/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -243,9 +264,9 @@ export async function searchCategories(query: string): Promise<any[]> {
 /**
  * Search tags
  */
-export async function searchTags(query: string): Promise<any[]> {
+export async function searchTags(query: string, country?: string): Promise<any[]> {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
+    const response = await fetch(`${getRestBase(country)}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -311,21 +332,13 @@ export function highlightSearchTerms(text: string, searchQuery: string): string 
 // Server action wrappers for Next.js
 export async function searchWordPressPostsAction(
   query: string,
-  options: {
-    page?: number
-    perPage?: number
-    categories?: number[]
-    tags?: number[]
-    author?: number
-    orderBy?: "relevance" | "date" | "title"
-    order?: "asc" | "desc"
-  } = {},
+  options: SearchWordPressPostsOptions = {},
 ): Promise<SearchResponse> {
   "use server"
   return searchWordPressPosts(query, options)
 }
 
-export async function getSearchSuggestionsAction(query: string, limit = 8): Promise<string[]> {
+export async function getSearchSuggestionsAction(query: string, limit = 8, country?: string): Promise<string[]> {
   "use server"
-  return getSearchSuggestions(query, limit)
+  return getSearchSuggestions(query, limit, country)
 }
