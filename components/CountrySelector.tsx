@@ -97,6 +97,16 @@ export default function CountrySelector() {
   const handleChange = (value: string) => {
     setSelectedEdition(value)
 
+    const navigateTo = (code: string) => {
+      const href = code === AFRICAN_EDITION.code ? "/" : `/${code}`
+
+      if (typeof window !== "undefined") {
+        window.location.assign(href)
+      } else {
+        router.push(href)
+      }
+    }
+
     if (value === AFRICAN_EDITION.code) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("preferredCountry")
@@ -109,13 +119,13 @@ export default function CountrySelector() {
           })
         })
       }
-      router.push("/")
+      navigateTo(AFRICAN_EDITION.code)
       return
     }
 
     const country = SUPPORTED_COUNTRIES.find((entry) => entry.code === value)
     if (!country) {
-      router.push("/")
+      navigateTo(AFRICAN_EDITION.code)
       return
     }
 
@@ -132,7 +142,7 @@ export default function CountrySelector() {
       })
     }
 
-    router.push(`/${country.code}`)
+    navigateTo(country.code)
   }
 
   return (
