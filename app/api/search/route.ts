@@ -177,13 +177,14 @@ export async function GET(request: NextRequest) {
   const scope = parseScope(searchParams.get("country") || searchParams.get("scope"))
   const sort = parseSort(searchParams.get("sort"))
   const suggestionsOnly = searchParams.get("suggestions") === "true"
+  const fallbackCountry = scope.type === "country" ? scope.country : "pan"
 
   const searchIndex = resolveSearchIndex(scope, sort)
 
   if (suggestionsOnly) {
     if (!searchIndex) {
       try {
-        const suggestions = await wpGetSearchSuggestions(query)
+        const suggestions = await wpGetSearchSuggestions(query, 8, fallbackCountry)
         return jsonWithCors(request, {
           suggestions,
           performance: {
@@ -215,7 +216,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error("Algolia suggestion search failed", error)
       try {
-        const suggestions = await wpGetSearchSuggestions(query)
+        const suggestions = await wpGetSearchSuggestions(query, 8, fallbackCountry)
         return jsonWithCors(request, {
           suggestions,
           performance: {
@@ -231,8 +232,8 @@ export async function GET(request: NextRequest) {
 
   if (!searchIndex) {
     try {
-      const wpResults = await wpSearchPosts(query, { page, perPage })
-      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+      const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
+      const records = fromWordPressResults(wpResults, fallbackCountry)
       return jsonWithCors(request, {
         results: records,
         total: wpResults.total,
@@ -280,8 +281,8 @@ export async function GET(request: NextRequest) {
     console.error("Algolia search failed", error)
 
     try {
-      const wpResults = await wpSearchPosts(query, { page, perPage })
-      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+      const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
+      const records = fromWordPressResults(wpResults, fallbackCountry)
 
       return jsonWithCors(request, {
         results: records,
