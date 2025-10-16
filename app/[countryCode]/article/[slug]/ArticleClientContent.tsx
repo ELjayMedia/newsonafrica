@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
@@ -93,11 +93,12 @@ export function ArticleClientContent({ slug, countryCode, sourceCountryCode, ini
       }
     : undefined
 
-  const sanitizedHtml = sanitizeArticleHtml(
-    rewriteLegacyLinks(initialData.content ?? "", countryCode),
-  )
+  const articleHtml = useMemo(() => {
+    const rewrittenHtml = rewriteLegacyLinks(initialData.content ?? "", countryCode)
+    const sanitizedHtml = sanitizeArticleHtml(rewrittenHtml)
 
-  const articleHtml = transformWordPressEmbeds(sanitizedHtml)
+    return transformWordPressEmbeds(sanitizedHtml)
+  }, [initialData?.content, countryCode])
 
   return (
     <>
