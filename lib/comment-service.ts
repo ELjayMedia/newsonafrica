@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
-import { v4 as uuidv4 } from "uuid"
 import { clearQueryCache } from "@/utils/supabase-query-utils"
 import { toast } from "@/hooks/use-toast"
 
@@ -715,10 +714,30 @@ export function organizeComments(comments: Comment[]): Comment[] {
   return rootComments
 }
 
+const generateOptimisticId = (): string => {
+  const cryptoObj =
+    typeof globalThis === "object" && "crypto" in globalThis
+      ? (globalThis as typeof globalThis & { crypto?: Crypto }).crypto
+      : undefined
+
+  if (cryptoObj && typeof cryptoObj.randomUUID === "function") {
+    try {
+      return cryptoObj.randomUUID()
+    } catch (error) {
+      console.warn("Failed to generate UUID via crypto.randomUUID", error)
+    }
+  }
+
+  // Fallback for environments without crypto.randomUUID
+  const timestampPart = Date.now().toString(36)
+  const randomPart = Math.random().toString(36).slice(2)
+  return `${timestampPart}-${randomPart}`
+}
+
 // Create an optimistic comment (for UI purposes before server response)
 export function createOptimisticComment(comment: NewComment, username: string, avatarUrl?: string | null): Comment {
   return {
-    id: `optimistic-${uuidv4()}`, // Temporary ID
+    id: `optimistic-${generateOptimisticId()}`, // Temporary ID
     post_id: comment.post_id,
     user_id: comment.user_id,
     content: comment.content,
