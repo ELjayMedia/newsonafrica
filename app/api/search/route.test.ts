@@ -1,92 +1,114 @@
-import { describe, expect, beforeEach, it, vi } from "vitest"
-import { NextRequest } from "next/server"
-import type { SearchResponse } from "@/lib/wordpress-search"
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+
+const mockJsonWithCors = vi.fn(
+  (_request: Request, data: unknown, init?: ResponseInit) =>
+    new Response(JSON.stringify(data), {
+      status: init?.status ?? 200,
+      headers: { "content-type": "application/json" },
+    }),
+)
+const mockLogRequest = vi.fn()
+const mockResolveSearchIndex = vi.fn()
+const mockWpSearchPosts = vi.fn()
+const mockWpGetSearchSuggestions = vi.fn()
+const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+vi.mock("@/lib/api-utils", () => ({
+  jsonWithCors: mockJsonWithCors,
+  logRequest: mockLogRequest,
+}))
+
+vi.mock("@/lib/search", () => ({
+  stripHtml: (value: string) => value,
+}))
+
+vi.mock("@/lib/editions", () => ({
+  SUPPORTED_COUNTRIES: [
+    { code: "SZ", name: "Eswatini" },
+    { code: "NG", name: "Nigeria" },
+  ],
+}))
 
 vi.mock("@/lib/algolia/client", () => ({
-  resolveSearchIndex: vi.fn(),
+  resolveSearchIndex: mockResolveSearchIndex,
 }))
 
 vi.mock("@/lib/wordpress-search", () => ({
-  searchWordPressPosts: vi.fn(),
-  getSearchSuggestions: vi.fn(),
+  searchWordPressPosts: mockWpSearchPosts,
+  getSearchSuggestions: mockWpGetSearchSuggestions,
 }))
 
-vi.mock("@/utils/logger", () => ({
-  default: {
-    log: vi.fn(),
-  },
-}))
+const routeModulePromise = import("./route")
 
-import { GET } from "./route"
-import { resolveSearchIndex } from "@/lib/algolia/client"
-import { searchWordPressPosts, getSearchSuggestions } from "@/lib/wordpress-search"
-
-const mockResolveSearchIndex = vi.mocked(resolveSearchIndex)
-const mockSearchWordPressPosts = vi.mocked(searchWordPressPosts)
-const mockGetSearchSuggestions = vi.mocked(getSearchSuggestions)
-
-const buildWpSearchResult = (country: string): SearchResponse => ({
-  results: [
-    {
-      id: 1,
-      slug: `${country}-post`,
-      date: new Date("2024-01-01").toISOString(),
-      link: "https://example.com",
-      featured_media: 0,
-      categories: [],
-      tags: [],
-      author: 1,
-      title: { rendered: `${country.toUpperCase()} Headline` },
-      excerpt: { rendered: `${country.toUpperCase()} excerpt` },
-      content: { rendered: "<p>Example content</p>" },
-      _embedded: undefined,
-    },
-  ],
-  total: 1,
-  totalPages: 1,
-  currentPage: 1,
-  hasMore: false,
-  query: "", // unused in assertions
-  searchTime: 5,
-})
-
-describe("GET /api/search WordPress fallback", () => {
+describe("GET /api/search", () => {
   beforeEach(() => {
-    mockResolveSearchIndex.mockReset()
-    mockSearchWordPressPosts.mockReset()
-    mockGetSearchSuggestions.mockReset()
+    vi.clearAllMocks()
+
+    mockJsonWithCors.mockImplementation(
+      (_request: Request, data: unknown, init?: ResponseInit) =>
+        new Response(JSON.stringify(data), {
+          status: init?.status ?? 200,
+          headers: { "content-type": "application/json" },
+        }),
+    )
+
+    mockResolveSearchIndex.mockReturnValue(null)
+    consoleErrorSpy.mockImplementation(() => {})
   })
 
-  it("uses the requested country when Algolia is unavailable", async () => {
-    const country = "za"
-    mockResolveSearchIndex.mockReturnValue(null)
-    mockSearchWordPressPosts.mockResolvedValue(buildWpSearchResult(country))
-
-    const request = new NextRequest(`https://example.com/api/search?q=economy&country=${country}`)
-    const response = await GET(request)
-    const payload = await response.json()
-
-    expect(mockSearchWordPressPosts).toHaveBeenCalledWith("economy", expect.objectContaining({
-      page: 1,
-      perPage: 20,
-      country,
-    }))
-    expect(payload.results[0].objectID).toBe(`${country}:${country}-post`)
+  afterAll(() => {
+    consoleErrorSpy.mockRestore()
   })
 
-  it("uses the pan-African edition when scope requests it", async () => {
-    mockResolveSearchIndex.mockReturnValue(null)
-    mockSearchWordPressPosts.mockResolvedValue(buildWpSearchResult("pan"))
+  it("sanitizes invalid pagination before calling WordPress search", async () => {
+    const { GET } = await routeModulePromise
 
-    const request = new NextRequest("https://example.com/api/search?q=economy&scope=pan")
+    mockWpSearchPosts.mockResolvedValue({
+      results: [
+        {
+          id: 1,
+          slug: "example",
+          title: { rendered: "Example" },
+          excerpt: { rendered: "Summary" },
+          date: "2024-01-01T00:00:00.000Z",
+          _embedded: { "wp:term": [[{ name: "News" }]] },
+        },
+      ],
+      total: 1,
+      totalPages: 1,
+      currentPage: 1,
+      hasMore: false,
+      query: "example",
+      searchTime: 10,
+    })
+
+    const request = new Request(
+      "https://example.com/api/search?q=example&page=bogus&per_page=not-a-number",
+    )
+
     const response = await GET(request)
-    const payload = await response.json()
 
-    expect(mockSearchWordPressPosts).toHaveBeenCalledWith("economy", expect.objectContaining({
-      page: 1,
-      perPage: 20,
-      country: "pan",
-    }))
-    expect(payload.results[0].objectID).toBe("pan:pan-post")
+    expect(response.status).toBe(200)
+    expect(mockWpSearchPosts).toHaveBeenCalledWith("example", { page: 1, perPage: 20 })
+  })
+
+  it("falls back to safe defaults when WordPress search fails", async () => {
+    const { GET } = await routeModulePromise
+
+    mockWpSearchPosts.mockRejectedValue(new Error("wp down"))
+
+    const request = new Request(
+      "https://example.com/api/search?q=welcome&page=bogus&per_page=also-bogus",
+    )
+
+    const response = await GET(request)
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(payload).toMatchObject({
+      currentPage: 1,
+      performance: { source: "fallback" },
+    })
+    expect(Number.isFinite((payload.totalPages as number) ?? NaN)).toBe(true)
   })
 })

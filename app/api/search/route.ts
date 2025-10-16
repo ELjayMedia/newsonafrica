@@ -172,8 +172,15 @@ export async function GET(request: NextRequest) {
     return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
   }
 
-  const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10))
-  const perPage = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("per_page") || "20", 10)))
+  const parsePaginationParam = (value: string | null, defaultValue: number) => {
+    const parsed = value !== null ? Number(value) : defaultValue
+    const safe = Number.isFinite(parsed) ? parsed : defaultValue
+    const integer = Math.trunc(safe)
+    return Math.min(100, Math.max(1, integer))
+  }
+
+  const page = parsePaginationParam(searchParams.get("page"), 1)
+  const perPage = parsePaginationParam(searchParams.get("per_page"), 20)
   const scope = parseScope(searchParams.get("country") || searchParams.get("scope"))
   const sort = parseSort(searchParams.get("sort"))
   const suggestionsOnly = searchParams.get("suggestions") === "true"
