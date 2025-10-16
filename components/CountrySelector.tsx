@@ -12,6 +12,73 @@ import {
 import { updateAuthCountry } from "@/app/actions/auth"
 import { useUser } from "@/contexts/UserContext"
 
+const STORAGE_KEY = "preferredCountry"
+const COOKIE_NAME = "preferredCountry"
+
+const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
+
+function getStoredPreferredCountry(): string | undefined {
+  if (typeof document !== "undefined") {
+    const preferredCookie = document.cookie
+      .split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(`${COOKIE_NAME}=`))
+
+    if (preferredCookie) {
+      const [, value] = preferredCookie.split("=")
+      if (value) {
+        return decodeURIComponent(value)
+      }
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.localStorage?.getItem(STORAGE_KEY)
+      if (stored) {
+        return stored
+      }
+    } catch {
+      // Access to localStorage can fail in some environments; ignore and continue
+    }
+  }
+
+  return undefined
+}
+
+function resolveEditionFromPreference(): string {
+  const storedCountry = getStoredPreferredCountry()
+  if (storedCountry && SUPPORTED_COUNTRY_CODES.has(storedCountry)) {
+    return storedCountry
+  }
+
+  return AFRICAN_EDITION.code
+}
+
+function resolveEditionFromPath(pathname: string | null): string {
+  if (!pathname) {
+    return resolveEditionFromPreference()
+  }
+
+  const segments = pathname.split("/").filter(Boolean)
+  if (!segments.length) {
+    return resolveEditionFromPreference()
+  }
+
+  const [potentialCountry] = segments
+  const normalized = potentialCountry.toLowerCase()
+
+  if (normalized === AFRICAN_EDITION.code) {
+    return AFRICAN_EDITION.code
+  }
+
+  if (SUPPORTED_COUNTRY_CODES.has(normalized)) {
+    return normalized
+  }
+
+  return resolveEditionFromPreference()
+}
+
 export default function CountrySelector() {
   const router = useRouter()
   const pathname = usePathname()
@@ -20,27 +87,7 @@ export default function CountrySelector() {
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    if (!pathname) {
-      setSelectedEdition(AFRICAN_EDITION.code)
-      return
-    }
-
-    const segments = pathname.split("/").filter(Boolean)
-    if (segments.length === 0) {
-      setSelectedEdition(AFRICAN_EDITION.code)
-      return
-    }
-
-    const [potentialCountry] = segments
-    const normalized = potentialCountry.toLowerCase()
-    const countryMatch = SUPPORTED_COUNTRIES.find((country) => country.code === normalized)
-
-    if (countryMatch) {
-      setSelectedEdition(countryMatch.code)
-      return
-    }
-
-    setSelectedEdition(AFRICAN_EDITION.code)
+    setSelectedEdition(resolveEditionFromPath(pathname))
   }, [pathname])
 
   const currentEdition = useMemo(() => {
