@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/lib/wordpress/types"
 
 type ArticleCardLayout = "compact" | "standard" | "featured"
 
