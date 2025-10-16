@@ -275,8 +275,11 @@ export async function searchPosts(query: string, options: SearchOptions = {}): P
       const results = data.results || []
       const total = data.total || 0
 
-      // Get search suggestions
-      const suggestions = await getSearchSuggestions(normalizedQuery, 5)
+      let suggestions = Array.isArray(data.suggestions) ? data.suggestions : []
+
+      if (suggestions.length === 0) {
+        suggestions = await getSearchSuggestions(normalizedQuery, 5)
+      }
 
       const responseTime = Date.now() - startTime
       const searchResponse: SearchResponse = {
