@@ -89,7 +89,11 @@ describe("GET /api/search", () => {
     const response = await GET(request)
 
     expect(response.status).toBe(200)
-    expect(mockWpSearchPosts).toHaveBeenCalledWith("example", { page: 1, perPage: 20 })
+    expect(mockWpSearchPosts).toHaveBeenCalledWith("example", {
+      page: 1,
+      perPage: 20,
+      country: "sz",
+    })
   })
 
   it("falls back to safe defaults when WordPress search fails", async () => {

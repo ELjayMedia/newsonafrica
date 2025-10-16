@@ -4,6 +4,7 @@ import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { resolveSearchIndex, type AlgoliaSortMode, type AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import type { SearchResultItem } from "@/types/search"
 
 export const runtime = "nodejs"
 export const revalidate = 0
@@ -13,22 +14,24 @@ const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-const FALLBACK_RECORDS: AlgoliaSearchRecord[] = [
+const FALLBACK_RECORDS: SearchResultItem[] = [
   {
-    objectID: "sz:welcome-to-news-on-africa",
+    id: "sz:welcome-to-news-on-africa",
+    slug: "welcome-to-news-on-africa",
     title: "Welcome to News On Africa",
     excerpt: "Your premier source for African news, politics, business, and culture.",
     categories: [],
     country: "sz",
-    published_at: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
   },
   {
-    objectID: "sz:search-service-info",
+    id: "sz:search-service-info",
+    slug: "search-service-info",
     title: "Search Service Information",
     excerpt: "Our search is powered by WordPress and provides comprehensive coverage of African news.",
     categories: [],
     country: "sz",
-    published_at: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
   },
 ]
 
@@ -95,31 +98,53 @@ const parseSort = (value: string | null | undefined): AlgoliaSortMode => {
   return "relevance"
 }
 
-const mapAlgoliaHits = (hits: AlgoliaSearchRecord[]): AlgoliaSearchRecord[] =>
-  hits.map((hit) => ({
-    objectID: hit.objectID,
-    title: hit.title,
-    excerpt: hit.excerpt,
-    categories: Array.isArray(hit.categories) ? hit.categories : [],
-    country: hit.country,
-    published_at: hit.published_at,
-  }))
+const parseRecordIdentifier = (identifier: string): { slug: string; country?: string } => {
+  if (!identifier) {
+    return { slug: identifier }
+  }
 
-const fromWordPressResults = (results: Awaited<ReturnType<typeof wpSearchPosts>>, country: string): AlgoliaSearchRecord[] =>
+  const [country, ...rest] = identifier.split(":")
+  if (rest.length === 0) {
+    return { slug: identifier }
+  }
+
+  return { slug: rest.join(":"), country }
+}
+
+const mapAlgoliaHits = (hits: AlgoliaSearchRecord[]): SearchResultItem[] =>
+  hits.map((hit) => {
+    const parsed = parseRecordIdentifier(hit.objectID)
+    return {
+      id: hit.objectID,
+      slug: parsed.slug,
+      title: hit.title,
+      excerpt: hit.excerpt,
+      categories: Array.isArray(hit.categories) ? hit.categories : [],
+      country: hit.country || parsed.country,
+      publishedAt: hit.published_at,
+    }
+  })
+
+const fromWordPressResults = (
+  results: Awaited<ReturnType<typeof wpSearchPosts>>,
+  country: string,
+): SearchResultItem[] =>
   results.results.map((post) => ({
-    objectID: `${country}:${post.slug || post.id}`,
+    id: `${country}:${post.slug || post.id}`,
+    slug: post.slug || String(post.id),
     title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",
     excerpt: stripHtml(post.excerpt?.rendered || "").trim(),
     categories:
       post._embedded?.["wp:term"]?.[0]?.map((term) => term.name)?.filter((name): name is string => Boolean(name)) || [],
     country,
-    published_at: new Date(post.date || new Date().toISOString()).toISOString(),
+    publishedAt: new Date(post.date || new Date().toISOString()).toISOString(),
   }))
 
 const buildFallbackResponse = (
   query: string,
   page: number,
   perPage: number,
+  elapsedMs: number,
 ): Record<string, unknown> => {
   const filtered = FALLBACK_RECORDS.filter((record) =>
     record.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -137,8 +162,9 @@ const buildFallbackResponse = (
     currentPage: page,
     hasMore: start + results.length < total,
     suggestions: results.map((result) => result.title).slice(0, 5),
+    searchTime: elapsedMs,
     performance: {
-      responseTime: 0,
+      responseTime: elapsedMs,
       source: "fallback",
     },
   }
@@ -241,6 +267,7 @@ export async function GET(request: NextRequest) {
     try {
       const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
       const records = fromWordPressResults(wpResults, fallbackCountry)
+      const elapsed = Date.now() - startTime
       return jsonWithCors(request, {
         results: records,
         total: wpResults.total,
@@ -249,14 +276,15 @@ export async function GET(request: NextRequest) {
         hasMore: wpResults.hasMore,
         query,
         suggestions: records.map((record) => record.title).slice(0, 10),
+        searchTime: elapsed,
         performance: {
-          responseTime: Date.now() - startTime,
+          responseTime: elapsed,
           source: "wordpress",
         },
       })
     } catch (error) {
       console.error("WordPress search fallback failed", error)
-      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+      return jsonWithCors(request, buildFallbackResponse(query, page, perPage, Date.now() - startTime))
     }
   }
 
@@ -271,6 +299,7 @@ export async function GET(request: NextRequest) {
     const total = response.nbHits
     const totalPages = Math.max(1, response.nbPages)
 
+    const elapsed = Date.now() - startTime
     return jsonWithCors(request, {
       results: mappedHits,
       total,
@@ -279,8 +308,9 @@ export async function GET(request: NextRequest) {
       hasMore: page < totalPages,
       query,
       suggestions: mappedHits.map((hit) => hit.title).slice(0, 10),
+      searchTime: elapsed,
       performance: {
-        responseTime: Date.now() - startTime,
+        responseTime: elapsed,
         source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${sort}`,
       },
     })
@@ -291,6 +321,7 @@ export async function GET(request: NextRequest) {
       const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
       const records = fromWordPressResults(wpResults, fallbackCountry)
 
+      const elapsed = Date.now() - startTime
       return jsonWithCors(request, {
         results: records,
         total: wpResults.total,
@@ -299,14 +330,15 @@ export async function GET(request: NextRequest) {
         hasMore: wpResults.hasMore,
         query,
         suggestions: records.map((record) => record.title).slice(0, 10),
+        searchTime: elapsed,
         performance: {
-          responseTime: Date.now() - startTime,
+          responseTime: elapsed,
           source: "wordpress-fallback",
         },
       })
     } catch (wpError) {
       console.error("WordPress fallback failed", wpError)
-      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+      return jsonWithCors(request, buildFallbackResponse(query, page, perPage, Date.now() - startTime))
     }
   }
 }
