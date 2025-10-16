@@ -326,7 +326,10 @@ export function HomeContent({
     return (
       <section key={name} className="bg-white rounded-lg">
         <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-          <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
+          <Link
+            href={getCategoryUrl(name.toLowerCase(), currentCountry)}
+            className="hover:text-blue-600 transition-colors"
+          >
             {name}
           </Link>
         </h2>
