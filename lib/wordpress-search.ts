@@ -4,15 +4,6 @@ import { CACHE_DURATIONS } from "@/lib/cache/constants"
 // Search result interface
 export interface WordPressSearchResult {
   id: number
-  title: {
-    rendered: string
-  }
-  excerpt: {
-    rendered: string
-  }
-  content: {
-    rendered: string
-  }
   slug: string
   date: string
   link: string
@@ -20,6 +11,13 @@ export interface WordPressSearchResult {
   categories: number[]
   tags: number[]
   author: number
+  title: {
+    rendered: string
+  }
+  excerpt: {
+    rendered: string
+  }
+  _links?: Record<string, Array<{ href: string }>>
   _embedded?: {
     "wp:featuredmedia"?: Array<{
       source_url: string
@@ -116,6 +114,20 @@ export async function searchWordPressPosts(
       page: page.toString(),
       per_page: perPage.toString(),
       _embed: "1", // Include embedded data (featured media, terms, author)
+      _fields: [
+        "id",
+        "slug",
+        "title",
+        "excerpt",
+        "date",
+        "link",
+        "featured_media",
+        "categories",
+        "tags",
+        "author",
+        "_links",
+        "_embedded",
+      ].join(","),
       orderby: orderBy === "relevance" ? "relevance" : orderBy,
       order: order,
     })
