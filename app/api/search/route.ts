@@ -3,6 +3,7 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import type { SearchResultItem } from "@/types/search"
 
 export const runtime = "nodejs"
 export const revalidate = 0
@@ -12,31 +13,24 @@ const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-type SearchResponseRecord = {
-  objectID: string
-  title: string
-  excerpt: string
-  categories: string[]
-  country: string
-  published_at: string
-}
-
-const FALLBACK_RECORDS: SearchResponseRecord[] = [
+const FALLBACK_RECORDS: SearchResultItem[] = [
   {
-    objectID: "sz:welcome-to-news-on-africa",
+    id: "sz:welcome-to-news-on-africa",
+    slug: "welcome-to-news-on-africa",
     title: "Welcome to News On Africa",
     excerpt: "Your premier source for African news, politics, business, and culture.",
     categories: [],
     country: "sz",
-    published_at: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
   },
   {
-    objectID: "sz:search-service-info",
+    id: "sz:search-service-info",
+    slug: "search-service-info",
     title: "Search Service Information",
     excerpt: "Our search is powered by WordPress and provides comprehensive coverage of African news.",
     categories: [],
     country: "sz",
-    published_at: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
   },
 ]
 
@@ -100,19 +94,21 @@ const fromWordPressResults = (
   country: string,
 ): SearchResponseRecord[] =>
   results.results.map((post) => ({
-    objectID: `${country}:${post.slug || post.id}`,
+    id: `${country}:${post.slug || post.id}`,
+    slug: post.slug || String(post.id),
     title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",
     excerpt: stripHtml(post.excerpt?.rendered || "").trim(),
     categories:
       post._embedded?.["wp:term"]?.[0]?.map((term) => term.name)?.filter((name): name is string => Boolean(name)) || [],
     country,
-    published_at: new Date(post.date || new Date().toISOString()).toISOString(),
+    publishedAt: new Date(post.date || new Date().toISOString()).toISOString(),
   }))
 
 const buildFallbackResponse = (
   query: string,
   page: number,
   perPage: number,
+  elapsedMs: number,
 ): Record<string, unknown> => {
   const filtered = FALLBACK_RECORDS.filter((record) =>
     record.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -132,7 +128,7 @@ const buildFallbackResponse = (
     suggestions: results.map((result) => result.title).slice(0, 5),
     query,
     performance: {
-      responseTime: 0,
+      responseTime: elapsedMs,
       source: "fallback",
     },
   }
