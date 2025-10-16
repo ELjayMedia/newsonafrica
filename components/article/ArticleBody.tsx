@@ -1,5 +1,6 @@
+"use client"
+
 import type { ReactNode } from "react"
-import { parse, type HTMLElement, type Node as HtmlNode, type TextNode } from "node-html-parser"
 
 import { cn } from "@/lib/utils"
 
@@ -62,32 +63,33 @@ function parseHtmlToBlocks(html: string): ArticleBlock[] {
     return []
   }
 
-  const root = parse(`<div>${html}</div>`, {
-    lowerCaseTagName: true,
-    comment: false,
-  })
+  if (typeof DOMParser === "undefined") {
+    return []
+  }
 
-  const container = root.firstChild
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html")
+  const container = doc.body.firstElementChild
 
-  if (!container || !("childNodes" in container)) {
+  if (!container) {
     return []
   }
 
   const blocks: ArticleBlock[] = []
 
-  collectBlocks(container.childNodes ?? [], blocks)
+  collectBlocks(container.childNodes, blocks)
 
   return blocks
 }
 
-function collectBlocks(nodes: HtmlNode[], blocks: ArticleBlock[]) {
-  nodes.forEach((node) => {
+function collectBlocks(nodes: Iterable<Node> | ArrayLike<Node>, blocks: ArticleBlock[]) {
+  Array.from(nodes).forEach((node) => {
     if (!node) {
       return
     }
 
     if (isTextNode(node)) {
-      const text = node.text.trim()
+      const text = node.textContent?.trim() ?? ""
 
       if (text.length > 0) {
         blocks.push({ type: "paragraph", html: text })
@@ -100,43 +102,44 @@ function collectBlocks(nodes: HtmlNode[], blocks: ArticleBlock[]) {
       return
     }
 
-    const tag = node.tagName?.toLowerCase()
+    const element = node as Element
+    const tag = element.tagName?.toLowerCase()
 
     if (!tag) {
       return
     }
 
     if (tag === "p") {
-      if (node.text.trim().length === 0) {
+      if ((element.textContent ?? "").trim().length === 0) {
         return
       }
 
-      blocks.push({ type: "paragraph", html: node.innerHTML })
+      blocks.push({ type: "paragraph", html: element.innerHTML })
       return
     }
 
     if (/^h[1-6]$/.test(tag)) {
-      blocks.push({ type: "heading", level: Number(tag.replace("h", "")), html: node.innerHTML })
+      blocks.push({ type: "heading", level: Number(tag.replace("h", "")), html: element.innerHTML })
       return
     }
 
     if (tag === "ul" || tag === "ol") {
-      blocks.push({ type: "list", tag, html: node.innerHTML })
+      blocks.push({ type: "list", tag, html: element.innerHTML })
       return
     }
 
     if (tag === "blockquote") {
-      blocks.push({ type: "blockquote", html: node.innerHTML })
+      blocks.push({ type: "blockquote", html: element.innerHTML })
       return
     }
 
     if (tag === "pre") {
-      blocks.push({ type: "code", tag: "pre", html: node.innerHTML })
+      blocks.push({ type: "code", tag: "pre", html: element.innerHTML })
       return
     }
 
     if (tag === "code") {
-      blocks.push({ type: "code", tag: "code", html: node.innerHTML })
+      blocks.push({ type: "code", tag: "code", html: element.innerHTML })
       return
     }
 
@@ -146,33 +149,33 @@ function collectBlocks(nodes: HtmlNode[], blocks: ArticleBlock[]) {
     }
 
     if (tag === "table") {
-      blocks.push({ type: "table", html: node.toString() })
+      blocks.push({ type: "table", html: element.outerHTML })
       return
     }
 
-    if (isEmbedNode(node)) {
-      blocks.push({ type: "embed", html: node.toString() })
+    if (isEmbedNode(element)) {
+      blocks.push({ type: "embed", html: element.outerHTML })
       return
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
-      collectBlocks(node.childNodes, blocks)
+    if (element.childNodes && element.childNodes.length > 0) {
+      collectBlocks(element.childNodes, blocks)
       return
     }
 
-    blocks.push({ type: "embed", html: node.toString() })
+    blocks.push({ type: "embed", html: element.outerHTML })
   })
 }
 
-function isElementNode(node: HtmlNode): node is HTMLElement {
-  return node && typeof (node as HTMLElement).tagName === "string"
+function isElementNode(node: Node): node is Element {
+  return node.nodeType === Node.ELEMENT_NODE
 }
 
-function isTextNode(node: HtmlNode): node is TextNode {
-  return node && typeof (node as TextNode).text === "string" && !(node as HTMLElement).tagName
+function isTextNode(node: Node): node is Text {
+  return node.nodeType === Node.TEXT_NODE
 }
 
-function isEmbedNode(node: HTMLElement) {
+function isEmbedNode(node: Element) {
   const tag = node.tagName?.toLowerCase()
 
   if (!tag) {
@@ -183,8 +186,8 @@ function isEmbedNode(node: HTMLElement) {
     return true
   }
 
-  const className = node.getAttribute?.("class") ?? ""
-  const dataProvider = node.getAttribute?.("data-provider") ?? ""
+  const className = node.getAttribute("class") ?? ""
+  const dataProvider = node.getAttribute("data-provider") ?? ""
 
   return [className, dataProvider].some((value) =>
     ["embed", "twitter", "instagram", "tiktok", "facebook", "wp-block-embed", "wp-block-gallery"].some((match) =>
