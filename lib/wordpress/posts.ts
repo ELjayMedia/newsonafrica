@@ -1,3 +1,4 @@
+import { env } from "@/config/env"
 import { getRestBase } from "@/lib/wp-endpoints"
 import { buildCacheTags } from "../cache/tag-utils"
 import {
@@ -350,13 +351,36 @@ const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost
   }
 }
 
-export const fetchMostReadPosts = async (countryCode = DEFAULT_COUNTRY, limit = 5): Promise<HomePost[]> => {
+const buildMostReadRequestUrl = (countryCode: string, limit: number) => {
   const params = new URLSearchParams({ country: countryCode })
   if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
     params.set("limit", String(Math.floor(limit)))
   }
 
-  const response = await fetch(`/api/most-read?${params.toString()}`)
+  const relativePath = `/api/most-read?${params.toString()}`
+
+  if (typeof window === "undefined") {
+    try {
+      const baseUrl = env.NEXT_PUBLIC_SITE_URL?.trim()
+      if (baseUrl) {
+        return new URL(relativePath, baseUrl).toString()
+      }
+    } catch (error) {
+      console.warn("[v0] Failed to build absolute most-read URL", {
+        countryCode,
+        relativePath,
+        error: toErrorDetails(error),
+      })
+    }
+  }
+
+  return relativePath
+}
+
+export const fetchMostReadPosts = async (countryCode = DEFAULT_COUNTRY, limit = 5): Promise<HomePost[]> => {
+  const requestUrl = buildMostReadRequestUrl(countryCode, limit)
+
+  const response = await fetch(requestUrl)
   if (!response.ok) {
     const message = await response.text().catch(() => "")
     throw new Error(message || "Failed to load most-read posts")
