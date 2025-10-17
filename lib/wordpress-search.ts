@@ -1,7 +1,10 @@
 import { getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
-const WORDPRESS_REST_API_URL = getRestBase()
+const DEFAULT_WORDPRESS_REST_API_URL = getRestBase()
+
+const resolveWordPressRestApiUrl = (country?: string) =>
+  country ? getRestBase(country) : DEFAULT_WORDPRESS_REST_API_URL
 
 // Search result interface
 export interface WordPressSearchResult {
@@ -70,14 +73,35 @@ export async function searchWordPressPosts(
     author?: number
     orderBy?: "relevance" | "date" | "title"
     order?: "asc" | "desc"
+    country?: string
   } = {},
 ): Promise<SearchResponse> {
   const startTime = Date.now()
 
-  const { page = 1, perPage = 20, categories = [], tags = [], author, orderBy = "relevance", order = "desc" } = options
+  const {
+    page = 1,
+    perPage = 20,
+    categories = [],
+    tags = [],
+    author,
+    orderBy = "relevance",
+    order = "desc",
+    country,
+  } = options
+
+  const normalizedCountry = country?.trim().toLowerCase()
 
   // Create cache key
-  const cacheKey = `search:${query}:${JSON.stringify(options)}`
+  const cacheKey = `search:${query}:${JSON.stringify({
+    page,
+    perPage,
+    categories,
+    tags,
+    author,
+    orderBy,
+    order,
+    country: normalizedCountry,
+  })}`
 
   // Check cache first
   const cached = searchCache.get(cacheKey)
@@ -114,7 +138,7 @@ export async function searchWordPressPosts(
       searchParams.append("author", author.toString())
     }
 
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/posts?${searchParams}`, {
+    const response = await fetch(`${resolveWordPressRestApiUrl(normalizedCountry)}/posts?${searchParams}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -168,13 +192,14 @@ export async function searchWordPressPosts(
 /**
  * Get search suggestions from WordPress
  */
-export async function getSearchSuggestions(query: string, limit = 8): Promise<string[]> {
+export async function getSearchSuggestions(query: string, limit = 8, country?: string): Promise<string[]> {
   if (!query || query.length < 2) return []
 
   try {
+    const normalizedCountry = country?.trim().toLowerCase()
     // Search for posts to extract suggestions
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
+      `${resolveWordPressRestApiUrl(normalizedCountry)}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -224,7 +249,7 @@ export async function getSearchSuggestions(query: string, limit = 8): Promise<st
 export async function searchCategories(query: string): Promise<any[]> {
   try {
     const response = await fetch(
-      `${WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
+      `${DEFAULT_WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -245,7 +270,7 @@ export async function searchCategories(query: string): Promise<any[]> {
  */
 export async function searchTags(query: string): Promise<any[]> {
   try {
-    const response = await fetch(`${WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
+    const response = await fetch(`${DEFAULT_WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
       headers: {
         "Content-Type": "application/json",
       },
