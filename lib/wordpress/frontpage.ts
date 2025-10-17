@@ -4,7 +4,12 @@ import { wordpressQueries, FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from
 import { fetchFromWp, fetchFromWpGraphQL, executeRestFallback } from "./client"
 import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
-import { FP_TAG_SLUG, mapGraphqlNodeToHomePost, mapWordPressPostToHomePost } from "./shared"
+import {
+  FP_TAG_SLUG,
+  mapGraphqlNodeToHomePost,
+  mapPostFromWp,
+  mapWordPressPostToHomePost,
+} from "./shared"
 import type {
   AggregatedHomeData,
   FrontPageSlicesResult,
@@ -133,9 +138,10 @@ const fetchFrontPageSlicesViaRest = async (
       { fallbackValue: [] },
     )
 
+    const mapped = posts.map((post) => mapPostFromWp(post, countryCode))
     return buildFrontPageSlices({
       heroPosts: [],
-      generalPosts: posts,
+      generalPosts: mapped,
       heroFallbackLimit,
       trendingLimit,
       latestLimit,
@@ -257,7 +263,9 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
         return []
       }
 
-      const normalizedPosts = posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
+      const normalizedPosts = posts.map((post) =>
+        mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode),
+      )
 
       console.log("[v0] Found", normalizedPosts.length, "FP tagged posts via REST")
       return normalizedPosts

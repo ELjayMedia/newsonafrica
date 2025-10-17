@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
+import { resolveSearchIndex, type AlgoliaSortMode, type AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
@@ -122,7 +123,6 @@ const buildFallbackResponse = (
     currentPage: page,
     hasMore: start + results.length < total,
     suggestions: results.map((result) => result.title).slice(0, 5),
-    query,
     performance: {
       responseTime: 0,
       source: "fallback",
@@ -158,55 +158,133 @@ export async function GET(request: NextRequest) {
     return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
   }
 
-  const parsePaginationParam = (value: string | null, defaultValue: number) => {
-    const parsed = value !== null ? Number(value) : defaultValue
-    const safe = Number.isFinite(parsed) ? parsed : defaultValue
-    const integer = Math.trunc(safe)
-    return Math.min(100, Math.max(1, integer))
-  }
-
-  const page = parsePaginationParam(searchParams.get("page"), 1)
-  const perPage = parsePaginationParam(searchParams.get("per_page"), 20)
+  const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10))
+  const perPage = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("per_page") || "20", 10)))
   const scope = parseScope(searchParams.get("country") || searchParams.get("scope"))
+  const sort = parseSort(searchParams.get("sort"))
   const suggestionsOnly = searchParams.get("suggestions") === "true"
-  const fallbackCountry = scope.type === "country" ? scope.country : "pan"
+
+  const searchIndex = resolveSearchIndex(scope, sort)
 
   if (suggestionsOnly) {
+    if (!searchIndex) {
+      try {
+        const suggestions = await wpGetSearchSuggestions(query)
+        return jsonWithCors(request, {
+          suggestions,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "wordpress-fallback",
+          },
+        })
+      } catch {
+        return jsonWithCors(request, { suggestions: [] })
+      }
+    }
+
     try {
-      const suggestions = await wpGetSearchSuggestions(query, 8, fallbackCountry)
+      const response = await searchIndex.search<AlgoliaSearchRecord>(query, {
+        page: 0,
+        hitsPerPage: 10,
+        attributesToRetrieve: ["title"],
+      })
+
+      const suggestions = Array.from(new Set(response.hits.map((hit) => hit.title))).slice(0, 10)
+
       return jsonWithCors(request, {
         suggestions,
+        performance: {
+          responseTime: Date.now() - startTime,
+          source: `algolia-${sort}`,
+        },
+      })
+    } catch (error) {
+      console.error("Algolia suggestion search failed", error)
+      try {
+        const suggestions = await wpGetSearchSuggestions(query)
+        return jsonWithCors(request, {
+          suggestions,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "wordpress-fallback",
+          },
+        })
+      } catch {
+        return jsonWithCors(request, { suggestions: [] })
+      }
+    }
+  }
+
+  if (!searchIndex) {
+    try {
+      const wpResults = await wpSearchPosts(query, { page, perPage })
+      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+      return jsonWithCors(request, {
+        results: records,
+        total: wpResults.total,
+        totalPages: wpResults.totalPages,
+        currentPage: wpResults.currentPage,
+        hasMore: wpResults.hasMore,
+        query,
+        suggestions: records.map((record) => record.title).slice(0, 10),
         performance: {
           responseTime: Date.now() - startTime,
           source: "wordpress",
         },
       })
     } catch (error) {
-      console.error("WordPress suggestion search failed", error)
-      return jsonWithCors(request, { suggestions: [] })
+      console.error("WordPress search fallback failed", error)
+      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
     }
   }
 
   try {
-    const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
-    const records = fromWordPressResults(wpResults, fallbackCountry)
+    const response = await searchIndex.search<AlgoliaSearchRecord>(query, {
+      page: page - 1,
+      hitsPerPage: perPage,
+      attributesToRetrieve: ["objectID", "title", "excerpt", "categories", "country", "published_at"],
+    })
+
+    const mappedHits = mapAlgoliaHits(response.hits as AlgoliaSearchRecord[])
+    const total = response.nbHits
+    const totalPages = Math.max(1, response.nbPages)
+
     return jsonWithCors(request, {
-      results: records,
-      total: wpResults.total,
-      totalPages: wpResults.totalPages,
-      currentPage: wpResults.currentPage,
-      hasMore: wpResults.hasMore,
+      results: mappedHits,
+      total,
+      totalPages,
+      currentPage: page,
+      hasMore: page < totalPages,
       query,
-      suggestions: wpResults.suggestions?.length
-        ? wpResults.suggestions
-        : records.map((record) => record.title).slice(0, 10),
+      suggestions: mappedHits.map((hit) => hit.title).slice(0, 10),
       performance: {
         responseTime: Date.now() - startTime,
-        source: "wordpress",
+        source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${sort}`,
       },
     })
   } catch (error) {
-    console.error("WordPress search failed", error)
-    return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+    console.error("Algolia search failed", error)
+
+    try {
+      const wpResults = await wpSearchPosts(query, { page, perPage })
+      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+
+      return jsonWithCors(request, {
+        results: records,
+        total: wpResults.total,
+        totalPages: wpResults.totalPages,
+        currentPage: wpResults.currentPage,
+        hasMore: wpResults.hasMore,
+        query,
+        suggestions: records.map((record) => record.title).slice(0, 10),
+        performance: {
+          responseTime: Date.now() - startTime,
+          source: "wordpress-fallback",
+        },
+      })
+    } catch (wpError) {
+      console.error("WordPress fallback failed", wpError)
+      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+    }
   }
 }

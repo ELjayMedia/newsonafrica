@@ -1,18 +1,20 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { appConfig } from "@/lib/config"
-import { env } from "@/config/env"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
 import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
 import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
-import { getWordPressBasicAuthHeader } from "@/config/env"
-import { getWordPressAuthorizationHeader } from "./auth"
-import type { DeepMutable, WordPressPost } from "./types"
+import type { PostFieldsFragment } from "@/types/wpgraphql"
 
-export type { DeepMutable, WordPressPost } from "./types"
+export type DeepMutable<T> = T extends ReadonlyArray<infer U>
+  ? DeepMutable<U>[]
+  : T extends object
+    ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+    : T
+
+export type WordPressPost = DeepMutable<PostFieldsFragment> & { globalRelayId?: string | null }
 
 export interface CountryConfig {
   code: string
@@ -72,25 +74,18 @@ async function getCircuitBreaker(): Promise<CircuitBreakerManager> {
   return circuitBreakerInstance
 }
 
-function encodeBasicAuth(username: string, password: string) {
-  const bufferCtor = (globalThis as { Buffer?: { from(value: string): { toString(encoding: string): string } } }).Buffer
-  if (bufferCtor?.from) {
-    return bufferCtor.from(`${username}:${password}`).toString("base64")
-  }
-  const btoaFn = (globalThis as { btoa?: (value: string) => string }).btoa
-  if (typeof btoaFn === "function") {
-    return btoaFn(`${username}:${password}`)
-  }
-  throw new Error("Unable to encode WordPress credentials: no base64 encoder available")
-}
-
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     Accept: "application/json",
   }
 
-  headers["Authorization"] = getWordPressBasicAuthHeader()
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
+  if (username && password) {
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
+  }
 
   return headers
 }
@@ -124,6 +119,7 @@ export async function fetchFromWpGraphQL<T>(
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
+            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -245,7 +241,7 @@ export async function fetchFromWp<T>(
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const { timeout = appConfig.wordpress.timeout, withHeaders = false, tags } = normalizedOpts
+  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)
