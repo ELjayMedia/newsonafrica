@@ -4,8 +4,6 @@ import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import {
   resolveSearchIndex,
-  parseSort,
-  mapAlgoliaHits,
   type AlgoliaSortMode,
   type AlgoliaSearchRecord,
 } from "@/lib/algolia/client"
