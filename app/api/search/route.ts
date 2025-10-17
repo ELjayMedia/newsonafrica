@@ -43,6 +43,15 @@ const supportedCountryCodes = new Set(SUPPORTED_COUNTRIES.map((country) => count
 
 type SearchScope = { type: "country"; country: string } | { type: "panAfrican" }
 
+type NormalizedSearchParams = {
+  query: string
+  page: number
+  perPage: number
+  sort: AlgoliaSortMode
+  scope: SearchScope
+  suggestionsOnly: boolean
+}
+
 const getRateLimitKey = (request: NextRequest): string => {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
   return `search:${ip}`
@@ -92,6 +101,62 @@ const parseScope = (value: string | null | undefined): SearchScope => {
   }
 
   return { type: "country", country: DEFAULT_COUNTRY }
+}
+
+const SORT_ALIASES: Record<string, AlgoliaSortMode> = {
+  latest: "latest",
+  recent: "latest",
+  newest: "latest",
+}
+
+const parseSort = (value: string | null | undefined): AlgoliaSortMode => {
+  if (!value) {
+    return "relevance"
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (normalized in SORT_ALIASES) {
+    return SORT_ALIASES[normalized]
+  }
+
+  return "relevance"
+}
+
+const normalizeBooleanParam = (value: string | null): boolean => {
+  if (!value) {
+    return false
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return ["1", "true", "yes", "on"].includes(normalized)
+}
+
+const normalizeIntegerParam = (
+  value: string | null,
+  { fallback, min, max }: { fallback: number; min: number; max?: number },
+): number => {
+  const parsed = Number.parseInt(value ?? "", 10)
+
+  if (Number.isNaN(parsed)) {
+    return fallback
+  }
+
+  const clamped = Math.max(min, parsed)
+  return typeof max === "number" ? Math.min(clamped, max) : clamped
+}
+
+const normalizeQuery = (value: string | null): string => (value ?? "").replace(/\s+/g, " ").trim()
+
+const normalizeSearchParams = (searchParams: URLSearchParams): NormalizedSearchParams => {
+  const query = normalizeQuery(searchParams.get("q") ?? searchParams.get("query"))
+  const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
+  const perPage = normalizeIntegerParam(searchParams.get("per_page"), { fallback: 20, min: 1, max: 100 })
+  const sort = parseSort(searchParams.get("sort"))
+  const scope = parseScope(searchParams.get("country") ?? searchParams.get("scope"))
+  const suggestionsOnly = normalizeBooleanParam(searchParams.get("suggestions"))
+
+  return { query, page, perPage, sort, scope, suggestionsOnly }
 }
 
 const fromWordPressResults = (
@@ -179,32 +244,76 @@ const executeWordPressSearchForScope = async (
 }
 
 const buildFallbackResponse = (
-  query: string,
-  page: number,
-  perPage: number,
+  params: NormalizedSearchParams,
+  startTime: number,
 ): Record<string, unknown> => {
-  const filtered = FALLBACK_RECORDS.filter((record) =>
-    record.title.toLowerCase().includes(query.toLowerCase()) ||
-    record.excerpt.toLowerCase().includes(query.toLowerCase()),
-  )
+  if (!params.query) {
+    return {
+      results: [],
+      total: 0,
+      totalPages: 1,
+      currentPage: params.page,
+      hasMore: false,
+      query: params.query,
+      suggestions: [],
+      performance: {
+        responseTime: Date.now() - startTime,
+        source: "fallback",
+      },
+    }
+  }
 
-  const start = (page - 1) * perPage
-  const results = filtered.slice(start, start + perPage)
+  const filtered = FALLBACK_RECORDS.filter((record) => {
+    const haystack = `${record.title} ${record.excerpt}`.toLowerCase()
+    return haystack.includes(params.query.toLowerCase())
+  })
+
+  const start = (params.page - 1) * params.perPage
+  const results = filtered.slice(start, start + params.perPage)
   const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / params.perPage))
 
   return {
     results,
     total,
-    totalPages: Math.max(1, Math.ceil(total / perPage)),
-    currentPage: page,
+    totalPages,
+    currentPage: Math.min(params.page, totalPages),
     hasMore: start + results.length < total,
+    query: params.query,
     suggestions: results.map((result) => result.title).slice(0, 5),
     performance: {
-      responseTime: 0,
+      responseTime: Date.now() - startTime,
       source: "fallback",
     },
   }
 }
+
+const mapAlgoliaHits = (hits: AlgoliaSearchRecord[], fallbackCountry: string): SearchRecord[] =>
+  hits.map((hit, index) => {
+    const title = stripHtml(hit.title || "").trim() || hit.title || "Untitled"
+    const excerpt = stripHtml(hit.excerpt || "").trim()
+    const categories = Array.isArray(hit.categories)
+      ? hit.categories.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+      : []
+    const country = (hit.country || fallbackCountry || DEFAULT_COUNTRY).toLowerCase()
+    const publishedAt = hit.published_at ? new Date(hit.published_at).toISOString() : undefined
+
+    return {
+      objectID: String(hit.objectID ?? `${country}:algolia-${index}`),
+      title,
+      excerpt,
+      categories,
+      country,
+      published_at: publishedAt,
+    }
+  })
+
+const buildWordPressOptions = (params: NormalizedSearchParams) => ({
+  page: params.page,
+  perPage: params.perPage,
+  orderBy: params.sort === "latest" ? "date" : "relevance",
+  order: "desc" as const,
+})
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -228,21 +337,17 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
-  const query = searchParams.get("q") || searchParams.get("query")
+  const normalizedParams = normalizeSearchParams(searchParams)
 
-  if (!query) {
+  if (!normalizedParams.query) {
     return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
   }
 
-  const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10))
-  const perPage = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("per_page") || "20", 10)))
-  const scope = parseScope(searchParams.get("country") || searchParams.get("scope"))
-  const sort = parseSort(searchParams.get("sort"))
-  const suggestionsOnly = searchParams.get("suggestions") === "true"
+  const scope = normalizedParams.scope
+  const fallbackCountry = scope.type === "country" ? scope.country : DEFAULT_COUNTRY
+  const searchIndex = resolveSearchIndex(scope, normalizedParams.sort)
 
-  const searchIndex = resolveSearchIndex(scope, sort)
-
-  if (suggestionsOnly) {
+  if (normalizedParams.suggestionsOnly) {
     if (!searchIndex) {
       if (scope.type === "panAfrican") {
         try {
@@ -278,7 +383,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const response = await searchIndex.search<AlgoliaSearchRecord>(query, {
+      const response = await searchIndex.search<AlgoliaSearchRecord>(normalizedParams.query, {
         page: 0,
         hitsPerPage: 10,
         attributesToRetrieve: ["title"],
@@ -290,13 +395,13 @@ export async function GET(request: NextRequest) {
         suggestions,
         performance: {
           responseTime: Date.now() - startTime,
-          source: `algolia-${sort}`,
+          source: `algolia-${normalizedParams.sort}`,
         },
       })
     } catch (error) {
       console.error("Algolia suggestion search failed", error)
       try {
-        const suggestions = await wpGetSearchSuggestions(query)
+        const suggestions = await wpGetSearchSuggestions(normalizedParams.query)
         return jsonWithCors(request, {
           suggestions,
           performance: {
@@ -312,72 +417,74 @@ export async function GET(request: NextRequest) {
 
   if (!searchIndex) {
     try {
-      const fallback = await executeWordPressSearchForScope(query, scope, page, perPage)
+      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
+      const records = fromWordPressResults(wpResults, fallbackCountry)
       return jsonWithCors(request, {
-        results: fallback.results,
-        total: fallback.total,
-        totalPages: fallback.totalPages,
-        currentPage: fallback.currentPage,
-        hasMore: fallback.hasMore,
-        query,
-        suggestions: fallback.suggestions,
+        results: records,
+        total: wpResults.total,
+        totalPages: Math.max(1, wpResults.totalPages || 1),
+        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
+        hasMore: wpResults.hasMore,
+        query: normalizedParams.query,
+        suggestions: records.map((record) => record.title).slice(0, 10),
         performance: {
-          responseTime: Date.now() - startTime,
+          responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress",
         },
       })
     } catch (error) {
       console.error("WordPress search fallback failed", error)
-      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+      return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
     }
   }
 
   try {
-    const response = await searchIndex.search<AlgoliaSearchRecord>(query, {
-      page: page - 1,
-      hitsPerPage: perPage,
+    const response = await searchIndex.search<AlgoliaSearchRecord>(normalizedParams.query, {
+      page: normalizedParams.page - 1,
+      hitsPerPage: normalizedParams.perPage,
       attributesToRetrieve: ["objectID", "title", "excerpt", "categories", "country", "published_at"],
     })
 
-    const mappedHits = mapAlgoliaHits(response.hits as AlgoliaSearchRecord[])
-    const total = response.nbHits
-    const totalPages = Math.max(1, response.nbPages)
+    const mappedHits = mapAlgoliaHits(response.hits as AlgoliaSearchRecord[], fallbackCountry)
+    const total = typeof response.nbHits === "number" ? response.nbHits : mappedHits.length
+    const totalPages = Math.max(1, response.nbPages || Math.ceil(total / normalizedParams.perPage))
 
     return jsonWithCors(request, {
       results: mappedHits,
       total,
       totalPages,
-      currentPage: page,
-      hasMore: page < totalPages,
-      query,
+      currentPage: normalizedParams.page,
+      hasMore: normalizedParams.page < totalPages,
+      query: normalizedParams.query,
       suggestions: mappedHits.map((hit) => hit.title).slice(0, 10),
       performance: {
         responseTime: Date.now() - startTime,
-        source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${sort}`,
+        source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${normalizedParams.sort}`,
       },
     })
   } catch (error) {
     console.error("Algolia search failed", error)
 
     try {
-      const fallback = await executeWordPressSearchForScope(query, scope, page, perPage)
+      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
+      const records = fromWordPressResults(wpResults, fallbackCountry)
 
       return jsonWithCors(request, {
-        results: fallback.results,
-        total: fallback.total,
-        totalPages: fallback.totalPages,
-        currentPage: fallback.currentPage,
-        hasMore: fallback.hasMore,
-        query,
-        suggestions: fallback.suggestions,
+        results: records,
+        total: wpResults.total,
+        totalPages: Math.max(1, wpResults.totalPages || 1),
+        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
+        hasMore: wpResults.hasMore,
+        query: normalizedParams.query,
+        suggestions: records.map((record) => record.title).slice(0, 10),
         performance: {
-          responseTime: Date.now() - startTime,
+          responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress-fallback",
         },
       })
     } catch (wpError) {
       console.error("WordPress fallback failed", wpError)
-      return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+      return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
     }
   }
 }
