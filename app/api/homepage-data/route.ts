@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import {
@@ -18,7 +19,7 @@ const DEFAULT_RECENT_LIMIT = 10
 const DEFAULT_CATEGORY_LIMIT = 5
 
 export const runtime = "nodejs"
-export const revalidate = 300
+export const revalidate = 0
 
 interface HomepageDataResult {
   taggedPosts: HomePost[]
@@ -85,6 +86,11 @@ export async function GET(request: NextRequest) {
   const recentLimit = parseLimit(url.searchParams.get("recentLimit"), DEFAULT_RECENT_LIMIT)
   const categoryLimit = parseLimit(url.searchParams.get("categoryLimit"), DEFAULT_CATEGORY_LIMIT)
   const categorySlugs = dedupe(parseCategorySlugs(url.searchParams.get("categories")))
+  const initialCacheTags = buildHomepageCacheTags(country, categorySlugs)
+
+  if (initialCacheTags.length > 0) {
+    await Promise.all(initialCacheTags.map(async (tag) => revalidateTag(tag)))
+  }
 
   try {
     const [taggedResult, latestResult, categoriesResult, categoryPostsResult] = await Promise.allSettled([
@@ -129,10 +135,15 @@ export async function GET(request: NextRequest) {
       country,
       dedupe([...categorySlugs, ...Object.keys(categoryPostsRaw)]),
     )
+
+    const extraTagsToRevalidate = cacheTags.filter((tag) => !initialCacheTags.includes(tag))
+    if (extraTagsToRevalidate.length > 0) {
+      await Promise.all(extraTagsToRevalidate.map(async (tag) => revalidateTag(tag)))
+    }
     if (cacheTags.length > 0) {
       response.headers.set("x-next-cache-tags", cacheTags.join(","))
     }
-    response.headers.set("Cache-Control", `s-maxage=${revalidate}, stale-while-revalidate=${Math.floor(revalidate / 2)}`)
+    response.headers.set("Cache-Control", "no-store")
 
     return response
   } catch (error) {
