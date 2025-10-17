@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { useState, useCallback } from "react"
+import { isOnline } from "@/utils/network-utils"
 import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
@@ -16,8 +17,10 @@ export function useLatestPosts(countryCode: string, limit = 20) {
     [`latest-posts`, countryCode, limit],
     () => getLatestPostsForCountry(countryCode, limit),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
       revalidateOnReconnect: true,
+      refreshInterval: () => (isOnline() ? 60000 : 0),
       dedupingInterval: 300000, // 5 minutes
     },
   )
@@ -37,8 +40,10 @@ export function useCategoryPosts(countryCode: string, categorySlug: string, limi
     [`category-posts`, countryCode, categorySlug, limit],
     () => getPostsByCategoryForCountry(countryCode, categorySlug, limit),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
       revalidateOnReconnect: true,
+      refreshInterval: () => (isOnline() ? 60000 : 0),
       dedupingInterval: 300000,
     },
   )
@@ -59,8 +64,10 @@ export function useCategories(countryCode: string) {
     [`categories`, countryCode],
     () => getCategoriesForCountry(countryCode),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
       revalidateOnReconnect: true,
+      refreshInterval: () => (isOnline() ? 120000 : 0),
       dedupingInterval: 600000, // 10 minutes - categories change less frequently
     },
   )
@@ -78,8 +85,10 @@ export function usePost(countryCode: string, slug: string) {
     [`post`, countryCode, slug],
     () => fetchPost({ countryCode, slug }),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
       revalidateOnReconnect: true,
+      refreshInterval: () => (isOnline() ? 60000 : 0),
       dedupingInterval: 300000,
     },
   )
@@ -97,8 +106,10 @@ export function useRelatedPosts(countryCode: string, postId: string, limit = 6) 
     [`related-posts`, countryCode, postId, limit],
     () => getRelatedPostsForCountry(countryCode, postId, limit),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
       revalidateOnReconnect: true,
+      refreshInterval: () => (isOnline() ? 120000 : 0),
       dedupingInterval: 600000,
     },
   )
@@ -113,8 +124,10 @@ export function useRelatedPosts(countryCode: string, postId: string, limit = 6) 
 
 export function useFeaturedPosts(limit = 10) {
   const { data, error, isLoading, mutate } = useSWR([`featured-posts`, limit], () => getFeaturedPosts(limit), {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    revalidateIfStale: true,
     revalidateOnReconnect: true,
+    refreshInterval: () => (isOnline() ? 60000 : 0),
     dedupingInterval: 300000,
   })
 
