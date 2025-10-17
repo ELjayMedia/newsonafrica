@@ -2,22 +2,30 @@
 
 import useSWR from "swr"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
+import { getCurrentCountry } from "@/lib/utils/routing"
 import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import { NewsGridSkeleton } from "@/components/NewsGridSkeleton"
 
 export function SpecialProjectsContent() {
+  const country = getCurrentCountry()
   const {
-    data: projects,
+    data: projectsResponse,
     error,
     isLoading,
-  } = useSWR(["specialProjects"], () => fetchTaggedPosts("special-project", 10), {
-    revalidateOnFocus: false,
-  })
+  } = useSWR(
+    ["specialProjects", country],
+    () => fetchTaggedPosts({ slug: "special-project", first: 10, countryCode: country }),
+    {
+      revalidateOnFocus: false,
+    },
+  )
+
+  const projects = projectsResponse?.nodes ?? []
 
   if (isLoading) return <NewsGridSkeleton />
   if (error)
     return <p className="text-center text-red-500">An error occurred while fetching special projects.</p>
-  if (!projects || projects.length === 0)
+  if (projects.length === 0)
     return <p className="text-center">No special projects found.</p>
 
   return (

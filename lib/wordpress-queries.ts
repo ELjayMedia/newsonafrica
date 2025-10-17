@@ -82,6 +82,29 @@ export const LATEST_POSTS_QUERY = gql`
   }
 `
 
+export const TAGGED_POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query TaggedPosts($tagSlugs: [String!]!, $first: Int!, $after: String) {
+    posts(
+      first: $first
+      after: $after
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        tagSlugIn: $tagSlugs
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
 export const FP_TAGGED_POSTS_QUERY = gql`
   ${HOME_POST_FIELDS_FRAGMENT}
   query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
