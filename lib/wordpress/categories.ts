@@ -286,7 +286,7 @@ export async function getCategoriesForCountry(countryCode: string) {
 export async function fetchCategoryPosts(
   slug: string,
   cursor: string | null = null,
-  countryCode: string,
+  countryCode: string = DEFAULT_COUNTRY,
 ) {
   const tags = buildCacheTags({
     country: countryCode,
