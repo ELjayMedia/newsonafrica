@@ -1,8 +1,13 @@
+import { randomUUID } from "node:crypto"
 import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import {
+  searchWordPressPosts as wpSearchPosts,
+  getSearchSuggestions as wpGetSearchSuggestions,
+} from "@/lib/wordpress-search"
+import type { SearchRecord } from "@/types/search"
 
 export const runtime = "nodejs"
 export const revalidate = 0
@@ -10,46 +15,21 @@ export const revalidate = 0
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
+
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-type SearchResponseRecord = {
-  objectID: string
-  title: string
-  excerpt: string
-  categories: string[]
-  country: string
-  published_at: string
-}
-
-const FALLBACK_RECORDS: SearchResponseRecord[] = [
-  {
-    objectID: "sz:welcome-to-news-on-africa",
-    title: "Welcome to News On Africa",
-    excerpt: "Your premier source for African news, politics, business, and culture.",
-    categories: [],
-    country: "sz",
-    published_at: new Date().toISOString(),
-  },
-  {
-    objectID: "sz:search-service-info",
-    title: "Search Service Information",
-    excerpt: "Our search is powered by WordPress and provides comprehensive coverage of African news.",
-    categories: [],
-    country: "sz",
-    published_at: new Date().toISOString(),
-  },
-]
-
-const supportedCountryCodes = new Set(SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase()))
-
-type SearchScope = { type: "country"; country: string } | { type: "panAfrican" }
+const SUPPORTED_COUNTRY_CODES = new Set(
+  SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase()),
+)
+const PAN_AFRICAN_VALUES = new Set(["all", "pan", "africa", "pan-africa", "african"])
 
 const getRateLimitKey = (request: NextRequest): string => {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
   return `search:${ip}`
 }
 
-const checkRateLimit = (request: NextRequest): { limited: boolean; retryAfter?: number } => {
+const checkRateLimit = (
+  request: NextRequest,
+): { limited: boolean; retryAfter?: number } => {
   if (process.env.NODE_ENV === "development") {
     return { limited: false }
   }
@@ -77,65 +57,82 @@ const checkRateLimit = (request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-const parseScope = (value: string | null | undefined): SearchScope => {
+const normalizeCountry = (value: string | null | undefined): string => {
   if (!value) {
-    return { type: "country", country: DEFAULT_COUNTRY }
+    return DEFAULT_COUNTRY
   }
 
   const normalized = value.trim().toLowerCase()
-
-  if (["all", "pan", "africa", "pan-africa", "african"].includes(normalized)) {
-    return { type: "panAfrican" }
+  if (PAN_AFRICAN_VALUES.has(normalized)) {
+    return DEFAULT_COUNTRY
   }
 
-  if (supportedCountryCodes.has(normalized)) {
-    return { type: "country", country: normalized }
+  if (SUPPORTED_COUNTRY_CODES.has(normalized)) {
+    return normalized
   }
 
-  return { type: "country", country: DEFAULT_COUNTRY }
+  return DEFAULT_COUNTRY
 }
 
-const fromWordPressResults = (
-  results: Awaited<ReturnType<typeof wpSearchPosts>>,
-  country: string,
-): SearchResponseRecord[] =>
-  results.results.map((post) => ({
-    objectID: `${country}:${post.slug || post.id}`,
-    title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",
-    excerpt: stripHtml(post.excerpt?.rendered || "").trim(),
-    categories:
-      post._embedded?.["wp:term"]?.[0]?.map((term) => term.name)?.filter((name): name is string => Boolean(name)) || [],
-    country,
-    published_at: new Date(post.date || new Date().toISOString()).toISOString(),
-  }))
+const parseNumberParam = (
+  value: string | null,
+  defaultValue: number,
+  { min = 1, max = 50 }: { min?: number; max?: number } = {},
+): number => {
+  const parsed = value !== null ? Number(value) : defaultValue
+  const safe = Number.isFinite(parsed) ? parsed : defaultValue
+  const integer = Math.trunc(safe)
+  return Math.min(max, Math.max(min, integer))
+}
 
-const buildFallbackResponse = (
-  query: string,
-  page: number,
-  perPage: number,
-): Record<string, unknown> => {
-  const filtered = FALLBACK_RECORDS.filter((record) =>
-    record.title.toLowerCase().includes(query.toLowerCase()) ||
-    record.excerpt.toLowerCase().includes(query.toLowerCase()),
-  )
+const toSearchRecord = (post: any, country: string): SearchRecord => {
+  const title = stripHtml(post?.title?.rendered ?? "").trim()
+  const excerpt = stripHtml(post?.excerpt?.rendered ?? "").trim()
+  const categories =
+    post?._embedded?.["wp:term"]?.[0]
+      ?.map((term: { name?: string }) => term?.name)
+      .filter((name: string | undefined): name is string => Boolean(name)) ?? []
 
-  const start = (page - 1) * perPage
-  const results = filtered.slice(start, start + perPage)
-  const total = filtered.length
+  let publishedAt: string | undefined
+  if (post?.date) {
+    const timestamp = Date.parse(post.date)
+    if (!Number.isNaN(timestamp)) {
+      publishedAt = new Date(timestamp).toISOString()
+    }
+  }
 
   return {
-    results,
-    total,
-    totalPages: Math.max(1, Math.ceil(total / perPage)),
-    currentPage: page,
-    hasMore: start + results.length < total,
-    suggestions: results.map((result) => result.title).slice(0, 5),
-    query,
-    performance: {
-      responseTime: 0,
-      source: "fallback",
-    },
+    objectID: `${country}:${post?.slug || post?.id || randomUUID()}`,
+    title: title || post?.title?.rendered || "Untitled",
+    excerpt,
+    categories,
+    country,
+    published_at: publishedAt,
   }
+}
+
+const buildEmptyResponse = (query: string, page: number, responseTime: number) => ({
+  results: [],
+  total: 0,
+  totalPages: 0,
+  currentPage: page,
+  hasMore: false,
+  query,
+  suggestions: [],
+  performance: {
+    responseTime,
+    source: "fallback" as const,
+  },
+})
+
+const resolveSort = (
+  value: string | null,
+): { orderBy: "relevance" | "date"; order: "asc" | "desc"; sort: "relevance" | "latest" } => {
+  if (value === "latest") {
+    return { orderBy: "date", order: "desc", sort: "latest" }
+  }
+
+  return { orderBy: "relevance", order: "desc", sort: "relevance" }
 }
 
 export async function GET(request: NextRequest) {
@@ -160,44 +157,58 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
-  const query = searchParams.get("q") || searchParams.get("query")
+  const rawQuery = searchParams.get("q") || searchParams.get("query") || ""
+  const query = rawQuery.trim()
 
   if (!query) {
     return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
   }
 
-  const parsePaginationParam = (value: string | null, defaultValue: number) => {
-    const parsed = value !== null ? Number(value) : defaultValue
-    const safe = Number.isFinite(parsed) ? parsed : defaultValue
-    const integer = Math.trunc(safe)
-    return Math.min(100, Math.max(1, integer))
-  }
-
-  const page = parsePaginationParam(searchParams.get("page"), 1)
-  const perPage = parsePaginationParam(searchParams.get("per_page"), 20)
-  const scope = parseScope(searchParams.get("country") || searchParams.get("scope"))
+  const page = parseNumberParam(searchParams.get("page"), 1, { min: 1, max: 100 })
+  const perPage = parseNumberParam(searchParams.get("per_page"), 20, { min: 1, max: 50 })
+  const country = normalizeCountry(searchParams.get("country") || searchParams.get("scope"))
+  const sort = resolveSort(searchParams.get("sort"))
   const suggestionsOnly = searchParams.get("suggestions") === "true"
-  const fallbackCountry = scope.type === "country" ? scope.country : "pan"
 
   if (suggestionsOnly) {
     try {
-      const suggestions = await wpGetSearchSuggestions(query, 8, fallbackCountry)
+      const suggestions = await wpGetSearchSuggestions(query, 8, country)
       return jsonWithCors(request, {
         suggestions,
         performance: {
           responseTime: Date.now() - startTime,
-          source: "wordpress",
+          source: "wordpress" as const,
         },
       })
     } catch (error) {
       console.error("WordPress suggestion search failed", error)
-      return jsonWithCors(request, { suggestions: [] })
+      return jsonWithCors(request, {
+        suggestions: [],
+        performance: {
+          responseTime: Date.now() - startTime,
+          source: "fallback" as const,
+        },
+      })
     }
   }
 
   try {
-    const wpResults = await wpSearchPosts(query, { page, perPage, country: fallbackCountry })
-    const records = fromWordPressResults(wpResults, fallbackCountry)
+    const wpResults = await wpSearchPosts(query, {
+      page,
+      perPage,
+      country,
+      orderBy: sort.orderBy,
+      order: sort.order,
+    })
+
+    const records = wpResults.results.map((post) => toSearchRecord(post, country))
+    const responseTime = Date.now() - startTime
+
+    const suggestions = records
+      .map((record) => record.title)
+      .filter((title) => title.length > 0)
+      .slice(0, 10)
+
     return jsonWithCors(request, {
       results: records,
       total: wpResults.total,
@@ -205,16 +216,14 @@ export async function GET(request: NextRequest) {
       currentPage: wpResults.currentPage,
       hasMore: wpResults.hasMore,
       query,
-      suggestions: wpResults.suggestions?.length
-        ? wpResults.suggestions
-        : records.map((record) => record.title).slice(0, 10),
+      suggestions,
       performance: {
-        responseTime: Date.now() - startTime,
-        source: "wordpress",
+        responseTime,
+        source: "wordpress" as const,
       },
     })
   } catch (error) {
     console.error("WordPress search failed", error)
-    return jsonWithCors(request, buildFallbackResponse(query, page, perPage))
+    return jsonWithCors(request, buildEmptyResponse(query, page, Date.now() - startTime))
   }
 }

@@ -89,6 +89,8 @@ describe("GET /api/search", () => {
       page: 1,
       perPage: 20,
       country: "sz",
+      orderBy: "relevance",
+      order: "desc",
     })
     expect(payload).toMatchObject({
       total: 1,
@@ -96,8 +98,8 @@ describe("GET /api/search", () => {
       currentPage: 1,
       hasMore: false,
       suggestions: ["Example"],
-      performance: { source: "wordpress" },
     })
+    expect((payload.performance as { source?: string })?.source).toBe("wordpress")
   })
 
   it("falls back to safe defaults when WordPress search fails", async () => {
