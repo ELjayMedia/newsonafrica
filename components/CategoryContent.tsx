@@ -9,8 +9,10 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
 import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CategoryContent({ slug }: { slug: string }) {
+  const country = getCurrentCountry()
   const {
     data,
     error,
@@ -22,9 +24,9 @@ export function CategoryContent({ slug }: { slug: string }) {
     (index, previousPage) => {
       if (previousPage && !previousPage.pageInfo?.hasNextPage) return null
       const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
-      return ["category", slug, cursor]
+      return ["category", slug, country, cursor]
     },
-    ([_, slug, cursor]) => fetchCategoryPosts(slug, cursor),
+    ([_, slug, country, cursor]) => fetchCategoryPosts(slug, cursor, country),
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000 * 60 * 5,
