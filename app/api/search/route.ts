@@ -2,7 +2,13 @@ import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import { resolveSearchIndex, type AlgoliaSortMode, type AlgoliaSearchRecord } from "@/lib/algolia/client"
+import {
+  resolveSearchIndex,
+  parseSort,
+  mapAlgoliaHits,
+  type AlgoliaSortMode,
+  type AlgoliaSearchRecord,
+} from "@/lib/algolia/client"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
@@ -102,6 +108,76 @@ const fromWordPressResults = (
     published_at: new Date(post.date || new Date().toISOString()).toISOString(),
   }))
 
+type WordPressScopeResult = {
+  results: SearchRecord[]
+  total: number
+  totalPages: number
+  currentPage: number
+  hasMore: boolean
+  suggestions: string[]
+}
+
+const uniqueSuggestions = (records: SearchRecord[]): string[] =>
+  Array.from(new Set(records.map((record) => record.title).filter(Boolean))).slice(0, 10)
+
+const executeWordPressSearchForScope = async (
+  query: string,
+  scope: SearchScope,
+  page: number,
+  perPage: number,
+): Promise<WordPressScopeResult> => {
+  const safePage = Math.max(1, page)
+  const safePerPage = Math.max(1, perPage)
+
+  if (scope.type === "panAfrican") {
+    const perCountryFetchSize = Math.min(100, safePage * safePerPage)
+
+    const responses = await Promise.all(
+      SUPPORTED_COUNTRIES.map(async (country) => {
+        const code = country.code.toLowerCase()
+        const response = await wpSearchPosts(query, { page: 1, perPage: perCountryFetchSize, country: code })
+        return {
+          code,
+          response,
+          records: fromWordPressResults(response, code),
+        }
+      }),
+    )
+
+    const mergedRecords = responses.flatMap((entry) => entry.records)
+    mergedRecords.sort(
+      (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
+    )
+
+    const startIndex = (safePage - 1) * safePerPage
+    const paginatedRecords = mergedRecords.slice(startIndex, startIndex + safePerPage)
+    const total = responses.reduce((sum, entry) => sum + entry.response.total, 0)
+    const totalPages = Math.max(1, Math.ceil(total / safePerPage))
+
+    return {
+      results: paginatedRecords,
+      total,
+      totalPages,
+      currentPage: safePage,
+      hasMore: safePage < totalPages,
+      suggestions: uniqueSuggestions(mergedRecords),
+    }
+  }
+
+  const countryCode = scope.country
+  const response = await wpSearchPosts(query, { page: safePage, perPage: safePerPage, country: countryCode })
+  const records = fromWordPressResults(response, countryCode)
+
+  return {
+    results: records,
+    total: response.total,
+    totalPages: response.totalPages,
+    currentPage: response.currentPage,
+    hasMore: response.hasMore,
+    suggestions: uniqueSuggestions(records),
+  }
+}
+
 const buildFallbackResponse = (
   query: string,
   page: number,
@@ -168,8 +244,27 @@ export async function GET(request: NextRequest) {
 
   if (suggestionsOnly) {
     if (!searchIndex) {
+      if (scope.type === "panAfrican") {
+        try {
+          const fallback = await executeWordPressSearchForScope(query, scope, 1, 10)
+          return jsonWithCors(request, {
+            suggestions: fallback.suggestions,
+            performance: {
+              responseTime: Date.now() - startTime,
+              source: "wordpress-fallback",
+            },
+          })
+        } catch {
+          return jsonWithCors(request, { suggestions: [] })
+        }
+      }
+
       try {
-        const suggestions = await wpGetSearchSuggestions(query)
+        const suggestions = await wpGetSearchSuggestions(
+          query,
+          10,
+          scope.type === "country" ? scope.country : undefined,
+        )
         return jsonWithCors(request, {
           suggestions,
           performance: {
@@ -217,16 +312,15 @@ export async function GET(request: NextRequest) {
 
   if (!searchIndex) {
     try {
-      const wpResults = await wpSearchPosts(query, { page, perPage })
-      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+      const fallback = await executeWordPressSearchForScope(query, scope, page, perPage)
       return jsonWithCors(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: wpResults.totalPages,
-        currentPage: wpResults.currentPage,
-        hasMore: wpResults.hasMore,
+        results: fallback.results,
+        total: fallback.total,
+        totalPages: fallback.totalPages,
+        currentPage: fallback.currentPage,
+        hasMore: fallback.hasMore,
         query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: fallback.suggestions,
         performance: {
           responseTime: Date.now() - startTime,
           source: "wordpress",
@@ -266,17 +360,16 @@ export async function GET(request: NextRequest) {
     console.error("Algolia search failed", error)
 
     try {
-      const wpResults = await wpSearchPosts(query, { page, perPage })
-      const records = fromWordPressResults(wpResults, scope.type === "country" ? scope.country : DEFAULT_COUNTRY)
+      const fallback = await executeWordPressSearchForScope(query, scope, page, perPage)
 
       return jsonWithCors(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: wpResults.totalPages,
-        currentPage: wpResults.currentPage,
-        hasMore: wpResults.hasMore,
+        results: fallback.results,
+        total: fallback.total,
+        totalPages: fallback.totalPages,
+        currentPage: fallback.currentPage,
+        hasMore: fallback.hasMore,
         query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: fallback.suggestions,
         performance: {
           responseTime: Date.now() - startTime,
           source: "wordpress-fallback",
