@@ -48,9 +48,11 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
   } = useSWRInfinite(
     (index, previousPage) => {
       if (previousPage && !previousPage.hasNextPage) return null
-      return ["category", country, slug, index]
+      const afterCursor = previousPage?.endCursor ?? null
+      return ["category", country, slug, afterCursor] as const
     },
-    () => getPostsByCategoryForCountry(country, slug, 20),
+    ([, countryCode, categorySlug, afterCursor]) =>
+      getPostsByCategoryForCountry(countryCode, categorySlug, 20, afterCursor ?? undefined),
     {
       revalidateOnFocus: false,
       fallbackData: initialData ? [initialData] : undefined,
@@ -67,7 +69,7 @@ export function CategoryPage({ slug, initialData }: CategoryPageProps) {
     async (relatedSlugs: string[]) => {
       const prefetchPromises = relatedSlugs.slice(0, 3).map(async (relatedSlug) => {
         const data = await getPostsByCategoryForCountry(country, relatedSlug, 20)
-        mutate(["category", country, relatedSlug, 0], [data], false)
+        mutate(["category", country, relatedSlug, null], [data], false)
       })
       await Promise.allSettled(prefetchPromises)
     },

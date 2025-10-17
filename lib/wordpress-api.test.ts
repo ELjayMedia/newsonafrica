@@ -299,7 +299,44 @@ describe("getPostsByCategoryForCountry", () => {
     expect(capturedRequests).not.toHaveLength(0)
     capturedRequests.forEach((request) => {
       expect(request.variables?.tagSlugs).toEqual(["fp"])
+      expect(request.variables?.after).toBeUndefined()
     })
+  })
+
+  it("passes the provided cursor to GraphQL requests", async () => {
+    const capturedRequests: Array<{ variables?: Record<string, unknown> }> = []
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString()
+
+      if (url.endsWith("/graphql")) {
+        if (init?.body && typeof init.body === "string") {
+          capturedRequests.push(JSON.parse(init.body) as { variables?: Record<string, unknown> })
+        }
+
+        return new Response(
+          JSON.stringify({
+            data: {
+              categories: { nodes: [] },
+              posts: {
+                pageInfo: { hasNextPage: false, endCursor: "cursor-2" },
+                nodes: [],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(null, { status: 404 })
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10, "cursor-1")
+
+    expect(capturedRequests).toHaveLength(1)
+    expect(capturedRequests[0]?.variables?.after).toBe("cursor-1")
   })
 
   it("includes the fp tag when using the REST fallback", async () => {

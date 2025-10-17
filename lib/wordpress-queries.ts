@@ -165,7 +165,7 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
 
 export const POSTS_BY_CATEGORY_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
-  query PostsByCategory($category: String!, $first: Int!, $tagSlugs: [String!]!) {
+  query PostsByCategory($category: String!, $first: Int!, $tagSlugs: [String!]!, $after: String) {
     categories(where: { slug: [$category] }) {
       nodes {
         databaseId
@@ -177,6 +177,7 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
     }
     posts(
       first: $first
+      after: $after
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }

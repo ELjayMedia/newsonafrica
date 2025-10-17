@@ -189,6 +189,7 @@ export async function getPostsByCategoryForCountry(
   countryCode: string,
   categorySlug: string,
   limit = 20,
+  after?: string | null,
 ): Promise<CategoryPostsResult> {
   const slug = categorySlug.trim().toLowerCase()
   const tags = buildCacheTags({
@@ -204,6 +205,7 @@ export async function getPostsByCategoryForCountry(
       category: categorySlug,
       first: limit,
       tagSlugs: [FP_TAG_SLUG],
+      after: after ?? undefined,
     },
     tags,
   )
