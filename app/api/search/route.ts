@@ -4,6 +4,7 @@ import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { resolveSearchIndex, type AlgoliaSortMode, type AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import type { SearchRecord } from "@/types/search"
 
 export const runtime = "nodejs"
 export const revalidate = 0
@@ -13,7 +14,7 @@ const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-const FALLBACK_RECORDS: AlgoliaSearchRecord[] = [
+const FALLBACK_RECORDS: SearchRecord[] = [
   {
     objectID: "sz:welcome-to-news-on-africa",
     title: "Welcome to News On Africa",
@@ -87,25 +88,10 @@ const parseScope = (value: string | null | undefined): SearchScope => {
   return { type: "country", country: DEFAULT_COUNTRY }
 }
 
-const parseSort = (value: string | null | undefined): AlgoliaSortMode => {
-  if (value === "latest") {
-    return "latest"
-  }
-
-  return "relevance"
-}
-
-const mapAlgoliaHits = (hits: AlgoliaSearchRecord[]): AlgoliaSearchRecord[] =>
-  hits.map((hit) => ({
-    objectID: hit.objectID,
-    title: hit.title,
-    excerpt: hit.excerpt,
-    categories: Array.isArray(hit.categories) ? hit.categories : [],
-    country: hit.country,
-    published_at: hit.published_at,
-  }))
-
-const fromWordPressResults = (results: Awaited<ReturnType<typeof wpSearchPosts>>, country: string): AlgoliaSearchRecord[] =>
+const fromWordPressResults = (
+  results: Awaited<ReturnType<typeof wpSearchPosts>>,
+  country: string,
+): SearchRecord[] =>
   results.results.map((post) => ({
     objectID: `${country}:${post.slug || post.id}`,
     title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",

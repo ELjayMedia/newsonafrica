@@ -48,7 +48,6 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
-        <meta name="algolia-site-verification"  content="1AA317933205C325" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="font-sans">
