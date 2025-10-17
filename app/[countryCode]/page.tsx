@@ -5,8 +5,7 @@ import { buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { SUPPORTED_EDITIONS } from "@/lib/editions"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const dynamic = "force-static"
-export const revalidate = 60
+export const dynamic = "force-dynamic"
 
 type Props = { params: { countryCode: string } }
 

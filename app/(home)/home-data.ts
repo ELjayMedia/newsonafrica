@@ -1,5 +1,7 @@
 import "server-only"
 
+import { unstable_noStore } from "next/cache"
+
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import {
   AFRICAN_EDITION,
@@ -420,6 +422,8 @@ async function buildCountryPosts(
 }
 
 export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
+  unstable_noStore()
+
   const { countryPosts, africanAggregate } =
     (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
@@ -444,6 +448,8 @@ export async function buildHomeContentPropsForEdition(
   baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
+  unstable_noStore()
+
   const aggregatedHome = isAfricanEdition(edition)
     ? await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
     : await fetchAggregatedHomeForCountry(edition.code)
