@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
-import { DEFAULT_COUNTRY, fetchMostReadPosts, fetchRecentPosts } from "@/lib/wordpress-api"
+import { DEFAULT_COUNTRY, fetchRecentPosts } from "@/lib/wordpress-api"
+import { fetchMostReadPosts } from "@/lib/wordpress/posts"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
 const DEFAULT_RECENT_LIMIT = 10
