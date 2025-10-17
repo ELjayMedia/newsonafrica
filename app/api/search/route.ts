@@ -351,7 +351,12 @@ export async function GET(request: NextRequest) {
     if (!searchIndex) {
       if (scope.type === "panAfrican") {
         try {
-          const fallback = await executeWordPressSearchForScope(query, scope, 1, 10)
+          const fallback = await executeWordPressSearchForScope(
+            normalizedParams.query,
+            scope,
+            1,
+            10,
+          )
           return jsonWithCors(request, {
             suggestions: fallback.suggestions,
             performance: {
@@ -366,7 +371,7 @@ export async function GET(request: NextRequest) {
 
       try {
         const suggestions = await wpGetSearchSuggestions(
-          query,
+          normalizedParams.query,
           10,
           scope.type === "country" ? scope.country : undefined,
         )
