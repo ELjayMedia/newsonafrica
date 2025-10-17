@@ -18,11 +18,6 @@ export interface CountryPosts {
   [countryCode: string]: HomePost[]
 }
 
-export interface PanAfricanSpotlightPayload {
-  country: string
-  posts: HomePost[]
-}
-
 export interface HomePageData {
   taggedPosts: HomePost[]
   recentPosts: HomePost[]

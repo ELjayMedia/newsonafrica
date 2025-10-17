@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import type { SearchResultItem } from "@/types/search"
+import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
 
 export function SearchDebugger() {
   const [query, setQuery] = useState("")
@@ -99,19 +99,20 @@ export function SearchDebugger() {
       {results && (
         <div className="space-y-2">
           <div className="text-sm text-gray-600">
-            Found {results.total || 0} results in {results.searchTime ?? results.performance?.responseTime ?? 0}ms.
+            Found {results.total || 0} results in {results.performance?.responseTime || 0}ms (Source:{" "}
+            {results.performance?.source || "unknown"})
           </div>
 
           {results.results && results.results.length > 0 ? (
             <div className="space-y-2">
-              {results.results.slice(0, 3).map((post: SearchResultItem, index: number) => (
+              {results.results.slice(0, 3).map((post: AlgoliaSearchRecord, index: number) => (
                 <div key={index} className="p-2 bg-white border rounded text-sm">
                   <div className="font-medium">{post.title || "No title"}</div>
                   <div className="text-gray-600 text-xs">
                     {(post.excerpt || "").slice(0, 120) || "No excerpt"}
                   </div>
                   <div className="text-gray-500 text-xs mt-1">
-                    {post.country?.toUpperCase() || "N/A"} • {post.publishedAt || "Unknown"}
+                    {post.country?.toUpperCase() || "N/A"} • {post.published_at || "Unknown"}
                   </div>
                 </div>
               ))}

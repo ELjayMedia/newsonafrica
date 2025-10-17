@@ -1,11 +1,8 @@
-import { env, getWordPressBasicAuthHeader } from "@/config/env"
-import { getWordPressAuthorizationHeader } from "./wordpress/auth"
-
 export type CountryCode = "sz" | "za"
 
 const REST_BASES: Record<CountryCode, string> = {
-  sz: env.NEXT_PUBLIC_WP_SZ_REST_BASE || "",
-  za: env.NEXT_PUBLIC_WP_ZA_REST_BASE || "",
+  sz: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE || "",
+  za: process.env.NEXT_PUBLIC_WP_ZA_REST_BASE || "",
 }
 
 function restBase(country: CountryCode) {
@@ -17,28 +14,14 @@ function restBase(country: CountryCode) {
 function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {}
 
-  // Try Basic Auth with Application Password first (more reliable)
-  const username = env.WP_APP_USERNAME
-  const password = env.WP_APP_PASSWORD
+  const username = process.env.WP_APP_USERNAME
+  const password = process.env.WP_APP_PASSWORD
   if (username && password) {
-    headers["Authorization"] = getWordPressBasicAuthHeader()
-    return headers
+    const credentials = Buffer.from(`${username}:${password}`).toString("base64")
+    headers["Authorization"] = `Basic ${credentials}`
   }
+  // Note: If no credentials, WordPress allows public access to public posts
 
-  const legacyAuthorization = getWordPressAuthorizationHeader()
-  if (legacyAuthorization) {
-    headers["Authorization"] = legacyAuthorization
-    return headers
-  }
-
-  // Fall back to Bearer token only if Basic Auth is not available
-  const authToken = env.WORDPRESS_AUTH_TOKEN
-  if (authToken) {
-    headers["Authorization"] = authToken.startsWith("Bearer ") ? authToken : `Bearer ${authToken}`
-    return headers
-  }
-
-  // No authentication - WordPress allows public access to public posts
   return headers
 }
 

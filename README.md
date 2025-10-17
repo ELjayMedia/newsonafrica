@@ -90,10 +90,8 @@ NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 MVP_MODE=1
 
 # --- WordPress Authentication ---
-WORDPRESS_AUTH_TOKEN=your_wordpress_jwt_token_optional
-# Required: used for authenticated REST operations (user provisioning, admin actions)
-WP_APP_USERNAME=your_wordpress_application_username
-WP_APP_PASSWORD=your_wordpress_application_password
+WP_APP_USERNAME=your_wordpress_username
+WP_APP_PASSWORD=your_wordpress_app_password
 
 # --- Supabase Configuration ---
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
@@ -126,8 +124,6 @@ FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
 \`\`\`
-
-> **Note:** `WP_APP_USERNAME` and `WP_APP_PASSWORD` are required in every environment. The app fails fast if they're missing so WordPress REST operations can authenticate consistently.
 
 ### Installation
 

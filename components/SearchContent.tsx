@@ -3,13 +3,21 @@
 import {
   useCallback,
   useEffect,
-  useRef,
+  useMemo,
   useState,
   type FormEvent,
   type KeyboardEvent,
 } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import {
+  Configure,
+  InstantSearch,
+  useInfiniteHits,
+  useInstantSearch,
+  useSearchBox,
+  useStats,
+} from "react-instantsearch-hooks-web"
 import { formatDistanceToNow } from "date-fns"
 import { Loader2, Search as SearchIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,17 +29,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { highlightSearchTerms } from "@/lib/search"
 import { getArticleUrl } from "@/lib/utils/routing"
-import type { SearchApiResponse, SearchResultItem } from "@/types/search"
 
 const PAN_AFRICAN_CODE = "all"
+const VIRTUAL_INDEX_NAME = "newsonafrica-proxy-search"
+
 const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
-const RESULTS_PER_PAGE = 12
 
 type SortOption = "relevance" | "latest"
-type SearchStatus = "idle" | "loading" | "loadingMore" | "success" | "error"
+
+type InstantSearchResponse<TRecord> = {
+  hits: TRecord[]
+  nbHits: number
+  nbPages: number
+  page: number
+  hitsPerPage: number
+  processingTimeMS: number
+  query: string
+  params: string
+}
+
+type InstantSearchClient<TRecord> = {
+  search: (
+    requests: Array<{
+      indexName: string
+      params?: Record<string, unknown>
+    }>,
+  ) => Promise<{ results: Array<InstantSearchResponse<TRecord>> }>
+  searchForFacetValues?: (
+    requests: Array<{
+      indexName: string
+      params: Record<string, unknown>
+    }>,
+  ) => Promise<{ results: Array<{ facetHits: Array<{ value: string; count: number }> }> }>
+}
+
+const createEmptyResponse = <TRecord,>(
+  query: string,
+  hitsPerPage: number,
+): InstantSearchResponse<TRecord> => ({
+  hits: [],
+  nbHits: 0,
+  nbPages: 0,
+  page: 0,
+  hitsPerPage,
+  processingTimeMS: 0,
+  query,
+  params: `query=${encodeURIComponent(query)}`,
+})
 
 const normalizeCountry = (value?: string | null): string => {
   if (!value) {
@@ -58,6 +106,88 @@ const normalizeCountry = (value?: string | null): string => {
 
 const normalizeSort = (value?: string | null): SortOption => (value === "latest" ? "latest" : "relevance")
 
+const createProxySearchClient = (
+  options: { country: string; sort: SortOption },
+): InstantSearchClient<AlgoliaSearchRecord> => {
+  return {
+    async search(requests) {
+      const results = await Promise.all(
+        requests.map(async (request) => {
+          const params = request.params ?? {}
+          const query = typeof params.query === "string" ? params.query : ""
+          const trimmedQuery = query.trim()
+          const hitsPerPage = Number.isFinite(Number(params.hitsPerPage))
+            ? Number(params.hitsPerPage)
+            : 12
+          const requestedPage = Number.isFinite(Number(params.page)) ? Number(params.page) : 0
+
+          if (!trimmedQuery) {
+            return createEmptyResponse<AlgoliaSearchRecord>(query, hitsPerPage)
+          }
+
+          const searchParams = new URLSearchParams({
+            q: trimmedQuery,
+            page: String(requestedPage + 1),
+            per_page: String(hitsPerPage),
+            sort: options.sort,
+          })
+
+          if (options.country && options.country !== PAN_AFRICAN_CODE) {
+            searchParams.set("country", options.country)
+          } else {
+            searchParams.set("country", PAN_AFRICAN_CODE)
+          }
+
+          try {
+            const response = await fetch(`/api/search?${searchParams.toString()}`, {
+              headers: { Accept: "application/json" },
+              cache: "no-store",
+            })
+
+            if (!response.ok) {
+              throw new Error(`Search request failed with status ${response.status}`)
+            }
+
+            const data = await response.json()
+            const hits = (Array.isArray(data.results) ? data.results : []) as AlgoliaSearchRecord[]
+            const total = Number.isFinite(Number(data.total)) ? Number(data.total) : hits.length
+            const nbPages = Number.isFinite(Number(data.totalPages))
+              ? Number(data.totalPages)
+              : Math.max(1, Math.ceil(total / Math.max(hitsPerPage, 1)))
+            const currentPage = Number.isFinite(Number(data.currentPage))
+              ? Math.max(0, Number(data.currentPage) - 1)
+              : Math.max(0, requestedPage)
+
+            return {
+              hits,
+              nbHits: total,
+              nbPages,
+              page: currentPage,
+              hitsPerPage,
+              processingTimeMS: Number.isFinite(Number(data.performance?.responseTime))
+                ? Number(data.performance.responseTime)
+                : 0,
+              query,
+              params: `query=${encodeURIComponent(query)}`,
+            }
+          } catch (error) {
+            if (process.env.NODE_ENV !== "production") {
+              console.error("InstantSearch proxy search failed", error)
+            }
+
+            return createEmptyResponse<AlgoliaSearchRecord>(query, hitsPerPage)
+          }
+        }),
+      )
+
+      return { results }
+    },
+    async searchForFacetValues() {
+      return { results: [] }
+    },
+  }
+}
+
 interface SearchContentProps {
   initialQuery?: string
   initialPage?: number
@@ -73,42 +203,94 @@ export function SearchContent({
 }: SearchContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const searchParamsString = searchParams.toString()
 
   const [country, setCountry] = useState(() => normalizeCountry(initialCountry))
   const [sort, setSort] = useState<SortOption>(() => normalizeSort(initialSort))
-  const [query, setQuery] = useState(() => initialQuery.trim())
-  const [page, setPage] = useState(() => Math.max(initialPage, 1))
-  const [results, setResults] = useState<SearchResultItem[]>([])
-  const [totalHits, setTotalHits] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [status, setStatus] = useState<SearchStatus>(() => (initialQuery.trim() ? "loading" : "idle"))
-  const [error, setError] = useState<string | null>(null)
-
-  const lastRequestRef = useRef<{ query: string; country: string; sort: SortOption; page: number } | null>(null)
-  const activeSignatureRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParamsString)
-    const urlCountry = normalizeCountry(params.get("country"))
-    const urlSort = normalizeSort(params.get("sort"))
-    const urlQuery = (params.get("q") ?? "").trim()
-    const parsedPage = Number.parseInt(params.get("page") ?? "1", 10)
-    const urlPage = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1)
+    const urlCountry = normalizeCountry(searchParams.get("country"))
+    if (urlCountry !== country) {
+      setCountry(urlCountry)
+    }
 
-    setCountry((previous) => (previous === urlCountry ? previous : urlCountry))
-    setSort((previous) => (previous === urlSort ? previous : urlSort))
-    setQuery((previous) => (previous === urlQuery ? previous : urlQuery))
-    setPage((previous) => (previous === urlPage ? previous : urlPage))
-  }, [searchParamsString])
+    const urlSort = normalizeSort(searchParams.get("sort"))
+    if (urlSort !== sort) {
+      setSort(urlSort)
+    }
+  }, [searchParams, country, sort])
+
+  const searchClient = useMemo(
+    () => createProxySearchClient({ country, sort }),
+    [country, sort],
+  )
+
+  const initialUiState = useMemo(
+    () => ({
+      [VIRTUAL_INDEX_NAME]: {
+        query: initialQuery,
+        page: Math.max(initialPage - 1, 0),
+      },
+    }),
+    [initialPage, initialQuery],
+  )
+
+  return (
+    <InstantSearch
+      searchClient={searchClient}
+      indexName={VIRTUAL_INDEX_NAME}
+      initialUiState={initialUiState}
+      future={{ preserveSharedStateOnUnmount: true }}
+    >
+      <Configure hitsPerPage={12} />
+      <SearchExperience
+        router={router}
+        country={country}
+        sort={sort}
+        onCountryChange={setCountry}
+        onSortChange={setSort}
+      />
+    </InstantSearch>
+  )
+}
+
+interface SearchExperienceProps {
+  router: ReturnType<typeof useRouter>
+  country: string
+  sort: SortOption
+  onCountryChange: (value: string) => void
+  onSortChange: (value: SortOption) => void
+}
+
+function SearchExperience({ router, country, sort, onCountryChange, onSortChange }: SearchExperienceProps) {
+  const searchParams = useSearchParams()
+  const { indexUiState, setIndexUiState, refresh } = useInstantSearch()
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParamsString)
-    const trimmedQuery = query.trim()
+    const urlParams = new URLSearchParams(searchParams.toString())
+    const urlQuery = urlParams.get("q") ?? ""
+    const pageParam = Number.parseInt(urlParams.get("page") || "1", 10)
+    const urlPage = Number.isNaN(pageParam) ? 0 : Math.max(pageParam - 1, 0)
 
-    if (trimmedQuery) {
-      params.set("q", trimmedQuery)
+    const updates: Partial<typeof indexUiState> = {}
+    if ((indexUiState.query ?? "") !== urlQuery) {
+      updates.query = urlQuery
+    }
+    if ((indexUiState.page ?? 0) !== urlPage) {
+      updates.page = urlPage
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setIndexUiState({ ...indexUiState, ...updates })
+    }
+  }, [searchParams, indexUiState, setIndexUiState])
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const query = (indexUiState.query ?? "").trim()
+    const page = (indexUiState.page ?? 0) + 1
+
+    if (query) {
+      params.set("q", query)
     } else {
       params.delete("q")
     }
@@ -132,154 +314,40 @@ export function SearchContent({
     }
 
     const next = params.toString()
-    if (next !== searchParamsString) {
+    if (next !== searchParams.toString()) {
       router.replace(next ? `/search?${next}` : "/search", { scroll: false })
     }
-  }, [country, sort, page, query, router, searchParamsString])
+  }, [country, sort, indexUiState.page, indexUiState.query, router, searchParams])
 
-  useEffect(() => {
-    const trimmedQuery = query.trim()
-
-    if (!trimmedQuery) {
-      setResults([])
-      setTotalHits(0)
-      setTotalPages(0)
-      setHasMore(false)
-      setStatus("idle")
-      setError(null)
-      lastRequestRef.current = null
-      activeSignatureRef.current = null
-      return
-    }
-
-    const signature = `${trimmedQuery}|${country}|${sort}|${page}`
-    const previous = lastRequestRef.current
-    const isLoadMore =
-      previous !== null &&
-      previous.query === trimmedQuery &&
-      previous.country === country &&
-      previous.sort === sort &&
-      page > previous.page
-
-    activeSignatureRef.current = signature
-    setError(null)
-
-    if (isLoadMore) {
-      setStatus("loadingMore")
-    } else {
-      setStatus("loading")
-      setResults([])
-      setHasMore(false)
-      setTotalHits(0)
-      setTotalPages(0)
-      lastRequestRef.current = null
-    }
-
-    const controller = new AbortController()
-
-    const params = new URLSearchParams({
-      q: trimmedQuery,
-      page: String(page),
-      per_page: String(RESULTS_PER_PAGE),
-      sort,
-    })
-
-    if (country && country !== PAN_AFRICAN_CODE) {
-      params.set("country", country)
-    } else {
-      params.set("country", PAN_AFRICAN_CODE)
-    }
-
-    const fetchResults = async () => {
-      try {
-        const response = await fetch(`/api/search?${params.toString()}`, {
-          signal: controller.signal,
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-        })
-
-        if (!response.ok) {
-          throw new Error(`Search request failed with status ${response.status}`)
-        }
-
-        const data = (await response.json()) as SearchApiResponse
-
-        if (activeSignatureRef.current !== signature) {
-          return
-        }
-
-        const hits = Array.isArray(data.results) ? data.results : []
-
-        setResults((current) => (isLoadMore ? [...current, ...hits] : hits))
-        setTotalHits(Number.isFinite(data.total) ? Number(data.total) : hits.length)
-        setTotalPages(Number.isFinite(data.totalPages) ? Number(data.totalPages) : 0)
-        setHasMore(
-          typeof data.hasMore === "boolean"
-            ? data.hasMore
-            : Number.isFinite(data.totalPages) && data.totalPages > 0
-              ? page < Number(data.totalPages)
-              : hits.length === RESULTS_PER_PAGE,
-        )
-        setStatus("success")
-        lastRequestRef.current = { query: trimmedQuery, country, sort, page }
-      } catch (fetchError) {
-        if (controller.signal.aborted) {
-          return
-        }
-
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Search request failed", fetchError)
-        }
-
-        setError(fetchError instanceof Error ? fetchError.message : "Unexpected error")
-        setStatus("error")
+  const handleCountryChange = useCallback(
+    (value: string) => {
+      const normalized = normalizeCountry(value)
+      if (normalized === country) {
+        return
       }
-    }
+      onCountryChange(normalized)
+      setIndexUiState({ ...indexUiState, page: 0 })
+      refresh()
+    },
+    [country, indexUiState, onCountryChange, refresh, setIndexUiState],
+  )
 
-    void fetchResults()
-
-    return () => {
-      controller.abort()
-    }
-  }, [country, sort, page, query])
-
-  const handleSearch = useCallback((value: string) => {
-    setPage(1)
-    setQuery(value.trim())
-  }, [])
-
-  const handleCountryChange = useCallback((value: string) => {
-    const normalized = normalizeCountry(value)
-    setCountry(normalized)
-    setPage(1)
-  }, [])
-
-  const handleSortChange = useCallback((value: SortOption) => {
-    setSort(value)
-    setPage(1)
-  }, [])
-
-  const handleLoadMore = useCallback(() => {
-    if (status === "loading" || status === "loadingMore" || !hasMore) {
-      return
-    }
-    setPage((current) => current + 1)
-  }, [status, hasMore])
-
-  const isLoading = status === "loading"
-  const isLoadingMore = status === "loadingMore"
+  const handleSortChange = useCallback(
+    (value: SortOption) => {
+      if (value === sort) {
+        return
+      }
+      onSortChange(value)
+      setIndexUiState({ ...indexUiState, page: 0 })
+      refresh()
+    },
+    [indexUiState, onSortChange, refresh, setIndexUiState, sort],
+  )
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <SearchBox
-          query={query}
-          country={country}
-          sort={sort}
-          onSearch={handleSearch}
-          isSearching={isLoading}
-          placeholder="Search articles, categories, and tags..."
-        />
+        <InstantSearchBox country={country} sort={sort} placeholder="Search articles, categories, and tags..." />
         <SearchFilters
           country={country}
           sort={sort}
@@ -288,40 +356,26 @@ export function SearchContent({
         />
       </div>
 
-      <SearchResultsPanel
-        query={query}
-        results={results}
-        status={status}
-        error={error}
-        totalHits={totalHits}
-        currentPage={page}
-        totalPages={totalPages}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        fallbackCountry={country}
-        isLoadingMore={isLoadingMore}
-      />
+      <SearchResultsPanel fallbackCountry={country} />
     </div>
   )
 }
 
-interface SearchBoxProps {
-  query: string
+interface InstantSearchBoxProps {
+  placeholder?: string
   country: string
   sort: SortOption
-  onSearch: (value: string) => void
-  placeholder?: string
-  isSearching: boolean
 }
 
-function SearchBox({ query, country, sort, onSearch, placeholder, isSearching }: SearchBoxProps) {
-  const [value, setValue] = useState(query)
+function InstantSearchBox({ placeholder, country, sort }: InstantSearchBoxProps) {
+  const { query, refine, clear, isSearchStalled } = useSearchBox()
+  const [value, setValue] = useState(query ?? "")
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
 
   useEffect(() => {
-    setValue(query)
+    setValue(query ?? "")
   }, [query])
 
   useEffect(() => {
@@ -354,7 +408,7 @@ function SearchBox({ query, country, sort, onSearch, placeholder, isSearching }:
           throw new Error(`Suggestion request failed with status ${response.status}`)
         }
 
-        const data = (await response.json()) as Pick<SearchApiResponse, "suggestions">
+        const data = await response.json()
         if (!cancelled) {
           setSuggestions(Array.isArray(data.suggestions) ? data.suggestions.slice(0, 10) : [])
         }
@@ -384,42 +438,42 @@ function SearchBox({ query, country, sort, onSearch, placeholder, isSearching }:
       event.preventDefault()
       const trimmed = value.trim()
       if (!trimmed) {
-        setValue("")
-        setSuggestions([])
-        setShowSuggestions(false)
-        onSearch("")
+        clear()
         return
       }
 
-      onSearch(trimmed)
+      refine(trimmed)
       setShowSuggestions(false)
     },
-    [onSearch, value],
+    [clear, refine, value],
   )
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       setValue(suggestion)
-      onSearch(suggestion)
+      refine(suggestion)
       setShowSuggestions(false)
     },
-    [onSearch],
+    [refine],
   )
 
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      setShowSuggestions(false)
-    }
-  }, [])
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Escape") {
+        setShowSuggestions(false)
+      }
+    },
+    [],
+  )
 
   const handleClear = useCallback(() => {
     setValue("")
     setSuggestions([])
     setShowSuggestions(false)
-    onSearch("")
-  }, [onSearch])
+    clear()
+  }, [clear])
 
-  const searching = isSearching || isFetchingSuggestions
+  const isSearching = isSearchStalled || isFetchingSuggestions
 
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -447,7 +501,7 @@ function SearchBox({ query, country, sort, onSearch, placeholder, isSearching }:
         />
 
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          {searching && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+          {isSearching && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
 
           {value && (
             <Button
@@ -531,41 +585,25 @@ function SearchFilters({ country, sort, onCountryChange, onSortChange }: SearchF
 }
 
 interface SearchResultsPanelProps {
-  query: string
-  results: SearchResultItem[]
-  status: SearchStatus
-  error: string | null
-  totalHits: number
-  currentPage: number
-  totalPages: number
-  hasMore: boolean
-  onLoadMore: () => void
   fallbackCountry: string
-  isLoadingMore: boolean
 }
 
-function SearchResultsPanel({
-  query,
-  results,
-  status,
-  error,
-  totalHits,
-  currentPage,
-  totalPages,
-  hasMore,
-  onLoadMore,
-  fallbackCountry,
-  isLoadingMore,
-}: SearchResultsPanelProps) {
+function SearchResultsPanel({ fallbackCountry }: SearchResultsPanelProps) {
+  const { hits, isLastPage, showMore } = useInfiniteHits<AlgoliaSearchRecord>()
+  const { indexUiState, results, status, error } = useInstantSearch()
+  const { nbHits } = useStats()
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  const trimmedQuery = query.trim()
+  const query = (indexUiState.query ?? "").trim()
+  const totalHits = nbHits ?? results?.nbHits ?? hits.length
+  const currentPage = (results?.page ?? 0) + 1
+  const totalPages = results?.nbPages ?? 0
 
-  if (!trimmedQuery) {
+  if (!query) {
     return (
       <div className="py-12 text-center text-gray-600">
         <div className="mb-2 text-lg">Start searching</div>
@@ -578,12 +616,12 @@ function SearchResultsPanel({
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
         <h3 className="mb-2 font-semibold">We couldn't complete your search.</h3>
-        <p>{error || "Please try again in a few moments."}</p>
+        <p>{error?.message || "Please try again in a few moments."}</p>
       </div>
     )
   }
 
-  if (status === "loading" && results.length === 0) {
+  if (status === "loading" && hits.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border bg-white py-12">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -592,11 +630,11 @@ function SearchResultsPanel({
     )
   }
 
-  if (results.length === 0) {
+  if (hits.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-6 text-center">
         <h3 className="mb-2 text-lg font-medium text-gray-900">No results found</h3>
-        <p className="text-gray-500">We couldn't find any matches for "{trimmedQuery}". Try a different search term.</p>
+        <p className="text-gray-500">We couldn't find any matches for "{query}". Try a different search term.</p>
       </div>
     )
   }
@@ -604,30 +642,30 @@ function SearchResultsPanel({
   return (
     <div className="rounded-lg border bg-white p-6 shadow-sm">
       <div className="text-sm text-gray-500">
-        Found {totalHits} {totalHits === 1 ? "result" : "results"} for "{trimmedQuery}"
+        Found {totalHits} {totalHits === 1 ? "result" : "results"} for "{query}"
       </div>
 
       <div className="mt-4 space-y-6">
-        {results.map((hit) => (
+        {hits.map((hit) => (
           <SearchResultHit
-            key={hit.id}
+            key={hit.objectID}
             hit={hit}
-            query={trimmedQuery}
+            query={query}
             fallbackCountry={fallbackCountry}
             showHighlights={isClient}
           />
         ))}
       </div>
 
-      {hasMore && (
+      {!isLastPage && (
         <div className="flex justify-center pt-6">
           <Button
-            onClick={onLoadMore}
+            onClick={showMore}
             variant="outline"
             className="min-w-[140px] bg-transparent"
-            disabled={status === "loading" || status === "loadingMore"}
+            disabled={status === "loading" || status === "stalled"}
           >
-            {isLoadingMore ? (
+            {status === "loading" || status === "stalled" ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
               </>
@@ -648,20 +686,20 @@ function SearchResultsPanel({
 }
 
 interface SearchResultHitProps {
-  hit: SearchResultItem
+  hit: AlgoliaSearchRecord
   query: string
   fallbackCountry: string
   showHighlights: boolean
 }
 
-const extractSlug = (identifier: string | undefined): { country?: string; slug: string } => {
-  if (!identifier) {
-    return { slug: "" }
+const extractSlug = (objectID: string): { country?: string; slug: string } => {
+  if (!objectID) {
+    return { slug: objectID }
   }
 
-  const [country, ...rest] = identifier.split(":")
+  const [country, ...rest] = objectID.split(":")
   if (rest.length === 0) {
-    return { slug: identifier }
+    return { slug: objectID }
   }
 
   return {
@@ -671,14 +709,13 @@ const extractSlug = (identifier: string | undefined): { country?: string; slug: 
 }
 
 function SearchResultHit({ hit, query, fallbackCountry, showHighlights }: SearchResultHitProps) {
-  const parsed = extractSlug(hit.id)
-  const resolvedCountry =
-    hit.country || parsed.country || (fallbackCountry !== PAN_AFRICAN_CODE ? fallbackCountry : undefined)
-  const slug = hit.slug || parsed.slug || hit.id
+  const parsed = extractSlug(hit.objectID)
+  const resolvedCountry = hit.country || parsed.country || (fallbackCountry !== PAN_AFRICAN_CODE ? fallbackCountry : undefined)
+  const slug = parsed.slug || hit.objectID
   const href = getArticleUrl(slug, resolvedCountry)
 
-  const publishedLabel = hit.publishedAt
-    ? formatDistanceToNow(new Date(hit.publishedAt), { addSuffix: true })
+  const publishedLabel = hit.published_at
+    ? formatDistanceToNow(new Date(hit.published_at), { addSuffix: true })
     : undefined
 
   const highlightedTitle = highlightSearchTerms(hit.title || "Untitled article", query)

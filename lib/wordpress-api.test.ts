@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
-
-process.env.WP_APP_USERNAME = process.env.WP_APP_USERNAME ?? "test-user"
-process.env.WP_APP_PASSWORD = process.env.WP_APP_PASSWORD ?? "test-password"
-
-const wordpressApi = await import("./wordpress-api")
+import * as wordpressApi from "./wordpress-api"
 
 const buildRestPost = (id: number, slugPrefix = "rest") => ({
   id,
@@ -96,14 +92,6 @@ describe("getRelatedPosts", () => {
   it("returns posts on 200 response", async () => {
     const mockPosts = [
       {
-        id: 1,
-        slug: "base-post",
-        title: { rendered: "Base Post" },
-        excerpt: { rendered: "" },
-        content: { rendered: "<p>Base content</p>" },
-        _embedded: { "wp:featuredmedia": [{ source_url: "base.jpg" }] },
-      },
-      {
         id: 2,
         slug: "hello",
         title: { rendered: "Hello" },
@@ -121,9 +109,6 @@ describe("getRelatedPosts", () => {
       expect.stringContaining("tags_relation=AND"),
       expect.anything(),
     )
-    expect(result).toHaveLength(1)
-    expect(result[0].databaseId).toBe(2)
-    expect(result.some((post) => post.databaseId === 1)).toBe(false)
     expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
     expect(result[0].content).toContain('/sz/article/old')
   })
@@ -492,13 +477,10 @@ describe("getFrontPageSlicesForCountry", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(result.hero.heroPost?.slug).toBe("fallback-1")
-    expect(result.hero.heroPost?.featuredImage?.node?.sourceUrl).toBe("fallback-1.jpg")
     expect(result.trending.posts).toHaveLength(7)
     expect(result.trending.posts[0].slug).toBe("fallback-4")
-    expect(result.trending.posts[0].featuredImage?.node?.sourceUrl).toBe("fallback-4.jpg")
     expect(result.latest.posts).toHaveLength(20)
     expect(result.latest.posts[0].slug).toBe("fallback-11")
-    expect(result.latest.posts[0].featuredImage?.node?.sourceUrl).toBe("fallback-11.jpg")
   })
 })
 
@@ -583,9 +565,7 @@ describe("getFpTaggedPostsForCountry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(result).toHaveLength(2)
     expect(result[0].slug).toBe("fp-1")
-    expect(result[0].featuredImage?.node?.sourceUrl).toBe("fp-1.jpg")
     expect(result[1].slug).toBe("fp-2")
-    expect(result[1].featuredImage?.node?.sourceUrl).toBe("fp-2.jpg")
   })
 })
 

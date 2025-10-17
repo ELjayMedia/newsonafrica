@@ -2,6 +2,8 @@ export * from "./wordpress/frontpage"
 export * from "./wordpress/categories"
 export * from "./wordpress/posts"
 export * from "./wordpress/authors"
+export * from "./wordpress/comments"
+
 export {
   DEFAULT_COUNTRY,
   FP_TAG_SLUG,
@@ -18,9 +20,14 @@ export type {
   PaginatedPostsResult,
   WordPressAuthor,
   WordPressCategory,
+  WordPressComment,
   WordPressImage,
   WordPressTag,
 } from "./wordpress/types"
 
 export { COUNTRIES, executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./wordpress/client"
 export type { CountryConfig, WordPressPost } from "./wordpress/client"
+
+export async function updateUserProfile() {
+  return null
+}

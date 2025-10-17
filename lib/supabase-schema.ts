@@ -12,7 +12,7 @@ export type Comment = {
   parent_id: string | null
   created_at: string
   // Moderation fields
-  status: "active" | "flagged" | "deleted" | "pending"
+  status: "active" | "flagged" | "deleted"
   reported_by?: string
   report_reason?: string
   reviewed_at?: string
@@ -40,7 +40,7 @@ export type NewComment = {
   user_id: string
   content: string
   parent_id?: string | null
-  status?: "active" | "flagged" | "deleted" | "pending"
+  status?: "active" | "flagged" | "deleted"
   is_rich_text?: boolean
 }
 

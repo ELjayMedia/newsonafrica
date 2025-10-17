@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
-import { PUBLIC_COUNTRIES_BY_CODE, PUBLIC_COUNTRIES_LIST } from "@/lib/countries-public"
-import type { CountryPosts, PanAfricanSpotlightPayload } from "@/types/home"
+import { getLatestPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
+import { COUNTRIES } from "@/lib/wordpress/client"
+import type { CountryPosts } from "@/types/home"
 import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
   const [showAll, setShowAll] = useState(false)
-  const countries = PUBLIC_COUNTRIES_LIST
+  const countries = Object.values(COUNTRIES)
   const displayedCountries = showAll ? countries : countries.slice(0, 6)
 
   return (
@@ -80,28 +81,16 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
       setIsLoading(true)
 
       try {
-        const allCountries = PUBLIC_COUNTRIES_LIST.map((country) => country.code)
+        const allCountries = Object.keys(COUNTRIES)
         // Fetch posts from all countries except the current one (to show diversity)
         const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
 
         const results = await Promise.allSettled(
           otherCountries.map(async (countryCode) => {
-            const response = await fetch(
-              `/api/pan-african-spotlight?country=${countryCode}&limit=2`,
-              {
-                headers: { Accept: "application/json" },
-              },
-            )
-
-            if (!response.ok) {
-              throw new Error(`Request failed with status ${response.status}`)
-            }
-
-            const data = (await response.json()) as PanAfricanSpotlightPayload
-
+            const result = await getLatestPostsForCountry(countryCode, 2)
             return {
               countryCode,
-              posts: Array.isArray(data.posts) ? data.posts : [],
+              posts: mapPostsToHomePosts(result.posts || [], countryCode),
             }
           }),
         )
@@ -170,7 +159,7 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
 
       <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
         {spotlightCountries.map(([countryCode, posts]) => {
-          const country = PUBLIC_COUNTRIES_BY_CODE[countryCode]
+          const country = COUNTRIES[countryCode]
           if (!country || !posts || posts.length === 0) return null
 
           return (

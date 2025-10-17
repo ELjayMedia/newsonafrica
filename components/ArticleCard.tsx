@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
-import type { WordPressPost } from "@/lib/wordpress/types"
+import type { WordPressPost } from "@/lib/wordpress/client"
 
 type ArticleCardLayout = "compact" | "standard" | "featured"
 
@@ -187,10 +187,6 @@ function normalizeArticleData(article: Article | WordPressPost) {
   }
 }
 
-const BLUR_COMPACT = generateBlurDataURL(80, 80)
-const BLUR_FEATURED = generateBlurDataURL(600, 400)
-const BLUR_STANDARD = generateBlurDataURL(400, 300)
-
 export function ArticleCard({ article, layout = "standard", className, priority = false }: ArticleCardProps) {
   let data
   try {
@@ -227,7 +223,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
                   motionSafe.transform,
                 )}
                 placeholder="blur"
-                blurDataURL={BLUR_COMPACT}
+                blurDataURL={generateBlurDataURL(80, 80)}
                 priority={priority}
                 loading={priority ? "eager" : "lazy"}
                 sizes="80px"
@@ -274,7 +270,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
             fill
             className={cn("object-cover group-hover:scale-105 transition-transform duration-300", motionSafe.transform)}
             placeholder="blur"
-            blurDataURL={BLUR_FEATURED}
+            blurDataURL={generateBlurDataURL(600, 400)}
             priority={priority}
             loading={priority ? "eager" : "lazy"}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 448px"
@@ -320,7 +316,7 @@ export function ArticleCard({ article, layout = "standard", className, priority 
           fill
           className={cn("object-cover group-hover:scale-105 transition-transform duration-200", motionSafe.transform)}
           placeholder="blur"
-          blurDataURL={BLUR_STANDARD}
+          blurDataURL={generateBlurDataURL(400, 300)}
           priority={priority}
           loading={priority ? "eager" : "lazy"}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
