@@ -111,14 +111,19 @@ const toSearchRecord = (post: any, country: string): SearchRecord => {
   }
 }
 
-const buildEmptyResponse = (query: string, page: number, responseTime: number) => ({
+const buildEmptyResponse = (
+  query: string,
+  page: number,
+  responseTime: number,
+  suggestions: string[] = [],
+) => ({
   results: [],
   total: 0,
   totalPages: 0,
   currentPage: page,
   hasMore: false,
   query,
-  suggestions: [],
+  suggestions,
   performance: {
     responseTime,
     source: "fallback" as const,
@@ -170,27 +175,34 @@ export async function GET(request: NextRequest) {
   const sort = resolveSort(searchParams.get("sort"))
   const suggestionsOnly = searchParams.get("suggestions") === "true"
 
-  if (suggestionsOnly) {
+  const loadSuggestions = async () => {
     try {
       const suggestions = await wpGetSearchSuggestions(query, 8, country)
-      return jsonWithCors(request, {
-        suggestions,
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: "wordpress" as const,
-        },
-      })
+      const values = Array.isArray(suggestions)
+        ? suggestions.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : []
+      return {
+        values,
+        source: values.length > 0 ? ("wordpress" as const) : ("fallback" as const),
+      }
     } catch (error) {
       console.error("WordPress suggestion search failed", error)
-      return jsonWithCors(request, {
-        suggestions: [],
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: "fallback" as const,
-        },
-      })
+      return { values: [], source: "fallback" as const }
     }
   }
+
+  if (suggestionsOnly) {
+    const { values, source } = await loadSuggestions()
+    return jsonWithCors(request, {
+      suggestions: values,
+      performance: {
+        responseTime: Date.now() - startTime,
+        source,
+      },
+    })
+  }
+
+  const suggestionsPromise = loadSuggestions()
 
   try {
     const wpResults = await wpSearchPosts(query, {
@@ -203,11 +215,13 @@ export async function GET(request: NextRequest) {
 
     const records = wpResults.results.map((post) => toSearchRecord(post, country))
     const responseTime = Date.now() - startTime
+    const { values: fetchedSuggestions } = await suggestionsPromise
 
-    const suggestions = records
+    const fallbackSuggestions = records
       .map((record) => record.title)
       .filter((title) => title.length > 0)
       .slice(0, 10)
+    const suggestions = fetchedSuggestions.length > 0 ? fetchedSuggestions : fallbackSuggestions
 
     return jsonWithCors(request, {
       results: records,
@@ -224,6 +238,10 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("WordPress search failed", error)
-    return jsonWithCors(request, buildEmptyResponse(query, page, Date.now() - startTime))
+    const { values: suggestions } = await suggestionsPromise
+    return jsonWithCors(
+      request,
+      buildEmptyResponse(query, page, Date.now() - startTime, suggestions),
+    )
   }
 }

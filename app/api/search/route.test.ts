@@ -48,6 +48,7 @@ describe("GET /api/search", () => {
     )
 
     consoleErrorSpy.mockImplementation(() => {})
+    mockWpGetSearchSuggestions.mockResolvedValue([])
   })
 
   afterAll(() => {
@@ -76,6 +77,7 @@ describe("GET /api/search", () => {
       searchTime: 10,
       suggestions: ["Example"],
     })
+    mockWpGetSearchSuggestions.mockResolvedValue(["Example suggestion"])
 
     const request = new Request(
       "https://example.com/api/search?q=example&page=bogus&per_page=not-a-number",
@@ -92,12 +94,13 @@ describe("GET /api/search", () => {
       orderBy: "relevance",
       order: "desc",
     })
+    expect(mockWpGetSearchSuggestions).toHaveBeenCalledWith("example", 8, "sz")
     expect(payload).toMatchObject({
       total: 1,
       totalPages: 1,
       currentPage: 1,
       hasMore: false,
-      suggestions: ["Example"],
+      suggestions: ["Example suggestion"],
     })
     expect((payload.performance as { source?: string })?.source).toBe("wordpress")
   })
@@ -106,6 +109,7 @@ describe("GET /api/search", () => {
     const { GET } = await routeModulePromise
 
     mockWpSearchPosts.mockRejectedValue(new Error("wp down"))
+    mockWpGetSearchSuggestions.mockResolvedValue(["try again"]) 
 
     const request = new Request(
       "https://example.com/api/search?q=welcome&page=bogus&per_page=also-bogus",
@@ -119,7 +123,63 @@ describe("GET /api/search", () => {
       currentPage: 1,
       performance: { source: "fallback" },
       query: "welcome",
+      suggestions: ["try again"],
     })
     expect(Number.isFinite((payload.totalPages as number) ?? NaN)).toBe(true)
+  })
+
+  it("uses record titles as fallback suggestions when WordPress suggestions are empty", async () => {
+    const { GET } = await routeModulePromise
+
+    mockWpSearchPosts.mockResolvedValue({
+      results: [
+        {
+          id: 2,
+          slug: "secondary",
+          title: { rendered: "Secondary Result" },
+          excerpt: { rendered: "Another summary" },
+          date: "2024-02-01T00:00:00.000Z",
+          _embedded: { "wp:term": [[{ name: "Politics" }]] },
+        },
+      ],
+      total: 1,
+      totalPages: 1,
+      currentPage: 1,
+      hasMore: false,
+      query: "secondary",
+      searchTime: 5,
+      suggestions: [],
+    })
+    mockWpGetSearchSuggestions.mockResolvedValue([])
+
+    const request = new Request("https://example.com/api/search?q=secondary")
+
+    const response = await GET(request)
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(mockWpGetSearchSuggestions).toHaveBeenCalledWith("secondary", 8, "sz")
+    expect(payload).toMatchObject({
+      suggestions: ["Secondary Result"],
+    })
+  })
+
+  it("returns suggestions without triggering a full search when suggestions=true", async () => {
+    const { GET } = await routeModulePromise
+
+    mockWpGetSearchSuggestions.mockResolvedValue(["first", "second"])
+
+    const request = new Request("https://example.com/api/search?q=query&suggestions=true")
+
+    const response = await GET(request)
+    const payload = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(mockWpSearchPosts).not.toHaveBeenCalled()
+    expect(mockWpGetSearchSuggestions).toHaveBeenCalledWith("query", 8, "sz")
+    expect(payload).toMatchObject({
+      suggestions: ["first", "second"],
+      performance: { source: "wordpress" },
+    })
   })
 })
