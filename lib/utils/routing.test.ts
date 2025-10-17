@@ -1,12 +1,32 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
-  convertLegacyUrl,
-  rewriteLegacyLinks,
-  getArticleUrl,
-  getCategoryUrl,
-  getCurrentCountry,
-  DEFAULT_COUNTRY,
-} from './routing'
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  vi,
+} from 'vitest'
+
+let convertLegacyUrl: typeof import('./routing').convertLegacyUrl
+let rewriteLegacyLinks: typeof import('./routing').rewriteLegacyLinks
+let getArticleUrl: typeof import('./routing').getArticleUrl
+let getCategoryUrl: typeof import('./routing').getCategoryUrl
+let getCurrentCountry: typeof import('./routing').getCurrentCountry
+let DEFAULT_COUNTRY: typeof import('./routing').DEFAULT_COUNTRY
+
+beforeAll(async () => {
+  vi.resetModules()
+  vi.stubEnv('NEXT_PUBLIC_DEFAULT_SITE', 'ZA')
+  const routingModule = await vi.importActual<typeof import('./routing')>('./routing')
+  convertLegacyUrl = routingModule.convertLegacyUrl
+  rewriteLegacyLinks = routingModule.rewriteLegacyLinks
+  getArticleUrl = routingModule.getArticleUrl
+  getCategoryUrl = routingModule.getCategoryUrl
+  getCurrentCountry = routingModule.getCurrentCountry
+  DEFAULT_COUNTRY = routingModule.DEFAULT_COUNTRY
+  vi.unstubAllEnvs()
+})
 
 const resetClientState = () => {
   window.history.pushState({}, '', '/')

@@ -4,26 +4,29 @@
  */
 
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "@/lib/editions"
+import { DEFAULT_COUNTRY as WORDPRESS_DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
+
+const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
+
+const FALLBACK_COUNTRY = "sz"
 
 // Default country mapping based on user preferences or URL structure
-export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz"
+export const DEFAULT_COUNTRY =
+  normalizeCountry(WORDPRESS_DEFAULT_COUNTRY) ?? FALLBACK_COUNTRY
 
 // Supported countries
 export const SUPPORTED_COUNTRIES = SUPPORTED_COUNTRY_EDITIONS.map((country) => country.code)
+
+const matchSupportedCountry = (value?: string | null) => {
+  const normalized = normalizeCountry(value)
+  return normalized && SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
+}
 
 /**
  * Get the current country code from various sources
  * Priority: URL path > user preference > default
  */
 export function getCurrentCountry(pathname?: string): string {
-  const normalizeCountry = (value?: string | null) =>
-    value?.toLowerCase() ?? undefined
-
-  const matchSupportedCountry = (value?: string | null) => {
-    const normalized = normalizeCountry(value)
-    return normalized && SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
-  }
-
   const extractFromPath = (path?: string | null) => {
     if (!path) return undefined
     const pathSegments = path.split("/").filter(Boolean)
@@ -76,8 +79,8 @@ export function getServerCountry(): string {
     // Dynamically import to avoid bundling on client
     const { cookies } = require("next/headers") as typeof import("next/headers")
     const store = cookies() as any
-    const saved = store.get("preferredCountry")?.value
-    if (saved && SUPPORTED_COUNTRIES.includes(saved)) {
+    const saved = matchSupportedCountry(store.get("preferredCountry")?.value)
+    if (saved) {
       return saved
     }
   } catch {
