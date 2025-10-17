@@ -5,6 +5,7 @@ import {
   LATEST_POSTS_QUERY,
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
+  TAGGED_POSTS_QUERY,
   wordpressQueries,
 } from "../wordpress-queries"
 import {
@@ -23,10 +24,7 @@ import type {
 import { mapWpPost } from "../utils/mapWpPost"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
-import type {
-  PaginatedPostsResult,
-  WordPressTag,
-} from "./types"
+import type { PaginatedPostsResult, WordPressTag } from "./types"
 import type { HomePost } from "@/types/home"
 
 const toErrorDetails = (error: unknown) => {
@@ -384,21 +382,120 @@ export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY
   }
 }
 
-export const fetchTaggedPosts = async (tagSlug: string, limit = 10, countryCode = DEFAULT_COUNTRY) => {
+export interface FetchTaggedPostsInput {
+  slug: string
+  after?: string | null
+  first?: number
+  countryCode?: string
+}
+
+export interface FetchTaggedPostsResult {
+  nodes: WordPressPost[]
+  pageInfo: {
+    hasNextPage: boolean
+    endCursor: string | null
+  }
+}
+
+export const fetchTaggedPosts = async ({
+  slug,
+  after = null,
+  first = 10,
+  countryCode = DEFAULT_COUNTRY,
+}: FetchTaggedPostsInput): Promise<FetchTaggedPostsResult> => {
   const cacheTags = buildCacheTags({
     country: countryCode,
     section: "tags",
-    extra: [`tag:${tagSlug}`],
+    extra: [`tag:${slug}`],
   })
 
-  const tags =
-    (await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(tagSlug), {
-      tags: cacheTags,
-    })) || []
-  const tag = tags[0]
-  if (!tag) return []
-  const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-  return (await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags })) || []
+  try {
+    const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
+      countryCode,
+      TAGGED_POSTS_QUERY,
+      {
+        tagSlugs: [slug],
+        first,
+        ...(after ? { after } : {}),
+      },
+      cacheTags,
+    )
+
+    if (gqlData?.posts) {
+      const nodes =
+        gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+      const mappedNodes = nodes.map((node) => mapWpPost(node, "gql", countryCode))
+      const pageInfo = gqlData.posts.pageInfo
+      return {
+        nodes: mappedNodes,
+        pageInfo: {
+          hasNextPage: pageInfo?.hasNextPage ?? false,
+          endCursor: pageInfo?.endCursor ?? null,
+        },
+      }
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch tagged posts via GraphQL", {
+      slug,
+      countryCode,
+      error: toErrorDetails(error),
+    })
+  }
+
+  console.log("[v0] Falling back to REST for tagged posts", { slug, countryCode })
+
+  try {
+    const tags =
+      (await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug), {
+        tags: cacheTags,
+      })) || []
+
+    const tag = tags[0]
+    if (!tag) {
+      return {
+        nodes: [],
+        pageInfo: {
+          hasNextPage: false,
+          endCursor: null,
+        },
+      }
+    }
+
+    const { endpoint, params } = wordpressQueries.postsByTag(tag.id, first)
+    const offset = cursorToOffset(after)
+    const restParams = offset !== null ? { ...params, offset } : params
+
+    const posts = await executeRestFallback(
+      () =>
+        fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }, { tags: cacheTags }),
+      `[v0] Tagged posts REST fallback failed for ${slug}`,
+      { slug, countryCode, params: restParams },
+      { fallbackValue: [] },
+    )
+
+    const nodes = posts.map((post) => mapWpPost(post, "rest", countryCode))
+    return {
+      nodes,
+      pageInfo: {
+        hasNextPage: nodes.length === first,
+        endCursor: null,
+      },
+    }
+  } catch (error) {
+    console.error("[v0] Failed to fetch tagged posts via REST", {
+      slug,
+      countryCode,
+      error: toErrorDetails(error),
+    })
+  }
+
+  return {
+    nodes: [],
+    pageInfo: {
+      hasNextPage: false,
+      endCursor: null,
+    },
+  }
 }
 
 export const fetchPosts = async (

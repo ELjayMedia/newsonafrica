@@ -25,9 +25,21 @@ export async function GET(request: NextRequest, context: TagRouteContext) {
 
   const { searchParams } = new URL(request.url)
   const after = searchParams.get("after") || null
+  const country = searchParams.get("country") || undefined
+  const firstParam = searchParams.get("first")
+  const parsedFirst = firstParam ? Number.parseInt(firstParam, 10) : undefined
+  const first =
+    typeof parsedFirst === "number" && Number.isFinite(parsedFirst) && parsedFirst > 0
+      ? parsedFirst
+      : undefined
 
   try {
-    const data = await fetchTaggedPosts(slug, after)
+    const data = await fetchTaggedPosts({
+      slug,
+      after,
+      countryCode: country,
+      first,
+    })
     return jsonWithCors(request, data)
   } catch (error) {
     console.error("Error fetching posts by tag:", error)

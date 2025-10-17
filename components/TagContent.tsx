@@ -8,11 +8,12 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
-import { getArticleUrl } from "@/lib/utils/routing"
+import type { FetchTaggedPostsResult } from "@/lib/wordpress-api"
+import { getArticleUrl, getCurrentCountry } from "@/lib/utils/routing"
 
 interface TagContentProps {
   slug: string
-  initialData: any
+  initialData?: FetchTaggedPostsResult | null
   tag: {
     name: string
     description?: string
@@ -21,6 +22,7 @@ interface TagContentProps {
 
 export function TagContent({ slug, initialData, tag }: TagContentProps) {
   const { ref, inView } = useInView()
+  const country = getCurrentCountry()
 
   const {
     data,
@@ -33,9 +35,10 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
     (index, previousPage) => {
       if (previousPage && !previousPage.pageInfo.hasNextPage) return null
       const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
-      return ["tagPosts", slug, cursor]
+      return ["tagPosts", slug, cursor, country]
     },
-    ([_, slug, cursor]) => fetchTaggedPosts(slug, cursor),
+    ([_, currentSlug, cursor, countryCode]) =>
+      fetchTaggedPosts({ slug: currentSlug, after: cursor, countryCode, first: 10 }),
     {
       revalidateOnFocus: false,
       fallbackData: initialData ? [initialData] : undefined,
@@ -55,7 +58,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
   if (isLoading) return <div>Loading...</div>
   if (error) return <div>Error: {(error as Error).message}</div>
 
-  const posts = data?.flatMap((page) => page.nodes) || []
+  const posts = data?.flatMap((page) => page.nodes ?? []) || []
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
@@ -66,7 +69,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
           {posts.map((post) => (
             <div key={post.id} className="border rounded-lg overflow-hidden shadow-md">
               <Link
-                href={getArticleUrl(post.slug)}
+                href={getArticleUrl(post.slug, country)}
                 className="flex items-start p-3 hover:bg-gray-50 transition-colors duration-200"
               >
                 <div className="relative w-20 h-20 flex-shrink-0 mr-3">
