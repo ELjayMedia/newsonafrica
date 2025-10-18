@@ -16,7 +16,7 @@ export const revalidate = 60
 
 export async function POST(request: Request) {
   logRequest(request)
-  const token = getAuthTokenFromCookies()
+  const token = await getAuthTokenFromCookies()
   if (!token) {
     return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
   }

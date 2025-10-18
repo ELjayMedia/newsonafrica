@@ -14,22 +14,23 @@ export function createClient(): SupabaseClient<Database> {
 }
 
 export function createServerCookieAdapter() {
-  const cookieStore = cookies()
-
   return {
-    get(name: string) {
-      return cookieStore.get(name)?.value
+    async get(name: string) {
+      const cookieStore = await cookies()
+      return cookieStore.get(name)?.value ?? null
     },
-    set(name: string, value: string, options: CookieOptions) {
+    async set(name: string, value: string, options: CookieOptions) {
       try {
+        const cookieStore = await cookies()
         cookieStore.set({ name, value, ...options })
       } catch (error) {
         // The `set` method was called from a Server Component.
         // This is allowed and will be fixed in a future version.
       }
     },
-    remove(name: string, options: CookieOptions) {
+    async remove(name: string, options: CookieOptions) {
       try {
+        const cookieStore = await cookies()
         cookieStore.set({ name, value: "", ...options })
       } catch (error) {
         // The `delete` method was called from a Server Component.
