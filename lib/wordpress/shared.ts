@@ -4,7 +4,7 @@ import {
   mapWordPressPostFromSource,
 } from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
-import type { WordPressPost } from "./client"
+import type { WordPressPost } from "@/types/wp"
 
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const

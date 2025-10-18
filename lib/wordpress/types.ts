@@ -1,5 +1,11 @@
 import type { HomePost } from "@/types/home"
-import type { WordPressPost } from "./client"
+import type {
+  WordPressAuthor,
+  WordPressCategory,
+  WordPressMediaNode,
+  WordPressPost,
+  WordPressTag,
+} from "@/types/wp"
 
 export interface PaginatedPostsResult {
   posts: WordPressPost[]
@@ -16,36 +22,7 @@ export interface FrontPageSlicesResult {
   latest: PaginatedPostsResult
 }
 
-export interface WordPressImage {
-  sourceUrl?: string
-  altText?: string
-  mediaDetails?: {
-    width?: number
-    height?: number
-  }
-}
-
-export interface WordPressAuthor {
-  id: number
-  name: string
-  slug: string
-  description?: string
-  avatar?: { url?: string }
-}
-
-export interface WordPressCategory {
-  id: number
-  name: string
-  slug: string
-  description?: string
-  count?: number
-}
-
-export interface WordPressTag {
-  id: number
-  name: string
-  slug: string
-}
+export type WordPressImage = WordPressMediaNode
 
 export interface CategoryPostsResult {
   category: WordPressCategory | null
@@ -68,3 +45,10 @@ export interface AggregatedHomeData {
   secondaryPosts: HomePost[]
   remainingPosts: HomePost[]
 }
+
+export type {
+  WordPressAuthor,
+  WordPressCategory,
+  WordPressPost,
+  WordPressTag,
+} from "@/types/wp"

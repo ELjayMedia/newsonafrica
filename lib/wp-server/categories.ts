@@ -11,13 +11,13 @@ import {
   executeRestFallback,
   fetchFromWp,
   fetchFromWpGraphQL,
-  type WordPressPost,
 } from "../wordpress/client"
 import { mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
 import type {
   CategoryPostsResult,
   WordPressCategory,
+  WordPressPost,
   WordPressTag,
 } from "@/types/wp"
 import type {

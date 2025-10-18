@@ -8,8 +8,6 @@ import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import type { WordPressPost } from "@/types/wp"
 
-export type { WordPressPost } from "@/types/wp"
-
 export interface CountryConfig {
   code: string
   name: string
