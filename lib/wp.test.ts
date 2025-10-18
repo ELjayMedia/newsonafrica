@@ -58,4 +58,43 @@ describe("wp client", () => {
       "https://newsonafrica.com/sz/wp-json/wp/v2/categories?per_page=20&hide_empty=false"
     )
   })
+
+  it("derives supported countries and rest bases from the editions registry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const getRestBaseMock = vi.fn().mockReturnValue("https://example.com/gh/wp-json/wp/v2")
+
+    vi.doMock("@/lib/editions", () => ({
+      SUPPORTED_COUNTRIES: [
+        {
+          code: "gh",
+          name: "Ghana",
+          flag: "🇬🇭",
+          canonicalUrl: "https://example.com/gh",
+          hreflang: "en-GH",
+          type: "country" as const,
+          apiEndpoint: "https://example.com/gh/graphql",
+          restEndpoint: "https://example.com/gh/wp-json/wp/v2",
+        },
+      ],
+    }))
+
+    vi.doMock("@/lib/wp-endpoints", () => ({
+      getRestBase: getRestBaseMock,
+    }))
+
+    const { getLatestPosts, isSupportedCountry } = await import("./wp")
+
+    expect(isSupportedCountry("gh")).toBe(true)
+    expect(isSupportedCountry("sz")).toBe(false)
+
+    await getLatestPosts("gh")
+
+    expect(getRestBaseMock).toHaveBeenCalledWith("gh")
+    const [requestUrl] = fetchMock.mock.calls[0] as [string]
+    expect(requestUrl).toBe(
+      "https://example.com/gh/wp-json/wp/v2/posts?per_page=12&_embed=1&order=desc&orderby=date"
+    )
+  })
 })

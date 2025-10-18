@@ -1,9 +1,17 @@
-export type CountryCode = "sz" | "za"
+import { SUPPORTED_COUNTRIES } from "@/lib/editions"
+import { getRestBase } from "@/lib/wp-endpoints"
 
-const REST_BASES: Record<CountryCode, string> = {
-  sz: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE || "",
-  za: process.env.NEXT_PUBLIC_WP_ZA_REST_BASE || "",
-}
+export type CountryCode = (typeof SUPPORTED_COUNTRIES)[number]["code"]
+
+const REST_BASES = SUPPORTED_COUNTRIES.reduce<Record<CountryCode, string>>((acc, edition) => {
+  const code = edition.code as CountryCode
+  acc[code] = getRestBase(code)
+  return acc
+}, {} as Record<CountryCode, string>)
+
+const SUPPORTED_COUNTRY_CODES = new Set<CountryCode>(
+  SUPPORTED_COUNTRIES.map((country) => country.code as CountryCode),
+)
 
 function restBase(country: CountryCode) {
   const base = REST_BASES[country]?.trim()
@@ -67,5 +75,5 @@ export async function getCategories(country: CountryCode, perPage = 20) {
 }
 
 export function isSupportedCountry(cc: string): cc is CountryCode {
-  return cc === "sz" || cc === "za"
+  return SUPPORTED_COUNTRY_CODES.has(cc as CountryCode)
 }
