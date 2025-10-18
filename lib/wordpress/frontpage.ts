@@ -17,7 +17,7 @@ import type {
   WordPressTag,
 } from "./types"
 import type { WordPressPost } from "./client"
-import { mapWpPost } from "../utils/mapWpPost"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 const toErrorDetails = (error: unknown) => {
@@ -189,14 +189,14 @@ export async function getFrontPageSlicesForCountry(
 
     if (gqlData) {
       const heroNodes = gqlData.hero?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
-      const heroPosts = heroNodes.map((node) => mapWpPost(node, "gql", countryCode))
+      const heroPosts = heroNodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
 
       const latestEdges =
         gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostFieldsFragment } =>
           Boolean(edge?.node),
         ) ?? []
 
-      const generalPosts = latestEdges.map((edge) => mapWpPost(edge.node, "gql", countryCode))
+      const generalPosts = latestEdges.map((edge) => mapGraphqlPostToWordPressPost(edge.node, countryCode))
       const cursors = latestEdges.map((edge) => edge.cursor ?? null)
 
       if (heroPosts.length > 0 || generalPosts.length > 0) {

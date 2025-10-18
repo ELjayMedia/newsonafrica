@@ -1,5 +1,8 @@
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-import { mapWpPost } from "../utils/mapWpPost"
+import {
+  mapGraphqlPostToWordPressPost,
+  mapWordPressPostFromSource,
+} from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost } from "./client"
 
@@ -7,7 +10,7 @@ export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const
 
 export const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost =>
-  mapWpPost(post as WordPressPost, "rest", countryCode)
+  mapWordPressPostFromSource(post as any, "rest", countryCode)
 
 export const resolveHomePostId = (post: WordPressPost): string => {
   if (post.globalRelayId) {
@@ -36,8 +39,8 @@ export const mapWordPressPostToHomePost = (
   id: resolveHomePostId(post),
   globalRelayId: post.globalRelayId,
   slug: post.slug ?? "",
-  title: decodeHtmlEntities(typeof post.title === "string" ? post.title : ""),
-  excerpt: decodeHtmlEntities(typeof post.excerpt === "string" ? post.excerpt : ""),
+  title: decodeHtmlEntities(post.title ?? ""),
+  excerpt: decodeHtmlEntities(post.excerpt ?? ""),
   date: post.date ?? "",
   country: countryCode,
   featuredImage: post.featuredImage?.node
@@ -54,7 +57,7 @@ export const mapGraphqlNodeToHomePost = (
   post: unknown,
   countryCode: string,
 ): HomePost => {
-  const mapped = mapWpPost(post as WordPressPost, "gql", countryCode)
+  const mapped = mapGraphqlPostToWordPressPost(post as any, countryCode)
   return mapWordPressPostToHomePost(mapped, countryCode)
 }
 

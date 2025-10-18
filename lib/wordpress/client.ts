@@ -1,20 +1,14 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithTimeout } from "../utils/fetchWithTimeout"
-import { mapWpPost } from "../utils/mapWpPost"
 import { APIError } from "../utils/errorHandling"
 import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
-import type { PostFieldsFragment } from "@/types/wpgraphql"
+import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import type { WordPressPost } from "@/types/wp"
 
-export type DeepMutable<T> = T extends ReadonlyArray<infer U>
-  ? DeepMutable<U>[]
-  : T extends object
-    ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
-    : T
-
-export type WordPressPost = DeepMutable<PostFieldsFragment> & { globalRelayId?: string | null }
+export type { WordPressPost } from "@/types/wp"
 
 export interface CountryConfig {
   code: string
@@ -295,9 +289,9 @@ export async function fetchFromWp<T>(
 
           if (query.endpoint.startsWith("posts")) {
             if (Array.isArray(rawData)) {
-              data = rawData.map((p: WordPressPost) => mapWpPost(p, "rest", countryCode)) as T
+              data = rawData.map((p: unknown) => mapRestPostToWordPressPost(p as any, countryCode)) as T
             } else {
-              data = mapWpPost(rawData as WordPressPost, "rest", countryCode) as T
+              data = mapRestPostToWordPressPost(rawData as any, countryCode) as T
             }
           } else {
             data = rawData as T
