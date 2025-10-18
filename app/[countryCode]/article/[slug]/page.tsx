@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { env } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { AFRICAN_EDITION, isCountryEdition } from "@/lib/editions"
+import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -101,12 +102,18 @@ export default async function ArticlePage({ params }: RouteParams) {
     notFound()
   }
 
+  const postId = resolvedArticle.article?.id != null ? String(resolvedArticle.article.id) : null
+  const relatedCountry = resolvedArticle.sourceCountry ?? normalizedCountry
+  const relatedPosts =
+    postId !== null ? await getRelatedPostsForCountry(relatedCountry, postId, 6) : []
+
   return (
     <ArticleClientContent
       slug={normalizedSlug}
       countryCode={isCountryEdition(edition) ? normalizedCountry : AFRICAN_EDITION.code}
       sourceCountryCode={resolvedArticle.sourceCountry}
       initialData={resolvedArticle.article}
+      relatedPosts={relatedPosts}
     />
   )
 }
