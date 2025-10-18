@@ -1,7 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
-import Fuse from "fuse.js"
+import formatDistanceToNow from "date-fns/formatDistanceToNow"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
@@ -29,14 +28,6 @@ interface HorizontalCardProps {
 export function HorizontalCard({ post, className = "" }: HorizontalCardProps) {
   const formattedDate = post.date ? formatDistanceToNow(new Date(post.date), { addSuffix: true }) : "Recently"
   const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
-
-  // Implementing fuzzy search with Fuse.js
-  const options = {
-    keys: ["title", "excerpt"],
-    threshold: 0.3,
-  }
-  const fuse = new Fuse([post], options)
-  const result = fuse.search("")
 
   return (
     <Link href={getArticleUrl(post.slug)} className={`block ${className}`}>
