@@ -10,13 +10,8 @@ import {
 import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "../wordpress/client"
 import type { WordPressPost } from "@/types/wp"
 import { mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
-import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
-import type {
-  CategoryPostsResult,
-  WordPressCategory,
-  WordPressPost,
-  WordPressTag,
-} from "@/types/wp"
+import { DEFAULT_COUNTRY, FP_TAG_SLUG, getFpTagForCountry } from "../wordpress/shared"
+import type { CategoryPostsResult, WordPressCategory, WordPressPost } from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
@@ -350,14 +345,11 @@ export async function getPostsByCategoryForCountry(
         return createEmptyResult()
       }
 
-      const tagsResponse = await executeRestFallback(
-        () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(FP_TAG_SLUG), { tags }),
-        `[v1] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
-        { countryCode, categorySlug, tagSlug: FP_TAG_SLUG },
-        { fallbackValue: [] },
-      )
-
-      const fpTag = tagsResponse[0]
+      const fpTag = await getFpTagForCountry(countryCode, {
+        tags,
+        logMessage: `[v1] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
+        logMeta: { countryCode, categorySlug },
+      })
       if (!fpTag) {
         return {
           category,

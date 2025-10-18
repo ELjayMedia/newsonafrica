@@ -1,13 +1,94 @@
+import { CACHE_DURATIONS } from "../cache/constants"
+import { wordpressQueries } from "../wordpress-queries"
+import { fetchFromWp, executeRestFallback } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import {
   mapGraphqlPostToWordPressPost,
   mapWordPressPostFromSource,
 } from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
-import type { WordPressPost } from "@/types/wp"
+import type { WordPressPost, WordPressTag } from "@/types/wp"
 
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const
+
+const FP_TAG_CACHE_TTL_MS = CACHE_DURATIONS.MEDIUM * 1000
+
+type FpTagCacheEntry = {
+  tag: WordPressTag | null
+  expiresAt: number
+}
+
+const fpTagCache = new Map<string, FpTagCacheEntry>()
+
+const buildFpTagCacheKey = (countryCode: string, slug: string) => `${countryCode}:${slug}`
+
+type GetFpTagForCountryOptions = {
+  tags?: string[]
+  logMessage?: string
+  logMeta?: Record<string, unknown>
+  slug?: string
+  forceRefresh?: boolean
+}
+
+export const invalidateFpTagCache = (countryCode?: string) => {
+  if (!countryCode) {
+    fpTagCache.clear()
+    return
+  }
+
+  const prefix = `${countryCode}:`
+  for (const key of fpTagCache.keys()) {
+    if (key.startsWith(prefix)) {
+      fpTagCache.delete(key)
+    }
+  }
+}
+
+export const getFpTagForCountry = async (
+  countryCode: string,
+  options: GetFpTagForCountryOptions = {},
+): Promise<WordPressTag | null> => {
+  const slug = options.slug ?? FP_TAG_SLUG
+  const cacheKey = buildFpTagCacheKey(countryCode, slug)
+
+  if (!options.forceRefresh) {
+    const cached = fpTagCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.tag
+    }
+  }
+
+  const tags = options.tags ?? []
+  const logMessage =
+    options.logMessage ?? `[v0] FP tag REST fallback failed for ${slug} (${countryCode})`
+  const logMeta = {
+    countryCode,
+    tagSlug: slug,
+    ...(options.logMeta ?? {}),
+  }
+
+  const response = await executeRestFallback(
+    () =>
+      fetchFromWp<WordPressTag[]>(
+        countryCode,
+        wordpressQueries.tagBySlug(slug),
+        tags.length > 0 ? { tags } : {},
+      ),
+    logMessage,
+    logMeta,
+    { fallbackValue: [] as WordPressTag[] },
+  )
+
+  const tag = Array.isArray(response) && response.length > 0 ? response[0] ?? null : null
+
+  fpTagCache.set(cacheKey, {
+    tag,
+    expiresAt: Date.now() + FP_TAG_CACHE_TTL_MS,
+  })
+
+  return tag
+}
 
 export const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost =>
   mapWordPressPostFromSource(post as any, "rest", countryCode)
