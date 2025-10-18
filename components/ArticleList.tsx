@@ -9,11 +9,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Article } from "@/types/article"
-import type { Post } from "@/types/wordpress"
+import type { WordPressPost } from "@/types/wp"
 
 type ArticleCardLayout = "compact" | "standard" | "featured"
 
-type ArticleItem = Article | Post
+type ArticleItem = Article | WordPressPost
 
 interface BaseArticleListProps {
   layout?: ArticleCardLayout
