@@ -6,16 +6,12 @@ import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
 import {
   FP_TAG_SLUG,
+  getFpTagForCountry,
   mapGraphqlNodeToHomePost,
   mapPostFromWp,
   mapWordPressPostToHomePost,
 } from "./shared"
-import type {
-  AggregatedHomeData,
-  FrontPageSlicesResult,
-  PaginatedPostsResult,
-  WordPressTag,
-} from "./types"
+import type { AggregatedHomeData, FrontPageSlicesResult, PaginatedPostsResult } from "./types"
 import type { WordPressPost } from "@/types/wp"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
@@ -245,16 +241,16 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
     console.log("[v0] No GraphQL results, trying REST fallback")
 
     try {
-      const tagResult = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(FP_TAG_SLUG), {
+      const tag = await getFpTagForCountry(countryCode, {
         tags,
+        logMessage: `[v0] FP tag REST fallback failed for ${countryCode}`,
       })
 
-      if (!tagResult || !Array.isArray(tagResult) || tagResult.length === 0) {
+      if (!tag) {
         console.log("[v0] No FP tag found")
         return []
       }
 
-      const tag = tagResult[0]
       const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
       const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags })
 

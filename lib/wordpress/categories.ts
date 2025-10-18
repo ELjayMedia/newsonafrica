@@ -9,9 +9,9 @@ import {
 } from "../wordpress-queries"
 import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
+import { DEFAULT_COUNTRY, FP_TAG_SLUG, getFpTagForCountry } from "./shared"
 import type { CategoryPostsResult } from "./types"
-import type { WordPressCategory, WordPressPost, WordPressTag } from "@/types/wp"
+import type { WordPressCategory, WordPressPost } from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
@@ -235,14 +235,11 @@ export async function getPostsByCategoryForCountry(
   if (!category) {
     return { category: null, posts: [], hasNextPage: false, endCursor: null }
   }
-  const fpTags = await executeRestFallback(
-    () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(FP_TAG_SLUG), { tags }),
-    `[v0] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
-    { countryCode, categorySlug, tagSlug: FP_TAG_SLUG },
-    { fallbackValue: [] },
-  )
-
-  const fpTag = fpTags[0]
+  const fpTag = await getFpTagForCountry(countryCode, {
+    tags,
+    logMessage: `[v0] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
+    logMeta: { countryCode, categorySlug },
+  })
   if (!fpTag) {
     return { category, posts: [], hasNextPage: false, endCursor: null }
   }
