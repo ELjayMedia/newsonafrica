@@ -138,7 +138,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
           .rpc("column_exists", { table_name: "comments", column_name: "status" })
           .single()
 
-        hasStatusColumn = statusCheckData?.exists || false
+        hasStatusColumn = Boolean(statusCheckData?.exists)
 
         if (statusCheckError) {
           // Fallback method if RPC is not available
@@ -170,7 +170,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
           .rpc("column_exists", { table_name: "comments", column_name: "is_rich_text" })
           .single()
 
-        hasRichTextColumn = richTextCheckData?.exists || false
+        hasRichTextColumn = Boolean(richTextCheckData?.exists)
 
         if (richTextCheckError) {
           // Fallback method if RPC is not available
@@ -280,14 +280,16 @@ export async function fetchComments(
       commentsQuery = commentsQuery.eq("status", "active")
     }
 
-    const { data: comments, error } = await commentsQuery
+    const { data: commentsData, error } = await commentsQuery
 
     if (error) {
       console.error("Error fetching comments:", error)
       throw error
     }
 
-    if (!comments || comments.length === 0) {
+    const comments = (commentsData ?? []) as Comment[]
+
+    if (comments.length === 0) {
       return { comments: [], hasMore: false, total: 0 }
     }
 
@@ -305,15 +307,17 @@ export async function fetchComments(
       repliesQuery = repliesQuery.eq("status", "active")
     }
 
-    const { data: replies, error: repliesError } = await repliesQuery
+    const { data: repliesData, error: repliesError } = await repliesQuery
 
     if (repliesError) {
       console.error("Error fetching replies:", repliesError)
       throw repliesError
     }
 
+    const replies = (repliesData ?? []) as Comment[]
+
     // Combine all comment IDs (root comments and replies)
-    const allCommentIds = [...comments.map((c) => c.id), ...(replies?.map((r) => r.id) || [])]
+    const allCommentIds = [...comments.map((c) => c.id), ...replies.map((r) => r.id)]
 
     // Determine the current authenticated user (if any) for reaction metadata
     let currentUserId: string | null = null
@@ -343,7 +347,13 @@ export async function fetchComments(
         if (reactionsError) {
           console.error("Error fetching comment reactions:", reactionsError)
         } else if (reactionRows) {
-          reactionRows.forEach((reaction) => {
+          const normalizedReactions = reactionRows as Array<{
+            comment_id: string
+            reaction_type: string
+            user_id: string
+          }>
+
+          normalizedReactions.forEach((reaction) => {
             const commentMap = reactionsByComment.get(reaction.comment_id) || new Map<string, CommentReaction>()
             const existingReaction = commentMap.get(reaction.reaction_type) || {
               type: reaction.reaction_type,
@@ -368,31 +378,30 @@ export async function fetchComments(
 
     // Create a map of comment_id to reactions
     // Process all comments with profile data and reactions
-    const processedComments = comments.map((comment) => {
+    const processedComments: Comment[] = comments.map((comment) => {
+      const reactionsForComment = reactionsByComment.get(comment.id)
+
       return {
         ...comment,
-        // Add status if it doesn't exist
-        status: comment.status || "active",
-        // Add is_rich_text if it doesn't exist
-        is_rich_text: hasRichText ? comment.is_rich_text : false,
+        status: comment.status ?? "active",
+        is_rich_text: hasRichText ? comment.is_rich_text ?? false : false,
         profile: comment.profile ?? undefined,
-        reactions: [],
+        reactions: reactionsForComment ? Array.from(reactionsForComment.values()) : comment.reactions ?? [],
       }
     })
 
     // Process all replies with profile data and reactions
-    const processedReplies =
-      replies?.map((reply) => {
-        return {
-          ...reply,
-          // Add status if it doesn't exist
-          status: reply.status || "active",
-          // Add is_rich_text if it doesn't exist
-          is_rich_text: hasRichText ? reply.is_rich_text : false,
-          profile: reply.profile ?? undefined,
-          reactions: [],
-        }
-      }) || []
+    const processedReplies: Comment[] = replies.map((reply) => {
+      const reactionsForReply = reactionsByComment.get(reply.id)
+
+      return {
+        ...reply,
+        status: reply.status ?? "active",
+        is_rich_text: hasRichText ? reply.is_rich_text ?? false : false,
+        profile: reply.profile ?? undefined,
+        reactions: reactionsForReply ? Array.from(reactionsForReply.values()) : reply.reactions ?? [],
+      }
+    })
 
     // Organize comments into a hierarchical structure
     const organizedComments = organizeComments([...processedComments, ...processedReplies])
@@ -505,9 +514,10 @@ export async function updateComment(
     const result = await readJson<Comment | { error?: string }>(response)
 
     if (!response.ok || !result) {
-      const message = typeof result === "object" && "error" in result && result.error
-        ? result.error
-        : `Failed to update comment (HTTP ${response.status})`
+      const message =
+        result && typeof result === "object" && "error" in result && result.error
+          ? result.error
+          : `Failed to update comment (HTTP ${response.status})`
       throw new Error(message)
     }
 

@@ -31,20 +31,28 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    "lib/**/*",
+    "services/**/*",
+    "contexts/**/*",
+    "utils/**/*",
+    "config/**/*",
+    "types/**/*",
+    "scripts/**/*",
+    "supabase/**/*",
+    "docs/**/*",
+    "middleware.ts",
+    "middleware.test.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "codegen.ts",
+    "next.config.js"
   ],
   "exclude": [
     "node_modules",
-    "app",
-    "lib",
-    "services",
-    "supabase",
-    "components",
-    "contexts",
-    "hooks",
-    "utils",
-    "config"
+    ".next",
+    "out"
   ]
 }
