@@ -4,7 +4,7 @@ import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
 import type { AuthorDataQuery } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"
-import type { WordPressAuthor, WordPressPost } from "./types"
+import type { WordPressAuthor, WordPressPost } from "@/types/wp"
 
 export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
   const { endpoint, params } = wordpressQueries.authors()

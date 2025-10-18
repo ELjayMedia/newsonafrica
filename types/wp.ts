@@ -79,7 +79,7 @@ export interface WordPressPost {
   tags?: WordPressTagConnection
 }
 
-export interface WordPressPaginationInfo {
+export interface WordPressPagination {
   total?: number
   totalPages?: number
   perPage?: number
@@ -87,6 +87,8 @@ export interface WordPressPaginationInfo {
   hasNextPage?: boolean
   endCursor?: string | null
 }
+
+export type WordPressPaginationInfo = WordPressPagination
 
 // ---- Compatibility re-exports for non-core result shapes still defined elsewhere
 export type {
