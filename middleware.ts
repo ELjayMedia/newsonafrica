@@ -17,10 +17,14 @@ const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
 }
 
 function getCountryFromRequest(request: NextRequest): string {
-  const preferredCountry = request.cookies.get("preferredCountry")?.value
-  if (preferredCountry && SUPPORTED_COUNTRIES.includes(preferredCountry)) {
-    return preferredCountry
+  const cookieValue =
+    request.cookies.get("country")?.value ??
+    request.cookies.get("preferredCountry")?.value
+
+  if (cookieValue && SUPPORTED_COUNTRIES.includes(cookieValue)) {
+    return cookieValue
   }
+
   return DEFAULT_COUNTRY
 }
 
@@ -60,6 +64,11 @@ export async function middleware(request: NextRequest) {
     return legacyRedirect
   }
 
+  if (pathname === "/") {
+    const redirectUrl = `/${country}`
+    return NextResponse.redirect(new URL(redirectUrl, request.url))
+  }
+
   if (LEGACY_CATEGORY_SLUGS[pathname]) {
     const redirectUrl = getCategoryUrl(LEGACY_CATEGORY_SLUGS[pathname], country)
     return NextResponse.redirect(new URL(redirectUrl, request.url))
@@ -79,5 +88,5 @@ export async function middleware(request: NextRequest) {
 
 // Only run middleware on specific paths
 export const config = {
-  matcher: ["/post/:path*", "/news", "/business", "/sport", "/entertainment", "/api/:path*"],
+  matcher: ["/", "/post/:path*", "/news", "/business", "/sport", "/entertainment", "/api/:path*"],
 }
