@@ -2,16 +2,20 @@ import { Suspense, type ReactNode } from "react"
 
 import { Header } from "@/components/Header"
 import { Sidebar } from "@/components/Sidebar"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 interface LayoutStructureProps {
   children: ReactNode
+  countryCode?: string
 }
 
-export function LayoutStructure({ children }: LayoutStructureProps) {
+export function LayoutStructure({ children, countryCode }: LayoutStructureProps) {
+  const resolvedCountry = (countryCode ?? DEFAULT_COUNTRY).toLowerCase()
+
   return (
     <>
       <Suspense fallback={<div className="h-16 bg-white shadow-md animate-pulse" />}>
-        <Header />
+        <Header countryCode={resolvedCountry} />
       </Suspense>
       <div className="mt-4 md:mt-6">
         <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
@@ -28,7 +32,7 @@ export function LayoutStructure({ children }: LayoutStructureProps) {
           </Suspense>
           <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
             <Suspense fallback={<div className="w-full bg-white shadow-md animate-pulse h-96" />}>
-              <Sidebar />
+              <Sidebar country={resolvedCountry} />
             </Suspense>
           </aside>
         </div>

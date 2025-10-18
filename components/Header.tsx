@@ -1,32 +1,31 @@
-import { headers } from "next/headers"
+"use client"
+
+import { useMemo } from "react"
+import { usePathname } from "next/navigation"
 
 import { HeaderClient, type HeaderCategory } from "@/components/HeaderClient"
-import { getServerUserPreferredSections } from "@/lib/supabase/server-user-preferences"
-import { getServerCountry, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import { getCategoriesForCountry } from "@/lib/wordpress-api"
+import { useCategories } from "@/lib/hooks/useWordPressData"
+import { DEFAULT_COUNTRY, getCurrentCountry } from "@/lib/utils/routing"
+import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 
-function extractCountryFromPath(path: string | null): string | null {
-  if (!path) return null
-
-  try {
-    const url = path.startsWith("http") ? new URL(path).pathname : path
-    const segments = url.split("/").filter(Boolean)
-    if (segments.length === 0) {
-      return null
-    }
-
-    const candidate = segments[0]?.toLowerCase()
-    if (candidate && SUPPORTED_COUNTRIES.includes(candidate)) {
-      return candidate
-    }
-  } catch {
-    return null
-  }
-
-  return null
+function normalizeCountry(value?: string | null) {
+  return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : undefined
 }
 
-export function sortCategoriesByPreference(categories: HeaderCategory[], sections: string[]): HeaderCategory[] {
+function resolveCountry(pathname: string | null, provided?: string): string {
+  const normalizedProvided = normalizeCountry(provided)
+  if (normalizedProvided) {
+    return normalizedProvided
+  }
+
+  const detected = getCurrentCountry(pathname ?? undefined)
+  return normalizeCountry(detected) ?? DEFAULT_COUNTRY
+}
+
+export function sortCategoriesByPreference(
+  categories: HeaderCategory[],
+  sections: string[],
+): HeaderCategory[] {
   if (!Array.isArray(categories) || categories.length === 0) {
     return []
   }
@@ -69,37 +68,21 @@ export function sortCategoriesByPreference(categories: HeaderCategory[], section
   })
 }
 
-function resolveCountryFromHeaders(): string {
-  const headerList = headers()
-
-  const candidates = [
-    headerList.get("x-invoke-path"),
-    headerList.get("x-invoke-query"),
-    headerList.get("x-matched-path"),
-    headerList.get("x-original-uri"),
-    headerList.get("x-rewrite-url"),
-    headerList.get("x-request-url"),
-    headerList.get("referer"),
-  ]
-
-  for (const candidate of candidates) {
-    const country = extractCountryFromPath(candidate)
-    if (country) {
-      return country
-    }
-  }
-
-  return getServerCountry()
+interface HeaderProps {
+  countryCode?: string
 }
 
-export async function Header() {
-  const countryCode = resolveCountryFromHeaders()
-  const [categories, preferredSections] = await Promise.all([
-    getCategoriesForCountry(countryCode),
-    getServerUserPreferredSections(),
-  ])
+export function Header({ countryCode }: HeaderProps = {}) {
+  const pathname = usePathname()
+  const effectiveCountry = useMemo(() => resolveCountry(pathname, countryCode), [pathname, countryCode])
 
-  const sortedCategories = sortCategoriesByPreference(categories ?? [], preferredSections ?? [])
+  const { categories } = useCategories(effectiveCountry)
+  const { preferences } = useUserPreferences()
 
-  return <HeaderClient categories={sortedCategories} countryCode={countryCode} />
+  const sortedCategories = useMemo(
+    () => sortCategoriesByPreference(categories ?? [], preferences?.sections ?? []),
+    [categories, preferences?.sections],
+  )
+
+  return <HeaderClient categories={sortedCategories} countryCode={effectiveCountry} />
 }
