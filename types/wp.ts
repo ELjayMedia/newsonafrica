@@ -1,3 +1,7 @@
+// ✅ Canonical WordPress types (single source of truth)
+// Keep only interface/type definitions here to avoid circular deps.
+// Re-export non-core result types from their existing modules for compatibility.
+
 export interface WordPressMediaDetails {
   width?: number
   height?: number
@@ -73,3 +77,23 @@ export interface WordPressPaginationInfo {
   hasNextPage?: boolean
   endCursor?: string | null
 }
+
+// ---- Compatibility re-exports for non-core result shapes still defined elsewhere
+export type {
+  WordPressAuthor as _CompatWordPressAuthor, // optional alias if some modules import from the lib path
+  WordPressCategory as _CompatWordPressCategory,
+  WordPressTag as _CompatWordPressTag,
+} // no runtime impact
+
+// Results/util types that still live under lib — re-export to avoid breaking imports
+export type {
+  CategoryPostsResult,
+  FrontPageSlicesResult,
+  PaginatedPostsResult,
+  AggregatedHomeData,
+} from "@/lib/wordpress/types"
+
+export type {
+  FetchTaggedPostsInput,
+  FetchTaggedPostsResult,
+} from "@/lib/wordpress/posts"

@@ -1,13 +1,35 @@
+// ✅ Unified WP post mappers + list adapters (resolved merge)
+
+// --- External helpers & types
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
-import type { WordPressPost } from "@/lib/wordpress/client"
-import type { HomePostFieldsFragment, PostFieldsFragment } from "@/types/wpgraphql"
+
+// Low-level normalized WordPress types
 import type {
+  WordPressPost,
   WordPressAuthor,
   WordPressMedia,
   WordPressCategoryConnection,
   WordPressTagConnection,
 } from "@/types/wp"
 
+// GraphQL fragments (shape for GQL nodes)
+import type { HomePostFieldsFragment, PostFieldsFragment } from "@/types/wpgraphql"
+
+// High-level list view mapping + types
+import {
+  mapWordPressPostToPostListItem,
+  mapWordPressPostsToPostListItems,
+  type PostListItemData,
+  type PostListAuthor,
+  type PostListCategory,
+} from "@/lib/data/post-list"
+
+// Re-export list types for convenience
+export type { PostListItemData, PostListAuthor, PostListCategory }
+
+// ------------------------------
+// Shared helpers
+// ------------------------------
 function decodeGlobalId(id: string): number {
   try {
     const decoded = Buffer.from(id, "base64").toString("ascii")
@@ -18,7 +40,25 @@ function decodeGlobalId(id: string): number {
   }
 }
 
-type RestPost = {
+const extractRendered = (value: string | { rendered?: string } | undefined): string | undefined => {
+  if (!value) return undefined
+  if (typeof value === "string") return value
+  if (typeof value === "object" && value.rendered) return value.rendered
+  return undefined
+}
+
+const resolveRelayId = (post: RestPost | GraphqlPostNode): string | undefined => {
+  const candidate = (post as any)?.globalRelayId ?? (post as any)?.id
+  if (typeof candidate === "string" && candidate.length > 0) {
+    return candidate
+  }
+  return undefined
+}
+
+// ------------------------------
+// REST shapes (embedded) → normalize
+// ------------------------------
+export type RestPost = {
   id?: number
   databaseId?: number
   slug?: string
@@ -39,28 +79,9 @@ type RestPost = {
   }
 }
 
-const extractRendered = (value: string | { rendered?: string } | undefined): string | undefined => {
-  if (!value) return undefined
-  if (typeof value === "string") return value
-  if (typeof value === "object" && value.rendered) return value.rendered
-  return undefined
-}
-
-type GraphqlPostNode = PostFieldsFragment | HomePostFieldsFragment
-
-const resolveRelayId = (post: RestPost | GraphqlPostNode): string | undefined => {
-  const candidate = (post as any)?.globalRelayId ?? (post as any)?.id
-  if (typeof candidate === "string" && candidate.length > 0) {
-    return candidate
-  }
-  return undefined
-}
-
 const mapRestFeaturedImage = (post: RestPost): WordPressMedia | undefined => {
   const featured = post._embedded?.["wp:featuredmedia"]?.[0]
-  if (!featured) {
-    return undefined
-  }
+  if (!featured) return undefined
 
   return {
     node: {
@@ -79,9 +100,7 @@ const mapRestFeaturedImage = (post: RestPost): WordPressMedia | undefined => {
 
 const mapRestAuthor = (post: RestPost): WordPressAuthor | undefined => {
   const author = post._embedded?.["wp:author"]?.[0]
-  if (!author) {
-    return undefined
-  }
+  if (!author) return undefined
 
   return {
     node: {
@@ -94,7 +113,6 @@ const mapRestAuthor = (post: RestPost): WordPressAuthor | undefined => {
 
 const mapRestCategories = (post: RestPost): WordPressCategoryConnection => {
   const categoryTerms = post._embedded?.["wp:term"]?.[0] ?? []
-
   return {
     nodes: categoryTerms
       .filter((cat): cat is NonNullable<typeof cat> => Boolean(cat?.slug))
@@ -108,7 +126,6 @@ const mapRestCategories = (post: RestPost): WordPressCategoryConnection => {
 
 const mapRestTags = (post: RestPost): WordPressTagConnection => {
   const tagTerms = post._embedded?.["wp:term"]?.[1] ?? []
-
   return {
     nodes: tagTerms
       .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag?.slug))
@@ -122,7 +139,6 @@ const mapRestTags = (post: RestPost): WordPressTagConnection => {
 
 export const mapRestPostToWordPressPost = (post: RestPost, countryCode?: string): WordPressPost => {
   const content = extractRendered(post.content)
-
   return {
     databaseId: post.databaseId ?? post.id ?? undefined,
     id: post.id !== undefined ? String(post.id) : undefined,
@@ -139,13 +155,14 @@ export const mapRestPostToWordPressPost = (post: RestPost, countryCode?: string)
   }
 }
 
+// ------------------------------
+// GraphQL shapes → normalize
+// ------------------------------
+export type GraphqlPostNode = PostFieldsFragment | HomePostFieldsFragment
+
 const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefined => {
-  if (!post.featuredImage?.node) {
-    return undefined
-  }
-
+  if (!post.featuredImage?.node) return undefined
   const node = post.featuredImage.node
-
   return {
     node: {
       sourceUrl: node.sourceUrl ?? undefined,
@@ -162,20 +179,17 @@ const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefi
 }
 
 const mapGraphqlAuthor = (post: GraphqlPostNode): WordPressAuthor | undefined => {
-  if (!post.author?.node) {
-    return undefined
-  }
-
+  if (!post.author?.node) return undefined
   const node = post.author.node
-
   return {
     node: {
-      databaseId: node.databaseId ?? (typeof node.id === "string" ? decodeGlobalId(node.id) : node.id) ?? undefined,
+      databaseId: node.databaseId ?? (typeof node.id === "string" ? decodeGlobalId(node.id) : (node as any).id) ?? undefined,
       name: node.name ?? undefined,
       slug: node.slug ?? undefined,
-      avatar: typeof node.avatar === "object" && node.avatar !== null && "url" in node.avatar
-        ? { url: (node.avatar as { url?: string }).url ?? undefined }
-        : undefined,
+      avatar:
+        typeof node.avatar === "object" && node.avatar !== null && "url" in node.avatar
+          ? { url: (node.avatar as { url?: string }).url ?? undefined }
+          : undefined,
     },
   }
 }
@@ -185,11 +199,11 @@ const mapGraphqlCategories = (post: GraphqlPostNode): WordPressCategoryConnectio
     post.categories?.nodes
       ?.filter((cat): cat is NonNullable<typeof cat> => Boolean(cat?.slug))
       .map((cat) => ({
-        databaseId: cat.databaseId ?? (typeof cat.id === "string" ? decodeGlobalId(cat.id) : cat.id) ?? undefined,
+        databaseId: cat.databaseId ?? (typeof cat.id === "string" ? decodeGlobalId(cat.id) : (cat as any).id) ?? undefined,
         name: cat.name ?? undefined,
         slug: cat.slug ?? undefined,
-        description: cat.description ?? undefined,
-        count: cat.count ?? undefined,
+        description: (cat as any).description ?? undefined,
+        count: (cat as any).count ?? undefined,
       })) ?? [],
 })
 
@@ -198,7 +212,7 @@ const mapGraphqlTags = (post: GraphqlPostNode): WordPressTagConnection => ({
     post.tags?.nodes
       ?.filter((tag): tag is NonNullable<typeof tag> => Boolean(tag?.slug))
       .map((tag) => ({
-        databaseId: tag.databaseId ?? (typeof tag.id === "string" ? decodeGlobalId(tag.id) : tag.id) ?? undefined,
+        databaseId: tag.databaseId ?? (typeof tag.id === "string" ? decodeGlobalId(tag.id) : (tag as any).id) ?? undefined,
         name: tag.name ?? undefined,
         slug: tag.slug ?? undefined,
       })) ?? [],
@@ -222,20 +236,34 @@ export const mapGraphqlPostToWordPressPost = (
   globalRelayId: resolveRelayId(post),
 })
 
+// ------------------------------
+// Source switch (REST vs GQL) → WordPressPost
+// ------------------------------
 export const mapWordPressPostFromSource = (
   post: RestPost | GraphqlPostNode,
   source: "rest" | "gql",
   countryCode?: string,
 ): WordPressPost => {
   if (source === "rest") {
-    const candidate = post as WordPressPost
+    const candidate = post as unknown as WordPressPost
     if (candidate && typeof candidate === "object" && "title" in candidate && "categories" in candidate) {
       return candidate
     }
     return mapRestPostToWordPressPost(post as RestPost, countryCode)
   }
-
   return mapGraphqlPostToWordPressPost(post as GraphqlPostNode, countryCode)
 }
 
-export type { RestPost, GraphqlPostNode }
+// ------------------------------
+// High-level adapters for list UI (kept from Branch A)
+// ------------------------------
+export function mapWpPostToPostListItem(post: WordPressPost, countryCode: string): PostListItemData {
+  return mapWordPressPostToPostListItem(post, countryCode)
+}
+
+export function mapWpPostsToPostListItems(
+  posts: WordPressPost[] | null | undefined,
+  countryCode: string,
+): PostListItemData[] {
+  return mapWordPressPostsToPostListItems(posts, countryCode)
+}

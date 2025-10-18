@@ -1,16 +1,18 @@
 "use client"
 
 import useSWRInfinite from "swr/infinite"
+import { useEffect, useCallback, useMemo } from "react"
 import { fetchCategoryPosts } from "@/lib/wordpress-api"
 import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
-import { useEffect, useCallback } from "react"
 import { HorizontalCard } from "./HorizontalCard"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useInView } from "react-intersection-observer"
 import { CategoryPageSkeleton } from "./CategoryPageSkeleton"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CategoryContent({ slug }: { slug: string }) {
+  const countryCode = getCurrentCountry()
   const {
     data,
     error,
@@ -22,9 +24,10 @@ export function CategoryContent({ slug }: { slug: string }) {
     (index, previousPage) => {
       if (previousPage && !previousPage.pageInfo?.hasNextPage) return null
       const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
-      return ["category", slug, cursor]
+      return ["category", countryCode, slug, cursor]
     },
-    ([_, slug, cursor]) => fetchCategoryPosts(slug, cursor),
+    ([_, country, currentSlug, cursor]) =>
+      fetchCategoryPosts(currentSlug, cursor, country),
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000 * 60 * 5,
@@ -52,7 +55,7 @@ export function CategoryContent({ slug }: { slug: string }) {
   if (!data || data.length === 0) return <div>No posts found for this category.</div>
 
   const category = data[0]?.category
-  const allPosts = data.flatMap((page) => page.posts || [])
+  const allPosts = useMemo(() => data.flatMap((page) => page.posts || []), [data])
 
   // Separate posts for different sections
   const gridPosts = allPosts.slice(0, 10)
