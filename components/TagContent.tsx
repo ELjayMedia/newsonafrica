@@ -3,13 +3,14 @@
 import useSWRInfinite from "swr/infinite"
 import { useInView } from "react-intersection-observer"
 import { useEffect, useCallback } from "react"
-import Image from "next/image"
-import Link from "next/link"
+import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { fetchTaggedPosts } from "@/lib/wordpress-api"
 import type { FetchTaggedPostsResult } from "@/lib/wordpress-api"
-import { getArticleUrl, getCurrentCountry } from "@/lib/utils/routing"
+import { getCurrentCountry } from "@/lib/utils/routing"
+import { PostList } from "@/components/posts/PostList"
+import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
 
 interface TagContentProps {
   slug: string
@@ -33,8 +34,8 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
     setSize,
   } = useSWRInfinite(
     (index, previousPage) => {
-      if (previousPage && !previousPage.pageInfo.hasNextPage) return null
-      const cursor = index === 0 ? null : previousPage.pageInfo.endCursor
+      if (previousPage && previousPage.pageInfo && !previousPage.pageInfo.hasNextPage) return null
+      const cursor = index === 0 ? null : previousPage?.pageInfo?.endCursor ?? null
       return ["tagPosts", slug, cursor, country]
     },
     ([_, currentSlug, cursor, countryCode]) =>
@@ -58,46 +59,15 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
   if (isLoading) return <div>Loading...</div>
   if (error) return <div>Error: {(error as Error).message}</div>
 
-  const posts = data?.flatMap((page) => page.nodes ?? []) || []
+  const posts = useMemo(() => data?.flatMap((page) => page.nodes ?? []) || [], [data])
+  const mappedPosts = useMemo(() => mapWordPressPostsToPostListItems(posts, country), [posts, country])
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">Articles tagged with "{tag.name}"</h1>
         {tag.description && <p className="text-gray-600 mb-6">{tag.description}</p>}
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div key={post.id} className="border rounded-lg overflow-hidden shadow-md">
-              <Link
-                href={getArticleUrl(post.slug, country)}
-                className="flex items-start p-3 hover:bg-gray-50 transition-colors duration-200"
-              >
-                <div className="relative w-20 h-20 flex-shrink-0 mr-3">
-                  <Image
-                    src={post.featuredImage?.node?.sourceUrl || "/placeholder.jpg"}
-                    alt={post.title}
-                    fill
-                    sizes="80px"
-                    className="rounded-lg object-cover"
-                  />
-                </div>
-                <div className="flex-grow flex flex-col justify-between">
-                  <h2 className="text-sm font-semibold leading-tight">{post.title}</h2>
-                  <div className="flex justify-between text-xs mt-2">
-                    <p className="text-gray-500">
-                      {new Date(post.date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                    <button className="text-blue-600 hover:text-blue-800">Share</button>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ))}
-        </div>
+        <PostList posts={mappedPosts} />
         <div ref={ref} className="mt-8 text-center">
           {isFetchingNextPage ? (
             <div>Loading more...</div>
