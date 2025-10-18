@@ -1,3 +1,7 @@
+import "server-only"
+
+import { cache } from "react"
+
 import { CACHE_DURATIONS } from "../cache/constants"
 import {
   CATEGORY_POSTS_BATCH_QUERY,
@@ -31,6 +35,39 @@ import {
 } from "./common"
 
 const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
+
+export interface WordPressCategoryTreeNode extends WordPressCategory {
+  children: WordPressCategoryTreeNode[]
+}
+
+const CATEGORY_TREE_CACHE_EXTRA = "tree"
+
+const normalizeCountryCode = (value: string | null | undefined): string => {
+  if (typeof value !== "string") {
+    return DEFAULT_COUNTRY
+  }
+
+  const trimmed = value.trim().toLowerCase()
+  return trimmed || DEFAULT_COUNTRY
+}
+
+const mapCategoryTreeNodeFromRest = (payload: any): WordPressCategoryTreeNode => {
+  const mapped = mapCategoryFromRest(payload)
+
+  return {
+    ...mapped,
+    parent: typeof mapped.parent === "number" ? mapped.parent : null,
+    children: [],
+  }
+}
+
+const cloneCategoryTree = (
+  nodes: WordPressCategoryTreeNode[],
+): WordPressCategoryTreeNode[] =>
+  nodes.map((node) => ({
+    ...node,
+    children: cloneCategoryTree(node.children),
+  }))
 
 interface CachedCategoryPosts {
   posts: WordPressPost[]
@@ -81,12 +118,24 @@ const mapCategoryFromRest = (payload: any): WordPressCategory => {
         ? Number.parseInt(rawId, 10)
         : undefined
 
+  const rawParent = payload?.parent ?? payload?.parentId ?? payload?.parent_id
+  const numericParent =
+    typeof rawParent === "number"
+      ? rawParent
+      : typeof rawParent === "string"
+        ? Number.parseInt(rawParent, 10)
+        : undefined
+
   return {
     id: Number.isFinite(numericId) && typeof numericId === "number" ? numericId : 0,
     name: payload?.name ?? "",
     slug: payload?.slug ?? "",
     description: payload?.description ?? undefined,
     count: typeof payload?.count === "number" ? payload.count : undefined,
+    parent:
+      Number.isFinite(numericParent) && typeof numericParent === "number"
+        ? numericParent
+        : null,
   }
 }
 
@@ -191,6 +240,106 @@ const fetchRestCategoriesBySlugs = async (
   }
 
   return map
+}
+
+async function fetchAllCategoriesUncached(
+  countryCode: string,
+): Promise<WordPressCategoryTreeNode[]> {
+  const normalizedCountry = normalizeCountryCode(countryCode)
+  const cacheTags = buildWpCacheTags({
+    country: normalizedCountry,
+    section: "categories",
+    extra: [CATEGORY_TREE_CACHE_EXTRA],
+  })
+
+  const { endpoint, params } = wordpressQueries.categories()
+
+  const pagination = await paginateRest<any>({
+    limit: Number.MAX_SAFE_INTEGER,
+    pageSize: WORDPRESS_REST_MAX_PER_PAGE,
+    makeRequest: async (page, perPage) => {
+      const response = await executeRestFallback(
+        () =>
+          fetchFromWp<any[]>(
+            normalizedCountry,
+            {
+              endpoint,
+              params: {
+                ...params,
+                page,
+                per_page: perPage,
+              },
+            },
+            { withHeaders: true, tags: cacheTags },
+          ),
+        `[v1] Category tree REST fallback failed for ${normalizedCountry}`,
+        { countryCode: normalizedCountry, page, perPage },
+        { fallbackValue: { data: [] as any[], headers: new Headers() } },
+      )
+
+      const items = Array.isArray(response.data) ? response.data : []
+
+      return {
+        items,
+        headers: response.headers,
+      }
+    },
+  })
+
+  const nodesById = new Map<number, WordPressCategoryTreeNode>()
+  const orderedNodes: WordPressCategoryTreeNode[] = []
+
+  for (const payload of pagination.items ?? []) {
+    const mapped = mapCategoryTreeNodeFromRest(payload)
+
+    if (!mapped.id || mapped.id <= 0) {
+      continue
+    }
+
+    const existing = nodesById.get(mapped.id)
+    if (existing) {
+      existing.name = mapped.name
+      existing.slug = mapped.slug
+      existing.description = mapped.description
+      existing.count = mapped.count
+      existing.parent = mapped.parent
+      continue
+    }
+
+    nodesById.set(mapped.id, mapped)
+    orderedNodes.push(mapped)
+  }
+
+  const roots: WordPressCategoryTreeNode[] = []
+
+  for (const node of orderedNodes) {
+    const parentId = typeof node.parent === "number" ? node.parent : null
+    if (parentId && parentId > 0) {
+      const parent = nodesById.get(parentId)
+      if (parent) {
+        parent.children.push(node)
+        continue
+      }
+    }
+
+    roots.push(node)
+  }
+
+  return roots
+}
+
+const getAllCategoriesCached = cache(
+  async (countryCode: string): Promise<WordPressCategoryTreeNode[]> => {
+    return fetchAllCategoriesUncached(countryCode)
+  },
+)
+
+export async function getAllCategories(
+  countryCode: string,
+): Promise<WordPressCategoryTreeNode[]> {
+  const normalizedCountry = normalizeCountryCode(countryCode)
+  const tree = await getAllCategoriesCached(normalizedCountry)
+  return cloneCategoryTree(tree)
 }
 
 export async function getPostsForCategories(

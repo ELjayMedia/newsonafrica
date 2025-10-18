@@ -3,6 +3,8 @@ import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
 
+vi.mock('server-only', () => ({}))
+
 vi.mock('isomorphic-dompurify', () => ({
   default: {
     sanitize: (html: string) =>

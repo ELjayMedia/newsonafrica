@@ -44,6 +44,7 @@ export interface WordPressCategory {
   slug?: string
   description?: string
   count?: number
+  parent?: number | null
 }
 
 export interface WordPressCategoryConnection {

@@ -7,6 +7,8 @@ import { env } from "@/config/env"
 import { LayoutStructure } from "@/components/LayoutStructure"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { SiteHeader } from "@/components/nav/SiteHeader"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 const ClientProviders = dynamic(() =>
   import("@/components/ClientProviders").then((mod) => ({ default: mod.ClientProviders })),
@@ -55,7 +57,10 @@ export default function RootLayout({
           <UserPreferencesProvider>
             <BookmarksProvider>
               <ClientLayoutComponents>
-                <LayoutStructure>
+                <LayoutStructure
+                  countryCode={DEFAULT_COUNTRY}
+                  header={<SiteHeader countryCode={DEFAULT_COUNTRY} />}
+                >
                   <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
                     <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
                   </main>
