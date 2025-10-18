@@ -1,6 +1,6 @@
 import { cache } from "react"
 import { fetchPosts } from "./wordpress-api"
-import type { WordPressPost } from "./wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 
 async function fetchCategoryPosts(slug: string, count: number) {
   return fetchPosts({ perPage: count, category: slug })

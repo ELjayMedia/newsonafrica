@@ -26,7 +26,8 @@ export type {
 } from "./wordpress/types"
 
 export { COUNTRIES, executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./wordpress/client"
-export type { CountryConfig, WordPressPost } from "./wordpress/client"
+export type { CountryConfig } from "./wordpress/client"
+export type { WordPressPost } from "@/types/wp"
 
 export async function updateUserProfile() {
   return null

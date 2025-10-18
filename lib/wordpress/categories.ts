@@ -10,12 +10,8 @@ import {
 import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
-import type {
-  CategoryPostsResult,
-  WordPressCategory,
-  WordPressPost,
-  WordPressTag,
-} from "./types"
+import type { CategoryPostsResult } from "./types"
+import type { WordPressCategory, WordPressPost, WordPressTag } from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
