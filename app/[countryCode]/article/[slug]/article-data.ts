@@ -1,7 +1,7 @@
 import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
-import { mapWpPost } from "@/lib/utils/mapWpPost"
+import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { fetchFromWp, type WordPressPost } from "@/lib/wordpress/client"
 import { wordpressQueries } from "@/lib/wordpress-queries"
 
@@ -77,7 +77,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       return rawPost
     }
 
-    return mapWpPost(rawPost, "rest", countryCode)
+    return mapRestPostToWordPressPost(rawPost as any, countryCode)
   } catch (error) {
     // Log error but return null to allow fallback to other country editions
     console.error("[v0] Failed to load article", { countryCode, slug, error })

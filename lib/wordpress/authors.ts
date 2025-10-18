@@ -2,7 +2,7 @@ import { buildCacheTags } from "../cache/tag-utils"
 import { AUTHOR_DATA_QUERY, wordpressQueries } from "../wordpress-queries"
 import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
 import type { AuthorDataQuery } from "@/types/wpgraphql"
-import { mapWpPost } from "../utils/mapWpPost"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { WordPressAuthor, WordPressPost } from "./types"
 
@@ -39,7 +39,7 @@ export async function fetchAuthorData(
   return {
     ...data.user,
     posts: {
-      nodes: nodes.map((p) => mapWpPost(p, "gql", countryCode)),
+      nodes: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
       pageInfo: {
         ...data.user.posts.pageInfo,
         endCursor: data.user.posts.pageInfo.endCursor ?? null,

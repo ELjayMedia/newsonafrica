@@ -8,7 +8,7 @@ import {
   wordpressQueries,
 } from "../wordpress-queries"
 import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
-import { mapWpPost } from "../utils/mapWpPost"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
 import type {
   CategoryPostsResult,
@@ -94,7 +94,7 @@ export async function getPostsForCategories(
       }
 
       const nodes = node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)) ?? []
-      const posts = nodes.map((post) => mapWpPost(post, "gql", countryCode))
+      const posts = nodes.map((post) => mapGraphqlPostToWordPressPost(post, countryCode))
 
       results[slug] = {
         category,
@@ -221,7 +221,7 @@ export async function getPostsByCategoryForCountry(
         }
       : null
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-    const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
+    const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
     return {
       category,
       posts,
@@ -320,7 +320,7 @@ export async function fetchCategoryPosts(
   const nodes = data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     category,
-    posts: nodes.map((p) => mapWpPost(p, "gql", countryCode)),
+    posts: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
     pageInfo: {
       ...data.posts.pageInfo,
       endCursor: data.posts.pageInfo.endCursor ?? null,
