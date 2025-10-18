@@ -4,27 +4,42 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const notFoundMock = vi.fn<never, []>()
 
 const mocks = vi.hoisted(() => ({
-  getPostsByCategoryForCountry: vi.fn(),
+  getCategoryPageData: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
 }))
 
-vi.mock("@/lib/wordpress-api", () => ({
-  getPostsByCategoryForCountry: mocks.getPostsByCategoryForCountry,
+vi.mock("@/lib/data/category", () => ({
+  getCategoryPageData: mocks.getCategoryPageData,
 }))
 
-vi.mock("@/components/category/CategoryClientPage", () => ({
-  __esModule: true,
-  default: vi.fn(() => <div data-testid="category-client-page" />),
+vi.mock("@/components/category/CategoryHeader", () => ({
+  CategoryHeader: (props: Record<string, unknown>) => <div data-testid="category-header" {...props} />,
+}))
+
+vi.mock("@/components/posts/PostList", () => ({
+  PostList: (props: Record<string, unknown>) => <div data-testid="post-list" {...props} />,
+}))
+
+vi.mock("@/components/category/EmptyState", () => ({
+  EmptyState: (props: Record<string, unknown>) => <div data-testid="empty-state" {...props} />,
+}))
+
+vi.mock("@/components/category/ErrorState", () => ({
+  ErrorState: (props: Record<string, unknown>) => <div data-testid="error-state" {...props} />,
+}))
+
+vi.mock("@/components/category/LoadMoreClient", () => ({
+  LoadMoreClient: (props: Record<string, unknown>) => <div data-testid="load-more" {...props} />,
 }))
 
 describe("CountryCategoryPage", () => {
   beforeEach(() => {
     vi.resetModules()
     notFoundMock.mockReset()
-    mocks.getPostsByCategoryForCountry.mockReset()
+    mocks.getCategoryPageData.mockReset()
   })
 
   it("invokes notFound when the category is missing", async () => {
@@ -32,7 +47,7 @@ describe("CountryCategoryPage", () => {
     notFoundMock.mockImplementation(() => {
       throw notFoundError
     })
-    mocks.getPostsByCategoryForCountry.mockResolvedValue({ category: null, posts: [] })
+    mocks.getCategoryPageData.mockResolvedValue({ kind: "not-found" })
 
     const { default: CountryCategoryPage } = await import("./page")
 
@@ -41,22 +56,35 @@ describe("CountryCategoryPage", () => {
     ).rejects.toBe(notFoundError)
 
     expect(notFoundMock).toHaveBeenCalledTimes(1)
-    expect(mocks.getPostsByCategoryForCountry).toHaveBeenCalledWith("ng", "politics", 20)
+    expect(mocks.getCategoryPageData).toHaveBeenCalledWith("ng", "politics", 20)
   })
 
-  it("propagates errors when fetching category data fails", async () => {
-    const fetchError = new Error("network failure")
-    mocks.getPostsByCategoryForCountry.mockRejectedValue(fetchError)
-    notFoundMock.mockImplementation(() => {
-      throw new Error("notFound should not be called")
+  it("renders the page when data is available", async () => {
+    mocks.getCategoryPageData.mockResolvedValue({
+      kind: "success",
+      category: { name: "Politics", slug: "politics", href: "/ng/category/politics" },
+      posts: [{ id: "1", slug: "post", title: "Post", excerpt: "Excerpt", href: "/ng/article/post", categories: [], countryCode: "ng" }],
+      relatedCategories: [],
+      pageInfo: { hasNextPage: false, endCursor: null },
     })
 
     const { default: CountryCategoryPage } = await import("./page")
 
-    await expect(
-      CountryCategoryPage({ params: Promise.resolve({ countryCode: "ng", slug: "politics" }) }),
-    ).rejects.toBe(fetchError)
+    const result = await CountryCategoryPage({ params: Promise.resolve({ countryCode: "ng", slug: "politics" }) })
 
+    expect(result).toMatchSnapshot()
+    expect(notFoundMock).not.toHaveBeenCalled()
+  })
+
+  it("renders the error state when fetching fails", async () => {
+    const fetchError = new Error("network failure")
+    mocks.getCategoryPageData.mockRejectedValue(fetchError)
+
+    const { default: CountryCategoryPage } = await import("./page")
+
+    const result = await CountryCategoryPage({ params: Promise.resolve({ countryCode: "ng", slug: "politics" }) })
+
+    expect(result).toMatchSnapshot()
     expect(notFoundMock).not.toHaveBeenCalled()
   })
 })

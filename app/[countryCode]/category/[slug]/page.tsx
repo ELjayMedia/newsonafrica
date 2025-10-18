@@ -1,10 +1,15 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import CategoryClientPage from "@/components/category/CategoryClientPage"
 import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import * as log from "@/lib/log"
 import { env } from "@/config/env"
+import { getCategoryPageData } from "@/lib/data/category"
+import { CategoryHeader } from "@/components/category/CategoryHeader"
+import { PostList } from "@/components/posts/PostList"
+import { EmptyState } from "@/components/category/EmptyState"
+import { ErrorState } from "@/components/category/ErrorState"
+import { LoadMoreClient } from "@/components/category/LoadMoreClient"
 
 interface Params {
   countryCode: string
@@ -191,20 +196,46 @@ interface CountryCategoryPageProps {
 
 export default async function CountryCategoryPage({ params }: CountryCategoryPageProps) {
   const { countryCode, slug } = await params
+
   try {
-    const data = await getPostsByCategoryForCountry(countryCode, slug, 20)
-    if (!data.category) {
+    const result = await getCategoryPageData(countryCode, slug, 20)
+
+    if (result.kind === "not-found") {
       return notFound()
     }
-    return <CategoryClientPage params={{ slug }} initialData={data} />
+
+    const hasPosts = result.posts.length > 0
+
+    return (
+      <div className="container mx-auto space-y-10 px-4 py-10">
+        <CategoryHeader category={result.category} relatedCategories={result.relatedCategories} />
+
+        {hasPosts ? (
+          <div className="space-y-8">
+            <PostList posts={result.posts} />
+            {result.pageInfo.hasNextPage && (
+              <LoadMoreClient
+                countryCode={countryCode}
+                slug={slug}
+                initialCursor={result.pageInfo.endCursor}
+                hasNextPage={result.pageInfo.hasNextPage}
+              />
+            )}
+          </div>
+        ) : (
+          <EmptyState message={`We haven't published any articles for ${result.category.name} yet.`} />
+        )}
+      </div>
+    )
   } catch (error) {
-    log.error(`Error fetching category ${slug} for ${countryCode}`, { error })
-    if (error instanceof Error) {
+    if (error instanceof Error && error.message === "NEXT_NOT_FOUND") {
       throw error
     }
-
-    throw new Error(
-      `Error fetching category ${slug} for ${countryCode}: ${String(error)}`,
+    log.error(`Error fetching category ${slug} for ${countryCode}`, { error })
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <ErrorState retryHref={`/${countryCode}/category/${slug}`} />
+      </div>
     )
   }
 }

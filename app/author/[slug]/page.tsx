@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { env } from "@/config/env"
 import * as log from "@/lib/log"
 import { getAuthorBySlug } from "@/lib/wordpress-api"
+import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import AuthorContent from "./AuthorContent"
 
 interface AuthorPageProps {
@@ -148,8 +150,9 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
     }
 
     const { author, posts } = authorData
+    const mappedPosts = mapWordPressPostsToPostListItems(posts, DEFAULT_COUNTRY)
 
-    return <AuthorContent author={author} posts={posts} />
+    return <AuthorContent author={author} posts={mappedPosts} />
   } catch (error) {
     log.error(`Error loading author page for ${params.slug}`, { error })
     throw error

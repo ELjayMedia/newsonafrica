@@ -1,0 +1,87 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CountryCategoryPage > renders the error state when fetching fails 1`] = `
+{
+  "$$typeof": Symbol(react.transitional.element),
+  "_owner": null,
+  "_store": {},
+  "key": null,
+  "props": {
+    "children": {
+      "$$typeof": Symbol(react.transitional.element),
+      "_owner": null,
+      "_store": {},
+      "key": null,
+      "props": {
+        "retryHref": "/ng/category/politics",
+      },
+      "type": [Function],
+    },
+    "className": "container mx-auto px-4 py-10",
+  },
+  "type": "div",
+}
+`;
+
+exports[`CountryCategoryPage > renders the page when data is available 1`] = `
+{
+  "$$typeof": Symbol(react.transitional.element),
+  "_owner": null,
+  "_store": {},
+  "key": null,
+  "props": {
+    "children": [
+      {
+        "$$typeof": Symbol(react.transitional.element),
+        "_owner": null,
+        "_store": {},
+        "key": null,
+        "props": {
+          "category": {
+            "href": "/ng/category/politics",
+            "name": "Politics",
+            "slug": "politics",
+          },
+          "relatedCategories": [],
+        },
+        "type": [Function],
+      },
+      {
+        "$$typeof": Symbol(react.transitional.element),
+        "_owner": null,
+        "_store": {},
+        "key": null,
+        "props": {
+          "children": [
+            {
+              "$$typeof": Symbol(react.transitional.element),
+              "_owner": null,
+              "_store": {},
+              "key": null,
+              "props": {
+                "posts": [
+                  {
+                    "categories": [],
+                    "countryCode": "ng",
+                    "excerpt": "Excerpt",
+                    "href": "/ng/article/post",
+                    "id": "1",
+                    "slug": "post",
+                    "title": "Post",
+                  },
+                ],
+              },
+              "type": [Function],
+            },
+            false,
+          ],
+          "className": "space-y-8",
+        },
+        "type": "div",
+      },
+    ],
+    "className": "container mx-auto space-y-10 px-4 py-10",
+  },
+  "type": "div",
+}
+`;
