@@ -30,7 +30,7 @@ describe("legacy post redirect", () => {
     })
 
     const req = new NextRequest("https://example.com/post/some-slug", {
-      headers: { cookie: "preferredCountry=za" },
+      headers: { cookie: "country=za" },
     })
     const res = await middleware(req)
 
@@ -49,7 +49,7 @@ describe("legacy post redirect", () => {
     })
 
     const req = new NextRequest("https://example.com/post/some-slug", {
-      headers: { cookie: "preferredCountry=za" },
+      headers: { cookie: "country=za" },
     })
     const res = await middleware(req)
 
@@ -58,7 +58,7 @@ describe("legacy post redirect", () => {
 
   it("falls through when no KV entry exists", async () => {
     const req = new NextRequest("https://example.com/post/missing", {
-      headers: { cookie: "preferredCountry=za" },
+      headers: { cookie: "country=za" },
     })
     const res = await middleware(req)
 
@@ -68,9 +68,9 @@ describe("legacy post redirect", () => {
 })
 
 describe("category redirects", () => {
-  it("uses the preferred country cookie for direct visits", async () => {
+  it("uses the country cookie for direct visits", async () => {
     const req = new NextRequest("https://example.com/news", {
-      headers: { cookie: "preferredCountry=za" },
+      headers: { cookie: "country=za" },
     })
 
     const res = await middleware(req)
@@ -87,6 +87,30 @@ describe("category redirects", () => {
     expect(res?.status).toBe(307)
     expect(res?.headers.get("location")).toBe(
       `https://example.com/${DEFAULT_COUNTRY}/category/news`,
+    )
+  })
+})
+
+describe("home redirects", () => {
+  it("redirects to the country slug when the cookie is set", async () => {
+    const req = new NextRequest("https://example.com/", {
+      headers: { cookie: "country=za" },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe("https://example.com/za")
+  })
+
+  it("falls back to the default country when the cookie is missing", async () => {
+    const req = new NextRequest("https://example.com/")
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe(
+      `https://example.com/${DEFAULT_COUNTRY}`,
     )
   })
 })
