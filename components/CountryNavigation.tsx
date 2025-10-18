@@ -6,9 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
-import { getLatestPostsForCountry, mapPostsToHomePosts } from "@/lib/wordpress-api"
 import { COUNTRIES } from "@/lib/wordpress/client"
-import type { CountryPosts } from "@/types/home"
+import type { CountryPosts, HomePost } from "@/types/home"
 import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
@@ -87,10 +86,21 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
 
         const results = await Promise.allSettled(
           otherCountries.map(async (countryCode) => {
-            const result = await getLatestPostsForCountry(countryCode, 2)
+            const params = new URLSearchParams({
+              country: countryCode,
+              limit: "2",
+              format: "home",
+            })
+            const response = await fetch(`/api/wordpress/latest-posts?${params.toString()}`)
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch latest posts for ${countryCode}`)
+            }
+
+            const payload = (await response.json()) as { posts?: HomePost[] }
             return {
               countryCode,
-              posts: mapPostsToHomePosts(result.posts || [], countryCode),
+              posts: payload.posts ?? [],
             }
           }),
         )
