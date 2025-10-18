@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
-import { DEFAULT_COUNTRY, fetchRecentPosts } from "@/lib/wordpress-api"
-import { fetchMostReadPosts } from "@/lib/wordpress/posts"
+import { DEFAULT_COUNTRY } from "@/lib/wordpress-api"
+import {
+  DEFAULT_SIDEBAR_MOST_READ_LIMIT,
+  DEFAULT_SIDEBAR_RECENT_LIMIT,
+  fetchSidebarContent,
+} from "@/lib/sidebar"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
-const DEFAULT_RECENT_LIMIT = 10
-const DEFAULT_MOST_READ_LIMIT = 10
+const DEFAULT_RECENT_LIMIT = DEFAULT_SIDEBAR_RECENT_LIMIT
+const DEFAULT_MOST_READ_LIMIT = DEFAULT_SIDEBAR_MOST_READ_LIMIT
 
 export const runtime = "nodejs"
 export const revalidate = 180
@@ -17,10 +21,6 @@ const parseLimit = (value: string | null, fallback: number): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-const normalizeArray = (value: unknown): unknown[] => {
-  return Array.isArray(value) ? value : []
-}
-
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const country = (url.searchParams.get("country") || DEFAULT_COUNTRY).toLowerCase()
@@ -28,15 +28,12 @@ export async function GET(request: NextRequest) {
   const mostReadLimit = parseLimit(url.searchParams.get("mostReadLimit"), DEFAULT_MOST_READ_LIMIT)
 
   try {
-    const [recentResult, mostReadResult] = await Promise.allSettled([
-      fetchRecentPosts(recentLimit, country),
-      fetchMostReadPosts(country, mostReadLimit),
-    ])
-
-    const payload: SidebarContentPayload = {
-      recent: recentResult.status === "fulfilled" ? normalizeArray(recentResult.value) : [],
-      mostRead: mostReadResult.status === "fulfilled" ? normalizeArray(mostReadResult.value) : [],
-    }
+    const payload = await fetchSidebarContent({
+      country,
+      recentLimit,
+      mostReadLimit,
+      requestUrl: request.url,
+    })
 
     const response = NextResponse.json(payload)
 

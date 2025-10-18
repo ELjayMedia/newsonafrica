@@ -6,6 +6,15 @@ const SIDEBAR_ENDPOINT = "/api/sidebar"
 const RECENT_LIMIT = 10
 const MOST_READ_LIMIT = 10
 
+const toArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
+
+const normalizePayload = (
+  payload: Partial<SidebarContentPayload> | null | undefined,
+): SidebarContentPayload => ({
+  recent: toArray(payload?.recent),
+  mostRead: toArray(payload?.mostRead),
+})
+
 async function requestSidebarContent(country: string): Promise<SidebarContentPayload> {
   const params = new URLSearchParams({
     country,
@@ -25,21 +34,21 @@ async function requestSidebarContent(country: string): Promise<SidebarContentPay
 
   const payload = (await response.json().catch(() => ({}))) as Partial<SidebarContentPayload> | undefined
 
-  const recent = Array.isArray(payload?.recent) ? payload.recent : []
-  const mostRead = Array.isArray(payload?.mostRead) ? payload.mostRead : []
-
-  return { recent, mostRead }
+  return normalizePayload(payload)
 }
 
 export async function fetchSidebarContentData(country: string): Promise<SidebarContentPayload> {
   return requestSidebarContent(country)
 }
 
-export function useSidebarContent(country: string) {
+export function useSidebarContent(country: string, initialData?: SidebarContentPayload) {
+  const fallbackData = initialData ? normalizePayload(initialData) : undefined
+
   return useSWR<SidebarContentPayload>(
     ["sidebar-content", country],
     () => requestSidebarContent(country),
     {
+      fallbackData,
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 1000 * 60 * 3,

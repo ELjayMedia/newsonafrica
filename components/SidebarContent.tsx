@@ -11,9 +11,15 @@ import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { SidebarSkeleton } from "./SidebarSkeleton"
 import { Button } from "@/components/ui/button"
 import { useSidebarContent } from "@/hooks/useSidebarContent"
+import type { SidebarContentPayload } from "@/types/sidebar"
 
-export function SidebarContent() {
-  const country = getCurrentCountry()
+interface SidebarContentProps {
+  initialData?: SidebarContentPayload
+  country?: string
+}
+
+export function SidebarContent({ initialData, country: initialCountry }: SidebarContentProps = {}) {
+  const country = initialCountry ?? getCurrentCountry()
   const { preferences } = useUserPreferences()
 
   const preferredSections = useMemo(
@@ -21,10 +27,15 @@ export function SidebarContent() {
     [preferences.sections],
   )
 
-  const { data, error, isLoading, mutate } = useSidebarContent(country)
+  const { data, error, isLoading, mutate } = useSidebarContent(country, initialData)
 
-  const recentPosts = Array.isArray(data?.recent) ? data.recent : []
-  const mostReadPosts = Array.isArray(data?.mostRead) ? data.mostRead : []
+  const payload = data ?? initialData
+  const recentPosts = Array.isArray(payload?.recent) ? payload.recent : []
+  const mostReadPosts = Array.isArray(payload?.mostRead) ? payload.mostRead : []
+
+  const initialRecentCount = Array.isArray(initialData?.recent) ? initialData.recent.length : 0
+  const initialMostReadCount = Array.isArray(initialData?.mostRead) ? initialData.mostRead.length : 0
+  const hasInitialContent = initialRecentCount + initialMostReadCount > 0
 
   const personalizedPosts = useMemo(() => {
     if (!recentPosts.length) {
@@ -50,7 +61,7 @@ export function SidebarContent() {
     mutate()
   }, [mutate])
 
-  if (isLoading) {
+  if (isLoading && !hasInitialContent) {
     return <SidebarSkeleton />
   }
 
@@ -128,7 +139,7 @@ export function SidebarContent() {
                 return (
                   <Link
                     key={post.id}
-                    href={getArticleUrl(post.slug)}
+                    href={getArticleUrl(post.slug, country)}
                     className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
                   >
                     <div
@@ -178,7 +189,7 @@ export function SidebarContent() {
               {personalizedPosts.slice(0, 5).map((post) => (
                 <Link
                   key={post.id}
-                  href={getArticleUrl(post.slug)}
+                  href={getArticleUrl(post.slug, country)}
                   className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
                 >
                   {post.featuredImage?.node?.sourceUrl && (

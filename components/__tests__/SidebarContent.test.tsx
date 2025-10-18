@@ -209,4 +209,40 @@ describe("SidebarContent", () => {
     expect(await screen.findByText("Recovered Most Read")).toBeInTheDocument()
     expect(await screen.findByText("Recovered Story")).toBeInTheDocument()
   })
+
+  it("uses provided initial data without waiting for the API response", async () => {
+    const initialData = {
+      recent: [
+        {
+          id: "initial-recent",
+          slug: "initial-latest",
+          title: "Initial Latest",
+          excerpt: "",
+          date: "2024-03-01",
+          categories: { nodes: [] },
+        },
+      ],
+      mostRead: [
+        {
+          id: "initial-most",
+          slug: "initial-most-read",
+          title: "Initial Most Read",
+          excerpt: "",
+          date: "2024-03-02",
+        },
+      ],
+    }
+
+    fetchMock.mockImplementation(
+      () =>
+        new Promise(() => {
+          // Intentionally never resolve to ensure we rely on initial data
+        }),
+    )
+
+    renderWithSWR(<SidebarContent initialData={initialData} country="sz" />)
+
+    expect(screen.getByText("Initial Most Read")).toBeInTheDocument()
+    expect(screen.getByText("Initial Latest")).toBeInTheDocument()
+  })
 })
