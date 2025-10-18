@@ -23,7 +23,7 @@ import type {
   PostCategoriesQuery,
   RelatedPostsQuery,
 } from "@/types/wpgraphql"
-import { mapWpPost } from "../utils/mapWpPost"
+import { mapGraphqlPostToWordPressPost, mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
 import type { PaginatedPostsResult, WordPressTag } from "./types"
@@ -162,7 +162,7 @@ export async function getLatestPostsForCountry(
       usedGraphql = true
       const nodes = gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
       if (nodes.length > 0) {
-        posts.push(...nodes.map((node) => mapWpPost(node, "gql", countryCode)))
+        posts.push(...nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode)))
       }
 
       lastPageInfo = gqlData.posts.pageInfo ?? null
@@ -249,7 +249,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
       )
       if (gqlData?.posts) {
         const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-        const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
+        const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
         return posts.filter((p) => p.databaseId !== Number(postId))
       }
     }
@@ -571,7 +571,7 @@ export const fetchTaggedPosts = async ({
     if (gqlData?.posts) {
       const nodes =
         gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
-      const mappedNodes = nodes.map((node) => mapWpPost(node, "gql", countryCode))
+      const mappedNodes = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
       const pageInfo = gqlData.posts.pageInfo
       return {
         nodes: mappedNodes,
@@ -620,7 +620,7 @@ export const fetchTaggedPosts = async ({
       { fallbackValue: [] },
     )
 
-    const nodes = posts.map((post) => mapWpPost(post, "rest", countryCode))
+    const nodes = posts.map((post) => mapWordPressPostFromSource(post, "rest", countryCode))
     return {
       nodes,
       pageInfo: {
@@ -794,7 +794,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
   )
   if (gqlData?.posts) {
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-    return nodes.map((p) => mapWpPost(p, "gql", countryCode))
+    return nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
   }
   const tags = await executeRestFallback(
     () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("featured"), { tags: cacheTags }),
