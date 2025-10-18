@@ -23,10 +23,17 @@ export interface WordPressAuthorNode {
   databaseId?: number
   name?: string
   slug?: string
+  description?: string
   avatar?: { url?: string }
 }
 
 export interface WordPressAuthor {
+  id?: number
+  databaseId?: number
+  name: string
+  slug: string
+  description?: string
+  avatar?: { url?: string }
   node?: WordPressAuthorNode
 }
 
@@ -59,10 +66,13 @@ export interface WordPressPost {
   databaseId?: number
   globalRelayId?: string
   slug?: string
+  uri?: string
+  link?: string
   title?: string
   excerpt?: string
   content?: string
   date?: string
+  modified?: string
   author?: WordPressAuthor
   featuredImage?: WordPressMedia
   categories?: WordPressCategoryConnection
