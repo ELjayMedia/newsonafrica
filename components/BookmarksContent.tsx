@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+import formatDistanceToNow from "date-fns/formatDistanceToNow"
 import {
   DropdownMenu,
   DropdownMenuContent,
