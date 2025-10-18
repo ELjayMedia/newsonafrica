@@ -10,13 +10,8 @@ import {
   wordpressQueries,
   WORDPRESS_REST_MAX_PER_PAGE,
 } from "../wordpress-queries"
-import {
-  executeRestFallback,
-  fetchFromWp,
-  fetchFromWpGraphQL,
-  COUNTRIES,
-  type WordPressPost,
-} from "./client"
+import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL, COUNTRIES } from "./client"
+import type { WordPressPost } from "@/types/wp"
 import type {
   FeaturedPostsQuery,
   LatestPostsQuery,

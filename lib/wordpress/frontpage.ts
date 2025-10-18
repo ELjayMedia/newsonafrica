@@ -16,7 +16,7 @@ import type {
   PaginatedPostsResult,
   WordPressTag,
 } from "./types"
-import type { WordPressPost } from "./client"
+import type { WordPressPost } from "@/types/wp"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 

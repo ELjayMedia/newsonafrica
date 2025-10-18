@@ -63,10 +63,12 @@ export type RestPost = {
   databaseId?: number
   slug?: string
   date?: string
+  modified?: string
   title?: string | { rendered?: string }
   excerpt?: string | { rendered?: string }
   content?: string | { rendered?: string }
   globalRelayId?: string
+  link?: string
   _embedded?: {
     "wp:featuredmedia"?: Array<{
       source_url?: string
@@ -102,11 +104,19 @@ const mapRestAuthor = (post: RestPost): WordPressAuthor | undefined => {
   const author = post._embedded?.["wp:author"]?.[0]
   if (!author) return undefined
 
+  const databaseId = author.id ?? undefined
+  const name = author.name ?? ""
+  const slug = author.slug ?? ""
+
   return {
+    id: databaseId,
+    databaseId,
+    name,
+    slug,
     node: {
-      databaseId: author.id ?? undefined,
-      name: author.name ?? undefined,
-      slug: author.slug ?? undefined,
+      databaseId,
+      name,
+      slug,
     },
   }
 }
@@ -117,6 +127,7 @@ const mapRestCategories = (post: RestPost): WordPressCategoryConnection => {
     nodes: categoryTerms
       .filter((cat): cat is NonNullable<typeof cat> => Boolean(cat?.slug))
       .map((cat) => ({
+        id: cat.id ?? cat.databaseId ?? undefined,
         databaseId: cat.databaseId ?? cat.id ?? undefined,
         name: cat.name ?? undefined,
         slug: cat.slug ?? undefined,
@@ -130,6 +141,7 @@ const mapRestTags = (post: RestPost): WordPressTagConnection => {
     nodes: tagTerms
       .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag?.slug))
       .map((tag) => ({
+        id: tag.id ?? tag.databaseId ?? undefined,
         databaseId: tag.databaseId ?? tag.id ?? undefined,
         name: tag.name ?? undefined,
         slug: tag.slug ?? undefined,
@@ -144,9 +156,11 @@ export const mapRestPostToWordPressPost = (post: RestPost, countryCode?: string)
     id: post.id !== undefined ? String(post.id) : undefined,
     slug: post.slug ?? undefined,
     date: post.date ?? undefined,
+    modified: post.modified ?? undefined,
     title: extractRendered(post.title) ?? "",
     excerpt: extractRendered(post.excerpt) ?? "",
     content: content ? rewriteLegacyLinks(content, countryCode) : undefined,
+    link: typeof post.link === "string" ? post.link : undefined,
     featuredImage: mapRestFeaturedImage(post),
     author: mapRestAuthor(post),
     categories: mapRestCategories(post),
@@ -181,15 +195,28 @@ const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefi
 const mapGraphqlAuthor = (post: GraphqlPostNode): WordPressAuthor | undefined => {
   if (!post.author?.node) return undefined
   const node = post.author.node
+  const databaseId =
+    node.databaseId ?? (typeof node.id === "string" ? decodeGlobalId(node.id) : (node as any).id) ?? undefined
+  const name = node.name ?? ""
+  const slug = node.slug ?? ""
+  const avatar =
+    typeof node.avatar === "object" && node.avatar !== null && "url" in node.avatar
+      ? { url: (node.avatar as { url?: string }).url ?? undefined }
+      : undefined
   return {
+    id: typeof node.id === "number" ? node.id : databaseId,
+    databaseId,
+    name,
+    slug,
+    description: (node as any).description ?? undefined,
+    avatar,
     node: {
-      databaseId: node.databaseId ?? (typeof node.id === "string" ? decodeGlobalId(node.id) : (node as any).id) ?? undefined,
-      name: node.name ?? undefined,
-      slug: node.slug ?? undefined,
-      avatar:
-        typeof node.avatar === "object" && node.avatar !== null && "url" in node.avatar
-          ? { url: (node.avatar as { url?: string }).url ?? undefined }
-          : undefined,
+      id: typeof node.id === "number" ? node.id : undefined,
+      databaseId,
+      name,
+      slug,
+      description: (node as any).description ?? undefined,
+      avatar,
     },
   }
 }
@@ -200,6 +227,10 @@ const mapGraphqlCategories = (post: GraphqlPostNode): WordPressCategoryConnectio
       ?.filter((cat): cat is NonNullable<typeof cat> => Boolean(cat?.slug))
       .map((cat) => ({
         databaseId: cat.databaseId ?? (typeof cat.id === "string" ? decodeGlobalId(cat.id) : (cat as any).id) ?? undefined,
+        id:
+          (typeof cat.id === "number" ? cat.id : undefined) ??
+          (typeof cat.databaseId === "number" ? cat.databaseId : undefined) ??
+          (typeof cat.id === "string" ? decodeGlobalId(cat.id) : undefined),
         name: cat.name ?? undefined,
         slug: cat.slug ?? undefined,
         description: (cat as any).description ?? undefined,
@@ -213,6 +244,10 @@ const mapGraphqlTags = (post: GraphqlPostNode): WordPressTagConnection => ({
       ?.filter((tag): tag is NonNullable<typeof tag> => Boolean(tag?.slug))
       .map((tag) => ({
         databaseId: tag.databaseId ?? (typeof tag.id === "string" ? decodeGlobalId(tag.id) : (tag as any).id) ?? undefined,
+        id:
+          (typeof tag.id === "number" ? tag.id : undefined) ??
+          (typeof tag.databaseId === "number" ? tag.databaseId : undefined) ??
+          (typeof tag.id === "string" ? decodeGlobalId(tag.id) : undefined),
         name: tag.name ?? undefined,
         slug: tag.slug ?? undefined,
       })) ?? [],
@@ -226,9 +261,12 @@ export const mapGraphqlPostToWordPressPost = (
   id: post.id ?? undefined,
   slug: post.slug ?? undefined,
   date: post.date ?? undefined,
+  modified: post.modified ?? undefined,
   title: post.title ?? "",
   excerpt: post.excerpt ?? "",
   content: post.content ? rewriteLegacyLinks(post.content, countryCode) : undefined,
+  uri: (post as any).uri ?? undefined,
+  link: (post as any).link ?? undefined,
   featuredImage: mapGraphqlFeaturedImage(post),
   author: mapGraphqlAuthor(post),
   categories: mapGraphqlCategories(post),

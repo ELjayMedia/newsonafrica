@@ -106,13 +106,24 @@ export async function getAuthorBySlug(
 
   const gqlAuthor = await fetchAuthorData(slug, null, countryCode, postLimit)
   if (gqlAuthor) {
+    const databaseId = coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id)
+    const avatar = selectAvatarUrl(gqlAuthor.avatar)
     return {
       author: {
-        id: coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id),
-        name: gqlAuthor.name,
-        slug: gqlAuthor.slug,
+        id: databaseId,
+        databaseId,
+        name: gqlAuthor.name ?? "",
+        slug: gqlAuthor.slug ?? slug,
         description: gqlAuthor.description ?? undefined,
-        avatar: selectAvatarUrl(gqlAuthor.avatar),
+        avatar,
+        node: {
+          id: typeof gqlAuthor.id === "number" ? gqlAuthor.id : undefined,
+          databaseId,
+          name: gqlAuthor.name ?? "",
+          slug: gqlAuthor.slug ?? slug,
+          description: gqlAuthor.description ?? undefined,
+          avatar,
+        },
       },
       posts: gqlAuthor.posts.nodes ?? [],
       pageInfo: gqlAuthor.posts.pageInfo,
@@ -158,13 +169,23 @@ export async function getAuthorBySlug(
     { fallbackValue: [] },
   )
 
+  const restAvatar = selectAvatarUrl(restAuthor.avatar_urls)
   return {
     author: {
       id: restAuthor.id,
-      name: restAuthor.name,
-      slug: restAuthor.slug,
+      databaseId: restAuthor.id,
+      name: restAuthor.name ?? "",
+      slug: restAuthor.slug ?? slug,
       description: restAuthor.description || undefined,
-      avatar: selectAvatarUrl(restAuthor.avatar_urls),
+      avatar: restAvatar,
+      node: {
+        id: restAuthor.id,
+        databaseId: restAuthor.id,
+        name: restAuthor.name ?? "",
+        slug: restAuthor.slug ?? slug,
+        description: restAuthor.description || undefined,
+        avatar: restAvatar,
+      },
     },
     posts,
   }
