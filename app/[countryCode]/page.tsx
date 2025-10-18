@@ -8,7 +8,13 @@ import {
 import { SUPPORTED_EDITIONS } from "@/lib/editions"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const revalidate = HOME_FEED_REVALIDATE
+export const revalidate = 60
+
+if (process.env.NODE_ENV !== "production" && revalidate !== HOME_FEED_REVALIDATE) {
+  throw new Error(
+    `Country home feed revalidate interval mismatch: page=${revalidate}, data=${HOME_FEED_REVALIDATE}`,
+  )
+}
 
 type Props = { params: { countryCode: string } }
 
