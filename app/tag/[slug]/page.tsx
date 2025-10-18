@@ -4,7 +4,7 @@ import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import { getServerCountry } from "@/lib/utils/routing"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 export const runtime = "nodejs"
 export const revalidate = 60 // Revalidate every 60 seconds
@@ -35,7 +35,6 @@ async function TagWrapper({ slug }: { slug: string }) {
   const tag = await fetchSingleTag(slug)
   if (!tag) notFound()
 
-  const countryCode = getServerCountry()
-  const initialData = await fetchTaggedPosts({ slug, countryCode, first: 10 })
+  const initialData = await fetchTaggedPosts({ slug, countryCode: DEFAULT_COUNTRY, first: 10 })
   return <TagContent slug={slug} initialData={initialData} tag={tag} />
 }
