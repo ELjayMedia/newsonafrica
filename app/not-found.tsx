@@ -1,5 +1,3 @@
-"use client"
-
 export default function NotFound() {
   return (
     <html lang="en">
@@ -30,6 +28,7 @@ export default function NotFound() {
           </p>
           <a
             href="/"
+            className="not-found-link"
             style={{
               padding: "12px 24px",
               backgroundColor: "#000",
@@ -38,12 +37,6 @@ export default function NotFound() {
               borderRadius: "6px",
               textDecoration: "none",
               transition: "background-color 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#374151"
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#000"
             }}
           >
             Return to Homepage
