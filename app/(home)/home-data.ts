@@ -1,6 +1,6 @@
 import "server-only"
 
-import { unstable_noStore } from "next/cache"
+import { cache } from "react"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import {
@@ -86,13 +86,8 @@ export const HOME_FEED_CACHE_TAGS = buildCacheTags({
   extra: ["tag:home-feed"],
 })
 
-const inflightRequests = new Map<string, Promise<AggregatedHomeData>>()
-const countryInflightRequests = new Map<string, Promise<AggregatedHomeData>>()
-
-const buildCacheKey = (baseUrl: string, cacheTags: string[]): string => {
-  const normalizedTags = Array.from(new Set(cacheTags)).sort()
-  return `${baseUrl}|${normalizedTags.join("|")}`
-}
+const normalizeCacheTags = (cacheTags: string[]): string[] =>
+  Array.from(new Set(cacheTags)).sort()
 
 const hasAggregatedHomeContent = ({
   heroPost,
@@ -193,26 +188,12 @@ async function fetchAggregatedHomeUncached(
   return createEmptyAggregatedHome()
 }
 
-export function fetchAggregatedHome(
-  baseUrl: string,
-  cacheTags: string[],
-): Promise<AggregatedHomeData> {
-  const cacheKey = buildCacheKey(baseUrl, cacheTags)
-  const existing = inflightRequests.get(cacheKey)
-  if (existing) {
-    return existing
-  }
-
-  const request = fetchAggregatedHomeUncached(baseUrl, cacheTags).finally(() => {
-    inflightRequests.delete(cacheKey)
-  })
-
-  inflightRequests.set(cacheKey, request)
-  return request
-}
-
-const buildCountryCacheKey = (countryCode: string, limit: number) =>
-  `${countryCode}|${limit}`
+export const fetchAggregatedHome = cache(
+  async (baseUrl: string, cacheTags: string[]): Promise<AggregatedHomeData> => {
+    const normalizedTags = normalizeCacheTags(cacheTags)
+    return fetchAggregatedHomeUncached(baseUrl, normalizedTags)
+  },
+)
 
 async function fetchAggregatedHomeForCountryUncached(
   countryCode: string,
@@ -264,23 +245,12 @@ async function fetchAggregatedHomeForCountryUncached(
   return createEmptyAggregatedHome()
 }
 
-export function fetchAggregatedHomeForCountry(
-  countryCode: string,
-  limit = HOME_FEED_FALLBACK_LIMIT,
-): Promise<AggregatedHomeData> {
-  const cacheKey = buildCountryCacheKey(countryCode, limit)
-  const existing = countryInflightRequests.get(cacheKey)
-  if (existing) {
-    return existing
-  }
-
-  const request = fetchAggregatedHomeForCountryUncached(countryCode, limit).finally(() => {
-    countryInflightRequests.delete(cacheKey)
-  })
-
-  countryInflightRequests.set(cacheKey, request)
-  return request
-}
+export const fetchAggregatedHomeForCountry = cache(
+  async (
+    countryCode: string,
+    limit = HOME_FEED_FALLBACK_LIMIT,
+  ): Promise<AggregatedHomeData> => fetchAggregatedHomeForCountryUncached(countryCode, limit),
+)
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
 
@@ -422,8 +392,6 @@ async function buildCountryPosts(
 }
 
 export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
-  unstable_noStore()
-
   const { countryPosts, africanAggregate } =
     (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
@@ -448,8 +416,6 @@ export async function buildHomeContentPropsForEdition(
   baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
-  unstable_noStore()
-
   const aggregatedHome = isAfricanEdition(edition)
     ? await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
     : await fetchAggregatedHomeForCountry(edition.code)

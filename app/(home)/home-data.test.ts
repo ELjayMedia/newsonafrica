@@ -6,6 +6,30 @@ import type { HomePost } from "@/types/home"
 const BASE_URL = "https://example.com"
 const CACHE_TAGS = ["section:home-feed"]
 
+const setupServerMocks = async () => {
+  vi.doMock("server-only", () => ({}))
+  vi.doMock("react", async () => {
+    const actual = await vi.importActual<typeof import("react")>("react")
+
+    return {
+      ...actual,
+      cache: ((fn: (...args: unknown[]) => unknown) => {
+        const store = new Map<string, unknown>()
+
+        return ((...args: unknown[]) => {
+          const key = JSON.stringify(args)
+
+          if (!store.has(key)) {
+            store.set(key, fn(...args))
+          }
+
+          return store.get(key)
+        }) as typeof fn
+      }) as typeof actual.cache,
+    }
+  })
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -42,7 +66,7 @@ describe("fetchAggregatedHome", () => {
 
   it("returns aggregated WordPress content when it is available", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const fetchMock = vi.fn(() => {
       throw new Error("API route should not be called when WordPress succeeds")
@@ -64,7 +88,7 @@ describe("fetchAggregatedHome", () => {
 
   it("falls back to the API route when the WordPress aggregation fails", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const apiPayload: AggregatedHomeData = {
       heroPost: {
@@ -101,7 +125,7 @@ describe("fetchAggregatedHome", () => {
 
   it("deduplicates fallback API requests when the WordPress aggregation fails", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const apiPayload: AggregatedHomeData = {
       heroPost: {
@@ -145,7 +169,7 @@ describe("fetchAggregatedHome", () => {
 describe("fetchAggregatedHomeForCountry", () => {
   it("builds aggregated home data from frontpage slices when available", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const wordpressApi = await import("@/lib/wordpress-api")
     const hero = {
@@ -219,7 +243,7 @@ describe("fetchAggregatedHomeForCountry", () => {
 
   it("falls back to fp-tag posts when frontpage slices are empty", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const fallbackPosts: HomePost[] = [
       {
@@ -262,7 +286,7 @@ describe("fetchAggregatedHomeForCountry", () => {
 describe("buildHomeContentProps", () => {
   it("flattens aggregated home data into HomeContent props", async () => {
     vi.resetModules()
-    vi.doMock("server-only", () => ({}))
+    await setupServerMocks()
 
     const { SUPPORTED_COUNTRIES } = await import("@/lib/utils/routing")
 
