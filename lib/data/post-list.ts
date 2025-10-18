@@ -1,8 +1,7 @@
 import { decodeHtmlEntities } from "@/lib/utils/decodeHtmlEntities"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
-import type { WordPressCategory } from "@/lib/wordpress/types"
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressCategory, WordPressPost } from "@/types/wp"
 
 export interface PostListCategory {
   name: string

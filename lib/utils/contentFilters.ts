@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 
 /**
  * Filter posts by tag

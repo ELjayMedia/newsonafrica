@@ -1,4 +1,4 @@
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
 
 export const CACHE_CONTROL_HEADER = "public, max-age=3600, s-maxage=3600"
