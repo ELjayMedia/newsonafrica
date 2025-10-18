@@ -80,9 +80,10 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
 
     return mapRestPostToWordPressPost(rawPost as any, countryCode)
   } catch (error) {
-    // Log error but return null to allow fallback to other country editions
     console.error("[v0] Failed to load article", { countryCode, slug, error })
-    return null
+
+    // Re-throw so the calling layer can surface the failure to the error boundary
+    throw (error instanceof Error ? error : new Error("Failed to load article"))
   }
 }
 
