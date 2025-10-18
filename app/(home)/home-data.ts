@@ -281,6 +281,7 @@ type HomeContentInitialData = {
   featuredPosts: HomePost[]
   categories: Category[]
   recentPosts: HomePost[]
+  categoryPosts?: Record<string, HomePost[]>
 }
 
 const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData => {
@@ -293,6 +294,7 @@ const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData =>
     featuredPosts,
     categories: [] as Category[],
     recentPosts,
+    categoryPosts: {},
   }
 }
 
