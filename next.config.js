@@ -83,6 +83,8 @@ const nextConfig = {
   },
   images: {
     unoptimized: false,
+    loader: "custom",
+    loaderFile: "./lib/nitroImageLoader.js",
     domains: [
       "newsonafrica.com",
       "secure.gravatar.com",

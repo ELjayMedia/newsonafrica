@@ -1,4 +1,5 @@
 import { rewriteLegacyLinks } from './routing'
+import { ensureNitroCdnUrl } from './nitroImage'
 import type { WordPressPost } from '../wordpress/client'
 import type { HomePostFieldsFragment, PostFieldsFragment } from '@/types/wpgraphql'
 
@@ -70,7 +71,7 @@ const mapRestPost = (post: RestPost, countryCode?: string): WordPressPost => {
           __typename: 'NodeWithFeaturedImageToMediaItemConnectionEdge',
           node: {
             __typename: 'MediaItem',
-            sourceUrl: featured.source_url ?? undefined,
+            sourceUrl: ensureNitroCdnUrl(featured.source_url) ?? undefined,
             altText: featured.alt_text ?? undefined,
             mediaDetails: featured.media_details
               ? {
@@ -146,7 +147,7 @@ export function mapWpPost(
           node: gqlPost.featuredImage.node
             ? {
                 __typename: gqlPost.featuredImage.node.__typename ?? 'MediaItem',
-                sourceUrl: gqlPost.featuredImage.node.sourceUrl ?? undefined,
+                sourceUrl: ensureNitroCdnUrl(gqlPost.featuredImage.node.sourceUrl) ?? undefined,
                 altText: gqlPost.featuredImage.node.altText ?? undefined,
                 mediaDetails: gqlPost.featuredImage.node.mediaDetails
                   ? {

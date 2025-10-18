@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { env } from "@/config/env"
 import { fetchWithTimeout } from "@/lib/utils/fetchWithTimeout"
 import { decodeHtmlEntities } from "@/lib/utils/decodeHtmlEntities"
+import { ensureNitroCdnUrl } from "@/lib/utils/nitroImage"
 import type { HomePost } from "@/types/home"
 
 const DEFAULT_LIMIT = 5
@@ -53,10 +54,11 @@ const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefine
             : typeof node.alt === "string"
               ? node.alt
               : undefined
-      if (sourceUrl) {
+      const normalizedSource = ensureNitroCdnUrl(sourceUrl)
+      if (normalizedSource) {
         return {
           node: {
-            sourceUrl,
+            sourceUrl: normalizedSource,
             altText,
           },
         }
@@ -71,10 +73,11 @@ const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefine
         ? item.featured_image_url
         : undefined
 
-  if (directUrl) {
+  const normalizedDirect = ensureNitroCdnUrl(directUrl)
+  if (normalizedDirect) {
     return {
       node: {
-        sourceUrl: directUrl,
+        sourceUrl: normalizedDirect,
       },
     }
   }

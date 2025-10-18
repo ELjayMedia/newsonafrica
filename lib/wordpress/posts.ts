@@ -27,6 +27,7 @@ import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
 import type { PaginatedPostsResult, WordPressTag } from "./types"
 import type { HomePost } from "@/types/home"
+import { ensureNitroCdnUrl } from "../utils/nitroImage"
 
 const toErrorDetails = (error: unknown) => {
   if (error instanceof Error) {
@@ -293,10 +294,11 @@ const normalizeFeaturedImage = (post: MaybeMostReadPost): HomePost["featuredImag
             ? (node.alt as string)
             : undefined
 
-    if (sourceUrl) {
+    const normalizedSource = ensureNitroCdnUrl(sourceUrl)
+    if (normalizedSource) {
       return {
         node: {
-          sourceUrl,
+          sourceUrl: normalizedSource,
           altText,
         },
       }
@@ -310,10 +312,11 @@ const normalizeFeaturedImage = (post: MaybeMostReadPost): HomePost["featuredImag
         ? post.featured_image_url
         : undefined
 
-  if (directSource) {
+  const normalizedDirect = ensureNitroCdnUrl(directSource)
+  if (normalizedDirect) {
     return {
       node: {
-        sourceUrl: directSource,
+        sourceUrl: normalizedDirect,
       },
     }
   }

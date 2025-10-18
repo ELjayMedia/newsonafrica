@@ -188,9 +188,11 @@ const executeWordPressSearchForScope = async (
   scope: SearchScope,
   page: number,
   perPage: number,
+  sort: NormalizedSearchParams["sort"] = "relevance",
 ): Promise<WordPressScopeResult> => {
   const safePage = Math.max(1, page)
   const safePerPage = Math.max(1, perPage)
+  const orderBy = sort === "latest" ? "date" : "relevance"
 
   if (scope.type === "panAfrican") {
     const perCountryFetchSize = Math.min(100, safePage * safePerPage)
@@ -198,7 +200,13 @@ const executeWordPressSearchForScope = async (
     const responses = await Promise.all(
       SUPPORTED_COUNTRIES.map(async (country) => {
         const code = country.code.toLowerCase()
-        const response = await wpSearchPosts(query, { page: 1, perPage: perCountryFetchSize, country: code })
+        const response = await wpSearchPosts(query, {
+          page: 1,
+          perPage: perCountryFetchSize,
+          country: code,
+          orderBy,
+          order: "desc",
+        })
         return {
           code,
           response,
@@ -228,7 +236,13 @@ const executeWordPressSearchForScope = async (
   }
 
   const countryCode = scope.country
-  const response = await wpSearchPosts(query, { page: safePage, perPage: safePerPage, country: countryCode })
+  const response = await wpSearchPosts(query, {
+    page: safePage,
+    perPage: safePerPage,
+    country: countryCode,
+    orderBy,
+    order: "desc",
+  })
   const records = fromWordPressResults(response, countryCode)
 
   return {
@@ -306,13 +320,6 @@ const mapAlgoliaHits = (hits: AlgoliaSearchRecord[], fallbackCountry: string): S
     }
   })
 
-const buildWordPressOptions = (params: NormalizedSearchParams) => ({
-  page: params.page,
-  perPage: params.perPage,
-  orderBy: params.sort === "latest" ? "date" : "relevance",
-  order: "desc" as const,
-})
-
 export async function GET(request: NextRequest) {
   logRequest(request)
   const startTime = Date.now()
@@ -354,6 +361,7 @@ export async function GET(request: NextRequest) {
             scope,
             1,
             10,
+            normalizedParams.sort,
           )
           return jsonWithCors(request, {
             suggestions: fallback.suggestions,
@@ -420,18 +428,23 @@ export async function GET(request: NextRequest) {
 
   if (!searchIndex) {
     try {
-      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
-      const records = fromWordPressResults(wpResults, fallbackCountry)
+      const scopeResults = await executeWordPressSearchForScope(
+        normalizedParams.query,
+        scope,
+        normalizedParams.page,
+        normalizedParams.perPage,
+        normalizedParams.sort,
+      )
       return jsonWithCors(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: Math.max(1, wpResults.totalPages || 1),
-        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
-        hasMore: wpResults.hasMore,
+        results: scopeResults.results,
+        total: scopeResults.total,
+        totalPages: scopeResults.totalPages,
+        currentPage: scopeResults.currentPage,
+        hasMore: scopeResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: scopeResults.suggestions,
         performance: {
-          responseTime: wpResults.searchTime || Date.now() - startTime,
+          responseTime: Date.now() - startTime,
           source: "wordpress",
         },
       })
@@ -469,19 +482,24 @@ export async function GET(request: NextRequest) {
     console.error("Algolia search failed", error)
 
     try {
-      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
-      const records = fromWordPressResults(wpResults, fallbackCountry)
+      const scopeResults = await executeWordPressSearchForScope(
+        normalizedParams.query,
+        scope,
+        normalizedParams.page,
+        normalizedParams.perPage,
+        normalizedParams.sort,
+      )
 
       return jsonWithCors(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: Math.max(1, wpResults.totalPages || 1),
-        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
-        hasMore: wpResults.hasMore,
+        results: scopeResults.results,
+        total: scopeResults.total,
+        totalPages: scopeResults.totalPages,
+        currentPage: scopeResults.currentPage,
+        hasMore: scopeResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: scopeResults.suggestions,
         performance: {
-          responseTime: wpResults.searchTime || Date.now() - startTime,
+          responseTime: Date.now() - startTime,
           source: "wordpress-fallback",
         },
       })

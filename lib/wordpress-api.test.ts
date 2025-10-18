@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import * as wordpressApi from "./wordpress-api"
+import { getNitroCdnUrl } from "./utils/nitroImage"
 
 const buildRestPost = (id: number, slugPrefix = "rest") => ({
   id,
@@ -56,7 +57,7 @@ describe("fetchPost", () => {
     ]
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPost }))
     const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "test" })
-    expect(result?.featuredImage?.node.sourceUrl).toBe("img.jpg")
+    expect(result?.featuredImage?.node.sourceUrl).toBe(getNitroCdnUrl("img.jpg"))
     expect(result?.title).toBe("Test")
   })
 
@@ -109,7 +110,7 @@ describe("getRelatedPosts", () => {
       expect.stringContaining("tags_relation=AND"),
       expect.anything(),
     )
-    expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
+    expect(result[0].featuredImage?.node.sourceUrl).toBe(getNitroCdnUrl("img.jpg"))
     expect(result[0].content).toContain('/sz/article/old')
   })
 })
