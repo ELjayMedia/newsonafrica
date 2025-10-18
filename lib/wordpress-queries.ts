@@ -350,11 +350,41 @@ export const CATEGORY_POSTS_QUERY = gql`
   }
 `
 
+export const WORDPRESS_REST_MAX_PER_PAGE = 100
+
+type RecentPostsOptions =
+  | number
+  | {
+      perPage?: number
+      page?: number
+      offset?: number
+    }
+
 export const wordpressQueries = {
-  recentPosts: (limit = 20) => ({
-    endpoint: 'posts',
-    params: { per_page: limit, _embed: 1, order: 'desc', orderby: 'date' },
-  }),
+  recentPosts: (input: RecentPostsOptions = 20) => {
+    const perPage = typeof input === 'number' ? input : input.perPage ?? 20
+    const params: Record<string, string | number> = {
+      per_page: Math.min(perPage, WORDPRESS_REST_MAX_PER_PAGE),
+      _embed: 1,
+      order: 'desc',
+      orderby: 'date',
+    }
+
+    if (typeof input !== 'number') {
+      if (typeof input.page === 'number') {
+        params.page = input.page
+      }
+
+      if (typeof input.offset === 'number') {
+        params.offset = input.offset
+      }
+    }
+
+    return {
+      endpoint: 'posts',
+      params,
+    }
+  },
   posts: ({
     page = 1,
     perPage = 10,

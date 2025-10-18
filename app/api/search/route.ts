@@ -419,6 +419,34 @@ export async function GET(request: NextRequest) {
   }
 
   if (!searchIndex) {
+    if (scope.type === "panAfrican") {
+      try {
+        const fallback = await executeWordPressSearchForScope(
+          normalizedParams.query,
+          scope,
+          normalizedParams.page,
+          normalizedParams.perPage,
+        )
+
+        return jsonWithCors(request, {
+          results: fallback.results,
+          total: fallback.total,
+          totalPages: fallback.totalPages,
+          currentPage: fallback.currentPage,
+          hasMore: fallback.hasMore,
+          query: normalizedParams.query,
+          suggestions: fallback.suggestions,
+          performance: {
+            responseTime: Date.now() - startTime,
+            source: "wordpress",
+          },
+        })
+      } catch (error) {
+        console.error("WordPress pan-African fallback failed", error)
+        return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
+      }
+    }
+
     try {
       const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
       const records = fromWordPressResults(wpResults, fallbackCountry)
