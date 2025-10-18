@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow } from "date-fns"
+import formatDistanceToNow from "date-fns/formatDistanceToNow"
 import Fuse from "fuse.js"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
