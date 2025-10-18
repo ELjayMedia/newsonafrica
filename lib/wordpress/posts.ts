@@ -8,6 +8,7 @@ import {
   RELATED_POSTS_QUERY,
   TAGGED_POSTS_QUERY,
   wordpressQueries,
+  WORDPRESS_REST_MAX_PER_PAGE,
 } from "../wordpress-queries"
 import {
   executeRestFallback,
@@ -66,6 +67,63 @@ const cursorToOffset = (cursor: string | null | undefined) => {
   return index + 1
 }
 
+const MAX_GRAPHQL_BATCH_SIZE = WORDPRESS_REST_MAX_PER_PAGE
+
+interface FetchRecentPostsRestOptions {
+  countryCode: string
+  count: number
+  cacheTags: string[]
+  offset?: number
+}
+
+const fetchRecentPostsRestBatched = async ({
+  countryCode,
+  count,
+  cacheTags,
+  offset = 0,
+}: FetchRecentPostsRestOptions): Promise<{ posts: WordPressPost[]; hasMore: boolean }> => {
+  if (count <= 0) {
+    return { posts: [], hasMore: false }
+  }
+
+  const collected: WordPressPost[] = []
+  let currentOffset = offset
+  let hasMore = false
+
+  while (collected.length < count) {
+    const remaining = count - collected.length
+    const perPage = Math.min(remaining, WORDPRESS_REST_MAX_PER_PAGE)
+    const { endpoint, params } = wordpressQueries.recentPosts({ perPage, offset: currentOffset })
+
+    const batch = await executeRestFallback(
+      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags }),
+      `[v0] Recent posts REST batch failed for ${countryCode}`,
+      { countryCode, offset: currentOffset, perPage, remaining },
+      { fallbackValue: [] },
+    )
+
+    if (batch.length === 0) {
+      hasMore = false
+      break
+    }
+
+    collected.push(...batch)
+    currentOffset += batch.length
+
+    if (batch.length < perPage) {
+      hasMore = false
+      break
+    }
+
+    if (collected.length >= count) {
+      hasMore = true
+      break
+    }
+  }
+
+  return { posts: collected.slice(0, count), hasMore }
+}
+
 export async function getLatestPostsForCountry(
   countryCode: string,
   limit = 20,
@@ -75,45 +133,82 @@ export async function getLatestPostsForCountry(
 
   try {
     console.log("[v0] Fetching latest posts for:", countryCode)
+    const posts: WordPressPost[] = []
+    const baseOffset = cursorToOffset(cursor ?? null) ?? 0
+    let afterCursor = cursor ?? null
+    let lastPageInfo: LatestPostsQuery["posts"]["pageInfo"] | null = null
+    let usedGraphql = false
+    let graphqlFailed = false
 
-    const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
-      countryCode,
-      LATEST_POSTS_QUERY,
-      {
-        first: limit,
-        ...(cursor ? { after: cursor } : {}),
-      },
-      tags,
-    )
+    while (posts.length < limit) {
+      const batchSize = Math.min(MAX_GRAPHQL_BATCH_SIZE, limit - posts.length)
+      const variables: { first: number; after?: string } = { first: batchSize }
+      if (afterCursor) {
+        variables.after = afterCursor
+      }
 
-    if (gqlData?.posts) {
+      const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
+        countryCode,
+        LATEST_POSTS_QUERY,
+        variables,
+        tags,
+      )
+
+      if (!gqlData?.posts) {
+        graphqlFailed = true
+        break
+      }
+
+      usedGraphql = true
       const nodes = gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
-      const posts = nodes.map((p) => mapWpPost(p, "gql", countryCode))
-      console.log("[v0] Found", posts.length, "latest posts via GraphQL")
+      if (nodes.length > 0) {
+        posts.push(...nodes.map((node) => mapWpPost(node, "gql", countryCode)))
+      }
+
+      lastPageInfo = gqlData.posts.pageInfo ?? null
+
+      if (!lastPageInfo?.hasNextPage || !lastPageInfo.endCursor) {
+        break
+      }
+
+      afterCursor = lastPageInfo.endCursor
+    }
+
+    if (posts.length >= limit) {
+      console.log("[v0] Found", posts.length, "latest posts via GraphQL (batched)")
       return {
-        posts,
-        hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-        endCursor: gqlData.posts.pageInfo.endCursor ?? null,
+        posts: posts.slice(0, limit),
+        hasNextPage: lastPageInfo?.hasNextPage ?? false,
+        endCursor: lastPageInfo?.endCursor ?? null,
       }
     }
 
-    console.log("[v0] No GraphQL results, trying REST fallback")
+    if (!usedGraphql || graphqlFailed) {
+      console.log("[v0] GraphQL unavailable, switching to REST for latest posts", {
+        countryCode,
+        limit,
+        cursor,
+      })
+    }
 
-    const { endpoint, params } = wordpressQueries.recentPosts(limit)
-    const offset = cursorToOffset(cursor ?? null)
-    const restParams = offset !== null ? { ...params, offset } : params
-    const posts = await executeRestFallback(
-      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }, { tags }),
-      `[v0] Latest posts REST fallback failed for ${countryCode}`,
-      { countryCode, limit, endpoint, params: restParams },
-      { fallbackValue: [] },
-    )
+    const remaining = limit - posts.length
+    const restResult = await fetchRecentPostsRestBatched({
+      countryCode,
+      count: remaining,
+      cacheTags: tags,
+      offset: baseOffset + posts.length,
+    })
 
-    console.log("[v0] Found", posts.length, "latest posts via REST")
+    if (restResult.posts.length > 0) {
+      console.log("[v0] Found", restResult.posts.length, "latest posts via REST (batched)")
+    }
+
+    const combined = posts.concat(restResult.posts)
+
     return {
-      posts,
-      hasNextPage: posts.length === limit,
-      endCursor: null,
+      posts: combined,
+      hasNextPage: restResult.hasMore,
+      endCursor: restResult.hasMore ? null : lastPageInfo?.endCursor ?? null,
     }
   } catch (error) {
     console.error("[v0] Failed to fetch latest posts:", error)
@@ -567,9 +662,21 @@ export const fetchPosts = async (
       } = {},
 ) => {
   if (typeof options === "number") {
-    const { endpoint, params } = wordpressQueries.recentPosts(options)
+    const limit = options
     const tags = buildCacheTags({ country: DEFAULT_COUNTRY, section: "news" })
-    return (await fetchFromWp<WordPressPost[]>(DEFAULT_COUNTRY, { endpoint, params }, { tags })) || []
+    const { posts } = await getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
+    if (posts.length >= limit) {
+      return posts.slice(0, limit)
+    }
+
+    const restResult = await fetchRecentPostsRestBatched({
+      countryCode: DEFAULT_COUNTRY,
+      count: limit - posts.length,
+      cacheTags: tags,
+      offset: posts.length,
+    })
+
+    return posts.concat(restResult.posts).slice(0, limit)
   }
 
   const {

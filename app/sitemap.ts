@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
-  const postsPromise = fetchPosts(1000).catch((err) => {
+  const postsPromise = fetchRecentPosts(1000).catch((err) => {
     console.warn(
       "Failed to fetch posts for sitemap:",
       err instanceof Error ? err.message : err,

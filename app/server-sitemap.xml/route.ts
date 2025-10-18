@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
+import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress-api"
 import { siteConfig } from "@/config/site"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
@@ -8,7 +8,7 @@ export async function GET() {
 
   let posts
   try {
-    posts = await fetchPosts(1000)
+    posts = await fetchRecentPosts(1000)
   } catch (error) {
     console.error("Error fetching posts for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
