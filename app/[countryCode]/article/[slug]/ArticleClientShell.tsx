@@ -13,7 +13,7 @@ import { ShareButtons } from "@/components/ShareButtons"
 import { ArrowUp, Calendar, ChevronLeft, ChevronRight, Gift, User } from "lucide-react"
 import formatDistanceToNow from "date-fns/formatDistanceToNow"
 
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { transformWordPressEmbeds } from "@/lib/utils/wordpressEmbeds"

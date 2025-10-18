@@ -11,7 +11,7 @@ import {
   mapPostsToHomePosts,
 } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 
 const DEFAULT_TAGGED_LIMIT = 8
 const DEFAULT_FEATURED_LIMIT = 6

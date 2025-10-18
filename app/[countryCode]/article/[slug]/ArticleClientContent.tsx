@@ -1,4 +1,4 @@
-import type { WordPressPost } from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
 
 import { ArticleClientShell } from "./ArticleClientShell"
 
