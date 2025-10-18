@@ -2,8 +2,8 @@
 
 import { OptimizedImage } from "@/components/OptimizedImage"
 import { PostList } from "@/components/posts/PostList"
-import type { WordPressAuthor } from "@/lib/wordpress-api"
-import type { PostListItemData } from "@/lib/data/post-list"
+import type { WordPressAuthor } from "@/types/wp"
+import type { PostListItemData } from "@/lib/mapping/post-mappers"
 
 interface AuthorContentProps {
   author: WordPressAuthor

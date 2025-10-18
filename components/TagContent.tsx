@@ -6,11 +6,11 @@ import { useEffect, useCallback } from "react"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { fetchTaggedPosts } from "@/lib/wordpress-api"
-import type { FetchTaggedPostsResult } from "@/lib/wordpress-api"
+import { fetchTaggedPosts } from "@/lib/wp-server/tags"
+import type { FetchTaggedPostsResult } from "@/types/wp"
 import { getCurrentCountry } from "@/lib/utils/routing"
 import { PostList } from "@/components/posts/PostList"
-import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
+import { mapWpPostsToPostListItems } from "@/lib/mapping/post-mappers"
 
 interface TagContentProps {
   slug: string
@@ -60,7 +60,7 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
   if (error) return <div>Error: {(error as Error).message}</div>
 
   const posts = useMemo(() => data?.flatMap((page) => page.nodes ?? []) || [], [data])
-  const mappedPosts = useMemo(() => mapWordPressPostsToPostListItems(posts, country), [posts, country])
+  const mappedPosts = useMemo(() => mapWpPostsToPostListItems(posts, country), [posts, country])
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
