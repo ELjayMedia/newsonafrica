@@ -1,6 +1,10 @@
-import { getPostsByCategoryForCountry } from "@/lib/wordpress-api"
-import type { CategoryPostsResult, WordPressCategory } from "@/lib/wordpress/types"
-import { mapWordPressPostsToPostListItems, type PostListItemData, type PostListCategory } from "./post-list"
+import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
+import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
+import {
+  mapWpPostsToPostListItems,
+  type PostListItemData,
+  type PostListCategory,
+} from "@/lib/mapping/post-mappers"
 import { getCategoryUrl } from "@/lib/utils/routing"
 import { decodeHtmlEntities } from "@/lib/utils/decodeHtmlEntities"
 
@@ -72,7 +76,7 @@ export async function getCategoryPageData(
     return { kind: "not-found" }
   }
 
-  const posts = mapWordPressPostsToPostListItems(postsResult.posts, countryCode)
+  const posts = mapWpPostsToPostListItems(postsResult.posts, countryCode)
 
   return {
     kind: "success",

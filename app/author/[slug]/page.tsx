@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { env } from "@/config/env"
 import * as log from "@/lib/log"
-import { getAuthorBySlug } from "@/lib/wordpress-api"
-import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
+import { getAuthorBySlug } from "@/lib/wp-server/authors"
+import { mapWpPostsToPostListItems } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import AuthorContent from "./AuthorContent"
 
@@ -150,7 +150,7 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
     }
 
     const { author, posts } = authorData
-    const mappedPosts = mapWordPressPostsToPostListItems(posts, DEFAULT_COUNTRY)
+    const mappedPosts = mapWpPostsToPostListItems(posts, DEFAULT_COUNTRY)
 
     return <AuthorContent author={author} posts={mappedPosts} />
   } catch (error) {

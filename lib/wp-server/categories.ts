@@ -13,13 +13,13 @@ import {
   fetchFromWpGraphQL,
   type WordPressPost,
 } from "../wordpress/client"
-import { mapWpPost } from "../utils/mapWpPost"
+import { mapWpPost } from "@/lib/utils/mapWpPost"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
 import type {
   CategoryPostsResult,
   WordPressCategory,
   WordPressTag,
-} from "../wordpress/types"
+} from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
