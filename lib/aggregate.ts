@@ -1,13 +1,14 @@
-import { getLatestPosts, type WpPost } from "./wp";
+import { SUPPORTED_COUNTRIES } from "./editions";
+import { getLatestPosts, type CountryCode, type WpPost } from "./wp";
 
 export async function getAfricanHomeFeed() {
-  // MVP: only SZ + ZA; extend later.
-  const [sz, za] = await Promise.all([
-    getLatestPosts("sz", 12).catch(() => [] as WpPost[]),
-    getLatestPosts("za", 12).catch(() => [] as WpPost[]),
-  ]);
+  const postsByCountry = await Promise.all(
+    SUPPORTED_COUNTRIES.map(({ code }) =>
+      getLatestPosts(code as CountryCode, 12).catch(() => [] as WpPost[]),
+    ),
+  );
 
-  const merged = dedupePosts([...sz, ...za]);
+  const merged = dedupePosts(postsByCountry.flat());
   const hero = merged[0] ? [merged[0]] : [];
   const secondary = merged.slice(1, 5);
   const remainder = merged.slice(5);
