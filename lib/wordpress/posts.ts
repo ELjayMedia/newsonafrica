@@ -351,7 +351,7 @@ const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost
   }
 }
 
-const buildMostReadRequestUrl = (countryCode: string, limit: number) => {
+const buildMostReadRequestUrl = (countryCode: string, limit: number, requestUrl?: string) => {
   const params = new URLSearchParams({ country: countryCode })
   if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
     params.set("limit", String(Math.floor(limit)))
@@ -360,25 +360,53 @@ const buildMostReadRequestUrl = (countryCode: string, limit: number) => {
   const relativePath = `/api/most-read?${params.toString()}`
 
   if (typeof window === "undefined") {
-    try {
-      const baseUrl = env.NEXT_PUBLIC_SITE_URL?.trim()
-      if (baseUrl) {
-        return new URL(relativePath, baseUrl).toString()
+    const candidateBases: string[] = []
+
+    const configuredBase = env.NEXT_PUBLIC_SITE_URL?.trim()
+    if (configuredBase) {
+      candidateBases.push(configuredBase)
+    }
+
+    if (requestUrl) {
+      try {
+        candidateBases.push(new URL(requestUrl).origin)
+      } catch (error) {
+        console.warn("[v0] Failed to derive request origin for most-read URL", {
+          countryCode,
+          relativePath,
+          requestUrl,
+          error: toErrorDetails(error),
+        })
       }
-    } catch (error) {
-      console.warn("[v0] Failed to build absolute most-read URL", {
-        countryCode,
-        relativePath,
-        error: toErrorDetails(error),
-      })
+    }
+
+    for (const baseUrl of candidateBases) {
+      try {
+        return new URL(relativePath, baseUrl).toString()
+      } catch (error) {
+        console.warn("[v0] Failed to build absolute most-read URL", {
+          countryCode,
+          relativePath,
+          baseUrl,
+          error: toErrorDetails(error),
+        })
+      }
     }
   }
 
   return relativePath
 }
 
-export const fetchMostReadPosts = async (countryCode = DEFAULT_COUNTRY, limit = 5): Promise<HomePost[]> => {
-  const requestUrl = buildMostReadRequestUrl(countryCode, limit)
+interface FetchMostReadPostsOptions {
+  requestUrl?: string
+}
+
+export const fetchMostReadPosts = async (
+  countryCode = DEFAULT_COUNTRY,
+  limit = 5,
+  options: FetchMostReadPostsOptions = {},
+): Promise<HomePost[]> => {
+  const requestUrl = buildMostReadRequestUrl(countryCode, limit, options.requestUrl)
 
   const response = await fetch(requestUrl)
   if (!response.ok) {
