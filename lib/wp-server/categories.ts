@@ -13,7 +13,7 @@ import {
   fetchFromWpGraphQL,
   type WordPressPost,
 } from "../wordpress/client"
-import { mapWpPost } from "@/lib/utils/mapWpPost"
+import { mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
 import type {
   CategoryPostsResult,
@@ -245,7 +245,7 @@ export async function getPostsForCategories(
 
         const posts =
           node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)).map((post) =>
-            mapWpPost(post, "gql", countryCode),
+            mapWordPressPostFromSource(post, "gql", countryCode),
           ) ?? []
 
         mapped[slug] = {
@@ -330,7 +330,7 @@ export async function getPostsByCategoryForCountry(
 
       return {
         category,
-        posts: nodes.map((post) => mapWpPost(post, "gql", countryCode)),
+        posts: nodes.map((post) => mapWordPressPostFromSource(post, "gql", countryCode)),
         hasNextPage: data.posts.pageInfo?.hasNextPage ?? false,
         endCursor: data.posts.pageInfo?.endCursor ?? null,
       }
@@ -458,7 +458,7 @@ export async function fetchCategoryPosts(
 
   return {
     category,
-    posts: nodes.map((post) => mapWpPost(post, "gql", countryCode)),
+    posts: nodes.map((post) => mapWordPressPostFromSource(post, "gql", countryCode)),
     pageInfo: {
       ...data.posts.pageInfo,
       endCursor: data.posts.pageInfo?.endCursor ?? null,
