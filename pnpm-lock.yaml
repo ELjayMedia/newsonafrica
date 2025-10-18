@@ -218,6 +218,9 @@ importers:
       opossum:
         specifier: latest
         version: 9.0.0
+      p-limit:
+        specifier: ^7.1.1
+        version: 7.1.1
       path:
         specifier: latest
         version: 0.12.7
@@ -5807,6 +5810,10 @@ packages:
   p-limit@5.0.0:
     resolution: {integrity: sha512-/Eaoq+QyLSiXQ4lyYV23f14mZRQcXnxfHrN0vCai+ak9G0pp9iEQukIIZq5NccEvwRB8PUnZT0KsOoDCINS1qQ==}
     engines: {node: '>=18'}
+
+  p-limit@7.1.1:
+    resolution: {integrity: sha512-i8PyM2JnsNChVSYWLr2BAjNoLi0BAYC+wecOnZnVV+YSNJkzP7cWmvI34dk0WArWfH9KwBHNoZI3P3MppImlIA==}
+    engines: {node: '>=20'}
 
   p-locate@5.0.0:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
@@ -13685,6 +13692,10 @@ snapshots:
       yocto-queue: 0.1.0
 
   p-limit@5.0.0:
+    dependencies:
+      yocto-queue: 1.2.1
+
+  p-limit@7.1.1:
     dependencies:
       yocto-queue: 1.2.1
 
