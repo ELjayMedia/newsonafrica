@@ -1,5 +1,5 @@
 export * from "./wordpress/frontpage"
-export * from "./wordpress/categories"
+export * from "./wp-server/categories"
 export * from "./wordpress/posts"
 export * from "./wordpress/authors"
 export * from "./wordpress/comments"
