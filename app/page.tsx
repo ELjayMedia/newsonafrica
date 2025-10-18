@@ -1,9 +1,9 @@
 import { HomeContent } from "@/components/HomeContent";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
-import { buildHomeContentProps } from "./(home)/home-data";
+import { HOME_FEED_REVALIDATE, buildHomeContentProps } from "./(home)/home-data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = HOME_FEED_REVALIDATE;
 
 export default async function Page() {
   const baseUrl = getSiteBaseUrl();

@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation"
 
 import { HomeContent } from "@/components/HomeContent"
-import { buildHomeContentPropsForEdition } from "../(home)/home-data"
+import {
+  HOME_FEED_REVALIDATE,
+  buildHomeContentPropsForEdition,
+} from "../(home)/home-data"
 import { SUPPORTED_EDITIONS } from "@/lib/editions"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const dynamic = "force-dynamic"
+export const revalidate = HOME_FEED_REVALIDATE
 
 type Props = { params: { countryCode: string } }
 
