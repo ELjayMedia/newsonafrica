@@ -6,6 +6,22 @@ import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { WordPressAuthor, WordPressPost } from "@/types/wp"
 
+const normalizeRenderedText = (value: unknown): string | undefined => {
+  if (!value) return undefined
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  }
+  if (typeof value === "object" && "rendered" in (value as Record<string, unknown>)) {
+    const rendered = (value as { rendered?: unknown }).rendered
+    if (typeof rendered === "string") {
+      const trimmed = rendered.trim()
+      return trimmed.length > 0 ? trimmed : undefined
+    }
+  }
+  return undefined
+}
+
 export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
   const { endpoint, params } = wordpressQueries.authors()
   const tags = buildCacheTags({ country: countryCode, section: "authors" })
@@ -38,6 +54,7 @@ export async function fetchAuthorData(
   const nodes = data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     ...data.user,
+    description: normalizeRenderedText(data.user.description) ?? undefined,
     posts: {
       nodes: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
       pageInfo: {
@@ -108,20 +125,21 @@ export async function getAuthorBySlug(
   if (gqlAuthor) {
     const databaseId = coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id)
     const avatar = selectAvatarUrl(gqlAuthor.avatar)
+    const description = normalizeRenderedText(gqlAuthor.description)
     return {
       author: {
         id: databaseId,
         databaseId,
         name: gqlAuthor.name ?? "",
         slug: gqlAuthor.slug ?? slug,
-        description: gqlAuthor.description ?? undefined,
+        description,
         avatar,
         node: {
           id: typeof gqlAuthor.id === "number" ? gqlAuthor.id : undefined,
           databaseId,
           name: gqlAuthor.name ?? "",
           slug: gqlAuthor.slug ?? slug,
-          description: gqlAuthor.description ?? undefined,
+          description,
           avatar,
         },
       },
@@ -150,6 +168,8 @@ export async function getAuthorBySlug(
     return null
   }
 
+  const restDescription = normalizeRenderedText(restAuthor.description)
+
   const query = wordpressQueries.posts({
     page: 1,
     perPage: postLimit,
@@ -176,14 +196,14 @@ export async function getAuthorBySlug(
       databaseId: restAuthor.id,
       name: restAuthor.name ?? "",
       slug: restAuthor.slug ?? slug,
-      description: restAuthor.description || undefined,
+      description: restDescription,
       avatar: restAvatar,
       node: {
         id: restAuthor.id,
         databaseId: restAuthor.id,
         name: restAuthor.name ?? "",
         slug: restAuthor.slug ?? slug,
-        description: restAuthor.description || undefined,
+        description: restDescription,
         avatar: restAvatar,
       },
     },
