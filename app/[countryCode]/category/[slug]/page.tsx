@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
 import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import * as log from "@/lib/log"
 import { env } from "@/config/env"
