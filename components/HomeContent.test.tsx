@@ -94,6 +94,7 @@ describe("HomeContent", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/sz")
     window.localStorage.clear()
+    document.cookie = "country=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
     document.cookie = "preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
     fetchMock.mockReset()
     global.fetch = fetchMock as unknown as typeof fetch

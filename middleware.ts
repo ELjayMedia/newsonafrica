@@ -5,6 +5,7 @@ import {
   DEFAULT_COUNTRY,
   SUPPORTED_COUNTRIES,
 } from "@/lib/utils/routing"
+import { AFRICAN_EDITION } from "@/lib/editions"
 import { getLegacyPostRoute } from "@/lib/legacy-routes"
 
 
@@ -17,12 +18,21 @@ const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
 }
 
 function getCountryFromRequest(request: NextRequest): string {
-  const cookieValue =
+  const rawCookieValue =
     request.cookies.get("country")?.value ??
     request.cookies.get("preferredCountry")?.value
 
-  if (cookieValue && SUPPORTED_COUNTRIES.includes(cookieValue)) {
-    return cookieValue
+  const normalized = rawCookieValue?.toLowerCase()
+
+  if (!normalized) {
+    return DEFAULT_COUNTRY
+  }
+
+  if (
+    SUPPORTED_COUNTRIES.includes(normalized) ||
+    normalized === AFRICAN_EDITION.code
+  ) {
+    return normalized
   }
 
   return DEFAULT_COUNTRY

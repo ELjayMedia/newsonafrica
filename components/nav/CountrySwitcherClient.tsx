@@ -2,21 +2,27 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { AFRICAN_EDITION, SUPPORTED_COUNTRIES, SUPPORTED_EDITIONS } from "@/lib/editions"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
+
+import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { updateAuthCountry } from "@/app/actions/auth"
 import { useUser } from "@/contexts/UserContext"
 
-export default function CountrySelector() {
+const EDITIONS_BY_CODE = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code, edition]))
+
+function useSafeUser() {
+  try {
+    return useUser()
+  } catch {
+    return { user: null } as Pick<ReturnType<typeof useUser>, "user">
+  }
+}
+
+export default function CountrySwitcherClient() {
   const router = useRouter()
   const pathname = usePathname()
+  const { user } = useSafeUser()
   const [selectedEdition, setSelectedEdition] = useState<string>(AFRICAN_EDITION.code)
-  const { user } = useUser()
   const [, startTransition] = useTransition()
 
   useEffect(() => {
@@ -25,18 +31,15 @@ export default function CountrySelector() {
       return
     }
 
-    const segments = pathname.split("/").filter(Boolean)
-    if (segments.length === 0) {
+    const [potentialCountry] = pathname.split("/").filter(Boolean)
+    if (!potentialCountry) {
       setSelectedEdition(AFRICAN_EDITION.code)
       return
     }
 
-    const [potentialCountry] = segments
     const normalized = potentialCountry.toLowerCase()
-    const countryMatch = SUPPORTED_COUNTRIES.find((country) => country.code === normalized)
-
-    if (countryMatch) {
-      setSelectedEdition(countryMatch.code)
+    if (EDITIONS_BY_CODE.has(normalized)) {
+      setSelectedEdition(normalized)
       return
     }
 
@@ -44,48 +47,43 @@ export default function CountrySelector() {
   }, [pathname])
 
   const currentEdition = useMemo(() => {
-    return SUPPORTED_EDITIONS.find((edition) => edition.code === selectedEdition) ?? AFRICAN_EDITION
+    return EDITIONS_BY_CODE.get(selectedEdition) ?? AFRICAN_EDITION
   }, [selectedEdition])
 
-  const handleChange = (value: string) => {
-    setSelectedEdition(value)
+  const handleChange = async (value: string) => {
+    const normalized = value.toLowerCase()
+    const edition = EDITIONS_BY_CODE.get(normalized)
 
-    if (value === AFRICAN_EDITION.code) {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("preferredCountry")
-        document.cookie = "preferredCountry=; path=/; max-age=0"
-      }
-      if (user) {
-        startTransition(() => {
-          void updateAuthCountry(AFRICAN_EDITION.code).catch((error) => {
-            console.error("Failed to update Supabase auth country", error)
-          })
-        })
-      }
-      router.push("/")
+    if (!edition) {
+      console.warn(`[CountrySwitcherClient] Unsupported edition selected: ${value}`)
       return
     }
 
-    const country = SUPPORTED_COUNTRIES.find((entry) => entry.code === value)
-    if (!country) {
-      router.push("/")
-      return
-    }
+    setSelectedEdition(edition.code)
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("preferredCountry", country.code)
-      document.cookie = `preferredCountry=${country.code}; path=/; max-age=${60 * 60 * 24 * 365}`
+    try {
+      const response = await fetch("/api/set-country", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country: edition.code }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Unexpected response: ${response.status}`)
+      }
+    } catch (error) {
+      console.error("[CountrySwitcherClient] Failed to persist country preference", error)
     }
 
     if (user) {
       startTransition(() => {
-        void updateAuthCountry(country.code).catch((error) => {
+        void updateAuthCountry(edition.code).catch((error) => {
           console.error("Failed to update Supabase auth country", error)
         })
       })
     }
 
-    router.push(`/${country.code}`)
+    router.push(`/${edition.code}`)
   }
 
   return (

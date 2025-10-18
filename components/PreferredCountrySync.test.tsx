@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { PreferredCountrySync } from "./PreferredCountrySync"
 
 let currentPathname = "/"
+const originalFetch = global.fetch
+
+const createFetchMock = () =>
+  vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))) as unknown as typeof fetch
 
 vi.mock("next/navigation", () => ({
   usePathname: () => currentPathname,
@@ -14,10 +18,13 @@ describe("PreferredCountrySync", () => {
     currentPathname = "/"
     window.localStorage.clear()
     document.cookie = "preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    document.cookie = "country=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    global.fetch = createFetchMock()
   })
 
   afterEach(() => {
     cleanup()
+    global.fetch = originalFetch
   })
 
   it("writes the preferred country when navigating to a supported edition", async () => {

@@ -31,6 +31,7 @@ beforeAll(async () => {
 const resetClientState = () => {
   window.history.pushState({}, '', '/')
   window.localStorage.clear()
+  document.cookie = 'country=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
   document.cookie = 'preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
 }
 
@@ -52,7 +53,15 @@ describe('getCurrentCountry', () => {
     expect(getCurrentCountry()).toBe('za')
   })
 
-  it('falls back to cookies before local storage when no pathname is supplied', () => {
+  it('prefers the country cookie before legacy storage', () => {
+    document.cookie = 'country=za; path=/'
+    document.cookie = 'preferredCountry=sz; path=/'
+    window.localStorage.setItem('preferredCountry', 'sz')
+
+    expect(getCurrentCountry()).toBe('za')
+  })
+
+  it('supports the legacy preferredCountry cookie as a fallback', () => {
     document.cookie = 'preferredCountry=za; path=/'
     expect(getCurrentCountry()).toBe('za')
   })

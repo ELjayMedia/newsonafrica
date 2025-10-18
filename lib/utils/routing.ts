@@ -3,7 +3,10 @@
  * Converts from generic /post/ routes to /[country]/article/ routes
  */
 
-import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "@/lib/editions"
+import {
+  SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS,
+  SUPPORTED_EDITIONS as SUPPORTED_EDITION_DEFINITIONS,
+} from "@/lib/editions"
 import { DEFAULT_COUNTRY as WORDPRESS_DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
 
 const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
@@ -17,9 +20,38 @@ export const DEFAULT_COUNTRY =
 // Supported countries
 export const SUPPORTED_COUNTRIES = SUPPORTED_COUNTRY_EDITIONS.map((country) => country.code)
 
-const matchSupportedCountry = (value?: string | null) => {
+const SUPPORTED_EDITION_CODES = new Set(
+  SUPPORTED_EDITION_DEFINITIONS.map((edition) => edition.code),
+)
+
+const matchSupportedEdition = (value?: string | null) => {
   const normalized = normalizeCountry(value)
-  return normalized && SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
+  return normalized && SUPPORTED_EDITION_CODES.has(normalized)
+    ? normalized
+    : undefined
+}
+
+const COOKIE_PREFERENCE_KEYS = ["country", "preferredCountry"] as const
+
+const readCookiePreference = (cookiesString?: string | null) => {
+  if (!cookiesString) return undefined
+
+  for (const key of COOKIE_PREFERENCE_KEYS) {
+    const prefix = `${key}=`
+    const match = cookiesString
+      .split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(prefix))
+
+    if (match) {
+      const value = match.slice(prefix.length)
+      if (value) {
+        return decodeURIComponent(value)
+      }
+    }
+  }
+
+  return undefined
 }
 
 /**
@@ -31,7 +63,7 @@ export function getCurrentCountry(pathname?: string): string {
     if (!path) return undefined
     const pathSegments = path.split("/").filter(Boolean)
     if (!pathSegments.length) return undefined
-    return matchSupportedCountry(pathSegments[0])
+    return matchSupportedEdition(pathSegments[0])
   }
 
   // Try to extract from provided pathname first
@@ -48,12 +80,8 @@ export function getCurrentCountry(pathname?: string): string {
     }
 
     // Read preferred country from cookies if present
-    const preferredCookie = window.document?.cookie
-      ?.split(";")
-      .map((cookie) => cookie.trim())
-      .find((cookie) => cookie.startsWith("preferredCountry="))
-    const cookieCountry = preferredCookie?.split("=")?.[1]
-    const fromCookie = matchSupportedCountry(cookieCountry && decodeURIComponent(cookieCountry))
+    const cookieCountry = readCookiePreference(window.document?.cookie)
+    const fromCookie = matchSupportedEdition(cookieCountry)
     if (fromCookie) {
       return fromCookie
     }
@@ -61,7 +89,7 @@ export function getCurrentCountry(pathname?: string): string {
     // Try to get from localStorage (user preference)
     try {
       const savedCountry = window.localStorage?.getItem("preferredCountry")
-      const fromStorage = matchSupportedCountry(savedCountry)
+      const fromStorage = matchSupportedEdition(savedCountry)
       if (fromStorage) {
         return fromStorage
       }
@@ -79,7 +107,8 @@ export function getServerCountry(): string {
     // Dynamically import to avoid bundling on client
     const { cookies } = require("next/headers") as typeof import("next/headers")
     const store = cookies() as any
-    const saved = matchSupportedCountry(store.get("preferredCountry")?.value)
+    const raw = store.get("country")?.value ?? store.get("preferredCountry")?.value
+    const saved = matchSupportedEdition(raw)
     if (saved) {
       return saved
     }

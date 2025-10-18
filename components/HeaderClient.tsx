@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useMemo } from "react"
 import { usePathname, useRouter } from "next/navigation"
 
-import CountrySelector from "@/components/CountrySelector"
+import CountrySwitcherClient from "@/components/nav/CountrySwitcherClient"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
 import { WeatherWidget } from "@/components/WeatherWidget"
@@ -64,7 +64,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                   priority
                 />
               </Link>
-              <CountrySelector />
+              <CountrySwitcherClient />
             </div>
 
             <div className="flex items-center gap-4">

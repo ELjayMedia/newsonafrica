@@ -55,9 +55,17 @@ function persistPreferredCountry(countryCode: string) {
   }
 }
 
+function useSafeUser() {
+  try {
+    return useUser()
+  } catch {
+    return { user: null } as Pick<ReturnType<typeof useUser>, "user">
+  }
+}
+
 export function PreferredCountrySync() {
   const pathname = usePathname()
-  const { user } = useUser()
+  const { user } = useSafeUser()
   const userId = user?.id ?? null
   const [, startTransition] = useTransition()
 
@@ -78,6 +86,14 @@ export function PreferredCountrySync() {
     }
 
     persistPreferredCountry(normalized)
+
+    void fetch("/api/set-country", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: normalized }),
+    }).catch((error) => {
+      console.error("[PreferredCountrySync] Failed to sync country preference", error)
+    })
 
     if (userId) {
       startTransition(() => {
