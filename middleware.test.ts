@@ -103,6 +103,17 @@ describe("home redirects", () => {
     expect(res?.headers.get("location")).toBe("https://example.com/za")
   })
 
+  it("supports the legacy preferredCountry cookie", async () => {
+    const req = new NextRequest("https://example.com/", {
+      headers: { cookie: "preferredCountry=sz" },
+    })
+
+    const res = await middleware(req)
+
+    expect(res?.status).toBe(307)
+    expect(res?.headers.get("location")).toBe("https://example.com/sz")
+  })
+
   it("falls back to the default country when the cookie is missing", async () => {
     const req = new NextRequest("https://example.com/")
 

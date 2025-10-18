@@ -17,10 +17,14 @@ const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
 }
 
 function getCountryFromRequest(request: NextRequest): string {
-  const countryCookie = request.cookies.get("country")?.value
-  if (countryCookie && SUPPORTED_COUNTRIES.includes(countryCookie)) {
-    return countryCookie
+  const cookieValue =
+    request.cookies.get("country")?.value ??
+    request.cookies.get("preferredCountry")?.value
+
+  if (cookieValue && SUPPORTED_COUNTRIES.includes(cookieValue)) {
+    return cookieValue
   }
+
   return DEFAULT_COUNTRY
 }
 
