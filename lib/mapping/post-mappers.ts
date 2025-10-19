@@ -284,7 +284,13 @@ export const mapWordPressPostFromSource = (
 ): WordPressPost => {
   if (source === "rest") {
     const candidate = post as unknown as WordPressPost
-    if (candidate && typeof candidate === "object" && "title" in candidate && "categories" in candidate) {
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      typeof candidate.title === "string" &&
+      (candidate.excerpt === undefined || typeof candidate.excerpt === "string") &&
+      (candidate.content === undefined || typeof candidate.content === "string")
+    ) {
       return candidate
     }
     return mapRestPostToWordPressPost(post as RestPost, countryCode)
