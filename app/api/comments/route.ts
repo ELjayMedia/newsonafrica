@@ -58,18 +58,40 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       query = query.eq("parent_id", parentId)
     }
 
-    // Filter by status if not 'all'
-    if (status !== "all") {
-      // For non-authenticated users, only show active comments
-      // For authenticated users, show their own comments regardless of status
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-      if (session?.user) {
-        query = query.or(`status.eq.${status},user_id.eq.${session.user.id}`)
+    let effectiveStatus = status
+    let isModerator = false
+
+    if (!session?.user && status === "all") {
+      effectiveStatus = "active"
+    }
+
+    if (session?.user && status !== "active") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", session.user.id)
+        .single()
+
+      isModerator = Boolean(profile?.is_admin)
+    }
+
+    if (!session?.user) {
+      query = query.eq("status", effectiveStatus)
+    } else if (isModerator) {
+      if (effectiveStatus !== "all") {
+        query = query.eq("status", effectiveStatus)
+      }
+    } else {
+      if (effectiveStatus === "all") {
+        query = query.or(`status.eq.active,user_id.eq.${session.user.id}`)
+      } else if (effectiveStatus === "active") {
+        query = query.eq("status", "active")
       } else {
-        query = query.eq("status", status)
+        query = query.eq("status", effectiveStatus).eq("user_id", session.user.id)
       }
     }
 
