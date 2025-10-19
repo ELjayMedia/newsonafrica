@@ -26,6 +26,23 @@ interface ArticleClientShellProps {
   relatedPosts: WordPressPost[]
 }
 
+const resolveRenderedText = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "rendered" in value &&
+    typeof (value as { rendered?: unknown }).rendered === "string"
+  ) {
+    return (value as { rendered: string }).rendered
+  }
+
+  return ""
+}
+
 export function ArticleClientShell({
   slug,
   countryCode,
@@ -62,7 +79,15 @@ export function ArticleClientShell({
     router.push(`/subscribe?${searchParams.toString()}`)
   }
 
-  const authorName = initialData?.author?.node?.name ?? initialData?.author?.name ?? null
+  const title = resolveRenderedText(initialData?.title)
+  const excerpt = resolveRenderedText(initialData?.excerpt)
+  const content = resolveRenderedText(initialData?.content)
+
+  const authorName =
+    resolveRenderedText(initialData?.author?.node?.name ?? initialData?.author?.name) ||
+    initialData?.author?.node?.name ||
+    initialData?.author?.name ||
+    null
   const authorAvatar =
     initialData?.author?.node?.avatar?.url ??
     initialData?.author?.avatar_urls?.["96"] ??
@@ -78,11 +103,8 @@ export function ArticleClientShell({
     : undefined
 
   const sanitizedHtml = useMemo(
-    () =>
-      transformWordPressEmbeds(
-        sanitizeArticleHtml(rewriteLegacyLinks(initialData.content ?? "", countryCode)),
-      ),
-    [countryCode, initialData.content],
+    () => transformWordPressEmbeds(sanitizeArticleHtml(rewriteLegacyLinks(content, countryCode))),
+    [content, countryCode],
   )
 
   const shareUrl = `/${countryCode}/article/${slug}`
@@ -97,15 +119,22 @@ export function ArticleClientShell({
         <header className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
             <div className="flex flex-wrap gap-2">
-              {initialData.categories?.nodes?.map((category: any) => (
-                <Badge
-                  key={category.id}
-                  variant="secondary"
-                  className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                >
-                  {category.name}
-                </Badge>
-              ))}
+              {initialData.categories?.nodes?.map((category: any) => {
+                const renderedName = resolveRenderedText(category?.name)
+                const fallbackName = typeof category?.name === "string" ? category.name : ""
+                const name = renderedName || fallbackName
+                if (!name) return null
+
+                return (
+                  <Badge
+                    key={category.id ?? name}
+                    variant="secondary"
+                    className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                  >
+                    {name}
+                  </Badge>
+                )
+              })}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Calendar className="w-4 h-4" />
@@ -114,7 +143,7 @@ export function ArticleClientShell({
           </div>
 
           <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground sm:text-3xl text-left tracking-tight leading-4 lg:mb-3 mt-1.5">
-            {initialData.title}
+            {title}
           </h1>
 
           {authorName && (
@@ -141,9 +170,9 @@ export function ArticleClientShell({
 
           <div className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
             <ShareButtons
-              title={initialData?.title ?? ""}
+              title={title}
               url={shareUrl}
-              description={initialData?.excerpt ?? initialData?.title ?? ""}
+              description={excerpt || title}
               variant="outline"
               size="sm"
               className="flex items-center"
@@ -165,7 +194,7 @@ export function ArticleClientShell({
                 postId={postId}
                 country={countryCode}
                 slug={slug}
-                title={initialData?.title}
+                title={title}
                 featuredImage={heroImage}
                 variant="outline"
                 size="sm"
@@ -178,13 +207,14 @@ export function ArticleClientShell({
             <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden">
               <img
                 src={featuredImageNode.sourceUrl || "/placeholder.svg"}
-                alt={featuredImageNode.altText || initialData.title}
+                alt={featuredImageNode.altText || title}
                 className="w-full h-auto aspect-video object-cover rounded-xs shadow-none"
                 loading="eager"
               />
               {featuredImageNode.caption && (
                 <figcaption className="text-sm text-muted-foreground text-center mt-3 px-4">
-                  {featuredImageNode.caption}
+                  {resolveRenderedText(featuredImageNode.caption) ||
+                    (typeof featuredImageNode.caption === "string" ? featuredImageNode.caption : "")}
                 </figcaption>
               )}
             </figure>
