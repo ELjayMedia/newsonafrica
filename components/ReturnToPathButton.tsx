@@ -1,5 +1,6 @@
-import ServerSafeReturnButton from "./ServerSafeReturnButton"
-
-export default function ReturnToPathButton() {
-  return <ServerSafeReturnButton />
-}
+export {
+  default,
+  type ReturnLinkProps,
+  type ReturnLinkVariant,
+  type ReturnLinkAlignment,
+} from "./ReturnLink"
