@@ -20,24 +20,87 @@ export const runtime = "nodejs"
 export const revalidate = 300
 export const dynamicParams = true
 
+type CategoriesResult = Awaited<ReturnType<typeof getCategoriesForCountry>>
+type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
+
+const categoriesMemo = new Map<string, Promise<CategoriesResult>>()
+const categoryPostsMemo = new Map<string, Promise<CategoryPostsResult>>()
+
+function memoize<T>(map: Map<string, Promise<T>>, key: string, factory: () => Promise<T>) {
+  if (!map.has(key)) {
+    const promise = factory().catch((error) => {
+      map.delete(key)
+      throw error
+    })
+    map.set(key, promise)
+  }
+
+  return map.get(key)!
+}
+
+const getMemoizedCategories = (
+  countryCode: string,
+  factory: () => Promise<CategoriesResult>,
+) => memoize(categoriesMemo, countryCode, factory)
+
+const getMemoizedCategoryPosts = (
+  countryCode: string,
+  slug: string,
+  limit: number,
+  factory: () => Promise<CategoryPostsResult>,
+) => memoize(categoryPostsMemo, `${countryCode}:${slug}:${limit}`, factory)
+
 export async function generateStaticParams(): Promise<Params[]> {
   try {
     const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
     const params: Params[] = []
     for (const country of SUPPORTED_COUNTRIES) {
       try {
-        const categories = await circuitBreaker.execute(
-          `wordpress-categories-static-${country}`,
-          async () => await getCategoriesForCountry(country),
-          async () => [],
-          { country, endpoint: "rest:categories" },
+        const categories = await getMemoizedCategories(
+          country,
+          () =>
+            circuitBreaker.execute(
+              `wordpress-categories-static-${country}`,
+              async () => await getCategoriesForCountry(country),
+              async () => [],
+              { country, endpoint: "rest:categories" },
+            ),
         )
-        params.push(
-          ...categories.slice(0, 50).map((category) => ({
+
+        const topCategories = categories.slice(0, 50).filter((category) => Boolean(category.slug))
+
+        for (const category of topCategories) {
+          params.push({
             countryCode: country,
             slug: category.slug,
-          })),
-        )
+          })
+
+          void getMemoizedCategoryPosts(
+            country,
+            category.slug,
+            10,
+            () =>
+              circuitBreaker.execute(
+                `wordpress-category-static-${country}-${category.slug}`,
+                async () => await getPostsByCategoryForCountry(country, category.slug, 10),
+                async () => ({
+                  category: null,
+                  posts: [],
+                  hasNextPage: false,
+                  endCursor: null,
+                }),
+                { country, endpoint: "graphql:category-static" },
+              ),
+          ).catch((error) => {
+            log.error(`Error prefetching posts for ${category.slug} (${country})`, { error })
+            return {
+              category: null,
+              posts: [],
+              hasNextPage: false,
+              endCursor: null,
+            }
+          })
+        }
       } catch (error) {
         log.error(`Error generating static params for ${country} categories`, { error })
       }
@@ -62,11 +125,22 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
   try {
     const breakerKey = `wordpress-category-metadata-${countryCode}`
-    const result = await circuitBreaker.execute(
-      breakerKey,
-      async () => await getPostsByCategoryForCountry(countryCode, slug, 10),
-      async () => ({ category: null, posts: [] }),
-      { country: countryCode, endpoint: "graphql:category-metadata" },
+    const result = await getMemoizedCategoryPosts(
+      countryCode,
+      slug,
+      10,
+      () =>
+        circuitBreaker.execute(
+          breakerKey,
+          async () => await getPostsByCategoryForCountry(countryCode, slug, 10),
+          async () => ({
+            category: null,
+            posts: [],
+            hasNextPage: false,
+            endCursor: null,
+          }),
+          { country: countryCode, endpoint: "graphql:category-metadata" },
+        ),
     )
     const { category, posts } = result
     if (!category) {

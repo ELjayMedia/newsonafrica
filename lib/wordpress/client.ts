@@ -1,6 +1,6 @@
 import { getGraphQLEndpoint, getRestBase } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { fetchWithTimeout } from "../utils/fetchWithTimeout"
+import { fetchWithRetry } from "../utils/fetchWithRetry"
 import { APIError } from "../utils/errorHandling"
 import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
@@ -103,7 +103,7 @@ export async function fetchFromWpGraphQL<T>(
 
         let logged = false
         try {
-          const res = await fetchWithTimeout(base, {
+          const res = await fetchWithRetry(base, {
             method: "POST",
             headers: getAuthHeaders(),
             body: JSON.stringify({ query, variables }),
@@ -111,7 +111,6 @@ export async function fetchFromWpGraphQL<T>(
               revalidate: CACHE_DURATIONS.MEDIUM,
               ...(tags && tags.length > 0 ? { tags } : {}),
             },
-            timeout: 10000,
           })
 
           if (!res.ok) {
@@ -233,7 +232,7 @@ export async function fetchFromWp<T>(
       ? { timeout: opts, withHeaders: false, tags: undefined as string[] | undefined }
       : (opts ?? {})
 
-  const { timeout = 10000, withHeaders = false, tags } = normalizedOpts
+  const { timeout, withHeaders = false, tags } = normalizedOpts
   const { method = "GET", payload, params: queryParams = {}, endpoint } = query
 
   const base = getRestBase(countryCode)
@@ -262,7 +261,7 @@ export async function fetchFromWp<T>(
 
         let logged = false
         try {
-          const res = await fetchWithTimeout(url, {
+          const res = await fetchWithRetry(url, {
             method,
             headers: getAuthHeaders(),
             next: {
