@@ -5,8 +5,8 @@ import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
 import { LayoutStructure } from "@/components/LayoutStructure"
-import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
 
 const ClientProviders = dynamic(() =>
   import("@/components/ClientProviders").then((mod) => ({ default: mod.ClientProviders })),
@@ -52,7 +52,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans">
         <ClientProviders>
-          <UserPreferencesProvider>
+          <ClientUserPreferencesProvider>
             <BookmarksProvider>
               <ClientLayoutComponents>
                 <LayoutStructure>
@@ -62,7 +62,7 @@ export default function RootLayout({
                 </LayoutStructure>
               </ClientLayoutComponents>
             </BookmarksProvider>
-          </UserPreferencesProvider>
+          </ClientUserPreferencesProvider>
         </ClientProviders>
       </body>
     </html>
