@@ -1,5 +1,6 @@
-import ClientDynamicReturnLink from "./ClientDynamicReturnLink"
-
-export default function DynamicSafeReturnLink() {
-  return <ClientDynamicReturnLink />
-}
+export {
+  default,
+  type ReturnLinkProps,
+  type ReturnLinkVariant,
+  type ReturnLinkAlignment,
+} from "./ReturnLink"
