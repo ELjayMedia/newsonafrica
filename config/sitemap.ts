@@ -1,0 +1,1 @@
+export const SITEMAP_RECENT_POST_LIMIT = 100

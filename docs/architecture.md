@@ -118,6 +118,7 @@ Vercel serves as the hosting and CDN platform:
 - **Caching Strategy**: ISR for optimal balance of freshness and performance
 - **Service Worker**: Offline capabilities and asset caching
 - **Core Web Vitals**: Optimized for LCP, FID, and CLS metrics
+- **Sitemap Fetch Limits**: `/sitemap.xml` and `/server-sitemap.xml` only pull the latest 100 posts during generation; rely on cached feeds (e.g., `/api/home-feed` or native WordPress sitemaps) for deeper archives to avoid heavy GraphQL bursts during builds.
 
 ## Security Considerations
 
