@@ -9,7 +9,6 @@ import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { siteConfig } from "@/config/site"
 import { categoryConfigs, homePageConfig, type CategoryConfig } from "@/config/homeConfig"
 import { getWebPageSchema } from "@/lib/schema"
@@ -88,7 +87,6 @@ export function HomeContentClient({
   featuredPosts = [],
   initialData,
 }: HomeContentClientProps) {
-  const _isMobile = useMediaQuery("(max-width: 768px)")
   const [isOffline, setIsOffline] = useState(!isOnline())
   const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>(() =>
     mapCategoryPostsForConfigs(categoryConfigs, initialData?.categoryPosts),
