@@ -47,6 +47,8 @@ type FetchHomeDataOptions = {
 }
 
 const CATEGORY_POST_LIMIT = 4
+const HOMEPAGE_CACHE_TTL_MS = 300_000
+const MIN_INITIAL_POSTS_FOR_DEFERRED_FETCH = 6
 
 const fetchHomeData = async ({
   country,
@@ -113,6 +115,10 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
     () => selectedConfigs.map((config) => config.name.toLowerCase()),
     [selectedConfigs],
   )
+  const hasInitialData = Boolean(initialData)
+  const hasEnoughInitialPosts = initialPosts.length >= MIN_INITIAL_POSTS_FOR_DEFERRED_FETCH
+  const shouldDeferFetch = hasInitialData || hasEnoughInitialPosts
+  const [shouldFetch, setShouldFetch] = useState(!shouldDeferFetch)
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -151,8 +157,28 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
           categoryPosts: {},
         }
 
+  useEffect(() => {
+    if (!shouldDeferFetch) {
+      setShouldFetch(true)
+    }
+  }, [shouldDeferFetch])
+
+  useEffect(() => {
+    if (shouldFetch || !shouldDeferFetch || isOffline) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setShouldFetch(true)
+    }, HOMEPAGE_CACHE_TTL_MS)
+
+    return () => clearTimeout(timer)
+  }, [shouldFetch, shouldDeferFetch, isOffline])
+
   const { data, error, isLoading } = useSWR<HomepageApiResponse>(
-    ["/homepage-data", currentCountry, categorySlugs.join(","), String(CATEGORY_POST_LIMIT)],
+    shouldFetch
+      ? ["/homepage-data", currentCountry, categorySlugs.join(","), String(CATEGORY_POST_LIMIT)]
+      : null,
     ([_, country]) =>
       fetchHomeData({
         country,
@@ -161,51 +187,22 @@ export function CompactHomeContent({ initialPosts = [], initialData }: CompactHo
       }),
     {
       fallbackData,
-      revalidateOnMount: !initialData && !initialPosts.length,
       revalidateOnFocus: false,
-      refreshInterval: isOffline ? 0 : 300000,
-      dedupingInterval: 60000,
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
-      shouldRetryOnError: !isOffline,
+      refreshInterval: shouldFetch && !isOffline ? HOMEPAGE_CACHE_TTL_MS : 0,
+      dedupingInterval: HOMEPAGE_CACHE_TTL_MS,
+      errorRetryCount: 2,
+      errorRetryInterval: HOMEPAGE_CACHE_TTL_MS,
+      shouldRetryOnError: shouldFetch && !isOffline,
     },
   )
 
   useEffect(() => {
-    let isCancelled = false
-
-    const updateCategoryPosts = async () => {
-      if (isOffline) return
-
-      if (data?.categoryPosts) {
-        setCategoryPosts(mapCategoryPostsForConfigs(selectedConfigs, data.categoryPosts))
-        return
-      }
-
-      try {
-        const response = await fetchHomeData({
-          country: currentCountry,
-          categorySlugs,
-          categoryLimit: CATEGORY_POST_LIMIT,
-        })
-
-        if (isCancelled) return
-
-        setCategoryPosts(mapCategoryPostsForConfigs(selectedConfigs, response.categoryPosts))
-      } catch (error) {
-        console.error("Error fetching category posts:", error)
-        if (!isCancelled) {
-          setCategoryPosts({})
-        }
-      }
+    if (!data?.categoryPosts) {
+      return
     }
 
-    updateCategoryPosts()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [isOffline, data?.categoryPosts, selectedConfigs, categorySlugs, currentCountry])
+    setCategoryPosts(mapCategoryPostsForConfigs(selectedConfigs, data.categoryPosts))
+  }, [data, selectedConfigs])
 
   const {
     taggedPosts = [],
