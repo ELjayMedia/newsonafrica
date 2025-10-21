@@ -5,6 +5,7 @@ import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import * as log from "@/lib/log"
 import { env } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
+import { siteConfig } from "@/config/site"
 import { CategoryHeader } from "@/components/category/CategoryHeader"
 import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
@@ -54,6 +55,7 @@ export async function generateStaticParams(): Promise<Params[]> {
   try {
     const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
     const params: Params[] = []
+    const prioritizedCategorySlugs = siteConfig.categories.map((category) => category.slug)
     for (const country of SUPPORTED_COUNTRIES) {
       try {
         const categories = await getMemoizedCategories(
@@ -67,38 +69,14 @@ export async function generateStaticParams(): Promise<Params[]> {
             ),
         )
 
-        const topCategories = categories.slice(0, 50).filter((category) => Boolean(category.slug))
+        const topCategories = prioritizedCategorySlugs
+          .map((slug) => categories.find((category) => category.slug === slug))
+          .filter((category): category is NonNullable<typeof category> => Boolean(category?.slug))
 
         for (const category of topCategories) {
           params.push({
             countryCode: country,
             slug: category.slug,
-          })
-
-          void getMemoizedCategoryPosts(
-            country,
-            category.slug,
-            10,
-            () =>
-              circuitBreaker.execute(
-                `wordpress-category-static-${country}-${category.slug}`,
-                async () => await getPostsByCategoryForCountry(country, category.slug, 10),
-                async () => ({
-                  category: null,
-                  posts: [],
-                  hasNextPage: false,
-                  endCursor: null,
-                }),
-                { country, endpoint: "graphql:category-static" },
-              ),
-          ).catch((error) => {
-            log.error(`Error prefetching posts for ${category.slug} (${country})`, { error })
-            return {
-              category: null,
-              posts: [],
-              hasNextPage: false,
-              endCursor: null,
-            }
           })
         }
       } catch (error) {

@@ -1,7 +1,7 @@
 # Category & Listing Page Architecture
 
 ## Server data pipeline
-- **Entry point:** `app/[countryCode]/category/[slug]/page.tsx` is a server component configured for ISR (`revalidate = 300`) and Node runtime; it builds static params per country via the shared circuit breaker before rendering. 【F:app/[countryCode]/category/[slug]/page.tsx†L19-L49】
+- **Entry point:** `app/[countryCode]/category/[slug]/page.tsx` is a server component configured for ISR (`revalidate = 300`) and Node runtime; it only pre-generates params for category slugs surfaced in `siteConfig.categories`, leaving the rest to ISR. 【F:app/[countryCode]/category/[slug]/page.tsx†L19-L116】【F:config/site.ts†L23-L39】
 - **Metadata caching:** `generateMetadata` reuses the circuit breaker for category lookups, then memoizes the computed `Metadata` in `enhancedCache` so repeated requests avoid duplicate fetches until the TTL expires. 【F:app/[countryCode]/category/[slug]/page.tsx†L52-L190】
 - **Page data fetch:** `CountryCategoryPage` defers to `getCategoryPageData`, which wraps `getPostsByCategoryForCountry` and maps results into UI-friendly shapes (category summary, posts, related chips, pagination cursor). 【F:app/[countryCode]/category/[slug]/page.tsx†L197-L241】【F:lib/data/category.ts†L1-L83】
 - **WordPress access helpers:** `getPostsByCategoryForCountry` executes a `graphqlFirst` pipeline that tags requests for revalidation, prefers GraphQL, and falls back to REST (including fetching the feature-programming tag and category metadata) if GraphQL fails or returns empty. 【F:lib/wp-server/categories.ts†L296-L393】
