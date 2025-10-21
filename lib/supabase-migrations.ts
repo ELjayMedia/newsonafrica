@@ -61,19 +61,3 @@ CREATE POLICY "Users can delete their own reactions"
   USING (auth.uid() = user_id);
 
 `
-
-export const COMMENT_SYSTEM_MIGRATION = `
--- Add comment system related migrations
-ALTER TABLE public.comments 
-  ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES public.comments(id),
-  ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS edit_count INTEGER NOT NULL DEFAULT 0;
-
--- Create index for faster parent-child lookups
-CREATE INDEX IF NOT EXISTS comments_parent_id_idx ON public.comments(parent_id);
-
--- Add threaded comments support
-ALTER TABLE public.comments
-  ADD COLUMN IF NOT EXISTS depth INTEGER NOT NULL DEFAULT 0;
-
-`
