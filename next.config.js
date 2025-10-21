@@ -85,6 +85,7 @@ const nextConfig = {
     unoptimized: false,
     domains: [
       "newsonafrica.com",
+      "news-on-africa.com",
       "secure.gravatar.com",
       "i0.wp.com",
       "i1.wp.com",
@@ -96,6 +97,7 @@ const nextConfig = {
     ],
     remotePatterns: [
       { protocol: "https", hostname: "newsonafrica.com", pathname: "**" },
+      { protocol: "https", hostname: "news-on-africa.com", pathname: "**" },
       { protocol: "https", hostname: "*.newsonafrica.com", pathname: "**" },
       { protocol: "https", hostname: "secure.gravatar.com", pathname: "**" },
       { protocol: "https", hostname: "i0.wp.com", pathname: "**" },
