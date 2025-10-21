@@ -15,8 +15,9 @@ export interface NewsGridPost {
   type?: string
   country?: string
   featuredImage?: {
-    node: {
-      sourceUrl: string
+    node?: {
+      sourceUrl?: string
+      altText?: string
     }
   }
 }
@@ -58,7 +59,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
         {mainPost?.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={mainPost.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
               alt={mainPost.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
@@ -121,7 +122,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
             {post.featuredImage && (
               <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
                   sizes="(max-width: 640px) 70px, 84px"
@@ -164,7 +165,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         {mainPost.featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden">
             <Image
-              src={mainPost.featuredImage.node.sourceUrl || "/placeholder.svg"}
+              src={mainPost.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
               alt={mainPost.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
@@ -229,7 +230,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
             {post.featuredImage && (
               <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
                   sizes="(max-width: 640px) 80px, 85px"
@@ -277,7 +278,7 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
             {post.featuredImage && (
               <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
                 <Image
-                  src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
+                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
                   alt={post.title}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
