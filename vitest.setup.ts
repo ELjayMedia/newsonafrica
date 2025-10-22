@@ -23,7 +23,6 @@ const restKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_REST_BASE`
 process.env[graphQLKey] ||= `https://wp.example.com/${defaultSite}/graphql`
 process.env[restKey] ||= `https://wp.example.com/${defaultSite}/wp-json/wp/v2`
 process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
-process.env.MVP_MODE ||= '0'
 
 class ResizeObserver {
   observe() {}
