@@ -50,12 +50,12 @@ export function CategoryContent({ slug }: { slug: string }) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  const category = data?.[0]?.category
+  const allPosts = useMemo(() => data?.flatMap((page) => page.posts || []) ?? [], [data])
+
   if (isLoading) return <CategoryPageSkeleton />
   if (error) return <div>Error loading category: {(error as Error).message}</div>
   if (!data || data.length === 0) return <div>No posts found for this category.</div>
-
-  const category = data[0]?.category
-  const allPosts = useMemo(() => data.flatMap((page) => page.posts || []), [data])
 
   // Separate posts for different sections
   const gridPosts = allPosts.slice(0, 10)
