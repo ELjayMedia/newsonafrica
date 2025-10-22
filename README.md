@@ -86,9 +86,6 @@ NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
 NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
 
-# --- Feature flags ---
-MVP_MODE=1
-
 # --- WordPress Authentication ---
 WP_APP_USERNAME=your_wordpress_username
 WP_APP_PASSWORD=your_wordpress_app_password
