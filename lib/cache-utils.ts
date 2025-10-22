@@ -1,5 +1,5 @@
 import { cache } from "react"
-import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
 import type { NextFetchRequestConfig } from "next/server"
 

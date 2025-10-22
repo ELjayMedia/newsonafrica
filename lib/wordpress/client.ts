@@ -6,7 +6,6 @@ import * as log from "../log"
 import type { CircuitBreakerManager } from "../api/circuit-breaker"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import type { WordPressPost } from "@/types/wp"
 
 export interface CountryConfig {
   code: string

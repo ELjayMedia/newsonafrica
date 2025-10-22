@@ -130,7 +130,7 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
     return () => {
       isCancelled = true
     }
-  }, [currentCountry])
+  }, [countryPosts, currentCountry])
 
   const spotlightCountries = Object.entries(countryPosts)
     .filter(([_, posts]) => posts && posts.length > 0)

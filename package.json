@@ -101,6 +101,7 @@
     "zod": "^3.25.31"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.2.4",
     "@graphql-codegen/cli": "^5.0.2",
     "@graphql-codegen/typescript": "^4.0.9",
     "@graphql-codegen/typescript-operations": "^4.2.1",
@@ -112,6 +113,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9.9.0",
     "eslint-config-next": "15.5.3",
+    "eslint-plugin-unused-imports": "^4.3.0",
     "jsdom": "^24.0.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",

@@ -4,11 +4,13 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 
+type GlobalErrorBoundaryProps = {
+  children?: React.ReactNode
+}
+
 export default function GlobalErrorBoundary({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: GlobalErrorBoundaryProps) {
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
@@ -49,5 +51,5 @@ export default function GlobalErrorBoundary({
     )
   }
 
-  return <>{children}</>
+  return <>{children ?? null}</>
 }

@@ -72,14 +72,18 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   extendDefaultRuntimeCaching: false,
 })
 
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "1",
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: false,
@@ -178,4 +182,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = withBundleAnalyzer(withPWA(nextConfig))
