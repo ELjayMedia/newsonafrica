@@ -1,4 +1,4 @@
-import crypto from "crypto"
+import { createHmac } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 
     // Verify the signature
     const secretKey = process.env.PAYSTACK_SECRET_KEY || ""
-    const hash = crypto.createHmac("sha512", secretKey).update(body).digest("hex")
+    const hash = createHmac("sha512", secretKey).update(body).digest("hex")
 
     if (hash !== signature) {
       console.error("Invalid Paystack signature")
