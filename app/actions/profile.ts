@@ -1,6 +1,6 @@
 "use server"
 
-import { randomUUID } from "crypto"
+import { randomUUID } from "node:crypto"
 
 import { withSupabaseSession } from "@/app/actions/supabase"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"

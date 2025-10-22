@@ -1,4 +1,4 @@
-import { createHmac } from "crypto"
+import { createHmac } from "node:crypto"
 import { WP_AUTH_CONFIG } from "./wp-auth-config"
 import { getRestBase } from "@/lib/wp-endpoints"
 
