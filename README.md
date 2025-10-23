@@ -116,23 +116,26 @@ FEATURE_ADVANCED_SEARCH=true
 
 ### Installation
 
+> [!NOTE]
+> The repository standardizes on **npm** for dependency management. Install dependencies with `npm install --legacy-peer-deps` (matching our CI setup) so the React 19 toolchain resolves cleanly, and keep `package-lock.json` committed.
+
 \`\`\`bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-pnpm install
+npm install --legacy-peer-deps
 
 # Run the development server
-pnpm dev
+npm run dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `pnpm build`
+1. **Build Command**: `npm run build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
@@ -161,13 +164,13 @@ Documentation for this workflow will be added once available.
 
 \`\`\`bash
 # Run unit tests
-pnpm test
+npm run test
 
 # Run end-to-end tests
-pnpm run test:e2e
+npm run test:e2e
 
 # Run linting
-pnpm lint
+npm run lint
 \`\`\`
 
 ### 📊 Bundle Analysis
@@ -175,7 +178,7 @@ pnpm lint
 Generate bundle size reports locally with the built-in analyzer:
 
 \`\`\`bash
-ANALYZE=1 pnpm build
+ANALYZE=1 npm run build
 \`\`\`
 
 This command outputs interactive client and server bundle reports in `.next/analyze/` for inspection.
