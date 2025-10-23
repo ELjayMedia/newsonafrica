@@ -1,11 +1,11 @@
-const blurDataUrlCache = new Map<string, string>()
+const blurDataURLCache = new Map<string, string>()
 
 export function generateBlurDataURL(width = 700, height = 475, color = "#f3f4f6"): string {
   const cacheKey = `${width}|${height}|${color}`
-  const cachedValue = blurDataUrlCache.get(cacheKey)
 
-  if (cachedValue) {
-    return cachedValue
+  const cached = blurDataURLCache.get(cacheKey)
+  if (cached) {
+    return cached
   }
 
   const svg = `
@@ -32,7 +32,8 @@ export function generateBlurDataURL(width = 700, height = 475, color = "#f3f4f6"
   }
 
   const dataUrl = `data:image/svg+xml;base64,${base64}`
-  blurDataUrlCache.set(cacheKey, dataUrl)
+
+  blurDataURLCache.set(cacheKey, dataUrl)
 
   return dataUrl
 }
