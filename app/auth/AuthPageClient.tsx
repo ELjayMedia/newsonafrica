@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useSupabaseClient } from "@supabase/auth-helpers-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import type { Database } from "@/types/supabase"
+import { getSupabaseClient } from "@/lib/api/supabase"
 import { cn } from "@/lib/utils"
 
 type AuthView = "sign_in" | "sign_up"
@@ -19,6 +18,7 @@ interface AuthPageClientProps {
     redirectTo?: string
     error?: string
   }
+  defaultView?: AuthView
 }
 
 interface StatusMessage {
@@ -27,13 +27,23 @@ interface StatusMessage {
   description?: string
 }
 
-export default function AuthPageClient({ searchParams }: AuthPageClientProps) {
+export default function AuthPageClient({ searchParams, defaultView }: AuthPageClientProps) {
   const urlParams = useSearchParams()
   const router = useRouter()
-  const supabase = useSupabaseClient<Database>()
+  const supabase = useMemo(() => getSupabaseClient(), [])
 
   const tabParam = urlParams?.get("tab")
-  const initialView: AuthView = tabParam === "signup" ? "sign_up" : "sign_in"
+  const initialView: AuthView = (() => {
+    if (tabParam === "signup") {
+      return "sign_up"
+    }
+
+    if (tabParam === "signin") {
+      return "sign_in"
+    }
+
+    return defaultView ?? "sign_in"
+  })()
 
   const redirectParam = searchParams?.redirectTo
   const redirectTo = useMemo(() => {
