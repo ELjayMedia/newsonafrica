@@ -122,17 +122,17 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
-npm run dev
+pnpm dev
 \`\`\`
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `npm run build`
+1. **Build Command**: `pnpm build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
@@ -161,14 +161,24 @@ Documentation for this workflow will be added once available.
 
 \`\`\`bash
 # Run unit tests
-npm test
+pnpm test
 
 # Run end-to-end tests
-npm run test:e2e
+pnpm run test:e2e
 
 # Run linting
-npm run lint
+pnpm lint
 \`\`\`
+
+### 📊 Bundle Analysis
+
+Generate bundle size reports locally with the built-in analyzer:
+
+\`\`\`bash
+ANALYZE=1 pnpm build
+\`\`\`
+
+This command outputs interactive client and server bundle reports in `.next/analyze/` for inspection.
 
 ## 📚 Documentation
 

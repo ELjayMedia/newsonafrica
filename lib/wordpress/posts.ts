@@ -20,7 +20,7 @@ import type {
 } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost, mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "./shared"
+import { DEFAULT_COUNTRY } from "./shared"
 import type { PaginatedPostsResult } from "./types"
 import type { WordPressTag } from "@/types/wp"
 import type { HomePost } from "@/types/home"

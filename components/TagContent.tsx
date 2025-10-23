@@ -56,11 +56,11 @@ export function TagContent({ slug, initialData, tag }: TagContentProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  const posts = useMemo(() => data?.flatMap((page) => page.nodes ?? []) ?? [], [data])
+  const mappedPosts = useMemo(() => mapWpPostsToPostListItems(posts, country), [posts, country])
+
   if (isLoading) return <div>Loading...</div>
   if (error) return <div>Error: {(error as Error).message}</div>
-
-  const posts = useMemo(() => data?.flatMap((page) => page.nodes ?? []) || [], [data])
-  const mappedPosts = useMemo(() => mapWpPostsToPostListItems(posts, country), [posts, country])
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>

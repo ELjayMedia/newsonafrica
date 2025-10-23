@@ -7,8 +7,6 @@ import {
   DEFAULT_SIDEBAR_RECENT_LIMIT,
   fetchSidebarContent,
 } from "@/lib/sidebar"
-import type { SidebarContentPayload } from "@/types/sidebar"
-
 const DEFAULT_RECENT_LIMIT = DEFAULT_SIDEBAR_RECENT_LIMIT
 const DEFAULT_MOST_READ_LIMIT = DEFAULT_SIDEBAR_MOST_READ_LIMIT
 

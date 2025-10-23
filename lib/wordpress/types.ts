@@ -1,11 +1,5 @@
 import type { HomePost } from "@/types/home"
-import type {
-  WordPressAuthor,
-  WordPressCategory,
-  WordPressMediaNode,
-  WordPressPost,
-  WordPressTag,
-} from "@/types/wp"
+import type { WordPressCategory, WordPressMediaNode, WordPressPost } from "@/types/wp"
 
 export interface PaginatedPostsResult {
   posts: WordPressPost[]

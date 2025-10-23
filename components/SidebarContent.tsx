@@ -30,8 +30,16 @@ export function SidebarContent({ initialData, country: initialCountry }: Sidebar
   const { data, error, isLoading, mutate } = useSidebarContent(country, initialData)
 
   const payload = data ?? initialData
-  const recentPosts = Array.isArray(payload?.recent) ? payload.recent : []
-  const mostReadPosts = Array.isArray(payload?.mostRead) ? payload.mostRead : []
+  const rawRecentPosts = payload?.recent
+  const rawMostReadPosts = payload?.mostRead
+  const recentPosts = useMemo(
+    () => (Array.isArray(rawRecentPosts) ? rawRecentPosts : []),
+    [rawRecentPosts],
+  )
+  const mostReadPosts = useMemo(
+    () => (Array.isArray(rawMostReadPosts) ? rawMostReadPosts : []),
+    [rawMostReadPosts],
+  )
 
   const initialRecentCount = Array.isArray(initialData?.recent) ? initialData.recent.length : 0
   const initialMostReadCount = Array.isArray(initialData?.mostRead) ? initialData.mostRead.length : 0

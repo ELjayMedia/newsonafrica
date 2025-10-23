@@ -1,9 +1,43 @@
 {
   "extends": ["next/core-web-vitals"],
+  "plugins": ["unused-imports"],
   "rules": {
     "react/no-unescaped-entities": "off",
     "@next/next/no-html-link-for-pages": "off",
     "@next/next/no-img-element": "off",
-    "react/no-children-prop": "off"
-  }
+    "react/no-children-prop": "off",
+    "no-unused-vars": "off",
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ExpressionStatement[directive='use client']",
+        "message": "`use client` directives are restricted to approved client component directories."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "app/**/*",
+        "components/**/*",
+        "contexts/**/*",
+        "hooks/**/*",
+        "lib/**/*",
+        "utils/**/*"
+      ],
+      "rules": {
+        "no-restricted-syntax": "off"
+      }
+    }
+  ]
 }

@@ -11,7 +11,7 @@ import {
   mapPostFromWp,
   mapWordPressPostToHomePost,
 } from "./shared"
-import type { AggregatedHomeData, FrontPageSlicesResult, PaginatedPostsResult } from "./types"
+import type { AggregatedHomeData, FrontPageSlicesResult } from "./types"
 import type { WordPressPost } from "@/types/wp"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
