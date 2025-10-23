@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
+import type { SupabaseServerClient } from "@/app/actions/supabase"
 
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
@@ -11,10 +12,15 @@ export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
+type BookmarkStatsRow = {
+  read_status?: string | null
+  category?: string | null
+}
+
 export async function GET(request: NextRequest) {
   logRequest(request)
   try {
-    const supabase = createClient()
+    const supabase = createClient() as SupabaseServerClient
 
     const {
       data: { user },
@@ -71,11 +77,13 @@ export async function GET(request: NextRequest) {
     // Calculate stats
     const { data: statsData } = await supabase.from("bookmarks").select("read_status, category").eq("user_id", user.id)
 
+    const statsRows = (Array.isArray(statsData) ? statsData : []) as BookmarkStatsRow[]
+
     const stats = {
       total: count || 0,
-      unread: statsData?.filter((b) => b.read_status !== "read").length || 0,
+      unread: statsRows.filter((b) => b.read_status !== "read").length || 0,
       categories:
-        statsData?.reduce(
+        statsRows.reduce(
           (acc, b) => {
             if (b.category) {
               acc[b.category] = (acc[b.category] || 0) + 1
@@ -105,7 +113,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   logRequest(request)
   try {
-    const supabase = createClient()
+    const supabase = createClient() as SupabaseServerClient
 
     const {
       data: { user },
@@ -168,7 +176,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   logRequest(request)
   try {
-    const supabase = createClient()
+    const supabase = createClient() as SupabaseServerClient
 
     const {
       data: { user },
