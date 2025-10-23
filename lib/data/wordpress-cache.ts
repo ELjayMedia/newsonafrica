@@ -1,5 +1,3 @@
-import { LRUCache } from "lru-cache"
-
 interface CacheEntry<T> {
   data: T
   timestamp: number
@@ -7,17 +5,14 @@ interface CacheEntry<T> {
 }
 
 class WordPressCacheManager {
-  private cache: LRUCache<string, CacheEntry<any>>
+  private cache = new Map<string, CacheEntry<any>>()
   private defaultTTL = 300000 // 5 minutes
-
-  constructor() {
-    this.cache = new LRUCache({
-      max: 1000, // Maximum number of items
-      ttl: this.defaultTTL,
-    })
-  }
+  private maxEntries = 1000
 
   set<T>(key: string, data: T, ttl?: number): void {
+    this.pruneExpired()
+    this.ensureCapacity()
+
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
@@ -48,6 +43,11 @@ class WordPressCacheManager {
     this.cache.clear()
   }
 
+  keys(): string[] {
+    this.pruneExpired()
+    return Array.from(this.cache.keys())
+  }
+
   // Generate cache keys
   generateKey(type: string, params: Record<string, any>): string {
     const sortedParams = Object.keys(params)
@@ -59,10 +59,40 @@ class WordPressCacheManager {
 
   // Cache statistics
   getStats() {
+    this.pruneExpired()
     return {
       size: this.cache.size,
-      calculatedSize: this.cache.calculatedSize,
-      max: this.cache.max,
+      calculatedSize: this.cache.size,
+      max: this.maxEntries,
+    }
+  }
+
+  private pruneExpired() {
+    const now = Date.now()
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key)
+      }
+    }
+  }
+
+  private ensureCapacity() {
+    if (this.cache.size < this.maxEntries) {
+      return
+    }
+
+    let oldestKey: string | undefined
+    let oldestTimestamp = Number.POSITIVE_INFINITY
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.timestamp < oldestTimestamp) {
+        oldestTimestamp = entry.timestamp
+        oldestKey = key
+      }
+    }
+
+    if (oldestKey) {
+      this.cache.delete(oldestKey)
     }
   }
 }
@@ -87,8 +117,7 @@ export async function getCachedData<T>(key: string, fetcher: () => Promise<T>, t
 
 export function invalidateCache(pattern: string): void {
   // Simple pattern matching for cache invalidation
-  const keys = Array.from(wordPressCache.cache.keys())
-  keys.forEach((key) => {
+  wordPressCache.keys().forEach((key) => {
     if (key.includes(pattern)) {
       wordPressCache.delete(key)
     }

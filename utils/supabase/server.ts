@@ -1,43 +1,40 @@
 import { createServerClient } from "@supabase/ssr"
-import type { CookieOptions } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { cookies } from "next/headers"
 
-import { getSupabaseClient as getBrowserSupabaseClient } from "@/lib/api/supabase"
-import { getSupabaseClient as getServerComponentSupabaseClient } from "@/lib/supabase/server-component-client"
+import {
+  getSupabaseClient as getBrowserSupabaseClient,
+  isSupabaseConfigured,
+} from "@/lib/api/supabase"
+import { createServerCookieAdapter } from "@/lib/supabase/cookies"
 import type { Database } from "@/types/supabase"
 
 let hasWarned = false
 
 export function createClient(): SupabaseClient<Database> {
-  return getServerComponentSupabaseClient()
-}
+  if (!isSupabaseConfigured()) {
+    if (!hasWarned) {
+      hasWarned = true
+      console.warn("Supabase environment variables are not configured. Using fallback client.")
+    }
 
-export function createServerCookieAdapter() {
-  return {
-    async get(name: string) {
-      const cookieStore = await cookies()
-      return cookieStore.get(name)?.value ?? null
-    },
-    async set(name: string, value: string, options: CookieOptions) {
-      try {
-        const cookieStore = await cookies()
-        cookieStore.set({ name, value, ...options })
-      } catch (error) {
-        // The `set` method was called from a Server Component.
-        // This is allowed and will be fixed in a future version.
-      }
-    },
-    async remove(name: string, options: CookieOptions) {
-      try {
-        const cookieStore = await cookies()
-        cookieStore.set({ name, value: "", ...options })
-      } catch (error) {
-        // The `delete` method was called from a Server Component.
-        // This is allowed and will be fixed in a future version.
-      }
-    },
+    return getBrowserSupabaseClient()
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (!hasWarned) {
+      hasWarned = true
+      console.warn("Supabase environment variables are incomplete. Using fallback client.")
+    }
+
+    return getBrowserSupabaseClient()
+  }
+
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: createServerCookieAdapter(),
+  })
 }
 
 export function createAdminClient(): SupabaseClient<Database> {
