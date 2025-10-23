@@ -34,7 +34,6 @@
     "@supabase/auth-helpers-react": "latest",
     "@supabase/auth-ui-react": "latest",
     "@supabase/auth-ui-shared": "latest",
-    "@supabase/postgrest-js": "latest",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tailwindcss/typography": "^0.5.16",
