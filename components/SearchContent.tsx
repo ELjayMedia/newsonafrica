@@ -9,7 +9,7 @@ import {
 } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import formatDistanceToNow from "date-fns/formatDistanceToNow"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { Loader2, Search as SearchIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

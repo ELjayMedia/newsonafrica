@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { memo, useMemo } from "react"
-import formatDistanceToNow from "date-fns/formatDistanceToNow"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
 
