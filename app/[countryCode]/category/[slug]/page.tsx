@@ -69,15 +69,19 @@ export async function generateStaticParams(): Promise<Params[]> {
             ),
         )
 
-        const topCategories = prioritizedCategorySlugs
-          .map((slug) => categories.find((category) => category.slug === slug))
-          .filter((category): category is NonNullable<typeof category> => Boolean(category?.slug))
+        for (const prioritizedSlug of prioritizedCategorySlugs) {
+          const category = categories.find((category) => category.slug === prioritizedSlug)
+          if (!category) {
+            continue
+          }
 
-        for (const category of topCategories) {
-          params.push({
-            countryCode: country,
-            slug: category.slug,
-          })
+          const slug = category.slug
+          if (typeof slug === "string" && slug.length > 0) {
+            params.push({
+              countryCode: country,
+              slug,
+            })
+          }
         }
       } catch (error) {
         log.error(`Error generating static params for ${country} categories`, { error })
