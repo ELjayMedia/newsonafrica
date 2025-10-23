@@ -1,6 +1,170 @@
+import { unstable_cache } from "next/cache"
+
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
 import { WORDPRESS_REST_MAX_PER_PAGE } from "../wordpress-queries"
 import { withGraphqlFallback, type WithGraphqlFallbackLogMeta } from "../wordpress/client"
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export interface CacheAwareFunctionOptions {
+  keyParts: readonly string[]
+  tags?: readonly string[]
+  revalidate?: number
+}
+
+export const defaults = {
+  retries: 3,
+  retryBaseDelay: 200,
+  retryMaxDelay: 2000,
+}
+
+const dedupe = (values?: readonly string[]): string[] | undefined => {
+  if (!values?.length) {
+    return undefined
+  }
+
+  return Array.from(new Set(values))
+}
+
+export function createCacheAwareFunction<TArgs extends unknown[], TResult>(
+  source: (...args: TArgs) => Promise<TResult>,
+  { keyParts, tags, revalidate }: CacheAwareFunctionOptions,
+): (...args: TArgs) => Promise<TResult> {
+  if (!keyParts.length) {
+    throw new Error("createCacheAwareFunction requires at least one cache key part")
+  }
+
+  const cached = unstable_cache(source, keyParts, {
+    revalidate,
+    tags: dedupe(tags),
+  })
+
+  return (...args: TArgs) => cached(...args)
+}
+
+export interface WithRetryOptions {
+  retries?: number
+  retryBaseDelay?: number
+  retryMaxDelay?: number
+  onRetry?: (attempt: number, error: unknown) => void
+  shouldRetry?: (error: unknown, attempt: number) => boolean
+}
+
+export async function withRetry<TResult>(
+  operation: () => Promise<TResult>,
+  {
+    retries = defaults.retries,
+    retryBaseDelay = defaults.retryBaseDelay,
+    retryMaxDelay = defaults.retryMaxDelay,
+    onRetry,
+    shouldRetry,
+  }: WithRetryOptions = {},
+): Promise<TResult> {
+  const maxRetries = Math.max(0, retries)
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      if (attempt >= maxRetries) {
+        throw error
+      }
+
+      const retryAttempt = attempt + 1
+
+      if (shouldRetry && !shouldRetry(error, retryAttempt)) {
+        throw error
+      }
+
+      onRetry?.(retryAttempt, error)
+
+      const backoff = Math.min(retryBaseDelay * Math.pow(2, attempt), retryMaxDelay)
+      if (backoff > 0) {
+        await wait(backoff)
+      } else {
+        await Promise.resolve()
+      }
+    }
+  }
+}
+
+interface ThrottledQueueTask<TValue> {
+  start: () => Promise<TValue>
+  resolve: (value: TValue) => void
+  reject: (reason: unknown) => void
+}
+
+export interface ThrottledQueueOptions {
+  concurrency: number
+  intervalMs?: number
+}
+
+export function createThrottledQueue({
+  concurrency,
+  intervalMs = 0,
+}: ThrottledQueueOptions) {
+  const maxConcurrency = Math.max(1, Math.floor(concurrency))
+  const throttleInterval = Math.max(0, intervalMs)
+  const queue: ThrottledQueueTask<unknown>[] = []
+
+  let active = 0
+  let lastStart = 0
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null
+
+  const tryStartNext = () => {
+    if (active >= maxConcurrency) {
+      return
+    }
+
+    if (queue.length === 0) {
+      return
+    }
+
+    const now = Date.now()
+    const sinceLastStart = now - lastStart
+
+    if (throttleInterval > 0 && sinceLastStart < throttleInterval) {
+      if (pendingTimer === null) {
+        pendingTimer = setTimeout(() => {
+          pendingTimer = null
+          tryStartNext()
+        }, throttleInterval - sinceLastStart)
+      }
+      return
+    }
+
+    const task = queue.shift()!
+    active += 1
+    lastStart = Date.now()
+
+    Promise.resolve()
+      .then(task.start)
+      .then((value) => task.resolve(value))
+      .catch((error) => task.reject(error))
+      .finally(() => {
+        active -= 1
+        tryStartNext()
+      })
+
+    if (active < maxConcurrency) {
+      tryStartNext()
+    }
+  }
+
+  return function enqueue<TValue>(start: () => Promise<TValue> | TValue): Promise<TValue> {
+    return new Promise<TValue>((resolve, reject) => {
+      queue.push({
+        start: async () => await Promise.resolve(start()),
+        resolve,
+        reject,
+      })
+
+      if (pendingTimer === null) {
+        tryStartNext()
+      }
+    })
+  }
+}
 
 export interface GraphqlFirstMessages {
   empty?: string
@@ -61,8 +225,6 @@ export interface RestPaginationOptions<TItem> {
 
 export const DEFAULT_REST_PAGE_SIZE = WORDPRESS_REST_MAX_PER_PAGE
 export const DEFAULT_REST_REQUEST_THROTTLE_MS = 150
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const parseTotalPages = (headers?: Headers | null): number | null => {
   if (!headers) {
@@ -138,7 +300,7 @@ export async function paginateRest<TItem>({
     currentPage += 1
 
     if (throttleMs > 0) {
-      await sleep(throttleMs)
+      await wait(throttleMs)
     }
   }
 
