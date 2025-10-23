@@ -5,13 +5,45 @@ import type { Database } from "@/types/supabase"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+const SUPABASE_DISABLED_WARNING =
+  "Supabase has been disabled via environment configuration. Authentication features are disabled."
+
 export const SUPABASE_AUTH_STORAGE_KEY = "noa_supabase_auth"
 
 const SUPABASE_CONFIG_WARNING =
   "Supabase environment variables are not configured. Authentication features are disabled."
 
+function parseDisabledFlag(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined
+
+  const normalized = value.trim().toLowerCase()
+
+  if (!normalized) return undefined
+  if (["1", "true", "yes", "on"].includes(normalized)) return true
+  if (["0", "false", "no", "off"].includes(normalized)) return false
+
+  return undefined
+}
+
+function isSupabaseDisabledByEnv(): boolean {
+  const disabledValues = [
+    process.env.NEXT_PUBLIC_SUPABASE_DISABLED,
+    process.env.SUPABASE_DISABLED,
+  ]
+
+  for (const value of disabledValues) {
+    const parsed = parseDisabledFlag(value)
+    if (parsed !== undefined) {
+      return parsed
+    }
+  }
+
+  return false
+}
+
 let supabaseInstance: SupabaseClient<Database> | null = null
 let hasLoggedConfigWarning = false
+let hasLoggedDisabledWarning = false
 
 function createStubSupabaseClient(): SupabaseClient<Database> {
   const createStubError = () => new Error(SUPABASE_CONFIG_WARNING)
@@ -99,6 +131,15 @@ function createStubSupabaseClient(): SupabaseClient<Database> {
 }
 
 function initializeSupabaseClient(): SupabaseClient<Database> {
+  if (!isSupabaseEnabled()) {
+    if (!hasLoggedDisabledWarning) {
+      hasLoggedDisabledWarning = true
+      console.warn(SUPABASE_DISABLED_WARNING)
+    }
+
+    return createStubSupabaseClient()
+  }
+
   if (!supabaseUrl || !supabaseAnonKey) {
     if (!hasLoggedConfigWarning) {
       hasLoggedConfigWarning = true
@@ -129,7 +170,11 @@ export function getSupabaseClient(): SupabaseClient<Database> {
 export const supabase = getSupabaseClient()
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey)
+  return Boolean(isSupabaseEnabled() && supabaseUrl && supabaseAnonKey)
+}
+
+export function isSupabaseEnabled(): boolean {
+  return !isSupabaseDisabledByEnv()
 }
 
 // TypeScript types for API responses
