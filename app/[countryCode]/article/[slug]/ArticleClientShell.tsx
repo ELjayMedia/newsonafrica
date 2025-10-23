@@ -11,7 +11,7 @@ import { BookmarkButton } from "@/components/BookmarkButton"
 import { CommentList } from "@/components/CommentList"
 import { ShareButtons } from "@/components/ShareButtons"
 import { ArrowUp, Calendar, ChevronLeft, ChevronRight, Gift, User } from "lucide-react"
-import formatDistanceToNow from "date-fns/formatDistanceToNow"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 
 import type { WordPressPost } from "@/types/wp"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"

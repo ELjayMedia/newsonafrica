@@ -55,6 +55,7 @@ export interface Database {
           is_admin?: boolean | null
           onboarded?: boolean | null
         }
+        Relationships: []
       }
       bookmarks: {
         Row: {
@@ -102,6 +103,7 @@ export interface Database {
           notes?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       comments: {
         Row: {
@@ -146,6 +148,7 @@ export interface Database {
           reviewed_at?: string | null
           reviewed_by?: string | null
         }
+        Relationships: []
       }
       schema_versions: {
         Row: {
@@ -175,6 +178,7 @@ export interface Database {
           status?: string
           script?: string | null
         }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -219,6 +223,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       user_preferences: {
         Row: {
@@ -268,6 +273,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: {
