@@ -4,9 +4,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js"
 
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
 import { getSupabaseClient } from "@/lib/supabase/server-component-client"
-import type { Database } from "@/types/supabase"
-
-export type SupabaseServerClient = SupabaseClient<Database>
+export type SupabaseServerClient = SupabaseClient<any, "public">
 
 async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Session | null> {
   const {
