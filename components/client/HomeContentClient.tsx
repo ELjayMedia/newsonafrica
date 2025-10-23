@@ -36,6 +36,8 @@ const isOnline = () => {
   return true
 }
 
+const resolveCategorySlug = (config: CategoryConfig) => config.typeOverride ?? config.name
+
 const mapCategoryPostsForConfigs = (
   configs: CategoryConfig[],
   categoryPostsBySlug?: Record<string, HomePost[]>,
@@ -45,8 +47,9 @@ const mapCategoryPostsForConfigs = (
   }
 
   return configs.reduce<Record<string, HomePost[]>>((acc, config) => {
-    const slug = config.name.toLowerCase()
-    const posts = categoryPostsBySlug[slug] ?? categoryPostsBySlug[config.name]
+    const resolvedSlug = resolveCategorySlug(config)
+    const posts =
+      categoryPostsBySlug[resolvedSlug.toLowerCase()] ?? categoryPostsBySlug[resolvedSlug]
 
     if (posts?.length) {
       acc[config.name] = posts
@@ -130,7 +133,11 @@ export function HomeContentClient({
   }, [])
 
   const categorySlugs = useMemo(
-    () => categoryConfigs.map((config) => config.name.toLowerCase()),
+    () =>
+      categoryConfigs.map((config) => {
+        const resolvedSlug = resolveCategorySlug(config)
+        return resolvedSlug.toLowerCase()
+      }),
     [],
   )
 
