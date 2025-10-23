@@ -27,6 +27,23 @@ type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountr
 const categoriesMemo = new Map<string, Promise<CategoriesResult>>()
 const categoryPostsMemo = new Map<string, Promise<CategoryPostsResult>>()
 
+const getRenderedText = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    return value
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "rendered" in value &&
+    typeof (value as { rendered?: unknown }).rendered === "string"
+  ) {
+    return (value as { rendered: string }).rendered
+  }
+
+  return null
+}
+
 function memoize<T>(map: Map<string, Promise<T>>, key: string, factory: () => Promise<T>) {
   if (!map.has(key)) {
     const promise = factory().catch((error) => {
@@ -71,13 +88,18 @@ export async function generateStaticParams(): Promise<Params[]> {
 
         const topCategories = prioritizedCategorySlugs
           .map((slug) => categories.find((category) => category.slug === slug))
-          .filter((category): category is NonNullable<typeof category> => Boolean(category?.slug))
+          .filter(
+            (category): category is NonNullable<typeof category> & { slug: string } =>
+              typeof category?.slug === "string" && category.slug.length > 0,
+          )
 
-        for (const category of topCategories) {
-          params.push({
-            countryCode: country,
-            slug: category.slug,
-          })
+          const slug = category.slug
+          if (typeof slug === "string" && slug.length > 0) {
+            params.push({
+              countryCode: country,
+              slug,
+            })
+          }
         }
       } catch (error) {
         log.error(`Error generating static params for ${country} categories`, { error })
@@ -95,9 +117,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
   const { countryCode, slug } = await params
   const cacheKey = `category-metadata-${countryCode}-${slug}`
-  const cached = enhancedCache.get(cacheKey)
+  const cached = enhancedCache.get<Metadata>(cacheKey)
 
-  if (cached.exists && !cached.isStale) {
+  if (cached.exists && !cached.isStale && cached.data != null) {
     return cached.data
   }
 
@@ -136,28 +158,35 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       }
     }
 
-    const baseDescription = category.description || `Latest articles in the ${category.name} category`
-    const postCount = category.count || posts.length
-    const description = `${baseDescription}. Browse ${postCount} articles covering ${category.name.toLowerCase()} news from across Africa.`
+    const categoryName = category.name ?? "Category"
+    const baseDescription = category.description || `Latest articles in the ${categoryName} category`
+    const postCount = category.count ?? posts.length
+    const description = `${baseDescription}. Browse ${postCount} articles covering ${categoryName.toLowerCase()} news from across Africa.`
 
     const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
     const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
     const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 
+    const topPostKeywords = posts
+      .map((post) => getRenderedText(post.title))
+      .filter((title): title is string => Boolean(title))
+      .slice(0, 5)
+      .map((title) => title.split(" ").slice(0, 3).join(" "))
+
     const keywords = [
-      category.name,
-      `${category.name} News`,
+      categoryName,
+      `${categoryName} News`,
       "African News",
       "News On Africa",
-      ...posts.slice(0, 5).map((post) => post.title.split(" ").slice(0, 3).join(" ")),
+      ...topPostKeywords,
     ].join(", ")
 
     const metadata: Metadata = {
-      title: `${category.name} News - News On Africa`,
+      title: `${categoryName} News - News On Africa`,
       description,
       keywords,
-      category: category.name,
+      category: categoryName,
       alternates: {
         canonical: canonicalUrl,
         languages: {
@@ -177,16 +206,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
           "max-image-preview": "large",
           "max-snippet": -1,
         },
-        bingBot: {
-          index: true,
-          follow: true,
-          "max-snippet": -1,
-          "max-image-preview": "large",
-        },
       },
       openGraph: {
         type: "website",
-        title: `${category.name} - News On Africa`,
+        title: `${categoryName} - News On Africa`,
         description,
         url: canonicalUrl,
         siteName: "News On Africa",
@@ -196,34 +219,35 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
             url: featuredImageUrl,
             width: 1200,
             height: 630,
-            alt: `${category.name} news from News On Africa`,
+            alt: `${categoryName} news from News On Africa`,
             type: "image/jpeg",
           },
           {
             url: featuredImageUrl,
             width: 800,
             height: 600,
-            alt: `${category.name} news from News On Africa`,
+            alt: `${categoryName} news from News On Africa`,
             type: "image/jpeg",
           },
           {
             url: featuredImageUrl,
             width: 400,
             height: 300,
-            alt: `${category.name} news from News On Africa`,
+            alt: `${categoryName} news from News On Africa`,
             type: "image/jpeg",
           },
         ],
       },
       twitter: {
         card: "summary_large_image",
-        title: `${category.name} - News On Africa`,
+        title: `${categoryName} - News On Africa`,
         description,
         images: [featuredImageUrl],
       },
       other: {
-        "article:section": category.name,
-        "article:tag": category.name,
+        "article:section": categoryName,
+        "article:tag": categoryName,
+        bingbot: "index, follow, max-snippet:-1, max-image-preview:large",
       },
     }
 

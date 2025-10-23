@@ -145,13 +145,20 @@ export async function signUp(params: {
     }
 
     const now = new Date().toISOString()
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const newProfile = {
       id: data.user.id,
       username: normalizedUsername,
       email: params.email.toLowerCase(),
       created_at: now,
       updated_at: now,
-    })
+    } satisfies Database["public"]["Tables"]["profiles"]["Insert"]
+
+    // Supabase's type inference can resolve the insert payload to `never` when the
+    // generated schema types omit relationship metadata, so we cast to `never`
+    // after validating with `satisfies` above.
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .insert(newProfile as never)
 
     if (profileError) {
       throw new ActionError("Failed to create profile", { cause: profileError })
@@ -311,11 +318,11 @@ export async function updateProfile(
     const payload = {
       ...updates,
       updated_at: new Date().toISOString(),
-    }
+    } satisfies Database["public"]["Tables"]["profiles"]["Update"]
 
     const { data, error } = await supabase
       .from("profiles")
-      .update(payload)
+      .update(payload as never)
       .eq("id", session.user.id)
       .select()
       .single()

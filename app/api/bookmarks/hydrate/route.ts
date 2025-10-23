@@ -137,7 +137,8 @@ export async function POST(req: NextRequest) {
       if (country.length === 2) {
         countryCode = country
       } else {
-        countryTermId = await resolveCountryTermId(country)
+        const resolvedCountryTermId = await resolveCountryTermId(country)
+        countryTermId = resolvedCountryTermId ?? undefined
       }
 
       try {

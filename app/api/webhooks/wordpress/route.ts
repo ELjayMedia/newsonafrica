@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
-import crypto from "crypto"
+import { createHmac, timingSafeEqual } from "node:crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { CACHE_TAGS, KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
@@ -194,9 +194,9 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
     return false
   }
 
-  const expectedSignature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
+  const expectedSignature = createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
 
-  return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
+  return timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
 }
 
 export async function POST(request: NextRequest) {

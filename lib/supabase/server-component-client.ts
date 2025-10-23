@@ -7,7 +7,7 @@ import type { Database } from "@/types/supabase"
 
 let hasWarnedAboutConfig = false
 
-export function getSupabaseClient(): SupabaseClient<Database> {
+export function getSupabaseClient(): SupabaseClient<any, "public"> {
   if (!isSupabaseConfigured()) {
     if (!hasWarnedAboutConfig) {
       hasWarnedAboutConfig = true

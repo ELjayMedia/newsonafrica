@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -64,26 +64,65 @@ export function CountryNavigation() {
 
 export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countryPosts?: CountryPosts }) {
   const currentCountry = getCurrentCountry()
-  const [countryPosts, setCountryPosts] = useState<CountryPosts>(initialCountryPosts || {})
+  const [countryPosts, setCountryPosts] = useState<CountryPosts>(() => initialCountryPosts || {})
   const [isLoading, setIsLoading] = useState(false)
+  const hasAttemptedFetch = useRef(false)
+  const previousCountryRef = useRef(currentCountry)
+
+  useEffect(() => {
+    if (previousCountryRef.current !== currentCountry) {
+      const nextPosts = initialCountryPosts || {}
+      previousCountryRef.current = currentCountry
+      hasAttemptedFetch.current = false
+      setCountryPosts({ ...nextPosts })
+      return
+    }
+
+    if (initialCountryPosts) {
+      setCountryPosts((prev) => {
+        let hasChanges = false
+        const mergedPosts: CountryPosts = { ...prev }
+
+        Object.entries(initialCountryPosts).forEach(([countryCode, posts]) => {
+          if (mergedPosts[countryCode] !== posts) {
+            mergedPosts[countryCode] = posts
+            hasChanges = true
+          }
+        })
+
+        return hasChanges ? mergedPosts : prev
+      })
+    }
+  }, [currentCountry, initialCountryPosts])
 
   // Fetch posts from all countries for Pan-African section
   useEffect(() => {
     let isCancelled = false
 
     const fetchPanAfricanPosts = async () => {
-      // If we already have posts from multiple countries, don't refetch
-      if (Object.keys(countryPosts).length > 1) {
+      const allCountries = Object.keys(COUNTRIES)
+      const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
+
+      if (hasAttemptedFetch.current) {
+        return
+      }
+
+      const spotlightCountriesWithPosts = otherCountries.filter(
+        (code) => (countryPosts[code]?.length ?? 0) > 0,
+      )
+
+      if (
+        spotlightCountriesWithPosts.length >= otherCountries.length ||
+        otherCountries.length === 0
+      ) {
+        hasAttemptedFetch.current = true
         return
       }
 
       setIsLoading(true)
+      hasAttemptedFetch.current = true
 
       try {
-        const allCountries = Object.keys(COUNTRIES)
-        // Fetch posts from all countries except the current one (to show diversity)
-        const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
-
         const results = await Promise.allSettled(
           otherCountries.map(async (countryCode) => {
             const params = new URLSearchParams({
@@ -107,15 +146,23 @@ export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countr
 
         if (isCancelled) return
 
-        const newCountryPosts: CountryPosts = {}
+        setCountryPosts((previousPosts) => {
+          let hasUpdates = false
+          const updatedPosts: CountryPosts = { ...previousPosts }
 
-        results.forEach((result) => {
-          if (result.status === "fulfilled" && result.value.posts.length > 0) {
-            newCountryPosts[result.value.countryCode] = result.value.posts
-          }
+          results.forEach((result) => {
+            if (result.status === "fulfilled" && result.value.posts.length > 0) {
+              const existingPosts = updatedPosts[result.value.countryCode]
+
+              if (existingPosts !== result.value.posts) {
+                updatedPosts[result.value.countryCode] = result.value.posts
+                hasUpdates = true
+              }
+            }
+          })
+
+          return hasUpdates ? updatedPosts : previousPosts
         })
-
-        setCountryPosts(newCountryPosts)
       } catch (error) {
         console.error("[v0] Error fetching Pan-African posts:", error)
       } finally {
