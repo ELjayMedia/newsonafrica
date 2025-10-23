@@ -11,6 +11,7 @@ import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
+import type { WordPressCategory } from "@/types/wp"
 
 interface Params {
   countryCode: string
@@ -89,10 +90,11 @@ export async function generateStaticParams(): Promise<Params[]> {
         const topCategories = prioritizedCategorySlugs
           .map((slug) => categories.find((category) => category.slug === slug))
           .filter(
-            (category): category is NonNullable<typeof category> & { slug: string } =>
+            (category): category is WordPressCategory & { slug: string } =>
               typeof category?.slug === "string" && category.slug.length > 0,
           )
 
+        for (const category of topCategories) {
           const slug = category.slug
           if (typeof slug === "string" && slug.length > 0) {
             params.push({
