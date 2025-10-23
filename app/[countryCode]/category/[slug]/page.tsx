@@ -93,11 +93,13 @@ export async function generateStaticParams(): Promise<Params[]> {
               typeof category?.slug === "string" && category.slug.length > 0,
           )
 
-        for (const category of topCategories) {
-          params.push({
-            countryCode: country,
-            slug: category.slug,
-          })
+          const slug = category.slug
+          if (typeof slug === "string" && slug.length > 0) {
+            params.push({
+              countryCode: country,
+              slug,
+            })
+          }
         }
       } catch (error) {
         log.error(`Error generating static params for ${country} categories`, { error })
