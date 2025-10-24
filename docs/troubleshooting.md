@@ -2,16 +2,14 @@
 
 ## Common Issues and Solutions
 
-### GraphQL 404 Errors / REST Fallback Issues
+### GraphQL Endpoint Misconfiguration
 
 **Symptoms:**
-- Seeing "GraphQL endpoint appears to be REST API, skipping GraphQL" in logs
-- REST requests failing with 404 errors
-- Missing country slug in API URLs (e.g., `/wp-json/wp/v2/posts` instead of `/sz/wp-json/wp/v2/posts`)
+- GraphQL requests returning 404 errors
+- Logs showing unexpected hosts or missing country slugs in `/graphql` URLs
 
 **Root Cause:**
-The WordPress GraphQL/REST environment variables (for example `NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`) are set to incorrect values that don't include the country
-slug or point to the wrong endpoint type.
+Custom GraphQL environment variables (for example `NEXT_PUBLIC_WP_SZ_GRAPHQL`) are set to incorrect values that do not include the country slug or point to the wrong host.
 
 **Solution:**
 
@@ -22,42 +20,28 @@ In Vercel:
 1. Go to Project Settings → Environment Variables
 2. Delete or unset any WordPress endpoint overrides, such as:
    - `NEXT_PUBLIC_WP_<COUNTRY>_GRAPHQL`
-   - `NEXT_PUBLIC_WP_<COUNTRY>_REST_BASE`
 3. Redeploy your application
 
-The app will automatically use the correct defaults:
-- GraphQL: `https://newsonafrica.com/{country}/graphql`
-- REST: `https://newsonafrica.com/{country}/wp-json/wp/v2`
+The app will automatically use the default GraphQL endpoint pattern: `https://newsonafrica.com/{country}/graphql`.
 
 #### Option 2: Set Correct Values
 If you need to override the defaults, ensure the URLs follow this pattern:
 
-\`\`\`bash
+```bash
 # For Eswatini (sz)
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
-NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 
 # For South Africa (za)
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
-NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
-\`\`\`
+```
 
-**Important:** 
+**Important:**
 - GraphQL URLs must end with `/graphql` and include the country slug
-- REST URLs must include `/wp-json/wp/v2` and the country slug
-- The system will automatically detect and ignore malformed URLs
+- Remove any legacy REST-specific variables; they are no longer used
 
 ### Verifying the Fix
 
-After making changes, check the server logs for:
-\`\`\`
-[v0] WordPress endpoints for sz: {
-  graphql: 'https://newsonafrica.com/sz/graphql',
-  rest: 'https://newsonafrica.com/sz/wp-json/wp/v2'
-}
-\`\`\`
-
-You should see:
+After making changes, check the server logs for successful GraphQL calls. You should see:
 - ✅ GraphQL requests succeeding
 - ✅ Correct country slug in all URLs
 - ✅ No "Invalid endpoint detected" warnings
@@ -70,11 +54,11 @@ You should see:
 **Solution:**
 Ensure your Supabase environment variables are set correctly:
 
-\`\`\`bash
+```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-\`\`\`
+```
 
 ### Build or Deployment Failures
 
@@ -84,7 +68,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 3. Dependency issues
 
 **Solutions:**
-\`\`\`bash
+```bash
 # Clear cache and reinstall dependencies
 rm -rf .next node_modules
 npm install
@@ -94,7 +78,7 @@ npm run type-check
 
 # Test build locally
 npm run build
-\`\`\`
+```
 
 ### Performance Issues
 
@@ -115,7 +99,7 @@ npm run build
 - Changes not reflecting
 
 **Solutions:**
-\`\`\`bash
+```bash
 # Restart development server
 npm run dev
 
@@ -124,7 +108,7 @@ rm -rf .next
 
 # Check for port conflicts
 lsof -i :3000
-\`\`\`
+```
 
 ## Getting Help
 

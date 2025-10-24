@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 vi.mock('@/lib/wordpress/client', () => ({
-  fetchFromWpGraphQL: vi.fn(),
+  fetchWordPressGraphQL: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -16,7 +16,7 @@ vi.mock('./ArticleClientContent', () => ({
 }))
 
 import Page, { generateMetadata } from './page'
-import { fetchFromWpGraphQL } from '@/lib/wordpress/client'
+import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { env } from '@/config/env'
 import { notFound } from 'next/navigation'
 import {
@@ -49,7 +49,7 @@ describe('ArticlePage', () => {
   })
 
   it('renders post content', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return { posts: { nodes: [createArticleNode({ title: 'Hello' })] } }
       }
@@ -67,11 +67,11 @@ describe('ArticlePage', () => {
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
     expect(screen.getByText('Hello')).toBeInTheDocument()
-    expect(fetchFromWpGraphQL).toHaveBeenCalled()
+    expect(fetchWordPressGraphQL).toHaveBeenCalled()
   })
 
   it('falls back to another supported country when the requested edition is missing the article', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
           return { posts: { nodes: [] } }
@@ -97,8 +97,8 @@ describe('ArticlePage', () => {
 
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
 
-    expect(fetchFromWpGraphQL).toHaveBeenCalledWith('sz', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
-    expect(fetchFromWpGraphQL).toHaveBeenCalledWith('za', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith('sz', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith('za', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
 
     render(ui)
 
@@ -106,7 +106,7 @@ describe('ArticlePage', () => {
   })
 
   it('propagates fetch failures to the error boundary', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockRejectedValue(new Error('Network down'))
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Network down'))
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('Network down')
 
@@ -114,7 +114,7 @@ describe('ArticlePage', () => {
   })
 
   it('generates metadata that prefers the dynamic OG image', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return {
           posts: {
@@ -154,7 +154,7 @@ describe('ArticlePage', () => {
   })
 
   it('falls back to the placeholder image when the article is missing', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return { posts: { nodes: [] } }
       }
@@ -185,7 +185,7 @@ describe('ArticlePage', () => {
   })
 
   it('treats the African edition alias as valid', async () => {
-    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return {
           posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },
@@ -206,7 +206,7 @@ describe('ArticlePage', () => {
     await Page({ params: { countryCode: 'african-edition', slug: 'African-Story' } })
 
     expect(notFound).not.toHaveBeenCalled()
-    expect(fetchFromWpGraphQL).toHaveBeenCalledWith(
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'african-edition',
       POST_BY_SLUG_QUERY,
       expect.any(Object),

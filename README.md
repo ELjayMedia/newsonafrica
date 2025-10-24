@@ -2,15 +2,13 @@
 
 A modern Next.js application for delivering news content across Africa with a focus on performance and user engagement.
 
-## ⚠️ Quick Fix: GraphQL/REST API Issues
+## ⚠️ Quick Fix: GraphQL Endpoint Issues
 
 **If you're seeing 404 errors or "GraphQL endpoint appears to be REST API" warnings:**
 
-Your WordPress endpoint environment variables may be misconfigured. Each edition now supports dedicated pairs like
-`NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`.
+Your WordPress GraphQL environment variables may be misconfigured. Each edition supports overrides such as `NEXT_PUBLIC_WP_SZ_GRAPHQL`.
 
-**Quick Solution:** Delete any malformed GraphQL/REST variables from your Vercel Environment Variables and redeploy. The app will
-use correct defaults automatically.
+**Quick Solution:** Delete any malformed GraphQL variables from your Vercel Environment Variables and redeploy. The app will use correct defaults automatically.
 
 See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
@@ -30,7 +28,7 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
 The application follows a feature-based architecture with the following structure:
 
-\`\`\`
+```
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -48,11 +46,11 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-\`\`\`
+```
 
 ### Data Flow
 
-1. **Content Source**: WordPress CMS with REST API
+1. **Content Source**: WordPress CMS with WPGraphQL
 2. **Authentication**: Supabase Auth with JWT tokens
 3. **Data Storage**: Supabase PostgreSQL for user data
 4. **Caching**: Next.js ISR (Incremental Static Regeneration)
@@ -70,7 +68,7 @@ news-on-africa/
 
 Create a `.env.local` file with the following variables:
 
-\`\`\`
+```
 # --- App Configuration ---
 NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
@@ -102,14 +100,14 @@ FEATURE_COMMENTS=true
 FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
-\`\`\`
+```
 
 ### Installation
 
 > [!NOTE]
 > The repository standardizes on **npm** for dependency management. Install dependencies with `npm install` and keep `package-lock.json` committed.
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
@@ -119,7 +117,7 @@ npm install
 
 # Run the development server
 npm run dev
-\`\`\`
+```
 
 ## 📦 Deployment
 
@@ -129,8 +127,7 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
-**Important:** For WordPress endpoints, ensure every country override (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follows the correct
-format with the country slug:
+**Important:** For WordPress endpoints, ensure every country override (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follows the correct format with the country slug:
 - GraphQL: `https://newsonafrica.com/{country}/graphql`
 
 The application now communicates with WordPress exclusively through GraphQL, so REST fallbacks and application credentials are no longer required.
@@ -141,7 +138,7 @@ The `/api/search` endpoint now reads directly from WordPress content. It support
 
 ## 🧪 Testing
 
-\`\`\`bash
+```bash
 # Run unit tests
 npm run test
 
@@ -150,7 +147,7 @@ npm run test:e2e
 
 # Run linting
 npm run lint
-\`\`\`
+```
 
 ## 📚 Documentation
 
@@ -158,18 +155,3 @@ Additional documentation:
 
 - [Troubleshooting Guide](./docs/troubleshooting.md) ⭐ **Start here for common issues**
 - [Component Documentation](./docs/components.md)
-- [API Documentation](./docs/api.md)
-- [Authentication Flow](./docs/auth.md)
-- [Deployment Guide](./docs/deployment.md)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add some amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

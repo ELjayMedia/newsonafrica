@@ -18,10 +18,8 @@ process.env.NEXT_PUBLIC_DEFAULT_SITE ||= 'sz'
 
 const defaultSite = process.env.NEXT_PUBLIC_DEFAULT_SITE ?? 'sz'
 const graphQLKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_GRAPHQL`
-const restKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_REST_BASE`
 
 process.env[graphQLKey] ||= `https://wp.example.com/${defaultSite}/graphql`
-process.env[restKey] ||= `https://wp.example.com/${defaultSite}/wp-json/wp/v2`
 process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
 
 class ResizeObserver {

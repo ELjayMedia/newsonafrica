@@ -8,7 +8,6 @@ const envSchema = z
     NEXT_PUBLIC_DEFAULT_SITE: z.string().default("sz"),
     NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().optional(),
     NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().optional(),
-    WORDPRESS_AUTH_TOKEN: z.string().optional(),
     ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
     WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce
       .number()
@@ -30,7 +29,6 @@ try {
     NEXT_PUBLIC_DEFAULT_SITE: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
     NEXT_PUBLIC_WP_SZ_GRAPHQL: process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL,
     NEXT_PUBLIC_WP_ZA_GRAPHQL: process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL,
-    WORDPRESS_AUTH_TOKEN: process.env.WORDPRESS_AUTH_TOKEN,
     ANALYTICS_API_BASE_URL:
       process.env.ANALYTICS_API_BASE_URL || "https://newsonafrica.com/api/analytics",
     WORDPRESS_REQUEST_TIMEOUT_MS: process.env.WORDPRESS_REQUEST_TIMEOUT_MS || "30000",
