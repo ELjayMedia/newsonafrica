@@ -1,81 +1,3 @@
-const runtimeCaching = [
-  {
-    urlPattern: ({ request }) => {
-      if (request.destination === "document") {
-        return true
-      }
-
-      const acceptHeader = request.headers.get("accept") || ""
-      return acceptHeader.includes("text/html") || acceptHeader.includes("application/json")
-    },
-    handler: "NetworkFirst",
-    options: {
-      cacheName: "document-cache",
-      networkTimeoutSeconds: 3,
-      expiration: {
-        maxEntries: 20,
-        maxAgeSeconds: 60 * 30, // 30 minutes
-      },
-    },
-  },
-  {
-    urlPattern: /^https:\/\/newsonafrica\.com\/api\/.*/i,
-    handler: "StaleWhileRevalidate",
-    options: {
-      cacheName: "api-cache",
-      expiration: {
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24, // 24 hours
-      },
-    },
-  },
-  {
-    urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)/i,
-    handler: ({ url, event, request, params }) => {
-      const hostname = url?.hostname || "default"
-      const cacheName = `image-cache-${hostname}`
-      self.__WB_IMAGE_CACHE_STRATEGIES__ = self.__WB_IMAGE_CACHE_STRATEGIES__ || {}
-      let strategy = self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName]
-
-      if (!strategy) {
-        strategy = new workbox.strategies.StaleWhileRevalidate({
-          cacheName,
-          plugins: [
-            new workbox.expiration.ExpirationPlugin({
-              maxEntries: 45,
-              maxAgeSeconds: 3 * 24 * 60 * 60, // 3 days
-              purgeOnQuotaError: true,
-            }),
-          ],
-        })
-        self.__WB_IMAGE_CACHE_STRATEGIES__[cacheName] = strategy
-      }
-
-      return strategy.handle({ event, request, url, params })
-    },
-  },
-]
-
-const withPWA = require("@ducanh2912/next-pwa").default({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-  skipWaiting: false,
-  cacheOnFrontEndNav: true,
-  fallbacks: {
-    document: "/offline",
-    image: "/placeholder.svg",
-  },
-  workboxOptions: {
-    runtimeCaching,
-  },
-  extendDefaultRuntimeCaching: false,
-})
-
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
-  enabled: process.env.ANALYZE === "1",
-})
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -136,23 +58,6 @@ const nextConfig = {
         ],
       },
       {
-        source: "/service-worker.js",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=0, must-revalidate",
-          },
-          {
-            key: "Service-Worker-Allowed",
-            value: "/",
-          },
-          {
-            key: "Content-Type",
-            value: "application/javascript; charset=utf-8",
-          },
-        ],
-      },
-      {
         source: "/(.*)\\.js$",
         headers: [
           {
@@ -182,4 +87,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withBundleAnalyzer(withPWA(nextConfig))
+module.exports = nextConfig

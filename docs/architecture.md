@@ -1,16 +1,16 @@
 # News On Africa Architecture
 
-This document outlines the architecture of the News On Africa Progressive Web App, explaining the key components, data flow, and design decisions.
+This document outlines the architecture of the News On Africa application, explaining the key components, data flow, and design decisions.
 
 ## System Overview
 
-News On Africa is a Progressive Web App built with Next.js that serves as a pan-African news platform. The application connects to a headless WordPress CMS for content and uses Supabase for authentication, user data storage, and real-time features.
+News On Africa is a modern Next.js application that serves as a pan-African news platform. The application connects to a headless WordPress CMS for content and uses Supabase for authentication, user data storage, and real-time features.
 
 ## Architecture Diagram
 
 \`\`\`mermaid
 graph TD
-    User[User] --> FE[Frontend - Next.js PWA]
+    User[User] --> FE[Frontend - Next.js App]
     FE --> WPAPI[WordPress REST API]
     FE --> SupabaseAuth[Supabase Auth]
     FE --> SupabaseDB[Supabase Database]
@@ -24,11 +24,10 @@ graph TD
 
 ## Key Components
 
-### 1. Frontend (Next.js PWA)
+### 1. Frontend (Next.js App)
 
 The frontend is built with Next.js using the App Router, providing a fast, responsive user interface with the following features:
 
-- **Progressive Web App**: Service worker for offline capabilities
 - **Server Components**: For improved performance and SEO
 - **Client Components**: For interactive elements
 - **Incremental Static Regeneration**: For efficient content updates
@@ -116,7 +115,6 @@ Vercel serves as the hosting and CDN platform:
 - **Image Optimization**: Next.js Image component for responsive images
 - **Code Splitting**: Automatic code splitting for faster page loads
 - **Caching Strategy**: ISR for optimal balance of freshness and performance
-- **Service Worker**: Offline capabilities and asset caching
 - **Core Web Vitals**: Optimized for LCP, FID, and CLS metrics
 - **Sitemap Fetch Limits**: `/sitemap.xml` and `/server-sitemap.xml` only pull the latest 100 posts during generation; rely on cached feeds (e.g., `/api/home-feed` or native WordPress sitemaps) for deeper archives to avoid heavy GraphQL bursts during builds.
 

@@ -1,6 +1,6 @@
-# News On Africa PWA
+# News On Africa
 
-A Progressive Web App for delivering news content across Africa with a focus on performance, offline capabilities, and user engagement.
+A modern Next.js application for delivering news content across Africa with a focus on performance and user engagement.
 
 ## ⚠️ Quick Fix: GraphQL/REST API Issues
 
@@ -17,7 +17,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 ## 🌟 Features
 
 - **Mobile-first, responsive design**: Optimized for all devices with a focus on mobile experience
-- **Offline reading capabilities**: Service worker implementation for offline content access
 - **Push notifications**: Real-time alerts for breaking news
 - **Fast loading times**: Optimized assets and code splitting for performance
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
@@ -25,7 +24,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
-- **Planned Web2Native conversion**: Future native wrappers will package the PWA for app stores
 
 ## 🏗️ Architecture
 
@@ -150,16 +148,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-f
 
 The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Suggestions can be retrieved by passing `suggestions=true` alongside the search query.
 
-## 📱 Future Web2Native Conversion
-
-Web2Native tooling will later be used to convert this PWA into installable native applications. Planned steps include:
-
-1. Configure the Web2Native project with app details.
-2. Generate platform-specific builds.
-3. Submit the builds to the respective app stores.
-
-Documentation for this workflow will be added once available.
-
 ## 🧪 Testing
 
 \`\`\`bash
@@ -172,16 +160,6 @@ npm run test:e2e
 # Run linting
 npm run lint
 \`\`\`
-
-### 📊 Bundle Analysis
-
-Generate bundle size reports locally with the built-in analyzer:
-
-\`\`\`bash
-ANALYZE=1 npm run build
-\`\`\`
-
-This command outputs interactive client and server bundle reports in `.next/analyze/` for inspection.
 
 ## 📚 Documentation
 
