@@ -1,7 +1,6 @@
 import { unstable_cache } from "next/cache"
 
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
-import { WORDPRESS_REST_MAX_PER_PAGE } from "../wordpress-queries"
 import { withGraphqlFallback, type WithGraphqlFallbackLogMeta } from "../wordpress/rest-client"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -222,6 +221,8 @@ export interface RestPaginationOptions<TItem> {
   throttleMs?: number
   makeRequest: (page: number, perPage: number) => Promise<{ items: TItem[]; headers?: Headers | null }>
 }
+
+export const WORDPRESS_REST_MAX_PER_PAGE = 100
 
 export const DEFAULT_REST_PAGE_SIZE = WORDPRESS_REST_MAX_PER_PAGE
 export const DEFAULT_REST_REQUEST_THROTTLE_MS = 150

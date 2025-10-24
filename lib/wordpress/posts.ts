@@ -24,7 +24,7 @@ import type {
 } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-import { DEFAULT_COUNTRY } from "./shared"
+import { DEFAULT_COUNTRY, mapGraphqlTagNode } from "./shared"
 import type { PaginatedPostsResult } from "./types"
 import type { WordPressTag } from "@/types/wp"
 import type { HomePost } from "@/types/home"
@@ -79,37 +79,6 @@ type PostBySlugQueryResult = {
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
-}
-
-const mapGraphqlTagNode = (
-  node:
-    | {
-        databaseId?: number | null
-        id?: string | null
-        name?: string | null
-        slug?: string | null
-      }
-    | null
-    | undefined,
-): WordPressTag | null => {
-  if (!node) {
-    return null
-  }
-
-  const databaseId = typeof node.databaseId === "number" ? node.databaseId : undefined
-  const slug = typeof node.slug === "string" ? node.slug : undefined
-  const name = typeof node.name === "string" ? node.name : undefined
-
-  if (!slug) {
-    return null
-  }
-
-  return {
-    id: databaseId,
-    databaseId,
-    name,
-    slug,
-  }
 }
 
 export async function getLatestPostsForCountry(
