@@ -1,7 +1,6 @@
 import { unstable_cache } from "next/cache"
 
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
-import { withGraphqlFallback, type WithGraphqlFallbackLogMeta } from "../wordpress/rest-client"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -165,46 +164,8 @@ export function createThrottledQueue({
   }
 }
 
-export interface GraphqlFirstMessages {
-  empty?: string
-  error?: string
-}
-
-export interface GraphqlFirstOptions<TGraphqlResult, TResult> {
-  fetchGraphql: () => Promise<TGraphqlResult | null | undefined>
-  normalize: (data: TGraphqlResult | null | undefined) => TResult | null | undefined
-  makeRestFallback: () => Promise<TResult>
-  cacheTags?: string[]
-  logMeta: WithGraphqlFallbackLogMeta
-  messages?: GraphqlFirstMessages
-  onGraphqlEmpty?: () => void
-  onGraphqlError?: (error: unknown) => void
-}
-
 export function buildWpCacheTags(params: BuildCacheTagsParams): string[] {
   return buildCacheTags(params)
-}
-
-export async function graphqlFirst<TGraphqlResult, TResult>({
-  fetchGraphql,
-  normalize,
-  makeRestFallback,
-  cacheTags,
-  logMeta,
-  messages,
-  onGraphqlEmpty,
-  onGraphqlError,
-}: GraphqlFirstOptions<TGraphqlResult, TResult>): Promise<TResult> {
-  return withGraphqlFallback<TGraphqlResult, TResult>({
-    fetchGraphql,
-    normalize,
-    makeRestFallback,
-    cacheTags,
-    logMeta,
-    messages,
-    onGraphqlEmpty,
-    onGraphqlError,
-  })
 }
 
 export interface RestPaginationResult<TItem> {

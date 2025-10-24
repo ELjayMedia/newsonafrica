@@ -26,7 +26,6 @@ export type {
 } from "./wordpress/types"
 
 export { COUNTRIES, fetchFromWpGraphQL } from "./wordpress/client"
-export { executeRestFallback, fetchFromWp, withGraphqlFallback } from "./wordpress/rest-client"
 export type { CountryConfig } from "./wordpress/client"
 export type { WordPressPost } from "@/types/wp"
 

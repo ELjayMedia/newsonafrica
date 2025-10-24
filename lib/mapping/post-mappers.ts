@@ -47,126 +47,14 @@ const extractRendered = (value: string | { rendered?: string } | undefined): str
   return undefined
 }
 
-const resolveRelayId = (post: RestPost | GraphqlPostNode): string | undefined => {
+const resolveRelayId = (
+  post: GraphqlPostNode | { globalRelayId?: unknown; id?: unknown },
+): string | undefined => {
   const candidate = (post as any)?.globalRelayId ?? (post as any)?.id
   if (typeof candidate === "string" && candidate.length > 0) {
     return candidate
   }
   return undefined
-}
-
-// ------------------------------
-// REST shapes (embedded) → normalize
-// ------------------------------
-export type RestPost = {
-  id?: number
-  databaseId?: number
-  slug?: string
-  date?: string
-  modified?: string
-  title?: string | { rendered?: string }
-  excerpt?: string | { rendered?: string }
-  content?: string | { rendered?: string }
-  globalRelayId?: string
-  link?: string
-  _embedded?: {
-    "wp:featuredmedia"?: Array<{
-      source_url?: string
-      alt_text?: string
-      media_details?: { width?: number; height?: number }
-      caption?: string
-    }>
-    "wp:author"?: Array<{ id?: number; name?: string; slug?: string }>
-    "wp:term"?: Array<Array<{ id?: number; databaseId?: number; name?: string; slug?: string }>>
-  }
-}
-
-const mapRestFeaturedImage = (post: RestPost): WordPressMedia | undefined => {
-  const featured = post._embedded?.["wp:featuredmedia"]?.[0]
-  if (!featured) return undefined
-
-  return {
-    node: {
-      sourceUrl: featured.source_url ?? undefined,
-      altText: featured.alt_text ?? undefined,
-      caption: featured.caption ?? undefined,
-      mediaDetails: featured.media_details
-        ? {
-            width: featured.media_details.width ?? undefined,
-            height: featured.media_details.height ?? undefined,
-          }
-        : undefined,
-    },
-  }
-}
-
-const mapRestAuthor = (post: RestPost): WordPressAuthor | undefined => {
-  const author = post._embedded?.["wp:author"]?.[0]
-  if (!author) return undefined
-
-  const databaseId = author.id ?? undefined
-  const name = author.name ?? ""
-  const slug = author.slug ?? ""
-
-  return {
-    id: databaseId,
-    databaseId,
-    name,
-    slug,
-    node: {
-      databaseId,
-      name,
-      slug,
-    },
-  }
-}
-
-const mapRestCategories = (post: RestPost): WordPressCategoryConnection => {
-  const categoryTerms = post._embedded?.["wp:term"]?.[0] ?? []
-  return {
-    nodes: categoryTerms
-      .filter((cat): cat is NonNullable<typeof cat> => Boolean(cat?.slug))
-      .map((cat) => ({
-        id: cat.id ?? cat.databaseId ?? undefined,
-        databaseId: cat.databaseId ?? cat.id ?? undefined,
-        name: cat.name ?? undefined,
-        slug: cat.slug ?? undefined,
-      })),
-  }
-}
-
-const mapRestTags = (post: RestPost): WordPressTagConnection => {
-  const tagTerms = post._embedded?.["wp:term"]?.[1] ?? []
-  return {
-    nodes: tagTerms
-      .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag?.slug))
-      .map((tag) => ({
-        id: tag.id ?? tag.databaseId ?? undefined,
-        databaseId: tag.databaseId ?? tag.id ?? undefined,
-        name: tag.name ?? undefined,
-        slug: tag.slug ?? undefined,
-      })),
-  }
-}
-
-export const mapRestPostToWordPressPost = (post: RestPost, countryCode?: string): WordPressPost => {
-  const content = extractRendered(post.content)
-  return {
-    databaseId: post.databaseId ?? post.id ?? undefined,
-    id: post.id !== undefined ? String(post.id) : undefined,
-    slug: post.slug ?? undefined,
-    date: post.date ?? undefined,
-    modified: post.modified ?? undefined,
-    title: extractRendered(post.title) ?? "",
-    excerpt: extractRendered(post.excerpt) ?? "",
-    content: content ? rewriteLegacyLinks(content, countryCode) : undefined,
-    link: typeof post.link === "string" ? post.link : undefined,
-    featuredImage: mapRestFeaturedImage(post),
-    author: mapRestAuthor(post),
-    categories: mapRestCategories(post),
-    tags: mapRestTags(post),
-    globalRelayId: resolveRelayId(post),
-  }
 }
 
 // ------------------------------
@@ -273,30 +161,6 @@ export const mapGraphqlPostToWordPressPost = (
   tags: mapGraphqlTags(post),
   globalRelayId: resolveRelayId(post),
 })
-
-// ------------------------------
-// Source switch (REST vs GQL) → WordPressPost
-// ------------------------------
-export const mapWordPressPostFromSource = (
-  post: RestPost | GraphqlPostNode,
-  source: "rest" | "gql",
-  countryCode?: string,
-): WordPressPost => {
-  if (source === "rest") {
-    const candidate = post as unknown as WordPressPost
-    if (
-      candidate &&
-      typeof candidate === "object" &&
-      typeof candidate.title === "string" &&
-      (candidate.excerpt === undefined || typeof candidate.excerpt === "string") &&
-      (candidate.content === undefined || typeof candidate.content === "string")
-    ) {
-      return candidate
-    }
-    return mapRestPostToWordPressPost(post as RestPost, countryCode)
-  }
-  return mapGraphqlPostToWordPressPost(post as GraphqlPostNode, countryCode)
-}
 
 // ------------------------------
 // High-level adapters for list UI (kept from Branch A)
