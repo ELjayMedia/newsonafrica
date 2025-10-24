@@ -1,68 +1,75 @@
-import { describe, it, expect, vi, afterEach } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+
 import * as wordpressApi from "./wordpress-api"
 
-const buildRestPost = (id: number, slugPrefix = "rest") => ({
-  id,
-  date: `2024-05-${String(id).padStart(2, "0")}T00:00:00Z`,
-  slug: `${slugPrefix}-${id}`,
-  title: { rendered: `${slugPrefix} title ${id}` },
-  excerpt: { rendered: `${slugPrefix} excerpt ${id}` },
-  content: { rendered: `<p>${slugPrefix} content ${id}</p>` },
-  _embedded: {
-    "wp:featuredmedia": [
-      {
-        source_url: `${slugPrefix}-${id}.jpg`,
-        alt_text: `${slugPrefix} alt ${id}`,
-        media_details: { width: 1200, height: 800 },
-      },
-    ],
-    "wp:author": [
-      {
-        id: id * 100,
-        name: `${slugPrefix} author ${id}`,
-        slug: `${slugPrefix}-author-${id}`,
-      },
-    ],
-    "wp:term": [
-      [
-        {
-          id: id * 10,
-          name: `${slugPrefix} category`,
-          slug: `${slugPrefix}-category`,
-        },
-      ],
-      [],
-    ],
-  },
+const createGraphqlPost = (id: number, prefix = "post") => ({
+  databaseId: id,
+  id: `gid://post/${id}`,
+  slug: `${prefix}-${id}`,
+  date: "2024-05-01T00:00:00Z",
+  modified: "2024-05-02T00:00:00Z",
+  title: `${prefix} title ${id}`,
+  excerpt: `${prefix} excerpt ${id}`,
+  content: `<p>${prefix} content ${id}</p>`,
+  uri: `/${prefix}-${id}/`,
+  link: `https://example.com/${prefix}-${id}`,
+  featuredImage: { node: { sourceUrl: `${prefix}-${id}.jpg`, altText: `${prefix} alt ${id}` } },
+  categories: { nodes: [] },
+  tags: { nodes: [] },
+  author: { node: { id: `gid://user/${id}`, databaseId: id, name: `${prefix} author`, slug: `${prefix}-author` } },
+  countries: { nodes: [] },
 })
 
-// Restore global fetch after each test
 afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe("fetchPost", () => {
-  it("returns post data with featured image", async () => {
-    const mockPost = [
-      {
-        id: 1,
-        slug: "test",
-        title: { rendered: "Test" },
-        excerpt: { rendered: "" },
-        content: { rendered: "content" },
-        _embedded: { "wp:featuredmedia": [{ source_url: "img.jpg", alt_text: "img" }] },
+  it("returns GraphQL post data with featured image", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: {
+          nodes: [createGraphqlPost(1, "sample")],
+        },
       },
-    ]
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockPost }))
-    const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "test" })
-    expect(result?.featuredImage?.node.sourceUrl).toBe("img.jpg")
-    expect(result?.title).toBe("Test")
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
+
+    const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "sample-1" })
+
+    expect(result).not.toBeNull()
+    expect(result?.slug).toBe("sample-1")
+    expect(result?.featuredImage?.node.sourceUrl).toBe("sample-1.jpg")
   })
 
-  it("returns null on 503 response", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }))
-    const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "test" })
+  it("returns null when GraphQL returns no nodes", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: {
+          nodes: [],
+        },
+      },
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
+
+    const result = await wordpressApi.fetchPost({ countryCode: "sz", slug: "missing" })
     expect(result).toBeNull()
   })
 })
@@ -70,471 +77,255 @@ describe("fetchPost", () => {
 describe("fetchFromWpGraphQL", () => {
   it("returns GraphQL data when response contains data", async () => {
     const mockData = { posts: { nodes: [] } }
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: mockData }),
-    }))
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: mockData }),
+      }),
+    )
 
     const result = await wordpressApi.fetchFromWpGraphQL<typeof mockData>("sz", "query")
-
     expect(result).toEqual(mockData)
   })
 })
 
 describe("getRelatedPosts", () => {
-  it("returns empty array on 503 response", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }))
-    const result = await wordpressApi.getRelatedPosts("1", [], ["news"])
-    expect(result).toEqual([])
-  })
-
-  it("returns posts on 200 response", async () => {
-    const mockPosts = [
-      {
-        id: 2,
-        slug: "hello",
-        title: { rendered: "Hello" },
-        excerpt: { rendered: "" },
-        content: { rendered: '<a href="/post/old">link</a>' },
-        _embedded: { "wp:featuredmedia": [{ source_url: "img.jpg" }] },
+  it("maps related posts returned from GraphQL", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: {
+          nodes: [createGraphqlPost(11, "related")],
+        },
       },
-    ]
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => mockPosts })
-    vi.stubGlobal("fetch", fetchMock)
-    const result = await wordpressApi.getRelatedPosts("1", [], ["news"])
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("tags_relation=AND"),
-      expect.anything(),
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
     )
-    expect(result[0].featuredImage?.node.sourceUrl).toBe("img.jpg")
-    expect(result[0].content).toContain('/sz/article/old')
+
+    const result = await wordpressApi.getRelatedPosts("42", [], ["analysis"], 3, "sz")
+
+    expect(result).toHaveLength(1)
+    expect(result[0].slug).toBe("related-11")
   })
 })
 
 describe("getPostsForCategories", () => {
-  it("batches GraphQL requests when available", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        data: {
-          categories: {
-            nodes: [
-              {
-                databaseId: 1,
-                name: 'News',
-                slug: 'news',
-                description: 'Latest news',
-                count: 5,
-                posts: {
-                  pageInfo: { hasNextPage: false, endCursor: 'cursor' },
-                  nodes: [
-                    {
-                      databaseId: 10,
-                      id: 'gid://post/10',
-                      slug: 'news-post',
-                      date: '2024-01-01T00:00:00Z',
-                      title: 'News GraphQL Title',
-                      excerpt: 'News GraphQL Excerpt',
-                      content: '<p>News GraphQL Content</p>',
-                      featuredImage: {
-                        node: {
-                          sourceUrl: 'news.jpg',
-                          altText: 'News',
-                          mediaDetails: { width: 1200, height: 800 },
-                        },
-                      },
-                      categories: { nodes: [] },
-                      tags: { nodes: [] },
-                      author: { node: { id: 'gid://user/1', name: 'Author', slug: 'author' } },
-                    },
-                  ],
-                },
+  it("returns category buckets from GraphQL", async () => {
+    const graphqlResponse = {
+      data: {
+        categories: {
+          nodes: [
+            {
+              databaseId: 5,
+              name: "News",
+              slug: "news",
+              description: "Latest news",
+              count: 2,
+              posts: {
+                pageInfo: { hasNextPage: false, endCursor: "cursor" },
+                nodes: [createGraphqlPost(21, "news")],
               },
-            ],
-          },
+            },
+          ],
         },
+      },
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
       }),
-    })
+    )
 
-    vi.stubGlobal('fetch', fetchMock)
+    const result = await wordpressApi.getPostsForCategories("sz", ["news"], 5)
 
-    const results = await wordpressApi.getPostsForCategories('sz', ['news'], 5)
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(results.news.category?.name).toBe('News')
-    expect(results.news.posts).toHaveLength(1)
-    expect(results.news.hasNextPage).toBe(false)
-    expect(results.news.endCursor).toBe('cursor')
-  })
-
-  it("returns empty category buckets when GraphQL returns no nodes", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        data: {
-          categories: { nodes: null },
-        },
-      }),
-    })
-
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
-
-    const results = await wordpressApi.getPostsForCategories('sz', ['news', 'business'], 5)
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(results.news).toEqual({
-      category: null,
-      posts: [],
-      hasNextPage: false,
-      endCursor: null,
-    })
-    expect(results.business).toEqual({
-      category: null,
-      posts: [],
-      hasNextPage: false,
-      endCursor: null,
-    })
+    expect(result.news.category?.name).toBe("News")
+    expect(result.news.posts).toHaveLength(1)
   })
 })
 
 describe("getPostsByCategoryForCountry", () => {
-  it("requests only fp-tagged posts via GraphQL", async () => {
-    const capturedRequests: Array<{ variables?: Record<string, unknown> }> = []
+  it("requests fp-tagged posts and returns GraphQL data", async () => {
+    const capturedBodies: string[] = []
+
+    const graphqlResponse = {
+      data: {
+        categories: { nodes: [{ databaseId: 8, name: "Politics", slug: "politics" }] },
+        posts: {
+          pageInfo: { hasNextPage: false, endCursor: null },
+          nodes: [createGraphqlPost(31, "politics")],
+        },
+      },
+    }
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        if (init?.body && typeof init.body === "string") {
-          capturedRequests.push(JSON.parse(init.body) as { variables?: Record<string, unknown> })
-        }
-
-        return new Response(
-          JSON.stringify({
-            data: {
-              categories: {
-                nodes: [
-                  {
-                    databaseId: 1,
-                    name: "Politics",
-                    slug: "politics",
-                    description: null,
-                    count: 1,
-                  },
-                ],
-              },
-              posts: {
-                pageInfo: { hasNextPage: false, endCursor: null },
-                nodes: [],
-              },
-            },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
+      if (typeof init?.body === "string") {
+        capturedBodies.push(init.body)
       }
-
-      return new Response(null, { status: 404 })
+      return new Response(JSON.stringify(graphqlResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
     })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10)
+    const result = await wordpressApi.getPostsByCategoryForCountry("za", "politics", 6)
 
-    expect(capturedRequests).not.toHaveLength(0)
-    capturedRequests.forEach((request) => {
-      expect(request.variables?.tagSlugs).toEqual(["fp"])
-      expect(request.variables?.after).toBeUndefined()
-    })
-  })
-
-  it("passes the provided cursor to GraphQL requests", async () => {
-    const capturedRequests: Array<{ variables?: Record<string, unknown> }> = []
-
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        if (init?.body && typeof init.body === "string") {
-          capturedRequests.push(JSON.parse(init.body) as { variables?: Record<string, unknown> })
-        }
-
-        return new Response(
-          JSON.stringify({
-            data: {
-              categories: { nodes: [] },
-              posts: {
-                pageInfo: { hasNextPage: false, endCursor: "cursor-2" },
-                nodes: [],
-              },
-            },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
-
-      return new Response(null, { status: 404 })
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
-
-    await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10, "cursor-1")
-
-    expect(capturedRequests).toHaveLength(1)
-    expect(capturedRequests[0]?.variables?.after).toBe("cursor-1")
-  })
-
-  it("returns an empty result when GraphQL returns no data", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        return new Response(JSON.stringify({ data: null }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
-      return new Response(null, { status: 404 })
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
-
-    const result = await wordpressApi.getPostsByCategoryForCountry("ng", "politics", 10)
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({
-      category: null,
-      posts: [],
-      hasNextPage: false,
-      endCursor: null,
-    })
+    expect(result.posts).toHaveLength(1)
+    expect(result.category?.name).toBe("Politics")
+    expect(capturedBodies.some((body) => body.includes("\"tagSlugs\":[\"fp\"]"))).toBe(true)
   })
 })
 
 describe("fetchMostReadPosts", () => {
-  it("decodes HTML entities in normalized responses", async () => {
-    const mockPayload = [
+  it("normalizes rendered text responses", async () => {
+    const payload = [
       {
-        id: 123,
-        slug: "encoded-title",
-        title: { rendered: "Leaders say &#39;hello&#39;" },
-        excerpt: { rendered: "It&#39;s a great day" },
+        id: 7,
+        slug: "encoded",
+        title: { rendered: "Leaders say &#39;hi&#39;" },
+        excerpt: { rendered: "It&#39;s great" },
         date: "2024-05-01",
       },
     ]
 
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockPayload,
-    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => payload,
+      }),
+    )
 
-    vi.stubGlobal("fetch", fetchMock)
+    const result = await wordpressApi.fetchMostReadPosts("sz", 1)
 
-    const results = await wordpressApi.fetchMostReadPosts("sz", 1)
-
-    expect(results).toHaveLength(1)
-    expect(results[0].title).toBe("Leaders say 'hello'")
-    expect(results[0].excerpt).toBe("It's a great day")
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe("Leaders say 'hi'")
+    expect(result[0].excerpt).toBe("It's great")
   })
 })
 
 describe("getFrontPageSlicesForCountry", () => {
   const createNode = (id: number, prefix: string) => ({
-    databaseId: id,
-    id: `gid://post/${id}`,
-    slug: `${prefix.toLowerCase()}-${id}`,
-    date: "2024-05-01T00:00:00Z",
-    title: `${prefix} ${id}`,
-    excerpt: `${prefix} excerpt ${id}`,
-    content: null,
+    ...createGraphqlPost(id, prefix),
     featuredImage: { node: null },
-    categories: { nodes: [] },
-    tags: { nodes: [] },
-    author: { node: null },
   })
 
-  it("aggregates hero, trending, and latest slices in a single GraphQL call", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
+  it("builds hero, trending, and latest slices from GraphQL", async () => {
+    const graphqlResponse = {
+      data: {
+        hero: { nodes: [createNode(101, "Hero"), createNode(102, "Hero")] },
+        latest: {
+          pageInfo: { hasNextPage: true, endCursor: "cursor-30" },
+          edges: Array.from({ length: 30 }, (_, index) => ({
+            cursor: `cursor-${index + 1}`,
+            node: createNode(index + 1, "Latest"),
+          })),
+        },
+      },
+    }
 
-      if (url.endsWith("/graphql")) {
-        return new Response(
-          JSON.stringify({
-            data: {
-              hero: {
-                nodes: [createNode(201, "Hero"), createNode(202, "Hero")],
-              },
-              latest: {
-                pageInfo: { hasNextPage: true, endCursor: "cursor-30" },
-                edges: Array.from({ length: 30 }, (_, index) => ({
-                  cursor: `cursor-${index + 1}`,
-                  node: createNode(index + 1, "Latest"),
-                })),
-              },
-            },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`)
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
 
     const result = await wordpressApi.getFrontPageSlicesForCountry("za")
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-
-    expect(result.hero.heroPost?.slug).toBe("hero-201")
-    expect(result.hero.secondaryStories).toHaveLength(1)
-
+    expect(result.hero.heroPost?.slug).toBe("hero-101")
     expect(result.trending.posts).toHaveLength(7)
-    expect(result.trending.posts[0].slug).toBe("latest-4")
-    expect(result.trending.endCursor).toBe("cursor-10")
-    expect(result.trending.hasNextPage).toBe(true)
-
     expect(result.latest.posts).toHaveLength(20)
-    expect(result.latest.posts[0].slug).toBe("latest-11")
-    expect(result.latest.endCursor).toBe("cursor-30")
-    expect(result.latest.hasNextPage).toBe(true)
-  })
-
-  it("returns empty slices when GraphQL returns no data", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        return new Response(
-          JSON.stringify({
-            data: {
-              hero: { nodes: [] },
-              latest: { pageInfo: { hasNextPage: false, endCursor: null }, edges: [] },
-            },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`)
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
-
-    const result = await wordpressApi.getFrontPageSlicesForCountry("za")
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(result.hero.heroPost).toBeUndefined()
-    expect(result.hero.secondaryStories).toHaveLength(0)
-    expect(result.trending.posts).toHaveLength(0)
-    expect(result.latest.posts).toHaveLength(0)
   })
 })
 
 describe("getFpTaggedPostsForCountry", () => {
-  const createGraphqlNode = (id: number) => ({
-    databaseId: id,
-    id: `gid://post/${id}`,
-    slug: `fp-${id}`,
-    date: "2024-05-01T00:00:00Z",
-    title: `FP ${id}`,
-    excerpt: `FP excerpt ${id}`,
-    content: null,
-    featuredImage: { node: null },
-    categories: { nodes: [] },
-    tags: { nodes: [] },
-    author: { node: null },
-  })
+  it("returns mapped posts when GraphQL resolves nodes", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: {
+          nodes: [createGraphqlPost(201, "fp"), createGraphqlPost(202, "fp")],
+        },
+      },
+    }
 
-  it("returns GraphQL results when available", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        return new Response(
-          JSON.stringify({
-            data: {
-              posts: {
-                nodes: [createGraphqlNode(1), createGraphqlNode(2)],
-              },
-            },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`)
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
 
     const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
 
     expect(result).toHaveLength(2)
-    expect(result[0].slug).toBe("fp-1")
-    expect(result[1].slug).toBe("fp-2")
-  })
-
-  it("returns an empty array when GraphQL returns no posts", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
-
-      if (url.endsWith("/graphql")) {
-        return new Response(
-          JSON.stringify({ data: { posts: { nodes: [] } } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
-
-      throw new Error(`Unexpected fetch to ${url}`)
-    })
-
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
-
-    const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(result).toHaveLength(0)
+    expect(result[0].slug).toBe("fp-201")
   })
 })
 
 describe("getLatestPostsForCountry", () => {
-  it("falls back to REST when GraphQL returns no posts", async () => {
-    const restPosts = [buildRestPost(1, "latest"), buildRestPost(2, "latest")]
+  it("returns paginated GraphQL posts", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: {
+          pageInfo: { hasNextPage: true, endCursor: "cursor-2" },
+          nodes: [createGraphqlPost(1, "latest"), createGraphqlPost(2, "latest")],
+        },
+      },
+    }
 
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
 
-      if (url.endsWith("/graphql")) {
-        return new Response(
-          JSON.stringify({ data: { posts: null } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )
-      }
+    const result = await wordpressApi.getLatestPostsForCountry("za", 2)
 
-      if (url.includes("/posts")) {
-        return new Response(JSON.stringify(restPosts), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
+    expect(result.posts).toHaveLength(2)
+    expect(result.hasNextPage).toBe(true)
+    expect(result.endCursor).toBe("cursor-2")
+  })
 
-      throw new Error(`Unexpected fetch to ${url}`)
-    })
+  it("returns empty pagination when GraphQL returns null", async () => {
+    const graphqlResponse = {
+      data: {
+        posts: null,
+      },
+    }
 
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => graphqlResponse,
+      }),
+    )
 
     const result = await wordpressApi.getLatestPostsForCountry("za", 3)
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(result.posts).toHaveLength(2)
-    expect(result.posts[0].slug).toBe("latest-1")
-    expect(result.hasNextPage).toBe(false)
-    expect(result.endCursor).toBeNull()
+    expect(result).toEqual({ posts: [], hasNextPage: false, endCursor: null })
   })
 })

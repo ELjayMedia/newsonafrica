@@ -1,81 +1,55 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { CACHE_DURATIONS } from "../cache/constants"
-import * as graphqlClient from "./client"
-import * as restClient from "./rest-client"
-import { getFpTagForCountry, invalidateFpTagCache } from "./shared"
-import type { WordPressTag } from "@/types/wp"
+vi.mock("./client", () => ({
+  fetchFromWpGraphQL: vi.fn(),
+}))
 
-const buildTag = (id: number, slug = "fp"): WordPressTag => ({
-  id,
-  databaseId: id,
-  name: `Front Page ${id}`,
-  slug,
-})
+import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
+import { fetchFromWpGraphQL } from "./client"
+import { getFpTagForCountry } from "./shared"
+
+const mockFetchFromWpGraphQL = vi.mocked(fetchFromWpGraphQL)
 
 describe("getFpTagForCountry", () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    mockFetchFromWpGraphQL.mockReset()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
-  it("reuses cached FP tag results within the TTL", async () => {
-    const graphqlSpy = vi
-      .spyOn(graphqlClient, "fetchFromWpGraphQL")
-      .mockResolvedValueOnce({
-        tag: { databaseId: 101, slug: "fp", name: "Front Page 101" },
-      })
-    const restSpy = vi.spyOn(restClient, "fetchFromWp").mockResolvedValue([] as WordPressTag[])
-
-    const tag = await getFpTagForCountry("za", { tags: ["frontpage"] })
-
-    expect(graphqlSpy).toHaveBeenCalledTimes(1)
-    expect(graphqlSpy).toHaveBeenCalledWith(
-      "za",
-      expect.any(String),
-      expect.objectContaining({ slug: "fp" }),
-      expect.arrayContaining([expect.stringContaining("country:za")]),
-    )
-    expect(restSpy).not.toHaveBeenCalled()
-    expect(first?.id).toBe(101)
-    expect(second?.id).toBe(101)
-  })
-
-  it("refetches the FP tag after the cache expires", async () => {
-    const graphqlSpy = vi
-      .spyOn(graphqlClient, "fetchFromWpGraphQL")
-      .mockResolvedValueOnce({
-        tag: { databaseId: 101, slug: "fp", name: "Front Page 101" },
-      })
-      .mockResolvedValueOnce({
-        tag: { databaseId: 202, slug: "fp", name: "Front Page 202" },
-      })
-
-    vi.spyOn(restClient, "fetchFromWp").mockResolvedValue([] as WordPressTag[])
-
-    await getFpTagForCountry("za")
-
-    const ttlMs = CACHE_DURATIONS.MEDIUM * 1000
-    vi.advanceTimersByTime(ttlMs + 1)
+  it("returns the GraphQL tag when data is available", async () => {
+    mockFetchFromWpGraphQL.mockResolvedValueOnce({
+      tag: { databaseId: 101, slug: "fp", name: "Front Page" },
+    } as any)
 
     const result = await getFpTagForCountry("za")
 
-    expect(graphqlSpy).toHaveBeenCalledTimes(2)
-    expect(refreshed?.id).toBe(202)
+    expect(mockFetchFromWpGraphQL).toHaveBeenCalledWith(
+      "za",
+      TAG_BY_SLUG_QUERY,
+      { slug: "fp" },
+      ["country:za", "section:tags", "tag:fp"],
+    )
+    expect(result).toEqual({ databaseId: 101, id: 101, name: "Front Page", slug: "fp" })
   })
 
-  it("falls back to REST when GraphQL returns no data", async () => {
-    vi.spyOn(graphqlClient, "fetchFromWpGraphQL").mockResolvedValueOnce({ tag: null })
-    const restSpy = vi
-      .spyOn(restClient, "fetchFromWp")
-      .mockResolvedValueOnce([buildTag(303)])
+  it("returns null when GraphQL returns no tag", async () => {
+    mockFetchFromWpGraphQL.mockResolvedValueOnce({ tag: null } as any)
 
-    const tag = await getFpTagForCountry("za")
+    const result = await getFpTagForCountry("ng")
 
-    expect(restSpy).toHaveBeenCalledTimes(1)
-    expect(tag?.id).toBe(303)
+    expect(mockFetchFromWpGraphQL).toHaveBeenCalled()
+    expect(result).toBeNull()
+  })
+
+  it("returns null when the GraphQL request throws", async () => {
+    mockFetchFromWpGraphQL.mockRejectedValueOnce(new Error("network"))
+
+    const result = await getFpTagForCountry("ke")
+
+    expect(mockFetchFromWpGraphQL).toHaveBeenCalled()
+    expect(result).toBeNull()
   })
 })

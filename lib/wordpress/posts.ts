@@ -1,7 +1,7 @@
 import { env } from "@/config/env"
-import { getRestBase } from "@/lib/wp-endpoints"
 import { buildCacheTags } from "../cache/tag-utils"
 import {
+  COUNTRY_BY_SLUG_QUERY,
   FEATURED_POSTS_QUERY,
   LATEST_POSTS_QUERY,
   POST_CATEGORIES_QUERY,
@@ -78,6 +78,18 @@ type TagBySlugQueryResult = {
 type PostBySlugQueryResult = {
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
+  } | null
+}
+
+type CountryBySlugQueryResult = {
+  countries?: {
+    nodes?: (
+      | {
+          databaseId?: number | null
+          slug?: string | null
+        }
+      | null
+    )[] | null
   } | null
 }
 
@@ -683,11 +695,44 @@ export async function fetchPost({
 }
 
 export async function resolveCountryTermId(slug: string): Promise<number | null> {
-  const base = getRestBase(process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY)
-  const res = await fetch(`${base}/countries?slug=${slug}`)
-  if (!res.ok) return null
-  const data = await res.json()
-  return data?.[0]?.id ?? null
+  const normalizedSlug = slug.trim().toLowerCase()
+  if (!normalizedSlug) {
+    return null
+  }
+
+  const countryCode = process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY
+  const cacheTags = buildCacheTags({
+    country: countryCode,
+    section: "countries",
+    extra: [`slug:${normalizedSlug}`],
+  })
+
+  try {
+    const data = await fetchFromWpGraphQL<CountryBySlugQueryResult>(
+      countryCode,
+      COUNTRY_BY_SLUG_QUERY,
+      { slug: [normalizedSlug] },
+      cacheTags,
+    )
+
+    const nodes = data?.countries?.nodes ?? []
+    for (const node of nodes) {
+      if (!node) {
+        continue
+      }
+
+      if (typeof node.slug === "string" && node.slug.toLowerCase() === normalizedSlug) {
+        const id = node.databaseId
+        if (typeof id === "number") {
+          return id
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`[v0] Failed to resolve country term id for ${normalizedSlug}:`, error)
+  }
+
+  return null
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {

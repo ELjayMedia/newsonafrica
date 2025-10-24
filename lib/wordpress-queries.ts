@@ -392,6 +392,17 @@ export const TAG_BY_SLUG_QUERY = gql`
   }
 `
 
+export const COUNTRY_BY_SLUG_QUERY = gql`
+  query CountryBySlug($slug: [String]) {
+    countries(where: { slug: $slug }) {
+      nodes {
+        databaseId
+        slug
+      }
+    }
+  }
+`
+
 export const POST_BY_SLUG_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
   query PostBySlug($slug: ID!, $countryTermIds: [ID!]) {
