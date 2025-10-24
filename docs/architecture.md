@@ -120,11 +120,11 @@ Vercel serves as the hosting and CDN platform:
 
 ## Security Considerations
 
-- **Authentication**: JWT-based with secure HTTP-only cookies
-- **API Protection**: Rate limiting and CSRF protection
-- **Database Security**: Row-level security policies
-- **Content Security Policy**: Strict CSP headers
-- **Input Validation**: Server-side validation for all user inputs
+- **Authentication & Session Management**: Supabase Auth manages user sign-in, issuing short-lived JWTs that are persisted through the `@supabase/ssr` helpers so credentials live inside HTTP-only cookies across server components and API routes.
+- **Access Control**: Supabase Row Level Security policies are provisioned and verified through the migration utilities, ensuring every read/write is scoped to the authenticated user even when using service clients.
+- **API & Webhook Hardening**: Internal APIs call Supabase with the active session, and external integrations such as the Paystack webhook validate provider signatures before mutating any data.
+- **Platform Headers**: Global security headers (e.g., frame, MIME sniffing, and XSS protections) are applied from the Next.js configuration to reduce common browser-based attack vectors.
+- **Input Validation**: Server-side actions sanitize payloads before persistence, combining application-level checks with Supabase constraints to prevent malformed content from being stored.
 
 ## Monitoring
 
