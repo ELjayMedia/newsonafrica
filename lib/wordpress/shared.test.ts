@@ -15,15 +15,11 @@ const buildTag = (id: number, slug = "fp"): WordPressTag => ({
 
 describe("getFpTagForCountry", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] })
-    vi.setSystemTime(new Date("2024-01-01T00:00:00Z"))
-    invalidateFpTagCache()
+    vi.restoreAllMocks()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    vi.useRealTimers()
-    invalidateFpTagCache()
   })
 
   it("reuses cached FP tag results within the TTL", async () => {
@@ -34,8 +30,7 @@ describe("getFpTagForCountry", () => {
       })
     const restSpy = vi.spyOn(restClient, "fetchFromWp").mockResolvedValue([] as WordPressTag[])
 
-    const first = await getFpTagForCountry("za", { tags: ["frontpage"] })
-    const second = await getFpTagForCountry("za", { tags: ["frontpage"] })
+    const tag = await getFpTagForCountry("za", { tags: ["frontpage"] })
 
     expect(graphqlSpy).toHaveBeenCalledTimes(1)
     expect(graphqlSpy).toHaveBeenCalledWith(
@@ -66,7 +61,7 @@ describe("getFpTagForCountry", () => {
     const ttlMs = CACHE_DURATIONS.MEDIUM * 1000
     vi.advanceTimersByTime(ttlMs + 1)
 
-    const refreshed = await getFpTagForCountry("za")
+    const result = await getFpTagForCountry("za")
 
     expect(graphqlSpy).toHaveBeenCalledTimes(2)
     expect(refreshed?.id).toBe(202)
