@@ -1,10 +1,10 @@
 # News On Africa Architecture
 
-This document outlines the architecture of the News On Africa platform, explaining the key components, data flow, and design decisions.
+This document outlines the architecture of the News On Africa application, explaining the key components, data flow, and design decisions.
 
 ## System Overview
 
-News On Africa is a Next.js application that serves as a pan-African news platform. The application connects to a headless WordPress CMS for content and uses Supabase for authentication, user data storage, and real-time features.
+News On Africa is a modern Next.js application that serves as a pan-African news platform. The application connects to a headless WordPress CMS for content and uses Supabase for authentication, user data storage, and real-time features.
 
 ## Architecture Diagram
 

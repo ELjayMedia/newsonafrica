@@ -63,7 +63,7 @@ export default function OfflineFallback({
           const url = new URL(request.url)
 
           // Skip API calls and assets
-          if (url.pathname.startsWith("/api/") || url.pathname.includes(".") || url.pathname === "/offline") {
+          if (url.pathname.startsWith("/api/") || url.pathname.includes(".")) {
             continue
           }
 

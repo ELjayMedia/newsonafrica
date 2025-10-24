@@ -23,7 +23,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 - **Ad integration**: Flexible ad placement system for monetization
 - **Search functionality**: Fast, relevant content discovery
 - **Multi-site architecture**: Support for country-specific editions
-- **Planned Web2Native conversion**: Future native wrappers will package the application for app stores
 
 ## 🏗️ Architecture
 
@@ -147,16 +146,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-f
 
 The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Suggestions can be retrieved by passing `suggestions=true` alongside the search query.
 
-## 📱 Future Web2Native Conversion
-
-Web2Native tooling will later be used to convert this application into installable native experiences. Planned steps include:
-
-1. Configure the Web2Native project with app details.
-2. Generate platform-specific builds.
-3. Submit the builds to the respective app stores.
-
-Documentation for this workflow will be added once available.
-
 ## 🧪 Testing
 
 \`\`\`bash
@@ -169,16 +158,6 @@ npm run test:e2e
 # Run linting
 npm run lint
 \`\`\`
-
-### 📊 Bundle Analysis
-
-Generate bundle size reports locally with the built-in analyzer:
-
-\`\`\`bash
-ANALYZE=1 npm run build
-\`\`\`
-
-This command outputs interactive client and server bundle reports in `.next/analyze/` for inspection.
 
 ## 📚 Documentation
 

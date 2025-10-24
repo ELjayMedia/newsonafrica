@@ -1,7 +1,3 @@
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
-  enabled: process.env.ANALYZE === "1",
-})
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -63,6 +59,36 @@ const nextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
   },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+        ],
+      },
+      {
+        source: "/(.*)\\.js$",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
+    ]
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -82,4 +108,4 @@ const nextConfig = {
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
 
-module.exports = withBundleAnalyzer(nextConfig)
+module.exports = nextConfig

@@ -40,13 +40,6 @@ export const appConfig = {
     cacheTimeout: 300000, // 5 minutes
   },
 
-  // PWA Configuration
-  pwa: {
-    installPromptDelay: 3000,
-    updateCheckInterval: 60000, // 1 minute
-    offlinePages: ["/", "/offline"],
-  },
-
   // Feature Flags
   features: {
     comments: process.env.FEATURE_COMMENTS === "true",
