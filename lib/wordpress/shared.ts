@@ -1,6 +1,5 @@
-import { CACHE_DURATIONS } from "../cache/constants"
-import { wordpressQueries } from "../wordpress-queries"
-import { fetchFromWp, executeRestFallback } from "./rest-client"
+import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
+import { fetchFromWpGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
@@ -9,36 +8,43 @@ import type { WordPressPost, WordPressTag } from "@/types/wp"
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const
 
-const FP_TAG_CACHE_TTL_MS = CACHE_DURATIONS.MEDIUM * 1000
-
-type FpTagCacheEntry = {
-  tag: WordPressTag | null
-  expiresAt: number
-}
-
-const fpTagCache = new Map<string, FpTagCacheEntry>()
-
-const buildFpTagCacheKey = (countryCode: string, slug: string) => `${countryCode}:${slug}`
-
 type GetFpTagForCountryOptions = {
   tags?: string[]
-  logMessage?: string
-  logMeta?: Record<string, unknown>
   slug?: string
-  forceRefresh?: boolean
 }
 
-export const invalidateFpTagCache = (countryCode?: string) => {
-  if (!countryCode) {
-    fpTagCache.clear()
-    return
+type TagBySlugQueryResult = {
+  tag?: {
+    databaseId?: number | null
+    id?: string | null
+    name?: string | null
+    slug?: string | null
+  } | null
+}
+
+const mapGraphqlTagNode = (
+  node:
+    | {
+        databaseId?: number | null
+        id?: string | null
+        name?: string | null
+        slug?: string | null
+      }
+    | null
+    | undefined,
+): WordPressTag | null => {
+  if (!node || typeof node.slug !== "string" || node.slug.length === 0) {
+    return null
   }
 
-  const prefix = `${countryCode}:`
-  for (const key of fpTagCache.keys()) {
-    if (key.startsWith(prefix)) {
-      fpTagCache.delete(key)
-    }
+  const databaseId = typeof node.databaseId === "number" ? node.databaseId : undefined
+  const name = typeof node.name === "string" ? node.name : undefined
+
+  return {
+    id: databaseId,
+    databaseId,
+    name,
+    slug: node.slug,
   }
 }
 
@@ -47,44 +53,16 @@ export const getFpTagForCountry = async (
   options: GetFpTagForCountryOptions = {},
 ): Promise<WordPressTag | null> => {
   const slug = options.slug ?? FP_TAG_SLUG
-  const cacheKey = buildFpTagCacheKey(countryCode, slug)
-
-  if (!options.forceRefresh) {
-    const cached = fpTagCache.get(cacheKey)
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.tag
-    }
-  }
-
   const tags = options.tags ?? []
-  const logMessage =
-    options.logMessage ?? `[v0] FP tag REST fallback failed for ${slug} (${countryCode})`
-  const logMeta = {
-    countryCode,
-    tagSlug: slug,
-    ...(options.logMeta ?? {}),
-  }
 
-  const response = await executeRestFallback(
-    () =>
-      fetchFromWp<WordPressTag[]>(
-        countryCode,
-        wordpressQueries.tagBySlug(slug),
-        tags.length > 0 ? { tags } : {},
-      ),
-    logMessage,
-    logMeta,
-    { fallbackValue: [] as WordPressTag[] },
+  const response = await fetchFromWpGraphQL<TagBySlugQueryResult>(
+    countryCode,
+    TAG_BY_SLUG_QUERY,
+    { slug },
+    tags,
   )
 
-  const tag = Array.isArray(response) && response.length > 0 ? response[0] ?? null : null
-
-  fpTagCache.set(cacheKey, {
-    tag,
-    expiresAt: Date.now() + FP_TAG_CACHE_TTL_MS,
-  })
-
-  return tag
+  return mapGraphqlTagNode(response?.tag)
 }
 
 export const resolveHomePostId = (post: WordPressPost): string => {
