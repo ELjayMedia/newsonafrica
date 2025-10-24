@@ -46,7 +46,13 @@ async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Se
 export async function withSupabaseSession<T>(
   callback: (context: { supabase: SupabaseServerClient; session: Session | null }) => Promise<T> | T,
 ): Promise<ActionResult<T>> {
-  const supabase = getSupabaseClient()
+  let supabase: SupabaseServerClient
+
+  try {
+    supabase = getSupabaseClient()
+  } catch (error) {
+    return actionFailure<T>(error)
+  }
 
   try {
     const session = await getSessionWithRefresh(supabase)
@@ -58,7 +64,13 @@ export async function withSupabaseSession<T>(
 }
 
 export async function getSupabaseSession(): Promise<ActionResult<Session | null>> {
-  const supabase = getSupabaseClient()
+  let supabase: SupabaseServerClient
+
+  try {
+    supabase = getSupabaseClient()
+  } catch (error) {
+    return actionFailure<Session | null>(error)
+  }
 
   try {
     const session = await getSessionWithRefresh(supabase)

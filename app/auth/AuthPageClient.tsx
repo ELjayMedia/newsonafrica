@@ -1,14 +1,16 @@
 "use client"
 
+import type React from "react"
 import { useEffect, useMemo, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { useFormState, useFormStatus } from "react-dom"
 
+import { sendMagicLinkAction, signInWithPasswordAction, signUpWithPasswordAction, initialAuthFormState } from "./actions"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { getSupabaseClient } from "@/lib/api/supabase"
 import { cn } from "@/lib/utils"
 
 type AuthView = "sign_in" | "sign_up"
@@ -29,8 +31,6 @@ interface StatusMessage {
 
 export default function AuthPageClient({ searchParams, defaultView }: AuthPageClientProps) {
   const urlParams = useSearchParams()
-  const router = useRouter()
-  const supabase = useMemo(() => getSupabaseClient(), [])
 
   const tabParam = urlParams?.get("tab")
   const initialView: AuthView = (() => {
@@ -52,13 +52,12 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
   }, [redirectParam])
 
   const [activeView, setActiveView] = useState<AuthView>(initialView)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [magicEmail, setMagicEmail] = useState("")
-  const [isPasswordLoading, setIsPasswordLoading] = useState(false)
-  const [isMagicLoading, setIsMagicLoading] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null)
+  const [globalMessage, setGlobalMessage] = useState<StatusMessage | null>(null)
+
+  const [signInState, signInAction] = useFormState(signInWithPasswordAction, initialAuthFormState)
+  const [signUpState, signUpAction] = useFormState(signUpWithPasswordAction, initialAuthFormState)
+  const [signInMagicState, signInMagicAction] = useFormState(sendMagicLinkAction, initialAuthFormState)
+  const [signUpMagicState, signUpMagicAction] = useFormState(sendMagicLinkAction, initialAuthFormState)
 
   useEffect(() => {
     setActiveView(initialView)
@@ -66,159 +65,34 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
 
   useEffect(() => {
     if (searchParams?.error) {
-      setStatusMessage({
+      setGlobalMessage({
         kind: "error",
         title: "We couldn't complete your sign in",
         description: "Please try again or request a new magic link.",
       })
     }
   }, [searchParams?.error])
-
-  const getCallbackUrl = () => {
-    if (typeof window === "undefined") return undefined
-    const callback = new URL("/auth/callback", window.location.origin)
-    if (redirectTo && redirectTo !== "/") {
-      callback.searchParams.set("next", redirectTo)
-    }
-    return callback.toString()
-  }
-
-  const resetMessages = () => setStatusMessage(null)
-
-  const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    resetMessages()
-    setIsPasswordLoading(true)
-
-    const formEmail = email.trim().toLowerCase()
-    const formPassword = password.trim()
-
-    if (!formEmail || !formPassword) {
-      setStatusMessage({
-        kind: "error",
-        title: "Please enter your email and password.",
-      })
-      setIsPasswordLoading(false)
-      return
-    }
-
-    if (activeView === "sign_up") {
-      if (formPassword.length < 6) {
-        setStatusMessage({
-          kind: "error",
-          title: "Password is too short",
-          description: "Use at least 6 characters to create your account.",
-        })
-        setIsPasswordLoading(false)
-        return
-      }
-
-      if (formPassword !== confirmPassword.trim()) {
-        setStatusMessage({
-          kind: "error",
-          title: "Passwords do not match",
-          description: "Confirm your password before continuing.",
-        })
-        setIsPasswordLoading(false)
-        return
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email: formEmail,
-        password: formPassword,
-        options: {
-          emailRedirectTo: getCallbackUrl(),
-        },
-      })
-
-      if (error) {
-        setStatusMessage({
-          kind: "error",
-          title: "Unable to create account",
-          description: error.message,
-        })
-        setIsPasswordLoading(false)
-        return
-      }
-
-      setStatusMessage({
+  useEffect(() => {
+    if (signUpState.status === "success") {
+      setActiveView("sign_in")
+      setGlobalMessage({
         kind: "success",
         title: "Check your email",
-        description: "We've sent a confirmation link to finish setting up your account.",
+        description:
+          signUpState.message ?? "We've sent a confirmation link to finish setting up your account.",
       })
-      setActiveView("sign_in")
-      setPassword("")
-      setConfirmPassword("")
-      setIsPasswordLoading(false)
-      return
     }
+  }, [signUpState])
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: formEmail,
-      password: formPassword,
-    })
+  const resetGlobalMessage = () => setGlobalMessage(null)
 
-    if (error) {
-      setStatusMessage({
-        kind: "error",
-        title: "Sign in failed",
-        description: error.message,
-      })
-      setIsPasswordLoading(false)
-      return
-    }
-
-    setStatusMessage({
-      kind: "success",
-      title: "Welcome back!",
-      description: "You're being redirected to your destination.",
-    })
-
-    router.push(redirectTo)
-    router.refresh()
-    setIsPasswordLoading(false)
-  }
-
-  const handleMagicLinkSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    resetMessages()
-    setIsMagicLoading(true)
-
-    const emailAddress = magicEmail.trim().toLowerCase()
-
-    if (!emailAddress) {
-      setStatusMessage({
-        kind: "error",
-        title: "Please provide an email address.",
-      })
-      setIsMagicLoading(false)
-      return
-    }
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: emailAddress,
-      options: {
-        emailRedirectTo: getCallbackUrl(),
-      },
-    })
-
-    if (error) {
-      setStatusMessage({
-        kind: "error",
-        title: "Couldn't send magic link",
-        description: error.message,
-      })
-      setIsMagicLoading(false)
-      return
-    }
-
-    setStatusMessage({
-      kind: "success",
-      title: "Magic link sent",
-      description: "Check your inbox for a secure sign-in link.",
-    })
-    setIsMagicLoading(false)
-  }
+  const signInFormMessage = signInState.status !== "idle" ? signInState.message : null
+  const signUpFormMessage =
+    signUpState.status === "error" && signUpState.message ? signUpState.message : null
+  const signInMagicMessage =
+    signInMagicState.status !== "idle" && signInMagicState.message ? signInMagicState.message : null
+  const signUpMagicMessage =
+    signUpMagicState.status !== "idle" && signUpMagicState.message ? signUpMagicState.message : null
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
@@ -237,18 +111,20 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
           </p>
         </div>
 
-        {statusMessage && (
-          <Alert variant={statusMessage.kind === "error" ? "destructive" : "default"}>
-            <AlertTitle>{statusMessage.title}</AlertTitle>
-            {statusMessage.description ? <AlertDescription>{statusMessage.description}</AlertDescription> : null}
+        {globalMessage ? (
+          <Alert variant={globalMessage.kind === "error" ? "destructive" : "default"}>
+            <AlertTitle>{globalMessage.title}</AlertTitle>
+            {globalMessage.description ? (
+              <AlertDescription>{globalMessage.description}</AlertDescription>
+            ) : null}
           </Alert>
-        )}
+        ) : null}
 
         <Tabs
           value={activeView}
           onValueChange={(value) => {
             setActiveView(value as AuthView)
-            setStatusMessage(null)
+            resetGlobalMessage()
           }}
           className="space-y-6"
         >
@@ -262,7 +138,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
           </TabsList>
 
           <TabsContent value="sign_in" className="space-y-8">
-            <form className="space-y-6" onSubmit={handlePasswordSubmit}>
+            <form className="space-y-6" action={signInAction} onSubmit={resetGlobalMessage}>
               <div className="space-y-4">
                 <div className="space-y-2 text-left">
                   <Label htmlFor="signin-email">Email</Label>
@@ -271,8 +147,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     type="email"
                     autoComplete="email"
                     placeholder="you@example.com"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    name="email"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
@@ -283,21 +158,25 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     id="signin-password"
                     type="password"
                     autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    name="password"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full" size="xl" disabled={isPasswordLoading}>
-                {isPasswordLoading ? "Signing in..." : "Sign in"}
-              </Button>
+              <input type="hidden" name="redirectTo" value={redirectTo} />
+              {signInFormMessage ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Sign in failed</AlertTitle>
+                  <AlertDescription>{signInFormMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+              <SubmitButton pendingLabel="Signing in...">Sign in</SubmitButton>
             </form>
 
             <div className="space-y-4 rounded-3xl border border-dashed border-border/60 p-6 text-center">
               <p className="text-sm font-medium text-foreground">Prefer a one-time link?</p>
-              <form className="space-y-4" onSubmit={handleMagicLinkSubmit}>
+              <form className="space-y-4" action={signInMagicAction} onSubmit={resetGlobalMessage}>
                 <div className="space-y-2 text-left">
                   <Label htmlFor="magic-email">Email</Label>
                   <Input
@@ -305,21 +184,31 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     type="email"
                     autoComplete="email"
                     placeholder="you@example.com"
-                    value={magicEmail}
-                    onChange={(event) => setMagicEmail(event.target.value)}
+                    name="email"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
                 </div>
-                <Button type="submit" variant="outline" className="w-full" size="xl" disabled={isMagicLoading}>
-                  {isMagicLoading ? "Sending..." : "Email me a magic link"}
-                </Button>
+                <input type="hidden" name="redirectTo" value={redirectTo} />
+                {signInMagicMessage ? (
+                  <Alert variant={signInMagicState.status === "error" ? "destructive" : "default"}>
+                    <AlertTitle>
+                      {signInMagicState.status === "error"
+                        ? "Couldn't send magic link"
+                        : "Magic link sent"}
+                    </AlertTitle>
+                    <AlertDescription>{signInMagicMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
+                <SubmitButton variant="outline" pendingLabel="Sending...">
+                  Email me a magic link
+                </SubmitButton>
               </form>
             </div>
           </TabsContent>
 
           <TabsContent value="sign_up" className="space-y-8">
-            <form className="space-y-6" onSubmit={handlePasswordSubmit}>
+            <form className="space-y-6" action={signUpAction} onSubmit={resetGlobalMessage}>
               <div className="space-y-4">
                 <div className="space-y-2 text-left">
                   <Label htmlFor="signup-email">Email</Label>
@@ -328,8 +217,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     type="email"
                     autoComplete="email"
                     placeholder="you@example.com"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    name="email"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
@@ -340,8 +228,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     id="signup-password"
                     type="password"
                     autoComplete="new-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    name="password"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
@@ -352,21 +239,25 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     id="signup-confirm"
                     type="password"
                     autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    name="confirmPassword"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full" size="xl" disabled={isPasswordLoading}>
-                {isPasswordLoading ? "Creating account..." : "Create account"}
-              </Button>
+              <input type="hidden" name="redirectTo" value={redirectTo} />
+              {signUpFormMessage ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to create account</AlertTitle>
+                  <AlertDescription>{signUpFormMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+              <SubmitButton pendingLabel="Creating account...">Create account</SubmitButton>
             </form>
 
             <div className="space-y-4 rounded-3xl border border-dashed border-border/60 p-6 text-center">
               <p className="text-sm font-medium text-foreground">Or get started instantly</p>
-              <form className="space-y-4" onSubmit={handleMagicLinkSubmit}>
+              <form className="space-y-4" action={signUpMagicAction} onSubmit={resetGlobalMessage}>
                 <div className="space-y-2 text-left">
                   <Label htmlFor="magic-email-signup">Email</Label>
                   <Input
@@ -374,20 +265,48 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     type="email"
                     autoComplete="email"
                     placeholder="you@example.com"
-                    value={magicEmail}
-                    onChange={(event) => setMagicEmail(event.target.value)}
+                    name="email"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
                 </div>
-                <Button type="submit" variant="outline" className="w-full" size="xl" disabled={isMagicLoading}>
-                  {isMagicLoading ? "Sending..." : "Send me a magic link"}
-                </Button>
+                <input type="hidden" name="redirectTo" value={redirectTo} />
+                {signUpMagicMessage ? (
+                  <Alert variant={signUpMagicState.status === "error" ? "destructive" : "default"}>
+                    <AlertTitle>
+                      {signUpMagicState.status === "error"
+                        ? "Couldn't send magic link"
+                        : "Magic link sent"}
+                    </AlertTitle>
+                    <AlertDescription>{signUpMagicMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
+                <SubmitButton variant="outline" pendingLabel="Sending...">
+                  Send me a magic link
+                </SubmitButton>
               </form>
             </div>
           </TabsContent>
         </Tabs>
       </div>
     </div>
+  )
+}
+
+function SubmitButton({
+  children,
+  pendingLabel,
+  variant,
+}: {
+  children: React.ReactNode
+  pendingLabel: string
+  variant?: React.ComponentProps<typeof Button>["variant"]
+}) {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button type="submit" className="w-full" size="xl" variant={variant} disabled={pending}>
+      {pending ? pendingLabel : children}
+    </Button>
   )
 }

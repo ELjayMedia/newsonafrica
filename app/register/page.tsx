@@ -1,8 +1,7 @@
-import AuthPageClient from "@/app/auth/AuthPageClient"
+import RegisterForm from "./RegisterForm"
 
 type RegisterPageSearchParams = {
   redirectTo?: string
-  error?: string
 }
 
 interface RegisterPageProps {
@@ -10,5 +9,5 @@ interface RegisterPageProps {
 }
 
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
-  return <AuthPageClient searchParams={searchParams} defaultView="sign_up" />
+  return <RegisterForm redirectTo={searchParams?.redirectTo} />
 }
