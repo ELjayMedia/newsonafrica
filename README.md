@@ -64,7 +64,7 @@ news-on-africa/
 
 - Node.js 18+ and npm/yarn
 - Supabase account
-- WordPress instance with REST API
+- WordPress instance with WPGraphQL enabled
 
 ### Environment Variables
 
@@ -77,15 +77,9 @@ NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
 # The staging domain is now the default development origin
 
 # --- WordPress Endpoints ---
-# Country-specific endpoints (for multi-site)
+# Country-specific GraphQL endpoints (for multi-site)
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
-NEXT_PUBLIC_WP_SZ_REST_BASE=https://newsonafrica.com/sz/wp-json/wp/v2
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
-NEXT_PUBLIC_WP_ZA_REST_BASE=https://newsonafrica.com/za/wp-json/wp/v2
-
-# --- WordPress Authentication ---
-WP_APP_USERNAME=your_wordpress_username
-WP_APP_PASSWORD=your_wordpress_app_password
 
 # --- Supabase Configuration ---
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
@@ -138,9 +132,8 @@ The application is deployed on Vercel with the following configuration:
 **Important:** For WordPress endpoints, ensure every country override (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follows the correct
 format with the country slug:
 - GraphQL: `https://newsonafrica.com/{country}/graphql`
-- REST: `https://newsonafrica.com/{country}/wp-json/wp/v2`
 
-See [Troubleshooting Guide](./docs/troubleshooting.md#graphql-404-errors--rest-fallback-issues) for details.
+The application now communicates with WordPress exclusively through GraphQL, so REST fallbacks and application credentials are no longer required.
 
 ## 🔍 Search
 
