@@ -1,12 +1,11 @@
 import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
-import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { fetchFromWp } from "@/lib/wordpress/rest-client"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { fetchFromWpGraphQL } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
-import { wordpressQueries } from "@/lib/wordpress-queries"
-
-export type FetchResponse<T> = { data: T } | { data: T; headers: Headers } | T | null
+import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
+import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
@@ -28,25 +27,10 @@ export const resolveEdition = (countryCode: string): SupportedEdition | null => 
 
 export const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "")
 
-export const resolveFetchedData = <T,>(result: FetchResponse<T[]>): T[] | null => {
-  if (!result) return null
-
-  if (Array.isArray(result)) {
-    return result
-  }
-
-  if (typeof result === "object" && "data" in result && Array.isArray(result.data)) {
-    return result.data
-  }
-
-  return null
-}
-
-export const looksLikeNormalizedPost = (post: unknown): post is WordPressPost => {
-  if (!post || typeof post !== "object") return false
-
-  const candidate = post as Record<string, unknown>
-  return typeof candidate.title === "string"
+type PostBySlugQueryResult = {
+  posts?: {
+    nodes?: (PostFieldsFragment | null)[] | null
+  } | null
 }
 
 export async function loadArticle(countryCode: string, slug: string): Promise<WordPressPost | null> {
@@ -57,28 +41,21 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       extra: [`slug:${slug}`],
     })
 
-    const result = await fetchFromWp<unknown[]>(countryCode, wordpressQueries.postBySlug(slug), {
-      tags: cacheTags,
-    })
+    const gqlData = await fetchFromWpGraphQL<PostBySlugQueryResult>(
+      countryCode,
+      POST_BY_SLUG_QUERY,
+      { slug },
+      cacheTags,
+    )
 
-    // Return null instead of throwing when result is null
-    if (!result) {
+    const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
+
+    if (!node) {
       console.log(`[v0] No article found for ${slug} in ${countryCode}`)
       return null
     }
 
-    const posts = resolveFetchedData(result)
-    const rawPost = posts?.[0]
-
-    if (!rawPost) {
-      return null
-    }
-
-    if (looksLikeNormalizedPost(rawPost)) {
-      return rawPost
-    }
-
-    return mapRestPostToWordPressPost(rawPost as any, countryCode)
+    return mapGraphqlPostToWordPressPost(node, countryCode)
   } catch (error) {
     console.error("[v0] Failed to load article", { countryCode, slug, error })
 

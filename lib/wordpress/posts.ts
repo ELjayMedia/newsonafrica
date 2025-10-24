@@ -5,21 +5,24 @@ import {
   FEATURED_POSTS_QUERY,
   LATEST_POSTS_QUERY,
   POST_CATEGORIES_QUERY,
+  POST_BY_SLUG_QUERY,
+  POSTS_QUERY,
+  RELATED_POSTS_BY_TAGS_QUERY,
   RELATED_POSTS_QUERY,
+  TAG_BY_SLUG_QUERY,
   TAGGED_POSTS_QUERY,
-  wordpressQueries,
-  WORDPRESS_REST_MAX_PER_PAGE,
+  TAGS_QUERY,
 } from "../wordpress-queries"
 import { fetchFromWpGraphQL, COUNTRIES } from "./client"
-import { executeRestFallback, fetchFromWp } from "./rest-client"
 import type { WordPressPost } from "@/types/wp"
 import type {
   FeaturedPostsQuery,
   LatestPostsQuery,
   PostCategoriesQuery,
+  PostFieldsFragment,
   RelatedPostsQuery,
 } from "@/types/wpgraphql"
-import { mapGraphqlPostToWordPressPost, mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { PaginatedPostsResult } from "./types"
@@ -34,91 +37,79 @@ const toErrorDetails = (error: unknown) => {
   return { error }
 }
 
-const decodeCursorIndex = (cursor: string | null | undefined) => {
-  if (!cursor) {
+const MAX_GRAPHQL_BATCH_SIZE = 100
+
+type PostsQueryResult = {
+  posts?: {
+    nodes?: (PostFieldsFragment | null)[] | null
+    pageInfo?: {
+      endCursor?: string | null
+      hasNextPage?: boolean | null
+      offsetPagination?: { total?: number | null } | null
+    } | null
+  } | null
+}
+
+type TagsQueryResult = {
+  tags?: {
+    nodes?: (
+      | {
+          databaseId?: number | null
+          id?: string | null
+          name?: string | null
+          slug?: string | null
+          count?: number | null
+        }
+      | null
+    )[] | null
+  } | null
+}
+
+type TagBySlugQueryResult = {
+  tag?: {
+    databaseId?: number | null
+    id?: string | null
+    name?: string | null
+    slug?: string | null
+    count?: number | null
+  } | null
+}
+
+type PostBySlugQueryResult = {
+  posts?: {
+    nodes?: (PostFieldsFragment | null)[] | null
+  } | null
+}
+
+const mapGraphqlTagNode = (
+  node:
+    | {
+        databaseId?: number | null
+        id?: string | null
+        name?: string | null
+        slug?: string | null
+      }
+    | null
+    | undefined,
+): WordPressTag | null => {
+  if (!node) {
     return null
   }
 
-  try {
-    const decoded = Buffer.from(cursor, "base64").toString("utf8")
-    const parts = decoded.split(":")
-    const lastPart = parts[parts.length - 1]
-    const index = Number.parseInt(lastPart || "", 10)
+  const databaseId = typeof node.databaseId === "number" ? node.databaseId : undefined
+  const slug = typeof node.slug === "string" ? node.slug : undefined
+  const name = typeof node.name === "string" ? node.name : undefined
 
-    return Number.isNaN(index) ? null : index
-  } catch (error) {
-    console.warn("[v0] Failed to decode pagination cursor for REST fallback", {
-      cursor,
-      error: toErrorDetails(error),
-    })
-    return null
-  }
-}
-
-const cursorToOffset = (cursor: string | null | undefined) => {
-  const index = decodeCursorIndex(cursor)
-  if (index === null) {
+  if (!slug) {
     return null
   }
 
-  return index + 1
-}
-
-const MAX_GRAPHQL_BATCH_SIZE = WORDPRESS_REST_MAX_PER_PAGE
-
-interface FetchRecentPostsRestOptions {
-  countryCode: string
-  count: number
-  cacheTags: string[]
-  offset?: number
-}
-
-const fetchRecentPostsRestBatched = async ({
-  countryCode,
-  count,
-  cacheTags,
-  offset = 0,
-}: FetchRecentPostsRestOptions): Promise<{ posts: WordPressPost[]; hasMore: boolean }> => {
-  if (count <= 0) {
-    return { posts: [], hasMore: false }
+  return {
+    id: databaseId,
+    databaseId,
+    name,
+    slug,
   }
-
-  const collected: WordPressPost[] = []
-  let currentOffset = offset
-  let hasMore = false
-
-  while (collected.length < count) {
-    const remaining = count - collected.length
-    const perPage = Math.min(remaining, WORDPRESS_REST_MAX_PER_PAGE)
-    const { endpoint, params } = wordpressQueries.recentPosts({ perPage, offset: currentOffset })
-
-    const batch = await executeRestFallback(
-      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags }),
-      `[v0] Recent posts REST batch failed for ${countryCode}`,
-      { countryCode, offset: currentOffset, perPage, remaining },
-      { fallbackValue: [] },
-    )
-
-    if (batch.length === 0) {
-      hasMore = false
-      break
-    }
-
-    collected.push(...batch)
-    currentOffset += batch.length
-
-    if (batch.length < perPage) {
-      hasMore = false
-      break
-    }
-
-    if (collected.length >= count) {
-      hasMore = true
-      break
-    }
-  }
-
-  return { posts: collected.slice(0, count), hasMore }
 }
 
 export async function getLatestPostsForCountry(
@@ -131,11 +122,8 @@ export async function getLatestPostsForCountry(
   try {
     console.log("[v0] Fetching latest posts for:", countryCode)
     const posts: WordPressPost[] = []
-    const baseOffset = cursorToOffset(cursor ?? null) ?? 0
     let afterCursor = cursor ?? null
     let lastPageInfo: LatestPostsQuery["posts"]["pageInfo"] | null = null
-    let usedGraphql = false
-    let graphqlFailed = false
 
     while (posts.length < limit) {
       const batchSize = Math.min(MAX_GRAPHQL_BATCH_SIZE, limit - posts.length)
@@ -152,11 +140,9 @@ export async function getLatestPostsForCountry(
       )
 
       if (!gqlData?.posts) {
-        graphqlFailed = true
         break
       }
 
-      usedGraphql = true
       const nodes = gqlData.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
       if (nodes.length > 0) {
         posts.push(...nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode)))
@@ -164,48 +150,17 @@ export async function getLatestPostsForCountry(
 
       lastPageInfo = gqlData.posts.pageInfo ?? null
 
-      if (!lastPageInfo?.hasNextPage || !lastPageInfo.endCursor) {
+      if (!lastPageInfo?.hasNextPage || !lastPageInfo.endCursor || nodes.length === 0) {
         break
       }
 
       afterCursor = lastPageInfo.endCursor
     }
 
-    if (posts.length >= limit) {
-      console.log("[v0] Found", posts.length, "latest posts via GraphQL (batched)")
-      return {
-        posts: posts.slice(0, limit),
-        hasNextPage: lastPageInfo?.hasNextPage ?? false,
-        endCursor: lastPageInfo?.endCursor ?? null,
-      }
-    }
-
-    if (!usedGraphql || graphqlFailed) {
-      console.log("[v0] GraphQL unavailable, switching to REST for latest posts", {
-        countryCode,
-        limit,
-        cursor,
-      })
-    }
-
-    const remaining = limit - posts.length
-    const restResult = await fetchRecentPostsRestBatched({
-      countryCode,
-      count: remaining,
-      cacheTags: tags,
-      offset: baseOffset + posts.length,
-    })
-
-    if (restResult.posts.length > 0) {
-      console.log("[v0] Found", restResult.posts.length, "latest posts via REST (batched)")
-    }
-
-    const combined = posts.concat(restResult.posts)
-
     return {
-      posts: combined,
-      hasNextPage: restResult.hasMore,
-      endCursor: restResult.hasMore ? null : lastPageInfo?.endCursor ?? null,
+      posts: posts.slice(0, limit),
+      hasNextPage: lastPageInfo?.hasNextPage ?? false,
+      endCursor: lastPageInfo?.endCursor ?? null,
     }
   } catch (error) {
     console.error("[v0] Failed to fetch latest posts:", error)
@@ -251,28 +206,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
       }
     }
   }
-  const post = await executeRestFallback(
-    () => fetchFromWp<WordPressPost | null>(countryCode, wordpressQueries.postById(postId), { tags }),
-    `[v0] Related posts REST fallback failed for base post ${postId} (${countryCode})`,
-    { countryCode, postId },
-    { fallbackValue: null },
-  )
-  if (!post) {
-    return []
-  }
-  const categoryIds: number[] =
-    post.categories?.nodes
-      ?.map((cat) => (typeof cat?.databaseId === "number" ? Number(cat.databaseId) : null))
-      .filter((id): id is number => id !== null) || []
-  if (categoryIds.length === 0) return []
-  const { endpoint, params } = wordpressQueries.relatedPosts(categoryIds, postId, limit)
-  const posts = await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
-    `[v0] Related posts REST fallback failed for ${postId} (${countryCode})`,
-    { countryCode, postId, categoryIds, limit, endpoint, params },
-    { fallbackValue: [] },
-  )
-  return posts.filter((p) => p.databaseId !== Number(postId))
+  return []
 }
 
 export const getRelatedPosts = async (
@@ -285,29 +219,26 @@ export const getRelatedPosts = async (
   const country = countryCode || DEFAULT_COUNTRY
 
   if (tags.length > 0) {
-    const { endpoint, params } = wordpressQueries.relatedPostsByTags(tags, postId, limit)
     const cacheTags = buildCacheTags({
       country,
       section: "related",
       extra: [`post:${postId}`, ...tags.map((tagSlug) => `tag:${tagSlug}`)],
     })
-    try {
-      const posts = await executeRestFallback(
-        () => fetchFromWp<WordPressPost[]>(country, { endpoint, params }, { tags: cacheTags }),
-        `[v0] Related posts by tags REST fallback failed for ${postId} (${country})`,
-        { country, postId, tags, limit, endpoint, params },
-        { fallbackValue: [] },
-      )
-      return posts.filter((p) => p.id !== Number(postId))
-    } catch (error) {
-      console.error(`[v0] Related posts by tags request failed for ${postId}`, {
-        country,
-        postId,
-        tags,
-        error,
-      })
-      return []
-    }
+    const gqlData = await fetchFromWpGraphQL<RelatedPostsQuery>(
+      country,
+      RELATED_POSTS_BY_TAGS_QUERY,
+      {
+        tagSlugs: tags,
+        exclude: Number(postId),
+        first: limit,
+      },
+      cacheTags,
+    )
+
+    const nodes = gqlData?.posts?.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+    return nodes
+      .map((node) => mapGraphqlPostToWordPressPost(node, country))
+      .filter((post) => post.databaseId !== Number(postId) && post.id !== postId)
   }
 
   const posts = await getRelatedPostsForCountry(country, postId, limit)
@@ -586,53 +517,6 @@ export const fetchTaggedPosts = async ({
     })
   }
 
-  console.log("[v0] Falling back to REST for tagged posts", { slug, countryCode })
-
-  try {
-    const tags =
-      (await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug), {
-        tags: cacheTags,
-      })) || []
-
-    const tag = tags[0]
-    if (!tag) {
-      return {
-        nodes: [],
-        pageInfo: {
-          hasNextPage: false,
-          endCursor: null,
-        },
-      }
-    }
-
-    const { endpoint, params } = wordpressQueries.postsByTag(tag.id, first)
-    const offset = cursorToOffset(after)
-    const restParams = offset !== null ? { ...params, offset } : params
-
-    const posts = await executeRestFallback(
-      () =>
-        fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params: restParams }, { tags: cacheTags }),
-      `[v0] Tagged posts REST fallback failed for ${slug}`,
-      { slug, countryCode, params: restParams },
-      { fallbackValue: [] },
-    )
-
-    const nodes = posts.map((post) => mapWordPressPostFromSource(post, "rest", countryCode))
-    return {
-      nodes,
-      pageInfo: {
-        hasNextPage: nodes.length === first,
-        endCursor: null,
-      },
-    }
-  } catch (error) {
-    console.error("[v0] Failed to fetch tagged posts via REST", {
-      slug,
-      countryCode,
-      error: toErrorDetails(error),
-    })
-  }
-
   return {
     nodes: [],
     pageInfo: {
@@ -656,24 +540,13 @@ export const fetchPosts = async (
         countryCode?: string
         ids?: Array<number | string>
         countryTermId?: number
-      } = {},
+  } = {},
 ) => {
   if (typeof options === "number") {
     const limit = options
     const tags = buildCacheTags({ country: DEFAULT_COUNTRY, section: "news" })
     const { posts } = await getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
-    if (posts.length >= limit) {
-      return posts.slice(0, limit)
-    }
-
-    const restResult = await fetchRecentPostsRestBatched({
-      countryCode: DEFAULT_COUNTRY,
-      count: limit - posts.length,
-      cacheTags: tags,
-      offset: posts.length,
-    })
-
-    return posts.concat(restResult.posts).slice(0, limit)
+    return posts.slice(0, limit)
   }
 
   const {
@@ -700,32 +573,87 @@ export const fetchPosts = async (
   ]
   const cacheTags = buildCacheTags({ country: countryCode, section: "posts", extra: extraTags })
 
-  const query = wordpressQueries.posts({
-    page,
-    perPage,
-    category,
-    tag,
-    search,
-    author,
-    featured,
-    ids,
-    countryTermId,
-  })
-  const result = await fetchFromWp<WordPressPost[]>(countryCode, query, {
-    withHeaders: true,
-    tags: cacheTags,
-  })
-  const total = Number(result?.headers.get("X-WP-Total") || "0")
-  const data = result?.data || []
-  return { data, total }
+  const offset = Math.max(0, Math.floor(page - 1) * perPage)
+
+  const includeIds = Array.isArray(ids)
+    ? ids
+        .map((value) => {
+          const numeric = Number(value)
+          return Number.isNaN(numeric) ? String(value) : numeric
+        })
+        .filter((value) => value !== undefined && value !== null)
+    : undefined
+
+  const authorIds = author
+    ? [author]
+        .map((value) => {
+          const numeric = Number(value)
+          return Number.isNaN(numeric) ? String(value) : numeric
+        })
+        .filter((value) => value !== undefined && value !== null)
+    : undefined
+
+  const variables: Record<string, unknown> = {
+    first: perPage,
+    offset,
+  }
+
+  if (category) {
+    variables.category = category
+  }
+
+  if (tag) {
+    variables.tagSlugs = [tag]
+  }
+
+  if (search) {
+    variables.search = search
+  }
+
+  if (authorIds && authorIds.length > 0) {
+    variables.authorIds = authorIds
+  }
+
+  if (includeIds && includeIds.length > 0) {
+    variables.includeIds = includeIds
+  }
+
+  if (featured) {
+    variables.onlySticky = true
+  }
+
+  if (typeof countryTermId === "number") {
+    variables.countryTermIds = [countryTermId]
+  }
+
+  const gqlData = await fetchFromWpGraphQL<PostsQueryResult>(
+    countryCode,
+    POSTS_QUERY,
+    variables,
+    cacheTags,
+  )
+
+  const nodes = gqlData?.posts?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
+  const mapped = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
+  const total = gqlData?.posts?.pageInfo?.offsetPagination?.total ?? mapped.length
+
+  return { data: mapped, total }
 }
 
 export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
   try {
-    const { endpoint, params } = wordpressQueries.tags()
     const tags = buildCacheTags({ country: countryCode, section: "tags" })
-    const result = await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params }, { tags })
-    return result || []
+    const gqlData = await fetchFromWpGraphQL<TagsQueryResult>(
+      countryCode,
+      TAGS_QUERY,
+      { first: 100, hideEmpty: true },
+      tags,
+    )
+
+    const nodes = gqlData?.tags?.nodes ?? []
+    return nodes
+      .map((node) => mapGraphqlTagNode(node))
+      .filter((tag): tag is WordPressTag => Boolean(tag))
   } catch (error) {
     console.error("[v0] Failed to fetch tags during build:", error)
     return []
@@ -734,16 +662,29 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
 
 export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
   const cacheTags = buildCacheTags({ country: countryCode, section: "tags", extra: [`tag:${slug}`] })
-  const tags = await fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug(slug), {
-    tags: cacheTags,
-  })
-  return tags?.[0] || null
+  const gqlData = await fetchFromWpGraphQL<TagBySlugQueryResult>(
+    countryCode,
+    TAG_BY_SLUG_QUERY,
+    { slug },
+    cacheTags,
+  )
+
+  return mapGraphqlTagNode(gqlData?.tag) ?? null
 }
 
 export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.tags()
-  const tags = buildCacheTags({ country: countryCode, section: "tags" })
-  return (await fetchFromWp<WordPressTag[]>(countryCode, { endpoint, params }, { tags })) || []
+  const cacheTags = buildCacheTags({ country: countryCode, section: "tags" })
+  const gqlData = await fetchFromWpGraphQL<TagsQueryResult>(
+    countryCode,
+    TAGS_QUERY,
+    { first: 100, hideEmpty: true },
+    cacheTags,
+  )
+
+  const nodes = gqlData?.tags?.nodes ?? []
+  return nodes
+    .map((node) => mapGraphqlTagNode(node))
+    .filter((tag): tag is WordPressTag => Boolean(tag))
 }
 
 export async function fetchPost({
@@ -755,18 +696,21 @@ export async function fetchPost({
   countryCode?: string
   countryTermId?: number
 }) {
-  const { endpoint, params } = wordpressQueries.postBySlug(slug)
-  if (countryTermId) params.countries = countryTermId
   const tags = buildCacheTags({ country: countryCode, section: "post", extra: [`slug:${slug}`] })
-  const posts = await fetchFromWp<WordPressPost[]>(
+  const variables: Record<string, unknown> = { slug }
+  if (typeof countryTermId === "number") {
+    variables.countryTermIds = [countryTermId]
+  }
+
+  const gqlData = await fetchFromWpGraphQL<PostBySlugQueryResult>(
     countryCode,
-    {
-      endpoint,
-      params,
-    },
-    { tags },
+    POST_BY_SLUG_QUERY,
+    variables,
+    tags,
   )
-  return posts?.[0] || null
+
+  const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
+  return node ? mapGraphqlPostToWordPressPost(node, countryCode) : null
 }
 
 export async function resolveCountryTermId(slug: string): Promise<number | null> {
@@ -793,21 +737,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
     return nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
   }
-  const tags = await executeRestFallback(
-    () => fetchFromWp<WordPressTag[]>(countryCode, wordpressQueries.tagBySlug("featured"), { tags: cacheTags }),
-    `[v0] Featured tag REST fallback failed for ${countryCode}`,
-    { countryCode },
-    { fallbackValue: [] },
-  )
-  const tag = tags[0]
-  if (!tag) return []
-  const { endpoint, params } = wordpressQueries.featuredPosts(tag.id, limit)
-  return await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags: cacheTags }),
-    `[v0] Featured posts REST fallback failed for ${countryCode}`,
-    { countryCode, tagId: tag.id, limit, endpoint, params },
-    { fallbackValue: [] },
-  )
+  return []
 }
 
 export const fetchCountries = async () => {

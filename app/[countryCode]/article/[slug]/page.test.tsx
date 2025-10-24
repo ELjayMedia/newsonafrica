@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('@/lib/wordpress/rest-client', () => ({
-  fetchFromWp: vi.fn(),
+vi.mock('@/lib/wordpress/client', () => ({
+  fetchFromWpGraphQL: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -16,45 +16,89 @@ vi.mock('./ArticleClientContent', () => ({
 }))
 
 import Page, { generateMetadata } from './page'
-import { fetchFromWp } from '@/lib/wordpress/rest-client'
+import { fetchFromWpGraphQL } from '@/lib/wordpress/client'
 import { env } from '@/config/env'
 import { notFound } from 'next/navigation'
+import {
+  POST_BY_SLUG_QUERY,
+  POST_CATEGORIES_QUERY,
+  RELATED_POSTS_QUERY,
+} from '@/lib/wordpress-queries'
 
 describe('ArticlePage', () => {
+  const createArticleNode = (overrides: Record<string, any> = {}) => ({
+    databaseId: 1,
+    id: 'gid://post/1',
+    slug: 'test',
+    date: '2024-01-01T00:00:00Z',
+    title: 'Hello',
+    excerpt: '',
+    content: '<p>Content</p>',
+    featuredImage: {
+      node: { sourceUrl: 'https://example.com/feature.jpg', altText: 'Feature image' },
+    },
+    categories: { nodes: [] },
+    tags: { nodes: [] },
+    author: { node: { databaseId: 1, name: 'Reporter', slug: 'reporter' } },
+    ...overrides,
+  })
+
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(notFound).mockReset()
   })
 
   it('renders post content', async () => {
-    vi.mocked(fetchFromWp).mockResolvedValue([
-      { title: 'Hello', slug: 'test' },
-    ])
+    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return { posts: { nodes: [createArticleNode({ title: 'Hello' })] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
     expect(screen.getByText('Hello')).toBeInTheDocument()
-    expect(fetchFromWp).toHaveBeenCalled()
+    expect(fetchFromWpGraphQL).toHaveBeenCalled()
   })
 
   it('falls back to another supported country when the requested edition is missing the article', async () => {
-    vi.mocked(fetchFromWp)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ title: 'From South Africa', slug: 'test' }])
+    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        if (country === 'sz') {
+          return { posts: { nodes: [] } }
+        }
+
+        if (country === 'za') {
+          return { posts: { nodes: [createArticleNode({ title: 'From South Africa' })] } }
+        }
+
+        return { posts: { nodes: [] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
 
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
 
-    expect(fetchFromWp).toHaveBeenNthCalledWith(
-      1,
-      'sz',
-      expect.anything(),
-      expect.objectContaining({ tags: expect.any(Array) }),
-    )
-    expect(fetchFromWp).toHaveBeenNthCalledWith(
-      2,
-      'za',
-      expect.anything(),
-      expect.objectContaining({ tags: expect.any(Array) }),
-    )
+    expect(fetchFromWpGraphQL).toHaveBeenCalledWith('sz', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
+    expect(fetchFromWpGraphQL).toHaveBeenCalledWith('za', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
 
     render(ui)
 
@@ -62,7 +106,7 @@ describe('ArticlePage', () => {
   })
 
   it('propagates fetch failures to the error boundary', async () => {
-    vi.mocked(fetchFromWp).mockRejectedValue(new Error('Network down'))
+    vi.mocked(fetchFromWpGraphQL).mockRejectedValue(new Error('Network down'))
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('Network down')
 
@@ -70,16 +114,33 @@ describe('ArticlePage', () => {
   })
 
   it('generates metadata that prefers the dynamic OG image', async () => {
-    vi.mocked(fetchFromWp).mockResolvedValue([
-      {
-        title: '<p>Headline</p>',
-        excerpt: '<p>Summary</p>',
-        slug: 'test',
-        date: '2024-01-01',
-        featuredImage: { node: { sourceUrl: 'https://example.com/feature.jpg' } },
-        author: { node: { name: 'Reporter' } },
-      },
-    ])
+    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return {
+          posts: {
+            nodes: [
+              createArticleNode({
+                title: '<p>Headline</p>',
+                excerpt: '<p>Summary</p>',
+                featuredImage: {
+                  node: { sourceUrl: 'https://example.com/feature.jpg', altText: 'Alt' },
+                },
+              }),
+            ],
+          },
+        }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
 
     const metadata = await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
 
@@ -93,7 +154,21 @@ describe('ArticlePage', () => {
   })
 
   it('falls back to the placeholder image when the article is missing', async () => {
-    vi.mocked(fetchFromWp).mockResolvedValue([])
+    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
 
     const metadata = await generateMetadata({
       params: Promise.resolve({ countryCode: 'za', slug: 'missing-post' }),
@@ -110,17 +185,32 @@ describe('ArticlePage', () => {
   })
 
   it('treats the African edition alias as valid', async () => {
-    vi.mocked(fetchFromWp).mockResolvedValue([
-      { title: 'African story', slug: 'african-story' },
-    ])
+    vi.mocked(fetchFromWpGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return {
+          posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },
+        }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
 
     await Page({ params: { countryCode: 'african-edition', slug: 'African-Story' } })
 
     expect(notFound).not.toHaveBeenCalled()
-    expect(fetchFromWp).toHaveBeenCalledWith(
+    expect(fetchFromWpGraphQL).toHaveBeenCalledWith(
       'african-edition',
-      expect.anything(),
-      expect.objectContaining({ tags: expect.any(Array) }),
+      POST_BY_SLUG_QUERY,
+      expect.any(Object),
+      expect.any(Array),
     )
   })
 })

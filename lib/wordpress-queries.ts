@@ -6,9 +6,12 @@ export const POST_FIELDS_FRAGMENT = gql`
     id
     slug
     date
+    modified
     title
     excerpt
     content
+    uri
+    link
     featuredImage {
       node {
         sourceUrl
@@ -17,6 +20,12 @@ export const POST_FIELDS_FRAGMENT = gql`
           width
           height
         }
+      }
+    }
+    countries {
+      nodes {
+        databaseId
+        slug
       }
     }
     categories {
@@ -98,6 +107,29 @@ export const TAGGED_POSTS_QUERY = gql`
         endCursor
         hasNextPage
       }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const RELATED_POSTS_BY_TAGS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query RelatedPostsByTags(
+    $tagSlugs: [String!]!
+    $exclude: ID!
+    $first: Int!
+  ) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        tagSlugIn: $tagSlugs
+        notIn: [$exclude]
+      }
+    ) {
       nodes {
         ...PostFields
       }
@@ -285,6 +317,112 @@ export const FEATURED_POSTS_QUERY = gql`
         status: PUBLISH
         orderby: { field: DATE, order: DESC }
         tagSlugIn: [$tag]
+      }
+    ) {
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const POSTS_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query Posts(
+    $first: Int!
+    $after: String
+    $category: String
+    $tagSlugs: [String!]
+    $search: String
+    $authorIds: [ID!]
+    $includeIds: [ID!]
+    $onlySticky: Boolean
+    $offset: Int
+    $countryTermIds: [ID!]
+  ) {
+    posts(
+      first: $first
+      after: $after
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        categoryName: $category
+        tagSlugIn: $tagSlugs
+        search: $search
+        authorIn: $authorIds
+        in: $includeIds
+        onlySticky: $onlySticky
+        offsetPagination: { offset: $offset, size: $first }
+        taxQuery: {
+          relation: AND
+          taxArray: [
+            {
+              taxonomy: COUNTRIES
+              field: TERM_ID
+              terms: $countryTermIds
+            }
+          ]
+        }
+      }
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+        offsetPagination {
+          total
+        }
+      }
+      nodes {
+        ...PostFields
+      }
+    }
+  }
+`
+
+export const TAGS_QUERY = gql`
+  query Tags($first: Int!, $hideEmpty: Boolean) {
+    tags(first: $first, where: { hideEmpty: $hideEmpty }) {
+      nodes {
+        databaseId
+        id
+        name
+        slug
+        count
+      }
+    }
+  }
+`
+
+export const TAG_BY_SLUG_QUERY = gql`
+  query TagBySlug($slug: ID!) {
+    tag(id: $slug, idType: SLUG) {
+      databaseId
+      id
+      name
+      slug
+      count
+    }
+  }
+`
+
+export const POST_BY_SLUG_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query PostBySlug($slug: ID!, $countryTermIds: [ID!]) {
+    posts(
+      first: 1
+      where: {
+        status: PUBLISH
+        nameIn: [$slug]
+        taxQuery: {
+          relation: AND
+          taxArray: [
+            {
+              taxonomy: COUNTRIES
+              field: TERM_ID
+              terms: $countryTermIds
+            }
+          ]
+        }
       }
     ) {
       nodes {
