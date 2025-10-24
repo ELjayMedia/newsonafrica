@@ -10,7 +10,6 @@ const envSchema = z
     NEXT_PUBLIC_WP_SZ_REST_BASE: z.string().optional(),
     NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().optional(),
     NEXT_PUBLIC_WP_ZA_REST_BASE: z.string().optional(),
-    WORDPRESS_AUTH_TOKEN: z.string().optional(),
     WP_APP_USERNAME: z.string().optional(),
     WP_APP_PASSWORD: z.string().optional(),
     ANALYTICS_API_BASE_URL: z.string().default("https://newsonafrica.com/api/analytics"),
@@ -36,7 +35,6 @@ try {
     NEXT_PUBLIC_WP_SZ_REST_BASE: process.env.NEXT_PUBLIC_WP_SZ_REST_BASE,
     NEXT_PUBLIC_WP_ZA_GRAPHQL: process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL,
     NEXT_PUBLIC_WP_ZA_REST_BASE: process.env.NEXT_PUBLIC_WP_ZA_REST_BASE,
-    WORDPRESS_AUTH_TOKEN: process.env.WORDPRESS_AUTH_TOKEN,
     WP_APP_USERNAME: process.env.WP_APP_USERNAME,
     WP_APP_PASSWORD: process.env.WP_APP_PASSWORD,
     ANALYTICS_API_BASE_URL:
