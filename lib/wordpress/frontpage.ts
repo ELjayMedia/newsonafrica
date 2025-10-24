@@ -1,7 +1,8 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
 import { wordpressQueries, FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
-import { fetchFromWp, fetchFromWpGraphQL, executeRestFallback } from "./client"
+import { fetchFromWpGraphQL } from "./client"
+import { fetchFromWp, executeRestFallback } from "./rest-client"
 import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
 import {

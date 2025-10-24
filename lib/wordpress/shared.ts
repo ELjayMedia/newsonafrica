@@ -1,6 +1,6 @@
 import { CACHE_DURATIONS } from "../cache/constants"
 import { wordpressQueries } from "../wordpress-queries"
-import { fetchFromWp, executeRestFallback } from "./client"
+import { fetchFromWp, executeRestFallback } from "./rest-client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import {
   mapGraphqlPostToWordPressPost,

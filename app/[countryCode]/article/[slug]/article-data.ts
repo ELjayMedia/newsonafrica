@@ -2,7 +2,7 @@ import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { fetchFromWp } from "@/lib/wordpress/client"
+import { fetchFromWp } from "@/lib/wordpress/rest-client"
 import type { WordPressPost } from "@/types/wp"
 import { wordpressQueries } from "@/lib/wordpress-queries"
 

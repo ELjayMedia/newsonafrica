@@ -75,7 +75,6 @@ describe("wp client", () => {
           hreflang: "en-GH",
           type: "country" as const,
           apiEndpoint: "https://example.com/gh/graphql",
-          restEndpoint: "https://example.com/gh/wp-json/wp/v2",
         },
       ],
     }))

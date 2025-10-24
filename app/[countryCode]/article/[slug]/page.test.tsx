@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('@/lib/wordpress/client', () => ({
+vi.mock('@/lib/wordpress/rest-client', () => ({
   fetchFromWp: vi.fn(),
 }))
 
@@ -16,7 +16,7 @@ vi.mock('./ArticleClientContent', () => ({
 }))
 
 import Page, { generateMetadata } from './page'
-import { fetchFromWp } from '@/lib/wordpress/client'
+import { fetchFromWp } from '@/lib/wordpress/rest-client'
 import { env } from '@/config/env'
 import { notFound } from 'next/navigation'
 

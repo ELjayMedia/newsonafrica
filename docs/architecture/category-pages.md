@@ -6,7 +6,7 @@
 - **Page data fetch:** `CountryCategoryPage` defers to `getCategoryPageData`, which wraps `getPostsByCategoryForCountry` and maps results into UI-friendly shapes (category summary, posts, related chips, pagination cursor). 【F:app/[countryCode]/category/[slug]/page.tsx†L197-L241】【F:lib/data/category.ts†L1-L83】
 - **WordPress access helpers:** `getPostsByCategoryForCountry` executes a `graphqlFirst` pipeline that tags requests for revalidation, prefers GraphQL, and falls back to REST (including fetching the feature-programming tag and category metadata) if GraphQL fails or returns empty. 【F:lib/wp-server/categories.ts†L296-L393】
 - **REST fallback caching:** REST pagination results are memoized in `restCategoryPostsCache` for a short window to prevent redundant requests while ISR batches run. 【F:lib/wp-server/categories.ts†L36-L165】
-- **Underlying fetches:** Both GraphQL and REST calls go through `fetchFromWpGraphQL`/`fetchFromWp`, which use the shared circuit breaker, inject cache tags for ISR, and pass through `fetchWithTimeout` so each network hop aborts after 10 seconds. 【F:lib/wordpress/client.ts†L89-L318】【F:lib/utils/fetchWithTimeout.ts†L1-L13】
+- **Underlying fetches:** Both GraphQL and REST calls go through `fetchFromWpGraphQL`/`fetchFromWp`, which use the shared circuit breaker, inject cache tags for ISR, and pass through `fetchWithTimeout` so each network hop aborts after 10 seconds. 【F:lib/wordpress/client.ts†L35-L102】【F:lib/wordpress/rest-client.ts†L33-L195】【F:lib/utils/fetchWithTimeout.ts†L1-L13】
 
 ## UI composition & client boundaries
 - **Server frame:** The page renders a container with `CategoryHeader`, an empty/error state, and wiring for pagination. 【F:app/[countryCode]/category/[slug]/page.tsx†L209-L239】
@@ -16,7 +16,7 @@
 
 ## Operational characteristics
 - **Retries & timeouts:** Circuit breakers default to a 10 s timeout and track failures per endpoint; they optionally run provided fallbacks when the primary call fails or times out. 【F:lib/api/circuit-breaker.ts†L14-L101】
-- **Request deduping:** WordPress helpers attach cache tags and revalidate hints so identical `fetchFromWp` or `fetchFromWpGraphQL` calls can reuse cached payloads, while REST fallbacks layer on the in-memory `restCategoryPostsCache` to prevent duplicate pagination pulls. 【F:lib/wordpress/client.ts†L89-L318】【F:lib/wp-server/categories.ts†L36-L165】
+- **Request deduping:** WordPress helpers attach cache tags and revalidate hints so identical `fetchFromWp` or `fetchFromWpGraphQL` calls can reuse cached payloads, while REST fallbacks layer on the in-memory `restCategoryPostsCache` to prevent duplicate pagination pulls. 【F:lib/wordpress/client.ts†L35-L102】【F:lib/wordpress/rest-client.ts†L33-L195】【F:lib/wp-server/categories.ts†L36-L165】
 - **Tag/author reuse:** Tag and author listing pages reuse the same primitives—`fetchTaggedPosts`/`getAuthorBySlug` feed into `mapWordPressPostsToPostListItems`, and the UI renders through `PostList` with client pagination handled by dedicated components. 【F:app/tag/[slug]/page.tsx†L1-L42】【F:app/tag/[slug]/TagFeedClient.tsx†L1-L117】【F:app/author/[slug]/page.tsx†L1-L116】
 
 ## Client-leaf expectations

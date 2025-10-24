@@ -1,6 +1,6 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
-import { fetchFromWp } from "./client"
+import { fetchFromWp } from "./rest-client"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { WordPressComment } from "./types"
 
