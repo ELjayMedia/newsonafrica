@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache"
 
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
 import { WORDPRESS_REST_MAX_PER_PAGE } from "../wordpress-queries"
-import { withGraphqlFallback, type WithGraphqlFallbackLogMeta } from "../wordpress/client"
+import { withGraphqlFallback, type WithGraphqlFallbackLogMeta } from "../wordpress/rest-client"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 

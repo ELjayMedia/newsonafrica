@@ -7,7 +7,8 @@ import {
   POSTS_BY_CATEGORY_QUERY,
   wordpressQueries,
 } from "../wordpress-queries"
-import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
+import { fetchFromWpGraphQL } from "./client"
+import { executeRestFallback, fetchFromWp } from "./rest-client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG, getFpTagForCountry } from "./shared"
 import type { CategoryPostsResult } from "./types"

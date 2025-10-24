@@ -7,7 +7,8 @@ import {
   WORDPRESS_REST_MAX_PER_PAGE,
   wordpressQueries,
 } from "../wordpress-queries"
-import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "../wordpress/client"
+import { fetchFromWpGraphQL } from "../wordpress/client"
+import { executeRestFallback, fetchFromWp } from "../wordpress/rest-client"
 import type { WordPressPost } from "@/types/wp"
 import { mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG, getFpTagForCountry } from "../wordpress/shared"

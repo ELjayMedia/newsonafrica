@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
 
 import { CACHE_DURATIONS } from "../cache/constants"
-import * as client from "./client"
+import * as restClient from "./rest-client"
 import { getFpTagForCountry, invalidateFpTagCache } from "./shared"
 import type { WordPressTag } from "@/types/wp"
 
@@ -32,7 +32,7 @@ describe("getFpTagForCountry", () => {
 
   it("reuses cached FP tag results within the TTL", async () => {
     const fetchSpy = vi
-      .spyOn(client, "fetchFromWp")
+      .spyOn(restClient, "fetchFromWp")
       .mockResolvedValueOnce([buildTag(101)])
 
     const first = await getFpTagForCountry("za", { tags: ["frontpage"] })
@@ -50,7 +50,7 @@ describe("getFpTagForCountry", () => {
 
   it("refetches the FP tag after the cache expires", async () => {
     const fetchSpy = vi
-      .spyOn(client, "fetchFromWp")
+      .spyOn(restClient, "fetchFromWp")
       .mockResolvedValueOnce([buildTag(101)])
       .mockResolvedValueOnce([buildTag(202)])
 

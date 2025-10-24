@@ -1,6 +1,7 @@
 import { buildCacheTags } from "../cache/tag-utils"
 import { AUTHOR_DATA_QUERY, wordpressQueries } from "../wordpress-queries"
-import { executeRestFallback, fetchFromWp, fetchFromWpGraphQL } from "./client"
+import { fetchFromWpGraphQL } from "./client"
+import { executeRestFallback, fetchFromWp } from "./rest-client"
 import type { AuthorDataQuery } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"

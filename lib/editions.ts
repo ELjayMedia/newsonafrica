@@ -14,7 +14,6 @@ interface BaseEdition {
 export interface CountryEdition extends BaseEdition {
   type: "country"
   apiEndpoint: string
-  restEndpoint: string
 }
 
 export interface AfricanEdition extends BaseEdition {
@@ -23,7 +22,7 @@ export interface AfricanEdition extends BaseEdition {
 
 export type SupportedEdition = CountryEdition | AfricanEdition
 
-const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint" | "restEndpoint">> = [
+const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint">> = [
   {
     code: "sz",
     name: "Eswatini",
@@ -44,7 +43,6 @@ export const SUPPORTED_COUNTRIES: CountryEdition[] = COUNTRY_DEFINITIONS.map((co
   ...country,
   type: "country",
   apiEndpoint: getWpEndpoints(country.code).graphql,
-  restEndpoint: getWpEndpoints(country.code).rest,
 }))
 
 export const AFRICAN_EDITION: AfricanEdition = {
