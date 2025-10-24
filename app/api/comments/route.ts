@@ -33,7 +33,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const rateLimitResponse = await applyRateLimit(request, 30, "COMMENTS_GET_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const supabase = createSupabaseRouteClient()
+    const supabase = createSupabaseRouteClient() as any
 
     const { searchParams } = new URL(request.url)
     const params = Object.fromEntries(searchParams.entries())
@@ -76,7 +76,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .eq("id", session.user.id)
         .single()
 
-      isModerator = Boolean(profile?.is_admin)
+      const isAdmin = (profile as { is_admin?: boolean | null } | null)?.is_admin
+      isModerator = Boolean(isAdmin)
     }
 
     if (!session?.user) {
@@ -102,7 +103,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw new Error(`Failed to fetch comments: ${error.message}`)
     }
 
-    if (!comments || comments.length === 0) {
+    const typedComments = (comments ?? []) as Array<Record<string, unknown> & {
+      profile?: { username?: string | null; avatar_url?: string | null } | null
+    }>
+
+    if (typedComments.length === 0) {
       return withCors(
         request,
         successResponse({
@@ -114,7 +119,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Combine comments with profile data
-    const commentsWithProfiles = comments.map((comment) => {
+    const commentsWithProfiles = typedComments.map((comment) => {
       return {
         ...comment,
         profile: comment.profile ?? undefined,
@@ -156,7 +161,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const rateLimitResponse = await applyRateLimit(request, 5, "COMMENTS_POST_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const supabase = createSupabaseRouteClient()
+    const supabase = createSupabaseRouteClient() as any
 
     // Check if user is authenticated
     const {
@@ -181,8 +186,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .limit(1)
       .single()
 
-    if (!lastCommentError && lastComment) {
-      const lastCommentTime = new Date(lastComment.created_at).getTime()
+    const lastCommentRecord = lastComment as { created_at: string } | null
+
+    if (!lastCommentError && lastCommentRecord) {
+      const lastCommentTime = new Date(lastCommentRecord.created_at).getTime()
       const currentTime = Date.now()
       const timeDiff = currentTime - lastCommentTime
 
@@ -274,11 +281,17 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     }
 
     // Check if the comment exists
-    const { data: comment, error: fetchError } = await supabase.from("comments").select("*").eq("id", id).single()
+    const { data: comment, error: fetchError } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("id", id)
+      .single()
 
-    if (fetchError) {
+    if (fetchError || !comment) {
       return withCors(request, handleApiError(new Error("Comment not found")))
     }
+
+    const commentRecord = comment as { user_id?: string | null }
 
     let updateData = {}
 
@@ -292,7 +305,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         break
       case "delete":
         // Only allow the author to delete their own comment
-        if (comment.user_id !== session.user.id) {
+        if (commentRecord.user_id !== session.user.id) {
           return withCors(request, handleApiError(new Error("You can only delete your own comments")))
         }
         updateData = { status: "deleted" }
@@ -300,7 +313,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       case "approve":
         // Check if user is a moderator (implement your own logic)
         // For now, we'll just check if the user is the author
-        if (comment.user_id !== session.user.id) {
+        if (commentRecord.user_id !== session.user.id) {
           return withCors(request, handleApiError(new Error("You don't have permission to approve this comment")))
         }
         updateData = {
@@ -312,6 +325,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     }
 
     // Update the comment
+    // @ts-expect-error -- Supabase type inference does not recognize our generic schema in route handlers
     const { error } = await supabase.from("comments").update(updateData).eq("id", id)
 
     if (error) {

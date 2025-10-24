@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Globe, ChevronRight, MapPin, Loader2 } from "lucide-react"
+import { Globe, ChevronRight, MapPin } from "lucide-react"
 import { COUNTRIES } from "@/lib/wordpress/client"
-import type { CountryPosts, HomePost } from "@/types/home"
+import type { CountryPosts } from "@/types/home"
 import { getCurrentCountry } from "@/lib/utils/routing"
 
 export function CountryNavigation() {
@@ -62,144 +62,16 @@ export function CountryNavigation() {
   )
 }
 
-export function CountrySpotlight({ countryPosts: initialCountryPosts }: { countryPosts?: CountryPosts }) {
+export function CountrySpotlight({ countryPosts = {} }: { countryPosts?: CountryPosts }) {
   const currentCountry = getCurrentCountry()
-  const [countryPosts, setCountryPosts] = useState<CountryPosts>(() => initialCountryPosts || {})
-  const [isLoading, setIsLoading] = useState(false)
-  const hasAttemptedFetch = useRef(false)
-  const previousCountryRef = useRef(currentCountry)
 
-  useEffect(() => {
-    if (previousCountryRef.current !== currentCountry) {
-      const nextPosts = initialCountryPosts || {}
-      previousCountryRef.current = currentCountry
-      hasAttemptedFetch.current = false
-      setCountryPosts({ ...nextPosts })
-      return
-    }
-
-    if (initialCountryPosts) {
-      setCountryPosts((prev) => {
-        let hasChanges = false
-        const mergedPosts: CountryPosts = { ...prev }
-
-        Object.entries(initialCountryPosts).forEach(([countryCode, posts]) => {
-          if (mergedPosts[countryCode] !== posts) {
-            mergedPosts[countryCode] = posts
-            hasChanges = true
-          }
-        })
-
-        return hasChanges ? mergedPosts : prev
-      })
-    }
-  }, [currentCountry, initialCountryPosts])
-
-  // Fetch posts from all countries for Pan-African section
-  useEffect(() => {
-    let isCancelled = false
-
-    const fetchPanAfricanPosts = async () => {
-      const allCountries = Object.keys(COUNTRIES)
-      const otherCountries = allCountries.filter((code) => code !== currentCountry).slice(0, 3)
-
-      if (hasAttemptedFetch.current) {
-        return
-      }
-
-      const spotlightCountriesWithPosts = otherCountries.filter(
-        (code) => (countryPosts[code]?.length ?? 0) > 0,
-      )
-
-      if (
-        spotlightCountriesWithPosts.length >= otherCountries.length ||
-        otherCountries.length === 0
-      ) {
-        hasAttemptedFetch.current = true
-        return
-      }
-
-      setIsLoading(true)
-      hasAttemptedFetch.current = true
-
-      try {
-        const results = await Promise.allSettled(
-          otherCountries.map(async (countryCode) => {
-            const params = new URLSearchParams({
-              country: countryCode,
-              limit: "2",
-              format: "home",
-            })
-            const response = await fetch(`/api/wordpress/latest-posts?${params.toString()}`)
-
-            if (!response.ok) {
-              throw new Error(`Failed to fetch latest posts for ${countryCode}`)
-            }
-
-            const payload = (await response.json()) as { posts?: HomePost[] }
-            return {
-              countryCode,
-              posts: payload.posts ?? [],
-            }
-          }),
-        )
-
-        if (isCancelled) return
-
-        setCountryPosts((previousPosts) => {
-          let hasUpdates = false
-          const updatedPosts: CountryPosts = { ...previousPosts }
-
-          results.forEach((result) => {
-            if (result.status === "fulfilled" && result.value.posts.length > 0) {
-              const existingPosts = updatedPosts[result.value.countryCode]
-
-              if (existingPosts !== result.value.posts) {
-                updatedPosts[result.value.countryCode] = result.value.posts
-                hasUpdates = true
-              }
-            }
-          })
-
-          return hasUpdates ? updatedPosts : previousPosts
-        })
-      } catch (error) {
-        console.error("[v0] Error fetching Pan-African posts:", error)
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    fetchPanAfricanPosts()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [countryPosts, currentCountry])
-
-  const spotlightCountries = Object.entries(countryPosts)
-    .filter(([_, posts]) => posts && posts.length > 0)
-    .slice(0, 3)
-
-  if (isLoading) {
-    return (
-      <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Pan-African Spotlight</h2>
-          <Badge variant="secondary" className="ml-2">
-            Pan-African
-          </Badge>
-        </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-3 text-muted-foreground">Loading stories from across Africa...</span>
-        </div>
-      </section>
-    )
-  }
+  const spotlightCountries = useMemo(
+    () =>
+      Object.entries(countryPosts)
+        .filter(([countryCode, posts]) => countryCode !== currentCountry && posts && posts.length > 0)
+        .slice(0, 3),
+    [countryPosts, currentCountry],
+  )
 
   if (spotlightCountries.length === 0) return null
 

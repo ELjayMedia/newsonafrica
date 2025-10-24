@@ -3,13 +3,14 @@ import "server-only"
 import { cache } from "react"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { categoryConfigs, homePageConfig } from "@/config/homeConfig"
 import {
   AFRICAN_EDITION,
   isAfricanEdition,
   isCountryEdition,
   type SupportedEdition,
 } from "@/lib/editions"
-import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { DEFAULT_COUNTRY, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import {
   getAggregatedLatestHome,
   getFpTaggedPostsForCountry,
@@ -18,6 +19,8 @@ import {
   type AggregatedHomeData,
   type WordPressPost,
 } from "@/lib/wordpress-api"
+import { mapPostsToHomePosts } from "@/lib/wordpress/shared"
+import { getPostsForCategories } from "@/lib/wp-server/categories"
 import type { Category } from "@/types/content"
 import type { CountryPosts, HomePost } from "@/types/home"
 
@@ -298,6 +301,32 @@ const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData =>
   }
 }
 
+const configuredCategorySlugs = Array.from(
+  new Set(
+    categoryConfigs
+      .map((config) => (config.typeOverride ?? config.name).toLowerCase())
+      .filter((slug) => slug.length > 0),
+  ),
+)
+
+const CATEGORY_POST_LIMIT = homePageConfig.categorySection?.postsPerCategory ?? 5
+
+const loadCategoryPostsForHome = async (
+  countryCode: string,
+): Promise<Record<string, HomePost[]>> => {
+  if (configuredCategorySlugs.length === 0 || CATEGORY_POST_LIMIT <= 0) {
+    return {}
+  }
+
+  const results = await getPostsForCategories(countryCode, configuredCategorySlugs, CATEGORY_POST_LIMIT)
+
+  return Object.entries(results).reduce<Record<string, HomePost[]>>((acc, [slug, result]) => {
+    const posts = Array.isArray(result?.posts) ? result?.posts : []
+    acc[slug] = mapPostsToHomePosts(posts, countryCode)
+    return acc
+  }, {})
+}
+
 export interface HomeContentServerProps {
   initialPosts: HomePost[]
   featuredPosts: HomePost[]
@@ -406,11 +435,14 @@ export async function buildHomeContentProps(baseUrl: string): Promise<HomeConten
     : await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
+  const categoryPosts = await loadCategoryPostsForHome(DEFAULT_COUNTRY)
+  const enrichedInitialData = { ...initialData, categoryPosts }
+
   return {
     initialPosts,
     featuredPosts,
     countryPosts,
-    initialData,
+    initialData: enrichedInitialData,
   }
 }
 
@@ -428,10 +460,18 @@ export async function buildHomeContentPropsForEdition(
     ? await buildCountryPosts([edition.code], { [edition.code]: aggregatedHome })
     : { [AFRICAN_EDITION.code]: initialPosts }
 
+  const categoryCountry = isCountryEdition(edition)
+    ? edition.code
+    : isAfricanEdition(edition)
+      ? AFRICAN_EDITION.code
+      : DEFAULT_COUNTRY
+  const categoryPosts = await loadCategoryPostsForHome(categoryCountry)
+  const enrichedInitialData = { ...initialData, categoryPosts }
+
   return {
     initialPosts,
     featuredPosts,
     countryPosts,
-    initialData,
+    initialData: enrichedInitialData,
   }
 }

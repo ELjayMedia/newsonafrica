@@ -23,7 +23,7 @@ export async function Sidebar({ country = DEFAULT_COUNTRY }: SidebarProps = {}) 
   return (
     <aside className="hidden lg:block w-full max-w-sm xl:max-w-md space-y-6 sticky top-4 self-start">
       <Suspense fallback={<SidebarSkeleton />}>
-        <SidebarContent initialData={initialData} country={normalizedCountry} />
+        <SidebarContent data={initialData} country={normalizedCountry} />
       </Suspense>
     </aside>
   )
