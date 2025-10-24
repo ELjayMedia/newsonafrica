@@ -1,14 +1,14 @@
-"use client"
+import AuthPageClient from "@/app/auth/AuthPageClient"
 
-import { Auth } from "@supabase/auth-ui-react"
-import { ThemeSupa } from "@supabase/auth-ui-shared"
-import { useSupabaseClient } from "@supabase/auth-helpers-react"
+type RegisterPageSearchParams = {
+  redirectTo?: string
+  error?: string
+}
 
-export default function RegisterPage() {
-  const supabase = useSupabaseClient()
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
-      <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} view="sign_up" providers={[]} />
-    </div>
-  )
+interface RegisterPageProps {
+  searchParams?: RegisterPageSearchParams
+}
+
+export default function RegisterPage({ searchParams }: RegisterPageProps) {
+  return <AuthPageClient searchParams={searchParams} defaultView="sign_up" />
 }

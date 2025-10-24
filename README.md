@@ -17,7 +17,6 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 ## 🌟 Features
 
 - **Mobile-first, responsive design**: Optimized for all devices with a focus on mobile experience
-- **Push notifications**: Real-time alerts for breaking news
 - **Fast loading times**: Optimized assets and code splitting for performance
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
 - **Personalization**: User profiles, bookmarks, and preferences
@@ -98,7 +97,6 @@ NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
 PAYSTACK_SECRET_KEY=your_paystack_secret_key
 
 # --- Security & Webhooks ---
-CSRF_SECRET=your_random_csrf_secret_min_32_chars
 REVALIDATION_SECRET=your_random_revalidation_secret
 WORDPRESS_WEBHOOK_SECRET=your_wordpress_webhook_secret
 
@@ -115,7 +113,7 @@ FEATURE_ADVANCED_SEARCH=true
 ### Installation
 
 > [!NOTE]
-> The repository standardizes on **npm** for dependency management. Install dependencies with `npm install --legacy-peer-deps` (matching our CI setup) so the React 19 toolchain resolves cleanly, and keep `package-lock.json` committed.
+> The repository standardizes on **npm** for dependency management. Install dependencies with `npm install` and keep `package-lock.json` committed.
 
 \`\`\`bash
 # Clone the repository
@@ -123,7 +121,7 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install --legacy-peer-deps
+npm install
 
 # Run the development server
 npm run dev
