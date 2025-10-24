@@ -1,32 +1,107 @@
 import { buildCacheTags } from "../cache/tag-utils"
-import { AUTHOR_DATA_QUERY, wordpressQueries } from "../wordpress-queries"
+import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "../wordpress-queries"
 import { fetchFromWpGraphQL } from "./client"
-import { executeRestFallback, fetchFromWp } from "./rest-client"
-import type { AuthorDataQuery } from "@/types/wpgraphql"
+import type { AuthorDataQuery, AuthorsQuery } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { WordPressAuthor, WordPressPost } from "@/types/wp"
 
 const normalizeRenderedText = (value: unknown): string | undefined => {
-  if (!value) return undefined
-  if (typeof value === "string") {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : undefined
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+const coerceToNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
   }
-  if (typeof value === "object" && "rendered" in (value as Record<string, unknown>)) {
-    const rendered = (value as { rendered?: unknown }).rendered
-    if (typeof rendered === "string") {
-      const trimmed = rendered.trim()
-      return trimmed.length > 0 ? trimmed : undefined
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const numeric = Number(value)
+    if (!Number.isNaN(numeric)) {
+      return numeric
+    }
+
+    try {
+      const decoded = Buffer.from(value, "base64").toString("ascii")
+      const parts = decoded.split(":")
+      const maybeNumber = Number(parts[parts.length - 1])
+      if (!Number.isNaN(maybeNumber)) {
+        return maybeNumber
+      }
+    } catch {
+      // Ignore decoding errors
     }
   }
+
   return undefined
 }
 
-export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY) => {
-  const { endpoint, params } = wordpressQueries.authors()
+const selectAvatarUrl = (
+  avatar: { url?: string | null } | null | undefined,
+): { url?: string } | undefined => {
+  if (!avatar || typeof avatar !== "object") return undefined
+  const url = typeof avatar.url === "string" ? avatar.url : undefined
+  return url ? { url } : undefined
+}
+
+type GraphqlAuthorLike =
+  | NonNullable<AuthorDataQuery["user"]>
+  | NonNullable<NonNullable<AuthorsQuery["users"]>["nodes"]>[number]
+
+const mapGraphqlAuthorToWordPressAuthor = (
+  author: GraphqlAuthorLike,
+  slugFallback: string,
+): WordPressAuthor => {
+  const databaseId = coerceToNumber(author.databaseId ?? author.id)
+  const description = normalizeRenderedText(author.description ?? undefined)
+  const avatar = selectAvatarUrl(author.avatar ?? undefined)
+  const slug = author.slug ?? slugFallback
+  const name = author.name ?? ""
+
+  return {
+    id: databaseId,
+    databaseId,
+    name,
+    slug,
+    description,
+    avatar,
+    node: {
+      id: typeof author.id === "number" ? author.id : undefined,
+      databaseId,
+      name,
+      slug,
+      description,
+      avatar,
+    },
+  }
+}
+
+export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordPressAuthor[]> => {
   const tags = buildCacheTags({ country: countryCode, section: "authors" })
-  return (await fetchFromWp<WordPressAuthor[]>(countryCode, { endpoint, params }, { tags })) || []
+  const data = await fetchFromWpGraphQL<AuthorsQuery>(
+    countryCode,
+    AUTHORS_QUERY,
+    { first: 100 },
+    tags,
+  )
+
+  const nodes =
+    data?.users?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+
+  return nodes.map((node) => mapGraphqlAuthorToWordPressAuthor(node, node.slug ?? ""))
+}
+
+interface AuthorPostsResult {
+  author: WordPressAuthor
+  posts: {
+    nodes: WordPressPost[]
+    pageInfo: {
+      endCursor: string | null
+      hasNextPage: boolean
+    }
+  }
 }
 
 export async function fetchAuthorData(
@@ -34,7 +109,7 @@ export async function fetchAuthorData(
   cursor: string | null = null,
   countryCode = DEFAULT_COUNTRY,
   limit = 10,
-) {
+): Promise<AuthorPostsResult | null> {
   const tags = buildCacheTags({
     country: countryCode,
     section: "authors",
@@ -52,10 +127,10 @@ export async function fetchAuthorData(
     tags,
   )
   if (!data?.user) return null
+  const author = mapGraphqlAuthorToWordPressAuthor(data.user, slug)
   const nodes = data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
-    ...data.user,
-    description: normalizeRenderedText(data.user.description) ?? undefined,
+    author,
     posts: {
       nodes: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
       pageInfo: {
@@ -75,139 +150,18 @@ interface AuthorLookupResult {
   }
 }
 
-const coerceToNumber = (value: unknown): number => {
-  if (typeof value === "number") return value
-  if (typeof value === "string") {
-    const numeric = Number(value)
-    if (!Number.isNaN(numeric)) {
-      return numeric
-    }
-
-    try {
-      const decoded = Buffer.from(value, "base64").toString("ascii")
-      const parts = decoded.split(":")
-      const maybeNumber = Number(parts[parts.length - 1])
-      if (!Number.isNaN(maybeNumber)) {
-        return maybeNumber
-      }
-    } catch {
-      // Ignore decoding errors
-    }
-  }
-  return 0
-}
-
-const selectAvatarUrl = (avatar: any): { url?: string } | undefined => {
-  if (!avatar) return undefined
-  if (typeof avatar === "object" && "url" in avatar) {
-    const url = (avatar as { url?: string }).url
-    return url ? { url } : undefined
-  }
-  if (typeof avatar === "object" && "96" in avatar) {
-    const urls = avatar as Record<string, string>
-    return {
-      url: urls["96"] || urls["48"] || urls["24"],
-    }
-  }
-  return undefined
-}
-
 export async function getAuthorBySlug(
   slug: string,
   { countryCode = DEFAULT_COUNTRY, postLimit = 12 }: { countryCode?: string; postLimit?: number } = {},
 ): Promise<AuthorLookupResult | null> {
-  const cacheTags = buildCacheTags({
-    country: countryCode,
-    section: "authors",
-    extra: [`author:${slug}`],
-  })
-
-  const gqlAuthor = await fetchAuthorData(slug, null, countryCode, postLimit)
-  if (gqlAuthor) {
-    const databaseId = coerceToNumber(gqlAuthor.databaseId ?? gqlAuthor.id)
-    const avatar = selectAvatarUrl(gqlAuthor.avatar)
-    const description = normalizeRenderedText(gqlAuthor.description)
-    return {
-      author: {
-        id: databaseId,
-        databaseId,
-        name: gqlAuthor.name ?? "",
-        slug: gqlAuthor.slug ?? slug,
-        description,
-        avatar,
-        node: {
-          id: typeof gqlAuthor.id === "number" ? gqlAuthor.id : undefined,
-          databaseId,
-          name: gqlAuthor.name ?? "",
-          slug: gqlAuthor.slug ?? slug,
-          description,
-          avatar,
-        },
-      },
-      posts: gqlAuthor.posts.nodes ?? [],
-      pageInfo: gqlAuthor.posts.pageInfo,
-    }
-  }
-
-  const restAuthors = await executeRestFallback(
-    () =>
-      fetchFromWp<any[]>(
-        countryCode,
-        {
-          endpoint: "users",
-          params: { slug },
-        },
-        { tags: cacheTags },
-      ),
-    `[v0] Author REST fallback failed for ${slug} (${countryCode})`,
-    { countryCode, slug },
-    { fallbackValue: [] },
-  )
-
-  const restAuthor = restAuthors[0]
-  if (!restAuthor) {
+  const authorData = await fetchAuthorData(slug, null, countryCode, postLimit)
+  if (!authorData) {
     return null
   }
 
-  const restDescription = normalizeRenderedText(restAuthor.description)
-
-  const query = wordpressQueries.posts({
-    page: 1,
-    perPage: postLimit,
-    author: String(restAuthor.id),
-  })
-  const posts = await executeRestFallback(
-    () => fetchFromWp<WordPressPost[]>(countryCode, query, { tags: cacheTags }),
-    `[v0] Author posts REST fallback failed for ${slug} (${countryCode})`,
-    {
-      countryCode,
-      slug,
-      authorId: restAuthor.id,
-      postLimit,
-      endpoint: query.endpoint,
-      params: query.params,
-    },
-    { fallbackValue: [] },
-  )
-
-  const restAvatar = selectAvatarUrl(restAuthor.avatar_urls)
   return {
-    author: {
-      id: restAuthor.id,
-      databaseId: restAuthor.id,
-      name: restAuthor.name ?? "",
-      slug: restAuthor.slug ?? slug,
-      description: restDescription,
-      avatar: restAvatar,
-      node: {
-        id: restAuthor.id,
-        databaseId: restAuthor.id,
-        name: restAuthor.name ?? "",
-        slug: restAuthor.slug ?? slug,
-        description: restDescription,
-        avatar: restAvatar,
-      },
-    },
-    posts,
+    author: authorData.author,
+    posts: authorData.posts.nodes,
+    pageInfo: authorData.posts.pageInfo,
   }
 }
