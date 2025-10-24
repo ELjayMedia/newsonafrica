@@ -2,10 +2,7 @@ import { CACHE_DURATIONS } from "../cache/constants"
 import { wordpressQueries } from "../wordpress-queries"
 import { fetchFromWp, executeRestFallback } from "./rest-client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-import {
-  mapGraphqlPostToWordPressPost,
-  mapWordPressPostFromSource,
-} from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 
@@ -89,9 +86,6 @@ export const getFpTagForCountry = async (
 
   return tag
 }
-
-export const mapPostFromWp = (post: unknown, countryCode?: string): WordPressPost =>
-  mapWordPressPostFromSource(post as any, "rest", countryCode)
 
 export const resolveHomePostId = (post: WordPressPost): string => {
   if (post.globalRelayId) {

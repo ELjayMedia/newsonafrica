@@ -13,7 +13,7 @@ import type {
 } from "@/types/wp"
 
 // GraphQL fragments (shape for GQL nodes)
-import type { HomePostFieldsFragment, PostFieldsFragment } from "@/types/wpgraphql"
+import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 // High-level list view mapping + types
 import {
@@ -172,7 +172,7 @@ export const mapRestPostToWordPressPost = (post: RestPost, countryCode?: string)
 // ------------------------------
 // GraphQL shapes → normalize
 // ------------------------------
-export type GraphqlPostNode = PostFieldsFragment | HomePostFieldsFragment
+export type GraphqlPostNode = PostFieldsFragment
 
 const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefined => {
   if (!post.featuredImage?.node) return undefined

@@ -115,21 +115,33 @@ export type PostFieldsFragment = {
   readonly id?: Maybe<Scalars["ID"]>
   readonly slug?: Maybe<Scalars["String"]>
   readonly date?: Maybe<Scalars["String"]>
+  readonly modified?: Maybe<Scalars["String"]>
   readonly title?: Maybe<Scalars["String"]>
   readonly excerpt?: Maybe<Scalars["String"]>
   readonly content?: Maybe<Scalars["String"]>
+  readonly uri?: Maybe<Scalars["String"]>
+  readonly link?: Maybe<Scalars["String"]>
   readonly featuredImage?: Maybe<{
     readonly __typename?: "NodeWithFeaturedImageToMediaItemConnectionEdge"
     readonly node?: Maybe<{
       readonly __typename?: "MediaItem"
       readonly sourceUrl?: Maybe<Scalars["String"]>
       readonly altText?: Maybe<Scalars["String"]>
+      readonly caption?: Maybe<Scalars["String"]>
       readonly mediaDetails?: Maybe<{
         readonly __typename?: "MediaDetails"
         readonly width?: Maybe<Scalars["Int"]>
         readonly height?: Maybe<Scalars["Int"]>
       }>
     }>
+  }>
+  readonly countries?: Maybe<{
+    readonly __typename?: "PostToCountryConnection"
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<{
+      readonly __typename?: "Country"
+      readonly databaseId?: Maybe<Scalars["Int"]>
+      readonly slug?: Maybe<Scalars["String"]>
+    }>>>
   }>
   readonly categories?: Maybe<{
     readonly __typename?: "PostToCategoryConnection"
@@ -156,24 +168,10 @@ export type PostFieldsFragment = {
       readonly databaseId?: Maybe<Scalars["Int"]>
       readonly name?: Maybe<Scalars["String"]>
       readonly slug?: Maybe<Scalars["String"]>
-    }>
-  }>
-}
-
-export type HomePostFieldsFragment = {
-  readonly __typename?: "Post"
-  readonly databaseId?: Maybe<Scalars["Int"]>
-  readonly id?: Maybe<Scalars["ID"]>
-  readonly slug?: Maybe<Scalars["String"]>
-  readonly date?: Maybe<Scalars["String"]>
-  readonly title?: Maybe<Scalars["String"]>
-  readonly excerpt?: Maybe<Scalars["String"]>
-  readonly featuredImage?: Maybe<{
-    readonly __typename?: "NodeWithFeaturedImageToMediaItemConnectionEdge"
-    readonly node?: Maybe<{
-      readonly __typename?: "MediaItem"
-      readonly sourceUrl?: Maybe<Scalars["String"]>
-      readonly altText?: Maybe<Scalars["String"]>
+      readonly avatar?: Maybe<{
+        readonly __typename?: "UserAvatar"
+        readonly url?: Maybe<Scalars["String"]>
+      }>
     }>
   }>
 }
@@ -191,7 +189,7 @@ export type FpTaggedPostsQuery = {
   readonly __typename?: "RootQuery"
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<HomePostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
   }>
 }
 

@@ -16,6 +16,7 @@ export const POST_FIELDS_FRAGMENT = gql`
       node {
         sourceUrl
         altText
+        caption
         mediaDetails {
           width
           height
@@ -47,23 +48,9 @@ export const POST_FIELDS_FRAGMENT = gql`
         databaseId
         name
         slug
-      }
-    }
-  }
-`
-
-export const HOME_POST_FIELDS_FRAGMENT = gql`
-  fragment HomePostFields on Post {
-    databaseId
-    id
-    slug
-    date
-    title
-    excerpt
-    featuredImage {
-      node {
-        sourceUrl
-        altText
+        avatar {
+          url
+        }
       }
     }
   }
@@ -138,7 +125,7 @@ export const RELATED_POSTS_BY_TAGS_QUERY = gql`
 `
 
 export const FP_TAGGED_POSTS_QUERY = gql`
-  ${HOME_POST_FIELDS_FRAGMENT}
+  ${POST_FIELDS_FRAGMENT}
   query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
     posts(
       first: $first
@@ -149,7 +136,7 @@ export const FP_TAGGED_POSTS_QUERY = gql`
       }
     ) {
       nodes {
-        ...HomePostFields
+        ...PostFields
       }
     }
   }
