@@ -1,47 +1,20 @@
-import { CACHE_DURATIONS } from "../cache/constants"
 import {
   CATEGORY_POSTS_BATCH_QUERY,
   CATEGORY_POSTS_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
-  WORDPRESS_REST_MAX_PER_PAGE,
-  wordpressQueries,
 } from "../wordpress-queries"
 import { fetchFromWpGraphQL } from "../wordpress/client"
-import { executeRestFallback, fetchFromWp } from "../wordpress/rest-client"
-import type { WordPressPost } from "@/types/wp"
-import { mapWordPressPostFromSource } from "@/lib/mapping/post-mappers"
-import { DEFAULT_COUNTRY, FP_TAG_SLUG, getFpTagForCountry } from "../wordpress/shared"
-import type { CategoryPostsResult, WordPressCategory, WordPressPost } from "@/types/wp"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
+import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
   CategoriesQuery,
   PostsByCategoryQuery,
 } from "@/types/wpgraphql"
-import {
-  buildWpCacheTags,
-  graphqlFirst,
-  paginateRest,
-  type RestPaginationResult,
-} from "./common"
-
-const REST_CATEGORY_CACHE_TTL_MS = CACHE_DURATIONS.SHORT * 1000
-
-interface CachedCategoryPosts {
-  posts: WordPressPost[]
-  hasMore: boolean
-  expiresAt: number
-}
-
-const restCategoryPostsCache = new Map<string, CachedCategoryPosts>()
-
-const buildCategoryCacheKey = (
-  countryCode: string,
-  categoryId: number | string,
-  limit: number,
-  tagId?: number | string,
-) => `${countryCode}:${categoryId}:${limit}:${tagId ?? "all"}`
+import { buildWpCacheTags } from "./common"
 
 const createEmptyResult = (): CategoryPostsResult => ({
   category: null,
@@ -68,24 +41,6 @@ const mapCategoryFromGraphql = (node: GraphqlCategoryNode | null | undefined): W
   count: node?.count ?? undefined,
 })
 
-const mapCategoryFromRest = (payload: any): WordPressCategory => {
-  const rawId = payload?.id ?? payload?.databaseId
-  const numericId =
-    typeof rawId === "number"
-      ? rawId
-      : typeof rawId === "string"
-        ? Number.parseInt(rawId, 10)
-        : undefined
-
-  return {
-    id: Number.isFinite(numericId) && typeof numericId === "number" ? numericId : 0,
-    name: payload?.name ?? "",
-    slug: payload?.slug ?? "",
-    description: payload?.description ?? undefined,
-    count: typeof payload?.count === "number" ? payload.count : undefined,
-  }
-}
-
 const ensureResultEntries = (
   results: Record<string, CategoryPostsResult>,
   slugs: string[],
@@ -97,96 +52,6 @@ const ensureResultEntries = (
   }
 
   return results
-}
-
-const fetchCategoryPostsRest = async (
-  countryCode: string,
-  category: WordPressCategory,
-  limit: number,
-  cacheTags: string[],
-  options: { tagId?: number | string } = {},
-): Promise<RestPaginationResult<WordPressPost>> => {
-  if (!category?.id || limit <= 0) {
-    return { items: [], hasMore: false, pagesFetched: 0 }
-  }
-
-  const cacheKey = buildCategoryCacheKey(countryCode, category.id, limit, options.tagId)
-  const cached = restCategoryPostsCache.get(cacheKey)
-
-  if (cached && cached.expiresAt > Date.now()) {
-    return {
-      items: cached.posts.slice(0, limit),
-      hasMore: cached.hasMore,
-      pagesFetched: 0,
-    }
-  }
-
-  try {
-    const pagination = await paginateRest<WordPressPost>({
-      limit,
-      pageSize: Math.min(limit, WORDPRESS_REST_MAX_PER_PAGE),
-      makeRequest: async (page, perPage) => {
-        const { endpoint, params } = wordpressQueries.postsByCategory(category.id, perPage, options)
-        const response = await executeRestFallback(
-          () =>
-            fetchFromWp<WordPressPost[]>(
-              countryCode,
-              { endpoint, params: { ...params, page } },
-              { withHeaders: true, tags: cacheTags },
-            ),
-          `[v1] Category REST fallback failed for ${String(category.slug)} (${countryCode})`,
-          { countryCode, categoryId: category.id, page, perPage, tagId: options.tagId },
-          { fallbackValue: { data: [] as WordPressPost[], headers: new Headers() } },
-        )
-
-        return { items: response.data, headers: response.headers }
-      },
-    })
-
-    restCategoryPostsCache.set(cacheKey, {
-      posts: pagination.items,
-      hasMore: pagination.hasMore,
-      expiresAt: Date.now() + REST_CATEGORY_CACHE_TTL_MS,
-    })
-
-    return pagination
-  } catch (error) {
-    console.error(`[v1] Failed to fetch posts for category ${String(category.slug)}:`, error)
-    restCategoryPostsCache.delete(cacheKey)
-    return { items: [], hasMore: false, pagesFetched: 0 }
-  }
-}
-
-const fetchRestCategoriesBySlugs = async (
-  countryCode: string,
-  slugs: string[],
-  cacheTags: string[],
-): Promise<Map<string, WordPressCategory>> => {
-  if (slugs.length === 0) {
-    return new Map()
-  }
-
-  const categories = await executeRestFallback(
-    () =>
-      fetchFromWp<WordPressCategory[]>(
-        countryCode,
-        wordpressQueries.categoriesBySlugs(slugs),
-        { tags: cacheTags },
-      ),
-    `[v1] Categories REST fallback failed for ${countryCode}`,
-    { countryCode, slugs },
-    { fallbackValue: [] },
-  )
-
-  const map = new Map<string, WordPressCategory>()
-  for (const category of categories ?? []) {
-    const slug = normalizeSlug(category?.slug)
-    if (slug) {
-      map.set(slug, mapCategoryFromRest(category))
-    }
-  }
-
-  return map
 }
 
 export async function getPostsForCategories(
@@ -212,76 +77,46 @@ export async function getPostsForCategories(
     extra: normalizedSlugs.map((slug) => `category:${slug}`),
   })
 
-  const results = await graphqlFirst<CategoryPostsBatchQuery, Record<string, CategoryPostsResult>>({
-    fetchGraphql: () =>
-      fetchFromWpGraphQL<CategoryPostsBatchQuery>(
-        countryCode,
-        CATEGORY_POSTS_BATCH_QUERY,
-        {
-          slugs: normalizedSlugs,
-          first: limit,
-        },
-        tags,
-      ),
-    normalize: (data) => {
-      const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
-      if (!nodes || nodes.length === 0) {
-        return null
-      }
+  let data: CategoryPostsBatchQuery | null = null
 
-      const mapped: Record<string, CategoryPostsResult> = {}
-      for (const node of nodes) {
-        const slug = normalizeSlug(node.slug)
-        if (!slug) {
-          continue
-        }
-
-        const posts =
-          node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)).map((post) =>
-            mapWordPressPostFromSource(post, "gql", countryCode),
-          ) ?? []
-
-        mapped[slug] = {
-          category: mapCategoryFromGraphql(node),
-          posts,
-          hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
-          endCursor: node.posts?.pageInfo?.endCursor ?? null,
-        }
-      }
-
-      return mapped
-    },
-    makeRestFallback: async () => {
-      const categoryMap = await fetchRestCategoriesBySlugs(countryCode, normalizedSlugs, tags)
-      const fallbackResults: Record<string, CategoryPostsResult> = {}
-
-      for (const slug of normalizedSlugs) {
-        const category = categoryMap.get(slug)
-        if (!category) {
-          fallbackResults[slug] = createEmptyResult()
-          continue
-        }
-
-        const { items, hasMore } = await fetchCategoryPostsRest(countryCode, category, limit, tags)
-
-        fallbackResults[slug] = {
-          category,
-          posts: items,
-          hasNextPage: hasMore,
-          endCursor: null,
-        }
-      }
-
-      return fallbackResults
-    },
-    cacheTags: tags,
-    logMeta: {
-      operation: "category-posts-batch",
+  try {
+    data = await fetchFromWpGraphQL<CategoryPostsBatchQuery>(
       countryCode,
-      slugs: normalizedSlugs,
-      limit,
-    },
-  })
+      CATEGORY_POSTS_BATCH_QUERY,
+      {
+        slugs: normalizedSlugs,
+        first: limit,
+      },
+      tags,
+    )
+  } catch (error) {
+    console.error(
+      `[v1] Failed to fetch category posts batch for ${countryCode}:`,
+      error,
+    )
+  }
+
+  const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+  const results: Record<string, CategoryPostsResult> = {}
+
+  for (const node of nodes) {
+    const slug = normalizeSlug(node.slug)
+    if (!slug) {
+      continue
+    }
+
+    const posts =
+      node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)).map((post) =>
+        mapGraphqlPostToWordPressPost(post, countryCode),
+      ) ?? []
+
+    results[slug] = {
+      category: mapCategoryFromGraphql(node),
+      posts,
+      hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
+      endCursor: node.posts?.pageInfo?.endCursor ?? null,
+    }
+  }
 
   return ensureResultEntries(results, normalizedSlugs)
 }
@@ -299,120 +134,59 @@ export async function getPostsByCategoryForCountry(
     extra: [slug ? `category:${slug}` : null, `tag:${FP_TAG_SLUG}`],
   })
 
-  return graphqlFirst<PostsByCategoryQuery, CategoryPostsResult>({
-    fetchGraphql: () =>
-      fetchFromWpGraphQL<PostsByCategoryQuery>(
-        countryCode,
-        POSTS_BY_CATEGORY_QUERY,
-        {
-          category: categorySlug,
-          first: limit,
-          tagSlugs: [FP_TAG_SLUG],
-          after: after ?? undefined,
-        },
-        tags,
-      ),
-    normalize: (data) => {
-      if (!data?.posts || !data?.categories) {
-        return null
-      }
+  let data: PostsByCategoryQuery | null = null
 
-      const catNode = data.categories.nodes?.[0] ?? null
-      const category = catNode ? mapCategoryFromGraphql(catNode) : null
-      const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+  const variables: Record<string, string | number | string[]> = {
+    category: categorySlug,
+    first: limit,
+    tagSlugs: [FP_TAG_SLUG],
+  }
 
-      return {
-        category,
-        posts: nodes.map((post) => mapWordPressPostFromSource(post, "gql", countryCode)),
-        hasNextPage: data.posts.pageInfo?.hasNextPage ?? false,
-        endCursor: data.posts.pageInfo?.endCursor ?? null,
-      }
-    },
-    makeRestFallback: async () => {
-      const categories = await executeRestFallback(
-        () =>
-          fetchFromWp<WordPressCategory[]>(
-            countryCode,
-            wordpressQueries.categoryBySlug(categorySlug),
-            { tags },
-          ),
-        `[v1] Category REST fallback failed for ${categorySlug} (${countryCode})`,
-        { countryCode, categorySlug },
-        { fallbackValue: [] },
-      )
+  if (after) {
+    variables.after = after
+  }
 
-      const category = categories[0] ? mapCategoryFromRest(categories[0]) : null
-      if (!category) {
-        return createEmptyResult()
-      }
-
-      const fpTag = await getFpTagForCountry(countryCode, {
-        tags,
-        logMessage: `[v1] FP tag REST fallback failed for ${categorySlug} (${countryCode})`,
-        logMeta: { countryCode, categorySlug },
-      })
-      if (!fpTag) {
-        return {
-          category,
-          posts: [],
-          hasNextPage: false,
-          endCursor: null,
-        }
-      }
-
-      const { items, hasMore } = await fetchCategoryPostsRest(countryCode, category, limit, tags, {
-        tagId: fpTag.id,
-      })
-
-      return {
-        category,
-        posts: items,
-        hasNextPage: hasMore,
-        endCursor: null,
-      }
-    },
-    cacheTags: tags,
-    logMeta: {
-      operation: "category-posts",
+  try {
+    data = await fetchFromWpGraphQL<PostsByCategoryQuery>(
       countryCode,
-      categorySlug,
-      limit,
-      after,
-    },
-  })
+      POSTS_BY_CATEGORY_QUERY,
+      variables,
+      tags,
+    )
+  } catch (error) {
+    console.error(
+      `[v1] Failed to fetch posts by category for ${categorySlug} (${countryCode}):`,
+      error,
+    )
+  }
+
+  if (!data?.posts || !data?.categories) {
+    return createEmptyResult()
+  }
+
+  const catNode = data.categories.nodes?.[0] ?? null
+  const category = catNode ? mapCategoryFromGraphql(catNode) : null
+  const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+
+  return {
+    category,
+    posts: nodes.map((post) => mapGraphqlPostToWordPressPost(post, countryCode)),
+    hasNextPage: data.posts.pageInfo?.hasNextPage ?? false,
+    endCursor: data.posts.pageInfo?.endCursor ?? null,
+  }
 }
 
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
   const tags = buildWpCacheTags({ country: countryCode, section: "categories" })
 
-  return graphqlFirst<CategoriesQuery, WordPressCategory[]>({
-    fetchGraphql: () => fetchFromWpGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags),
-    normalize: (data) => {
-      if (!data?.categories?.nodes) {
-        return null
-      }
-
-      const nodes = data.categories.nodes.filter((node): node is NonNullable<typeof node> => Boolean(node))
-      return nodes.map((node) => mapCategoryFromGraphql(node))
-    },
-    makeRestFallback: () =>
-      executeRestFallback(
-        () =>
-          fetchFromWp<WordPressCategory[]>(
-            countryCode,
-            wordpressQueries.categories(),
-            { tags },
-          ),
-        `[v1] Categories REST fallback failed for ${countryCode}`,
-        { countryCode },
-        { fallbackValue: [] },
-      ),
-    cacheTags: tags,
-    logMeta: {
-      operation: "categories",
-      countryCode,
-    },
-  })
+  try {
+    const data = await fetchFromWpGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags)
+    const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    return nodes.map((node) => mapCategoryFromGraphql(node))
+  } catch (error) {
+    console.error(`[v1] Failed to fetch categories for ${countryCode}:`, error)
+    return []
+  }
 }
 
 export async function fetchCategoryPosts(
@@ -427,14 +201,19 @@ export async function fetchCategoryPosts(
     extra: [`category:${normalizedSlug}`],
   })
 
+  const variables: Record<string, string | number | string[]> = {
+    slug,
+    first: 10,
+  }
+
+  if (cursor) {
+    variables.after = cursor
+  }
+
   const data = await fetchFromWpGraphQL<CategoryPostsQuery>(
     countryCode,
     CATEGORY_POSTS_QUERY,
-    {
-      slug,
-      after: cursor ?? undefined,
-      first: 10,
-    },
+    variables,
     tags,
   )
 
@@ -448,7 +227,7 @@ export async function fetchCategoryPosts(
 
   return {
     category,
-    posts: nodes.map((post) => mapWordPressPostFromSource(post, "gql", countryCode)),
+    posts: nodes.map((post) => mapGraphqlPostToWordPressPost(post, countryCode)),
     pageInfo: {
       ...data.posts.pageInfo,
       endCursor: data.posts.pageInfo?.endCursor ?? null,
