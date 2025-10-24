@@ -436,6 +436,7 @@ export const AUTHOR_DATA_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
   query AuthorData($slug: String!, $after: String, $first: Int!) {
     user(id: $slug, idType: SLUG) {
+      id
       databaseId
       name
       slug
@@ -450,6 +451,26 @@ export const AUTHOR_DATA_QUERY = gql`
         }
         nodes {
           ...PostFields
+        }
+      }
+  }
+}
+`
+
+export const AUTHORS_QUERY = gql`
+  query Authors($first: Int!) {
+    users(
+      first: $first
+      where: { orderby: { field: DISPLAY_NAME, order: ASC }, hasPublishedPosts: true }
+    ) {
+      nodes {
+        id
+        databaseId
+        name
+        slug
+        description
+        avatar {
+          url
         }
       }
     }
