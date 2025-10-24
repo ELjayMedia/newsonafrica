@@ -1,9 +1,0 @@
-export const WP_AUTH_CONFIG = {
-  AUTH_KEY: "@Yh*-0|3%1;kyE;79u%ZnfKO47g(X;P7hNW2IO2[:*5gTe@9Go%Z;JRj]C25~I_f",
-  SECURE_AUTH_KEY: "x:b;h~-&OZMH5yhG]53JBH4f19j/Z6rxZ|2rWqT8e)J63a5p#54R0/x@xraczGLA",
-  LOGGED_IN_KEY: "4V[Z-W759~|@1cj|xx9kuW]:8U2Aw@BF;VIuw3j13@6NK6/3:##n_:;|2Dy64lsX",
-  NONCE_KEY: "6@&0td8Y4bsky+QZtEo:Ngur&2jTk4v1p3QS3OzW70HShW2FQvA4O+I4sSaI8;58",
-  AUTH_SALT: "0;873uw2/g-06/:&7XR2G)E!w1)l+&8|3Z+XEK/T/tYN(E56eyeH8@j1%DEK86K7",
-  SECURE_AUTH_SALT: "F_Ka9/aG16ZY29d13qMa5!o@5Z!b]p+g:4!63n&_T:x8Xxb//A(4h2/&!2#4FUiY",
-  LOGGED_IN_SALT: "2)lA1cU[:!61@65V/2QENn[106QGRhRG7eX2)/Rp[1z!1vi#G~r;7j&|sisgp7Fe",
-}

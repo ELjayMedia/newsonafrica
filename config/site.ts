@@ -1,7 +1,7 @@
-import { getRestBase } from "@/lib/wp-endpoints"
+import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { env } from "@/config/env"
 
-const WORDPRESS_REST_API_URL = getRestBase()
+const WORDPRESS_GRAPHQL_API_URL = getGraphQLEndpoint()
 
 export const siteConfig = {
   name: "News On Africa",
@@ -39,10 +39,8 @@ export const siteConfig = {
   ],
   // WordPress API configuration
   wordpress: {
-    apiUrl: WORDPRESS_REST_API_URL,
+    graphqlEndpoint: WORDPRESS_GRAPHQL_API_URL,
     authToken: env.WORDPRESS_AUTH_TOKEN,
-    username: env.WP_APP_USERNAME,
-    password: env.WP_APP_PASSWORD,
   },
   // Search configuration
   search: {
