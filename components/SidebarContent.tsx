@@ -1,49 +1,40 @@
 "use client"
 
-import { getCurrentCountry } from "@/lib/utils/routing"
+import { useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, AlertCircle, RefreshCw, TrendingUp } from "lucide-react"
+import { Clock, TrendingUp } from "lucide-react"
+
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { useMemo, useCallback } from "react"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCurrentCountry } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
-import { SidebarSkeleton } from "./SidebarSkeleton"
-import { Button } from "@/components/ui/button"
-import { useSidebarContent } from "@/hooks/useSidebarContent"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
 interface SidebarContentProps {
-  initialData?: SidebarContentPayload
+  data?: SidebarContentPayload
   country?: string
 }
 
-export function SidebarContent({ initialData, country: initialCountry }: SidebarContentProps = {}) {
-  const country = initialCountry ?? getCurrentCountry()
+const normalizePosts = (value: unknown): SidebarContentPayload["recent"] =>
+  Array.isArray(value) ? (value as SidebarContentPayload["recent"]) : []
+
+const buildPayload = (data?: SidebarContentPayload): SidebarContentPayload => ({
+  recent: normalizePosts(data?.recent),
+  mostRead: normalizePosts(data?.mostRead),
+})
+
+export function SidebarContent({ data, country: providedCountry }: SidebarContentProps = {}) {
+  const country = (providedCountry ?? getCurrentCountry()).toLowerCase()
   const { preferences } = useUserPreferences()
+
+  const payload = useMemo(() => buildPayload(data), [data])
+  const recentPosts = payload.recent
+  const mostReadPosts = payload.mostRead
 
   const preferredSections = useMemo(
     () => preferences.sections.map((section) => section.toLowerCase()),
     [preferences.sections],
   )
-
-  const { data, error, isLoading, mutate } = useSidebarContent(country, initialData)
-
-  const payload = data ?? initialData
-  const rawRecentPosts = payload?.recent
-  const rawMostReadPosts = payload?.mostRead
-  const recentPosts = useMemo(
-    () => (Array.isArray(rawRecentPosts) ? rawRecentPosts : []),
-    [rawRecentPosts],
-  )
-  const mostReadPosts = useMemo(
-    () => (Array.isArray(rawMostReadPosts) ? rawMostReadPosts : []),
-    [rawMostReadPosts],
-  )
-
-  const initialRecentCount = Array.isArray(initialData?.recent) ? initialData.recent.length : 0
-  const initialMostReadCount = Array.isArray(initialData?.mostRead) ? initialData.mostRead.length : 0
-  const hasInitialContent = initialRecentCount + initialMostReadCount > 0
 
   const personalizedPosts = useMemo(() => {
     if (!recentPosts.length) {
@@ -54,8 +45,8 @@ export function SidebarContent({ initialData, country: initialCountry }: Sidebar
       return recentPosts
     }
 
-    const matches = recentPosts.filter((post) => {
-      const categories = post.categories?.nodes || []
+    const matches = recentPosts.filter((post: any) => {
+      const categories = post?.categories?.nodes || []
       return categories.some((category: any) => {
         const slug = (category?.slug || category?.name || "").toLowerCase()
         return slug && preferredSections.includes(slug)
@@ -64,41 +55,6 @@ export function SidebarContent({ initialData, country: initialCountry }: Sidebar
 
     return matches.length > 0 ? matches : recentPosts
   }, [recentPosts, preferredSections])
-
-  const handleRetry = useCallback(() => {
-    mutate()
-  }, [mutate])
-
-  if (isLoading && !hasInitialContent) {
-    return <SidebarSkeleton />
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-red-800 mb-1">Unable to load content</h3>
-              <p className="text-sm text-red-700 mb-3">
-                We're having trouble loading the sidebar content. This might be a temporary issue.
-              </p>
-              <Button
-                onClick={handleRetry}
-                variant="outline"
-                size="sm"
-                className="text-red-700 border-red-300 hover:bg-red-100 bg-transparent"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   if (personalizedPosts.length === 0 && mostReadPosts.length === 0) {
     return (
@@ -135,18 +91,18 @@ export function SidebarContent({ initialData, country: initialCountry }: Sidebar
               <h2 className="text-lg font-bold text-gray-900">Most Read</h2>
             </div>
             <div className="space-y-4">
-              {mostReadPosts.map((post, index) => {
+              {mostReadPosts.map((post: any, index: number) => {
                 const rankColors = [
-                  "from-yellow-400 to-yellow-600", // 1st place - gold
-                  "from-gray-300 to-gray-500", // 2nd place - silver
-                  "from-orange-400 to-orange-600", // 3rd place - bronze
+                  "from-yellow-400 to-yellow-600",
+                  "from-gray-300 to-gray-500",
+                  "from-orange-400 to-orange-600",
                 ]
                 const isTopThree = index < 3
                 const rankBgClass = isTopThree ? rankColors[index] : "from-gray-200 to-gray-300"
 
                 return (
                   <Link
-                    key={post.id}
+                    key={post.id ?? `${post.slug}-${index}`}
                     href={getArticleUrl(post.slug, country)}
                     className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
                   >
@@ -163,68 +119,63 @@ export function SidebarContent({ initialData, country: initialCountry }: Sidebar
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold leading-snug group-hover:text-blue-600 transition-colors line-clamp-3 mb-1">
+                      <h3 className="text-sm font-semibold text-gray-900 leading-tight group-hover:text-blue-600">
                         {post.title}
                       </h3>
-                      {post.date && (
-                        <div className="flex items-center gap-1.5 text-gray-400 text-xs">
-                          <Clock className="h-3 w-3 flex-shrink-0" />
-                          <time dateTime={post.date} className="truncate">
-                            {new Date(post.date).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </time>
-                        </div>
+                      {post.excerpt && (
+                        <p className="mt-1 text-xs text-gray-600 line-clamp-2">{post.excerpt}</p>
                       )}
+                      <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="h-3.5 w-3.5" />
+                        <time dateTime={post.date}>{new Date(post.date).toLocaleDateString()}</time>
+                      </div>
                     </div>
                   </Link>
                 )
               })}
             </div>
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-400 text-center">Updated every 3 minutes</p>
-            </div>
           </section>
         )}
 
         {personalizedPosts.length > 0 && (
-          <section className="bg-white shadow-sm rounded-lg p-5 border border-gray-100 transition-all hover:shadow-md">
-            <h2 className="text-lg font-bold mb-5 pb-3 border-b-2 border-gray-200 text-gray-900">
-              {preferredSections.length > 0 ? "For You" : "Latest News"}
-            </h2>
+          <section className="bg-white shadow-sm rounded-lg p-5 border border-gray-100">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Latest News</h2>
+                <p className="text-xs text-gray-500">Personalized for you</p>
+              </div>
+            </div>
             <div className="space-y-4">
-              {personalizedPosts.slice(0, 5).map((post) => (
+              {personalizedPosts.map((post: any, index: number) => (
                 <Link
-                  key={post.id}
+                  key={post.id ?? `${post.slug}-${index}`}
                   href={getArticleUrl(post.slug, country)}
-                  className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
+                  className="flex items-start gap-3 group"
                 >
-                  {post.featuredImage?.node?.sourceUrl && (
-                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 ring-1 ring-gray-200">
+                  {post.featuredImage?.node?.sourceUrl ? (
+                    <div className="flex-shrink-0 relative w-20 h-16 rounded-md overflow-hidden">
                       <Image
-                        src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
-                        alt={post.featuredImage.node.altText || post.title}
+                        src={post.featuredImage.node.sourceUrl}
+                        alt={post.featuredImage.node.altText || post.title || "Article thumbnail"}
                         fill
-                        sizes="80px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-110"
-                        loading="lazy"
+                        className="object-cover"
                       />
+                    </div>
+                  ) : (
+                    <div className="flex-shrink-0 w-20 h-16 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                      <span className="text-xs font-medium">NOA</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold leading-snug group-hover:text-blue-600 transition-colors line-clamp-2 mb-1.5">
+                    <h3 className="text-sm font-semibold text-gray-900 leading-tight group-hover:text-blue-600">
                       {post.title}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-gray-500 text-xs">
-                      <Clock className="h-3 w-3 flex-shrink-0" />
-                      <time dateTime={post.date} className="truncate">
-                        {new Date(post.date).toLocaleDateString("en-US", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </time>
+                    {post.excerpt && (
+                      <p className="mt-1 text-xs text-gray-600 line-clamp-2">{post.excerpt}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                      <Clock className="h-3.5 w-3.5" />
+                      <time dateTime={post.date}>{new Date(post.date).toLocaleDateString()}</time>
                     </div>
                   </div>
                 </Link>

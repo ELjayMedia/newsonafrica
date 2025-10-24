@@ -4,6 +4,7 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import type { Database } from "@/types/supabase"
 
 export const runtime = "nodejs"
 
@@ -36,9 +37,10 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
   }
 
   try {
-    const { content } = await request.json()
+    const { content }: { content?: string } = await request.json()
+    const sanitizedContent = content?.trim()
 
-    if (!content) {
+    if (!sanitizedContent) {
       return jsonWithCors(request, { error: "Content is required" }, { status: 400 })
     }
 
@@ -47,7 +49,7 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
       .from("comments")
       .select("user_id, status")
       .eq("id", commentId)
-      .single()
+      .single<{ user_id: string; status: string }>()
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
@@ -75,19 +77,36 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     }
 
     // Update the comment
-    const { data, error } = await supabase.from("comments").update({ content }).eq("id", commentId).select().single()
+    const updatePayload = {
+      content: sanitizedContent,
+    } satisfies Database["public"]["Tables"]["comments"]["Update"]
+
+    type CommentRow = Database["public"]["Tables"]["comments"]["Row"]
+
+    const { data, error } = await supabase
+      .from("comments")
+      .update(updatePayload as never)
+      .eq("id", commentId)
+      .select()
+      .single<CommentRow>()
 
     if (error) {
       console.error("Error updating comment:", error)
       return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
     }
 
+    if (!data) {
+      return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
+    }
+
     // Fetch the profile data
+    type ProfilePreview = { username: string | null; avatar_url: string | null }
+
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("username, avatar_url")
       .eq("id", session.user.id)
-      .single()
+      .single<ProfilePreview>()
 
     if (profileError) {
       console.error("Error fetching profile:", profileError)
@@ -97,13 +116,15 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 
     // Return the updated comment with profile data
     revalidateByTag(CACHE_TAGS.COMMENTS)
-    return NextResponse.json({
+    const responsePayload = {
       ...data,
       profile: {
-        username: profile.username,
-        avatar_url: profile.avatar_url,
+        username: profile?.username ?? null,
+        avatar_url: profile?.avatar_url ?? null,
       },
-    })
+    }
+
+    return NextResponse.json(responsePayload)
   } catch (error) {
     console.error("Error updating comment:", error)
     return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
@@ -133,11 +154,13 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
 
   try {
     // First check if the user owns this comment
+    type CommentOwner = { user_id: string }
+
     const { data: comment, error: fetchError } = await supabase
       .from("comments")
       .select("user_id")
       .eq("id", commentId)
-      .single()
+      .single<CommentOwner>()
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
@@ -154,7 +177,14 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
     }
 
     // Soft delete the comment by updating its status
-    const { error } = await supabase.from("comments").update({ status: "deleted" }).eq("id", commentId)
+    const deletionPayload = {
+      status: "deleted",
+    } satisfies Database["public"]["Tables"]["comments"]["Update"]
+
+    const { error } = await supabase
+      .from("comments")
+      .update(deletionPayload as never)
+      .eq("id", commentId)
 
     if (error) {
       console.error("Error deleting comment:", error)

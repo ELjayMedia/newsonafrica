@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
 import { HeaderClient, type HeaderCategory } from "@/components/HeaderClient"
-import { sortCategoriesByPreference } from "@/components/Header"
+import { sortCategoriesByPreference } from "@/components/header-utils"
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/"),

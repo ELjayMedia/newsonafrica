@@ -3,12 +3,12 @@
 import { Suspense, type ReactNode } from "react"
 import Link from "next/link"
 
-import { ClientWrapper } from "@/components/ClientWrapper"
 import { TopBar } from "@/components/TopBar"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Toaster } from "@/components/ui/toaster"
+import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 
 interface ClientLayoutComponentsProps {
   children: ReactNode
@@ -16,7 +16,8 @@ interface ClientLayoutComponentsProps {
 
 export function ClientLayoutComponents({ children }: ClientLayoutComponentsProps) {
   return (
-    <ClientWrapper>
+    <>
+      <PreferredCountrySync />
       <Suspense fallback={null}>
         <ScrollToTop />
       </Suspense>
@@ -40,6 +41,6 @@ export function ClientLayoutComponents({ children }: ClientLayoutComponentsProps
       </footer>
       <BottomNavigation />
       <Toaster />
-    </ClientWrapper>
+    </>
   )
 }

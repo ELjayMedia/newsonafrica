@@ -96,7 +96,7 @@ export function logRequest(req: Request) {
   logger.log(`[${req.method}] ${pathname}${search}`)
 }
 
-export function withCors(req: Request, res: Response) {
+export function withCors<T extends Response>(req: Request, res: T): T {
   const allowedOrigins =
     process.env.NODE_ENV === "production"
       ? [env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]

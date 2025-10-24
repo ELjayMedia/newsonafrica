@@ -10,7 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import { siteConfig } from "@/config/site"
-import { categoryConfigs, homePageConfig, type CategoryConfig } from "@/config/homeConfig"
+import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import { getWebPageSchema } from "@/lib/schema"
 import { getArticleUrl, getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
 import type { Category } from "@/types/content"
@@ -91,9 +91,6 @@ export function HomeContentClient({
   initialData,
 }: HomeContentClientProps) {
   const [isOffline, setIsOffline] = useState(!isOnline())
-  const [categoryPosts, setCategoryPosts] = useState<Record<string, HomePost[]>>(() =>
-    mapCategoryPostsForConfigs(categoryConfigs, initialData?.categoryPosts),
-  )
 
   const currentCountry = getCurrentCountry()
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
@@ -110,14 +107,10 @@ export function HomeContentClient({
     return buildFallbackData(baselinePosts, featuredPosts)
   }, [baselinePosts, featuredPosts, initialData])
 
-  const mappedCategoryPosts = useMemo(
+  const categoryPosts = useMemo(
     () => mapCategoryPostsForConfigs(categoryConfigs, resolvedData.categoryPosts),
     [resolvedData.categoryPosts],
   )
-
-  useEffect(() => {
-    setCategoryPosts(mappedCategoryPosts)
-  }, [mappedCategoryPosts])
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -131,62 +124,6 @@ export function HomeContentClient({
       window.removeEventListener("offline", handleOffline)
     }
   }, [])
-
-  const categorySlugs = useMemo(
-    () =>
-      categoryConfigs.map((config) => {
-        const resolvedSlug = resolveCategorySlug(config)
-        return resolvedSlug.toLowerCase()
-      }),
-    [],
-  )
-
-  const categoryLimit = homePageConfig.categorySection?.postsPerCategory ?? 5
-
-  useEffect(() => {
-    if (isOffline) {
-      return
-    }
-
-    if (categorySlugs.length === 0) {
-      return
-    }
-
-    let isCancelled = false
-
-    const fetchCategoryData = async () => {
-      try {
-        const params = new URLSearchParams({ country: currentCountry })
-        params.set("categories", categorySlugs.join(","))
-
-        if (categoryLimit > 0) {
-          params.set("categoryLimit", String(categoryLimit))
-        }
-
-        const response = await fetch(`/api/homepage-data?${params.toString()}`)
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch category posts: ${response.status}`)
-        }
-
-        const data = (await response.json()) as {
-          categoryPosts?: Record<string, HomePost[]>
-        }
-
-        if (!isCancelled && data?.categoryPosts) {
-          setCategoryPosts(mapCategoryPostsForConfigs(categoryConfigs, data.categoryPosts))
-        }
-      } catch (error) {
-        console.error("Failed to fetch homepage category posts", error)
-      }
-    }
-
-    fetchCategoryData()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [categoryLimit, categorySlugs, currentCountry, isOffline])
 
   const renderOfflineNotification = () => {
     if (!isOffline) {

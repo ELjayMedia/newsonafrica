@@ -1,10 +1,10 @@
 import { fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
-import { TagContent } from "@/components/TagContent"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
+import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
 export const revalidate = 60 // Revalidate every 60 seconds
@@ -36,5 +36,12 @@ async function TagWrapper({ slug }: { slug: string }) {
   if (!tag) notFound()
 
   const initialData = await fetchTaggedPosts({ slug, countryCode: DEFAULT_COUNTRY, first: 10 })
-  return <TagContent slug={slug} initialData={initialData} tag={tag} />
+  return (
+    <TagFeedClient
+      slug={slug}
+      initialData={initialData}
+      tag={tag}
+      countryCode={DEFAULT_COUNTRY}
+    />
+  )
 }

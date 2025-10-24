@@ -17,7 +17,7 @@
 ## Operational characteristics
 - **Retries & timeouts:** Circuit breakers default to a 10 s timeout and track failures per endpoint; they optionally run provided fallbacks when the primary call fails or times out. 【F:lib/api/circuit-breaker.ts†L14-L101】
 - **Request deduping:** WordPress helpers attach cache tags and revalidate hints so identical `fetchFromWp` or `fetchFromWpGraphQL` calls can reuse cached payloads, while REST fallbacks layer on the in-memory `restCategoryPostsCache` to prevent duplicate pagination pulls. 【F:lib/wordpress/client.ts†L89-L318】【F:lib/wp-server/categories.ts†L36-L165】
-- **Tag/author reuse:** Tag and author listing pages reuse the same primitives—`fetchTaggedPosts`/`getAuthorBySlug` feed into `mapWordPressPostsToPostListItems`, and the UI renders through `PostList` (with client pagination powered by SWR or dedicated components). 【F:app/tag/[slug]/page.tsx†L1-L33】【F:components/TagContent.tsx†L1-L64】【F:app/author/[slug]/page.tsx†L1-L96】
+- **Tag/author reuse:** Tag and author listing pages reuse the same primitives—`fetchTaggedPosts`/`getAuthorBySlug` feed into `mapWordPressPostsToPostListItems`, and the UI renders through `PostList` with client pagination handled by dedicated components. 【F:app/tag/[slug]/page.tsx†L1-L42】【F:app/tag/[slug]/TagFeedClient.tsx†L1-L117】【F:app/author/[slug]/page.tsx†L1-L116】
 
 ## Client-leaf expectations
 - **No suspense boundaries:** The server component mounts client leaves directly, so any loading UX after hydration is handled in the client component (e.g., `LoadMoreClient` button states). 【F:components/category/LoadMoreClient.tsx†L58-L78】
