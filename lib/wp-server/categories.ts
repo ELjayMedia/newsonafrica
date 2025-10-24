@@ -4,7 +4,7 @@ import {
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
 } from "../wordpress-queries"
-import { fetchFromWpGraphQL } from "../wordpress/client"
+import { fetchWordPressGraphQL } from "../wordpress/client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
 import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
@@ -80,7 +80,7 @@ export async function getPostsForCategories(
   let data: CategoryPostsBatchQuery | null = null
 
   try {
-    data = await fetchFromWpGraphQL<CategoryPostsBatchQuery>(
+    data = await fetchWordPressGraphQL<CategoryPostsBatchQuery>(
       countryCode,
       CATEGORY_POSTS_BATCH_QUERY,
       {
@@ -147,7 +147,7 @@ export async function getPostsByCategoryForCountry(
   }
 
   try {
-    data = await fetchFromWpGraphQL<PostsByCategoryQuery>(
+    data = await fetchWordPressGraphQL<PostsByCategoryQuery>(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
@@ -180,7 +180,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
   const tags = buildWpCacheTags({ country: countryCode, section: "categories" })
 
   try {
-    const data = await fetchFromWpGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags)
+    const data = await fetchWordPressGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags)
     const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
     return nodes.map((node) => mapCategoryFromGraphql(node))
   } catch (error) {
@@ -210,7 +210,7 @@ export async function fetchCategoryPosts(
     variables.after = cursor
   }
 
-  const data = await fetchFromWpGraphQL<CategoryPostsQuery>(
+  const data = await fetchWordPressGraphQL<CategoryPostsQuery>(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const fetchFromWpGraphQLMock = vi.fn()
+const fetchWordPressGraphQLMock = vi.fn()
 
 vi.mock("./client", () => ({
-  fetchFromWpGraphQL: (...args: unknown[]) => fetchFromWpGraphQLMock(...args),
+  fetchWordPressGraphQL: (...args: unknown[]) => fetchWordPressGraphQLMock(...args),
 }))
 
 vi.mock("../log", () => ({
@@ -18,13 +18,13 @@ const errorMock = logError as unknown as ReturnType<typeof vi.fn>
 const COMMENT_GLOBAL_ID_42 = Buffer.from("comment:42", "utf-8").toString("base64")
 
 beforeEach(() => {
-  fetchFromWpGraphQLMock.mockReset()
+  fetchWordPressGraphQLMock.mockReset()
   errorMock.mockClear()
 })
 
 describe("fetchPendingComments", () => {
   it("maps GraphQL comment nodes to WordPress comments", async () => {
-    fetchFromWpGraphQLMock.mockResolvedValue({
+    fetchWordPressGraphQLMock.mockResolvedValue({
       comments: {
         nodes: [
           {
@@ -41,7 +41,7 @@ describe("fetchPendingComments", () => {
 
     const result = await fetchPendingComments("ng")
 
-    expect(fetchFromWpGraphQLMock).toHaveBeenCalledWith(
+    expect(fetchWordPressGraphQLMock).toHaveBeenCalledWith(
       "ng",
       expect.stringContaining("PendingComments"),
       { first: 100 },
@@ -60,7 +60,7 @@ describe("fetchPendingComments", () => {
   })
 
   it("returns an empty list and logs when the query response is null", async () => {
-    fetchFromWpGraphQLMock.mockResolvedValue(null)
+    fetchWordPressGraphQLMock.mockResolvedValue(null)
 
     const result = await fetchPendingComments("ng")
 
@@ -73,7 +73,7 @@ describe("fetchPendingComments", () => {
 
 describe("approveComment", () => {
   it("approves a comment and returns the mapped comment", async () => {
-    fetchFromWpGraphQLMock.mockResolvedValue({
+    fetchWordPressGraphQLMock.mockResolvedValue({
       updateComment: {
         comment: {
           databaseId: 42,
@@ -88,7 +88,7 @@ describe("approveComment", () => {
 
     const result = await approveComment(42, "ng")
 
-    expect(fetchFromWpGraphQLMock).toHaveBeenCalledWith(
+    expect(fetchWordPressGraphQLMock).toHaveBeenCalledWith(
       "ng",
       expect.stringContaining("ApproveComment"),
       { id: COMMENT_GLOBAL_ID_42 },
@@ -104,7 +104,7 @@ describe("approveComment", () => {
   })
 
   it("throws an error when the mutation does not return a comment", async () => {
-    fetchFromWpGraphQLMock.mockResolvedValue({ updateComment: { comment: null } })
+    fetchWordPressGraphQLMock.mockResolvedValue({ updateComment: { comment: null } })
 
     await expect(approveComment(42, "ng")).rejects.toThrowError("Failed to approve comment 42")
 
@@ -118,7 +118,7 @@ describe("approveComment", () => {
 
 describe("deleteComment", () => {
   it("deletes a comment and returns the deleted comment", async () => {
-    fetchFromWpGraphQLMock.mockResolvedValue({
+    fetchWordPressGraphQLMock.mockResolvedValue({
       deleteComment: {
         deletedId: COMMENT_GLOBAL_ID_42,
         comment: {
@@ -134,7 +134,7 @@ describe("deleteComment", () => {
 
     const result = await deleteComment(42, "ng")
 
-    expect(fetchFromWpGraphQLMock).toHaveBeenCalledWith(
+    expect(fetchWordPressGraphQLMock).toHaveBeenCalledWith(
       "ng",
       expect.stringContaining("DeleteComment"),
       { id: COMMENT_GLOBAL_ID_42 },
@@ -151,7 +151,7 @@ describe("deleteComment", () => {
 
   it("throws when the mutation response does not contain the deleted comment", async () => {
     const response = { deleteComment: { deletedId: COMMENT_GLOBAL_ID_42, comment: null } }
-    fetchFromWpGraphQLMock.mockResolvedValue(response)
+    fetchWordPressGraphQLMock.mockResolvedValue(response)
 
     await expect(deleteComment(42, "ng")).rejects.toThrowError("Failed to delete comment 42")
 

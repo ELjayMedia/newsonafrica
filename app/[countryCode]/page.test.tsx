@@ -16,9 +16,7 @@ vi.mock("@/components/HomeContent", () => ({
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://newsonafrica.com/sz/graphql"
-  process.env.NEXT_PUBLIC_WP_SZ_REST_BASE = "https://newsonafrica.com/sz/wp-json/wp/v2"
   process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://newsonafrica.com/za/graphql"
-  process.env.NEXT_PUBLIC_WP_ZA_REST_BASE = "https://newsonafrica.com/za/wp-json/wp/v2"
 })
 
 beforeEach(() => {

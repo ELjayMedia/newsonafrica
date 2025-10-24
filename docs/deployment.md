@@ -14,8 +14,7 @@ Add these secrets to your repository settings:
 
 Ensure the following environment variables are configured in GitHub and Vercel:
 
-- WordPress endpoints: country specific
-  pairs such as `NEXT_PUBLIC_WP_SZ_GRAPHQL` / `NEXT_PUBLIC_WP_SZ_REST_BASE`
+- WordPress GraphQL endpoints: `NEXT_PUBLIC_WP_SZ_GRAPHQL`, `NEXT_PUBLIC_WP_ZA_GRAPHQL` (optional overrides)
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -30,10 +29,10 @@ Ensure the following environment variables are configured in GitHub and Vercel:
 
 ## Manual Deployment
 
-\`\`\`bash
+```bash
 npm run build
 vercel --prod
-\`\`\`
+```
 
 ## Troubleshooting
 

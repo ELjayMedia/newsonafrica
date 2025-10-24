@@ -1,6 +1,6 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
-import { fetchFromWpGraphQL } from "./client"
+import { fetchWordPressGraphQL } from "./client"
 import {
   APPROVE_COMMENT_MUTATION,
   DELETE_COMMENT_MUTATION,
@@ -98,7 +98,7 @@ export async function fetchPendingComments(
   const tags = buildCacheTags({ country: countryCode, section: "comments" })
 
   try {
-    const data = await fetchFromWpGraphQL<PendingCommentsQueryResult>(
+    const data = await fetchWordPressGraphQL<PendingCommentsQueryResult>(
       countryCode,
       PENDING_COMMENTS_QUERY,
       { first: COMMENT_QUERY_PAGE_SIZE },
@@ -131,7 +131,7 @@ export async function approveComment(
   const id = toCommentGlobalId(commentId)
 
   try {
-    const data = await fetchFromWpGraphQL<ApproveCommentMutationResult>(
+    const data = await fetchWordPressGraphQL<ApproveCommentMutationResult>(
       countryCode,
       APPROVE_COMMENT_MUTATION,
       { id },
@@ -166,7 +166,7 @@ export async function deleteComment(
   const id = toCommentGlobalId(commentId)
 
   try {
-    const data = await fetchFromWpGraphQL<DeleteCommentMutationResult>(
+    const data = await fetchWordPressGraphQL<DeleteCommentMutationResult>(
       countryCode,
       DELETE_COMMENT_MUTATION,
       { id },

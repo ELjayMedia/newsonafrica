@@ -40,7 +40,6 @@ export const siteConfig = {
   // WordPress API configuration
   wordpress: {
     graphqlEndpoint: WORDPRESS_GRAPHQL_API_URL,
-    authToken: env.WORDPRESS_AUTH_TOKEN,
   },
   // Search configuration
   search: {

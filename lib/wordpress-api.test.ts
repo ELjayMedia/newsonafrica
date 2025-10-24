@@ -74,7 +74,7 @@ describe("fetchPost", () => {
   })
 })
 
-describe("fetchFromWpGraphQL", () => {
+describe("fetchWordPressGraphQL", () => {
   it("returns GraphQL data when response contains data", async () => {
     const mockData = { posts: { nodes: [] } }
 
@@ -87,7 +87,7 @@ describe("fetchFromWpGraphQL", () => {
       }),
     )
 
-    const result = await wordpressApi.fetchFromWpGraphQL<typeof mockData>("sz", "query")
+    const result = await wordpressApi.fetchWordPressGraphQL<typeof mockData>("sz", "query")
     expect(result).toEqual(mockData)
   })
 })

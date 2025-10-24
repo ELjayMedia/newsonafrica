@@ -1,7 +1,7 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
 import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
-import { fetchFromWpGraphQL } from "./client"
+import { fetchWordPressGraphQL } from "./client"
 import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
 import { FP_TAG_SLUG, mapGraphqlNodeToHomePost } from "./shared"
@@ -132,7 +132,7 @@ export async function getFrontPageSlicesForCountry(
   try {
     console.log("[v0] Fetching frontpage slices for:", countryCode)
 
-    const gqlData = await fetchFromWpGraphQL<FrontPageSlicesQueryResult>(
+    const gqlData = await fetchWordPressGraphQL<FrontPageSlicesQueryResult>(
       countryCode,
       FRONT_PAGE_SLICES_QUERY,
       {
@@ -182,7 +182,7 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
   try {
     console.log("[v0] Fetching FP tagged posts for:", countryCode)
 
-    const gqlData = await fetchFromWpGraphQL<FpTaggedPostsQuery>(
+    const gqlData = await fetchWordPressGraphQL<FpTaggedPostsQuery>(
       countryCode,
       FP_TAGGED_POSTS_QUERY,
       {

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("./client", () => ({
-  fetchFromWpGraphQL: vi.fn(),
+  fetchWordPressGraphQL: vi.fn(),
 }))
 
 import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
-import { fetchFromWpGraphQL } from "./client"
+import { fetchWordPressGraphQL } from "./client"
 import { getFpTagForCountry } from "./shared"
 
-const mockFetchFromWpGraphQL = vi.mocked(fetchFromWpGraphQL)
+const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
 
 describe("getFpTagForCountry", () => {
   beforeEach(() => {

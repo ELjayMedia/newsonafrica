@@ -13,7 +13,7 @@ import {
   TAGGED_POSTS_QUERY,
   TAGS_QUERY,
 } from "../wordpress-queries"
-import { fetchFromWpGraphQL, COUNTRIES } from "./client"
+import { fetchWordPressGraphQL, COUNTRIES } from "./client"
 import type { WordPressPost } from "@/types/wp"
 import type {
   FeaturedPostsQuery,
@@ -113,7 +113,7 @@ export async function getLatestPostsForCountry(
         variables.after = afterCursor
       }
 
-      const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
+      const gqlData = await fetchWordPressGraphQL<LatestPostsQuery>(
         countryCode,
         LATEST_POSTS_QUERY,
         variables,
@@ -158,7 +158,7 @@ export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_C
 export async function getRelatedPostsForCountry(countryCode: string, postId: string, limit = 6) {
   const tags = buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postId}`] })
 
-  const gqlPost = await fetchFromWpGraphQL<PostCategoriesQuery>(
+  const gqlPost = await fetchWordPressGraphQL<PostCategoriesQuery>(
     countryCode,
     POST_CATEGORIES_QUERY,
     { id: Number(postId) },
@@ -170,7 +170,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
         ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
         .map((c) => Number(c!.databaseId)) ?? []
     if (catIds.length > 0) {
-      const gqlData = await fetchFromWpGraphQL<RelatedPostsQuery>(
+      const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
         countryCode,
         RELATED_POSTS_QUERY,
         {
@@ -205,7 +205,7 @@ export const getRelatedPosts = async (
       section: "related",
       extra: [`post:${postId}`, ...tags.map((tagSlug) => `tag:${tagSlug}`)],
     })
-    const gqlData = await fetchFromWpGraphQL<RelatedPostsQuery>(
+    const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
       country,
       RELATED_POSTS_BY_TAGS_QUERY,
       {
@@ -466,7 +466,7 @@ export const fetchTaggedPosts = async ({
   })
 
   try {
-    const gqlData = await fetchFromWpGraphQL<LatestPostsQuery>(
+    const gqlData = await fetchWordPressGraphQL<LatestPostsQuery>(
       countryCode,
       TAGGED_POSTS_QUERY,
       {
@@ -607,7 +607,7 @@ export const fetchPosts = async (
     variables.countryTermIds = [countryTermId]
   }
 
-  const gqlData = await fetchFromWpGraphQL<PostsQueryResult>(
+  const gqlData = await fetchWordPressGraphQL<PostsQueryResult>(
     countryCode,
     POSTS_QUERY,
     variables,
@@ -624,7 +624,7 @@ export const fetchPosts = async (
 export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
   try {
     const tags = buildCacheTags({ country: countryCode, section: "tags" })
-    const gqlData = await fetchFromWpGraphQL<TagsQueryResult>(
+    const gqlData = await fetchWordPressGraphQL<TagsQueryResult>(
       countryCode,
       TAGS_QUERY,
       { first: 100, hideEmpty: true },
@@ -643,7 +643,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
 
 export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
   const cacheTags = buildCacheTags({ country: countryCode, section: "tags", extra: [`tag:${slug}`] })
-  const gqlData = await fetchFromWpGraphQL<TagBySlugQueryResult>(
+  const gqlData = await fetchWordPressGraphQL<TagBySlugQueryResult>(
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
@@ -655,7 +655,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
 
 export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
   const cacheTags = buildCacheTags({ country: countryCode, section: "tags" })
-  const gqlData = await fetchFromWpGraphQL<TagsQueryResult>(
+  const gqlData = await fetchWordPressGraphQL<TagsQueryResult>(
     countryCode,
     TAGS_QUERY,
     { first: 100, hideEmpty: true },
@@ -683,7 +683,7 @@ export async function fetchPost({
     variables.countryTermIds = [countryTermId]
   }
 
-  const gqlData = await fetchFromWpGraphQL<PostBySlugQueryResult>(
+  const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
     countryCode,
     POST_BY_SLUG_QUERY,
     variables,
@@ -708,7 +708,7 @@ export async function resolveCountryTermId(slug: string): Promise<number | null>
   })
 
   try {
-    const data = await fetchFromWpGraphQL<CountryBySlugQueryResult>(
+    const data = await fetchWordPressGraphQL<CountryBySlugQueryResult>(
       countryCode,
       COUNTRY_BY_SLUG_QUERY,
       { slug: [normalizedSlug] },
@@ -738,7 +738,7 @@ export async function resolveCountryTermId(slug: string): Promise<number | null>
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
   const cacheTags = buildCacheTags({ country: countryCode, section: "featured", extra: ["tag:featured"] })
 
-  const gqlData = await fetchFromWpGraphQL<FeaturedPostsQuery>(
+  const gqlData = await fetchWordPressGraphQL<FeaturedPostsQuery>(
     countryCode,
     FEATURED_POSTS_QUERY,
     {

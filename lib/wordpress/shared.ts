@@ -1,6 +1,6 @@
 import { buildCacheTags } from "../cache/tag-utils"
 import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
-import { fetchFromWpGraphQL } from "./client"
+import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import type { HomePost } from "@/types/home"
@@ -59,7 +59,7 @@ export const getFpTagForCountry = async (
   })
 
   try {
-    const gqlResult = await fetchFromWpGraphQL<TagBySlugQueryResult>(
+    const gqlResult = await fetchWordPressGraphQL<TagBySlugQueryResult>(
       countryCode,
       TAG_BY_SLUG_QUERY,
       { slug },

@@ -25,7 +25,7 @@ export type {
   WordPressTag,
 } from "./wordpress/types"
 
-export { COUNTRIES, fetchFromWpGraphQL } from "./wordpress/client"
+export { COUNTRIES, fetchWordPressGraphQL } from "./wordpress/client"
 export type { CountryConfig } from "./wordpress/client"
 export type { WordPressPost } from "@/types/wp"
 

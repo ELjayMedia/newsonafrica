@@ -8,19 +8,19 @@ News On Africa is a modern Next.js application that serves as a pan-African news
 
 ## Architecture Diagram
 
-\`\`\`mermaid
+```mermaid
 graph TD
     User[User] --> FE[Frontend - Next.js App]
-    FE --> WPAPI[WordPress REST API]
+    FE --> WPGraphQL[WordPress GraphQL API]
     FE --> SupabaseAuth[Supabase Auth]
     FE --> SupabaseDB[Supabase Database]
     FE --> CDN[Vercel CDN]
-    WPAPI --> WP[WordPress CMS]
+    WPGraphQL --> WP[WordPress CMS]
     SupabaseAuth --> SupabaseDB
     WP --> Webhook[Webhooks]
     Webhook --> Revalidation[Next.js Revalidation]
     Revalidation --> CDN
-\`\`\`
+```
 
 ## Key Components
 
@@ -37,7 +37,7 @@ The frontend is built with Next.js using the App Router, providing a fast, respo
 WordPress serves as the content management system with the following setup:
 
 - **Multisite Architecture**: Supports multiple country editions
-- **REST API**: Provides content to the frontend
+- **GraphQL API**: Provides content to the frontend through a single schema
 - **Custom Post Types**: For different content categories
 - **Webhooks**: Trigger revalidation on content updates
 
@@ -66,7 +66,7 @@ Vercel serves as the hosting and CDN platform:
 1. User requests a page
 2. Next.js checks if the page is in the cache
 3. If cached and valid, serves from cache
-4. If not cached or stale, fetches from WordPress API
+4. If not cached or stale, fetches from the WordPress GraphQL API
 5. Renders the page and caches the result
 6. Returns the page to the user
 
@@ -101,7 +101,7 @@ Vercel serves as the hosting and CDN platform:
 - **Editorial Familiarity**: Well-known interface for content teams
 - **Flexibility**: Extensive plugin ecosystem
 - **Multisite Support**: Built-in support for multiple country editions
-- **REST API**: Robust API for headless implementation
+- **GraphQL API**: Unified schema that powers the headless implementation
 
 ### Why Supabase?
 

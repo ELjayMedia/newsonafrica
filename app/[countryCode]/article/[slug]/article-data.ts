@@ -2,7 +2,7 @@ import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { fetchFromWpGraphQL } from "@/lib/wordpress/client"
+import { fetchWordPressGraphQL } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -41,7 +41,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       extra: [`slug:${slug}`],
     })
 
-    const gqlData = await fetchFromWpGraphQL<PostBySlugQueryResult>(
+    const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
       countryCode,
       POST_BY_SLUG_QUERY,
       { slug },

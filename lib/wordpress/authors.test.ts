@@ -3,14 +3,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("./client", () => ({
-  fetchFromWpGraphQL: vi.fn(),
+  fetchWordPressGraphQL: vi.fn(),
 }))
 
-import { fetchFromWpGraphQL } from "./client"
+import { fetchWordPressGraphQL } from "./client"
 import { fetchAuthors, fetchAuthorData, getAuthorBySlug } from "./authors"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "../wordpress-queries"
 
-const mockFetchFromWpGraphQL = vi.mocked(fetchFromWpGraphQL)
+const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
 
 describe("wordpress authors GraphQL helpers", () => {
   beforeEach(() => {
