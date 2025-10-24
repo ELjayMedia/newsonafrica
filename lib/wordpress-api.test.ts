@@ -405,9 +405,7 @@ describe("getFrontPageSlicesForCountry", () => {
     expect(result.latest.hasNextPage).toBe(true)
   })
 
-  it("falls back to REST when GraphQL returns no slices", async () => {
-    const restPosts = Array.from({ length: 30 }, (_, index) => buildRestPost(index + 1, "fallback"))
-
+  it("returns empty slices when GraphQL returns no data", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString()
 
@@ -423,13 +421,6 @@ describe("getFrontPageSlicesForCountry", () => {
         )
       }
 
-      if (url.includes("/posts")) {
-        return new Response(JSON.stringify(restPosts), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
       throw new Error(`Unexpected fetch to ${url}`)
     })
 
@@ -437,12 +428,11 @@ describe("getFrontPageSlicesForCountry", () => {
 
     const result = await wordpressApi.getFrontPageSlicesForCountry("za")
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(result.hero.heroPost?.slug).toBe("fallback-1")
-    expect(result.trending.posts).toHaveLength(7)
-    expect(result.trending.posts[0].slug).toBe("fallback-4")
-    expect(result.latest.posts).toHaveLength(20)
-    expect(result.latest.posts[0].slug).toBe("fallback-11")
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result.hero.heroPost).toBeUndefined()
+    expect(result.hero.secondaryStories).toHaveLength(0)
+    expect(result.trending.posts).toHaveLength(0)
+    expect(result.latest.posts).toHaveLength(0)
   })
 })
 
@@ -490,9 +480,7 @@ describe("getFpTaggedPostsForCountry", () => {
     expect(result[1].slug).toBe("fp-2")
   })
 
-  it("falls back to REST when GraphQL returns no posts", async () => {
-    const restPosts = [buildRestPost(1, "fp"), buildRestPost(2, "fp")]
-
+  it("returns an empty array when GraphQL returns no posts", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString()
 
@@ -503,20 +491,6 @@ describe("getFpTaggedPostsForCountry", () => {
         )
       }
 
-      if (url.includes("/tags")) {
-        return new Response(JSON.stringify([{ id: 101, name: "Front Page", slug: "fp" }]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
-      if (url.includes("/posts")) {
-        return new Response(JSON.stringify(restPosts), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      }
-
       throw new Error(`Unexpected fetch to ${url}`)
     })
 
@@ -524,10 +498,8 @@ describe("getFpTaggedPostsForCountry", () => {
 
     const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
 
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-    expect(result).toHaveLength(2)
-    expect(result[0].slug).toBe("fp-1")
-    expect(result[1].slug).toBe("fp-2")
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result).toHaveLength(0)
   })
 })
 

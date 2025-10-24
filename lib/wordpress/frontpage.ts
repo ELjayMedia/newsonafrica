@@ -1,17 +1,10 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
-import { wordpressQueries, FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
+import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
 import { fetchFromWpGraphQL } from "./client"
-import { fetchFromWp, executeRestFallback } from "./rest-client"
 import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
-import {
-  FP_TAG_SLUG,
-  getFpTagForCountry,
-  mapGraphqlNodeToHomePost,
-  mapPostFromWp,
-  mapWordPressPostToHomePost,
-} from "./shared"
+import { FP_TAG_SLUG, mapGraphqlNodeToHomePost } from "./shared"
 import type { AggregatedHomeData, FrontPageSlicesResult } from "./types"
 import type { WordPressPost } from "@/types/wp"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
@@ -115,40 +108,6 @@ const buildFrontPageSlices = ({
   }
 }
 
-const fetchFrontPageSlicesViaRest = async (
-  countryCode: string,
-  {
-    heroFallbackLimit,
-    trendingLimit,
-    latestLimit,
-  }: { heroFallbackLimit: number; trendingLimit: number; latestLimit: number },
-  tags: string[],
-): Promise<FrontPageSlicesResult> => {
-  const totalLatest = heroFallbackLimit + trendingLimit + latestLimit
-
-  try {
-    const { endpoint, params } = wordpressQueries.recentPosts(totalLatest)
-    const posts = await executeRestFallback(
-      () => fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags }),
-      `[v0] Frontpage slices REST fallback failed for ${countryCode}`,
-      { countryCode, endpoint, params },
-      { fallbackValue: [] },
-    )
-
-    const mapped = posts.map((post) => mapPostFromWp(post, countryCode))
-    return buildFrontPageSlices({
-      heroPosts: [],
-      generalPosts: mapped,
-      heroFallbackLimit,
-      trendingLimit,
-      latestLimit,
-    })
-  } catch (error) {
-    console.error("[v0] Failed to fetch frontpage slices via REST:", error)
-    return createEmptyFrontPageSlices()
-  }
-}
-
 export async function getFrontPageSlicesForCountry(
   countryCode: string,
   options?: {
@@ -209,12 +168,12 @@ export async function getFrontPageSlicesForCountry(
       }
     }
 
-    console.log("[v0] GraphQL returned no data for frontpage slices, falling back to REST")
+    console.log("[v0] GraphQL returned no data for frontpage slices")
   } catch (error) {
     console.error("[v0] Failed to fetch frontpage slices via GraphQL:", error)
   }
 
-  return fetchFrontPageSlicesViaRest(countryCode, { heroFallbackLimit, trendingLimit, latestLimit }, tags)
+  return createEmptyFrontPageSlices()
 }
 
 export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {
@@ -239,37 +198,7 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
       return nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
     }
 
-    console.log("[v0] No GraphQL results, trying REST fallback")
-
-    try {
-      const tag = await getFpTagForCountry(countryCode, {
-        tags,
-        logMessage: `[v0] FP tag REST fallback failed for ${countryCode}`,
-      })
-
-      if (!tag) {
-        console.log("[v0] No FP tag found")
-        return []
-      }
-
-      const { endpoint, params } = wordpressQueries.postsByTag(tag.id, limit)
-      const posts = await fetchFromWp<WordPressPost[]>(countryCode, { endpoint, params }, { tags })
-
-      if (!posts || !Array.isArray(posts)) {
-        console.log("[v0] No FP tagged posts found via REST")
-        return []
-      }
-
-      const normalizedPosts = posts.map((post) =>
-        mapWordPressPostToHomePost(mapPostFromWp(post, countryCode), countryCode),
-      )
-
-      console.log("[v0] Found", normalizedPosts.length, "FP tagged posts via REST")
-      return normalizedPosts
-    } catch (restError) {
-      console.error("[v0] REST fallback failed for FP tagged posts:", restError)
-      return []
-    }
+    console.log("[v0] No GraphQL results for FP tagged posts")
   } catch (error) {
     console.error("[v0] Failed to fetch FP tagged posts:", error)
     return []
