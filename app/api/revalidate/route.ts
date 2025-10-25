@@ -1,22 +1,54 @@
 import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
-import { z } from "zod"
-import { applyRateLimit, handleApiError, successResponse, jsonWithCors as withCors, logRequest } from "@/lib/api-utils"
+import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
+import {
+  ValidationError,
+  addValidationError,
+  hasValidationErrors,
+  type FieldErrors,
+} from "@/lib/validation"
 
 export const runtime = "nodejs"
 
 // Cache policy: none (manual revalidation endpoint)
 export const revalidate = 0
 
-// Input validation schema
-const revalidateSchema = z.object({
-  secret: z.string().min(1),
-  path: z.string().optional(),
-  tag: z.string().optional(),
-  type: z.enum(["content", "sitemaps", "all"]).optional().default("all"),
-})
+const REVALIDATE_TYPES = ["content", "sitemaps", "all"] as const
+type RevalidateType = (typeof REVALIDATE_TYPES)[number]
+
+function validateRevalidateParams(searchParams: URLSearchParams) {
+  const errors: FieldErrors = {}
+
+  const secretValue = searchParams.get("secret")
+  const secret = secretValue && secretValue.trim().length > 0 ? secretValue.trim() : ""
+  if (!secret) {
+    addValidationError(errors, "secret", "A secret token is required")
+  }
+
+  const pathValue = searchParams.get("path")
+  const path = pathValue && pathValue.trim().length > 0 ? pathValue.trim() : undefined
+
+  const tagValue = searchParams.get("tag")
+  const tag = tagValue && tagValue.trim().length > 0 ? tagValue.trim() : undefined
+
+  const typeValue = searchParams.get("type")?.trim().toLowerCase()
+  let type: RevalidateType = "all"
+  if (typeValue) {
+    if (REVALIDATE_TYPES.includes(typeValue as RevalidateType)) {
+      type = typeValue as RevalidateType
+    } else {
+      addValidationError(errors, "type", "Type must be one of content, sitemaps, or all")
+    }
+  }
+
+  if (hasValidationErrors(errors) || !secret) {
+    throw new ValidationError("Invalid revalidation request", errors)
+  }
+
+  return { secret, path, tag, type }
+}
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -26,10 +58,9 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const { searchParams } = new URL(request.url)
-    const params = Object.fromEntries(searchParams.entries())
 
     // Validate query parameters
-    const { secret, path, tag, type } = revalidateSchema.parse(params)
+    const { secret, path, tag, type } = validateRevalidateParams(searchParams)
 
     if (secret !== process.env.REVALIDATION_SECRET) {
       throw new Error("Invalid revalidation secret")
