@@ -116,7 +116,7 @@ Vercel serves as the hosting and CDN platform:
 - **Code Splitting**: Automatic code splitting for faster page loads
 - **Caching Strategy**: ISR for optimal balance of freshness and performance
 - **Core Web Vitals**: Optimized for LCP, FID, and CLS metrics
-- **Sitemap Fetch Limits**: `/sitemap.xml` and `/server-sitemap.xml` only pull the latest 100 posts during generation; rely on cached feeds (e.g., `/api/home-feed` or native WordPress sitemaps) for deeper archives to avoid heavy GraphQL bursts during builds.
+- **Sitemap Fetch Limits**: `/sitemap.xml` and `/server-sitemap.xml` only pull the latest 100 posts during generation; rely on cached GraphQL feeds (e.g., the aggregated data from `fetchAggregatedHome`) or native WordPress sitemaps for deeper archives to avoid heavy GraphQL bursts during builds.
 
 ## Security Considerations
 
