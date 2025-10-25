@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { ZodError } from "zod"
 import { rateLimit } from "./rateLimit"
 import logger from "@/utils/logger"
 import { env } from "@/config/env"
+import { ValidationError } from "./validation"
 
 export type ApiResponse<T = any> = {
   success: boolean
@@ -36,24 +36,14 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
 export function handleApiError(error: unknown): NextResponse<ApiResponse> {
   console.error("API Error:", error)
 
-  if (error instanceof ZodError) {
-    const fieldErrors: Record<string, string[]> = {}
-
-    error.errors.forEach((err) => {
-      const field = err.path.join(".")
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = []
-      }
-      fieldErrors[field].push(err.message)
-    })
-
+  if (error instanceof ValidationError) {
     return NextResponse.json(
       {
         success: false,
-        error: "Validation error",
-        errors: fieldErrors,
+        error: error.message,
+        errors: Object.keys(error.fieldErrors).length > 0 ? error.fieldErrors : undefined,
       } as ApiResponse,
-      { status: 400 },
+      { status: error.statusCode },
     )
   }
 

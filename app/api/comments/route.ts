@@ -1,29 +1,169 @@
 import type { NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
-import { applyRateLimit, handleApiError, successResponse, jsonWithCors as withCors, logRequest } from "@/lib/api-utils"
+import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import {
+  ValidationError,
+  addValidationError,
+  hasValidationErrors,
+  type FieldErrors,
+} from "@/lib/validation"
 
 export const runtime = "nodejs"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
-// Input validation schemas
-const getCommentsSchema = z.object({
-  postId: z.string().min(1, "Post ID is required"),
-  page: z.coerce.number().nonnegative().default(0),
-  limit: z.coerce.number().positive().max(50).default(10),
-  parentId: z.string().optional().nullable(),
-  status: z.enum(["active", "pending", "flagged", "deleted", "all"]).default("active"),
-})
+const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
+const COMMENT_STATUS_SET = new Set(COMMENT_STATUSES)
+const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
+const COMMENT_ACTION_SET = new Set(COMMENT_ACTIONS)
 
-const createCommentSchema = z.object({
-  postId: z.string().min(1, "Post ID is required"),
-  content: z.string().min(1, "Comment content is required").max(2000, "Comment is too long"),
-  parentId: z.string().optional().nullable(),
-})
+type CommentStatus = (typeof COMMENT_STATUSES)[number]
+type CommentAction = (typeof COMMENT_ACTIONS)[number]
+
+function parseParentId(value: string | null): string | null | undefined {
+  if (value == null) {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  if (trimmed.length === 0 || trimmed.toLowerCase() === "null") {
+    return null
+  }
+
+  return trimmed
+}
+
+function validateGetCommentsParams(searchParams: URLSearchParams) {
+  const errors: FieldErrors = {}
+
+  const postId = searchParams.get("postId")
+  if (!postId) {
+    addValidationError(errors, "postId", "Post ID is required")
+  }
+
+  const rawPage = searchParams.get("page")
+  let page = 0
+  if (rawPage != null) {
+    const parsed = Number.parseInt(rawPage, 10)
+    if (Number.isNaN(parsed) || parsed < 0) {
+      addValidationError(errors, "page", "Page must be a non-negative integer")
+    } else {
+      page = parsed
+    }
+  }
+
+  const rawLimit = searchParams.get("limit")
+  let limit = 10
+  if (rawLimit != null) {
+    const parsed = Number.parseInt(rawLimit, 10)
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      addValidationError(errors, "limit", "Limit must be a positive integer")
+    } else if (parsed > 50) {
+      addValidationError(errors, "limit", "Limit cannot be greater than 50")
+    } else {
+      limit = parsed
+    }
+  }
+
+  const parentId = parseParentId(searchParams.get("parentId"))
+
+  const rawStatus = searchParams.get("status")
+  const status = rawStatus ? rawStatus.trim() : "active"
+
+  if (status && !COMMENT_STATUS_SET.has(status as CommentStatus)) {
+    addValidationError(errors, "status", "Invalid status value")
+  }
+
+  if (hasValidationErrors(errors) || !postId) {
+    throw new ValidationError("Invalid query parameters", errors)
+  }
+
+  return {
+    postId,
+    page,
+    limit,
+    parentId,
+    status: (COMMENT_STATUS_SET.has(status as CommentStatus) ? status : "active") as CommentStatus,
+  }
+}
+
+function validateCreateCommentPayload(payload: unknown) {
+  if (payload == null || typeof payload !== "object") {
+    throw new ValidationError("Invalid request body", { body: ["Expected an object payload"] })
+  }
+
+  const record = payload as Record<string, unknown>
+  const errors: FieldErrors = {}
+
+  const postId = typeof record.postId === "string" && record.postId.length > 0 ? record.postId : null
+  if (!postId) {
+    addValidationError(errors, "postId", "Post ID is required")
+  }
+
+  const content = typeof record.content === "string" ? record.content : null
+  if (!content || content.length === 0) {
+    addValidationError(errors, "content", "Comment content is required")
+  } else if (content.length > 2000) {
+    addValidationError(errors, "content", "Comment is too long")
+  }
+
+  let parentId: string | null | undefined
+  if (record.parentId === null) {
+    parentId = null
+  } else if (typeof record.parentId === "string") {
+    parentId = record.parentId
+  } else if (record.parentId !== undefined) {
+    addValidationError(errors, "parentId", "Parent ID must be a string or null")
+  }
+
+  if (hasValidationErrors(errors) || !postId || !content) {
+    throw new ValidationError("Invalid comment payload", errors)
+  }
+
+  return { postId, content, parentId }
+}
+
+function validateUpdateCommentPayload(payload: unknown) {
+  if (payload == null || typeof payload !== "object") {
+    throw new ValidationError("Invalid request body", { body: ["Expected an object payload"] })
+  }
+
+  const record = payload as Record<string, unknown>
+  const errors: FieldErrors = {}
+
+  const id = typeof record.id === "string" && record.id.length > 0 ? record.id : null
+  if (!id) {
+    addValidationError(errors, "id", "Comment ID is required")
+  }
+
+  const action = typeof record.action === "string" ? record.action : null
+  if (!action || !COMMENT_ACTION_SET.has(action as CommentAction)) {
+    addValidationError(errors, "action", "Invalid action")
+  }
+
+  const reasonValue = record.reason
+  let reason: string | undefined
+  if (reasonValue === undefined) {
+    reason = undefined
+  } else if (typeof reasonValue === "string") {
+    reason = reasonValue
+  } else {
+    addValidationError(errors, "reason", "Reason must be a string")
+  }
+
+  if ((action as CommentAction) === "report" && (!reason || reason.length === 0)) {
+    addValidationError(errors, "reason", "Report reason is required")
+  }
+
+  if (hasValidationErrors(errors) || !id || !action) {
+    throw new ValidationError("Invalid comment update payload", errors)
+  }
+
+  return { id, action: action as CommentAction, reason }
+}
 
 // Get comments for a post with pagination
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -36,10 +176,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const supabase = createSupabaseRouteClient() as any
 
     const { searchParams } = new URL(request.url)
-    const params = Object.fromEntries(searchParams.entries())
 
     // Validate query parameters
-    const { postId, page, limit, parentId, status } = getCommentsSchema.parse(params)
+    const { postId, page, limit, parentId, status } = validateGetCommentsParams(searchParams)
 
     // Calculate pagination range
     const from = page * limit
@@ -172,10 +311,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return withCors(request, handleApiError(new Error("Unauthorized")))
     }
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
+    }
 
     // Validate request body
-    const { postId, content, parentId } = createCommentSchema.parse(body)
+    const { postId, content, parentId } = validateCreateCommentPayload(body)
 
     // Rate limiting check - get user's last comment timestamp
     const { data: lastComment, error: lastCommentError } = await supabase
@@ -265,16 +409,15 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       return withCors(request, handleApiError(new Error("Unauthorized")))
     }
 
-    const updateCommentSchema = z.object({
-      id: z.string().min(1, "Comment ID is required"),
-      action: z.enum(["report", "delete", "approve"]),
-      reason: z.string().optional(),
-    })
-
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
+    }
 
     // Validate request body
-    const { id, action, reason } = updateCommentSchema.parse(body)
+    const { id, action, reason } = validateUpdateCommentPayload(body)
 
     if (action === "report" && !reason) {
       return handleApiError(new Error("Report reason is required"))

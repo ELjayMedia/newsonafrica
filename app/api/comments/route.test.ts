@@ -232,4 +232,17 @@ describe("GET /api/comments", () => {
     expect(returnedIds).toContain("comment-active")
     expect(returnedIds).not.toContain("comment-other-flagged")
   })
+
+  it("returns a validation error when the postId is missing", async () => {
+    const { GET } = await import("./route")
+
+    const response = await GET(new NextRequest("https://example.com/api/comments"))
+
+    expect(response.status).toBe(400)
+
+    const body = (await response.json()) as { success: boolean; error: string; errors?: Record<string, string[]> }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe("Invalid query parameters")
+    expect(body.errors).toEqual({ postId: ["Post ID is required"] })
+  })
 })
