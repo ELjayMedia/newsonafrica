@@ -4,6 +4,7 @@ import {
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
 } from "../wordpress-queries"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { fetchWordPressGraphQL } from "../wordpress/client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
@@ -40,6 +41,9 @@ const mapCategoryFromGraphql = (node: GraphqlCategoryNode | null | undefined): W
   description: node?.description ?? undefined,
   count: node?.count ?? undefined,
 })
+
+const CATEGORY_LISTING_REVALIDATE = CACHE_DURATIONS.MEDIUM
+const CATEGORY_METADATA_REVALIDATE = CACHE_DURATIONS.MEDIUM
 
 const ensureResultEntries = (
   results: Record<string, CategoryPostsResult>,
@@ -87,7 +91,7 @@ export async function getPostsForCategories(
         slugs: normalizedSlugs,
         first: limit,
       },
-      tags,
+      { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
     )
   } catch (error) {
     console.error(
@@ -151,7 +155,7 @@ export async function getPostsByCategoryForCountry(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
-      tags,
+      { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
     )
   } catch (error) {
     console.error(
@@ -180,7 +184,12 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
   const tags = buildWpCacheTags({ country: countryCode, section: "categories" })
 
   try {
-    const data = await fetchWordPressGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, tags)
+    const data = await fetchWordPressGraphQL<CategoriesQuery>(
+      countryCode,
+      CATEGORIES_QUERY,
+      undefined,
+      { tags, revalidate: CATEGORY_METADATA_REVALIDATE },
+    )
     const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
     return nodes.map((node) => mapCategoryFromGraphql(node))
   } catch (error) {
@@ -214,7 +223,7 @@ export async function fetchCategoryPosts(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
-    tags,
+    { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
   )
 
   if (!data?.posts || !data?.categories) {

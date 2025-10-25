@@ -17,6 +17,7 @@ vi.mock('./ArticleClientContent', () => ({
 
 import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
+import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { env } from '@/config/env'
 import { notFound } from 'next/navigation'
 import {
@@ -97,8 +98,24 @@ describe('ArticlePage', () => {
 
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
 
-    expect(fetchWordPressGraphQL).toHaveBeenCalledWith('sz', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
-    expect(fetchWordPressGraphQL).toHaveBeenCalledWith('za', POST_BY_SLUG_QUERY, expect.any(Object), expect.any(Array))
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'sz',
+      POST_BY_SLUG_QUERY,
+      expect.any(Object),
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: expect.arrayContaining(['slug:test']),
+      }),
+    )
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'za',
+      POST_BY_SLUG_QUERY,
+      expect.any(Object),
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: expect.arrayContaining(['slug:test']),
+      }),
+    )
 
     render(ui)
 
@@ -210,7 +227,10 @@ describe('ArticlePage', () => {
       'african-edition',
       POST_BY_SLUG_QUERY,
       expect.any(Object),
-      expect.any(Array),
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: expect.arrayContaining(['slug:african-story']),
+      }),
     )
   })
 })

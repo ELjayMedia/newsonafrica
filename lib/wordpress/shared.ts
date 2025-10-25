@@ -1,4 +1,5 @@
 import { buildCacheTags } from "../cache/tag-utils"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
@@ -42,6 +43,8 @@ export const mapGraphqlTagNode = (node: GraphqlTagNode): WordPressTag | null => 
 export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 export const FP_TAG_SLUG = "fp" as const
 
+const TAG_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
+
 type GetFpTagForCountryOptions = {
   slug?: string
 }
@@ -63,7 +66,7 @@ export const getFpTagForCountry = async (
       countryCode,
       TAG_BY_SLUG_QUERY,
       { slug },
-      cacheTags,
+      { tags: cacheTags, revalidate: TAG_DETAIL_REVALIDATE },
     )
 
     return mapGraphqlTagNode(gqlResult?.tag ?? null)

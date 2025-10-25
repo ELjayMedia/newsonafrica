@@ -1,5 +1,6 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
@@ -36,6 +37,9 @@ const FRONT_PAGE_HERO_FALLBACK_LIMIT = 3
 const FRONT_PAGE_TRENDING_LIMIT = 7
 const FRONT_PAGE_LATEST_LIMIT = 20
 const FRONT_PAGE_HERO_TAGS = [FP_TAG_SLUG] as const
+
+const FRONTPAGE_REVALIDATE = CACHE_DURATIONS.SHORT
+const FP_TAG_REVALIDATE = CACHE_DURATIONS.SHORT
 
 const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
   hero: { heroPost: undefined, secondaryStories: [] },
@@ -140,7 +144,7 @@ export async function getFrontPageSlicesForCountry(
         heroTagSlugs: FRONT_PAGE_HERO_TAGS,
         latestFirst: totalLatest,
       },
-      tags,
+      { tags, revalidate: FRONTPAGE_REVALIDATE },
     )
 
     if (gqlData) {
@@ -189,7 +193,7 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
         tagSlugs: [FP_TAG_SLUG],
         first: limit,
       },
-      tags,
+      { tags, revalidate: FP_TAG_REVALIDATE },
     )
 
     const nodes = gqlData?.posts?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))

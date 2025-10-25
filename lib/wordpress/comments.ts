@@ -1,5 +1,6 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { fetchWordPressGraphQL } from "./client"
 import {
   APPROVE_COMMENT_MUTATION,
@@ -46,6 +47,9 @@ type DeleteCommentMutationResult = {
 }
 
 const COMMENT_QUERY_PAGE_SIZE = 100
+
+const COMMENTS_REVALIDATE = CACHE_DURATIONS.SHORT
+const COMMENTS_MUTATION_REVALIDATE = CACHE_DURATIONS.NONE
 
 const encodeBase64 = (value: string): string => {
   if (typeof Buffer !== "undefined") {
@@ -102,7 +106,7 @@ export async function fetchPendingComments(
       countryCode,
       PENDING_COMMENTS_QUERY,
       { first: COMMENT_QUERY_PAGE_SIZE },
-      tags,
+      { tags, revalidate: COMMENTS_REVALIDATE },
     )
 
     if (!data) {
@@ -135,6 +139,7 @@ export async function approveComment(
       countryCode,
       APPROVE_COMMENT_MUTATION,
       { id },
+      { revalidate: COMMENTS_MUTATION_REVALIDATE },
     )
 
     const comment = data?.updateComment?.comment
@@ -170,6 +175,7 @@ export async function deleteComment(
       countryCode,
       DELETE_COMMENT_MUTATION,
       { id },
+      { revalidate: COMMENTS_MUTATION_REVALIDATE },
     )
 
     const comment = mapGraphqlCommentToWordPressComment(data?.deleteComment?.comment)

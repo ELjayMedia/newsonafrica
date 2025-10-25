@@ -12,6 +12,7 @@ vi.mock("../log", () => ({
 
 import { error as logError } from "../log"
 import { fetchPendingComments, approveComment, deleteComment } from "./comments"
+import { CACHE_DURATIONS } from "../cache/constants"
 
 const errorMock = logError as unknown as ReturnType<typeof vi.fn>
 
@@ -45,7 +46,10 @@ describe("fetchPendingComments", () => {
       "ng",
       expect.stringContaining("PendingComments"),
       { first: 100 },
-      ["country:ng", "section:comments"],
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: ["country:ng", "section:comments"],
+      }),
     )
     expect(result).toEqual([
       {
@@ -92,6 +96,7 @@ describe("approveComment", () => {
       "ng",
       expect.stringContaining("ApproveComment"),
       { id: COMMENT_GLOBAL_ID_42 },
+      expect.objectContaining({ revalidate: CACHE_DURATIONS.NONE }),
     )
     expect(result).toEqual({
       id: 42,
@@ -138,6 +143,7 @@ describe("deleteComment", () => {
       "ng",
       expect.stringContaining("DeleteComment"),
       { id: COMMENT_GLOBAL_ID_42 },
+      expect.objectContaining({ revalidate: CACHE_DURATIONS.NONE }),
     )
     expect(result).toEqual({
       id: 42,

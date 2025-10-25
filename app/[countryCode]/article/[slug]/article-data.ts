@@ -1,5 +1,6 @@
 import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { fetchWordPressGraphQL } from "@/lib/wordpress/client"
@@ -45,7 +46,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
       countryCode,
       POST_BY_SLUG_QUERY,
       { slug },
-      cacheTags,
+      { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
     const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
