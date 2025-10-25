@@ -1,10 +1,11 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import type { PostListItemData } from "@/lib/data/post-list"
 import { PostList } from "@/components/posts/PostList"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { fetchCategoryPostsAction } from "@/app/actions/content"
 
 interface LoadMoreClientProps {
   countryCode: string
@@ -13,22 +14,6 @@ interface LoadMoreClientProps {
   hasNextPage: boolean
   pageSize?: number
   className?: string
-}
-
-interface LoadMoreResponse {
-  posts: PostListItemData[]
-  pageInfo: {
-    hasNextPage: boolean
-    endCursor: string | null
-  }
-}
-
-const buildEndpoint = (countryCode: string, slug: string, after: string | null, first: number) => {
-  const params = new URLSearchParams({ first: String(first) })
-  if (after) {
-    params.set("after", after)
-  }
-  return `/api/category/${countryCode}/${slug}/posts?${params.toString()}`
 }
 
 export function LoadMoreClient({
@@ -45,8 +30,6 @@ export function LoadMoreClient({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const endpoint = useMemo(() => buildEndpoint(countryCode, slug, cursor, pageSize), [countryCode, slug, cursor, pageSize])
-
   const fetchMore = () => {
     if (!moreAvailable || isPending) {
       return
@@ -55,20 +38,16 @@ export function LoadMoreClient({
     startTransition(async () => {
       try {
         setError(null)
-        const response = await fetch(endpoint, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
+        const result = await fetchCategoryPostsAction({
+          countryCode,
+          slug,
+          first: pageSize,
+          after: cursor,
         })
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
-        }
-
-        const json = (await response.json()) as LoadMoreResponse
-        setPosts((previous) => [...previous, ...json.posts])
-        setCursor(json.pageInfo.endCursor)
-        setMoreAvailable(json.pageInfo.hasNextPage)
+        setPosts((previous) => [...previous, ...result.posts])
+        setCursor(result.pageInfo.endCursor)
+        setMoreAvailable(result.pageInfo.hasNextPage)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unexpected error")
       }

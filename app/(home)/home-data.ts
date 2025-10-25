@@ -134,10 +134,7 @@ const mapFrontPageSlicesToHomePosts = (
   return dedupeHomePosts(posts)
 }
 
-async function fetchAggregatedHomeUncached(
-  baseUrl: string,
-  cacheTags: string[],
-): Promise<AggregatedHomeData> {
+async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {
   try {
     const aggregated = await getAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT)
 
@@ -145,46 +142,13 @@ async function fetchAggregatedHomeUncached(
       return aggregated
     }
 
-    console.warn("[v0] Direct WordPress aggregation returned no content, falling back to API", {
-      baseUrl,
+    console.warn("[v1] WordPress aggregation returned no content", {
       cacheTags,
     })
   } catch (error) {
-    console.error("[v0] Failed to fetch aggregated home feed from WordPress", {
+    console.error("[v1] Failed to fetch aggregated home feed from WordPress", {
       error,
-      baseUrl,
       cacheTags,
-    })
-  }
-
-  const endpoint = new URL("/api/home-feed", baseUrl)
-
-  try {
-    const response = await fetch(endpoint, {
-      next: { tags: cacheTags, revalidate: HOME_FEED_REVALIDATE },
-    })
-
-    if (response.ok) {
-      const data = (await response.json()) as AggregatedHomeData | null
-
-      if (data && hasAggregatedHomeContent(data)) {
-        return data
-      }
-
-      console.warn("[v0] Home feed API returned an empty payload", {
-        endpoint: endpoint.toString(),
-      })
-    } else {
-      console.error("[v0] Home feed API request failed", {
-        endpoint: endpoint.toString(),
-        status: response.status,
-        statusText: response.statusText,
-      })
-    }
-  } catch (error) {
-    console.error("[v0] Failed to fetch home feed via API route", {
-      error,
-      endpoint: endpoint.toString(),
     })
   }
 
@@ -192,9 +156,9 @@ async function fetchAggregatedHomeUncached(
 }
 
 export const fetchAggregatedHome = cache(
-  async (baseUrl: string, cacheTags: string[]): Promise<AggregatedHomeData> => {
+  async (cacheTags: string[]): Promise<AggregatedHomeData> => {
     const normalizedTags = normalizeCacheTags(cacheTags)
-    return fetchAggregatedHomeUncached(baseUrl, normalizedTags)
+    return fetchAggregatedHomeUncached(normalizedTags)
   },
 )
 
@@ -432,7 +396,7 @@ export async function buildHomeContentProps(baseUrl: string): Promise<HomeConten
   const aggregatedFromCountries = africanAggregate ?? createEmptyAggregatedHome()
   const aggregatedHome = hasAggregatedHomeContent(aggregatedFromCountries)
     ? aggregatedFromCountries
-    : await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+    : await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
   const categoryPosts = await loadCategoryPostsForHome(DEFAULT_COUNTRY)
@@ -451,7 +415,7 @@ export async function buildHomeContentPropsForEdition(
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
   const aggregatedHome = isAfricanEdition(edition)
-    ? await fetchAggregatedHome(baseUrl, HOME_FEED_CACHE_TAGS)
+    ? await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
     : await fetchAggregatedHomeForCountry(edition.code)
 
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)

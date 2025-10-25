@@ -7,6 +7,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { Button } from "@/components/ui/button"
 import { PostList } from "@/components/posts/PostList"
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
+import { fetchTaggedPostsAction } from "@/app/actions/content"
 import type { FetchTaggedPostsResult, WordPressPost } from "@/types/wp"
 import { fetchTaggedPostsPageAction } from "./actions"
 
