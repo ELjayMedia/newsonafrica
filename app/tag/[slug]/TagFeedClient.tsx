@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { PostList } from "@/components/posts/PostList"
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
 import type { FetchTaggedPostsResult, WordPressPost } from "@/types/wp"
+import { fetchTaggedPostsPageAction } from "./actions"
 
 interface TagFeedClientProps {
   slug: string
@@ -35,6 +36,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
     initialData?.pageInfo ?? { hasNextPage: false, endCursor: null },
   )
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const combinedPosts = useMemo(() => {
@@ -60,38 +62,38 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
     [combinedPosts, countryCode],
   )
 
-  const fetchNextPage = useCallback(async () => {
-    if (isLoading || !pageInfo?.hasNextPage) {
+  const fetchNextPage = useCallback(() => {
+    if (isLoading || isPending || !pageInfo?.hasNextPage) {
       return
     }
 
     setIsLoading(true)
     setError(null)
 
-    try {
-      const params = new URLSearchParams({ first: "10", country: countryCode })
-      if (pageInfo.endCursor) {
-        params.set("after", pageInfo.endCursor)
-      }
-
-      const response = await fetch(`/api/tags/${slug}?${params.toString()}`, {
-        cache: "no-store",
+    startTransition(() => {
+      void fetchTaggedPostsPageAction({
+        slug,
+        after: pageInfo.endCursor ?? null,
+        first: 10,
+        countryCode,
       })
+        .then((data) => {
+          if (!data) {
+            return
+          }
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`)
-      }
-
-      const data = (await response.json()) as FetchTaggedPostsResult
-      setPages((previous) => [...previous, data])
-      setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load more posts"
-      setError(message)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [countryCode, isLoading, pageInfo?.endCursor, pageInfo?.hasNextPage, slug])
+          setPages((previous) => [...previous, data])
+          setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null })
+        })
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : "Failed to load more posts"
+          setError(message)
+        })
+        .finally(() => {
+          setIsLoading(false)
+        })
+    })
+  }, [countryCode, isLoading, isPending, pageInfo?.endCursor, pageInfo?.hasNextPage, slug, startTransition])
 
   const { ref, inView } = useIntersectionObserver<HTMLDivElement>({ rootMargin: "200px" })
 
@@ -102,6 +104,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
   }, [fetchNextPage, inView])
 
   const hasMore = pageInfo?.hasNextPage ?? false
+  const isFetchingMore = isLoading || isPending
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
@@ -118,7 +121,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
         <PostList posts={mappedPosts} />
 
         <div ref={ref} className="mt-8 text-center">
-          {isLoading ? (
+          {isFetchingMore ? (
             <div className="text-sm text-muted-foreground">Loading more...</div>
           ) : hasMore ? (
             <Button onClick={fetchNextPage}>Load More</Button>
