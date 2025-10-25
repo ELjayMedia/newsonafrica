@@ -194,27 +194,100 @@ const executeWordPressSearchForScope = async (
 
   if (scope.type === "panAfrican") {
     const perCountryFetchSize = Math.min(100, safePage * safePerPage)
+    type HeapNode = { record: SearchRecord; timestamp: number }
 
-    const responses = await Promise.all(
+    const heap: HeapNode[] = []
+    const maxHeapSize = Math.max(1, safePage * safePerPage)
+    let total = 0
+    const suggestionSet = new Set<string>()
+
+    const siftUp = (index: number) => {
+      let current = index
+      while (current > 0) {
+        const parent = Math.floor((current - 1) / 2)
+        if (heap[current].timestamp >= heap[parent].timestamp) {
+          break
+        }
+        ;[heap[current], heap[parent]] = [heap[parent], heap[current]]
+        current = parent
+      }
+    }
+
+    const siftDown = (index: number) => {
+      let current = index
+      const length = heap.length
+
+      while (true) {
+        const left = current * 2 + 1
+        const right = left + 1
+        let smallest = current
+
+        if (left < length && heap[left].timestamp < heap[smallest].timestamp) {
+          smallest = left
+        }
+
+        if (right < length && heap[right].timestamp < heap[smallest].timestamp) {
+          smallest = right
+        }
+
+        if (smallest === current) {
+          break
+        }
+
+        ;[heap[current], heap[smallest]] = [heap[smallest], heap[current]]
+        current = smallest
+      }
+    }
+
+    const addToHeap = (record: SearchRecord) => {
+      const timestamp = new Date(record.published_at ?? 0).getTime()
+      const node: HeapNode = { record, timestamp }
+
+      if (heap.length < maxHeapSize) {
+        heap.push(node)
+        siftUp(heap.length - 1)
+        return
+      }
+
+      if (heap[0].timestamp >= timestamp) {
+        return
+      }
+
+      heap[0] = node
+      siftDown(0)
+    }
+
+    const addSuggestion = (title: string | undefined) => {
+      if (!title) {
+        return
+      }
+
+      if (suggestionSet.has(title) || suggestionSet.size < 10) {
+        suggestionSet.add(title)
+      }
+    }
+
+    await Promise.all(
       SUPPORTED_COUNTRIES.map(async (country) => {
         const code = country.code.toLowerCase()
         const response = await wpSearchPosts(query, { page: 1, perPage: perCountryFetchSize, country: code })
-        return {
-          code,
-          response,
-          records: fromWordPressResults(response, code),
-        }
+        const records = fromWordPressResults(response, code)
+
+        total += response.total
+
+        records.forEach((record) => {
+          addToHeap(record)
+          addSuggestion(record.title)
+        })
       }),
     )
 
-    const mergedRecords = responses.flatMap((entry) => entry.records)
-    mergedRecords.sort(
-      (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
-    )
+    const sortedRecords = heap
+      .map((entry) => entry.record)
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
 
     const startIndex = (safePage - 1) * safePerPage
-    const paginatedRecords = mergedRecords.slice(startIndex, startIndex + safePerPage)
-    const total = responses.reduce((sum, entry) => sum + entry.response.total, 0)
+    const paginatedRecords = sortedRecords.slice(startIndex, startIndex + safePerPage)
     const totalPages = Math.max(1, Math.ceil(total / safePerPage))
 
     return {
@@ -223,7 +296,7 @@ const executeWordPressSearchForScope = async (
       totalPages,
       currentPage: safePage,
       hasMore: safePage < totalPages,
-      suggestions: uniqueSuggestions(mergedRecords),
+      suggestions: Array.from(suggestionSet),
     }
   }
 

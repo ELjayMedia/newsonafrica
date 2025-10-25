@@ -31,10 +31,11 @@ describe("GET /api/search", () => {
 
   it("fans out WordPress fallback searches for the pan-African scope", async () => {
     const query = "climate"
-    const postsPerCountry = 2
-    const perPage = SUPPORTED_COUNTRIES.length * postsPerCountry
+    const postsPerCountry = 6
+    const perPage = 4
+    const page = 2
     const countryCodes = SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase())
-    const expectedFetchSize = Math.min(100, perPage)
+    const expectedFetchSize = Math.min(100, page * perPage)
 
     const buildResponse = (country: string, dates: string[], titles: string[]): SearchResponse => ({
       results: dates.map((date, index) => ({
@@ -59,18 +60,21 @@ describe("GET /api/search", () => {
     })
 
     const responsesByCountry: Record<string, SearchResponse> = {}
-    const firstCountryCode = countryCodes[0]
-    const secondCountryCode = countryCodes[1]
+    const allTitles: string[] = []
+    const startDate = Date.UTC(2024, 5, 1)
+    let globalDayOffset = 0
 
-    countryCodes.forEach((code, index) => {
-      const baseDate = new Date(Date.UTC(2024, 5, 1 + index * postsPerCountry))
-      const dates = Array.from({ length: postsPerCountry }, (_, offset) =>
-        new Date(baseDate.getTime() + offset * 24 * 60 * 60 * 1000).toISOString(),
-      )
+    countryCodes.forEach((code) => {
+      const dates = Array.from({ length: postsPerCountry }, () => {
+        const date = new Date(startDate + globalDayOffset * 24 * 60 * 60 * 1000).toISOString()
+        globalDayOffset += 1
+        return date
+      })
       const titles = Array.from({ length: postsPerCountry }, (_, offset) =>
         `${code.toUpperCase()} Headline ${offset + 1}`,
       )
       responsesByCountry[code] = buildResponse(code, dates, titles)
+      allTitles.push(...titles)
     })
 
     mockSearchWordPressPosts.mockImplementation(async (_query, options = {}) => {
@@ -84,7 +88,7 @@ describe("GET /api/search", () => {
       return response
     })
 
-    const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=1`
+    const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
     const response = await GET(new Request(requestUrl))
     const payload = await response.json()
 
@@ -94,18 +98,42 @@ describe("GET /api/search", () => {
     })
 
     expect(payload.results).toHaveLength(perPage)
-    expect(new Set(payload.results.map((record: { country: string }) => record.country)).size).toBe(
-      SUPPORTED_COUNTRIES.length,
+
+    const allRecords = countryCodes.flatMap((code) =>
+      responsesByCountry[code].results.map((post) => ({
+        objectID: `${code}:${post.slug}`,
+        publishedAt: new Date(post.date).getTime(),
+      })),
     )
-    expect(payload.total).toBe(perPage)
+
+    const expectedObjectIDs = allRecords
+      .sort((a, b) => b.publishedAt - a.publishedAt)
+      .slice((page - 1) * perPage, page * perPage)
+      .map((entry) => entry.objectID)
+
+    const actualObjectIDs = payload.results.map((record: { objectID: string }) => record.objectID)
+    expect(actualObjectIDs).toEqual(expectedObjectIDs)
+
+    payload.results.reduce((previousDate: number, record: { published_at: string }) => {
+      const currentDate = new Date(record.published_at).getTime()
+      expect(currentDate).toBeLessThanOrEqual(previousDate)
+      return currentDate
+    }, Number.POSITIVE_INFINITY)
+
+    const total = countryCodes.reduce(
+      (sum, code) => sum + (responsesByCountry[code]?.total ?? 0),
+      0,
+    )
+
+    expect(payload.total).toBe(total)
+    expect(payload.totalPages).toBe(Math.max(1, Math.ceil(total / perPage)))
+    expect(payload.currentPage).toBe(page)
+    expect(payload.hasMore).toBe(page < payload.totalPages)
     expect(payload.performance.source).toBe("wordpress")
-    const suggestions = new Set(payload.suggestions)
-    if (firstCountryCode) {
-      expect(suggestions.has(`${firstCountryCode.toUpperCase()} Headline 1`)).toBe(true)
-    }
-    if (secondCountryCode) {
-      expect(suggestions.has(`${secondCountryCode.toUpperCase()} Headline 1`)).toBe(true)
-    }
+    expect(payload.suggestions.length).toBeLessThanOrEqual(10)
+    payload.suggestions.forEach((title: string) => {
+      expect(allTitles).toContain(title)
+    })
   })
 
   it("normalizes the query when using the WordPress suggestions fallback for the pan-African scope", async () => {
