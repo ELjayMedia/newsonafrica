@@ -381,7 +381,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       })
 
       const task = async () => {
-        let rollback: void | (() => void)
+        let rollback: (() => void) | undefined
 
         if (options.optimisticUpdate) {
           rollback = options.optimisticUpdate()
@@ -413,7 +413,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
             throw error
           }
 
-          if (typeof rollback === "function") {
+          if (rollback) {
             rollback()
           }
 

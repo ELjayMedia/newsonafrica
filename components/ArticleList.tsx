@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useInView } from "react-intersection-observer"
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { ArticleCard } from "./ArticleCard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -139,7 +139,7 @@ function InfiniteArticleList({
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<Error | null>(null)
 
-  const { ref: loadMoreRef, inView } = useInView({
+  const { ref: loadMoreRef, inView } = useIntersectionObserver<HTMLDivElement>({
     threshold: 0,
     rootMargin: "200px 0px",
   })

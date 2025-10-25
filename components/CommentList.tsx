@@ -9,7 +9,7 @@ import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
 import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useInView } from "react-intersection-observer"
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
@@ -35,9 +35,8 @@ export function CommentList({ postId }: CommentListProps) {
   const maxRetries = 3
 
   // For infinite scroll
-  const { ref, inView } = useInView({
+  const { ref, inView } = useIntersectionObserver<HTMLDivElement>({
     threshold: 0.1,
-    triggerOnce: false,
   })
 
   // For rate limiting

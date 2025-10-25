@@ -167,7 +167,7 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
       lg: "py-16 md:py-20 lg:py-24",
     }
 
-    return <Component ref={ref} className={cn(sizeClasses[size], className)} {...props} />
+    return <Component ref={ref as React.Ref<any>} className={cn(sizeClasses[size], className)} {...props} />
   },
 )
 Section.displayName = "Section"

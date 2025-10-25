@@ -47,21 +47,22 @@ export function useEnhancedRelatedPosts({
     (post: WordPressPost, targetCategories: string[], targetTags: string[]): number => {
       // Basic similarity based on category and tag matching
       let score = 0
-      const postCategories = post.categories?.nodes?.map((cat) => cat.slug) || []
-      const postTags = post.tags?.nodes?.map((tag) => tag.slug) || []
+      const postCategories = post.categories?.nodes?.map((cat) => cat?.slug || "") || []
+      const postTags = post.tags?.nodes?.map((tag) => tag?.slug || "") || []
 
       // Category similarity (weighted higher)
-      const categoryMatches = postCategories.filter((cat) => targetCategories.includes(cat)).length
+      const categoryMatches = postCategories.filter((cat): cat is string => Boolean(cat) && targetCategories.includes(cat)).length
       const categoryScore = (categoryMatches / Math.max(targetCategories.length, 1)) * 0.7
 
       // Tag similarity
-      const tagMatches = postTags.filter((tag) => targetTags.includes(tag)).length
+      const tagMatches = postTags.filter((tag): tag is string => Boolean(tag) && targetTags.includes(tag)).length
       const tagScore = (tagMatches / Math.max(targetTags.length, 1)) * 0.3
 
       score = categoryScore + tagScore
 
       // Boost recent posts slightly
-      const daysSincePublished = (Date.now() - new Date(post.date).getTime()) / (1000 * 60 * 60 * 24)
+      const postDate = post.date ? new Date(post.date) : null
+      const daysSincePublished = postDate ? (Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24) : Number.POSITIVE_INFINITY
       const recencyBoost = Math.max(0, (30 - daysSincePublished) / 30) * 0.1
 
       return Math.min(1, score + recencyBoost)

@@ -108,4 +108,3 @@ export const contentMessages = {
   noContentDescription: "Please check back later for the latest news and updates.",
 }
 
-export type { CategoryConfig }

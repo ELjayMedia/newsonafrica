@@ -32,7 +32,7 @@ export function createCacheAwareFunction<TArgs extends unknown[], TResult>(
     throw new Error("createCacheAwareFunction requires at least one cache key part")
   }
 
-  const cached = unstable_cache(source, keyParts, {
+  const cached = unstable_cache(source, Array.from(keyParts), {
     revalidate,
     tags: dedupe(tags),
   })
@@ -88,7 +88,7 @@ export async function withRetry<TResult>(
 
 interface ThrottledQueueTask<TValue> {
   start: () => Promise<TValue>
-  resolve: (value: TValue) => void
+  resolve: (value: TValue | PromiseLike<TValue>) => void
   reject: (reason: unknown) => void
 }
 
@@ -153,7 +153,7 @@ export function createThrottledQueue({
     return new Promise<TValue>((resolve, reject) => {
       queue.push({
         start: async () => await Promise.resolve(start()),
-        resolve,
+        resolve: (value) => resolve(value as TValue),
         reject,
       })
 
