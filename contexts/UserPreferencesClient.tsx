@@ -117,6 +117,11 @@ export function UserPreferencesClientProvider({ children, initialData }: UserPre
     } else {
       document.documentElement.classList.remove("dark")
     }
+    try {
+      window.localStorage.setItem("noa-theme", resolved)
+    } catch (error) {
+      console.error("Failed to persist theme preference", error)
+    }
   }, [])
 
   const applySnapshot = useCallback(

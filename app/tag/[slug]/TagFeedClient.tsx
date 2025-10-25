@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useInView } from "react-intersection-observer"
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { Button } from "@/components/ui/button"
@@ -93,7 +93,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
     }
   }, [countryCode, isLoading, pageInfo?.endCursor, pageInfo?.hasNextPage, slug])
 
-  const { ref, inView } = useInView({ rootMargin: "200px" })
+  const { ref, inView } = useIntersectionObserver<HTMLDivElement>({ rootMargin: "200px" })
 
   useEffect(() => {
     if (inView) {

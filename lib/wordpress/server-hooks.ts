@@ -9,7 +9,7 @@ import {
   getRelatedPostsForCountry,
 } from "@/lib/wordpress-api"
 
-import { mapPostsToHomePosts } from "@/lib/wordpress/shared"
+import { DEFAULT_COUNTRY, mapPostsToHomePosts } from "@/lib/wordpress/shared"
 
 export async function loadLatestPostsForCountry(countryCode: string, limit = 20) {
   return getLatestPostsForCountry(countryCode, limit)
@@ -53,12 +53,12 @@ export async function loadCategoriesForCountry(countryCode: string) {
 }
 
 export async function loadFeaturedPosts(limit = 10) {
-  return getFeaturedPosts(limit)
+  return getFeaturedPosts(DEFAULT_COUNTRY, limit)
 }
 
 export async function loadFeaturedHomePosts(limit = 10) {
-  const posts = await getFeaturedPosts(limit)
-  return mapPostsToHomePosts(posts ?? [], process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz")
+  const posts = await getFeaturedPosts(DEFAULT_COUNTRY, limit)
+  return mapPostsToHomePosts(posts ?? [], process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY)
 }
 
 export async function loadPost(countryCode: string, slug: string) {

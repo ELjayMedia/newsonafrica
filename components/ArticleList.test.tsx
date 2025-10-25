@@ -2,8 +2,8 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { ArticleList } from "./ArticleList"
 
-vi.mock("react-intersection-observer", () => ({
-  useInView: () => ({ ref: () => {}, inView: false }),
+vi.mock("@/hooks/use-intersection-observer", () => ({
+  useIntersectionObserver: () => ({ ref: () => {}, inView: false }),
 }))
 
 vi.mock("./ArticleCard", () => ({
