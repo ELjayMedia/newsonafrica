@@ -1,8 +1,10 @@
 import { fetchAllTags } from "@/lib/wp-server/tags"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import Link from "next/link"
 import type { Metadata } from "next"
 
 export const runtime = "nodejs"
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 export const metadata: Metadata = {
   title: "All Tags - News On Africa",

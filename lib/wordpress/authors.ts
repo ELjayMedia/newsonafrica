@@ -1,4 +1,5 @@
 import { buildCacheTags } from "../cache/tag-utils"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { AuthorDataQuery, AuthorsQuery } from "@/types/wpgraphql"
@@ -46,6 +47,9 @@ const selectAvatarUrl = (
   return url ? { url } : undefined
 }
 
+const AUTHORS_INDEX_REVALIDATE = CACHE_DURATIONS.LONG
+const AUTHOR_PAGE_REVALIDATE = 600
+
 type GraphqlAuthorLike =
   | NonNullable<AuthorDataQuery["user"]>
   | NonNullable<NonNullable<AuthorsQuery["users"]>["nodes"]>[number]
@@ -84,7 +88,7 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordP
     countryCode,
     AUTHORS_QUERY,
     { first: 100 },
-    tags,
+    { tags, revalidate: AUTHORS_INDEX_REVALIDATE },
   )
 
   const nodes =
@@ -124,7 +128,7 @@ export async function fetchAuthorData(
       after: cursor,
       first: limit,
     },
-    tags,
+    { tags, revalidate: AUTHOR_PAGE_REVALIDATE },
   )
   if (!data?.user) return null
   const author = mapGraphqlAuthorToWordPressAuthor(data.user, slug)

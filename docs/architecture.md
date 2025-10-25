@@ -118,6 +118,12 @@ Vercel serves as the hosting and CDN platform:
 - **Core Web Vitals**: Optimized for LCP, FID, and CLS metrics
 - **Sitemap Fetch Limits**: `/sitemap.xml` and `/server-sitemap.xml` only pull the latest 100 posts during generation; rely on cached GraphQL feeds (e.g., the aggregated data from `fetchAggregatedHome`) or native WordPress sitemaps for deeper archives to avoid heavy GraphQL bursts during builds.
 
+## Revalidation Strategy
+
+- **Server data boundaries**: Every server component that consumes WordPress GraphQL helpers exports an explicit `revalidate` interval (for example, the tag index page revalidates every five minutes while individual tag routes use a 60 second window). Static params are generated for the highest value routes so ISR can pick up the long tail on demand. 【F:app/tag/page.tsx†L1-L18】【F:app/tag/[slug]/page.tsx†L1-L54】
+- **Tagged fetches**: `fetchWordPressGraphQL` accepts `tags` and `revalidate` hints so helper modules can scope cache invalidation to the content they load. Home, article, author, category, and tag helpers all pass through their cache tags alongside the matching ISR duration. 【F:lib/wordpress/client.ts†L1-L70】【F:lib/wordpress/posts.ts†L1-L209】【F:lib/wp-server/categories.ts†L1-L229】【F:lib/wordpress/authors.ts†L1-L154】【F:lib/wordpress/frontpage.ts†L1-L210】【F:app/[countryCode]/article/[slug]/article-data.ts†L1-L71】
+- **Incremental regeneration hooks**: GraphQL helper tests assert the new metadata contract so future changes keep the `revalidate` hints intact. When content mutates, cache tags feed into the webhook and API revalidation utilities to refresh only the affected slices. 【F:lib/wordpress/comments.test.ts†L1-L147】【F:lib/wordpress/shared.test.ts†L1-L40】【F:app/[countryCode]/article/[slug]/page.test.tsx†L1-L231】【F:lib/wordpress/authors.test.ts†L1-L120】
+
 ## Security Considerations
 
 - **Authentication & Session Management**: Supabase Auth manages user sign-in, issuing short-lived JWTs that are persisted through the `@supabase/ssr` helpers so credentials live inside HTTP-only cookies across server components and API routes.

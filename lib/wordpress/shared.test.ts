@@ -7,6 +7,7 @@ vi.mock("./client", () => ({
 import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
 import { getFpTagForCountry } from "./shared"
+import { CACHE_DURATIONS } from "../cache/constants"
 
 const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
 
@@ -30,7 +31,10 @@ describe("getFpTagForCountry", () => {
       "za",
       TAG_BY_SLUG_QUERY,
       { slug: "fp" },
-      ["country:za", "section:tags", "tag:fp"],
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: ["country:za", "section:tags", "tag:fp"],
+      }),
     )
     expect(result).toEqual({ databaseId: 101, id: 101, name: "Front Page", slug: "fp" })
   })

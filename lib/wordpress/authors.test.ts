@@ -8,6 +8,7 @@ vi.mock("./client", () => ({
 
 import { fetchWordPressGraphQL } from "./client"
 import { fetchAuthors, fetchAuthorData, getAuthorBySlug } from "./authors"
+import { CACHE_DURATIONS } from "../cache/constants"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "../wordpress-queries"
 
 const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
@@ -44,7 +45,10 @@ describe("wordpress authors GraphQL helpers", () => {
       "za",
       AUTHORS_QUERY,
       { first: 100 },
-      ["country:za", "section:authors"],
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.LONG,
+        tags: ["country:za", "section:authors"],
+      }),
     )
     expect(authors).toHaveLength(1)
     expect(authors[0]).toMatchObject({
@@ -88,7 +92,10 @@ describe("wordpress authors GraphQL helpers", () => {
       "ng",
       AUTHOR_DATA_QUERY,
       { slug: "john-doe", after: null, first: 5 },
-      ["country:ng", "section:authors", "author:john-doe"],
+      expect.objectContaining({
+        revalidate: 600,
+        tags: ["country:ng", "section:authors", "author:john-doe"],
+      }),
     )
     expect(result).not.toBeNull()
     expect(result?.author).toMatchObject({
@@ -138,7 +145,10 @@ describe("wordpress authors GraphQL helpers", () => {
       "za",
       AUTHOR_DATA_QUERY,
       { slug: "alex-smith", after: null, first: 2 },
-      ["country:za", "section:authors", "author:alex-smith"],
+      expect.objectContaining({
+        revalidate: 600,
+        tags: ["country:za", "section:authors", "author:alex-smith"],
+      }),
     )
     expect(result).not.toBeNull()
     expect(result?.author.slug).toBe("alex-smith")

@@ -29,11 +29,24 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
   {} as Record<string, CountryConfig>,
 )
 
+export interface FetchWordPressGraphQLOptions {
+  tags?: readonly string[]
+  revalidate?: number
+}
+
+const dedupe = (values?: readonly string[]): string[] | undefined => {
+  if (!values?.length) {
+    return undefined
+  }
+
+  return Array.from(new Set(values))
+}
+
 export async function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
   variables?: Record<string, string | number | string[]>,
-  tags?: string[],
+  options: FetchWordPressGraphQLOptions = {},
 ): Promise<T | null> {
   const base = getGraphQLEndpoint(countryCode)
 
@@ -43,8 +56,8 @@ export async function fetchWordPressGraphQL<T>(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, variables }),
       next: {
-        revalidate: CACHE_DURATIONS.MEDIUM,
-        ...(tags && tags.length > 0 ? { tags } : {}),
+        revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,
+        ...(options.tags ? { tags: dedupe(options.tags) } : {}),
       },
     })
 
