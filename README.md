@@ -60,7 +60,7 @@ news-on-africa/
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
+- Node.js 18+ and pnpm
 - Supabase account
 - WordPress instance with WPGraphQL enabled
 
@@ -105,7 +105,7 @@ FEATURE_ADVANCED_SEARCH=true
 ### Installation
 
 > [!NOTE]
-> The repository standardizes on **npm** for dependency management. Install dependencies with `npm install` and keep `package-lock.json` committed.
+> The repository standardizes on **pnpm** for dependency management. Install dependencies with `pnpm install` and keep `pnpm-lock.yaml` committed.
 
 ```bash
 # Clone the repository
@@ -113,17 +113,17 @@ git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the development server
-npm run dev
+pnpm dev
 ```
 
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
 
-1. **Build Command**: `npm run build`
+1. **Build Command**: `pnpm build`
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
@@ -140,13 +140,13 @@ The `/api/search` endpoint now reads directly from WordPress content. It support
 
 ```bash
 # Run unit tests
-npm run test
+pnpm test
 
 # Run end-to-end tests
-npm run test:e2e
+pnpm test:e2e
 
 # Run linting
-npm run lint
+pnpm lint
 ```
 
 ## 📚 Documentation
