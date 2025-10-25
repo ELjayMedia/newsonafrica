@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
-import { fetchComments } from "@/lib/comment-service"
+import { useEffect, useState, useRef, useCallback, useTransition } from "react"
 import { supabase } from "@/lib/supabase"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
@@ -14,6 +13,7 @@ import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUser } from "@/contexts/UserContext"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { fetchCommentsPageAction } from "@/app/[countryCode]/article/[slug]/actions"
 
 interface CommentListProps {
   postId: string
@@ -33,6 +33,10 @@ export function CommentList({ postId }: CommentListProps) {
   const { user } = useUser()
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
+  const [isPending, startTransition] = useTransition()
+  const isFetching = loading || isPending
+  const isInitialLoad = isFetching && page === 0
+  const isLoadingMore = isFetching && page > 0
 
   // For infinite scroll
   const { ref, inView } = useIntersectionObserver<HTMLDivElement>({
@@ -60,18 +64,29 @@ export function CommentList({ postId }: CommentListProps) {
           comments: fetchedComments,
           hasMore: moreAvailable,
           total,
-        } = await fetchComments(postId, pageNum, 10, sortOption)
+        } = await fetchCommentsPageAction({
+          postId,
+          page: pageNum,
+          pageSize: 10,
+          sortOption,
+        })
 
-        if (append) {
-          setComments((prevComments) => [...prevComments, ...fetchedComments])
-        } else {
-          setComments(fetchedComments)
-        }
+        startTransition(() => {
+          if (append) {
+            setComments((prevComments) => {
+              const existingIds = new Set(prevComments.map((comment) => comment.id))
+              const deduped = fetchedComments.filter((comment) => !existingIds.has(comment.id))
+              return [...prevComments, ...deduped]
+            })
+          } else {
+            setComments(fetchedComments)
+          }
 
-        setHasMore(moreAvailable)
-        setTotalComments(total)
-        setError(null)
-        setRetryCount(0) // Reset retry count on success
+          setHasMore(moreAvailable)
+          setTotalComments(total)
+          setError(null)
+          setRetryCount(0) // Reset retry count on success
+        })
       } catch (err: any) {
         console.error("Error loading comments:", err)
 
@@ -99,7 +114,7 @@ export function CommentList({ postId }: CommentListProps) {
         setLoading(false)
       }
     },
-    [postId, sortOption, retryCount, maxRetries],
+    [postId, sortOption, retryCount, maxRetries, startTransition],
   )
 
   // Load initial comments
@@ -111,12 +126,12 @@ export function CommentList({ postId }: CommentListProps) {
 
   // Handle infinite scroll
   useEffect(() => {
-    if (inView && hasMore && !loading) {
+    if (inView && hasMore && !isFetching) {
       const nextPage = page + 1
       setPage(nextPage)
       loadComments(nextPage, true)
     }
-  }, [inView, hasMore, loading, loadComments, page])
+  }, [hasMore, inView, isFetching, loadComments, page])
 
   // Subscribe to realtime updates for this post's comments
   useEffect(() => {
@@ -258,7 +273,7 @@ export function CommentList({ postId }: CommentListProps) {
         </Alert>
       )}
 
-      {loading && page === 0 ? (
+      {isInitialLoad ? (
         <div className="space-y-3 mt-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="animate-pulse flex space-x-4">
@@ -305,11 +320,12 @@ export function CommentList({ postId }: CommentListProps) {
           {/* Infinite scroll trigger */}
           {hasMore && (
             <div ref={ref} className="flex justify-center py-4" aria-live="polite">
-              {loading && page > 0 ? (
+              {isLoadingMore ? (
                 <p className="text-gray-500">Loading more comments...</p>
               ) : (
                 <Button
                   variant="outline"
+                  disabled={isLoadingMore}
                   onClick={() => {
                     const nextPage = page + 1
                     setPage(nextPage)

@@ -1,5 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
+import type { Database } from "@/types/supabase"
 import { v4 as uuidv4 } from "uuid"
 import { clearQueryCache } from "@/utils/supabase-query-utils"
 import { toast } from "@/hooks/use-toast"
@@ -119,7 +122,9 @@ export function recordSubmission(userId: string): void {
 let hasStatusColumn: boolean | null = null
 let hasRichTextColumn: boolean | null = null
 
-async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
+async function checkColumns(
+  client: SupabaseClient<Database> = supabase,
+): Promise<{ hasStatus: boolean; hasRichText: boolean }> {
   if (hasStatusColumn !== null && hasRichTextColumn !== null) {
     return { hasStatus: hasStatusColumn, hasRichText: hasRichTextColumn }
   }
@@ -127,14 +132,14 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
   try {
     // Check for status column
     try {
-      const { data: statusData, error: statusError } = await supabase
+      const { data: statusData, error: statusError } = await client
         .from("comments")
         .select("id") // Select a column we know exists
         .limit(1)
 
       // Try to access the status column to see if it exists
       try {
-        const { data: statusCheckData, error: statusCheckError } = await supabase
+        const { data: statusCheckData, error: statusCheckError } = await client
           .rpc("column_exists", { table_name: "comments", column_name: "status" })
           .single()
 
@@ -143,7 +148,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
         if (statusCheckError) {
           // Fallback method if RPC is not available
           try {
-            await supabase.from("comments").select("status").limit(1)
+            await client.from("comments").select("status").limit(1)
             hasStatusColumn = true
           } catch (e) {
             hasStatusColumn = false
@@ -152,7 +157,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
       } catch (e) {
         // If RPC fails, try direct query
         try {
-          await supabase.from("comments").select("status").limit(1)
+          await client.from("comments").select("status").limit(1)
           hasStatusColumn = true
         } catch (e) {
           hasStatusColumn = false
@@ -166,7 +171,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
     // Check for rich_text column
     try {
       try {
-        const { data: richTextCheckData, error: richTextCheckError } = await supabase
+        const { data: richTextCheckData, error: richTextCheckError } = await client
           .rpc("column_exists", { table_name: "comments", column_name: "is_rich_text" })
           .single()
 
@@ -175,7 +180,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
         if (richTextCheckError) {
           // Fallback method if RPC is not available
           try {
-            await supabase.from("comments").select("is_rich_text").limit(1)
+            await client.from("comments").select("is_rich_text").limit(1)
             hasRichTextColumn = true
           } catch (e) {
             hasRichTextColumn = false
@@ -184,7 +189,7 @@ async function checkColumns(): Promise<{ hasStatus: boolean; hasRichText: boolea
       } catch (e) {
         // If RPC fails, try direct query
         try {
-          await supabase.from("comments").select("is_rich_text").limit(1)
+          await client.from("comments").select("is_rich_text").limit(1)
           hasRichTextColumn = true
         } catch (e) {
           hasRichTextColumn = false
@@ -213,16 +218,17 @@ export async function fetchComments(
   page = 0,
   pageSize = 10,
   sortOption: CommentSortOption = "newest",
+  client: SupabaseClient<Database> = supabase,
 ): Promise<{ comments: Comment[]; hasMore: boolean; total: number }> {
   try {
     // Check if columns exist
-    const { hasStatus, hasRichText } = await checkColumns()
+    const { hasStatus, hasRichText } = await checkColumns(client)
 
     // Get total count first - using a more robust approach
     let count = 0
     try {
       // Build the count query
-      let countQuery = supabase
+      let countQuery = client
         .from("comments")
         .select("id", { count: "exact" }) // Only select ID for counting
         .eq("post_id", postId)
@@ -248,7 +254,7 @@ export async function fetchComments(
     }
 
     // Then fetch paginated comments
-    let commentsQuery = supabase
+    let commentsQuery = client
       .from("comments")
       .select("*, profile:profiles(username, avatar_url)")
       .eq("post_id", postId)
@@ -296,7 +302,7 @@ export async function fetchComments(
     // Fetch all replies for these comments in a single query
     const rootCommentIds = comments.map((comment) => comment.id)
 
-    let repliesQuery = supabase
+    let repliesQuery = client
       .from("comments")
       .select("*, profile:profiles(username, avatar_url)")
       .eq("post_id", postId)
@@ -325,7 +331,7 @@ export async function fetchComments(
       const {
         data: { user },
         error: authError,
-      } = await supabase.auth.getUser()
+      } = await client.auth.getUser()
 
       if (!authError && user) {
         currentUserId = user.id
@@ -339,7 +345,7 @@ export async function fetchComments(
 
     if (allCommentIds.length > 0) {
       try {
-        const { data: reactionRows, error: reactionsError } = await supabase
+        const { data: reactionRows, error: reactionsError } = await client
           .from("comment_reactions")
           .select("comment_id, reaction_type, user_id")
           .in("comment_id", allCommentIds)
@@ -380,26 +386,40 @@ export async function fetchComments(
     // Process all comments with profile data and reactions
     const processedComments: Comment[] = comments.map((comment) => {
       const reactionsForComment = reactionsByComment.get(comment.id)
+      const reactionList = reactionsForComment
+        ? Array.from(reactionsForComment.values())
+        : comment.reactions ?? []
+      const reactionCount = reactionList.reduce((total, reaction) => total + reaction.count, 0)
+      const userReaction = reactionList.find((reaction) => reaction.reactedByCurrentUser)?.type ?? null
 
       return {
         ...comment,
         status: comment.status ?? "active",
         is_rich_text: hasRichText ? comment.is_rich_text ?? false : false,
         profile: comment.profile ?? undefined,
-        reactions: reactionsForComment ? Array.from(reactionsForComment.values()) : comment.reactions ?? [],
+        reactions: reactionList,
+        reaction_count: reactionCount,
+        user_reaction: userReaction,
       }
     })
 
     // Process all replies with profile data and reactions
     const processedReplies: Comment[] = replies.map((reply) => {
       const reactionsForReply = reactionsByComment.get(reply.id)
+      const reactionList = reactionsForReply
+        ? Array.from(reactionsForReply.values())
+        : reply.reactions ?? []
+      const reactionCount = reactionList.reduce((total, reaction) => total + reaction.count, 0)
+      const userReaction = reactionList.find((reaction) => reaction.reactedByCurrentUser)?.type ?? null
 
       return {
         ...reply,
         status: reply.status ?? "active",
         is_rich_text: hasRichText ? reply.is_rich_text ?? false : false,
         profile: reply.profile ?? undefined,
-        reactions: reactionsForReply ? Array.from(reactionsForReply.values()) : reply.reactions ?? [],
+        reactions: reactionList,
+        reaction_count: reactionCount,
+        user_reaction: userReaction,
       }
     })
 
