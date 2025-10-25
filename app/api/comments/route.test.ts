@@ -21,6 +21,10 @@ vi.mock("@/utils/supabase/route-client", () => ({
   createSupabaseRouteClient: () => currentSupabaseClient,
 }))
 
+vi.mock("@/lib/server-cache-utils", () => ({
+  revalidateByTag: vi.fn(),
+}))
+
 function createCommentsQuery(
   comments: CommentRecord[],
   onRange: (result: CommentRecord[]) => void,
@@ -244,5 +248,127 @@ describe("GET /api/comments", () => {
     expect(body.success).toBe(false)
     expect(body.error).toBe("Invalid query parameters")
     expect(body.errors).toEqual({ postId: ["Post ID is required"] })
+  })
+})
+
+describe("POST /api/comments", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    currentSupabaseClient = null
+  })
+
+  afterEach(() => {
+    vi.resetModules()
+  })
+
+  function createPostSupabaseClient({
+    session,
+    profile,
+    onInsert,
+  }: {
+    session: { user: { id: string; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } }
+    profile: ProfileRecord | null
+    onInsert: (payload: Record<string, unknown>) => void
+  }) {
+    const createCommentsBuilder = () => {
+      const builder: any = {}
+
+      builder.select = vi.fn(() => builder)
+      builder.eq = vi.fn(() => builder)
+      builder.order = vi.fn(() => builder)
+      builder.limit = vi.fn(() => builder)
+      builder.single = vi.fn(async () => ({ data: null, error: null }))
+      builder.insert = vi.fn((payload: Record<string, unknown>) => {
+        onInsert(payload)
+        return {
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({ data: { id: "comment-id" }, error: null })),
+          })),
+        }
+      })
+
+      return builder
+    }
+
+    const createProfilesBuilder = () => {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(async () => ({ data: profile, error: profile ? null : { message: "not found" } })),
+          })),
+        })),
+      }
+    }
+
+    return {
+      auth: {
+        getSession: vi.fn(async () => ({ data: { session }, error: null })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "comments") {
+          return createCommentsBuilder()
+        }
+
+        if (table === "profiles") {
+          return createProfilesBuilder()
+        }
+
+        throw new Error(`Unexpected table ${table}`)
+      }),
+    }
+  }
+
+  it("includes the session edition when inserting a comment", async () => {
+    const onInsert = vi.fn()
+
+    currentSupabaseClient = createPostSupabaseClient({
+      session: { user: { id: "user-1", app_metadata: { country: "sz" }, user_metadata: {} } },
+      profile: { id: "user-1" },
+      onInsert,
+    })
+
+    const { POST } = await import("./route")
+
+    const response = await POST(
+      new NextRequest("https://example.com/api/comments", {
+        method: "POST",
+        body: JSON.stringify({ postId: "post-1", content: "Hello world" }),
+        headers: { "content-type": "application/json" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(onInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "sz",
+      }),
+    )
+  })
+
+  it("falls back to the primary edition when no country context is available", async () => {
+    const onInsert = vi.fn()
+
+    currentSupabaseClient = createPostSupabaseClient({
+      session: { user: { id: "user-1", app_metadata: {}, user_metadata: {} } },
+      profile: { id: "user-1" },
+      onInsert,
+    })
+
+    const { POST } = await import("./route")
+
+    const response = await POST(
+      new NextRequest("https://example.com/api/comments", {
+        method: "POST",
+        body: JSON.stringify({ postId: "post-1", content: "Hello world" }),
+        headers: { "content-type": "application/json" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(onInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "african-edition",
+      }),
+    )
   })
 })

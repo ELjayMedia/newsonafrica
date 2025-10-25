@@ -1,8 +1,10 @@
 import type { NextRequest, NextResponse } from "next/server"
+import type { Session } from "@supabase/supabase-js"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import {
   ValidationError,
   addValidationError,
@@ -19,6 +21,49 @@ const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as c
 const COMMENT_STATUS_SET = new Set(COMMENT_STATUSES)
 const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
 const COMMENT_ACTION_SET = new Set(COMMENT_ACTIONS)
+
+const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
+const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
+
+function normalizeEditionCode(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (!normalized) {
+    return null
+  }
+
+  if (SUPPORTED_EDITION_CODES.has(normalized)) {
+    return normalized
+  }
+
+  return null
+}
+
+function resolveRequestCountry(request: NextRequest, session: Session | null): string {
+  const appMetadataCountry = normalizeEditionCode(session?.user?.app_metadata?.country)
+  if (appMetadataCountry) {
+    return appMetadataCountry
+  }
+
+  const userMetadataCountry = normalizeEditionCode(session?.user?.user_metadata?.country)
+  if (userMetadataCountry) {
+    return userMetadataCountry
+  }
+
+  for (const cookieName of EDITION_COOKIE_KEYS) {
+    const cookieValue = request.cookies.get(cookieName)?.value
+    const normalized = normalizeEditionCode(cookieValue)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return AFRICAN_EDITION.code
+}
 
 type CommentStatus = (typeof COMMENT_STATUSES)[number]
 type CommentAction = (typeof COMMENT_ACTIONS)[number]
@@ -199,7 +244,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const {
       data: { session },
-    } = await supabase.auth.getSession()
+    }: { data: { session: Session | null } } = await supabase.auth.getSession()
 
     let effectiveStatus = status
     let isModerator = false
@@ -347,12 +392,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    const requestCountry = resolveRequestCountry(request, session)
+
     const newComment = {
       post_id: postId,
       user_id: session.user.id,
       content,
       parent_id: parentId || null,
       status: "active",
+      country: requestCountry,
     }
 
     // Insert the comment
