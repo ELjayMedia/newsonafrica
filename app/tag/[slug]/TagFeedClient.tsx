@@ -7,6 +7,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { Button } from "@/components/ui/button"
 import { PostList } from "@/components/posts/PostList"
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
+import { fetchTaggedPostsAction } from "@/app/actions/content"
 import type { FetchTaggedPostsResult, WordPressPost } from "@/types/wp"
 
 interface TagFeedClientProps {
@@ -69,20 +70,13 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
     setError(null)
 
     try {
-      const params = new URLSearchParams({ first: "10", country: countryCode })
-      if (pageInfo.endCursor) {
-        params.set("after", pageInfo.endCursor)
-      }
-
-      const response = await fetch(`/api/tags/${slug}?${params.toString()}`, {
-        cache: "no-store",
+      const data = await fetchTaggedPostsAction({
+        slug,
+        countryCode,
+        first: 10,
+        after: pageInfo.endCursor,
       })
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`)
-      }
-
-      const data = (await response.json()) as FetchTaggedPostsResult
       setPages((previous) => [...previous, data])
       setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null })
     } catch (err) {
