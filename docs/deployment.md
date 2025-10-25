@@ -15,13 +15,15 @@ Add these secrets to your repository settings:
 Ensure the following environment variables are configured in GitHub and Vercel:
 
 - WordPress GraphQL endpoints: `NEXT_PUBLIC_WP_SZ_GRAPHQL`, `NEXT_PUBLIC_WP_ZA_GRAPHQL` (optional overrides)
+- `NEXT_PUBLIC_DEFAULT_SITE` (defaults to `sz` if omitted)
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_AUTH0_DOMAIN`
-- `NEXT_PUBLIC_AUTH0_CLIENT_ID`
-- `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
+- `PAYSTACK_SECRET_KEY`
+- `PAYSTACK_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_FACEBOOK_APP_ID` (optional, enables Facebook app metadata)
 
 ## Workflow Overview
 
@@ -30,8 +32,9 @@ Ensure the following environment variables are configured in GitHub and Vercel:
 ## Manual Deployment
 
 ```bash
-npm run build
-vercel --prod
+pnpm install
+pnpm build
+pnpm dlx vercel --prod
 ```
 
 ## Troubleshooting
