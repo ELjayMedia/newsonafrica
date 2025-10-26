@@ -42,7 +42,6 @@ interface RelatedArticlesProps {
   className?: string
   layout?: "carousel" | "grid"
   showMetadata?: boolean
-  enableAI?: boolean
   countryCode?: string
 }
 
@@ -53,7 +52,6 @@ export function RelatedArticles({
   className,
   layout = "carousel",
   showMetadata = true,
-  enableAI = false,
   countryCode = "sz",
 }: RelatedArticlesProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -126,7 +124,7 @@ export function RelatedArticles({
     </div>
   )
 
-  const ArticleCard = ({ post, index }: { post: RelatedPost; index: number }) => (
+  const ArticleCard = ({ post }: { post: RelatedPost }) => (
     <Link
       href={getArticleUrl(post.slug, countryCode)}
       className={cn("group block", layout === "carousel" ? "flex-shrink-0 w-72" : "")}
@@ -302,8 +300,8 @@ export function RelatedArticles({
                 msOverflowStyle: "none",
               }}
             >
-              {posts.map((post, index) => (
-                <ArticleCard key={post.id} post={post} index={index} />
+              {posts.map((post) => (
+                <ArticleCard key={post.id} post={post} />
               ))}
             </div>
 
@@ -333,8 +331,8 @@ export function RelatedArticles({
         ) : (
           // Enhanced grid layout
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post, index) => (
-              <ArticleCard key={post.id} post={post} index={index} />
+            {posts.map((post) => (
+              <ArticleCard key={post.id} post={post} />
             ))}
           </div>
         )

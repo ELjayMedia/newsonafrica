@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -17,7 +16,6 @@ import { useAuth } from "@/hooks/useAuth"
 export function ProfileDropdown() {
   const { user, profile, logout } = useAuth()
   const [open, setOpen] = useState(false)
-  const router = useRouter()
 
   if (!user) return null
 

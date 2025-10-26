@@ -359,7 +359,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let body: unknown
     try {
       body = await request.json()
-    } catch (parseError) {
+    } catch {
       throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
     }
 
@@ -460,7 +460,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     let body: unknown
     try {
       body = await request.json()
-    } catch (parseError) {
+    } catch {
       throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
     }
 

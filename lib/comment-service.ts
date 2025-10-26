@@ -14,9 +14,6 @@ const recentSubmissions = new Map<string, number>()
 const RATE_LIMIT_SECONDS = 10
 
 // Cache TTLs
-const COMMENTS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
-const SCHEMA_CHECK_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
-
 const COMMENT_SYNC_QUEUE = "comments-write-queue"
 
 type ApiResult<T> = {
@@ -132,10 +129,7 @@ async function checkColumns(
   try {
     // Check for status column
     try {
-      const { data: statusData, error: statusError } = await client
-        .from("comments")
-        .select("id") // Select a column we know exists
-        .limit(1)
+      await client.from("comments").select("id").limit(1)
 
       // Try to access the status column to see if it exists
       try {
@@ -150,16 +144,16 @@ async function checkColumns(
           try {
             await client.from("comments").select("status").limit(1)
             hasStatusColumn = true
-          } catch (e) {
+          } catch {
             hasStatusColumn = false
           }
         }
-      } catch (e) {
+      } catch {
         // If RPC fails, try direct query
         try {
           await client.from("comments").select("status").limit(1)
           hasStatusColumn = true
-        } catch (e) {
+        } catch {
           hasStatusColumn = false
         }
       }
@@ -182,16 +176,16 @@ async function checkColumns(
           try {
             await client.from("comments").select("is_rich_text").limit(1)
             hasRichTextColumn = true
-          } catch (e) {
+          } catch {
             hasRichTextColumn = false
           }
         }
-      } catch (e) {
+      } catch {
         // If RPC fails, try direct query
         try {
           await client.from("comments").select("is_rich_text").limit(1)
           hasRichTextColumn = true
-        } catch (e) {
+        } catch {
           hasRichTextColumn = false
         }
       }
@@ -608,7 +602,7 @@ export async function reportComment(data: ReportCommentData): Promise<void> {
     throw new Error("Comment reporting requires database migration. Please run the migration script first.")
   }
 
-  const { commentId, reportedBy, reason } = data
+  const { commentId, reportedBy: _reportedBy, reason } = data
 
   try {
     let response: Response

@@ -153,7 +153,7 @@ export function HomeContentClient({
   const {
     taggedPosts = [],
     featuredPosts: fetchedFeaturedPosts = [],
-    categories = [],
+    categories: _categories = [],
     recentPosts = [],
   } = resolvedData
 

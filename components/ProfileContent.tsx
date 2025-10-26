@@ -22,7 +22,7 @@ interface ProfileContentProps {
 
 export default function ProfileContent({ initialSession }: ProfileContentProps) {
   const router = useRouter()
-  const { user, profile, loading, isAuthenticated, signOut } = useUser()
+  const { user, loading, isAuthenticated, signOut } = useUser()
   const isMobile = useMediaQuery("(max-width: 768px)")
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("profile")

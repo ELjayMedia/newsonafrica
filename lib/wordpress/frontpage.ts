@@ -11,14 +11,6 @@ import type { WordPressPost } from "@/types/wp"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
-const toErrorDetails = (error: unknown) => {
-  if (error instanceof Error) {
-    const { message, name, stack } = error
-    return { message, name, stack }
-  }
-  return { error }
-}
-
 type FrontPageSlicesQueryResult = {
   hero?: {
     nodes?: (PostFieldsFragment | null)[] | null

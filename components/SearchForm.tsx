@@ -320,7 +320,7 @@ export function SearchForm({
                 <div className="px-4 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
                   Recent Searches
                 </div>
-                {recentSearches.map((search, index) => (
+                {recentSearches.map((search) => (
                   <button
                     key={search}
                     type="button"
