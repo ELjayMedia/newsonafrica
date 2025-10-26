@@ -37,6 +37,7 @@ export function RelatedPostsCarousel({
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const CARD_WIDTH = 280 // Approximate card width including gap
 
   // Check scroll position to update navigation buttons
   const checkScrollPosition = () => {
@@ -45,6 +46,7 @@ export function RelatedPostsCarousel({
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
     setCanScrollLeft(scrollLeft > 0)
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
+    setCurrentIndex(Math.round(scrollLeft / CARD_WIDTH))
   }
 
   useEffect(() => {
@@ -55,8 +57,7 @@ export function RelatedPostsCarousel({
     if (!scrollContainerRef.current) return
 
     const container = scrollContainerRef.current
-    const cardWidth = 280 // Approximate card width including gap
-    const scrollAmount = cardWidth * 2 // Scroll 2 cards at a time
+    const scrollAmount = CARD_WIDTH * 2 // Scroll 2 cards at a time
 
     const newScrollLeft =
       direction === "left" ? container.scrollLeft - scrollAmount : container.scrollLeft + scrollAmount
@@ -65,6 +66,7 @@ export function RelatedPostsCarousel({
       left: newScrollLeft,
       behavior: "smooth",
     })
+    setCurrentIndex(Math.round(newScrollLeft / CARD_WIDTH))
   }
 
   // Always show the section, even if loading or no posts

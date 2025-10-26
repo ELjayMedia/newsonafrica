@@ -40,13 +40,6 @@ function decodeGlobalId(id: string): number {
   }
 }
 
-const extractRendered = (value: string | { rendered?: string } | undefined): string | undefined => {
-  if (!value) return undefined
-  if (typeof value === "string") return value
-  if (typeof value === "object" && value.rendered) return value.rendered
-  return undefined
-}
-
 const resolveRelayId = (
   post: GraphqlPostNode | { globalRelayId?: unknown; id?: unknown },
 ): string | undefined => {

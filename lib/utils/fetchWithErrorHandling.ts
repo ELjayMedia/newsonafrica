@@ -294,7 +294,7 @@ export async function uploadFile<T>(
   url: string,
   file: File,
   options: Omit<FetchOptions, "method" | "body"> = {},
-  onProgress?: (progress: number) => void,
+  _onProgress?: (progress: number) => void,
 ): Promise<FetchResponse<T>> {
   const formData = new FormData()
   formData.append("file", file)

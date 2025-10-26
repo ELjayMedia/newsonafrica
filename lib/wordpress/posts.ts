@@ -42,7 +42,6 @@ const MAX_GRAPHQL_BATCH_SIZE = 100
 
 const LATEST_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const RELATED_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
-const CATEGORY_LISTING_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const TAG_LISTING_REVALIDATE = CACHE_DURATIONS.SHORT
 const TAG_INDEX_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const POST_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
@@ -202,7 +201,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
 
 export const getRelatedPosts = async (
   postId: string,
-  categories: string[] = [],
+  _categories: string[] = [],
   tags: string[] = [],
   limit = 6,
   countryCode?: string,
@@ -535,7 +534,6 @@ export const fetchPosts = async (
 ) => {
   if (typeof options === "number") {
     const limit = options
-    const tags = buildCacheTags({ country: DEFAULT_COUNTRY, section: "news" })
     const { posts } = await getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
     return posts.slice(0, limit)
   }

@@ -8,7 +8,7 @@ import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
 import { useUser } from "@/contexts/UserContext"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 import { RelatedArticles } from "./RelatedArticles"
 import { useEnhancedRelatedPosts } from "@/hooks/useEnhancedRelatedPosts"
@@ -55,8 +55,6 @@ interface ArticleViewProps {
 export default function ArticleView({ post }: ArticleViewProps) {
   const { isAuthenticated } = useUser()
   const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
@@ -71,7 +69,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
   const {
     posts: relatedPosts,
     loading: loadingRelated,
-    error: relatedError,
   } = useEnhancedRelatedPosts({
     postId: id,
     categories: categoryIds,

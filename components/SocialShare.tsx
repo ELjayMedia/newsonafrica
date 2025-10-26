@@ -48,8 +48,6 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
     window.location.href = `mailto:?subject=${encodedTitle}&body=${encodedUrl}`
   }
 
-  const toggleShareOptions = () => setShowOptions(!showOptions)
-
   const handleTwitterShare = () => {
     if (typeof window !== "undefined" && (window as any).fbq) {
       ;(window as any).fbq("track", "Share", { platform: "twitter" })
@@ -111,7 +109,7 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
           text: description,
           url,
         })
-      } catch (err) {
+      } catch {
         // If native share fails or is cancelled, show our custom share options
         setShowOptions(true)
       }

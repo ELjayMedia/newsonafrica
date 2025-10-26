@@ -24,7 +24,7 @@ export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordCli
     const checkResetKey = async () => {
       try {
         // Verify the key is valid by checking the hash in the URL
-        const { data, error } = await supabase.auth.verifyOtp({
+        const { data: _data, error } = await supabase.auth.verifyOtp({
           type: "recovery",
           token_hash: key,
         })
@@ -32,7 +32,7 @@ export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordCli
         if (error) {
           setError("Invalid or expired password reset link. Please request a new one.")
         }
-      } catch (err) {
+      } catch {
         setError("Failed to verify reset link. Please try again.")
       }
     }
@@ -62,7 +62,7 @@ export default function ResetPasswordClient({ key, onSuccess }: ResetPasswordCli
           router.push("/auth")
         }
       }, 3000)
-    } catch (err) {
+    } catch {
       setError("Failed to reset password. Please try again.")
     }
   }

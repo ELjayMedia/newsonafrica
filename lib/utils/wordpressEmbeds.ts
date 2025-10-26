@@ -10,7 +10,7 @@ const WRAPPER_REGEX = /<div[^>]*class="[^"]*wp-block-embed__wrapper[^"]*"[^>]*>(
 function safeParseUrl(url: string): URL | null {
   try {
     return new URL(url)
-  } catch (error) {
+  } catch {
     return null
   }
 }

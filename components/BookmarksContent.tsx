@@ -60,7 +60,7 @@ export default function BookmarksContent() {
   const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<SortOption>(preferences.bookmarkSort)
   const [filterBy, setFilterBy] = useState<FilterOption>("all")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedCategory] = useState<string>("all")
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [notePostId, setNotePostId] = useState<string>("")
   const [noteText, setNoteText] = useState("")
@@ -127,7 +127,7 @@ export default function BookmarksContent() {
     try {
       await bulkRemoveBookmarks(selectedBookmarks)
       setSelectedBookmarks([])
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove bookmarks",
@@ -153,7 +153,7 @@ export default function BookmarksContent() {
         title: "Export successful",
         description: "Your bookmarks have been exported",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Export failed",
         description: "Failed to export bookmarks",
@@ -174,7 +174,7 @@ export default function BookmarksContent() {
         title: "Note added",
         description: "Your note has been saved",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save note",

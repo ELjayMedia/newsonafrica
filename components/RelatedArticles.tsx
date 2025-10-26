@@ -53,7 +53,7 @@ export function RelatedArticles({
   className,
   layout = "carousel",
   showMetadata = true,
-  enableAI = false,
+  enableAI: _enableAI = false,
   countryCode = "sz",
 }: RelatedArticlesProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -126,7 +126,7 @@ export function RelatedArticles({
     </div>
   )
 
-  const ArticleCard = ({ post, index }: { post: RelatedPost; index: number }) => (
+  const ArticleCard = ({ post, index: _index }: { post: RelatedPost; index: number }) => (
     <Link
       href={getArticleUrl(post.slug, countryCode)}
       className={cn("group block", layout === "carousel" ? "flex-shrink-0 w-72" : "")}

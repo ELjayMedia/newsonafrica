@@ -22,7 +22,7 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
     const identifier = `${token}-${request.ip ?? "127.0.0.1"}`
     await limiter.check(limit, identifier)
     return null
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,

@@ -31,7 +31,7 @@ export function ScrollToTop() {
         top: 0,
         behavior: "smooth",
       })
-    } catch (error) {
+    } catch {
       // Fallback for older browsers
       window.scrollTo(0, 0)
     }
