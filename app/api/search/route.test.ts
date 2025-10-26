@@ -35,7 +35,12 @@ describe("GET /api/search", () => {
     const perPage = 4
     const page = 2
     const countryCodes = SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase())
-    const expectedFetchSize = Math.min(100, page * perPage)
+    const desiredTotal = page * perPage
+    const basePerCountry = Math.ceil(desiredTotal / SUPPORTED_COUNTRIES.length)
+    const expectedFetchSize = Math.min(
+      100,
+      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+    )
 
     const buildResponse = (country: string, dates: string[], titles: string[]): SearchResponse => ({
       results: dates.map((date, index) => ({
@@ -134,6 +139,121 @@ describe("GET /api/search", () => {
     payload.suggestions.forEach((title: string) => {
       expect(allTitles).toContain(title)
     })
+  })
+
+  it("limits per-country fetch size while incrementally fetching additional pages", async () => {
+    const query = "economy"
+    const perPage = 100
+    const page = 5
+    const countryCodes = SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase())
+    const desiredTotal = page * perPage
+    const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
+    const expectedPerCountry = Math.min(
+      100,
+      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+    )
+
+    const totalPostsPerCountry = 320
+    const postsByCountry: Record<string, Array<{ date: string; title: string; slug: string }>> = {}
+    const callHistory: Record<string, number[]> = {}
+    const startDate = Date.UTC(2024, 0, 1)
+
+    countryCodes.forEach((code, countryIndex) => {
+      postsByCountry[code] = Array.from({ length: totalPostsPerCountry }, (_, index) => {
+        const date = new Date(startDate - (countryIndex * totalPostsPerCountry + index) * 24 * 60 * 60 * 1000)
+        return {
+          date: date.toISOString(),
+          title: `${code.toUpperCase()} Economic Update ${index + 1}`,
+          slug: `${code}-economy-${index + 1}`,
+        }
+      })
+      callHistory[code] = []
+    })
+
+    mockSearchWordPressPosts.mockImplementation(async (receivedQuery, options = {}) => {
+      expect(receivedQuery).toBe(query)
+      const country = options.country?.toLowerCase()
+      expect(country).toBeDefined()
+
+      if (!country || !postsByCountry[country]) {
+        throw new Error(`Unexpected country: ${country}`)
+      }
+
+      const requestedPage = options.page ?? 1
+      const requestedPerPage = options.perPage ?? expectedPerCountry
+
+      expect(requestedPerPage).toBeLessThanOrEqual(100)
+      expect(requestedPerPage).toBe(expectedPerCountry)
+
+      callHistory[country].push(requestedPage)
+
+      const start = (requestedPage - 1) * requestedPerPage
+      const end = start + requestedPerPage
+      const allPosts = postsByCountry[country]
+      const slice = allPosts.slice(start, end)
+
+      const results = slice.map((post) => ({
+        id: Number(post.slug.replace(/\D+/g, "")) || 0,
+        slug: post.slug,
+        title: { rendered: post.title },
+        excerpt: { rendered: `${post.title} excerpt` },
+        content: { rendered: `${post.title} content` },
+        date: post.date,
+        link: `https://example.com/${country}/${post.slug}`,
+        featured_media: 0,
+        categories: [],
+        tags: [],
+        author: 1,
+      }))
+
+      return {
+        results,
+        total: allPosts.length,
+        totalPages: Math.max(1, Math.ceil(allPosts.length / requestedPerPage)),
+        currentPage: requestedPage,
+        hasMore: end < allPosts.length,
+        query,
+        searchTime: 10,
+      }
+    })
+
+    const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
+    const response = await GET(new Request(requestUrl))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mockSearchWordPressPosts).toHaveBeenCalledTimes(countryCodes.length * 4)
+
+    countryCodes.forEach((code) => {
+      expect(callHistory[code]).toEqual([1, 2, 3, 4])
+    })
+
+    expect(payload.results).toHaveLength(perPage)
+
+    const allRecords = countryCodes.flatMap((code) =>
+      postsByCountry[code].map((post) => ({
+        objectID: `${code}:${post.slug}`,
+        publishedAt: new Date(post.date).getTime(),
+      })),
+    )
+
+    const expectedObjectIDs = allRecords
+      .sort((a, b) => b.publishedAt - a.publishedAt)
+      .slice((page - 1) * perPage, page * perPage)
+      .map((entry) => entry.objectID)
+
+    const actualObjectIDs = payload.results.map((record: { objectID: string }) => record.objectID)
+    expect(actualObjectIDs).toEqual(expectedObjectIDs)
+
+    payload.results.forEach((record: { published_at: string }) => {
+      expect(typeof record.published_at).toBe("string")
+    })
+
+    expect(payload.total).toBe(countryCodes.length * totalPostsPerCountry)
+    expect(payload.totalPages).toBe(Math.max(1, Math.ceil(payload.total / perPage)))
+    expect(payload.currentPage).toBe(page)
+    expect(payload.hasMore).toBe(page < payload.totalPages)
+    expect(payload.performance.source).toBe("wordpress")
   })
 
   it("normalizes the query when using the WordPress suggestions fallback for the pan-African scope", async () => {
