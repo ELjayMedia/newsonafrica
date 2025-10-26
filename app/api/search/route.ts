@@ -193,13 +193,18 @@ const executeWordPressSearchForScope = async (
   const safePerPage = Math.max(1, perPage)
 
   if (scope.type === "panAfrican") {
-    const perCountryFetchSize = Math.min(100, safePage * safePerPage)
+    const desiredTotal = safePage * safePerPage
+    const countryCount = Math.max(1, SUPPORTED_COUNTRIES.length)
+    const basePerCountry = Math.ceil(desiredTotal / countryCount)
+    const buffer = Math.max(2, Math.ceil(basePerCountry * 0.1))
+    const perCountryFetchSize = Math.min(100, Math.max(1, basePerCountry + buffer))
     type HeapNode = { record: SearchRecord; timestamp: number }
 
     const heap: HeapNode[] = []
-    const maxHeapSize = Math.max(1, safePage * safePerPage)
+    const maxHeapSize = Math.max(1, desiredTotal)
     let total = 0
     const suggestionSet = new Set<string>()
+    const countryTotals = new Map<string, number>()
 
     const siftUp = (index: number) => {
       let current = index
@@ -267,20 +272,89 @@ const executeWordPressSearchForScope = async (
       }
     }
 
-    await Promise.all(
-      SUPPORTED_COUNTRIES.map(async (country) => {
-        const code = country.code.toLowerCase()
-        const response = await wpSearchPosts(query, { page: 1, perPage: perCountryFetchSize, country: code })
-        const records = fromWordPressResults(response, code)
+    type CountryState = {
+      code: string
+      nextPage: number
+      hasMore: boolean
+      oldestTimestampFetched?: number
+    }
 
+    const fetchAndProcessPage = async (state: CountryState, pageToFetch: number) => {
+      const response = await wpSearchPosts(query, {
+        page: pageToFetch,
+        perPage: perCountryFetchSize,
+        country: state.code,
+      })
+      const records = fromWordPressResults(response, state.code)
+
+      if (!countryTotals.has(state.code)) {
         total += response.total
+        countryTotals.set(state.code, response.total)
+      }
 
-        records.forEach((record) => {
-          addToHeap(record)
-          addSuggestion(record.title)
-        })
+      let pageOldestTimestamp: number | undefined
+
+      records.forEach((record) => {
+        addToHeap(record)
+        addSuggestion(record.title)
+        const timestamp = new Date(record.published_at ?? 0).getTime()
+        pageOldestTimestamp = typeof pageOldestTimestamp === "number"
+          ? Math.min(pageOldestTimestamp, timestamp)
+          : timestamp
+      })
+
+      if (typeof pageOldestTimestamp === "number") {
+        state.oldestTimestampFetched = typeof state.oldestTimestampFetched === "number"
+          ? Math.min(state.oldestTimestampFetched, pageOldestTimestamp)
+          : pageOldestTimestamp
+      }
+
+      state.nextPage = response.currentPage + 1
+      state.hasMore = response.hasMore
+      return records.length
+    }
+
+    const countryStates: CountryState[] = SUPPORTED_COUNTRIES.map((country) => ({
+      code: country.code.toLowerCase(),
+      nextPage: 1,
+      hasMore: true,
+    }))
+
+    await Promise.all(
+      countryStates.map(async (state) => {
+        await fetchAndProcessPage(state, 1)
       }),
     )
+
+    while (true) {
+      const statesWithMore = countryStates.filter((state) => state.hasMore)
+
+      if (statesWithMore.length === 0) {
+        break
+      }
+
+      const heapOldestTimestamp = heap[0]?.timestamp ?? Number.NEGATIVE_INFINITY
+      const shouldContinue =
+        heap.length < desiredTotal ||
+        statesWithMore.some((state) => {
+          const oldestForCountry = state.oldestTimestampFetched
+          return typeof oldestForCountry === "number" && oldestForCountry > heapOldestTimestamp
+        })
+
+      if (!shouldContinue) {
+        break
+      }
+
+      const additions = await Promise.all(
+        statesWithMore.map((state) => fetchAndProcessPage(state, state.nextPage)),
+      )
+
+      const addedRecords = additions.reduce((sum, count) => sum + count, 0)
+
+      if (addedRecords === 0) {
+        break
+      }
+    }
 
     const sortedRecords = heap
       .map((entry) => entry.record)
