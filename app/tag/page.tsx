@@ -4,7 +4,8 @@ import Link from "next/link"
 import type { Metadata } from "next"
 
 export const runtime = "nodejs"
-export const revalidate = CACHE_DURATIONS.MEDIUM
+const TAGS_PAGE_REVALIDATE = CACHE_DURATIONS.MEDIUM
+export const revalidate = TAGS_PAGE_REVALIDATE
 
 export const metadata: Metadata = {
   title: "All Tags - News On Africa",
