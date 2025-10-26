@@ -1,6 +1,7 @@
 import "server-only"
 
 import { cache } from "react"
+import pLimit from "p-limit"
 
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { categoryConfigs, homePageConfig } from "@/config/homeConfig"
@@ -102,6 +103,7 @@ const hasAggregatedHomeContent = ({
 const FEATURED_POST_LIMIT = 6
 const TAGGED_POST_LIMIT = 8
 const RECENT_POST_LIMIT = 10
+export const COUNTRY_AGGREGATE_CONCURRENCY = 4
 
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
@@ -315,6 +317,7 @@ const deriveHomeContentState = (
 interface BuildCountryPostsOptions {
   includeAggregates?: boolean
   includeAfricanAggregate?: boolean
+  fetchCountryAggregate?: (countryCode: string) => Promise<AggregatedHomeData>
 }
 
 interface BuildCountryPostsResult {
@@ -323,16 +326,16 @@ interface BuildCountryPostsResult {
   africanAggregate?: AggregatedHomeData
 }
 
-async function buildCountryPosts(
+export async function buildCountryPosts(
   countryCodes: readonly string[],
   preloaded?: Partial<Record<string, AggregatedHomeData>>,
 ): Promise<CountryPosts>
-async function buildCountryPosts(
+export async function buildCountryPosts(
   countryCodes: readonly string[],
   preloaded: Partial<Record<string, AggregatedHomeData>> | undefined,
   options: BuildCountryPostsOptions & { includeAggregates: true },
 ): Promise<BuildCountryPostsResult>
-async function buildCountryPosts(
+export async function buildCountryPosts(
   countryCodes: readonly string[],
   preloaded: Partial<Record<string, AggregatedHomeData>> = {},
   options?: BuildCountryPostsOptions,
@@ -351,13 +354,44 @@ async function buildCountryPosts(
     return {}
   }
 
-  const aggregatedEntries = await Promise.all(
+  const aggregatedByCountry = new Map<string, AggregatedHomeData>()
+
+  if (preloaded) {
+    for (const [countryCode, aggregated] of Object.entries(preloaded)) {
+      if (aggregated) {
+        aggregatedByCountry.set(countryCode, aggregated)
+      }
+    }
+  }
+
+  const limit = pLimit(COUNTRY_AGGREGATE_CONCURRENCY)
+  const fetchCountryAggregate = options?.fetchCountryAggregate ?? fetchAggregatedHomeForCountry
+  const pendingCountries = new Set<string>()
+
+  await Promise.all(
     countryCodes.map(async (countryCode) => {
-      const aggregated =
-        preloaded[countryCode] ?? (await fetchAggregatedHomeForCountry(countryCode))
-      return [countryCode, aggregated] as const
+      if (aggregatedByCountry.has(countryCode) || pendingCountries.has(countryCode)) {
+        return
+      }
+
+      pendingCountries.add(countryCode)
+
+      const aggregated = await limit(() => fetchCountryAggregate(countryCode))
+      aggregatedByCountry.set(countryCode, aggregated)
     }),
   )
+
+  const aggregatedEntries = countryCodes.map((countryCode) => {
+    const aggregated = aggregatedByCountry.get(countryCode)
+
+    if (!aggregated) {
+      const empty = createEmptyAggregatedHome()
+      aggregatedByCountry.set(countryCode, empty)
+      return [countryCode, empty] as const
+    }
+
+    return [countryCode, aggregated] as const
+  })
 
   const countryPosts = aggregatedEntries.reduce<CountryPosts>((acc, [countryCode, aggregated]) => {
     acc[countryCode] = flattenAggregatedHome(aggregated)
@@ -368,7 +402,7 @@ async function buildCountryPosts(
     return countryPosts
   }
 
-  const aggregatedByCountry = aggregatedEntries.reduce<
+  const aggregatedByCountryRecord = aggregatedEntries.reduce<
     Record<string, AggregatedHomeData>
   >((acc, [countryCode, aggregated]) => {
     acc[countryCode] = aggregated
@@ -381,7 +415,7 @@ async function buildCountryPosts(
 
   return {
     countryPosts,
-    aggregatedByCountry,
+    aggregatedByCountry: aggregatedByCountryRecord,
     africanAggregate,
   }
 }
