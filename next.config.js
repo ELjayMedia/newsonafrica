@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  typedRoutes: true,
   eslint: {
     ignoreDuringBuilds: false,
   },
@@ -103,7 +104,6 @@ const nextConfig = {
   experimental: {
     scrollRestoration: true,
     largePageDataBytes: 12800000,
-    typedRoutes: true,
   },
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
