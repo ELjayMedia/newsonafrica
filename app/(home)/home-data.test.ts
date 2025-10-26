@@ -247,6 +247,101 @@ describe("fetchAggregatedHomeForCountry", () => {
   })
 })
 
+describe("buildCountryPosts", () => {
+  it("limits concurrent fetches while reusing preloaded aggregates", async () => {
+    vi.resetModules()
+    await setupServerMocks()
+
+    const homeDataModule = await import("./home-data")
+
+    const aggregatedFor = (countryCode: string): AggregatedHomeData => ({
+      heroPost: {
+        id: `${countryCode}-hero`,
+        slug: `${countryCode}-hero`,
+        title: `${countryCode}-hero`,
+        excerpt: `${countryCode}-hero`,
+        date: "2024-01-01T00:00:00.000Z",
+        country: countryCode,
+      },
+      secondaryPosts: [
+        {
+          id: `${countryCode}-secondary`,
+          slug: `${countryCode}-secondary`,
+          title: `${countryCode}-secondary`,
+          excerpt: `${countryCode}-secondary`,
+          date: "2024-01-02T00:00:00.000Z",
+          country: countryCode,
+        },
+      ],
+      remainingPosts: [
+        {
+          id: `${countryCode}-remaining`,
+          slug: `${countryCode}-remaining`,
+          title: `${countryCode}-remaining`,
+          excerpt: `${countryCode}-remaining`,
+          date: "2024-01-03T00:00:00.000Z",
+          country: countryCode,
+        },
+      ],
+    })
+
+    let inFlight = 0
+    let peakInFlight = 0
+    const fetchCountryAggregate = vi.fn(async (countryCode: string) => {
+      inFlight += 1
+      peakInFlight = Math.max(peakInFlight, inFlight)
+
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      inFlight -= 1
+      return aggregatedFor(countryCode)
+    })
+
+    const preloadedCountry = "ng"
+    const preloadedAggregate = aggregatedFor(preloadedCountry)
+    const countryCodes = ["ng", "za", "ke", "tz", "za", "ng", "eg", "gh"] as const
+
+    const result = (await homeDataModule.buildCountryPosts(
+      countryCodes,
+      { [preloadedCountry]: preloadedAggregate },
+      {
+        includeAggregates: true,
+        includeAfricanAggregate: true,
+        fetchCountryAggregate,
+      },
+    )) as {
+      countryPosts: Record<string, HomePost[]>
+      aggregatedByCountry: Record<string, AggregatedHomeData>
+      africanAggregate?: AggregatedHomeData
+    }
+
+    const expectedCountries = ["ng", "za", "ke", "tz", "eg", "gh"]
+
+    expect(Object.keys(result.countryPosts).sort()).toEqual([...expectedCountries].sort())
+    expectedCountries.forEach((countryCode) => {
+      const posts = result.countryPosts[countryCode]
+      expect(posts).toEqual([
+        expect.objectContaining({ slug: `${countryCode}-hero` }),
+        expect.objectContaining({ slug: `${countryCode}-secondary` }),
+        expect.objectContaining({ slug: `${countryCode}-remaining` }),
+      ])
+    })
+
+    expect(result.africanAggregate?.heroPost?.slug).toBe("ng-hero")
+    expect(result.africanAggregate?.secondaryPosts.length).toBeGreaterThan(0)
+    expect(result.aggregatedByCountry).toMatchObject(
+      expectedCountries.reduce<Record<string, AggregatedHomeData>>((acc, countryCode) => {
+        acc[countryCode] = aggregatedFor(countryCode)
+        return acc
+      }, {}),
+    )
+
+    const uniqueFetchedCountries = new Set(countryCodes.filter((code) => code !== preloadedCountry))
+    expect(fetchCountryAggregate).toHaveBeenCalledTimes(uniqueFetchedCountries.size)
+    expect(peakInFlight).toBeLessThanOrEqual(homeDataModule.COUNTRY_AGGREGATE_CONCURRENCY)
+  })
+})
+
 describe("buildHomeContentProps", () => {
   it("flattens aggregated home data into HomeContent props", async () => {
     vi.resetModules()
