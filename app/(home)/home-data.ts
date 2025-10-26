@@ -420,7 +420,7 @@ export async function buildCountryPosts(
   }
 }
 
-export async function buildHomeContentProps(baseUrl: string): Promise<HomeContentServerProps> {
+export async function buildHomeContentProps(_baseUrl: string): Promise<HomeContentServerProps> {
   const { countryPosts, africanAggregate } =
     (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
@@ -445,7 +445,7 @@ export async function buildHomeContentProps(baseUrl: string): Promise<HomeConten
 }
 
 export async function buildHomeContentPropsForEdition(
-  baseUrl: string,
+  _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
   const aggregatedHome = isAfricanEdition(edition)

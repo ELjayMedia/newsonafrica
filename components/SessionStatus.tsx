@@ -1,18 +1,14 @@
 "use client"
 
 import { useUser } from "@/contexts/UserContext"
-import { getSessionExpiryTime } from "@/lib/supabase"
 import { useState, useEffect } from "react"
 
 export function SessionStatus() {
   const { session, refreshSession } = useUser()
-  const [expiryTime, setExpiryTime] = useState<string>("Unknown")
   const [timeLeft, setTimeLeft] = useState<string>("Unknown")
 
   useEffect(() => {
     if (session) {
-      setExpiryTime(getSessionExpiryTime(session))
-
       const updateTimeLeft = () => {
         if (session.expires_at) {
           const now = Math.floor(Date.now() / 1000)

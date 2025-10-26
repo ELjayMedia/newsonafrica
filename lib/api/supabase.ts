@@ -502,7 +502,7 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
     const filePath = `avatars/${fileName}`
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage.from("profiles").upload(filePath, file, {
+    const { error: uploadError } = await supabase.storage.from("profiles").upload(filePath, file, {
       cacheControl: "3600",
       upsert: false,
     })

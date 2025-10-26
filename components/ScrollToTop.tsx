@@ -32,6 +32,7 @@ export function ScrollToTop() {
         behavior: "smooth",
       })
     } catch (error) {
+      console.warn("Falling back to immediate scroll", error)
       // Fallback for older browsers
       window.scrollTo(0, 0)
     }

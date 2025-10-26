@@ -23,6 +23,7 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
     await limiter.check(limit, identifier)
     return null
   } catch (error) {
+    console.warn("Rate limit exceeded", error)
     return NextResponse.json(
       {
         success: false,

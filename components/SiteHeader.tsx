@@ -6,7 +6,6 @@ import { useRouter, usePathname } from "next/navigation"
 import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
 import Image from "next/image"
 import { Menu, ChevronDown, Twitter, Facebook } from "lucide-react"
-import { useUser } from "@/contexts/UserContext"
 import { WeatherWidget } from "@/components/WeatherWidget"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
@@ -127,7 +126,7 @@ function MobileMenu({
             <SearchBox
               placeholder="Search articles..."
               className="w-full"
-              onSearch={(query) => {
+              onSearch={(_query) => {
                 // Handle search
                 onClose()
               }}
@@ -191,7 +190,6 @@ function MobileMenu({
 
 export function SiteHeader() {
   const router = useRouter()
-  const { user, signOut } = useUser()
   const pathname = usePathname()
   const homeHref = getHomeHref(pathname)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

@@ -144,7 +144,7 @@ export async function POST(request: Request) {
 // Event handlers
 export async function handleChargeSuccess(data: ChargeSuccessData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing successful charge:", data.reference)
-  const userId = await getUserIdByEmail(client, data.customer.email)
+  const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error: txnError } = await (client as any).from("transactions").insert({
     id: data.reference,
     user_id: userId,
@@ -167,7 +167,7 @@ export async function handleSubscriptionCreated(
   client: SupabaseClient = createAdminClient(),
 ) {
   console.log("Processing subscription creation:", data.subscription_code)
-  const userId = await getUserIdByEmail(client, data.customer.email)
+  const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client.from("subscriptions").insert({
     id: data.subscription_code,
     user_id: userId,
@@ -224,14 +224,14 @@ export async function handleSubscriptionDisabled(
 
 export async function handlePaymentFailed(data: PaymentFailedData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing failed payment:", data.reference)
-  const userId = await getUserIdByEmail(client, data.customer.email)
+  const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await (client as any).from("transactions").update({ status: "failed" }).eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
 }
 
 export async function handleInvoiceUpdate(data: InvoiceUpdateData, client: SupabaseClient = createAdminClient()) {
   console.log("Processing invoice update:", data.invoice_code)
-  const userId = await getUserIdByEmail(client, data.customer.email)
+  const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
     .from("subscriptions")
     .update({ metadata: data, updated_at: new Date().toISOString() })

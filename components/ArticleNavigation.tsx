@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation"
 
 interface ArticleNavigationProps {
   countryCode: string
-  currentSlug: string
   previousArticle?: {
     slug: string
     title: string
@@ -19,7 +18,7 @@ interface ArticleNavigationProps {
   }
 }
 
-export function ArticleNavigation({ countryCode, currentSlug, previousArticle, nextArticle }: ArticleNavigationProps) {
+export function ArticleNavigation({ countryCode, previousArticle, nextArticle }: ArticleNavigationProps) {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const router = useRouter()
 
