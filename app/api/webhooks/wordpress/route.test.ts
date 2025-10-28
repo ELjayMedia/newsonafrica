@@ -9,8 +9,8 @@ const WEBHOOK_BODY = JSON.stringify({ action: "post_updated" })
 async function loadPostHandler() {
   vi.resetModules()
   process.env.WORDPRESS_WEBHOOK_SECRET = "test-secret"
-  const module = await import("./route")
-  return module.POST
+  const routeModule = await import("./route")
+  return routeModule.POST
 }
 
 describe("WordPress webhook signature validation", () => {
