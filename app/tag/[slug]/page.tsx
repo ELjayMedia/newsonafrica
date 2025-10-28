@@ -8,8 +8,7 @@ import { TagFeedClient } from "./TagFeedClient"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 export const runtime = "nodejs"
-const TAG_PAGE_REVALIDATE = CACHE_DURATIONS.SHORT // Revalidate every 60 seconds
-export const revalidate = TAG_PAGE_REVALIDATE
+export const revalidate = CACHE_DURATIONS.SHORT // Revalidate every 60 seconds
 export const dynamicParams = true
 
 const STATIC_TAG_COUNT = 20
