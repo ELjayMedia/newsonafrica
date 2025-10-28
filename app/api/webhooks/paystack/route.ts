@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import type { Database } from "@/types/supabase"
+
+type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
+type SubscriptionUpdate = Database["public"]["Tables"]["subscriptions"]["Update"]
 
 // Node.js runtime declaration for crypto module
 export const runtime = "nodejs"
@@ -56,7 +60,7 @@ interface TransferData {
   [key: string]: any
 }
 
-async function getUserIdByEmail(client: SupabaseClient, email: string) {
+async function getUserIdByEmail(client: SupabaseClient<Database>, email: string) {
   const { data, error } = await (client as any)
     .from("users", { schema: "auth" })
     .select("id")
@@ -144,7 +148,7 @@ export async function POST(request: Request) {
 // Event handlers
 export async function handleChargeSuccess(
   data: ChargeSuccessData,
-  client: SupabaseClient = createAdminClient(),
+  client: SupabaseClient<Database> = createAdminClient(),
 ) {
   console.log("Processing successful charge:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
@@ -167,23 +171,24 @@ export async function handleChargeSuccess(
 
 export async function handleSubscriptionCreated(
   data: SubscriptionCreatedData,
-  client: SupabaseClient = createAdminClient(),
+  client: SupabaseClient<Database> = createAdminClient(),
 ) {
   console.log("Processing subscription creation:", data.subscription_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
-  const { error } = await client.from("subscriptions").insert({
+  const nowIso = new Date().toISOString()
+  const { error } = await client.from<SubscriptionInsert>("subscriptions").insert({
     id: data.subscription_code,
     user_id: userId,
     plan: data.plan.name,
-    status: data.status,
+    status: data.status as SubscriptionInsert["status"],
     start_date: new Date(data.createdAt).toISOString(),
     end_date: null,
     renewal_date: new Date(data.next_payment_date).toISOString(),
     payment_provider: "paystack",
     payment_id: data.subscription_code,
-    metadata: data,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    metadata: data as SubscriptionInsert["metadata"],
+    created_at: nowIso,
+    updated_at: nowIso,
   })
   if (error) throw new Error("Failed to create subscription")
 
@@ -197,7 +202,7 @@ export async function handleSubscriptionCreated(
 
 export async function handleSubscriptionDisabled(
   data: SubscriptionDisabledData,
-  client: SupabaseClient = createAdminClient(),
+  client: SupabaseClient<Database> = createAdminClient(),
 ) {
   console.log("Processing subscription cancellation:", data.subscription_code)
   const { data: sub, error: fetchError } = await client
@@ -207,7 +212,7 @@ export async function handleSubscriptionDisabled(
     .single()
   if (fetchError || !sub) throw new Error("Subscription not found")
   const { error } = await client
-    .from("subscriptions")
+    .from<SubscriptionUpdate>("subscriptions")
     .update({
       status: "cancelled",
       end_date: new Date().toISOString(),
@@ -225,19 +230,25 @@ export async function handleSubscriptionDisabled(
   }
 }
 
-export async function handlePaymentFailed(data: PaymentFailedData, client: SupabaseClient = createAdminClient()) {
+export async function handlePaymentFailed(
+  data: PaymentFailedData,
+  client: SupabaseClient<Database> = createAdminClient(),
+) {
   console.log("Processing failed payment:", data.reference)
   const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await (client as any).from("transactions").update({ status: "failed" }).eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
 }
 
-export async function handleInvoiceUpdate(data: InvoiceUpdateData, client: SupabaseClient = createAdminClient()) {
+export async function handleInvoiceUpdate(
+  data: InvoiceUpdateData,
+  client: SupabaseClient<Database> = createAdminClient(),
+) {
   console.log("Processing invoice update:", data.invoice_code)
   const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
-    .from("subscriptions")
-    .update({ metadata: data, updated_at: new Date().toISOString() })
+    .from<SubscriptionUpdate>("subscriptions")
+    .update({ metadata: data as SubscriptionUpdate["metadata"], updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
 
@@ -249,7 +260,10 @@ export async function handleInvoiceUpdate(data: InvoiceUpdateData, client: Supab
   }
 }
 
-export async function handleTransferSuccess(data: TransferData, client: SupabaseClient = createAdminClient()) {
+export async function handleTransferSuccess(
+  data: TransferData,
+  client: SupabaseClient<Database> = createAdminClient(),
+) {
   console.log("Processing successful transfer:", data.reference)
   const { error } = await (client as any).from("transfers").insert({
     id: data.reference,
@@ -260,7 +274,10 @@ export async function handleTransferSuccess(data: TransferData, client: Supabase
   if (error) throw new Error("Failed to save transfer")
 }
 
-export async function handleTransferFailed(data: TransferData, client: SupabaseClient = createAdminClient()) {
+export async function handleTransferFailed(
+  data: TransferData,
+  client: SupabaseClient<Database> = createAdminClient(),
+) {
   console.log("Processing failed transfer:", data.reference)
   const { error } = await (client as any)
     .from("transfers")
