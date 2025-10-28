@@ -81,22 +81,24 @@ export async function GET(request: NextRequest) {
           const renewalDate = data.data.next_payment_date ? new Date(data.data.next_payment_date).toISOString() : null
           const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
 
-          await supabase.from<SubscriptionInsert>("subscriptions").upsert(
-            {
-              id: data.data.reference,
-              user_id: userId,
-              plan: planName,
-              status: (data.data.status ?? "success") as SubscriptionInsert["status"],
-              start_date: startDate,
-              end_date: null,
-              renewal_date: renewalDate,
-              payment_provider: "paystack",
-              payment_id: data.data.reference,
-              metadata: data.data as SubscriptionInsert["metadata"],
-              updated_at: nowIso,
-            },
-            { onConflict: "id" },
-          )
+          await supabase
+            .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+            .upsert(
+              {
+                id: data.data.reference,
+                user_id: userId,
+                plan: planName,
+                status: (data.data.status ?? "success") as SubscriptionInsert["status"],
+                start_date: startDate,
+                end_date: null,
+                renewal_date: renewalDate,
+                payment_provider: "paystack",
+                payment_id: data.data.reference,
+                metadata: data.data as SubscriptionInsert["metadata"],
+                updated_at: nowIso,
+              },
+              { onConflict: "id" },
+            )
 
           revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
           revalidatePath("/subscriptions")
