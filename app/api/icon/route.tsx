@@ -22,11 +22,15 @@ export async function GET(request: NextRequest) {
 
   // Convert SVG to PNG
   const pngBuffer = await sharp(svgBuffer).resize(size, size).png().toBuffer()
+  const pngArrayBuffer = pngBuffer.buffer.slice(
+    pngBuffer.byteOffset,
+    pngBuffer.byteOffset + pngBuffer.byteLength,
+  )
 
   // Return the PNG image
   return withCors(
     request,
-    new NextResponse(pngBuffer, {
+    new NextResponse(pngArrayBuffer, {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=31536000, immutable",
