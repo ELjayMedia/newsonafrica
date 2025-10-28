@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import sharp from "sharp"
 import { logRequest, withCors } from "@/lib/api-utils"
 
@@ -6,6 +6,15 @@ import { logRequest, withCors } from "@/lib/api-utils"
 export const revalidate = 86400
 
 export const runtime = "nodejs"
+
+function toArrayBuffer(buf: ArrayBuffer | SharedArrayBuffer): ArrayBuffer {
+  if (buf instanceof ArrayBuffer) {
+    return buf
+  }
+
+  const view = new Uint8Array(buf)
+  return view.slice().buffer
+}
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -25,12 +34,14 @@ export async function GET(request: NextRequest) {
   const pngArrayBuffer = pngBuffer.buffer.slice(
     pngBuffer.byteOffset,
     pngBuffer.byteOffset + pngBuffer.byteLength,
-  )
+  ) as ArrayBuffer | SharedArrayBuffer
+
+  const arrayBuffer = toArrayBuffer(pngArrayBuffer)
 
   // Return the PNG image
   return withCors(
     request,
-    new NextResponse(pngArrayBuffer as ArrayBuffer, {
+    new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=31536000, immutable",
