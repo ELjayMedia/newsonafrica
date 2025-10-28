@@ -4,6 +4,9 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { createAdminClient } from "@/lib/supabase"
+import type { Database } from "@/types/supabase"
+
+type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
 
 export const runtime = "nodejs"
 
@@ -72,23 +75,24 @@ export async function GET(request: NextRequest) {
         }
 
         if (userId) {
-          const startDate = data.data.paid_at ? new Date(data.data.paid_at).toISOString() : new Date().toISOString()
+          const nowIso = new Date().toISOString()
+          const startDate = data.data.paid_at ? new Date(data.data.paid_at).toISOString() : nowIso
           const renewalDate = data.data.next_payment_date ? new Date(data.data.next_payment_date).toISOString() : null
           const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
 
-          await supabase.from("subscriptions").upsert(
+          await supabase.from<SubscriptionInsert>("subscriptions").upsert(
             {
               id: data.data.reference,
               user_id: userId,
               plan: planName,
-              status: data.data.status || "success",
+              status: (data.data.status ?? "success") as SubscriptionInsert["status"],
               start_date: startDate,
               end_date: null,
               renewal_date: renewalDate,
               payment_provider: "paystack",
               payment_id: data.data.reference,
-              metadata: data.data,
-              updated_at: new Date().toISOString(),
+              metadata: data.data as SubscriptionInsert["metadata"],
+              updated_at: nowIso,
             },
             { onConflict: "id" },
           )
