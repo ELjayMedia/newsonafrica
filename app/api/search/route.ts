@@ -356,9 +356,11 @@ const executeWordPressSearchForScope = async (
       }
     }
 
+    const getRecordTimestamp = (record: SearchRecord) => new Date(record.published_at ?? 0).getTime()
+
     const sortedRecords = heap
       .map((entry) => entry.record)
-      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+      .sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a))
 
     const startIndex = (safePage - 1) * safePerPage
     const paginatedRecords = sortedRecords.slice(startIndex, startIndex + safePerPage)
