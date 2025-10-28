@@ -195,8 +195,25 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
   }
 
   const expectedSignature = createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
+  if (signature.length !== expectedSignature.length) {
+    return false
+  }
 
-  return timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))
+  try {
+    const providedBuffer = Buffer.from(signature, "hex")
+    const expectedBuffer = Buffer.from(expectedSignature, "hex")
+
+    if (providedBuffer.length !== expectedBuffer.length) {
+      return false
+    }
+
+    return timingSafeEqual(providedBuffer, expectedBuffer)
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return false
+    }
+    throw error
+  }
 }
 
 export async function POST(request: NextRequest) {
