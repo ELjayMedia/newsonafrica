@@ -177,7 +177,7 @@ export async function handleSubscriptionCreated(
   const userId = await getUserIdByEmail(client, data.customer.email)
   const nowIso = new Date().toISOString()
   const { error } = await client
-    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+    .from("subscriptions")
     .insert({
       id: data.subscription_code,
       user_id: userId,
@@ -214,7 +214,7 @@ export async function handleSubscriptionDisabled(
     .single()
   if (fetchError || !sub) throw new Error("Subscription not found")
   const { error } = await client
-    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+    .from("subscriptions")
     .update({
       status: "cancelled",
       end_date: new Date().toISOString(),
@@ -249,7 +249,7 @@ export async function handleInvoiceUpdate(
   console.log("Processing invoice update:", data.invoice_code)
   const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
-    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+    .from("subscriptions")
     .update({ metadata: data as SubscriptionUpdate["metadata"], updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
