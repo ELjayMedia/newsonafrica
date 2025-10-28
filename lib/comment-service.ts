@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
+import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import type { Database } from "@/types/supabase"
 import { v4 as uuidv4 } from "uuid"
 import { clearQueryCache } from "@/utils/supabase-query-utils"
@@ -213,72 +214,83 @@ export async function fetchComments(
   pageSize = 10,
   sortOption: CommentSortOption = "newest",
   client: SupabaseClient<Database> = supabase,
-): Promise<{ comments: Comment[]; hasMore: boolean; total: number }> {
+  cursor?: string | null,
+): Promise<{ comments: Comment[]; hasMore: boolean; nextCursor: string | null; total?: number }> {
   try {
     // Check if columns exist
     const { hasStatus, hasRichText } = await checkColumns(client)
 
-    // Get total count first - using a more robust approach
-    let count = 0
-    try {
-      // Build the count query
-      let countQuery = client
-        .from("comments")
-        .select("id", { count: "exact" }) // Only select ID for counting
-        .eq("post_id", postId)
-        .is("parent_id", null) // Only count root comments for pagination
+    let total: number | undefined
 
-      // Add status filter only if the column exists
-      if (hasStatus) {
-        countQuery = countQuery.eq("status", "active")
+    if (page === 0) {
+      try {
+        let countQuery = client
+          .from("comments")
+          .select("id", { count: "exact", head: true })
+          .eq("post_id", postId)
+          .is("parent_id", null)
+
+        if (hasStatus) {
+          countQuery = countQuery.eq("status", "active")
+        }
+
+        const { count: commentCount, error: countError } = await countQuery
+
+        if (countError) {
+          console.error("Error in count query:", countError)
+        } else if (typeof commentCount === "number") {
+          total = commentCount
+        } else {
+          total = 0
+        }
+      } catch (countErr) {
+        console.error("Error counting comments:", countErr)
       }
-
-      // Execute the count query
-      const { count: commentCount, error: countError } = await countQuery
-
-      if (countError) {
-        console.error("Error in count query:", countError)
-        // Continue with count = 0 instead of throwing
-      } else {
-        count = commentCount || 0
-      }
-    } catch (countErr) {
-      console.error("Error counting comments:", countErr)
-      // Continue with count = 0 instead of throwing
     }
 
-    // Then fetch paginated comments
+    const decodedCursor = cursor ? decodeCommentCursor(cursor) : null
+    const effectiveCursor =
+      decodedCursor && decodedCursor.sort === sortOption ? decodedCursor : null
+    const cursorConditions = buildCursorConditions(sortOption, effectiveCursor)
+
     let commentsQuery = client
       .from("comments")
       .select("*, profile:profiles(username, avatar_url)")
       .eq("post_id", postId)
-      .is("parent_id", null) // Only fetch root comments for pagination
+      .is("parent_id", null)
 
-    // Add sort order based on option
-    switch (sortOption) {
-      case "newest":
-        commentsQuery = commentsQuery.order("created_at", { ascending: false })
-        break
-      case "oldest":
-        commentsQuery = commentsQuery.order("created_at", { ascending: true })
-        break
-      case "popular":
-        // If we have a reaction_count column, use it
-        commentsQuery = commentsQuery
-          .order("reaction_count", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-        break
-      default:
-        commentsQuery = commentsQuery.order("created_at", { ascending: false })
-    }
-
-    // Add pagination
-    commentsQuery = commentsQuery.range(page * pageSize, (page + 1) * pageSize - 1)
-
-    // Add status filter only if the column exists
     if (hasStatus) {
       commentsQuery = commentsQuery.eq("status", "active")
     }
+
+    if (cursorConditions.length > 0) {
+      commentsQuery = commentsQuery.or(cursorConditions.join(","))
+    }
+
+    switch (sortOption) {
+      case "newest":
+        commentsQuery = commentsQuery
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+        break
+      case "oldest":
+        commentsQuery = commentsQuery
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+        break
+      case "popular":
+        commentsQuery = commentsQuery
+          .order("reaction_count", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+        break
+      default:
+        commentsQuery = commentsQuery
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+    }
+
+    commentsQuery = commentsQuery.limit(pageSize + 1)
 
     const { data: commentsData, error } = await commentsQuery
 
@@ -287,37 +299,78 @@ export async function fetchComments(
       throw error
     }
 
-    const comments = (commentsData ?? []) as Comment[]
+    const rootComments = (commentsData ?? []) as Comment[]
 
-    if (comments.length === 0) {
-      return { comments: [], hasMore: false, total: 0 }
+    const hasMore = rootComments.length > pageSize
+    const limitedComments = hasMore ? rootComments.slice(0, pageSize) : rootComments
+
+    let nextCursor: string | null = null
+    const lastComment = limitedComments[limitedComments.length - 1]
+
+    if (hasMore && lastComment?.id && lastComment?.created_at) {
+      if (sortOption === "popular") {
+        nextCursor = encodeCommentCursor({
+          sort: "popular",
+          reactionCount: lastComment.reaction_count ?? null,
+          createdAt: lastComment.created_at,
+          id: lastComment.id,
+        })
+      } else {
+        nextCursor = encodeCommentCursor({
+          sort: sortOption,
+          createdAt: lastComment.created_at,
+          id: lastComment.id,
+        })
+      }
     }
 
-    // Fetch all replies for these comments in a single query
-    const rootCommentIds = comments.map((comment) => comment.id)
+    if (limitedComments.length === 0) {
+      const baseResult: {
+        comments: Comment[]
+        hasMore: boolean
+        nextCursor: string | null
+        total?: number
+      } = {
+        comments: [],
+        hasMore: false,
+        nextCursor,
+      }
 
-    let repliesQuery = client
-      .from("comments")
-      .select("*, profile:profiles(username, avatar_url)")
-      .eq("post_id", postId)
-      .in("parent_id", rootCommentIds)
+      if (total !== undefined) {
+        baseResult.total = total
+      }
 
-    // Add status filter only if the column exists
-    if (hasStatus) {
-      repliesQuery = repliesQuery.eq("status", "active")
+      return baseResult
     }
 
-    const { data: repliesData, error: repliesError } = await repliesQuery
+    const rootCommentIds = limitedComments.map((comment) => comment.id)
 
-    if (repliesError) {
-      console.error("Error fetching replies:", repliesError)
-      throw repliesError
+    let replies: Comment[] = []
+    if (rootCommentIds.length > 0) {
+      let repliesQuery = client
+        .from("comments")
+        .select("*, profile:profiles(username, avatar_url)")
+        .eq("post_id", postId)
+        .in("parent_id", rootCommentIds)
+
+      if (hasStatus) {
+        repliesQuery = repliesQuery.eq("status", "active")
+      }
+
+      const { data: repliesData, error: repliesError } = await repliesQuery
+
+      if (repliesError) {
+        console.error("Error fetching replies:", repliesError)
+        throw repliesError
+      }
+
+      replies = (repliesData ?? []) as Comment[]
     }
 
-    const replies = (repliesData ?? []) as Comment[]
-
-    // Combine all comment IDs (root comments and replies)
-    const allCommentIds = [...comments.map((c) => c.id), ...replies.map((r) => r.id)]
+    const allCommentIds = [
+      ...limitedComments.map((c) => c.id),
+      ...replies.map((r) => r.id),
+    ]
 
     // Determine the current authenticated user (if any) for reaction metadata
     let currentUserId: string | null = null
@@ -378,7 +431,7 @@ export async function fetchComments(
 
     // Create a map of comment_id to reactions
     // Process all comments with profile data and reactions
-    const processedComments: Comment[] = comments.map((comment) => {
+    const processedComments: Comment[] = limitedComments.map((comment) => {
       const reactionsForComment = reactionsByComment.get(comment.id)
       const reactionList = reactionsForComment
         ? Array.from(reactionsForComment.values())
@@ -420,14 +473,22 @@ export async function fetchComments(
     // Organize comments into a hierarchical structure
     const organizedComments = organizeComments([...processedComments, ...processedReplies])
 
-    // Calculate if there are more comments based on the count and current page
-    const hasMore = count > (page + 1) * pageSize
-
-    return {
+    const result: {
+      comments: Comment[]
+      hasMore: boolean
+      nextCursor: string | null
+      total?: number
+    } = {
       comments: organizedComments,
       hasMore,
-      total: count,
+      nextCursor,
     }
+
+    if (total !== undefined) {
+      result.total = total
+    }
+
+    return result
   } catch (error) {
     console.error("Error in fetchComments:", error)
     throw error

@@ -24,6 +24,7 @@ export function CommentList({ postId }: CommentListProps) {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [totalComments, setTotalComments] = useState(0)
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
@@ -49,7 +50,7 @@ export function CommentList({ postId }: CommentListProps) {
   const [failedComments, setFailedComments] = useState<string[]>([])
 
   const loadComments = useCallback(
-    async (pageNum = 0, append = false) => {
+    async (pageNum = 0, append = false, cursorValue?: string | null) => {
       try {
         setLoading(true)
 
@@ -58,15 +59,23 @@ export function CommentList({ postId }: CommentListProps) {
           await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
         }
 
+        if (!append) {
+          setNextCursor(null)
+        } else {
+          setPage(pageNum)
+        }
+
         const {
           comments: fetchedComments,
           hasMore: moreAvailable,
+          nextCursor: fetchedNextCursor,
           total,
         } = await fetchCommentsPageAction({
           postId,
           page: pageNum,
           pageSize: 10,
           sortOption,
+          cursor: cursorValue ?? null,
         })
 
         startTransition(() => {
@@ -81,9 +90,15 @@ export function CommentList({ postId }: CommentListProps) {
           }
 
           setHasMore(moreAvailable)
-          setTotalComments(total)
+          setNextCursor(fetchedNextCursor ?? null)
+          if (typeof total === "number") {
+            setTotalComments(total)
+          } else if (!append && pageNum === 0 && fetchedComments.length === 0) {
+            setTotalComments(0)
+          }
           setError(null)
           setRetryCount(0) // Reset retry count on success
+          setPage(pageNum)
         })
       } catch (err: any) {
         console.error("Error loading comments:", err)
@@ -124,12 +139,11 @@ export function CommentList({ postId }: CommentListProps) {
 
   // Handle infinite scroll
   useEffect(() => {
-    if (inView && hasMore && !isFetching) {
+    if (inView && hasMore && !isFetching && nextCursor) {
       const nextPage = page + 1
-      setPage(nextPage)
-      loadComments(nextPage, true)
+      loadComments(nextPage, true, nextCursor)
     }
-  }, [hasMore, inView, isFetching, loadComments, page])
+  }, [hasMore, inView, isFetching, loadComments, nextCursor, page])
 
   // Subscribe to realtime updates for this post's comments
   useEffect(() => {
