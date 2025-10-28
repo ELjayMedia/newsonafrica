@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   // Return the PNG image
   return withCors(
     request,
-    new NextResponse(pngArrayBuffer, {
+    new NextResponse(pngArrayBuffer as ArrayBuffer, {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=31536000, immutable",
