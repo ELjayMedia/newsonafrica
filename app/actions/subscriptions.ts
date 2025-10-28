@@ -27,7 +27,7 @@ export async function getUserSubscriptions(userId: string): Promise<ActionResult
 
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("*")
+      .select<SubscriptionRow>("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -80,7 +80,7 @@ export async function recordSubscription(input: RecordSubscriptionInput): Promis
     const { data, error } = await supabase
       .from("subscriptions")
       .upsert(payload, { onConflict: "id" })
-      .select("*")
+      .select<SubscriptionRow>("*")
       .single()
 
     if (error || !data) {
