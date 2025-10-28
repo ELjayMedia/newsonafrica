@@ -5,6 +5,7 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
+import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import {
   ValidationError,
   addValidationError,
@@ -21,6 +22,36 @@ const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as c
 const COMMENT_STATUS_SET = new Set(COMMENT_STATUSES)
 const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
 const COMMENT_ACTION_SET = new Set(COMMENT_ACTIONS)
+
+function applyOrFilters(
+  query: any,
+  statusConditions: string[],
+  cursorConditions: string[],
+) {
+  if (statusConditions.length === 0 && cursorConditions.length === 0) {
+    return query
+  }
+
+  const orGroups: string[] = []
+
+  if (statusConditions.length > 0 && cursorConditions.length > 0) {
+    for (const statusCondition of statusConditions) {
+      for (const cursorCondition of cursorConditions) {
+        orGroups.push(`and(${statusCondition},${cursorCondition})`)
+      }
+    }
+  } else if (statusConditions.length > 0) {
+    orGroups.push(...statusConditions)
+  } else {
+    orGroups.push(...cursorConditions)
+  }
+
+  if (orGroups.length > 0) {
+    query = query.or(orGroups.join(","))
+  }
+
+  return query
+}
 
 const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
 const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
@@ -115,6 +146,9 @@ function validateGetCommentsParams(searchParams: URLSearchParams) {
 
   const parentId = parseParentId(searchParams.get("parentId"))
 
+  const rawCursor = searchParams.get("cursor")
+  const cursor = rawCursor && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined
+
   const rawStatus = searchParams.get("status")
   const status = rawStatus ? rawStatus.trim() : "active"
 
@@ -131,6 +165,7 @@ function validateGetCommentsParams(searchParams: URLSearchParams) {
     page,
     limit,
     parentId,
+    cursor,
     status: (COMMENT_STATUS_SET.has(status as CommentStatus) ? status : "active") as CommentStatus,
   }
 }
@@ -223,24 +258,43 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url)
 
     // Validate query parameters
-    const { postId, page, limit, parentId, status } = validateGetCommentsParams(searchParams)
+    const { postId, page, limit, parentId, status, cursor: cursorParam } =
+      validateGetCommentsParams(searchParams)
 
-    // Calculate pagination range
-    const from = page * limit
-    const to = from + limit - 1
+    const decodedCursor = cursorParam ? decodeCommentCursor(cursorParam) : null
+    if (cursorParam && (!decodedCursor || decodedCursor.sort !== "newest")) {
+      throw new ValidationError("Invalid cursor", { cursor: ["Cursor is malformed"] })
+    }
+
+    const createCommentsQuery = () => supabase.from("comments").eq("post_id", postId)
+
+    const applyParentFilter = (builder: any) => {
+      if (parentId === null) {
+        return builder.is("parent_id", null)
+      }
+
+      if (parentId) {
+        return builder.eq("parent_id", parentId)
+      }
+
+      return builder
+    }
+
+    const simpleStatusFilters: Array<{ column: string; value: string }> = []
+    const statusOrConditions: string[] = []
+
+    const applySimpleStatusFilters = (builder: any) => {
+      let updated = builder
+      for (const filter of simpleStatusFilters) {
+        updated = updated.eq(filter.column, filter.value)
+      }
+      return updated
+    }
 
     // Build query
-    let query = supabase
-      .from("comments")
-      .select("*, profile:profiles(username, avatar_url)", { count: "exact" })
-      .eq("post_id", postId)
-
-    // Filter by parent_id
-    if (parentId === null) {
-      query = query.is("parent_id", null)
-    } else if (parentId) {
-      query = query.eq("parent_id", parentId)
-    }
+    let query = applyParentFilter(
+      createCommentsQuery().select("*, profile:profiles(username, avatar_url)"),
+    )
 
     const {
       data: { session },
@@ -265,69 +319,110 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     if (!session?.user) {
-      query = query.eq("status", effectiveStatus)
+      simpleStatusFilters.push({ column: "status", value: effectiveStatus })
     } else if (isModerator) {
       if (effectiveStatus !== "all") {
-        query = query.eq("status", effectiveStatus)
+        simpleStatusFilters.push({ column: "status", value: effectiveStatus })
       }
     } else {
       if (effectiveStatus === "all") {
-        query = query.or(`status.eq.active,user_id.eq.${session.user.id}`)
+        statusOrConditions.push("status.eq.active")
+        statusOrConditions.push(`user_id.eq.${session.user.id}`)
       } else if (effectiveStatus === "active") {
-        query = query.eq("status", "active")
+        simpleStatusFilters.push({ column: "status", value: "active" })
       } else {
-        query = query.eq("status", effectiveStatus).eq("user_id", session.user.id)
+        simpleStatusFilters.push({ column: "status", value: effectiveStatus })
+        simpleStatusFilters.push({ column: "user_id", value: session.user.id })
       }
     }
 
-    // Add pagination and ordering
-    const { data: comments, error, count } = await query.order("created_at", { ascending: false }).range(from, to)
+    query = applySimpleStatusFilters(query)
+
+    const cursorConditions = buildCursorConditions("newest", decodedCursor)
+    query = applyOrFilters(query, statusOrConditions, cursorConditions)
+
+    const { data: commentsData, error } = await query
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1)
 
     if (error) {
       throw new Error(`Failed to fetch comments: ${error.message}`)
     }
 
-    const typedComments = (comments ?? []) as Array<Record<string, unknown> & {
+    const typedComments = (commentsData ?? []) as Array<Record<string, unknown> & {
       profile?: { username?: string | null; avatar_url?: string | null } | null
     }>
+
+    let totalCount: number | undefined
+
+    if (page === 0) {
+      let countQuery = applySimpleStatusFilters(
+        applyParentFilter(createCommentsQuery().select("id", { count: "exact", head: true })),
+      )
+
+      countQuery = applyOrFilters(countQuery, statusOrConditions, [])
+
+      const { count, error: countError } = await countQuery
+
+      if (countError) {
+        console.error("Failed to count comments:", countError)
+      } else if (typeof count === "number") {
+        totalCount = count
+      } else {
+        totalCount = 0
+      }
+    }
 
     if (typedComments.length === 0) {
       return withCors(
         request,
         successResponse({
           comments: [],
-          totalCount: 0,
           hasMore: false,
+          ...(totalCount !== undefined ? { totalCount } : {}),
+          nextCursor: null,
         }),
       )
     }
 
     // Combine comments with profile data
-    const commentsWithProfiles = typedComments.map((comment) => {
+    const hasMore = typedComments.length > limit
+    const limitedComments = hasMore ? typedComments.slice(0, limit) : typedComments
+
+    const lastComment = limitedComments[limitedComments.length - 1] as
+      | (Record<string, unknown> & { created_at?: string | null; id?: string | null })
+      | undefined
+
+    const nextCursor =
+      hasMore && lastComment?.created_at && lastComment?.id
+        ? encodeCommentCursor({
+            sort: "newest",
+            createdAt: String(lastComment.created_at),
+            id: String(lastComment.id),
+          })
+        : null
+
+    const commentsWithProfiles = limitedComments.map((comment) => {
       return {
         ...comment,
         profile: comment.profile ?? undefined,
       }
     })
 
-    // Check if there are more comments to load
-    const hasMore = count ? from + limit < count : false
-    const totalCount = count || 0
-
     return withCors(
       request,
       successResponse(
         {
           comments: commentsWithProfiles,
-          totalCount,
           hasMore,
+          ...(totalCount !== undefined ? { totalCount } : {}),
+          nextCursor,
         },
         {
           pagination: {
             page,
             limit,
-            from,
-            to,
           },
         },
       ),

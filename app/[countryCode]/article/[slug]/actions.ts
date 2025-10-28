@@ -9,6 +9,7 @@ interface FetchCommentsPageActionInput {
   page?: number
   pageSize?: number
   sortOption?: CommentSortOption
+  cursor?: string | null
 }
 
 export async function fetchCommentsPageAction({
@@ -16,8 +17,9 @@ export async function fetchCommentsPageAction({
   page = 0,
   pageSize = 10,
   sortOption = "newest",
+  cursor = null,
 }: FetchCommentsPageActionInput) {
   const supabase = getSupabaseClient()
 
-  return fetchComments(postId, page, pageSize, sortOption, supabase)
+  return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
 }
