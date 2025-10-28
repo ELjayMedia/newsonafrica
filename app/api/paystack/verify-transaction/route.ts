@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
           const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
 
           await supabase
-            .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+            .from("subscriptions")
             .upsert(
               {
                 id: data.data.reference,
@@ -99,6 +99,8 @@ export async function GET(request: NextRequest) {
               },
               { onConflict: "id" },
             )
+            .select()
+            .returns<SubscriptionInsert>()
 
           revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
           revalidatePath("/subscriptions")
