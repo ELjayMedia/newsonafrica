@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("@/lib/api/supabase", () => ({
+  isSupabaseConfigured: () => true,
   supabaseClient: {
     auth: {
       setSession: mocks.mockSetSession,

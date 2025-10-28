@@ -14,7 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 
-import { supabaseClient } from "@/lib/api/supabase"
+import { isSupabaseConfigured, supabaseClient } from "@/lib/api/supabase"
 
 import {
   getCurrentSession,
@@ -95,46 +95,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isPending, startTransition] = useTransition()
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
 
-  const syncBrowserClientSession = useCallback((nextSession: Session | null) => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    if (nextSession) {
-      const accessToken = nextSession.access_token
-      const refreshToken = nextSession.refresh_token
-
-      if (!accessToken || !refreshToken) {
-        console.warn("Supabase session is missing tokens; skipping client synchronization")
-        return
-      }
-
-      void supabaseClient.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) {
-            console.error("Failed to synchronize Supabase client session:", error)
-          }
-        })
-        .catch((error) => {
-          console.error("Unexpected error synchronizing Supabase client session:", error)
-        })
-    } else {
-      void supabaseClient.auth
-        .signOut()
-        .then(({ error }) => {
-          if (error) {
-            console.error("Failed to clear Supabase client session:", error)
-          }
-        })
-        .catch((error) => {
-          console.error("Unexpected error clearing Supabase client session:", error)
-        })
-    }
-  }, [])
-
   const applyAuthState = useCallback(
-    (next: AuthStatePayload | null) => {
+    async (next: AuthStatePayload | null) => {
       const nextSession = (next?.session ?? null) as Session | null
       const nextUser = (next?.user ?? null) as User | null
       const nextProfile = next?.profile ?? null
@@ -143,19 +105,54 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(nextUser)
       setProfile(nextProfile)
       setIsAuthenticated(!!nextUser)
-      syncBrowserClientSession(nextSession)
+      if (typeof window === "undefined") {
+        return
+      }
+
+      if (!isSupabaseConfigured()) {
+        return
+      }
+
+      try {
+        if (nextSession) {
+          const accessToken = nextSession.access_token
+          const refreshToken = nextSession.refresh_token
+
+          if (!accessToken || !refreshToken) {
+            console.warn("Supabase session is missing tokens; skipping client synchronization")
+            return
+          }
+
+          const { error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (error) {
+            console.error("Failed to synchronize Supabase client session:", error)
+          }
+        } else {
+          const { error } = await supabaseClient.auth.signOut()
+
+          if (error) {
+            console.error("Failed to clear Supabase client session:", error)
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error synchronizing Supabase client session:", error)
+      }
     },
-    [syncBrowserClientSession],
+    [],
   )
 
   const handleAuthResult = useCallback(
-    (result: AuthActionResult): AuthStatePayload | null => {
+    async (result: AuthActionResult): Promise<AuthStatePayload | null> => {
       if (result.error) {
         throw result.error
       }
 
       const payload = result.data ?? null
-      applyAuthState(payload)
+      await applyAuthState(payload)
       return payload
     },
     [applyAuthState],
@@ -167,19 +164,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     startTransition(() => {
       getCurrentSession()
-        .then((result) => {
+        .then(async (result) => {
           if (!isMounted) return
           try {
-            handleAuthResult(result)
+            await handleAuthResult(result)
           } catch (error) {
             console.error("Error getting current session:", error)
-            applyAuthState(null)
+            await applyAuthState(null)
           }
         })
-        .catch((error) => {
+        .catch(async (error) => {
           if (!isMounted) return
           console.error("Unexpected error loading session:", error)
-          applyAuthState(null)
+          await applyAuthState(null)
         })
         .finally(() => {
           if (!isMounted) return
@@ -213,15 +210,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const refreshPromise = new Promise<boolean>((resolve) => {
       startTransition(() => {
         refreshSessionAction()
-          .then((result) => {
+          .then(async (result) => {
             try {
-              handleAuthResult(result)
+              await handleAuthResult(result)
               router.refresh()
               resolve(true)
             } catch (error) {
               console.error("Failed to refresh session:", error)
               if (!user) {
-                applyAuthState(null)
+                await applyAuthState(null)
               }
               resolve(!!user)
             }
@@ -263,9 +260,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return new Promise<AuthStatePayload | null>((resolve, reject) => {
         startTransition(() => {
           action()
-            .then((result) => {
+            .then(async (result) => {
               try {
-                const payload = handleAuthResult(result)
+                const payload = await handleAuthResult(result)
 
                 if (shouldRefreshRouter) {
                   router.refresh()
@@ -316,13 +313,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return new Promise<void>((resolve, reject) => {
         startTransition(() => {
           signOutAction()
-            .then((result) => {
+            .then(async (result) => {
               if (result.error) {
                 reject(result.error)
                 return
               }
 
-              applyAuthState(null)
+              await applyAuthState(null)
               router.refresh()
 
               if (redirectTo) {
