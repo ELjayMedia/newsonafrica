@@ -176,20 +176,22 @@ export async function handleSubscriptionCreated(
   console.log("Processing subscription creation:", data.subscription_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
   const nowIso = new Date().toISOString()
-  const { error } = await client.from<SubscriptionInsert>("subscriptions").insert({
-    id: data.subscription_code,
-    user_id: userId,
-    plan: data.plan.name,
-    status: data.status as SubscriptionInsert["status"],
-    start_date: new Date(data.createdAt).toISOString(),
-    end_date: null,
-    renewal_date: new Date(data.next_payment_date).toISOString(),
-    payment_provider: "paystack",
-    payment_id: data.subscription_code,
-    metadata: data as SubscriptionInsert["metadata"],
-    created_at: nowIso,
-    updated_at: nowIso,
-  })
+  const { error } = await client
+    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
+    .insert({
+      id: data.subscription_code,
+      user_id: userId,
+      plan: data.plan.name,
+      status: data.status as SubscriptionInsert["status"],
+      start_date: new Date(data.createdAt).toISOString(),
+      end_date: null,
+      renewal_date: new Date(data.next_payment_date).toISOString(),
+      payment_provider: "paystack",
+      payment_id: data.subscription_code,
+      metadata: data as SubscriptionInsert["metadata"],
+      created_at: nowIso,
+      updated_at: nowIso,
+    })
   if (error) throw new Error("Failed to create subscription")
 
   revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
@@ -212,7 +214,7 @@ export async function handleSubscriptionDisabled(
     .single()
   if (fetchError || !sub) throw new Error("Subscription not found")
   const { error } = await client
-    .from<SubscriptionUpdate>("subscriptions")
+    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
     .update({
       status: "cancelled",
       end_date: new Date().toISOString(),
@@ -247,7 +249,7 @@ export async function handleInvoiceUpdate(
   console.log("Processing invoice update:", data.invoice_code)
   const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client
-    .from<SubscriptionUpdate>("subscriptions")
+    .from<"subscriptions", Database["public"]["Tables"]["subscriptions"]>("subscriptions")
     .update({ metadata: data as SubscriptionUpdate["metadata"], updated_at: new Date().toISOString() })
     .eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
