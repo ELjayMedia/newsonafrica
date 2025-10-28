@@ -142,9 +142,12 @@ export async function POST(request: Request) {
 }
 
 // Event handlers
-export async function handleChargeSuccess(data: ChargeSuccessData, client: SupabaseClient = createAdminClient()) {
+export async function handleChargeSuccess(
+  data: ChargeSuccessData,
+  client: SupabaseClient = createAdminClient(),
+) {
   console.log("Processing successful charge:", data.reference)
-  const _userId = await getUserIdByEmail(client, data.customer.email)
+  const userId = await getUserIdByEmail(client, data.customer.email)
   const { error: txnError } = await (client as any).from("transactions").insert({
     id: data.reference,
     user_id: userId,
@@ -167,7 +170,7 @@ export async function handleSubscriptionCreated(
   client: SupabaseClient = createAdminClient(),
 ) {
   console.log("Processing subscription creation:", data.subscription_code)
-  const _userId = await getUserIdByEmail(client, data.customer.email)
+  const userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await client.from("subscriptions").insert({
     id: data.subscription_code,
     user_id: userId,

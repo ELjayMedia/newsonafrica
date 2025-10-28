@@ -37,7 +37,9 @@ describe("Paystack webhook handlers", () => {
       },
     })
     await handlers.handleChargeSuccess(chargeData as any, client)
-    expect(client.from("transactions").insert).toHaveBeenCalled()
+    expect(client.from("transactions").insert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user1" }),
+    )
   })
 
   it("handleChargeSuccess throws on insert error", async () => {
@@ -71,7 +73,9 @@ describe("Paystack webhook handlers", () => {
       },
     })
     await handlers.handleSubscriptionCreated(subCreateData as any, client)
-    expect(client.from("subscriptions").insert).toHaveBeenCalled()
+    expect(client.from("subscriptions").insert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user1" }),
+    )
   })
 
   it("handleSubscriptionCreated throws on insert error", async () => {
