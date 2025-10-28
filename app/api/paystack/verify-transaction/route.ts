@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/request"
+import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
