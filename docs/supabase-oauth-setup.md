@@ -66,6 +66,14 @@ In your Supabase project:
 - **"Invalid redirect URI" error**: Verify OAuth app settings match Supabase callback URL
 - **Session not persisting**: Check that callback handler is working correctly
 - **Profile not created**: Verify database permissions and RLS policies
-\`\`\`
 
-Let's also create a client-side auth state manager:
+## Client-side Auth State Management
+
+To keep the signed-in user available across your application, add a client-side store that reacts to Supabase session changes.
+
+1. Create a context or store (for example, `contexts/AuthContext.tsx`) that exposes the current `session` and `user`.
+2. Subscribe to Supabase auth events with `supabase.auth.onAuthStateChange` and update the store whenever a session starts, refreshes, or ends.
+3. Wrap your app in the provider so components can call a `useAuth` hook to access user data and loading state.
+4. In pages that require authentication, check the user from the auth context before rendering protected content.
+
+With these steps in place, the OAuth setup will surface session changes instantly in the UI and prevent stale auth states.
