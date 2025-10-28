@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
             .select("id")
             .eq("email", customer.email)
             .maybeSingle()
+            .returns<{ id: string }>()
 
           if (profileMatch?.id) {
             userId = profileMatch.id
