@@ -4,6 +4,7 @@ import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 
@@ -40,7 +41,7 @@ export const mapGraphqlTagNode = (node: GraphqlTagNode): WordPressTag | null => 
   }
 }
 
-export const DEFAULT_COUNTRY = process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
+export const DEFAULT_COUNTRY = DEFAULT_SITE_COUNTRY
 export const FP_TAG_SLUG = "fp" as const
 
 const TAG_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT

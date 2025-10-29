@@ -7,7 +7,7 @@ import {
   SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS,
   SUPPORTED_EDITIONS as SUPPORTED_EDITION_DEFINITIONS,
 } from "@/lib/editions"
-import { DEFAULT_COUNTRY as WORDPRESS_DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
+import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
 
 const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
 
@@ -15,7 +15,7 @@ const FALLBACK_COUNTRY = "sz"
 
 // Default country mapping based on user preferences or URL structure
 export const DEFAULT_COUNTRY =
-  normalizeCountry(WORDPRESS_DEFAULT_COUNTRY) ?? FALLBACK_COUNTRY
+  normalizeCountry(DEFAULT_SITE_COUNTRY) ?? FALLBACK_COUNTRY
 
 // Supported countries
 export const SUPPORTED_COUNTRIES = SUPPORTED_COUNTRY_EDITIONS.map((country) => country.code)
