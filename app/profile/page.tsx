@@ -10,8 +10,6 @@ export const metadata: Metadata = {
   description: "View and edit your News On Africa profile",
 }
 
-export const dynamic = "force-dynamic"
-
 export default async function ProfilePage() {
   const supabase = createClient()
 
