@@ -140,7 +140,7 @@ export const mapGraphqlPostToWordPressPost = (
 ): WordPressPost => ({
   databaseId: post.databaseId ?? undefined,
   id: post.id ?? undefined,
-  slug: post.slug ?? undefined,
+  slug: typeof post.slug === "string" ? post.slug.toLowerCase() : undefined,
   date: post.date ?? undefined,
   modified: post.modified ?? undefined,
   title: post.title ?? "",

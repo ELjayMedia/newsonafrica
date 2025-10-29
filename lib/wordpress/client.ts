@@ -1,3 +1,4 @@
+import { env } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithRetry } from "../utils/fetchWithRetry"
@@ -34,6 +35,29 @@ export interface FetchWordPressGraphQLOptions {
   revalidate?: number
 }
 
+const buildServerHeaders = (): Record<string, string> => {
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL || "https://app.newsonafrica.com"
+
+  return {
+    "User-Agent": `NewsOnAfrica/1.0 (+${siteUrl})`,
+    Origin: siteUrl,
+    Referer: siteUrl,
+  }
+}
+
+const resolveBaseHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  }
+
+  if (typeof window === "undefined") {
+    Object.assign(headers, buildServerHeaders())
+  }
+
+  return headers
+}
+
 const dedupe = (values?: readonly string[]): string[] | undefined => {
   if (!values?.length) {
     return undefined
@@ -53,7 +77,7 @@ export async function fetchWordPressGraphQL<T>(
   try {
     const res = await fetchWithRetry(base, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: resolveBaseHeaders(),
       body: JSON.stringify({ query, variables }),
       next: {
         revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,

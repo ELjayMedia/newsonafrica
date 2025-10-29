@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 
 import { FeaturedHeroClient as FeaturedHero } from "@/components/client/FeaturedHeroClient"
@@ -29,6 +29,14 @@ export interface HomeContentClientProps {
   }
 }
 
+type HomeApiResponse = {
+  taggedPosts?: HomePost[]
+  featuredPosts?: HomePost[]
+  categories?: Category[]
+  recentPosts?: HomePost[]
+  categoryPosts?: Record<string, HomePost[]>
+}
+
 const isOnline = () => {
   if (typeof navigator !== "undefined" && "onLine" in navigator) {
     return navigator.onLine
@@ -48,8 +56,12 @@ const mapCategoryPostsForConfigs = (
 
   return configs.reduce<Record<string, HomePost[]>>((acc, config) => {
     const resolvedSlug = resolveCategorySlug(config)
+    const normalizedSlug = resolvedSlug.toLowerCase()
+    const fallbackSlug = config.name.toLowerCase()
     const posts =
-      categoryPostsBySlug[resolvedSlug.toLowerCase()] ?? categoryPostsBySlug[resolvedSlug]
+      categoryPostsBySlug[normalizedSlug] ??
+      categoryPostsBySlug[resolvedSlug] ??
+      categoryPostsBySlug[fallbackSlug]
 
     if (posts?.length) {
       acc[config.name] = posts
@@ -91,12 +103,14 @@ export function HomeContentClient({
   initialData,
 }: HomeContentClientProps) {
   const [isOffline, setIsOffline] = useState(!isOnline())
+  const [asyncData, setAsyncData] = useState<HomeApiResponse | null>(null)
+  const fetchedCountriesRef = useRef<Set<string>>(new Set())
 
   const currentCountry = getCurrentCountry()
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
 
-  const resolvedData = useMemo(() => {
+  const baseData = useMemo(() => {
     if (initialData) {
       return {
         ...initialData,
@@ -106,6 +120,20 @@ export function HomeContentClient({
 
     return buildFallbackData(baselinePosts, featuredPosts)
   }, [baselinePosts, featuredPosts, initialData])
+
+  const resolvedData = useMemo(() => {
+    if (!asyncData) {
+      return baseData
+    }
+
+    return {
+      taggedPosts: asyncData.taggedPosts ?? baseData.taggedPosts,
+      featuredPosts: asyncData.featuredPosts ?? baseData.featuredPosts,
+      categories: asyncData.categories ?? baseData.categories,
+      recentPosts: asyncData.recentPosts ?? baseData.recentPosts,
+      categoryPosts: asyncData.categoryPosts ?? baseData.categoryPosts,
+    }
+  }, [asyncData, baseData])
 
   const categoryPosts = useMemo(
     () => mapCategoryPostsForConfigs(categoryConfigs, resolvedData.categoryPosts),
@@ -235,6 +263,63 @@ export function HomeContentClient({
       </section>
     )
   }
+
+  useEffect(() => {
+    const fetchedCountries = fetchedCountriesRef.current
+    if (fetchedCountries.has(currentCountry)) {
+      return
+    }
+
+    let isCancelled = false
+    const controller = new AbortController()
+    fetchedCountries.add(currentCountry)
+
+    const fetchLatestHome = async () => {
+      try {
+        const params = new URLSearchParams({ country: currentCountry })
+        const categorySlugs = categoryConfigs
+          .map((config) => resolveCategorySlug(config).toLowerCase())
+          .filter(Boolean)
+
+        if (categorySlugs.length > 0) {
+          params.set("categories", categorySlugs.join(","))
+        }
+
+        const response = await fetch(`/api/home?${params.toString()}`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Home API request failed with status ${response.status}`)
+        }
+
+        const json = (await response.json()) as HomeApiResponse
+
+        if (!isCancelled && json) {
+          setAsyncData(json)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          fetchedCountries.delete(currentCountry)
+
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            console.error("[v1] Failed to fetch aggregated home feed from WordPress", {
+              countryCode: currentCountry,
+              error,
+            })
+          }
+        }
+      }
+    }
+
+    fetchLatestHome()
+
+    return () => {
+      isCancelled = true
+      controller.abort()
+      fetchedCountries.delete(currentCountry)
+    }
+  }, [currentCountry])
 
   return (
     <ErrorBoundary>
