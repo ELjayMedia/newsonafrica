@@ -5,12 +5,15 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
+import type { Database } from "@/types/supabase"
 import {
   fetchBookmarkStats,
   getDefaultBookmarkStats,
 } from "@/lib/bookmarks/stats"
 import { derivePagination } from "@/lib/bookmarks/pagination"
 import type { BookmarkListPayload, BookmarkRow } from "@/types/bookmarks"
+
+type BookmarkInsert = Database["public"]["Tables"]["bookmarks"]["Insert"]
 export type {
   BookmarkListPayload,
   BookmarkPagination,
@@ -133,7 +136,7 @@ export async function addBookmark(
       throw new ActionError("Bookmark already exists", { status: 409 })
     }
 
-    const { error } = await supabase.from("bookmarks").insert({
+    const newBookmark: BookmarkInsert = {
       user_id: userId,
       post_id: postId,
       country: payload.country ?? null,
@@ -146,9 +149,11 @@ export async function addBookmark(
           : null,
       category: payload.category ?? null,
       tags: payload.tags ?? null,
-      read_status: "unread" as const,
+      read_status: "unread",
       notes: payload.notes ?? null,
-    })
+    }
+
+    const { error } = await supabase.from("bookmarks").insert(newBookmark)
 
     if (error) {
       throw new ActionError("Failed to add bookmark", { cause: error })
