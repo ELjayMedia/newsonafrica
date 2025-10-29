@@ -23,11 +23,14 @@ import {
   removeBookmark as removeBookmarkAction,
   updateBookmark as updateBookmarkAction,
   type AddBookmarkInput,
-  type BookmarkListPayload,
-  type BookmarkRow,
-  type BookmarkStats as ServerBookmarkStats,
   type UpdateBookmarkInput,
 } from "@/app/actions/bookmarks"
+import type {
+  BookmarkListPayload,
+  BookmarkPagination,
+  BookmarkRow,
+  BookmarkStats,
+} from "@/types/bookmarks"
 import { ensureActionError } from "@/lib/supabase/action-result"
 
 interface Bookmark {
@@ -46,12 +49,11 @@ interface Bookmark {
   notes?: string
 }
 
-type BookmarkStats = ServerBookmarkStats
-
 interface BookmarksContextType {
   bookmarks: Bookmark[]
   loading: boolean
   stats: BookmarkStats
+  pagination: BookmarkPagination
   addBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
   toggleBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
@@ -86,6 +88,13 @@ type BookmarkHydrationMap = Record<
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 const BOOKMARK_SYNC_QUEUE = "bookmarks-write-queue"
 const DEFAULT_STATS: BookmarkStats = { total: 0, unread: 0, categories: {} }
+const DEFAULT_PAGINATION: BookmarkPagination = {
+  page: 1,
+  limit: 0,
+  hasMore: false,
+  nextPage: null,
+  nextCursor: null,
+}
 
 const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
   const categories: Record<string, number> = {}
@@ -233,6 +242,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const { user, ensureSessionFreshness } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [stats, setStats] = useState<BookmarkStats>(DEFAULT_STATS)
+  const [pagination, setPagination] = useState<BookmarkPagination>(DEFAULT_PAGINATION)
   const [loading, setLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
@@ -314,6 +324,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
 
       setBookmarks(hydrated)
       setStats(payload.stats ?? DEFAULT_STATS)
+      setPagination(payload.pagination ?? DEFAULT_PAGINATION)
     },
     [hydrateBookmarks],
   )
@@ -449,6 +460,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         if (!user) {
           setBookmarks([])
           setStats(DEFAULT_STATS)
+          setPagination(DEFAULT_PAGINATION)
           return
         }
 
@@ -490,6 +502,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     if (!user) {
       setBookmarks([])
       setStats(DEFAULT_STATS)
+      setPagination(DEFAULT_PAGINATION)
       setLoading(false)
       return
     }
@@ -861,6 +874,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       bookmarks,
       loading,
       stats,
+      pagination,
       addBookmark,
       removeBookmark,
       toggleBookmark,
@@ -881,6 +895,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       bookmarks,
       loading,
       stats,
+      pagination,
       addBookmark,
       removeBookmark,
       toggleBookmark,
