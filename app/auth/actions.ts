@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation"
 
+import { writeSessionCookie } from "@/lib/auth/session-cookie"
 import { getSupabaseClient } from "@/lib/supabase/server-component-client"
 
 export type AuthFormState = {
@@ -98,13 +99,35 @@ export async function signInWithPasswordAction(
     }
 
     const supabase = getSupabaseClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
       return createErrorState(error.message)
+    }
+
+    const userId = data.user?.id
+    if (userId) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username, avatar_url, role, created_at, updated_at")
+          .eq("id", userId)
+          .maybeSingle()
+
+        await writeSessionCookie({
+          userId,
+          username: profile?.username ?? null,
+          avatar_url: profile?.avatar_url ?? null,
+          role: profile?.role ?? null,
+          created_at: profile?.created_at ?? null,
+          updated_at: profile?.updated_at ?? null,
+        })
+      } catch (cookieError) {
+        console.error("Failed to prime session cookie after password sign-in", cookieError)
+      }
     }
 
     redirect(redirectTo)
@@ -143,7 +166,7 @@ export async function signUpWithPasswordAction(
     }
 
     const supabase = getSupabaseClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -153,6 +176,28 @@ export async function signUpWithPasswordAction(
 
     if (error) {
       return createErrorState(error.message)
+    }
+
+    const userId = data.user?.id
+    if (userId) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username, avatar_url, role, created_at, updated_at")
+          .eq("id", userId)
+          .maybeSingle()
+
+        await writeSessionCookie({
+          userId,
+          username: profile?.username ?? null,
+          avatar_url: profile?.avatar_url ?? null,
+          role: profile?.role ?? null,
+          created_at: profile?.created_at ?? null,
+          updated_at: profile?.updated_at ?? null,
+        })
+      } catch (cookieError) {
+        console.error("Failed to prime session cookie after password sign-up", cookieError)
+      }
     }
 
     return createSuccessState(

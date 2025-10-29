@@ -2,6 +2,8 @@ import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+import { writeSessionCookie } from "@/lib/auth/session-cookie"
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
@@ -53,6 +55,25 @@ export async function GET(request: NextRequest) {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
+        }
+
+        try {
+          const { data: profileSummary } = await supabase
+            .from("profiles")
+            .select("username, avatar_url, role, created_at, updated_at")
+            .eq("id", data.session.user.id)
+            .maybeSingle()
+
+          await writeSessionCookie({
+            userId: data.session.user.id,
+            username: profileSummary?.username ?? null,
+            avatar_url: profileSummary?.avatar_url ?? null,
+            role: profileSummary?.role ?? null,
+            created_at: profileSummary?.created_at ?? null,
+            updated_at: profileSummary?.updated_at ?? null,
+          })
+        } catch (cookieError) {
+          console.error("Failed to persist session cookie after callback", cookieError)
         }
 
         // Successful login - redirect to intended page or home

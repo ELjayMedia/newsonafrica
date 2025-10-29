@@ -1,6 +1,11 @@
 import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient, User, Session, AuthError } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
+import {
+  clearSessionCookieClient,
+  persistSessionCookie,
+} from "@/lib/auth/session-cookie-client"
+import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -130,6 +135,20 @@ export function getSupabaseClient(): SupabaseClient<Database> {
 
 export const supabase = getSupabaseClient()
 
+function createSessionCookiePayload(
+  userId: string,
+  profile: Partial<UserProfile> | null,
+): SessionCookieProfile {
+  return {
+    userId,
+    username: profile?.username ?? null,
+    avatar_url: profile?.avatar_url ?? null,
+    role: profile?.role ?? null,
+    created_at: profile?.created_at ?? null,
+    updated_at: profile?.updated_at ?? null,
+  }
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey)
 }
@@ -204,6 +223,43 @@ function handleSupabaseError(error: AuthError | Error | null): string | null {
  * @returns Promise with session data, user information, and profile
  */
 export async function getUserSession(): Promise<AuthResponse & { profile: UserProfile | null }> {
+  if (typeof window === "undefined") {
+    const { getServerUserSession } = await import("@/lib/supabase/server-component-client")
+    const result = await getServerUserSession()
+
+    if (!result.success) {
+      return {
+        user: null,
+        session: null,
+        profile: null,
+        error: result.error ?? "Failed to retrieve user session",
+        success: false,
+      }
+    }
+
+    const profile = result.profile
+      ? ({
+          id: result.profile.userId,
+          username: result.profile.username ?? "",
+          avatar_url: result.profile.avatar_url ?? undefined,
+          role: result.profile.role ?? undefined,
+          created_at: result.profile.created_at ?? new Date(0).toISOString(),
+          updated_at:
+            result.profile.updated_at ??
+            result.profile.created_at ??
+            new Date(0).toISOString(),
+        } as UserProfile)
+      : null
+
+    return {
+      user: result.user,
+      session: result.session,
+      profile,
+      error: null,
+      success: true,
+    }
+  }
+
   try {
     const {
       data: { session },
@@ -429,6 +485,8 @@ export async function signOutUser(): Promise<SupabaseResponse<null>> {
       }
     }
 
+    await clearSessionCookieClient()
+
     return {
       data: null,
       error: null,
@@ -645,10 +703,20 @@ export async function updateUserProfile(
       }
     }
 
+    if (data) {
+      await persistSessionCookie(createSessionCookiePayload(userId, data as UserProfile))
+
+      return {
+        data: data as UserProfile,
+        error: null,
+        success: true,
+      }
+    }
+
     return {
-      data: data as UserProfile,
-      error: null,
-      success: true,
+      data: null,
+      error: "Failed to update profile",
+      success: false,
     }
   } catch (error) {
     console.error("Error updating user profile:", error)

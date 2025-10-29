@@ -12,7 +12,7 @@ interface AuthorPageProps {
 }
 
 export const runtime = "nodejs"
-export const revalidate = 600 // Revalidate every 10 minutes
+export const revalidate = 3600 // Revalidate every hour
 
 // Enhanced metadata generation for author pages
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {

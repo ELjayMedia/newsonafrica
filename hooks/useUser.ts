@@ -8,6 +8,12 @@ import {
   supabaseClient,
 } from "@/lib/api/supabase"
 import type { UserProfile } from "@/lib/api/supabase"
+import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
+import {
+  clearSessionCookieClient,
+  fetchSessionCookie,
+  persistSessionCookie,
+} from "@/lib/auth/session-cookie-client"
 
 // Hook return type
 export interface UseUserReturn {
@@ -24,6 +30,27 @@ export interface UseUserReturn {
 const profileCache: { [userId: string]: UserProfile } = {}
 const profileCacheTimestamp: { [userId: string]: number } = {}
 const PROFILE_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+function mapCookieToProfile(cookie: SessionCookieProfile): UserProfile {
+  return {
+    id: cookie.userId,
+    username: cookie.username ?? "",
+    avatar_url: cookie.avatar_url ?? undefined,
+    role: cookie.role ?? undefined,
+    created_at: cookie.created_at ?? new Date(0).toISOString(),
+    updated_at: cookie.updated_at ?? cookie.created_at ?? new Date(0).toISOString(),
+  }
+}
+
+function createCookiePayload(userId: string, profile: UserProfile | null): SessionCookieProfile {
+  return {
+    userId,
+    username: profile?.username ?? null,
+    avatar_url: profile?.avatar_url ?? null,
+    role: profile?.role ?? null,
+    created_at: profile?.created_at ?? null,
+    updated_at: profile?.updated_at ?? null,
+  }
+}
 
 /**
  * Custom hook to manage user authentication state with Supabase
@@ -82,6 +109,7 @@ export function useUser(): UseUserReturn {
           // Update cache
           profileCache[userId] = data as UserProfile
           profileCacheTimestamp[userId] = now
+          await persistSessionCookie(createCookiePayload(userId, data as UserProfile))
           return data as UserProfile
         }
 
@@ -118,6 +146,7 @@ export function useUser(): UseUserReturn {
             delete profileCache[user.id]
             delete profileCacheTimestamp[user.id]
           }
+          await clearSessionCookieClient()
         }
       } catch (error) {
         console.error("Error handling auth state change:", error)
@@ -164,8 +193,12 @@ export function useUser(): UseUserReturn {
 
         const userProfile = await fetchUserProfile(userId)
         setProfile(userProfile)
+        if (userProfile) {
+          await persistSessionCookie(createCookiePayload(userId, userProfile))
+        }
       } else {
         setProfile(null)
+        await clearSessionCookieClient()
       }
     } catch (error) {
       console.error("Error refreshing user:", error)
@@ -191,6 +224,15 @@ export function useUser(): UseUserReturn {
       }
 
       try {
+        const cookieProfile = await fetchSessionCookie()
+
+        if (cookieProfile) {
+          const mappedProfile = mapCookieToProfile(cookieProfile)
+          setProfile(mappedProfile)
+          profileCache[cookieProfile.userId] = mappedProfile
+          profileCacheTimestamp[cookieProfile.userId] = Date.now()
+        }
+
         // Get initial session
         const {
           data: { session: initialSession },
