@@ -135,14 +135,6 @@ export type PostFieldsFragment = {
       }>
     }>
   }>
-  readonly countries?: Maybe<{
-    readonly __typename?: "PostToCountryConnection"
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<{
-      readonly __typename?: "Country"
-      readonly databaseId?: Maybe<Scalars["Int"]>
-      readonly slug?: Maybe<Scalars["String"]>
-    }>>>
-  }>
   readonly categories?: Maybe<{
     readonly __typename?: "PostToCategoryConnection"
     readonly nodes?: Maybe<ReadonlyArray<Maybe<{

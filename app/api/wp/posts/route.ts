@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
+import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 export const runtime = "nodejs"
@@ -22,8 +22,10 @@ export async function GET(req: NextRequest) {
     if (country.length === 2) {
       opts.countryCode = country.toLowerCase()
     } else {
-      const termId = await resolveCountryTermId(country)
-      if (termId) opts.countryTermId = termId
+      const resolved = resolveCountryCode(country)
+      if (resolved) {
+        opts.countryCode = resolved
+      }
     }
   }
 

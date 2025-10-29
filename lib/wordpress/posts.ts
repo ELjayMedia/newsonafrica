@@ -2,7 +2,6 @@ import { env } from "@/config/env"
 import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
 import {
-  COUNTRY_BY_SLUG_QUERY,
   FEATURED_POSTS_QUERY,
   LATEST_POSTS_QUERY,
   POST_CATEGORIES_QUERY,
@@ -15,6 +14,7 @@ import {
   TAGS_QUERY,
 } from "../wordpress-queries"
 import { fetchWordPressGraphQL, COUNTRIES } from "./client"
+import { AFRICAN_EDITION } from "../editions"
 import type { WordPressPost } from "@/types/wp"
 import type {
   FeaturedPostsQuery,
@@ -45,7 +45,6 @@ const RELATED_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const TAG_LISTING_REVALIDATE = CACHE_DURATIONS.SHORT
 const TAG_INDEX_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const POST_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
-const COUNTRY_LOOKUP_REVALIDATE = CACHE_DURATIONS.LONG
 const FEATURED_POSTS_REVALIDATE = CACHE_DURATIONS.MEDIUM
 
 type PostsQueryResult = {
@@ -87,18 +86,6 @@ type TagBySlugQueryResult = {
 type PostBySlugQueryResult = {
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
-  } | null
-}
-
-type CountryBySlugQueryResult = {
-  countries?: {
-    nodes?: (
-      | {
-          databaseId?: number | null
-          slug?: string | null
-        }
-      | null
-    )[] | null
   } | null
 }
 
@@ -529,7 +516,6 @@ export const fetchPosts = async (
         featured?: boolean
         countryCode?: string
         ids?: Array<number | string>
-        countryTermId?: number
   } = {},
 ) => {
   if (typeof options === "number") {
@@ -548,7 +534,6 @@ export const fetchPosts = async (
     featured,
     countryCode = DEFAULT_COUNTRY,
     ids,
-    countryTermId,
   } = options
 
   const extraTags = [
@@ -558,7 +543,6 @@ export const fetchPosts = async (
     featured ? "filter:featured" : null,
     search ? `search:${search}` : null,
     ids && ids.length > 0 ? `ids:${ids.map(String).sort().join("-")}` : null,
-    typeof countryTermId === "number" ? `country-term:${countryTermId}` : null,
   ]
   const cacheTags = buildCacheTags({ country: countryCode, section: "posts", extra: extraTags })
 
@@ -609,10 +593,6 @@ export const fetchPosts = async (
 
   if (featured) {
     variables.onlySticky = true
-  }
-
-  if (typeof countryTermId === "number") {
-    variables.countryTermIds = [countryTermId]
   }
 
   const gqlData = await fetchWordPressGraphQL<PostsQueryResult>(
@@ -679,22 +659,15 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
 export async function fetchPost({
   slug,
   countryCode = DEFAULT_COUNTRY,
-  countryTermId,
 }: {
   slug: string
   countryCode?: string
-  countryTermId?: number
 }) {
   const tags = buildCacheTags({ country: countryCode, section: "post", extra: [`slug:${slug}`] })
-  const variables: Record<string, unknown> = { slug }
-  if (typeof countryTermId === "number") {
-    variables.countryTermIds = [countryTermId]
-  }
-
   const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
     countryCode,
     POST_BY_SLUG_QUERY,
-    variables,
+    { slug },
     { tags, revalidate: POST_DETAIL_REVALIDATE },
   )
 
@@ -702,42 +675,49 @@ export async function fetchPost({
   return node ? mapGraphqlPostToWordPressPost(node, countryCode) : null
 }
 
-export async function resolveCountryTermId(slug: string): Promise<number | null> {
-  const normalizedSlug = slug.trim().toLowerCase()
-  if (!normalizedSlug) {
+const slugify = (value: string): string =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+export function resolveCountryCode(input: string): string | null {
+  const normalized = input?.trim().toLowerCase()
+  if (!normalized) {
     return null
   }
 
-  const countryCode = process.env.NEXT_PUBLIC_DEFAULT_SITE || DEFAULT_COUNTRY
-  const cacheTags = buildCacheTags({
-    country: countryCode,
-    section: "countries",
-    extra: [`slug:${normalizedSlug}`],
+  if (COUNTRIES[normalized]) {
+    return normalized
+  }
+
+  const normalizedSlug = slugify(normalized)
+
+  const match = Object.values(COUNTRIES).find((country) => {
+    const codeSlug = slugify(country.code)
+    const nameSlug = slugify(country.name)
+    const canonicalSlug = country.canonicalUrl
+      ? slugify(country.canonicalUrl.split("/").filter(Boolean).pop() ?? "")
+      : ""
+
+    return (
+      codeSlug === normalizedSlug ||
+      nameSlug === normalizedSlug ||
+      (canonicalSlug && canonicalSlug === normalizedSlug)
+    )
   })
 
-  try {
-    const data = await fetchWordPressGraphQL<CountryBySlugQueryResult>(
-      countryCode,
-      COUNTRY_BY_SLUG_QUERY,
-      { slug: [normalizedSlug] },
-      { tags: cacheTags, revalidate: COUNTRY_LOOKUP_REVALIDATE },
-    )
+  if (match) {
+    return match.code
+  }
 
-    const nodes = data?.countries?.nodes ?? []
-    for (const node of nodes) {
-      if (!node) {
-        continue
-      }
-
-      if (typeof node.slug === "string" && node.slug.toLowerCase() === normalizedSlug) {
-        const id = node.databaseId
-        if (typeof id === "number") {
-          return id
-        }
-      }
-    }
-  } catch (error) {
-    console.error(`[v0] Failed to resolve country term id for ${normalizedSlug}:`, error)
+  const africanSlug = slugify(AFRICAN_EDITION.code)
+  const africanNameSlug = slugify(AFRICAN_EDITION.name)
+  if (normalizedSlug === africanSlug || normalizedSlug === africanNameSlug) {
+    return AFRICAN_EDITION.code
   }
 
   return null

@@ -23,12 +23,6 @@ export const POST_FIELDS_FRAGMENT = gql`
         }
       }
     }
-    countries {
-      nodes {
-        databaseId
-        slug
-      }
-    }
     categories {
       nodes {
         databaseId
@@ -325,7 +319,6 @@ export const POSTS_QUERY = gql`
     $includeIds: [ID!]
     $onlySticky: Boolean
     $offset: Int
-    $countryTermIds: [ID!]
   ) {
     posts(
       first: $first
@@ -340,16 +333,6 @@ export const POSTS_QUERY = gql`
         in: $includeIds
         onlySticky: $onlySticky
         offsetPagination: { offset: $offset, size: $first }
-        taxQuery: {
-          relation: AND
-          taxArray: [
-            {
-              taxonomy: COUNTRIES
-              field: TERM_ID
-              terms: $countryTermIds
-            }
-          ]
-        }
       }
     ) {
       pageInfo {
@@ -392,35 +375,14 @@ export const TAG_BY_SLUG_QUERY = gql`
   }
 `
 
-export const COUNTRY_BY_SLUG_QUERY = gql`
-  query CountryBySlug($slug: [String]) {
-    countries(where: { slug: $slug }) {
-      nodes {
-        databaseId
-        slug
-      }
-    }
-  }
-`
-
 export const POST_BY_SLUG_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
-  query PostBySlug($slug: ID!, $countryTermIds: [ID!]) {
+  query PostBySlug($slug: ID!) {
     posts(
       first: 1
       where: {
         status: PUBLISH
         nameIn: [$slug]
-        taxQuery: {
-          relation: AND
-          taxArray: [
-            {
-              taxonomy: COUNTRIES
-              field: TERM_ID
-              terms: $countryTermIds
-            }
-          ]
-        }
       }
     ) {
       nodes {
