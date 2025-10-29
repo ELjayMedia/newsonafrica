@@ -212,7 +212,7 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
 export const CATEGORY_POSTS_BATCH_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
   query CategoryPostsBatch($slugs: [String!]!, $first: Int!) {
-    categories(where: { slugIn: $slugs }) {
+    categories(where: { slug: $slugs }) {
       nodes {
         databaseId
         name
