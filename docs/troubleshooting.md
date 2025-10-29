@@ -27,13 +27,13 @@ The app will automatically use the default GraphQL endpoint pattern: `https://ne
 #### Option 2: Set Correct Values
 If you need to override the defaults, ensure the URLs follow this pattern:
 
-```bash
+\`\`\`bash
 # For Eswatini (sz)
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
 
 # For South Africa (za)
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
-```
+\`\`\`
 
 **Important:**
 - GraphQL URLs must end with `/graphql` and include the country slug
@@ -54,11 +54,11 @@ After making changes, check the server logs for successful GraphQL calls. You sh
 **Solution:**
 Ensure your Supabase environment variables are set correctly:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+\`\`\`
 
 ### Build or Deployment Failures
 
@@ -68,7 +68,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 3. Dependency issues
 
 **Solutions:**
-```bash
+\`\`\`bash
 # Clear cache and reinstall dependencies
 rm -rf .next node_modules
 npm install
@@ -78,7 +78,7 @@ npm run type-check
 
 # Test build locally
 npm run build
-```
+\`\`\`
 
 ### Performance Issues
 
@@ -99,7 +99,7 @@ npm run build
 - Changes not reflecting
 
 **Solutions:**
-```bash
+\`\`\`bash
 # Restart development server
 npm run dev
 
@@ -108,7 +108,7 @@ rm -rf .next
 
 # Check for port conflicts
 lsof -i :3000
-```
+\`\`\`
 
 ## Getting Help
 

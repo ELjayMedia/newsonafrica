@@ -506,4 +506,3 @@ export const CATEGORY_POSTS_QUERY = gql`
     }
   }
 `
-

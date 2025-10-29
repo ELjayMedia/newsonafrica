@@ -28,7 +28,7 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
 The application follows a feature-based architecture with the following structure:
 
-```
+\`\`\`
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -46,7 +46,7 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-```
+\`\`\`
 
 ### Data Flow
 
@@ -68,7 +68,7 @@ news-on-africa/
 
 Create a `.env.local` file with the following variables:
 
-```
+\`\`\`
 # --- App Configuration ---
 NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
@@ -100,14 +100,14 @@ FEATURE_COMMENTS=true
 FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
-```
+\`\`\`
 
 ### Installation
 
 > [!NOTE]
 > The repository standardizes on **pnpm** for dependency management. Install dependencies with `pnpm install` and keep `pnpm-lock.yaml` committed.
 
-```bash
+\`\`\`bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
@@ -117,7 +117,7 @@ pnpm install
 
 # Run the development server
 pnpm dev
-```
+\`\`\`
 
 ## 📦 Deployment
 
@@ -138,7 +138,7 @@ The `/api/search` endpoint now reads directly from WordPress content. It support
 
 ## 🧪 Testing
 
-```bash
+\`\`\`bash
 # Run unit tests
 pnpm test
 
@@ -147,7 +147,7 @@ pnpm test:e2e
 
 # Run linting
 pnpm lint
-```
+\`\`\`
 
 ## 📚 Documentation
 

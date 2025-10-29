@@ -8,7 +8,7 @@ News On Africa is a modern Next.js application that serves as a pan-African news
 
 ## Architecture Diagram
 
-```mermaid
+\`\`\`mermaid
 graph TD
     User[User] --> FE[Frontend - Next.js App]
     FE --> WPGraphQL[WordPress GraphQL API]
@@ -20,7 +20,7 @@ graph TD
     WP --> Webhook[Webhooks]
     Webhook --> Revalidation[Next.js Revalidation]
     Revalidation --> CDN
-```
+\`\`\`
 
 ## Key Components
 

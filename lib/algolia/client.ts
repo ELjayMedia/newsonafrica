@@ -30,4 +30,3 @@ export const resolveSearchIndex = (
 ): AlgoliaIndex | null => {
   return null
 }
-

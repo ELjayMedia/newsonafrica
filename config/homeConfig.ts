@@ -107,4 +107,3 @@ export const contentMessages = {
   noContent: "No Content Available",
   noContentDescription: "Please check back later for the latest news and updates.",
 }
-

@@ -63,4 +63,3 @@ describe("getAfricanHomeFeed", () => {
     expect(feed.remainder).toEqual([])
   })
 })
-

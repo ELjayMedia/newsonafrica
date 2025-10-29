@@ -31,11 +31,11 @@ Ensure the following environment variables are configured in GitHub and Vercel:
 
 ## Manual Deployment
 
-```bash
+\`\`\`bash
 pnpm install
 pnpm build
 pnpm dlx vercel --prod
-```
+\`\`\`
 
 ## Troubleshooting
 
