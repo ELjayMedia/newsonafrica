@@ -18,17 +18,17 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const dynamic = "force-dynamic"
 export const revalidate = 60
 
 type RouteParams = { params: { countryCode: string; slug: string } }
+type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
 
 const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =>
   `${baseUrl}/${countryCode}/article/${slug}/opengraph-image`
 
 const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_PATH}`
 
-export async function generateMetadata({ params }: { params: Promise<RouteParams["params"]> }): Promise<Metadata> {
+export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
@@ -85,8 +85,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
   }
 }
 
-export default async function ArticlePage({ params }: RouteParams) {
-  const { countryCode, slug } = params
+export default async function ArticlePage({ params }: RouteParamsPromise) {
+  const { countryCode, slug } = await params
   const edition = resolveEdition(countryCode)
 
   if (!edition) {
