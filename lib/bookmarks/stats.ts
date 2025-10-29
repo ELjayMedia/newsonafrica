@@ -1,5 +1,6 @@
 import type { SupabaseServerClient } from "@/app/actions/supabase"
 import type { BookmarkStats } from "@/types/bookmarks"
+import { executeListQuery } from "@/lib/supabase/list-query"
 
 export interface StatusAggregateRow {
   read_status: string | null
@@ -52,17 +53,16 @@ export async function fetchBookmarkStats(
   userId: string,
 ): Promise<BookmarkStats> {
   const [statusResult, categoryResult] = await Promise.all([
-    supabase
-      .from("bookmarks")
-      .select("read_status, count:count(*)", { head: false })
-      .eq("user_id", userId)
-      .group("read_status"),
-    supabase
-      .from("bookmarks")
-      .select("category, count:count(*)", { head: false })
-      .eq("user_id", userId)
-      .not("category", "is", null)
-      .group("category"),
+    executeListQuery(supabase, "bookmarks", (query) =>
+      query.select("read_status, count:count(*)", { head: false }).eq("user_id", userId).group("read_status"),
+    ),
+    executeListQuery(supabase, "bookmarks", (query) =>
+      query
+        .select("category, count:count(*)", { head: false })
+        .eq("user_id", userId)
+        .not("category", "is", null)
+        .group("category"),
+    ),
   ])
 
   if (statusResult.error) {

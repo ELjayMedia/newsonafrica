@@ -3,6 +3,7 @@
 import { withSupabaseSession } from "@/app/actions/supabase"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
+import { executeListQuery } from "@/lib/supabase/list-query"
 
 export type SubscriptionRow = Database["public"]["Tables"]["subscriptions"]["Row"]
 export type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
@@ -25,11 +26,9 @@ export async function getUserSubscriptions(userId: string): Promise<ActionResult
       throw new ActionError("You do not have access to these subscriptions", { status: 403 })
     }
 
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .select<SubscriptionRow>("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
+    const { data, error } = await executeListQuery(supabase, "subscriptions", (query) =>
+      query.select<SubscriptionRow>("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    )
 
     if (error) {
       throw new ActionError("Failed to load subscriptions", { cause: error })

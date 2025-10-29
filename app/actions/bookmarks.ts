@@ -11,6 +11,7 @@ import {
   getDefaultBookmarkStats,
 } from "@/lib/bookmarks/stats"
 import { derivePagination } from "@/lib/bookmarks/pagination"
+import { executeListQuery } from "@/lib/supabase/list-query"
 import type { BookmarkListPayload, BookmarkRow } from "@/types/bookmarks"
 
 type BookmarkInsert = Database["public"]["Tables"]["bookmarks"]["Insert"]
@@ -67,11 +68,9 @@ async function fetchBookmarkList(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<BookmarkListPayload> {
-  const { data, error } = await supabase
-    .from("bookmarks")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+  const { data, error } = await executeListQuery(supabase, "bookmarks", (query) =>
+    query.select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+  )
 
   if (error) {
     throw new ActionError("Failed to fetch bookmarks", { cause: error })

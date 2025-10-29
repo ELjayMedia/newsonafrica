@@ -4,6 +4,7 @@ import { applyRateLimit, handleApiError, successResponse, withCors, logRequest }
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import { executeListQuery } from "@/lib/supabase/list-query"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import {
@@ -266,8 +267,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw new ValidationError("Invalid cursor", { cursor: ["Cursor is malformed"] })
     }
 
-    const createCommentsQuery = () => supabase.from("comments").eq("post_id", postId)
-
     const applyParentFilter = (builder: any) => {
       if (parentId === null) {
         return builder.is("parent_id", null)
@@ -292,9 +291,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Build query
-    let query = applyParentFilter(
-      createCommentsQuery().select("*, profile:profiles(username, avatar_url)"),
-    )
+    const buildBaseQuery = (builder: any, { includeCursor }: { includeCursor: boolean }) => {
+      let updated = builder.eq("post_id", postId)
+      updated = applyParentFilter(updated)
+      updated = applySimpleStatusFilters(updated)
+      return applyOrFilters(updated, statusOrConditions, includeCursor ? cursorConditions : [])
+    }
 
     const {
       data: { session },
@@ -336,15 +338,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    query = applySimpleStatusFilters(query)
-
     const cursorConditions = buildCursorConditions("newest", decodedCursor)
-    query = applyOrFilters(query, statusOrConditions, cursorConditions)
 
-    const { data: commentsData, error } = await query
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(limit + 1)
+    const { data: commentsData, error } = await executeListQuery(supabase, "comments", (query) => {
+      const baseQuery = buildBaseQuery(query.select("*, profile:profiles(username, avatar_url)"), {
+        includeCursor: true,
+      })
+
+      return baseQuery
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(limit + 1)
+    })
 
     if (error) {
       throw new Error(`Failed to fetch comments: ${error.message}`)
@@ -357,13 +362,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let totalCount: number | undefined
 
     if (page === 0) {
-      let countQuery = applySimpleStatusFilters(
-        applyParentFilter(createCommentsQuery().select("id", { count: "exact", head: true })),
+      const { count, error: countError } = await executeListQuery(
+        supabase,
+        "comments",
+        (query) =>
+          buildBaseQuery(query.select("id", { count: "exact", head: true }), { includeCursor: false }),
       )
-
-      countQuery = applyOrFilters(countQuery, statusOrConditions, [])
-
-      const { count, error: countError } = await countQuery
 
       if (countError) {
         console.error("Failed to count comments:", countError)
