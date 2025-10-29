@@ -6,16 +6,14 @@ import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
+import { derivePagination } from "@/lib/bookmarks/pagination"
+import { fetchBookmarkStats, getDefaultBookmarkStats } from "@/lib/bookmarks/stats"
+import type { BookmarkRow, BookmarkStats } from "@/types/bookmarks"
 
 export const runtime = "nodejs"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
-
-type BookmarkStatsRow = {
-  read_status?: string | null
-  category?: string | null
-}
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -32,8 +30,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "20")
+    const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
+    const limit = Math.max(Number.parseInt(searchParams.get("limit") || "20"), 1)
     const search = searchParams.get("search")
     const category = searchParams.get("category")
     const status = searchParams.get("status") // 'read' | 'unread'
@@ -42,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit
 
-    let query = supabase.from("bookmarks").select("*", { count: "exact" }).eq("user_id", user.id)
+    let query = supabase.from("bookmarks").select("*").eq("user_id", user.id)
 
     // Apply filters
     if (search) {
@@ -64,45 +62,48 @@ export async function GET(request: NextRequest) {
     // Apply sorting
     query = query.order(sortBy, { ascending: sortOrder === "asc" })
 
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1)
-
-    const { data: bookmarks, error, count } = await query
+    const { data: rows, error } = await query.limit(limit + 1, { offset })
 
     if (error) {
       console.error("Error fetching bookmarks:", error)
       return jsonWithCors(request, { error: "Failed to fetch bookmarks" }, { status: 500 })
     }
 
-    // Calculate stats
-    const { data: statsData } = await supabase.from("bookmarks").select("read_status, category").eq("user_id", user.id)
+    const { items: bookmarks, pagination } = derivePagination<BookmarkRow>({
+      page,
+      limit,
+      rows: (rows ?? []) as BookmarkRow[],
+      cursorEncoder: (row) => {
+        const record = row as BookmarkRow
+        const cursorPayload = {
+          sortBy,
+          sortOrder,
+          value: (record as Record<string, unknown>)[sortBy] ?? null,
+          id: record.id ?? null,
+        }
+        try {
+          return JSON.stringify(cursorPayload)
+        } catch (cursorError) {
+          console.warn("Failed to encode bookmark cursor", cursorError)
+          return null
+        }
+      },
+    })
 
-    const statsRows = (Array.isArray(statsData) ? statsData : []) as BookmarkStatsRow[]
-
-    const stats = {
-      total: count || 0,
-      unread: statsRows.filter((b) => b.read_status !== "read").length || 0,
-      categories:
-        statsRows.reduce(
-          (acc, b) => {
-            if (b.category) {
-              acc[b.category] = (acc[b.category] || 0) + 1
-            }
-            return acc
-          },
-          {} as Record<string, number>,
-        ) || {},
+    let stats: BookmarkStats | null = null
+    if (page === 1) {
+      try {
+        stats = await fetchBookmarkStats(supabase, user.id)
+      } catch (statsError) {
+        console.error("Failed to fetch bookmark stats:", statsError)
+        stats = getDefaultBookmarkStats()
+      }
     }
 
     return jsonWithCors(request, {
-      bookmarks: bookmarks || [],
+      bookmarks,
       stats,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
-      },
+      pagination,
     })
   } catch (error) {
     console.error("Error in bookmarks API:", error)

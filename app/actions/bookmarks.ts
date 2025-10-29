@@ -5,22 +5,20 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
-import type { Database } from "@/types/supabase"
+import {
+  fetchBookmarkStats,
+  getDefaultBookmarkStats,
+} from "@/lib/bookmarks/stats"
+import { derivePagination } from "@/lib/bookmarks/pagination"
+import type { BookmarkListPayload, BookmarkRow } from "@/types/bookmarks"
+export type {
+  BookmarkListPayload,
+  BookmarkPagination,
+  BookmarkRow,
+  BookmarkStats,
+} from "@/types/bookmarks"
 
 const BOOKMARK_PATHS = ["/bookmarks"]
-
-export type BookmarkRow = Database["public"]["Tables"]["bookmarks"]["Row"]
-
-export interface BookmarkStats {
-  total: number
-  unread: number
-  categories: Record<string, number>
-}
-
-export interface BookmarkListPayload {
-  bookmarks: BookmarkRow[]
-  stats: BookmarkStats
-}
 
 export interface ListBookmarksOptions {
   revalidate?: boolean
@@ -55,26 +53,6 @@ function ensureUserId(session: { user: { id: string } } | null | undefined): str
   return userId
 }
 
-function computeStats(rows: BookmarkRow[]): BookmarkStats {
-  const categories: Record<string, number> = {}
-  let unread = 0
-
-  for (const row of rows) {
-    if (row.category) {
-      categories[row.category] = (categories[row.category] || 0) + 1
-    }
-    if (row.read_status !== "read") {
-      unread += 1
-    }
-  }
-
-  return {
-    total: rows.length,
-    unread,
-    categories,
-  }
-}
-
 async function revalidateBookmarkCache() {
   revalidateTag(CACHE_TAGS.BOOKMARKS)
   for (const path of BOOKMARK_PATHS) {
@@ -82,7 +60,10 @@ async function revalidateBookmarkCache() {
   }
 }
 
-async function fetchBookmarkList(supabase: SupabaseServerClient, userId: string): Promise<BookmarkListPayload> {
+async function fetchBookmarkList(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<BookmarkListPayload> {
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
@@ -94,9 +75,25 @@ async function fetchBookmarkList(supabase: SupabaseServerClient, userId: string)
   }
 
   const rows = (data ?? []) as BookmarkRow[]
+  const stats = rows.length
+    ? await fetchBookmarkStats(supabase, userId)
+    : getDefaultBookmarkStats()
+  const { items } = derivePagination({
+    page: 1,
+    limit: rows.length || 1,
+    rows,
+  })
+
   return {
-    bookmarks: rows,
-    stats: computeStats(rows),
+    bookmarks: items,
+    stats,
+    pagination: {
+      page: 1,
+      limit: rows.length || 1,
+      hasMore: false,
+      nextPage: null,
+      nextCursor: null,
+    },
   }
 }
 
