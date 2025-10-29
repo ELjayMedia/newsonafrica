@@ -7,6 +7,7 @@ import type { Database } from "@/types/supabase"
 import { v4 as uuidv4 } from "uuid"
 import { clearQueryCache } from "@/utils/supabase-query-utils"
 import { toast } from "@/hooks/use-toast"
+import { executeListQuery } from "@/lib/supabase/list-query"
 
 // Store recent comment submissions for rate limiting
 const recentSubmissions = new Map<string, number>()
@@ -224,17 +225,22 @@ export async function fetchComments(
 
     if (page === 0) {
       try {
-        let countQuery = client
-          .from("comments")
-          .select("id", { count: "exact", head: true })
-          .eq("post_id", postId)
-          .is("parent_id", null)
+        const { count: commentCount, error: countError } = await executeListQuery(
+          client,
+          "comments",
+          (query) => {
+            let builder = query
+              .select("id", { count: "exact", head: true })
+              .eq("post_id", postId)
+              .is("parent_id", null)
 
-        if (hasStatus) {
-          countQuery = countQuery.eq("status", "active")
-        }
+            if (hasStatus) {
+              builder = builder.eq("status", "active")
+            }
 
-        const { count: commentCount, error: countError } = await countQuery
+            return builder
+          },
+        )
 
         if (countError) {
           console.error("Error in count query:", countError)
@@ -253,46 +259,45 @@ export async function fetchComments(
       decodedCursor && decodedCursor.sort === sortOption ? decodedCursor : null
     const cursorConditions = buildCursorConditions(sortOption, effectiveCursor)
 
-    let commentsQuery = client
-      .from("comments")
-      .select("*, profile:profiles(username, avatar_url)")
-      .eq("post_id", postId)
-      .is("parent_id", null)
+    const { data: commentsData, error } = await executeListQuery(client, "comments", (query) => {
+      let commentsQuery = query
+        .select("*, profile:profiles(username, avatar_url)")
+        .eq("post_id", postId)
+        .is("parent_id", null)
 
-    if (hasStatus) {
-      commentsQuery = commentsQuery.eq("status", "active")
-    }
+      if (hasStatus) {
+        commentsQuery = commentsQuery.eq("status", "active")
+      }
 
-    if (cursorConditions.length > 0) {
-      commentsQuery = commentsQuery.or(cursorConditions.join(","))
-    }
+      if (cursorConditions.length > 0) {
+        commentsQuery = commentsQuery.or(cursorConditions.join(","))
+      }
 
-    switch (sortOption) {
-      case "newest":
-        commentsQuery = commentsQuery
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-        break
-      case "oldest":
-        commentsQuery = commentsQuery
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-        break
-      case "popular":
-        commentsQuery = commentsQuery
-          .order("reaction_count", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-        break
-      default:
-        commentsQuery = commentsQuery
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-    }
+      switch (sortOption) {
+        case "newest":
+          commentsQuery = commentsQuery
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+          break
+        case "oldest":
+          commentsQuery = commentsQuery
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+          break
+        case "popular":
+          commentsQuery = commentsQuery
+            .order("reaction_count", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+          break
+        default:
+          commentsQuery = commentsQuery
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+      }
 
-    commentsQuery = commentsQuery.limit(pageSize + 1)
-
-    const { data: commentsData, error } = await commentsQuery
+      return commentsQuery.limit(pageSize + 1)
+    })
 
     if (error) {
       console.error("Error fetching comments:", error)
@@ -347,17 +352,22 @@ export async function fetchComments(
 
     let replies: Comment[] = []
     if (rootCommentIds.length > 0) {
-      let repliesQuery = client
-        .from("comments")
-        .select("*, profile:profiles(username, avatar_url)")
-        .eq("post_id", postId)
-        .in("parent_id", rootCommentIds)
+      const { data: repliesData, error: repliesError } = await executeListQuery(
+        client,
+        "comments",
+        (query) => {
+          let repliesQuery = query
+            .select("*, profile:profiles(username, avatar_url)")
+            .eq("post_id", postId)
+            .in("parent_id", rootCommentIds)
 
-      if (hasStatus) {
-        repliesQuery = repliesQuery.eq("status", "active")
-      }
+          if (hasStatus) {
+            repliesQuery = repliesQuery.eq("status", "active")
+          }
 
-      const { data: repliesData, error: repliesError } = await repliesQuery
+          return repliesQuery
+        },
+      )
 
       if (repliesError) {
         console.error("Error fetching replies:", repliesError)

@@ -108,7 +108,7 @@ describe("fetchComments", () => {
     ]
 
     fromMock.mockImplementation((table: string) => {
-      if (table === "comments") {
+      if (["comments", "comments_view", "comment_list_view", "comments_list_view"].includes(table)) {
         const builder = commentBuilders.shift()
         if (!builder) throw new Error("Unexpected comments query")
         return builder
@@ -234,7 +234,7 @@ describe("fetchComments", () => {
     ]
 
     fromMock.mockImplementation((table: string) => {
-      if (table === "comments") {
+      if (["comments", "comments_view", "comment_list_view", "comments_list_view"].includes(table)) {
         const builder = commentBuilders.shift()
         if (!builder) throw new Error("Unexpected comments query")
         return builder
@@ -333,7 +333,7 @@ describe("fetchComments", () => {
     ]
 
     fromMock.mockImplementation((table: string) => {
-      if (table === "comments") {
+      if (["comments", "comments_view", "comment_list_view", "comments_list_view"].includes(table)) {
         const builder = commentBuilders.shift()
         if (!builder) throw new Error("Unexpected comments query")
         return builder
@@ -421,7 +421,7 @@ describe("fetchComments", () => {
     ]
 
     fromMock.mockImplementation((table: string) => {
-      if (table === "comments") {
+      if (["comments", "comments_view", "comment_list_view", "comments_list_view"].includes(table)) {
         const builder = commentBuilders.shift()
         if (!builder) throw new Error("Unexpected comments query")
         return builder

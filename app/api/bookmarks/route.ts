@@ -8,6 +8,7 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { derivePagination } from "@/lib/bookmarks/pagination"
 import { fetchBookmarkStats, getDefaultBookmarkStats } from "@/lib/bookmarks/stats"
+import { executeListQuery } from "@/lib/supabase/list-query"
 import type { BookmarkRow, BookmarkStats } from "@/types/bookmarks"
 
 export const runtime = "nodejs"
@@ -40,29 +41,29 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit
 
-    let query = supabase.from("bookmarks").select("*").eq("user_id", user.id)
+    const { data: rows, error } = await executeListQuery(supabase, "bookmarks", (query) => {
+      let builder = query.select("*").eq("user_id", user.id)
 
-    // Apply filters
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,notes.ilike.%${search}%`)
-    }
-
-    if (category && category !== "all") {
-      query = query.eq("category", category)
-    }
-
-    if (status && status !== "all") {
-      if (status === "unread") {
-        query = query.neq("read_status", "read")
-      } else {
-        query = query.eq("read_status", status)
+      if (search) {
+        builder = builder.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,notes.ilike.%${search}%`)
       }
-    }
 
-    // Apply sorting
-    query = query.order(sortBy, { ascending: sortOrder === "asc" })
+      if (category && category !== "all") {
+        builder = builder.eq("category", category)
+      }
 
-    const { data: rows, error } = await query.limit(limit + 1, { offset })
+      if (status && status !== "all") {
+        if (status === "unread") {
+          builder = builder.neq("read_status", "read")
+        } else {
+          builder = builder.eq("read_status", status)
+        }
+      }
+
+      builder = builder.order(sortBy, { ascending: sortOrder === "asc" })
+
+      return builder.limit(limit + 1, { offset })
+    })
 
     if (error) {
       console.error("Error fetching bookmarks:", error)
