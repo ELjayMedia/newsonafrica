@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import { isSupabaseConfigured, supabaseClient } from "@/lib/api/supabase"
+import {
+  USER_PROFILE_SELECT_COLUMNS,
+  isSupabaseConfigured,
+  supabaseClient,
+} from "@/lib/api/supabase"
 import type { UserProfile } from "@/lib/api/supabase"
 
 // Hook return type
@@ -63,7 +67,11 @@ export function useUser(): UseUserReturn {
         }
 
         // Fetch from Supabase
-        const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single()
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select(USER_PROFILE_SELECT_COLUMNS)
+          .eq("id", userId)
+          .single()
 
         if (error) {
           console.error("Error fetching user profile:", error)

@@ -27,8 +27,8 @@ import {
 } from "@/app/actions/bookmarks"
 import type {
   BookmarkListPayload,
+  BookmarkListRow,
   BookmarkPagination,
-  BookmarkRow,
   BookmarkStats,
 } from "@/types/bookmarks"
 import { ensureActionError } from "@/lib/supabase/action-result"
@@ -173,7 +173,7 @@ const extractFeaturedImage = (value: unknown): Bookmark["featured_image"] => {
 }
 
 const formatBookmarkRow = (
-  row: BookmarkRow,
+  row: BookmarkListRow,
   metadata?: BookmarkHydrationMap[string],
 ): Bookmark => {
   const metaTitle = metadata?.title ? extractText(metadata.title) : ""
@@ -203,7 +203,7 @@ const formatBookmarkRow = (
   }
 }
 
-const buildHydrationPayload = (bookmarks: BookmarkRow[]) => {
+const buildHydrationPayload = (bookmarks: BookmarkListRow[]) => {
   const grouped = new Map<string, Set<string>>()
 
   bookmarks.forEach((bookmark) => {
@@ -284,7 +284,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     [bookmarks], // Keep dependency for reactivity
   )
 
-  const hydrateBookmarks = useCallback(async (rows: BookmarkRow[]): Promise<BookmarkHydrationMap> => {
+  const hydrateBookmarks = useCallback(async (rows: BookmarkListRow[]): Promise<BookmarkHydrationMap> => {
     if (rows.length === 0) {
       return {}
     }

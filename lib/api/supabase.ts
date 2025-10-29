@@ -5,6 +5,8 @@ import type { Database } from "@/types/supabase"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+export const USER_PROFILE_SELECT_COLUMNS = "id, username, avatar_url, role, handle"
+
 export const SUPABASE_AUTH_STORAGE_KEY = "noa_supabase_auth"
 
 const SUPABASE_CONFIG_WARNING =
@@ -142,6 +144,7 @@ export interface SupabaseResponse<T = any> {
 export interface UserProfile {
   id: string
   username: string
+  handle?: string | null
   full_name?: string
   bio?: string
   avatar_url?: string
@@ -149,6 +152,7 @@ export interface UserProfile {
   email?: string
   country?: string
   interests?: string[]
+  role?: string | null
   created_at: string
   updated_at: string
 }
@@ -231,7 +235,7 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
     // Fetch user profile from Supabase
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("*")
+      .select(USER_PROFILE_SELECT_COLUMNS)
       .eq("id", user.id)
       .single()
 
@@ -575,7 +579,11 @@ export async function getUserProfile(userId: string): Promise<SupabaseResponse<U
       }
     }
 
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(USER_PROFILE_SELECT_COLUMNS)
+      .eq("id", userId)
+      .single()
 
     if (error) {
       return {
