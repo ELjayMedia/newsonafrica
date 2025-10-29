@@ -248,7 +248,9 @@ export async function POST(request: NextRequest) {
 
           // Revalidate the specific post page for all supported countries
           for (const country of SUPPORTED_COUNTRIES) {
-            revalidatePath(getArticleUrl(post.slug, country))
+            const articlePath = getArticleUrl(post.slug, country)
+            revalidatePath(articlePath)
+            revalidatePath(`${articlePath}/opengraph-image`)
 
             buildCacheTags({
               country,
@@ -258,6 +260,12 @@ export async function POST(request: NextRequest) {
             buildCacheTags({
               country,
               section: "posts",
+            }).forEach((tag) => tagsToRevalidate.add(tag))
+
+            buildCacheTags({
+              country,
+              section: "article",
+              extra: [`slug:${post.slug}`],
             }).forEach((tag) => tagsToRevalidate.add(tag))
 
             buildCacheTags({
@@ -341,10 +349,17 @@ export async function POST(request: NextRequest) {
 
           // Revalidate pages that might have referenced this post
           for (const country of SUPPORTED_COUNTRIES) {
-            revalidatePath(getArticleUrl(post.slug, country))
+            const articlePath = getArticleUrl(post.slug, country)
+            revalidatePath(articlePath)
+            revalidatePath(`${articlePath}/opengraph-image`)
 
             buildCacheTags({ country, section: "news" }).forEach((tag) => tagsToRevalidate.add(tag))
             buildCacheTags({ country, section: "posts" }).forEach((tag) => tagsToRevalidate.add(tag))
+            buildCacheTags({
+              country,
+              section: "article",
+              extra: [`slug:${post.slug}`],
+            }).forEach((tag) => tagsToRevalidate.add(tag))
             buildCacheTags({ country, section: "post", extra: [`slug:${post.slug}`] }).forEach((tag) =>
               tagsToRevalidate.add(tag),
             )
