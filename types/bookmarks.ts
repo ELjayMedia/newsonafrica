@@ -2,6 +2,26 @@ import type { Database } from "@/types/supabase"
 
 export type BookmarkRow = Database["public"]["Tables"]["bookmarks"]["Row"]
 
+export const BOOKMARK_LIST_SELECT_COLUMNS =
+  "id, user_id, post_id, slug, country, title, excerpt, featured_image, category, tags, read_status, notes, created_at"
+
+export type BookmarkListRow = Pick<
+  BookmarkRow,
+  | "id"
+  | "user_id"
+  | "post_id"
+  | "slug"
+  | "country"
+  | "title"
+  | "excerpt"
+  | "featured_image"
+  | "category"
+  | "tags"
+  | "read_status"
+  | "notes"
+  | "created_at"
+>
+
 export interface BookmarkStats {
   total: number
   unread: number
@@ -17,7 +37,7 @@ export interface BookmarkPagination {
 }
 
 export interface BookmarkListPayload {
-  bookmarks: BookmarkRow[]
+  bookmarks: BookmarkListRow[]
   stats: BookmarkStats | null
   pagination: BookmarkPagination
 }

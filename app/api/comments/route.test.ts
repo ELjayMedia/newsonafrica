@@ -33,6 +33,26 @@ function createCommentsQuery(
   const nullFilters = new Set<string>()
   let orConditions: Array<{ column: string; value: string }> | null = null
 
+  const applyFilters = () => {
+    let filtered = comments.slice()
+
+    eqFilters.forEach((value, column) => {
+      filtered = filtered.filter((comment) => comment[column as keyof CommentRecord] === value)
+    })
+
+    nullFilters.forEach((column) => {
+      filtered = filtered.filter((comment) => comment[column as keyof CommentRecord] == null)
+    })
+
+    if (orConditions) {
+      filtered = filtered.filter((comment) =>
+        orConditions!.some(({ column, value }) => comment[column as keyof CommentRecord] === value),
+      )
+    }
+
+    return filtered
+  }
+
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn((column: string, value: string) => {
@@ -58,29 +78,21 @@ function createCommentsQuery(
       })
       return builder
     }),
-    order: vi.fn(() => ({
-      range: vi.fn(async (from: number, to: number) => {
-        let filtered = comments.slice()
-
-        eqFilters.forEach((value, column) => {
-          filtered = filtered.filter((comment) => comment[column as keyof CommentRecord] === value)
-        })
-
-        nullFilters.forEach((column) => {
-          filtered = filtered.filter((comment) => comment[column as keyof CommentRecord] == null)
-        })
-
-        if (orConditions) {
-          filtered = filtered.filter((comment) =>
-            orConditions!.some(({ column, value }) => comment[column as keyof CommentRecord] === value),
-          )
-        }
-
-        const sliced = filtered.slice(from, to + 1)
-        onRange(sliced)
-        return { data: sliced, error: null, count: filtered.length }
-      }),
-    })),
+    order: vi.fn(() => builder),
+    range: vi.fn(async (from: number, to: number) => {
+      const filtered = applyFilters()
+      const sliced = filtered.slice(from, to + 1)
+      onRange(sliced)
+      return { data: sliced, error: null, count: filtered.length }
+    }),
+    limit: vi.fn(async (limit: number, options?: { offset?: number }) => {
+      const filtered = applyFilters()
+      const start = options?.offset ?? 0
+      const end = start + limit - 1
+      const sliced = filtered.slice(start, end + 1)
+      onRange(sliced)
+      return { data: sliced, error: null, count: filtered.length }
+    }),
   }
 
   return builder
@@ -127,7 +139,7 @@ function createSupabaseClient({
       getSession: vi.fn(async () => ({ data: { session }, error: null })),
     },
     from: vi.fn((table: string) => {
-      if (table === "comments") {
+      if (["comments", "comments_view", "comment_list_view", "comments_list_view"].includes(table)) {
         return createCommentsQuery(comments, (result) => {
           lastCommentsResult = result
         })

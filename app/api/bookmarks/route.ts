@@ -9,7 +9,11 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { derivePagination } from "@/lib/bookmarks/pagination"
 import { fetchBookmarkStats, getDefaultBookmarkStats } from "@/lib/bookmarks/stats"
 import { executeListQuery } from "@/lib/supabase/list-query"
-import type { BookmarkRow, BookmarkStats } from "@/types/bookmarks"
+import {
+  BOOKMARK_LIST_SELECT_COLUMNS,
+  type BookmarkListRow,
+  type BookmarkStats,
+} from "@/types/bookmarks"
 
 export const runtime = "nodejs"
 
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     const { data: rows, error } = await executeListQuery(supabase, "bookmarks", (query) => {
-      let builder = query.select("*").eq("user_id", user.id)
+      let builder = query.select(BOOKMARK_LIST_SELECT_COLUMNS).eq("user_id", user.id)
 
       if (search) {
         builder = builder.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,notes.ilike.%${search}%`)
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest) {
 
       builder = builder.order(sortBy, { ascending: sortOrder === "asc" })
 
-      return builder.limit(limit + 1, { offset })
+      return builder.range(offset, offset + limit)
     })
 
     if (error) {
@@ -70,12 +74,12 @@ export async function GET(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to fetch bookmarks" }, { status: 500 })
     }
 
-    const { items: bookmarks, pagination } = derivePagination<BookmarkRow>({
+    const { items: bookmarks, pagination } = derivePagination<BookmarkListRow>({
       page,
       limit,
-      rows: (rows ?? []) as BookmarkRow[],
+      rows: (rows ?? []) as BookmarkListRow[],
       cursorEncoder: (row) => {
-        const record = row as BookmarkRow
+        const record = row as BookmarkListRow
         const cursorPayload = {
           sortBy,
           sortOrder,

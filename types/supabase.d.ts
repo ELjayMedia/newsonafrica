@@ -7,6 +7,7 @@ export interface Database {
         Row: {
           id: string
           username: string
+          handle: string | null
           full_name: string | null
           avatar_url: string | null
           website: string | null
@@ -20,10 +21,12 @@ export interface Database {
           created_at: string
           is_admin: boolean | null
           onboarded: boolean | null
+          role: string | null
         }
         Insert: {
           id: string
           username: string
+          handle?: string | null
           full_name?: string | null
           avatar_url?: string | null
           website?: string | null
@@ -37,10 +40,12 @@ export interface Database {
           created_at?: string
           is_admin?: boolean | null
           onboarded?: boolean | null
+          role?: string | null
         }
         Update: {
           id?: string
           username?: string
+          handle?: string | null
           full_name?: string | null
           avatar_url?: string | null
           website?: string | null
@@ -54,6 +59,7 @@ export interface Database {
           created_at?: string
           is_admin?: boolean | null
           onboarded?: boolean | null
+          role?: string | null
         }
         Relationships: []
       }

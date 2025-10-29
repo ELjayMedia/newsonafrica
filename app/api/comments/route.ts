@@ -1,5 +1,5 @@
 import type { NextRequest, NextResponse } from "next/server"
-import type { Session } from "@supabase/supabase-js"
+import type { PostgrestError, Session } from "@supabase/supabase-js"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
@@ -13,6 +13,7 @@ import {
   hasValidationErrors,
   type FieldErrors,
 } from "@/lib/validation"
+import type { CommentListRecord } from "@/types/comments"
 
 export const runtime = "nodejs"
 
@@ -56,6 +57,9 @@ function applyOrFilters(
 
 const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
 const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
+
+const COMMENT_LIST_SELECT_COLUMNS =
+  "id, post_id, user_id, content, parent_id, country, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, profile:profiles(username, avatar_url)"
 
 function normalizeEditionCode(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -340,8 +344,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const cursorConditions = buildCursorConditions("newest", decodedCursor)
 
-    const { data: commentsData, error } = await executeListQuery(supabase, "comments", (query) => {
-      const baseQuery = buildBaseQuery(query.select("*, profile:profiles(username, avatar_url)"), {
+    const { data: commentsData, error } = (await executeListQuery(supabase, "comments", (query) => {
+      const baseQuery = buildBaseQuery(query.select(COMMENT_LIST_SELECT_COLUMNS), {
         includeCursor: true,
       })
 
@@ -349,15 +353,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(limit + 1)
-    })
+    })) as { data: CommentListRecord[] | null; error: PostgrestError | null }
 
     if (error) {
       throw new Error(`Failed to fetch comments: ${error.message}`)
     }
 
-    const typedComments = (commentsData ?? []) as Array<Record<string, unknown> & {
-      profile?: { username?: string | null; avatar_url?: string | null } | null
-    }>
+    const typedComments = (commentsData ?? []) as CommentListRecord[]
 
     let totalCount: number | undefined
 
@@ -394,9 +396,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const hasMore = typedComments.length > limit
     const limitedComments = hasMore ? typedComments.slice(0, limit) : typedComments
 
-    const lastComment = limitedComments[limitedComments.length - 1] as
-      | (Record<string, unknown> & { created_at?: string | null; id?: string | null })
-      | undefined
+    const lastComment = limitedComments[limitedComments.length - 1]
 
     const nextCursor =
       hasMore && lastComment?.created_at && lastComment?.id
