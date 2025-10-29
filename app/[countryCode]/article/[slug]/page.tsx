@@ -18,7 +18,7 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = 300
+export const revalidate = 60
 export const dynamicParams = true
 
 export async function generateStaticParams(): Promise<Array<{ countryCode: string; slug: string }>> {
