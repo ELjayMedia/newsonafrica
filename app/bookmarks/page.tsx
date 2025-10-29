@@ -9,8 +9,6 @@ export const metadata: Metadata = {
   description: "View and manage your saved articles",
 }
 
-export const dynamic = "force-dynamic"
-
 export default async function BookmarksPage() {
   const supabase = createClient()
 

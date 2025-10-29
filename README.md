@@ -132,6 +132,12 @@ The application is deployed on Vercel with the following configuration:
 
 The application now communicates with WordPress exclusively through GraphQL, so REST fallbacks and application credentials are no longer required.
 
+### Partial Prerendering (PPR)
+
+- PPR is enabled globally through the `experimental.ppr = true` flag in `next.config.js` and leverages streaming to keep time-to-first-byte low for static sections while deferring personalized content.
+- Dynamic dashboards such as `/profile` and `/bookmarks` rely on the Supabase server client, which reads request cookies and therefore already opt into dynamic rendering without forcing `dynamic = "force-dynamic"`. This keeps them compatible with PPR while ensuring user-specific data is never cached.
+- Deployment engineers should monitor the Vercel request logs and Real User Monitoring dashboards for regressions (notably increased `x-vercel-cache` MISS ratios or hydration warnings). Roll back by disabling the flag if regressions appear.
+
 ## 🔍 Search
 
 The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Suggestions can be retrieved by passing `suggestions=true` alongside the search query.
