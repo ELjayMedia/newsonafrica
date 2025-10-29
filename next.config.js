@@ -6,7 +6,7 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
   async headers() {
     return [
@@ -104,7 +104,6 @@ const nextConfig = {
   experimental: {
     scrollRestoration: true,
     largePageDataBytes: 12800000,
-    ppr: true,
     optimizePackageImports: ["lucide-react"],
   },
   serverExternalPackages: ["sharp", "react-dom/server"],

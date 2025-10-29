@@ -11,7 +11,10 @@ const DEFAULT_VIEW_CANDIDATES: Record<string, readonly string[]> = {
 type Client = SupabaseClient<Database>
 type QueryBuilder = ReturnType<Client["from"]>
 
-type ResponseWithError = { error?: PostgrestError | null }
+type ResponseWithError<TData = unknown> = {
+  data?: TData
+  error?: PostgrestError | null
+}
 
 const RELATION_MISSING_CODES = new Set(["42P01", "42P07", "42704"]) // undefined_table, duplicate_table, undefined_object
 

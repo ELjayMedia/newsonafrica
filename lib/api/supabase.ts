@@ -224,40 +224,9 @@ function handleSupabaseError(error: AuthError | Error | null): string | null {
  */
 export async function getUserSession(): Promise<AuthResponse & { profile: UserProfile | null }> {
   if (typeof window === "undefined") {
-    const { getServerUserSession } = await import("@/lib/supabase/server-component-client")
-    const result = await getServerUserSession()
-
-    if (!result.success) {
-      return {
-        user: null,
-        session: null,
-        profile: null,
-        error: result.error ?? "Failed to retrieve user session",
-        success: false,
-      }
-    }
-
-    const profile = result.profile
-      ? ({
-          id: result.profile.userId,
-          username: result.profile.username ?? "",
-          avatar_url: result.profile.avatar_url ?? undefined,
-          role: result.profile.role ?? undefined,
-          created_at: result.profile.created_at ?? new Date(0).toISOString(),
-          updated_at:
-            result.profile.updated_at ??
-            result.profile.created_at ??
-            new Date(0).toISOString(),
-        } as UserProfile)
-      : null
-
-    return {
-      user: result.user,
-      session: result.session,
-      profile,
-      error: null,
-      success: true,
-    }
+    throw new Error(
+      "getUserSession is only available in client-side environments. Import getServerUserSession from '@/lib/supabase/server-component-client' instead."
+    )
   }
 
   try {
