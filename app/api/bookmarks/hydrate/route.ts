@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
-import { fetchPosts, resolveCountryTermId } from "@/lib/wordpress-api"
+import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
 import { logRequest } from "@/lib/api-utils"
 
 export const runtime = "nodejs"
@@ -132,13 +132,11 @@ export async function POST(req: NextRequest) {
       if (postIds.length === 0) return
 
       let countryCode: string | undefined
-      let countryTermId: number | undefined
 
       if (country.length === 2) {
-        countryCode = country
+        countryCode = country.toLowerCase()
       } else {
-        const resolvedCountryTermId = await resolveCountryTermId(country)
-        countryTermId = resolvedCountryTermId ?? undefined
+        countryCode = resolveCountryCode(country) ?? undefined
       }
 
       try {
@@ -146,7 +144,6 @@ export async function POST(req: NextRequest) {
           ids: postIds,
           perPage: Math.min(Math.max(postIds.length, 1), 100),
           countryCode,
-          countryTermId,
         })
         const postsArray = Array.isArray(result) ? result : result?.data || []
 
