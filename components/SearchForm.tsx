@@ -249,7 +249,12 @@ export function SearchForm({
           />
 
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-            {isLoading && <Loader2 className={`${config.icon} animate-spin text-gray-400`} />}
+            {isLoading && (
+              <div className="flex items-center gap-1 text-xs text-gray-500" role="status" aria-live="polite">
+                <Loader2 className={`${config.icon} text-gray-500`} aria-hidden="true" />
+                <span>Loading</span>
+              </div>
+            )}
 
             {query && !isLoading && (
               <Button
@@ -271,7 +276,14 @@ export function SearchForm({
               disabled={isLoading || !query.trim()}
               className={`${config.button} bg-blue-600 hover:bg-blue-700 text-white`}
             >
-              {isLoading ? <Loader2 className={`${config.icon} animate-spin`} /> : "Search"}
+              {isLoading ? (
+                <span className="flex items-center gap-2" role="status" aria-live="polite">
+                  <Loader2 className={config.icon} aria-hidden="true" />
+                  <span>Searching</span>
+                </span>
+              ) : (
+                "Search"
+              )}
             </Button>
           </div>
         </div>

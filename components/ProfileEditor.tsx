@@ -310,9 +310,9 @@ export function ProfileEditor() {
           <h3 className="text-lg font-semibold">{profile?.full_name || profile?.username || "User"}</h3>
           <p className="text-sm text-gray-500">{user?.email}</p>
           {uploading && (
-            <div className="flex items-center mt-2 text-sm text-gray-500">
-              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-              Uploading...
+            <div className="mt-2 flex items-center text-sm text-gray-500" role="status" aria-live="polite">
+              <Loader2 className="mr-2 h-3 w-3 text-gray-500" aria-hidden="true" />
+              <span>Uploading...</span>
             </div>
           )}
         </div>
@@ -419,10 +419,10 @@ export function ProfileEditor() {
       <div className="flex justify-end">
         <Button type="submit" disabled={isUpdating || !hasChanges || Object.keys(errors).length > 0}>
           {isUpdating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <span className="flex items-center" role="status" aria-live="polite">
+              <Loader2 className="mr-2 h-4 w-4 text-blue-600" aria-hidden="true" />
               Updating...
-            </>
+            </span>
           ) : (
             "Update Profile"
           )}

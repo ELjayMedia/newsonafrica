@@ -146,12 +146,23 @@ export default function RetryBanner({
 
   const getStatusIcon = () => {
     if (isRetrying) {
-      return <RefreshCw className="w-4 h-4 animate-spin" />
+      return (
+        <div className="flex items-center gap-2" role="status" aria-live="polite">
+          <RefreshCw className="h-4 w-4 text-blue-600" aria-hidden="true" />
+          <span className="text-xs font-medium text-blue-700">Retrying</span>
+          <progress
+            value={retryCount}
+            max={maxRetries}
+            className="h-1 w-16"
+            aria-label={`Retry attempt ${retryCount} of ${maxRetries}`}
+          />
+        </div>
+      )
     }
     if (isOnline) {
-      return <Wifi className="w-4 h-4 text-green-500" />
+      return <Wifi className="w-4 h-4 text-green-500" aria-hidden="true" />
     }
-    return <WifiOff className="w-4 h-4 text-red-500" />
+    return <WifiOff className="w-4 h-4 text-red-500" aria-hidden="true" />
   }
 
   const getStatusMessage = () => {

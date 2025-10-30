@@ -344,10 +344,10 @@ export function CommentForm({
           aria-label={parentId ? "Post reply" : "Post comment"}
         >
           {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <span className="flex items-center" role="status" aria-live="polite">
+              <Loader2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Posting...
-            </>
+            </span>
           ) : remainingTime > 0 ? (
             `Wait ${remainingTime}s`
           ) : parentId ? (
