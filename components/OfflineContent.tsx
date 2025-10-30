@@ -147,12 +147,12 @@ export default function OfflineContent() {
               {isOnline ? "Go to Homepage" : "Try Again"}
             </Button>
 
-            <Link href="/">
-              <Button variant="outline" className="flex items-center gap-2">
+            <Button asChild variant="outline" className="flex items-center gap-2">
+              <Link href="/">
                 <Home className="h-4 w-4" />
                 Homepage
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
 
