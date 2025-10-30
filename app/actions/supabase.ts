@@ -4,8 +4,11 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
 
-import { actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
-import { getSupabaseClient } from "@/lib/supabase/server-component-client"
+import { ActionError, actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
+import {
+  SUPABASE_CONFIGURATION_ERROR_MESSAGE,
+  getSupabaseClient,
+} from "@/lib/supabase/server-component-client"
 export type SupabaseServerClient = SupabaseClient<Database>
 
 async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Session | null> {
@@ -48,13 +51,16 @@ async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Se
 export async function withSupabaseSession<T>(
   callback: (context: { supabase: SupabaseServerClient; session: Session | null }) => Promise<T> | T,
 ): Promise<ActionResult<T>> {
-  let supabase: SupabaseServerClient
+  const result = getSupabaseClient()
 
-  try {
-    supabase = getSupabaseClient()
-  } catch (error) {
+  if (result.isFallback) {
+    const error = new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE, {
+      cause: result.error,
+    })
     return actionFailure<T>(error)
   }
+
+  const supabase = result.client
 
   try {
     const session = await getSessionWithRefresh(supabase)
@@ -66,13 +72,16 @@ export async function withSupabaseSession<T>(
 }
 
 export async function getSupabaseSession(): Promise<ActionResult<Session | null>> {
-  let supabase: SupabaseServerClient
+  const result = getSupabaseClient()
 
-  try {
-    supabase = getSupabaseClient()
-  } catch (error) {
+  if (result.isFallback) {
+    const error = new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE, {
+      cause: result.error,
+    })
     return actionFailure<Session | null>(error)
   }
+
+  const supabase = result.client
 
   try {
     const session = await getSessionWithRefresh(supabase)

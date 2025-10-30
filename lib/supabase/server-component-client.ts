@@ -9,45 +9,84 @@ import {
   writeSessionCookie,
   type SessionCookieProfile,
 } from "@/lib/auth/session-cookie"
+import {
+  getSupabaseClient as getBrowserSupabaseClient,
+  isSupabaseConfigured,
+} from "@/lib/api/supabase"
 
 let hasWarnedAboutConfig = false
 
-export function getSupabaseClient(): SupabaseClient<Database> {
+export const SUPABASE_CONFIGURATION_ERROR_MESSAGE =
+  "We're still configuring our backend services, so this feature isn't available right now. Please try again later."
+
+interface SupabaseClientSuccessResult {
+  client: SupabaseClient<Database>
+  isFallback: false
+  error: null
+}
+
+interface SupabaseClientFallbackResult {
+  client: SupabaseClient<Database>
+  isFallback: true
+  error: Error
+}
+
+export type SupabaseServerComponentClientResult =
+  | SupabaseClientSuccessResult
+  | SupabaseClientFallbackResult
+
+function createFallbackClient(message: string): SupabaseClientFallbackResult {
+  if (!hasWarnedAboutConfig) {
+    hasWarnedAboutConfig = true
+    console.warn(`${message} Using fallback client.`)
+  }
+
+  return {
+    client: getBrowserSupabaseClient(),
+    isFallback: true,
+    error: new Error(message),
+  }
+}
+
+export function getSupabaseClient(): SupabaseServerComponentClientResult {
+  if (!isSupabaseConfigured()) {
+    return createFallbackClient(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    if (!hasWarnedAboutConfig) {
-      hasWarnedAboutConfig = true
-      console.warn("Supabase environment variables are not configured.")
-    }
-
-    throw new Error("Supabase environment variables are not configured.")
+    return createFallbackClient(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
   }
 
   const cookieStore = cookies()
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value ?? null
+  return {
+    client: createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value ?? null
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch {
+            // Setting cookies is unsupported in some server contexts.
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: "", ...options, maxAge: 0 })
+          } catch {
+            // Removing cookies is unsupported in some server contexts.
+          }
+        },
       },
-      set(name: string, value: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value, ...options })
-        } catch {
-          // Setting cookies is unsupported in some server contexts.
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 })
-        } catch {
-          // Removing cookies is unsupported in some server contexts.
-        }
-      },
-    },
-  })
+    }),
+    isFallback: false,
+    error: null,
+  }
 }
 
 export interface ServerUserSession {
@@ -97,7 +136,20 @@ export async function getServerUserSession(): Promise<ServerUserSession> {
     }
   }
 
-  const supabase = getSupabaseClient()
+  const result = getSupabaseClient()
+
+  if (result.isFallback) {
+    return {
+      session: null,
+      user: null,
+      profile: null,
+      success: false,
+      error: result.error.message,
+      fromCache: false,
+    }
+  }
+
+  const supabase = result.client
   const {
     data: { session },
     error,
