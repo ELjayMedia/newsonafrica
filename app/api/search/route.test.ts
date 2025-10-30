@@ -15,7 +15,7 @@ vi.mock("@/lib/wordpress-search", () => ({
   getSearchSuggestions: vi.fn(),
 }))
 
-const { GET } = await import("./route")
+const { GET, MAX_PAGES_PER_COUNTRY } = await import("./route")
 const { resolveSearchIndex } = await import("@/lib/algolia/client")
 const { searchWordPressPosts, getSearchSuggestions } = await import("@/lib/wordpress-search")
 
@@ -153,7 +153,7 @@ describe("GET /api/search", () => {
       Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
     )
 
-    const totalPostsPerCountry = 320
+    const totalPostsPerCountry = expectedPerCountry * (MAX_PAGES_PER_COUNTRY + 2)
     const postsByCountry: Record<string, Array<{ date: string; title: string; slug: string }>> = {}
     const callHistory: Record<string, number[]> = {}
     const startDate = Date.UTC(2024, 0, 1)
@@ -222,11 +222,21 @@ describe("GET /api/search", () => {
     const payload = await response.json()
 
     expect(response.status).toBe(200)
-    expect(mockSearchWordPressPosts).toHaveBeenCalledTimes(countryCodes.length * 4)
+    const totalCalls = mockSearchWordPressPosts.mock.calls.length
+    expect(totalCalls).toBeLessThanOrEqual(countryCodes.length * MAX_PAGES_PER_COUNTRY)
 
     countryCodes.forEach((code) => {
-      expect(callHistory[code]).toEqual([1, 2, 3, 4])
+      const pages = callHistory[code]
+      expect(pages.length).toBeLessThanOrEqual(MAX_PAGES_PER_COUNTRY)
+      expect(pages).toEqual([...pages].sort((a, b) => a - b))
+      if (pages.length > 0) {
+        expect(pages[0]).toBe(1)
+      }
     })
+
+    expect(
+      Object.values(callHistory).some((pages) => pages.length === MAX_PAGES_PER_COUNTRY),
+    ).toBe(true)
 
     expect(payload.results).toHaveLength(perPage)
 
@@ -254,6 +264,9 @@ describe("GET /api/search", () => {
     expect(payload.currentPage).toBe(page)
     expect(payload.hasMore).toBe(page < payload.totalPages)
     expect(payload.performance.source).toBe("wordpress")
+    expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
+    expect(payload.performance.wordpressRequestBudget).toBeGreaterThanOrEqual(totalCalls)
+    expect(typeof payload.performance.wordpressBudgetExhausted).toBe("boolean")
   })
 
   it("normalizes the query when using the WordPress suggestions fallback for the pan-African scope", async () => {
@@ -299,6 +312,125 @@ describe("GET /api/search", () => {
     })
     expect(mockGetSearchSuggestions).not.toHaveBeenCalled()
     expect(Array.isArray(payload.suggestions)).toBe(true)
+  })
+
+  it("stops fetching when WordPress keeps reporting more pages but limits are reached", async () => {
+    const query = "budget"
+    const perPage = 20
+    const page = 3
+    const countryCodes = SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase())
+    const desiredTotal = perPage * page
+    const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
+    const expectedPerCountry = Math.min(
+      100,
+      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+    )
+    const totalPagesAvailable = MAX_PAGES_PER_COUNTRY + 4
+
+    const postsByCountry: Record<string, Array<{ date: string; title: string; slug: string }>> = {}
+    const callHistory: Record<string, number[]> = {}
+    const startDate = Date.UTC(2024, 6, 1)
+
+    countryCodes.forEach((code, countryIndex) => {
+      const posts: Array<{ date: string; title: string; slug: string }> = []
+      for (let pageIndex = 0; pageIndex < totalPagesAvailable; pageIndex += 1) {
+        for (let itemIndex = 0; itemIndex < expectedPerCountry; itemIndex += 1) {
+          const sequence =
+            countryIndex * totalPagesAvailable * expectedPerCountry + pageIndex * expectedPerCountry + itemIndex
+          const date = new Date(startDate - sequence * 60 * 60 * 1000).toISOString()
+          posts.push({
+            date,
+            title: `${code.toUpperCase()} Budget Insight ${sequence + 1}`,
+            slug: `${code}-budget-${sequence + 1}`,
+          })
+        }
+      }
+      postsByCountry[code] = posts
+      callHistory[code] = []
+    })
+
+    mockSearchWordPressPosts.mockImplementation(async (receivedQuery, options = {}) => {
+      expect(receivedQuery).toBe(query)
+      const country = options.country?.toLowerCase()
+      expect(country).toBeDefined()
+
+      if (!country || !postsByCountry[country]) {
+        throw new Error(`Unexpected country: ${country}`)
+      }
+
+      const requestedPage = options.page ?? 1
+      const requestedPerPage = options.perPage ?? expectedPerCountry
+
+      expect(requestedPerPage).toBe(expectedPerCountry)
+      callHistory[country].push(requestedPage)
+
+      const start = (requestedPage - 1) * requestedPerPage
+      const end = start + requestedPerPage
+      const allPosts = postsByCountry[country]
+      const slice = allPosts.slice(start, end)
+
+      const results = slice.map((post) => ({
+        id: Number(post.slug.replace(/\D+/g, "")) || 0,
+        slug: post.slug,
+        title: { rendered: post.title },
+        excerpt: { rendered: `${post.title} excerpt` },
+        content: { rendered: `${post.title} content` },
+        date: post.date,
+        link: `https://example.com/${country}/${post.slug}`,
+        featured_media: 0,
+        categories: [],
+        tags: [],
+        author: 1,
+      }))
+
+      return {
+        results,
+        total: allPosts.length,
+        totalPages: Math.max(1, Math.ceil(allPosts.length / requestedPerPage)),
+        currentPage: requestedPage,
+        hasMore: requestedPage < totalPagesAvailable,
+        query,
+        searchTime: 12,
+      }
+    })
+
+    const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
+    const response = await GET(new Request(requestUrl))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+
+    countryCodes.forEach((code) => {
+      const pages = callHistory[code]
+      expect(pages.length).toBeLessThanOrEqual(MAX_PAGES_PER_COUNTRY)
+      expect(pages.length).toBeLessThan(totalPagesAvailable)
+      expect(pages).toEqual(Array.from({ length: pages.length }, (_, index) => index + 1))
+    })
+
+    const allRecords = countryCodes.flatMap((code) =>
+      postsByCountry[code].map((post) => ({
+        objectID: `${code}:${post.slug}`,
+        publishedAt: new Date(post.date).getTime(),
+      })),
+    )
+
+    const expectedObjectIDs = allRecords
+      .sort((a, b) => b.publishedAt - a.publishedAt)
+      .slice((page - 1) * perPage, page * perPage)
+      .map((entry) => entry.objectID)
+
+    const actualObjectIDs = payload.results.map((record: { objectID: string }) => record.objectID)
+    expect(actualObjectIDs).toEqual(expectedObjectIDs)
+
+    const totalCalls = mockSearchWordPressPosts.mock.calls.length
+
+    expect(payload.performance.source).toBe("wordpress")
+    expect(payload.performance.wordpressBudgetExhausted).toBe(false)
+    expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
+    expect(totalCalls).toBeLessThan(SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY)
+    expect(payload.performance.wordpressRequestBudget).toBe(
+      SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY,
+    )
   })
 
   it("normalizes the query when fetching WordPress search suggestions for a specific country", async () => {
