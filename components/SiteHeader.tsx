@@ -11,9 +11,16 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { SearchBox } from "@/components/SearchBox"
 import { fetchAllCategories } from "@/lib/wordpress-api"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu"
 
 interface Category {
   id: string
@@ -50,45 +57,6 @@ function NavigationError({ onRetry }: { onRetry: () => void }) {
         Retry
       </Button>
     </div>
-  )
-}
-
-// Desktop dropdown menu for categories with subcategories
-function CategoryDropdown({ category }: { category: Category }) {
-  if (!category.children || category.children.length === 0) {
-    return (
-      <Link
-        href={getCategoryUrl(category.slug)}
-        className="block px-3 py-3 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 transition-colors duration-200"
-      >
-        {category.name.toUpperCase()}
-      </Link>
-    )
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="flex items-center px-3 py-3 text-sm font-semibold text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 transition-colors duration-200">
-          {category.name.toUpperCase()}
-          <ChevronDown className="ml-1 h-3 w-3" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
-        <DropdownMenuItem asChild>
-          <Link href={getCategoryUrl(category.slug)} className="w-full">
-            All {category.name}
-          </Link>
-        </DropdownMenuItem>
-        {category.children.map((child) => (
-          <DropdownMenuItem key={child.id} asChild>
-            <Link href={getCategoryUrl(child.slug)} className="w-full">
-              {child.name}
-            </Link>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }
 
@@ -330,13 +298,56 @@ export function SiteHeader() {
                 {categoriesState.loading && <NavigationSkeleton />}
                 {categoriesState.error && <NavigationError onRetry={retryLoadCategories} />}
                 {!categoriesState.loading && !categoriesState.error && (
-                  <ul className="flex whitespace-nowrap px-4 font-light">
-                    {categoriesState.categories.map((category) => (
-                      <li key={category.id}>
-                        <CategoryDropdown category={category} />
-                      </li>
-                    ))}
-                  </ul>
+                  <NavigationMenu viewport={false} className="px-4">
+                    <NavigationMenuList className="flex-nowrap gap-0 font-light justify-start whitespace-nowrap">
+                      {categoriesState.categories.map((category) => {
+                        const hasChildren = category.children && category.children.length > 0
+
+                        if (!hasChildren) {
+                          return (
+                            <NavigationMenuItem key={category.id}>
+                              <NavigationMenuLink
+                                asChild
+                                className="uppercase text-sm font-semibold text-gray-700 hover:text-blue-600 focus:text-blue-600 px-3 py-3 flex items-center"
+                              >
+                                <Link href={getCategoryUrl(category.slug)}>{category.name.toUpperCase()}</Link>
+                              </NavigationMenuLink>
+                            </NavigationMenuItem>
+                          )
+                        }
+
+                        return (
+                          <NavigationMenuItem key={category.id}>
+                            <NavigationMenuTrigger className="uppercase text-sm font-semibold text-gray-700 bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-blue-600 hover:text-blue-600 focus:text-blue-600 px-3 py-3">
+                              {category.name.toUpperCase()}
+                            </NavigationMenuTrigger>
+                            <NavigationMenuContent className="bg-white border border-gray-200 shadow-md rounded-md">
+                              <ul className="w-56 p-2 space-y-1">
+                                <li>
+                                  <NavigationMenuLink
+                                    asChild
+                                    className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                                  >
+                                    <Link href={getCategoryUrl(category.slug)}>All {category.name}</Link>
+                                  </NavigationMenuLink>
+                                </li>
+                                {category.children?.map((child) => (
+                                  <li key={child.id}>
+                                    <NavigationMenuLink
+                                      asChild
+                                      className="block rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-blue-600"
+                                    >
+                                      <Link href={getCategoryUrl(child.slug)}>{child.name}</Link>
+                                    </NavigationMenuLink>
+                                  </li>
+                                ))}
+                              </ul>
+                            </NavigationMenuContent>
+                          </NavigationMenuItem>
+                        )
+                      })}
+                    </NavigationMenuList>
+                  </NavigationMenu>
                 )}
               </div>
             </div>
