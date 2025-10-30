@@ -34,6 +34,18 @@ const getDefaultRestBase = (country: string): string => `${BASE_URL}/${country}/
 const looksLikeGraphQLEndpoint = (value?: string | null) =>
   Boolean(value && value.toLowerCase().includes("/graphql"))
 
+const warnInvalidGraphQlOverride = (
+  country: string,
+  override: string,
+  fallback: string,
+) => {
+  console.warn("Ignoring WP GraphQL override because it does not look like a GraphQL endpoint", {
+    country,
+    graphqlOverride: override,
+    defaultGraphQLEndpoint: fallback,
+  })
+}
+
 const toSignature = (country: string) =>
   [
     process.env[buildEnvKey(country, GRAPHQL_SUFFIX)],
@@ -51,9 +63,15 @@ const cache = new Map<string, CachedEndpoints>()
 
 export function getGraphQLEndpoint(country: string = DEFAULT_SITE): string {
   const normalized = normalizeCountry(country)
+  const defaultGraphQl = getDefaultGraphQLEndpoint(normalized)
   const specific = getEnvValue(buildEnvKey(normalized, GRAPHQL_SUFFIX))
 
-  return specific || getDefaultGraphQLEndpoint(normalized)
+  if (specific && !looksLikeGraphQLEndpoint(specific)) {
+    warnInvalidGraphQlOverride(normalized, specific, defaultGraphQl)
+    return defaultGraphQl
+  }
+
+  return specific || defaultGraphQl
 }
 
 export function getRestBase(country: string = DEFAULT_SITE): string {
