@@ -248,6 +248,17 @@ export const CATEGORIES_QUERY = gql`
         slug
         description
         count
+        parentDatabaseId
+        children {
+          nodes {
+            databaseId
+            name
+            slug
+            description
+            count
+            parentDatabaseId
+          }
+        }
       }
     }
   }

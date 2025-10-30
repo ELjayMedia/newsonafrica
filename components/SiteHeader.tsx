@@ -181,16 +181,42 @@ export function SiteHeader() {
         setCategoriesState((prev) => ({ ...prev, loading: true, error: null }))
         const categories = await fetchAllCategories()
 
-        // Transform and organize categories (assuming flat structure from API)
-        // You might need to adjust this based on your actual API response structure
-        const organizedCategories = categories.map((cat: any) => ({
-          id: cat.id,
-          name: cat.name,
-          slug: cat.slug,
-          description: cat.description,
-          count: cat.count,
-          children: [], // Add logic here if you have parent-child relationships
-        }))
+        const normalizeCategory = (cat: any): Category => {
+          const deriveId = (input: any) => {
+            if (input?.id !== undefined && input?.id !== null) {
+              return String(input.id)
+            }
+
+            if (input?.databaseId !== undefined && input?.databaseId !== null) {
+              return String(input.databaseId)
+            }
+
+            if (typeof input?.slug === "string" && input.slug.length > 0) {
+              return input.slug
+            }
+
+            return ""
+          }
+
+          const children = Array.isArray(cat?.children)
+            ? cat.children
+                .map((child: any) => normalizeCategory(child))
+                .filter((child) => Boolean(child.slug))
+            : []
+
+          return {
+            id: deriveId(cat),
+            name: cat?.name ?? "",
+            slug: cat?.slug ?? "",
+            description: cat?.description ?? undefined,
+            count: cat?.count ?? undefined,
+            children,
+          }
+        }
+
+        const organizedCategories = Array.isArray(categories)
+          ? categories.map((cat: any) => normalizeCategory(cat)).filter((cat) => cat.slug)
+          : []
 
         setCategoriesState({
           categories: organizedCategories,
