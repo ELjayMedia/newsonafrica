@@ -29,7 +29,9 @@ import type {
   BookmarkListPayload,
   BookmarkListRow,
   BookmarkPagination,
+  BookmarkMutationPayload,
   BookmarkStats,
+  BookmarkStatsDelta,
 } from "@/types/bookmarks"
 import { ensureActionError } from "@/lib/supabase/action-result"
 
@@ -94,6 +96,28 @@ const DEFAULT_PAGINATION: BookmarkPagination = {
   hasMore: false,
   nextPage: null,
   nextCursor: null,
+}
+
+const EMPTY_STATS_DELTA: BookmarkStatsDelta = { total: 0, unread: 0, categories: {} }
+
+const applyStatsDelta = (stats: BookmarkStats, delta: BookmarkStatsDelta): BookmarkStats => {
+  if (!delta) return stats
+
+  const categories = { ...stats.categories }
+  for (const [category, change] of Object.entries(delta.categories)) {
+    const next = (categories[category] ?? 0) + change
+    if (next <= 0) {
+      delete categories[category]
+    } else {
+      categories[category] = next
+    }
+  }
+
+  return {
+    total: Math.max(0, stats.total + delta.total),
+    unread: Math.max(0, stats.unread + delta.unread),
+    categories,
+  }
 }
 
 const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
@@ -315,7 +339,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const applyServerPayload = useCallback(
+  const applyListPayload = useCallback(
     async (payload: BookmarkListPayload) => {
       const hydrationMap = await hydrateBookmarks(payload.bookmarks)
       const hydrated = payload.bookmarks.map((row) =>
@@ -325,6 +349,84 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       setBookmarks(hydrated)
       setStats(payload.stats ?? DEFAULT_STATS)
       setPagination(payload.pagination ?? DEFAULT_PAGINATION)
+    },
+    [hydrateBookmarks],
+  )
+
+  const applyMutationDelta = useCallback(
+    async (payload: BookmarkMutationPayload | null | undefined) => {
+      if (!payload) {
+        return
+      }
+
+      const additions = payload.added ?? []
+      const updates = payload.updated ?? []
+      const removals = payload.removed ?? []
+      const hydrationTargets = [...additions, ...updates]
+      const hydrationMap = hydrationTargets.length
+        ? await hydrateBookmarks(hydrationTargets)
+        : {}
+
+      const formatRow = (row: BookmarkListRow) =>
+        formatBookmarkRow(row, hydrationMap[row.post_id])
+
+      const removalSet = new Set(removals.map((row) => row.post_id))
+      let nextBookmarks = bookmarksRef.current.filter(
+        (bookmark) => !removalSet.has(bookmark.post_id),
+      )
+
+      const changeMap = new Map<string, Bookmark>()
+      const additionSet = new Set<string>()
+
+      additions.forEach((row) => {
+        const formatted = formatRow(row)
+        changeMap.set(row.post_id, formatted)
+        additionSet.add(row.post_id)
+      })
+
+      updates.forEach((row) => {
+        const formatted = formatRow(row)
+        changeMap.set(row.post_id, formatted)
+      })
+
+      if (changeMap.size > 0) {
+        nextBookmarks = nextBookmarks.map((bookmark) =>
+          changeMap.get(bookmark.post_id) ?? bookmark,
+        )
+
+        const existingPostIds = new Set(nextBookmarks.map((bookmark) => bookmark.post_id))
+        const newEntries: Bookmark[] = []
+        for (const postId of additionSet) {
+          if (!existingPostIds.has(postId)) {
+            const addition = changeMap.get(postId)
+            if (addition) {
+              existingPostIds.add(postId)
+              newEntries.push(addition)
+            }
+          }
+        }
+
+        if (newEntries.length) {
+          nextBookmarks = [...newEntries, ...nextBookmarks]
+        }
+      }
+
+      setBookmarks(nextBookmarks)
+
+      const statsDelta = payload.statsDelta ?? EMPTY_STATS_DELTA
+      const hasStatsDelta =
+        statsDelta.total !== 0 ||
+        statsDelta.unread !== 0 ||
+        Object.keys(statsDelta.categories).length > 0
+
+      if (hasStatsDelta) {
+        const nextStats = applyStatsDelta(statsRef.current, statsDelta)
+        setStats(nextStats)
+        setPagination((prev) => ({
+          ...prev,
+          limit: Math.max(0, (prev.limit || 0) + statsDelta.total),
+        }))
+      }
     },
     [hydrateBookmarks],
   )
@@ -408,7 +510,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (result?.data) {
-            await applyServerPayload(result.data as BookmarkListPayload)
+            await applyMutationDelta(result.data as BookmarkMutationPayload)
           }
 
           options.onSuccess?.()
@@ -449,7 +551,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       enqueueMutation(task)
       return taskPromise
     },
-    [applyServerPayload, enqueueMutation, ensureSessionFreshness, toast],
+    [applyMutationDelta, enqueueMutation, ensureSessionFreshness, toast],
   )
 
   const fetchBookmarks = useCallback(
@@ -472,7 +574,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (result.data) {
-          await applyServerPayload(result.data)
+          await applyListPayload(result.data)
         }
       } catch (error) {
         if (isOfflineError(error)) {
@@ -494,7 +596,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       }
     },
-    [applyServerPayload, ensureSessionFreshness, toast, user],
+    [applyListPayload, ensureSessionFreshness, toast, user],
   )
 
   // Fetch bookmarks when user changes

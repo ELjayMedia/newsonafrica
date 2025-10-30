@@ -41,3 +41,16 @@ export interface BookmarkListPayload {
   stats: BookmarkStats | null
   pagination: BookmarkPagination
 }
+
+export interface BookmarkStatsDelta {
+  total: number
+  unread: number
+  categories: Record<string, number>
+}
+
+export interface BookmarkMutationPayload {
+  added?: BookmarkListRow[]
+  updated?: BookmarkListRow[]
+  removed?: BookmarkListRow[]
+  statsDelta: BookmarkStatsDelta
+}
