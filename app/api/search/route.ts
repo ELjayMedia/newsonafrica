@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server"
+import pLimit from "p-limit"
+
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
@@ -14,6 +16,12 @@ export const runtime = "nodejs"
 export const revalidate = 0
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
+export const MAX_PAGES_PER_COUNTRY = 6
+export const MAX_CONCURRENT_COUNTRY_FETCHES = 3
+const RESULT_BUFFER_RATIO = 0.2
+const RESULT_BUFFER_MIN = 10
+
+const REQUEST_BUDGET = SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -178,6 +186,12 @@ type WordPressScopeResult = {
   currentPage: number
   hasMore: boolean
   suggestions: string[]
+  performance: {
+    totalRequests: number
+    requestBudget: number
+    budgetExhausted: boolean
+    elapsedMs: number
+  }
 }
 
 const uniqueSuggestions = (records: SearchRecord[]): string[] =>
@@ -198,10 +212,18 @@ const executeWordPressSearchForScope = async (
     const basePerCountry = Math.ceil(desiredTotal / countryCount)
     const buffer = Math.max(2, Math.ceil(basePerCountry * 0.1))
     const perCountryFetchSize = Math.min(100, Math.max(1, basePerCountry + buffer))
+    const desiredWithBuffer = desiredTotal + Math.max(
+      RESULT_BUFFER_MIN,
+      Math.ceil(desiredTotal * RESULT_BUFFER_RATIO),
+    )
+    const limit = pLimit(MAX_CONCURRENT_COUNTRY_FETCHES)
+    const searchStart = Date.now()
+    let totalRequests = 0
+    let budgetExhausted = false
     type HeapNode = { record: SearchRecord; timestamp: number }
 
     const heap: HeapNode[] = []
-    const maxHeapSize = Math.max(1, desiredTotal)
+    const maxHeapSize = Math.max(1, desiredWithBuffer)
     let total = 0
     const suggestionSet = new Set<string>()
     const countryTotals = new Map<string, number>()
@@ -276,10 +298,17 @@ const executeWordPressSearchForScope = async (
       code: string
       nextPage: number
       hasMore: boolean
+      pagesFetched: number
       oldestTimestampFetched?: number
     }
 
     const fetchAndProcessPage = async (state: CountryState, pageToFetch: number) => {
+      if (budgetExhausted || totalRequests >= REQUEST_BUDGET) {
+        budgetExhausted = true
+        return 0
+      }
+
+      totalRequests += 1
       const response = await wpSearchPosts(query, {
         page: pageToFetch,
         perPage: perCountryFetchSize,
@@ -310,7 +339,12 @@ const executeWordPressSearchForScope = async (
       }
 
       state.nextPage = response.currentPage + 1
-      state.hasMore = response.hasMore
+      state.pagesFetched += 1
+      state.hasMore = response.hasMore && state.pagesFetched < MAX_PAGES_PER_COUNTRY
+
+      if (totalRequests >= REQUEST_BUDGET) {
+        budgetExhausted = true
+      }
       return records.length
     }
 
@@ -318,15 +352,16 @@ const executeWordPressSearchForScope = async (
       code: country.code.toLowerCase(),
       nextPage: 1,
       hasMore: true,
+      pagesFetched: 0,
     }))
 
-    await Promise.all(
-      countryStates.map(async (state) => {
-        await fetchAndProcessPage(state, 1)
-      }),
-    )
+    await Promise.all(countryStates.map((state) => limit(() => fetchAndProcessPage(state, 1))))
 
     while (true) {
+      if (budgetExhausted) {
+        break
+      }
+
       const statesWithMore = countryStates.filter((state) => state.hasMore)
 
       if (statesWithMore.length === 0) {
@@ -335,7 +370,7 @@ const executeWordPressSearchForScope = async (
 
       const heapOldestTimestamp = heap[0]?.timestamp ?? Number.NEGATIVE_INFINITY
       const shouldContinue =
-        heap.length < desiredTotal ||
+        heap.length < desiredWithBuffer ||
         statesWithMore.some((state) => {
           const oldestForCountry = state.oldestTimestampFetched
           return typeof oldestForCountry === "number" && oldestForCountry > heapOldestTimestamp
@@ -346,7 +381,7 @@ const executeWordPressSearchForScope = async (
       }
 
       const additions = await Promise.all(
-        statesWithMore.map((state) => fetchAndProcessPage(state, state.nextPage)),
+        statesWithMore.map((state) => limit(() => fetchAndProcessPage(state, state.nextPage))),
       )
 
       const addedRecords = additions.reduce((sum, count) => sum + count, 0)
@@ -373,6 +408,12 @@ const executeWordPressSearchForScope = async (
       currentPage: safePage,
       hasMore: safePage < totalPages,
       suggestions: Array.from(suggestionSet),
+      performance: {
+        totalRequests,
+        requestBudget: REQUEST_BUDGET,
+        budgetExhausted,
+        elapsedMs: Date.now() - searchStart,
+      },
     }
   }
 
@@ -387,6 +428,12 @@ const executeWordPressSearchForScope = async (
     currentPage: response.currentPage,
     hasMore: response.hasMore,
     suggestions: uniqueSuggestions(records),
+    performance: {
+      totalRequests: 1,
+      requestBudget: REQUEST_BUDGET,
+      budgetExhausted: false,
+      elapsedMs: 0,
+    },
   }
 }
 
@@ -588,6 +635,10 @@ export async function GET(request: NextRequest) {
           performance: {
             responseTime: Date.now() - startTime,
             source: "wordpress",
+            wordpressRequestCount: fallback.performance.totalRequests,
+            wordpressRequestBudget: fallback.performance.requestBudget,
+            wordpressBudgetExhausted: fallback.performance.budgetExhausted,
+            wordpressSearchElapsed: fallback.performance.elapsedMs,
           },
         })
       } catch (error) {
