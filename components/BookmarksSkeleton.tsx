@@ -10,7 +10,7 @@ export default function BookmarksSkeleton() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <Card key={i} className="overflow-hidden flex flex-col h-full animate-pulse">
+          <Card key={i} className="overflow-hidden flex flex-col h-full">
             <div className="relative">
               <div className="aspect-video relative overflow-hidden bg-gray-200"></div>
             </div>

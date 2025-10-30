@@ -79,7 +79,7 @@ export function RelatedPostsCarousel({
         <div className="relative">
           <div className="flex gap-4 overflow-hidden">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-64 animate-pulse">
+              <div key={i} className="flex-shrink-0 w-64">
                 <div className="bg-gray-200 aspect-[16/10] rounded-lg mb-3"></div>
                 <div className="space-y-2">
                   <div className="h-4 bg-gray-200 rounded"></div>

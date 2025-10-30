@@ -54,7 +54,7 @@ export function TopBar() {
         </div>
         <div className="flex items-center space-x-3">
           {loading ? (
-            <div className="h-8 w-24 bg-gray-700 animate-pulse rounded-full"></div>
+            <div className="h-8 w-24 bg-gray-700 rounded-full"></div>
           ) : (
             <>
               <Button

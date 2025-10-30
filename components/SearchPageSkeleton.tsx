@@ -1,6 +1,6 @@
 export function SearchPageSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="space-y-8">
       {/* Search box skeleton */}
       <div className="h-12 bg-gray-200 rounded-lg w-full"></div>
 

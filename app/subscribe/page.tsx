@@ -17,7 +17,7 @@ export default function SubscribePage() {
 
 function SubscriptionSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 animate-pulse">
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="h-8 bg-gray-200 rounded w-1/2 mx-auto mb-4"></div>
