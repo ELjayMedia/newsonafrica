@@ -148,7 +148,7 @@ export default function OfflineContent() {
             </Button>
 
             <Button asChild variant="outline" className="flex items-center gap-2">
-              <Link href="/">
+              <Link href="/" prefetch={false}>
                 <Home className="h-4 w-4" />
                 Homepage
               </Link>
