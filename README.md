@@ -79,6 +79,14 @@ NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
 
+# --- WordPress Authentication (Optional) ---
+# Provide credentials for build-time/server-side GraphQL requests.
+# Supports either a plain Authorization value or a JSON object of headers.
+# Examples:
+# WORDPRESS_GRAPHQL_AUTH_HEADER=Bearer your-token
+# WORDPRESS_GRAPHQL_AUTH_HEADER={"Authorization":"Basic base64","X-Role":"editor"}
+WORDPRESS_GRAPHQL_AUTH_HEADER=
+
 # --- Supabase Configuration ---
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -101,6 +109,10 @@ FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
 \`\`\`
+
+> [!TIP]
+> Set `WORDPRESS_GRAPHQL_AUTH_HEADER` when your WordPress instance requires authenticated GraphQL access. Provide either the raw
+> `Authorization` value (e.g. `Bearer <token>`) or a JSON object mapping header names to values for multi-header setups.
 
 ### Installation
 
