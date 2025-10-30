@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 
 import { env } from "@/config/env"
 import { stripHtml } from "@/lib/search"
-import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
+import { SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
 import { getLatestPostsForCountry, getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 
 import {
