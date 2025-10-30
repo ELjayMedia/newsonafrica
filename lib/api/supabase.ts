@@ -55,6 +55,19 @@ function createStubSupabaseClient(): SupabaseClient<Database> {
     return builder
   }
 
+  const createStubChannel = () => {
+    const channel: any = {
+      on: (..._args: any[]) => channel,
+      subscribe: (callback?: (status: string) => void) => {
+        callback?.("SUBSCRIBED")
+        return channel
+      },
+      unsubscribe: async () => "ok" as const,
+    }
+
+    return channel
+  }
+
   const stubClient = {
     auth: {
       getSession: async () => ({ data: { session: null }, error: createStubError() }),
@@ -92,6 +105,10 @@ function createStubSupabaseClient(): SupabaseClient<Database> {
         error: createStubError(),
       }),
     },
+    rpc: (_fn: string, _args?: Record<string, unknown>, _options?: Record<string, unknown>) =>
+      createStubQueryPromise(),
+    channel: (_name: string, _opts?: Record<string, unknown>) => createStubChannel(),
+    removeChannel: async (_channel: unknown) => "ok" as const,
     from: () => createQueryBuilder(),
     storage: {
       from: () => ({
