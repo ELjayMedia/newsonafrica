@@ -171,12 +171,12 @@ export default function OfflineFallback({
           {isRetrying ? "Retrying..." : "Try Again"}
         </Button>
 
-        <Link href="/">
-          <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+        <Button asChild variant="outline">
+          <Link href="/" className="flex items-center gap-2 bg-transparent">
             <Home className="w-4 h-4" />
-            Go Home
-          </Button>
-        </Link>
+            <span>Go Home</span>
+          </Link>
+        </Button>
       </div>
 
       {showCachedContent && (
