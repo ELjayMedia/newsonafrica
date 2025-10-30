@@ -18,7 +18,6 @@ import {
   type BookmarkListRow,
   type BookmarkMutationPayload,
   type BookmarkRow,
-  type BookmarkStats,
   type BookmarkStatsDelta,
 } from "@/types/bookmarks"
 
