@@ -276,10 +276,10 @@ export function PaystackButton({
       className={`w-full bg-blue-600 hover:bg-blue-700 text-white ${className}`}
     >
       {isLoading ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <span className="flex items-center" role="status" aria-live="polite">
+          <Loader2 className="mr-2 h-4 w-4 text-white" aria-hidden="true" />
           Processing...
-        </>
+        </span>
       ) : (
         <>
           <Lock className="mr-2 h-4 w-4" />

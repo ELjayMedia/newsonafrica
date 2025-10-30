@@ -70,13 +70,8 @@ export function NewsGridClient({
         <AuthorNewsList posts={posts} blurPlaceholder={blurPlaceholders.main} className="space-y-3" />
         <div ref={loadMoreRef} aria-hidden="true" />
         {isFetching && (
-          <div className="py-3 text-center" aria-live="polite" aria-busy="true">
-            <div
-              className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-              role="status"
-            >
-              <span className="sr-only">Loading...</span>
-            </div>
+          <div className="py-3 text-center text-sm text-muted-foreground" role="status" aria-live="polite">
+            Loading more articles…
           </div>
         )}
         {!isFetching && !hasMorePosts && posts.length > 0 && (

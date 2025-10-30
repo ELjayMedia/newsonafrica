@@ -121,10 +121,10 @@ export const BookmarkButton = ({
   const getButtonContent = () => {
     if (isProcessing) {
       return (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="flex items-center" role="status" aria-live="polite">
+          <Loader2 className="h-4 w-4 text-blue-600" aria-hidden="true" />
           {showText && !compact && <span className="ml-2">Saving...</span>}
-        </>
+        </span>
       )
     }
 

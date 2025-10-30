@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useEffect } from "react"
+import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -26,8 +27,13 @@ export function ProtectedRoute({ children, fallbackUrl = "/auth" }: ProtectedRou
   // Show loading state while checking authentication
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+      <div
+        className="flex min-h-screen flex-col items-center justify-center text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 className="h-10 w-10 text-blue-600" aria-hidden="true" />
+        <p className="mt-4 text-sm text-gray-600">Checking your session…</p>
       </div>
     )
   }

@@ -487,7 +487,12 @@ function SearchBox({ placeholder, country, sort, query, onSearch, onClear, isSea
         />
 
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          {busy && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+          {busy && (
+            <div className="flex items-center gap-1 text-xs text-gray-500" role="status" aria-live="polite">
+              <Loader2 className="h-4 w-4 text-gray-500" aria-hidden="true" />
+              <span>Loading</span>
+            </div>
+          )}
 
           {value && (
             <Button
@@ -624,8 +629,12 @@ function SearchResultsPanel({
 
   if (status === "loading" && results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border bg-white py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div
+        className="flex flex-col items-center justify-center rounded-lg border bg-white py-12"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 className="h-8 w-8 text-gray-400" aria-hidden="true" />
         <p className="mt-4 text-gray-500">Searching…</p>
       </div>
     )
@@ -667,9 +676,10 @@ function SearchResultsPanel({
             disabled={status === "loadingMore"}
           >
             {status === "loadingMore" ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
-              </>
+              <span className="flex items-center" role="status" aria-live="polite">
+                <Loader2 className="mr-2 h-4 w-4 text-blue-600" aria-hidden="true" />
+                Loading…
+              </span>
             ) : (
               "Load more"
             )}

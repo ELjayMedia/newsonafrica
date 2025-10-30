@@ -139,8 +139,9 @@ export function OnboardingClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      <div className="flex min-h-screen flex-col items-center justify-center" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 text-gray-500" aria-hidden="true" />
+        <p className="mt-4 text-sm text-gray-500">Preparing your onboarding experience…</p>
       </div>
     )
   }
@@ -355,10 +356,10 @@ export function OnboardingClient() {
             ) : (
               <Button onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span className="flex items-center" role="status" aria-live="polite">
+                    <Loader2 className="mr-2 h-4 w-4" aria-hidden="true" />
                     Saving...
-                  </>
+                  </span>
                 ) : (
                   "Complete Profile"
                 )}

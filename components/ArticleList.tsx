@@ -258,9 +258,9 @@ function InfiniteArticleList({
       {hasMore && (
         <div ref={loadMoreRef} className="flex justify-center py-8">
           {isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Loading more articles...
+            <div className="flex items-center gap-2 text-muted-foreground" role="status" aria-live="polite">
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              <span>Loading more articles...</span>
             </div>
           ) : (
             <Button variant="outline" onClick={loadMore} className="bg-transparent">
@@ -310,10 +310,10 @@ function StaticArticleList({
         <div className="flex justify-center pt-6">
           <Button onClick={onLoadMore} disabled={isLoadingMore} variant="outline" className="bg-transparent">
             {isLoadingMore ? (
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin" />
+              <span className="flex items-center gap-2" role="status" aria-live="polite">
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 Loading...
-              </div>
+              </span>
             ) : (
               "Load more articles"
             )}

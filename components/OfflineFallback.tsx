@@ -167,8 +167,17 @@ export default function OfflineFallback({
 
       <div className="flex gap-3 mb-8">
         <Button onClick={handleRetry} disabled={isRetrying} className="flex items-center gap-2">
-          <RefreshCw className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`} />
-          {isRetrying ? "Retrying..." : "Try Again"}
+          {isRetrying ? (
+            <span className="flex items-center gap-2" role="status" aria-live="polite">
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              <span>Retrying...</span>
+            </span>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              <span>Try Again</span>
+            </>
+          )}
         </Button>
 
         <Button asChild variant="outline">
