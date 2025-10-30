@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import { getSupabaseClient } from "@/lib/supabase/server-component-client"
+import {
+  SUPABASE_CONFIGURATION_ERROR_MESSAGE,
+  getSupabaseClient,
+} from "@/lib/supabase/server-component-client"
 
 export type AuthFormState = {
   status: "idle" | "success" | "error"
@@ -98,7 +101,12 @@ export async function signInWithPasswordAction(
       return createErrorState("Email and password are required.")
     }
 
-    const supabase = getSupabaseClient()
+    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+
+    if (isFallback) {
+      console.error("Sign-in is unavailable because Supabase is not configured.", fallbackError)
+      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    }
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -165,7 +173,12 @@ export async function signUpWithPasswordAction(
       return createErrorState("Passwords do not match.")
     }
 
-    const supabase = getSupabaseClient()
+    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+
+    if (isFallback) {
+      console.error("Sign-up is unavailable because Supabase is not configured.", fallbackError)
+      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -221,7 +234,12 @@ export async function sendMagicLinkAction(
       return createErrorState("Please provide an email address.")
     }
 
-    const supabase = getSupabaseClient()
+    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+
+    if (isFallback) {
+      console.error("Magic link sign-in is unavailable because Supabase is not configured.", fallbackError)
+      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
