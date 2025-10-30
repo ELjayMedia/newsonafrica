@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 
 import { env } from "@/config/env"
 import { stripHtml } from "@/lib/search"
-import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
+import { SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
 import { getLatestPostsForCountry, getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 
 import {
@@ -62,12 +62,13 @@ const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_
 
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
+  const routeCountry = normalizeCountryCode(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
 
   if (!edition) {
     const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
-    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, normalizeCountryCode(countryCode), normalizedSlug)
+    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountry, normalizedSlug)
     const placeholderImage = buildPlaceholderUrl(baseUrl)
 
     return {
@@ -84,18 +85,18 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
     }
   }
 
-  const normalizedCountry = edition.code.toLowerCase()
+  const editionCountry = normalizeCountryCode(edition.code)
   const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
-  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, normalizedCountry, normalizedSlug)
+  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountry, normalizedSlug)
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
-  const countryPriority = buildArticleCountryPriority(normalizedCountry)
+  const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
   const article = resolvedArticle?.article ?? null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const canonicalUrl = `${baseUrl}/${normalizedCountry}/article/${normalizedSlug}`
+  const canonicalUrl = `${baseUrl}/${routeCountry}/article/${normalizedSlug}`
 
   return {
     title: `${title} - News On Africa`,
@@ -125,9 +126,10 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     notFound()
   }
 
-  const normalizedCountry = edition.code.toLowerCase()
+  const editionCountry = normalizeCountryCode(edition.code)
+  const routeCountry = normalizeCountryCode(countryCode)
   const normalizedSlug = normalizeSlug(slug)
-  const countryPriority = buildArticleCountryPriority(normalizedCountry)
+  const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
   if (resolvedArticle === null) {
@@ -135,14 +137,14 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   }
 
   const postId = resolvedArticle.article?.id != null ? String(resolvedArticle.article.id) : null
-  const relatedCountry = resolvedArticle.sourceCountry ?? normalizedCountry
+  const relatedCountry = resolvedArticle.sourceCountry ?? editionCountry
   const relatedPosts =
     postId !== null ? await getRelatedPostsForCountry(relatedCountry, postId, 6) : []
 
   return (
     <ArticleClientContent
       slug={normalizedSlug}
-      countryCode={isCountryEdition(edition) ? normalizedCountry : AFRICAN_EDITION.code}
+      countryCode={isCountryEdition(edition) ? editionCountry : routeCountry}
       sourceCountryCode={resolvedArticle.sourceCountry}
       initialData={resolvedArticle.article}
       relatedPosts={relatedPosts}

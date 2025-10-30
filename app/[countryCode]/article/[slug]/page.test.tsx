@@ -9,10 +9,15 @@ vi.mock('next/navigation', () => ({
   notFound: vi.fn(),
 }))
 
+const { capturedArticleClientProps } = vi.hoisted(() => ({
+  capturedArticleClientProps: [] as Array<Record<string, any>>,
+}))
+
 vi.mock('./ArticleClientContent', () => ({
-  ArticleClientContent: ({ initialData }: { initialData: any }) => (
-    <div>{initialData.title}</div>
-  ),
+  ArticleClientContent: (props: { initialData: any }) => {
+    capturedArticleClientProps.push(props)
+    return <div>{props.initialData.title}</div>
+  },
 }))
 
 import Page, { generateMetadata } from './page'
@@ -47,6 +52,7 @@ describe('ArticlePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(notFound).mockReset()
+    capturedArticleClientProps.length = 0
   })
 
   it('renders post content', async () => {
@@ -199,6 +205,68 @@ describe('ArticlePage', () => {
     expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
     expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
     expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
+  })
+
+  it('uses the requested country path for african edition URLs', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        if (country === 'african-edition') {
+          return { posts: { nodes: [createArticleNode({ title: 'African Edition' })] } }
+        }
+
+        return { posts: { nodes: [] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ countryCode: 'african', slug: 'test' }),
+    })
+
+    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const expectedOgUrl = `${baseUrl}/african/article/test/opengraph-image`
+    const expectedCanonical = `${baseUrl}/african/article/test`
+
+    expect(metadata.alternates?.canonical).toBe(expectedCanonical)
+    expect(metadata.openGraph?.url).toBe(expectedCanonical)
+    expect(metadata.openGraph?.images?.[0]?.url).toBe(expectedOgUrl)
+    expect(metadata.twitter?.images?.[0]).toBe(expectedOgUrl)
+  })
+
+  it('passes the route country to the article client for non-country editions', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        if (country === 'african-edition') {
+          return { posts: { nodes: [createArticleNode({ title: 'African' })] } }
+        }
+
+        return { posts: { nodes: [] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
+
+    const ui = await Page({ params: { countryCode: 'african', slug: 'test' } })
+    render(ui)
+
+    expect(capturedArticleClientProps[0]?.countryCode).toBe('african')
   })
 
   it('treats the African edition alias as valid', async () => {
