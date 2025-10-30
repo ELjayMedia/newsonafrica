@@ -15,6 +15,7 @@ Add these secrets to your repository settings:
 Ensure the following environment variables are configured in GitHub and Vercel:
 
 - WordPress GraphQL endpoints: `NEXT_PUBLIC_WP_SZ_GRAPHQL`, `NEXT_PUBLIC_WP_ZA_GRAPHQL` (optional overrides)
+- WordPress GraphQL authentication: `WORDPRESS_GRAPHQL_AUTH_HEADER` (optional JSON/object for server-side headers)
 - `NEXT_PUBLIC_DEFAULT_SITE` (defaults to `sz` if omitted)
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`

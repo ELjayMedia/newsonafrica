@@ -8,6 +8,8 @@ type EnvConfig = {
   WORDPRESS_REQUEST_TIMEOUT_MS: number
 }
 
+type WordPressGraphQLAuthHeaders = Record<string, string>
+
 function readEnvValue(name: string): string | undefined {
   const value = process.env[name]
   if (typeof value !== "string") {
@@ -46,6 +48,64 @@ function readPositiveInteger(name: string, defaultValue: number): number {
   return parsed
 }
 
+function parseWordPressGraphQLAuthHeaders(
+  rawValue: string,
+): WordPressGraphQLAuthHeaders | undefined {
+  const trimmed = rawValue.trim()
+  if (!trimmed) {
+    return undefined
+  }
+
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        console.warn(
+          "WORDPRESS_GRAPHQL_AUTH_HEADER must be a JSON object when using JSON syntax.",
+        )
+        return undefined
+      }
+
+      const entries = Object.entries(parsed).filter((entry): entry is [string, string] => {
+        const [key, value] = entry
+        return typeof key === "string" && typeof value === "string" && value.trim().length > 0
+      })
+
+      if (!entries.length) {
+        console.warn(
+          "WORDPRESS_GRAPHQL_AUTH_HEADER JSON object did not contain any string header values.",
+        )
+        return undefined
+      }
+
+      return Object.fromEntries(entries)
+    } catch (error) {
+      console.warn(
+        "Failed to parse WORDPRESS_GRAPHQL_AUTH_HEADER as JSON. The value will be ignored.",
+        error,
+      )
+      return undefined
+    }
+  }
+
+  return { Authorization: trimmed }
+}
+
+/**
+ * Reads optional server-only headers (Authorization and companions) that should be attached to WordPress GraphQL fetches.
+ *
+ * The value can either be a raw Authorization token (e.g. "Bearer <token>") or a JSON object of header key/value pairs.
+ * The string is trimmed before parsing. Invalid or empty values are ignored.
+ */
+function getWordPressGraphQLAuthHeaders(): WordPressGraphQLAuthHeaders | undefined {
+  const rawValue = readEnvValue("WORDPRESS_GRAPHQL_AUTH_HEADER")
+  if (!rawValue) {
+    return undefined
+  }
+
+  return parseWordPressGraphQLAuthHeaders(rawValue)
+}
+
 function createEnv(): EnvConfig {
   return {
     NEXT_PUBLIC_SITE_URL: readString("NEXT_PUBLIC_SITE_URL", DEFAULT_SITE_URL),
@@ -63,4 +123,5 @@ function createEnv(): EnvConfig {
 const env = createEnv()
 
 export { env }
-export type { EnvConfig }
+export { getWordPressGraphQLAuthHeaders }
+export type { EnvConfig, WordPressGraphQLAuthHeaders }

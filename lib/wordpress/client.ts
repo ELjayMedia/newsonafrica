@@ -1,3 +1,4 @@
+import { getWordPressGraphQLAuthHeaders } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithRetry } from "../utils/fetchWithRetry"
@@ -51,9 +52,20 @@ export async function fetchWordPressGraphQL<T>(
   const base = getGraphQLEndpoint(countryCode)
 
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+
+    if (typeof window === "undefined") {
+      const authHeaders = getWordPressGraphQLAuthHeaders()
+      if (authHeaders) {
+        for (const [key, value] of Object.entries(authHeaders)) {
+          headers[key] = value
+        }
+      }
+    }
+
     const res = await fetchWithRetry(base, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ query, variables }),
       next: {
         revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,

@@ -22,6 +22,7 @@ const createGraphqlPost = (id: number, prefix = "post") => ({
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   vi.restoreAllMocks()
 })
 
@@ -89,6 +90,39 @@ describe("fetchWordPressGraphQL", () => {
 
     const result = await wordpressApi.fetchWordPressGraphQL<typeof mockData>("sz", "query")
     expect(result).toEqual(mockData)
+  })
+
+  it("forwards configured WordPress auth headers during server fetches", async () => {
+    vi.stubEnv(
+      "WORDPRESS_GRAPHQL_AUTH_HEADER",
+      JSON.stringify({ Authorization: "Bearer secret", "X-Role": "editor" }),
+    )
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    const originalWindow = (globalThis as { window?: unknown }).window
+    ;(globalThis as { window?: unknown }).window = undefined
+
+    try {
+      await wordpressApi.fetchWordPressGraphQL("sz", "query")
+    } finally {
+      if (typeof originalWindow === "undefined") {
+        delete (globalThis as { window?: unknown }).window
+      } else {
+        ;(globalThis as { window?: unknown }).window = originalWindow
+      }
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init?.headers).toMatchObject({
+      Authorization: "Bearer secret",
+      "Content-Type": "application/json",
+      "X-Role": "editor",
+    })
   })
 })
 
