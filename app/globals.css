@@ -125,15 +125,6 @@
   overflow: hidden;
 }
 
-/* Smooth transitions for carousel cards */
-.carousel-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.carousel-card:hover {
-  transform: translateY(-2px);
-}
-
 /* Focus styles for accessibility */
 .carousel-nav-button:focus {
   outline: none;
@@ -148,51 +139,13 @@
   }
 }
 
-/* Animation for loading skeleton */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes accordion-down {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-accordion-content-height);
-  }
-}
-
-@keyframes accordion-up {
-  from {
-    height: var(--radix-accordion-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
-
-  .animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
 /* Gradient overlay for images */
 .image-overlay {
   background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.1) 100%);
 }
 
 /* Hover effects */
-.hover-lift {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
 .hover-lift:hover {
-  transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
@@ -204,11 +157,6 @@
 .focus-ring:focus {
   outline: none;
   box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
-}
-
-/* Smooth scroll behavior */
-html {
-  scroll-behavior: smooth;
 }
 
 /* Print styles */
