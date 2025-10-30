@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function SidebarSkeleton() {
   return (
-    <div className="w-full space-y-6 animate-pulse">
+    <div className="w-full space-y-6">
       {/* Most Read Skeleton */}
       <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-100">
         <div className="flex items-center gap-2 mb-5 pb-3 border-b-2 border-gray-200">

@@ -24,7 +24,7 @@ export default async function SubscriptionsPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Manage Your Subscriptions</h1>
 
-      <Suspense fallback={<div className="animate-pulse h-96 bg-gray-100 rounded-md"></div>}>
+      <Suspense fallback={<div className="h-96 bg-gray-100 rounded-md"></div>}>
         <SubscriptionsContent userId={session.user.id} />
       </Suspense>
     </div>

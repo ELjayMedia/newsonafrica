@@ -288,7 +288,7 @@ export function CommentList({ postId }: CommentListProps) {
       {isInitialLoad ? (
         <div className="space-y-3 mt-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="animate-pulse flex space-x-4">
+            <div key={i} className="flex space-x-4">
               <div className="rounded-full bg-gray-200 h-10 w-10"></div>
               <div className="flex-1 space-y-2 py-1">
                 <div className="h-4 bg-gray-200 rounded w-1/4"></div>

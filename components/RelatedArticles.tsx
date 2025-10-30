@@ -108,14 +108,14 @@ export function RelatedArticles({
         )}
       >
         {[...Array(layout === "carousel" ? 4 : 6)].map((_, i) => (
-          <div key={i} className={cn("animate-pulse", layout === "carousel" ? "flex-shrink-0 w-72" : "")}>
-            <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 aspect-[16/10] rounded-xl mb-4 animate-shimmer bg-[length:200%_100%]"></div>
+          <div key={i} className={cn(layout === "carousel" ? "flex-shrink-0 w-72" : "")}>
+            <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 aspect-[16/10] rounded-xl mb-4 bg-[length:200%_100%]"></div>
             <div className="space-y-3">
-              <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded animate-shimmer bg-[length:200%_100%]"></div>
-              <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-4/5 animate-shimmer bg-[length:200%_100%]"></div>
+              <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded bg-[length:200%_100%]"></div>
+              <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-4/5 bg-[length:200%_100%]"></div>
               <div className="flex gap-2">
-                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 animate-shimmer bg-[length:200%_100%]"></div>
-                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 animate-shimmer bg-[length:200%_100%]"></div>
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-20 bg-[length:200%_100%]"></div>
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded w-16 bg-[length:200%_100%]"></div>
               </div>
             </div>
           </div>
@@ -348,13 +348,6 @@ export function RelatedArticles({
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
         }
       `}</style>
     </section>
