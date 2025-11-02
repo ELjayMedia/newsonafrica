@@ -191,7 +191,7 @@ describe("getPostsForCategories", () => {
 })
 
 describe("getPostsByCategoryForCountry", () => {
-  it("requests fp-tagged posts and returns GraphQL data", async () => {
+  it("requests category posts without forcing fp tag and returns GraphQL data", async () => {
     const capturedBodies: string[] = []
 
     const graphqlResponse = {
@@ -220,7 +220,11 @@ describe("getPostsByCategoryForCountry", () => {
 
     expect(result.posts).toHaveLength(1)
     expect(result.category?.name).toBe("Politics")
-    expect(capturedBodies.some((body) => body.includes("\"tagSlugs\":[\"fp\"]"))).toBe(true)
+    const parsedRequests = capturedBodies.map((body) => JSON.parse(body) as { variables?: Record<string, unknown> })
+    expect(parsedRequests).not.toHaveLength(0)
+    parsedRequests.forEach((request) => {
+      expect(request.variables?.tagSlugs).toBeUndefined()
+    })
   })
 })
 
@@ -255,6 +259,7 @@ describe("fetchMostReadPosts", () => {
 describe("getFrontPageSlicesForCountry", () => {
   const createNode = (id: number, prefix: string) => ({
     ...createGraphqlPost(id, prefix),
+    slug: `${prefix.toLowerCase()}-${id}`,
     featuredImage: { node: null },
   })
 
