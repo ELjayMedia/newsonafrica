@@ -1,8 +1,137 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface Database {
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          id: string
+          user_id: string
+          post_id: string
+          country: string | null
+          title: string | null
+          slug: string | null
+          excerpt: string | null
+          featured_image: Json | null
+          category: string | null
+          tags: string[] | null
+          read_status: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          post_id: string
+          country?: string | null
+          title?: string | null
+          slug?: string | null
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          post_id?: string
+          country?: string | null
+          title?: string | null
+          slug?: string | null
+          excerpt?: string | null
+          featured_image?: Json | null
+          category?: string | null
+          tags?: string[] | null
+          read_status?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      comment_reactions: {
+        Row: {
+          id: string
+          comment_id: string
+          user_id: string
+          reaction_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          user_id: string
+          reaction_type: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          user_id?: string
+          reaction_type?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          content: string
+          parent_id: string | null
+          country: string | null
+          status: string
+          reported_by: string | null
+          report_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reaction_count: number
+          is_rich_text: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          content: string
+          parent_id?: string | null
+          country?: string | null
+          status?: string
+          reported_by?: string | null
+          report_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reaction_count?: number
+          is_rich_text?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          content?: string
+          parent_id?: string | null
+          country?: string | null
+          status?: string
+          reported_by?: string | null
+          report_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reaction_count?: number
+          is_rich_text?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
@@ -63,99 +192,6 @@ export interface Database {
         }
         Relationships: []
       }
-      bookmarks: {
-        Row: {
-          id: string
-          user_id: string
-          post_id: string
-          country?: string | null
-          title?: string | null
-          slug?: string | null
-          excerpt?: string | null
-          featured_image?: Json | null
-          category?: string | null
-          tags?: string[] | null
-          read_status?: string | null
-          notes?: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          post_id: string
-          country?: string | null
-          title?: string | null
-          slug?: string | null
-          excerpt?: string | null
-          featured_image?: Json | null
-          category?: string | null
-          tags?: string[] | null
-          read_status?: string | null
-          notes?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          post_id?: string
-          country?: string | null
-          title?: string | null
-          slug?: string | null
-          excerpt?: string | null
-          featured_image?: Json | null
-          category?: string | null
-          tags?: string[] | null
-          read_status?: string | null
-          notes?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      comments: {
-        Row: {
-          id: string
-          post_id: string
-          user_id: string
-          content: string
-          parent_id: string | null
-          country?: string | null
-          created_at: string
-          status: string
-          reported_by?: string | null
-          report_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-        }
-        Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          content: string
-          parent_id?: string | null
-          country?: string | null
-          created_at?: string
-          status?: string
-          reported_by?: string | null
-          report_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-        }
-        Update: {
-          id?: string
-          post_id?: string
-          user_id?: string
-          content?: string
-          parent_id?: string | null
-          country?: string | null
-          created_at?: string
-          status?: string
-          reported_by?: string | null
-          report_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-        }
-        Relationships: []
-      }
       schema_versions: {
         Row: {
           id: number
@@ -172,7 +208,7 @@ export interface Database {
           applied_at?: string
           applied_by: string
           description: string
-          status: string
+          status?: string
           script?: string | null
         }
         Update: {
@@ -231,6 +267,63 @@ export interface Database {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          status: string
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          user_id: string
+          amount: number
+          status: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          status?: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transfers: {
+        Row: {
+          id: string
+          amount: number
+          status: string
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          amount: number
+          status: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          amount?: number
+          status?: string
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           user_id: string
@@ -250,6 +343,7 @@ export interface Database {
           blocked_topics?: string[] | null
           countries?: string[] | null
         }
+        Relationships: []
       }
       user_settings: {
         Row: {
