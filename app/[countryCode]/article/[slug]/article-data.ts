@@ -16,10 +16,27 @@ export const normalizeSlug = (value: string): string => value.toLowerCase()
 
 const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
 
+export const AFRICAN_ROUTE_ALIAS = "african"
+
+export const normalizeRouteCountry = (country: string): string => {
+  const normalized = normalizeCountryCode(country)
+
+  if (normalized === AFRICAN_ROUTE_ALIAS) {
+    return AFRICAN_ROUTE_ALIAS
+  }
+
+  const normalizedAfricanCode = normalizeCountryCode(AFRICAN_EDITION.code)
+  if (normalized === normalizedAfricanCode) {
+    return AFRICAN_ROUTE_ALIAS
+  }
+
+  return normalized
+}
+
 export const resolveEdition = (countryCode: string): SupportedEdition | null => {
   const normalized = normalizeCountryCode(countryCode)
 
-  if (normalized === "african") {
+  if (normalized === AFRICAN_ROUTE_ALIAS) {
     return AFRICAN_EDITION
   }
 

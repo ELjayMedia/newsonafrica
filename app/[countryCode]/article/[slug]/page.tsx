@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import { env } from "@/config/env"
 import { stripHtml } from "@/lib/search"
@@ -11,6 +11,7 @@ import {
   buildArticleCountryPriority,
   loadArticleWithFallback,
   normalizeCountryCode,
+  normalizeRouteCountry,
   normalizeSlug,
   resolveEdition,
   sanitizeBaseUrl,
@@ -87,7 +88,6 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 
   const editionCountry = normalizeCountryCode(edition.code)
   const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
-  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountry, normalizedSlug)
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
@@ -96,7 +96,9 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const canonicalUrl = `${baseUrl}/${routeCountry}/article/${normalizedSlug}`
+  const targetCountry = normalizeRouteCountry(resolvedArticle?.sourceCountry ?? editionCountry)
+  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
+  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
 
   return {
     title: `${title} - News On Africa`,
@@ -127,13 +129,19 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   }
 
   const editionCountry = normalizeCountryCode(edition.code)
-  const routeCountry = normalizeCountryCode(countryCode)
+  const routeCountry = normalizeRouteCountry(countryCode)
   const normalizedSlug = normalizeSlug(slug)
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
   if (resolvedArticle === null) {
     notFound()
+  }
+
+  const targetCountry = normalizeRouteCountry(resolvedArticle.sourceCountry ?? editionCountry)
+
+  if (targetCountry !== routeCountry) {
+    redirect(`/${targetCountry}/article/${normalizedSlug}`)
   }
 
   const postId = resolvedArticle.article?.id != null ? String(resolvedArticle.article.id) : null
@@ -144,7 +152,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   return (
     <ArticleClientContent
       slug={normalizedSlug}
-      countryCode={isCountryEdition(edition) ? editionCountry : routeCountry}
+      countryCode={targetCountry}
       sourceCountryCode={resolvedArticle.sourceCountry}
       initialData={resolvedArticle.article}
       relatedPosts={relatedPosts}

@@ -7,6 +7,7 @@ vi.mock('@/lib/wordpress/client', () => ({
 
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(),
+  redirect: vi.fn(),
 }))
 
 const { capturedArticleClientProps } = vi.hoisted(() => ({
@@ -24,7 +25,7 @@ import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { env } from '@/config/env'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import {
   POST_BY_SLUG_QUERY,
   POST_CATEGORIES_QUERY,
@@ -52,6 +53,10 @@ describe('ArticlePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(notFound).mockReset()
+    vi.mocked(redirect).mockReset()
+    vi.mocked(redirect).mockImplementation(() => {
+      throw new Error('NEXT_REDIRECT')
+    })
     capturedArticleClientProps.length = 0
   })
 
@@ -75,6 +80,8 @@ describe('ArticlePage', () => {
     render(ui)
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(fetchWordPressGraphQL).toHaveBeenCalled()
+    expect(capturedArticleClientProps[0]?.countryCode).toBe('sz')
+    expect(redirect).not.toHaveBeenCalled()
   })
 
   it('falls back to another supported country when the requested edition is missing the article', async () => {
@@ -102,7 +109,7 @@ describe('ArticlePage', () => {
       return null
     })
 
-    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('NEXT_REDIRECT')
 
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'sz',
@@ -122,10 +129,7 @@ describe('ArticlePage', () => {
         tags: expect.arrayContaining(['slug:test']),
       }),
     )
-
-    render(ui)
-
-    expect(screen.getByText('From South Africa')).toBeInTheDocument()
+    expect(redirect).toHaveBeenCalledWith('/za/article/test')
   })
 
   it('propagates fetch failures to the error boundary', async () => {
@@ -169,11 +173,14 @@ describe('ArticlePage', () => {
 
     const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
+    const canonical = `${baseUrl}/sz/article/test`
 
     expect(metadata.openGraph?.images?.[0]?.url).toBe(dynamicUrl)
     expect(metadata.openGraph?.images?.[1]?.url).toBe('https://example.com/feature.jpg')
     expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
     expect(metadata.twitter?.images?.[1]).toBe('https://example.com/feature.jpg')
+    expect(metadata.alternates?.canonical).toBe(canonical)
+    expect(metadata.openGraph?.url).toBe(canonical)
   })
 
   it('falls back to the placeholder image when the article is missing', async () => {
@@ -205,6 +212,47 @@ describe('ArticlePage', () => {
     expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
     expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
     expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
+    expect(metadata.alternates?.canonical).toBe(`${baseUrl}/za/article/missing-post`)
+    expect(metadata.openGraph?.url).toBe(`${baseUrl}/za/article/missing-post`)
+  })
+
+  it('generates metadata for the canonical country when the article resolves elsewhere', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        if (country === 'sz') {
+          return { posts: { nodes: [] } }
+        }
+
+        if (country === 'za') {
+          return { posts: { nodes: [createArticleNode({ slug: 'test', title: 'Canonical' })] } }
+        }
+
+        return { posts: { nodes: [] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ countryCode: 'sz', slug: 'test' }),
+    })
+
+    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const expectedCanonical = `${baseUrl}/za/article/test`
+    const expectedOg = `${baseUrl}/za/article/test/opengraph-image`
+
+    expect(metadata.alternates?.canonical).toBe(expectedCanonical)
+    expect(metadata.openGraph?.url).toBe(expectedCanonical)
+    expect(metadata.openGraph?.images?.[0]?.url).toBe(expectedOg)
+    expect(metadata.twitter?.images?.[0]).toBe(expectedOg)
   })
 
   it('uses the requested country path for african edition URLs', async () => {
