@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import ResetPasswordClient from "./ResetPasswordClient"
-import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
@@ -9,14 +8,9 @@ export const metadata: Metadata = {
 }
 
 export default function ResetPasswordPage({ params }: { params: { key: string } }) {
-  // After successful password reset, redirect to the auth page
-  const onSuccess = () => {
-    redirect("/auth")
-  }
-
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <ResetPasswordClient resetKey={params.key} onSuccess={onSuccess} />
+      <ResetPasswordClient resetKey={params.key} />
     </Suspense>
   )
 }
