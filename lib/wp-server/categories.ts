@@ -7,7 +7,7 @@ import {
 import { CACHE_DURATIONS } from "../cache/constants"
 import { fetchWordPressGraphQL } from "../wordpress/client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { DEFAULT_COUNTRY, FP_TAG_SLUG } from "../wordpress/shared"
+import { DEFAULT_COUNTRY } from "../wordpress/shared"
 import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
 import type {
   CategoryPostsBatchQuery,
@@ -135,15 +135,14 @@ export async function getPostsByCategoryForCountry(
   const tags = buildWpCacheTags({
     country: countryCode,
     section: "categories",
-    extra: [slug ? `category:${slug}` : null, `tag:${FP_TAG_SLUG}`],
+    extra: [slug ? `category:${slug}` : null],
   })
 
   let data: PostsByCategoryQuery | null = null
 
-  const variables: Record<string, string | number | string[]> = {
+  const variables: Record<string, string | number> = {
     category: categorySlug,
     first: limit,
-    tagSlugs: [FP_TAG_SLUG],
   }
 
   if (after) {
