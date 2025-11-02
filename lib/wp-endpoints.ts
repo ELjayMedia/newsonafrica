@@ -34,15 +34,26 @@ const getDefaultRestBase = (country: string): string => `${BASE_URL}/${country}/
 const looksLikeGraphQLEndpoint = (value?: string | null) =>
   Boolean(value && value.toLowerCase().includes("/graphql"))
 
-const warnInvalidGraphQlOverride = (
+const getOverridePathname = (value: string): string | undefined => {
+  try {
+    const pathname = new URL(value, BASE_URL).pathname
+    return pathname.replace(/\/+$/, "")
+  } catch {
+    return undefined
+  }
+}
+
+const warnGraphQlOverride = (
   country: string,
   override: string,
   fallback: string,
+  reason: string,
 ) => {
-  console.warn("Ignoring WP GraphQL override because it does not look like a GraphQL endpoint", {
+  console.warn("Ignoring WP GraphQL override", {
     country,
     graphqlOverride: override,
     defaultGraphQLEndpoint: fallback,
+    reason,
   })
 }
 
@@ -66,9 +77,29 @@ export function getGraphQLEndpoint(country: string = DEFAULT_SITE): string {
   const defaultGraphQl = getDefaultGraphQLEndpoint(normalized)
   const specific = getEnvValue(buildEnvKey(normalized, GRAPHQL_SUFFIX))
 
-  if (specific && !looksLikeGraphQLEndpoint(specific)) {
-    warnInvalidGraphQlOverride(normalized, specific, defaultGraphQl)
-    return defaultGraphQl
+  if (specific) {
+    if (!looksLikeGraphQLEndpoint(specific)) {
+      warnGraphQlOverride(
+        normalized,
+        specific,
+        defaultGraphQl,
+        "does not look like a GraphQL endpoint",
+      )
+      return defaultGraphQl
+    }
+
+    const pathname = getOverridePathname(specific)
+    const expectedSegment = `/${normalized}/graphql`
+
+    if (!pathname || !pathname.toLowerCase().includes(expectedSegment)) {
+      warnGraphQlOverride(
+        normalized,
+        specific,
+        defaultGraphQl,
+        `expected pathname to include "${expectedSegment}"`,
+      )
+      return defaultGraphQl
+    }
   }
 
   return specific || defaultGraphQl
