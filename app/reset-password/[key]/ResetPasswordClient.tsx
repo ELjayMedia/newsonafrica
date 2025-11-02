@@ -9,10 +9,9 @@ import { supabase } from "@/lib/supabase"
 
 interface ResetPasswordClientProps {
   resetKey: string
-  onSuccess?: () => void
 }
 
-export default function ResetPasswordClient({ resetKey, onSuccess }: ResetPasswordClientProps) {
+export default function ResetPasswordClient({ resetKey }: ResetPasswordClientProps) {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
@@ -57,11 +56,7 @@ export default function ResetPasswordClient({ resetKey, onSuccess }: ResetPasswo
 
       setSuccess(true)
       setTimeout(() => {
-        if (onSuccess) {
-          onSuccess()
-        } else {
-          router.push("/auth")
-        }
+        router.push("/auth")
       }, 3000)
     } catch (error) {
       console.error("Failed to reset password", error)
