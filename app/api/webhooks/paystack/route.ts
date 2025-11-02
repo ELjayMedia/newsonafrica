@@ -2,6 +2,12 @@ import { createHmac } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
+import {
+  buildInvoiceMetadataUpdate,
+  buildPaymentFailureUpdate,
+  buildSubscriptionCancellationUpdate,
+  buildSubscriptionUpsert,
+} from "@/supabase/functions/_shared/paystack"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
@@ -175,23 +181,10 @@ export async function handleSubscriptionCreated(
 ) {
   console.log("Processing subscription creation:", data.subscription_code)
   const userId = await getUserIdByEmail(client, data.customer.email)
-  const nowIso = new Date().toISOString()
+  const record = buildSubscriptionUpsert(data as unknown as Record<string, any>, userId)
   const { error } = await client
     .from("subscriptions")
-    .insert({
-      id: data.subscription_code,
-      user_id: userId,
-      plan: data.plan.name,
-      status: data.status as SubscriptionInsert["status"],
-      start_date: new Date(data.createdAt).toISOString(),
-      end_date: null,
-      renewal_date: new Date(data.next_payment_date).toISOString(),
-      payment_provider: "paystack",
-      payment_id: data.subscription_code,
-      metadata: data as SubscriptionInsert["metadata"],
-      created_at: nowIso,
-      updated_at: nowIso,
-    })
+    .upsert(record as SubscriptionInsert, { onConflict: "id" })
   if (error) throw new Error("Failed to create subscription")
 
   revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
@@ -213,14 +206,10 @@ export async function handleSubscriptionDisabled(
     .eq("id", data.subscription_code)
     .single()
   if (fetchError || !sub) throw new Error("Subscription not found")
+  const update = buildSubscriptionCancellationUpdate()
   const { error } = await client
     .from("subscriptions")
-    .update({
-      status: "cancelled",
-      end_date: new Date().toISOString(),
-      renewal_date: null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update as SubscriptionUpdate)
     .eq("id", data.subscription_code)
   if (error) throw new Error("Failed to cancel subscription")
 
@@ -240,6 +229,17 @@ export async function handlePaymentFailed(
   const _userId = await getUserIdByEmail(client, data.customer.email)
   const { error } = await (client as any).from("transactions").update({ status: "failed" }).eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
+  const update = buildPaymentFailureUpdate(data as unknown as Record<string, any>)
+  const paymentId = (data as any)?.invoice_code || data.reference
+  if (paymentId) {
+    const { error: subscriptionError } = await client
+      .from("subscriptions")
+      .update(update as SubscriptionUpdate)
+      .or(`payment_id.eq.${paymentId},id.eq.${paymentId}`)
+    if (subscriptionError) {
+      console.error("Failed to mark subscription as past_due", subscriptionError)
+    }
+  }
 }
 
 export async function handleInvoiceUpdate(
@@ -248,10 +248,8 @@ export async function handleInvoiceUpdate(
 ) {
   console.log("Processing invoice update:", data.invoice_code)
   const _userId = await getUserIdByEmail(client, data.customer.email)
-  const { error } = await client
-    .from("subscriptions")
-    .update({ metadata: data as SubscriptionUpdate["metadata"], updated_at: new Date().toISOString() })
-    .eq("payment_id", data.invoice_code)
+  const update = buildInvoiceMetadataUpdate(data as unknown as Record<string, any>)
+  const { error } = await client.from("subscriptions").update(update as SubscriptionUpdate).eq("payment_id", data.invoice_code)
   if (error) throw new Error("Failed to update invoice")
 
   revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)

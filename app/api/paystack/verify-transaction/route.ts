@@ -5,6 +5,7 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { createAdminClient } from "@/lib/supabase"
 import type { Database } from "@/types/supabase"
+import { buildSubscriptionUpsert } from "@/supabase/functions/_shared/paystack"
 
 type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
 
@@ -76,29 +77,10 @@ export async function GET(request: NextRequest) {
         }
 
         if (userId) {
-          const nowIso = new Date().toISOString()
-          const startDate = data.data.paid_at ? new Date(data.data.paid_at).toISOString() : nowIso
-          const renewalDate = data.data.next_payment_date ? new Date(data.data.next_payment_date).toISOString() : null
-          const planName = data.data.plan?.name || data.data.plan?.plan_code || data.data.plan || "paystack"
-
+          const record = buildSubscriptionUpsert(data.data, userId)
           await supabase
             .from("subscriptions")
-            .upsert(
-              {
-                id: data.data.reference,
-                user_id: userId,
-                plan: planName,
-                status: (data.data.status ?? "success") as SubscriptionInsert["status"],
-                start_date: startDate,
-                end_date: null,
-                renewal_date: renewalDate,
-                payment_provider: "paystack",
-                payment_id: data.data.reference,
-                metadata: data.data as SubscriptionInsert["metadata"],
-                updated_at: nowIso,
-              },
-              { onConflict: "id" },
-            )
+            .upsert(record as SubscriptionInsert, { onConflict: "id" })
             .select()
             .returns<SubscriptionInsert>()
 
