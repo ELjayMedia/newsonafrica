@@ -8,7 +8,11 @@ export async function getAfricanHomeFeed() {
     ),
   );
 
-  const merged = dedupePosts(postsByCountry.flat());
+  const merged = dedupePosts(postsByCountry.flat())
+    .map((post) => ({ post, timestamp: getPostTimestamp(post) }))
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map(({ post }) => post);
+
   const hero = merged[0] ? [merged[0]] : [];
   const secondary = merged.slice(1, 5);
   const remainder = merged.slice(5);
@@ -26,4 +30,13 @@ function dedupePosts(posts: WpPost[]) {
     }
   }
   return out;
+}
+
+function getPostTimestamp(post: WpPost) {
+  if (!post.date) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(post.date);
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
