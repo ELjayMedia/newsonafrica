@@ -42,7 +42,7 @@ const dedupe = (values?: readonly string[]): string[] | undefined => {
     return undefined
   }
 
-  return Array.from(new Set(values))
+  return Array.from(new Set(values)).sort()
 }
 
 const FALLBACK_IN_FLIGHT_SYMBOL = Symbol.for("newsonafrica.wpGraphqlInFlight")
@@ -81,7 +81,11 @@ export function fetchWordPressGraphQL<T>(
 ): Promise<T | null> {
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
-  const cacheKey = `${base}::${body}`
+  const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
+  const dedupedTags = dedupe(options.tags)
+  const cacheKey = `${base}::${body}::${resolvedRevalidate}::${
+    dedupedTags?.join(",") ?? ""
+  }`
   const inFlightRequests = getInFlightRequests()
 
   const cachedRequest = inFlightRequests.get(cacheKey) as Promise<T | null> | undefined
@@ -105,8 +109,8 @@ export function fetchWordPressGraphQL<T>(
     headers,
     body,
     next: {
-      revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,
-      ...(options.tags ? { tags: dedupe(options.tags) } : {}),
+      revalidate: resolvedRevalidate,
+      ...(dedupedTags ? { tags: dedupedTags } : {}),
     },
   })
     .then(async (res) => {
