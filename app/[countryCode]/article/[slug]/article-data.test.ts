@@ -11,53 +11,18 @@ vi.mock('@/lib/wordpress/client', async () => {
   }
 })
 
-vi.mock('@/lib/wordpress/post-rest', () => ({
-  fetchWordPressPostBySlugRest: vi.fn(),
-}))
-
-const restMapperRef = vi.hoisted(() => ({
-  current: undefined as
-    | typeof import('@/lib/mapping/post-mappers').mapRestPostToWordPressPost
-    | undefined,
-}))
-
-vi.mock('@/lib/mapping/post-mappers', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/mapping/post-mappers')>(
-    '@/lib/mapping/post-mappers',
-  )
-
-  restMapperRef.current = actual.mapRestPostToWordPressPost
-
-  return {
-    ...actual,
-    mapRestPostToWordPressPost: vi.fn((post: any, countryCode?: string) =>
-      actual.mapRestPostToWordPressPost(post, countryCode),
-    ),
-  }
-})
-
 import {
   buildArticleCountryPriority,
   loadArticle,
   normalizeCountryCode,
 } from './article-data'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { fetchWordPressPostBySlugRest } from '@/lib/wordpress/post-rest'
-import { mapRestPostToWordPressPost } from '@/lib/mapping/post-mappers'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
+import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 
 describe('article-data', () => {
   beforeEach(() => {
     vi.mocked(fetchWordPressGraphQL).mockReset()
-    vi.mocked(fetchWordPressPostBySlugRest).mockReset()
-    if (restMapperRef.current) {
-      vi
-        .mocked(mapRestPostToWordPressPost)
-        .mockImplementation((post: any, countryCode?: string) =>
-          restMapperRef.current!(post, countryCode),
-        )
-    }
-    vi.mocked(mapRestPostToWordPressPost).mockClear()
   })
 
   it('returns only supported wordpress countries in the fallback priority', () => {
@@ -75,44 +40,52 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).not.toHaveBeenCalled()
   })
 
-  it('falls back to the REST API when GraphQL returns no nodes', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({ posts: { nodes: [] } } as any)
-    const restPayload = { id: 5 }
-    const mapped = { id: '5', slug: 'test-slug', title: 'From REST' } as any
-    vi.mocked(fetchWordPressPostBySlugRest).mockResolvedValue(restPayload as any)
-    vi.mocked(mapRestPostToWordPressPost).mockReturnValue(mapped)
+  it('returns the mapped article when GraphQL resolves with a node', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
+      posts: {
+        nodes: [
+          {
+            slug: 'test-slug',
+            id: 'gid://wordpress/Post:42',
+            databaseId: 42,
+            date: '2024-05-01T00:00:00Z',
+            title: 'GraphQL title',
+            excerpt: 'GraphQL excerpt',
+            content: '<p>Hello</p>',
+            categories: { nodes: [] },
+            tags: { nodes: [] },
+            author: { node: { databaseId: 1, name: 'Author', slug: 'author' } },
+          },
+        ],
+      },
+    } as any)
 
     const result = await loadArticle('za', 'test-slug')
 
-    expect(fetchWordPressPostBySlugRest).toHaveBeenCalledWith(
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'za',
-      'test-slug',
+      POST_BY_SLUG_QUERY,
+      expect.any(Object),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.SHORT,
         tags: expect.arrayContaining(['slug:test-slug']),
       }),
     )
-    expect(mapRestPostToWordPressPost).toHaveBeenCalledWith(restPayload, 'za')
-    expect(result).toBe(mapped)
+    expect(result?.slug).toBe('test-slug')
+    expect(result?.databaseId).toBe(42)
   })
 
-  it('returns the REST mapped result when GraphQL throws an error', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('GraphQL down'))
-    const restPayload = { id: 9 }
-    const mapped = { id: '9', slug: 'test-slug', title: 'Recovered via REST' } as any
-    vi.mocked(fetchWordPressPostBySlugRest).mockResolvedValue(restPayload as any)
-    vi.mocked(mapRestPostToWordPressPost).mockReturnValue(mapped)
+  it('returns null when GraphQL returns no nodes', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({ posts: { nodes: [] } } as any)
 
-    const result = await loadArticle('za', 'test-slug')
+    const result = await loadArticle('za', 'missing-slug')
 
-    expect(fetchWordPressPostBySlugRest).toHaveBeenCalled()
-    expect(result).toBe(mapped)
+    expect(result).toBeNull()
   })
 
-  it('re-throws the GraphQL error when REST fallback also fails', async () => {
+  it('re-throws GraphQL errors', async () => {
     const failure = new Error('GraphQL fatal')
     vi.mocked(fetchWordPressGraphQL).mockRejectedValue(failure)
-    vi.mocked(fetchWordPressPostBySlugRest).mockResolvedValue(null)
 
     await expect(loadArticle('za', 'test-slug')).rejects.toBe(failure)
   })

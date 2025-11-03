@@ -1,12 +1,3 @@
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { fetchWithRetry } from "@/lib/utils/fetchWithRetry"
-import { getWpEndpoints } from "@/lib/wp-endpoints"
-
-export interface FetchWordPressPostBySlugRestOptions {
-  tags?: readonly string[]
-  revalidate?: number
-}
-
 export interface WordPressRestMediaDetails {
   width?: number
   height?: number
@@ -57,50 +48,3 @@ export interface WordPressRestPost {
   }
 }
 
-const dedupe = (values?: readonly string[]): string[] | undefined => {
-  if (!values?.length) {
-    return undefined
-  }
-
-  return Array.from(new Set(values))
-}
-
-const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "")
-
-export async function fetchWordPressPostBySlugRest(
-  countryCode: string,
-  slug: string,
-  options: FetchWordPressPostBySlugRestOptions = {},
-): Promise<WordPressRestPost | null> {
-  const endpoints = getWpEndpoints(countryCode)
-  const base = trimTrailingSlash(endpoints.rest)
-  const url = `${base}/posts?slug=${encodeURIComponent(slug)}&_embed=1`
-
-  try {
-    const response = await fetchWithRetry(url, {
-      next: {
-        revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,
-        ...(options.tags ? { tags: dedupe(options.tags) } : {}),
-      },
-    })
-
-    if (!response.ok) {
-      console.error("[v0] WordPress REST request failed:", response.status, response.statusText, {
-        countryCode,
-        slug,
-      })
-      return null
-    }
-
-    const json = (await response.json()) as unknown
-
-    if (!Array.isArray(json) || json.length === 0) {
-      return null
-    }
-
-    return (json[0] ?? null) as WordPressRestPost | null
-  } catch (error) {
-    console.error("[v0] WordPress REST request exception:", { countryCode, slug, error })
-    return null
-  }
-}

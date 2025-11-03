@@ -12,31 +12,6 @@ vi.mock('@/lib/wordpress/client', async () => {
   }
 })
 
-vi.mock('@/lib/wordpress/post-rest', () => ({
-  fetchWordPressPostBySlugRest: vi.fn(),
-}))
-
-const restMapperRef = vi.hoisted(() => ({
-  current: undefined as
-    | typeof import('@/lib/mapping/post-mappers').mapRestPostToWordPressPost
-    | undefined,
-}))
-
-vi.mock('@/lib/mapping/post-mappers', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/mapping/post-mappers')>(
-    '@/lib/mapping/post-mappers',
-  )
-
-  restMapperRef.current = actual.mapRestPostToWordPressPost
-
-  return {
-    ...actual,
-    mapRestPostToWordPressPost: vi.fn((post: any, countryCode?: string) =>
-      actual.mapRestPostToWordPressPost(post, countryCode),
-    ),
-  }
-})
-
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(),
   redirect: vi.fn(),
@@ -55,8 +30,6 @@ vi.mock('./ArticleClientContent', () => ({
 
 import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { fetchWordPressPostBySlugRest } from '@/lib/wordpress/post-rest'
-import { mapRestPostToWordPressPost } from '@/lib/mapping/post-mappers'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { env } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
@@ -89,19 +62,13 @@ describe('ArticlePage', () => {
     vi.resetAllMocks()
     vi.mocked(notFound).mockReset()
     vi.mocked(redirect).mockReset()
+    vi.mocked(notFound).mockImplementation(() => {
+      throw new Error('NEXT_NOT_FOUND')
+    })
     vi.mocked(redirect).mockImplementation(() => {
       throw new Error('NEXT_REDIRECT')
     })
     capturedArticleClientProps.length = 0
-    if (restMapperRef.current) {
-      vi
-        .mocked(mapRestPostToWordPressPost)
-        .mockImplementation((post: any, countryCode?: string) =>
-          restMapperRef.current!(post, countryCode),
-        )
-    }
-    vi.mocked(mapRestPostToWordPressPost).mockClear()
-    vi.mocked(fetchWordPressPostBySlugRest).mockReset()
   })
 
   it('renders post content', async () => {
@@ -128,7 +95,7 @@ describe('ArticlePage', () => {
     expect(redirect).not.toHaveBeenCalled()
   })
 
-  it('falls back to the REST API when GraphQL does not return the article', async () => {
+  it('calls notFound when the article cannot be resolved via GraphQL', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return { posts: { nodes: [] } }
@@ -145,29 +112,10 @@ describe('ArticlePage', () => {
       return null
     })
 
-    const restPayload = { id: 55 }
-    const mapped = {
-      id: '55',
-      slug: 'test',
-      title: 'Fetched via REST',
-      content: '<p>Content</p>',
-    } as any
-
-    vi.mocked(fetchWordPressPostBySlugRest).mockResolvedValue(restPayload as any)
-    vi.mocked(mapRestPostToWordPressPost).mockReturnValue(mapped)
-
-    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
-    render(ui)
-
-    expect(screen.getByText('Fetched via REST')).toBeInTheDocument()
-    expect(fetchWordPressPostBySlugRest).toHaveBeenCalledWith(
-      'sz',
-      'test',
-      expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
-      }),
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow(
+      'NEXT_NOT_FOUND',
     )
-    expect(mapRestPostToWordPressPost).toHaveBeenCalledWith(restPayload, 'sz')
+    expect(notFound).toHaveBeenCalled()
   })
 
   it('falls back to another supported country when the requested edition is missing the article', async () => {
