@@ -5,8 +5,7 @@ import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 const countryCode = "za"
 
 describe("mapGraphqlPostToWordPressPost", () => {
-  it("normalizes GraphQL posts into WordPressPost shape", () => {
-    const graphqlPost = {
+  const baseGraphqlPost = {
       databaseId: 42,
       id: "cG9zdDo0Mg==",
       slug: "rendered-title",
@@ -14,7 +13,6 @@ describe("mapGraphqlPostToWordPressPost", () => {
       modified: "2024-05-02T00:00:00Z",
       title: "Rendered title",
       excerpt: "Rendered excerpt",
-      content: "<p>Rendered content</p>",
       uri: "/rendered-title/",
       link: "https://example.com/rendered-title",
       featuredImage: {
@@ -47,7 +45,8 @@ describe("mapGraphqlPostToWordPressPost", () => {
       },
     }
 
-    const result = mapGraphqlPostToWordPressPost(graphqlPost as any, countryCode)
+  it("normalizes GraphQL summary posts into WordPressPost shape", () => {
+    const result = mapGraphqlPostToWordPressPost(baseGraphqlPost as any, countryCode)
 
     expect(result).toMatchObject({
       databaseId: 42,
@@ -55,7 +54,6 @@ describe("mapGraphqlPostToWordPressPost", () => {
       slug: "rendered-title",
       title: "Rendered title",
       excerpt: "Rendered excerpt",
-      content: "<p>Rendered content</p>",
       featuredImage: {
         node: {
           sourceUrl: "https://example.com/img.jpg",
@@ -72,5 +70,17 @@ describe("mapGraphqlPostToWordPressPost", () => {
     expect(result.categories?.nodes?.[0]?.slug).toBe("category")
     expect(result.tags?.nodes?.[0]?.slug).toBe("tag")
     expect(result.globalRelayId).toBe("cG9zdDo0Mg==")
+    expect(result.content).toBeUndefined()
+  })
+
+  it("includes rendered content when provided by the GraphQL node", () => {
+    const detailedGraphqlPost = {
+      ...baseGraphqlPost,
+      content: "<p>Rendered content</p>",
+    }
+
+    const result = mapGraphqlPostToWordPressPost(detailedGraphqlPost as any, countryCode)
+
+    expect(result.content).toBe("<p>Rendered content</p>")
   })
 })
