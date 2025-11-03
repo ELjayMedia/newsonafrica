@@ -64,12 +64,13 @@ const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
   const routeCountry = normalizeCountryCode(countryCode)
+  const routeCountryAlias = normalizeRouteCountry(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
 
   if (!edition) {
     const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
-    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountry, normalizedSlug)
+    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountryAlias, normalizedSlug)
     const placeholderImage = buildPlaceholderUrl(baseUrl)
 
     return {
@@ -96,7 +97,9 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const targetCountry = normalizeRouteCountry(resolvedArticle?.sourceCountry ?? editionCountry)
+  const targetCountry = isCountryEdition(edition)
+    ? normalizeRouteCountry(resolvedArticle?.sourceCountry ?? editionCountry)
+    : routeCountryAlias
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
 
@@ -138,7 +141,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     notFound()
   }
 
-  const targetCountry = normalizeRouteCountry(resolvedArticle.sourceCountry ?? editionCountry)
+  const targetCountry = isCountryEdition(edition)
+    ? normalizeRouteCountry(resolvedArticle.sourceCountry ?? editionCountry)
+    : routeCountry
 
   if (targetCountry !== routeCountry) {
     redirect(`/${targetCountry}/article/${normalizedSlug}`)

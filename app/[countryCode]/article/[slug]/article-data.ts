@@ -3,7 +3,7 @@ import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { fetchWordPressGraphQL } from "@/lib/wordpress/client"
+import { COUNTRIES, fetchWordPressGraphQL } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -13,6 +13,13 @@ const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
 
 export const normalizeSlug = (value: string): string => value.toLowerCase()
+
+const SUPPORTED_WORDPRESS_COUNTRIES = new Set(
+  Object.keys(COUNTRIES).map((code) => normalizeCountryCode(code)),
+)
+
+const hasWordPressEndpoint = (countryCode: string): boolean =>
+  SUPPORTED_WORDPRESS_COUNTRIES.has(normalizeCountryCode(countryCode))
 
 const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
 
@@ -52,6 +59,10 @@ type PostBySlugQueryResult = {
 }
 
 export async function loadArticle(countryCode: string, slug: string): Promise<WordPressPost | null> {
+  if (!hasWordPressEndpoint(countryCode)) {
+    return null
+  }
+
   try {
     const cacheTags = buildCacheTags({
       country: countryCode,
@@ -111,7 +122,11 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
     normalizeCountryCode(edition.code),
   )
 
-  return unique([normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition])
+  const prioritized = [normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition]
+
+  const supportedPriority = prioritized.filter(hasWordPressEndpoint)
+
+  return unique(supportedPriority)
 }
 
 export async function loadArticleWithFallback(
