@@ -109,7 +109,7 @@ export type PostEdge = {
   readonly pageInfo: PageInfo
 }
 
-export type PostFieldsFragment = {
+export type PostSummaryFieldsFragment = {
   readonly __typename?: "Post"
   readonly databaseId?: Maybe<Scalars["Int"]>
   readonly id?: Maybe<Scalars["ID"]>
@@ -118,7 +118,6 @@ export type PostFieldsFragment = {
   readonly modified?: Maybe<Scalars["String"]>
   readonly title?: Maybe<Scalars["String"]>
   readonly excerpt?: Maybe<Scalars["String"]>
-  readonly content?: Maybe<Scalars["String"]>
   readonly uri?: Maybe<Scalars["String"]>
   readonly link?: Maybe<Scalars["String"]>
   readonly featuredImage?: Maybe<{
@@ -168,12 +167,16 @@ export type PostFieldsFragment = {
   }>
 }
 
+export type PostFieldsFragment = PostSummaryFieldsFragment & {
+  readonly content?: Maybe<Scalars["String"]>
+}
+
 export type LatestPostsQuery = {
   readonly __typename?: "RootQuery"
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
     readonly pageInfo: PageInfo
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 
@@ -181,7 +184,7 @@ export type FpTaggedPostsQuery = {
   readonly __typename?: "RootQuery"
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 
@@ -201,7 +204,7 @@ export type PostsByCategoryQuery = {
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
     readonly pageInfo: PageInfo
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 
@@ -219,7 +222,7 @@ export type CategoryPostsBatchQuery = {
       readonly posts?: Maybe<{
         readonly __typename?: "CategoryToPostConnection"
         readonly pageInfo: PageInfo
-        readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+        readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
       }>
     }>>>
   }>
@@ -252,7 +255,7 @@ export type RelatedPostsQuery = {
   readonly __typename?: "RootQuery"
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 
@@ -260,7 +263,7 @@ export type FeaturedPostsQuery = {
   readonly __typename?: "RootQuery"
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 
@@ -277,7 +280,7 @@ export type AuthorDataQuery = {
     readonly posts: {
       readonly __typename?: "UserToPostConnection"
       readonly pageInfo: PageInfo
-      readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+      readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
     }
   }>
 }
@@ -318,7 +321,7 @@ export type CategoryPostsQuery = {
   readonly posts?: Maybe<{
     readonly __typename?: "RootQueryToPostConnection"
     readonly pageInfo: PageInfo
-    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostFieldsFragment>>>
+    readonly nodes?: Maybe<ReadonlyArray<Maybe<PostSummaryFieldsFragment>>>
   }>
 }
 

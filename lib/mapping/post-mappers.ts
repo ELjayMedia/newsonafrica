@@ -13,7 +13,7 @@ import type {
 } from "@/types/wp"
 
 // GraphQL fragments (shape for GQL nodes)
-import type { PostFieldsFragment } from "@/types/wpgraphql"
+import type { PostFieldsFragment, PostSummaryFieldsFragment } from "@/types/wpgraphql"
 
 // High-level list view mapping + types
 import {
@@ -53,7 +53,7 @@ const resolveRelayId = (
 // ------------------------------
 // GraphQL shapes → normalize
 // ------------------------------
-export type GraphqlPostNode = PostFieldsFragment
+export type GraphqlPostNode = PostFieldsFragment | PostSummaryFieldsFragment
 
 const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefined => {
   if (!post.featuredImage?.node) return undefined
@@ -137,23 +137,30 @@ const mapGraphqlTags = (post: GraphqlPostNode): WordPressTagConnection => ({
 export const mapGraphqlPostToWordPressPost = (
   post: GraphqlPostNode,
   countryCode?: string,
-): WordPressPost => ({
-  databaseId: post.databaseId ?? undefined,
-  id: post.id ?? undefined,
-  slug: post.slug ?? undefined,
-  date: post.date ?? undefined,
-  modified: post.modified ?? undefined,
-  title: post.title ?? "",
-  excerpt: post.excerpt ?? "",
-  content: post.content ? rewriteLegacyLinks(post.content, countryCode) : undefined,
-  uri: (post as any).uri ?? undefined,
-  link: (post as any).link ?? undefined,
-  featuredImage: mapGraphqlFeaturedImage(post),
-  author: mapGraphqlAuthor(post),
-  categories: mapGraphqlCategories(post),
-  tags: mapGraphqlTags(post),
-  globalRelayId: resolveRelayId(post),
-})
+): WordPressPost => {
+  const rawContent = "content" in post ? post.content : undefined
+
+  return {
+    databaseId: post.databaseId ?? undefined,
+    id: post.id ?? undefined,
+    slug: post.slug ?? undefined,
+    date: post.date ?? undefined,
+    modified: post.modified ?? undefined,
+    title: post.title ?? "",
+    excerpt: post.excerpt ?? "",
+    content:
+      typeof rawContent === "string" && rawContent.length > 0
+        ? rewriteLegacyLinks(rawContent, countryCode)
+        : undefined,
+    uri: (post as any).uri ?? undefined,
+    link: (post as any).link ?? undefined,
+    featuredImage: mapGraphqlFeaturedImage(post),
+    author: mapGraphqlAuthor(post),
+    categories: mapGraphqlCategories(post),
+    tags: mapGraphqlTags(post),
+    globalRelayId: resolveRelayId(post),
+  }
+}
 
 // ------------------------------
 // High-level adapters for list UI (kept from Branch A)

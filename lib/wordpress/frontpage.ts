@@ -3,7 +3,7 @@ import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
 import { fetchWordPressGraphQL } from "./client"
-import type { PostFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
+import type { PostSummaryFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"
 import { FP_TAG_SLUG, mapGraphqlNodeToHomePost } from "./shared"
 import type { AggregatedHomeData, FrontPageSlicesResult } from "./types"
@@ -13,14 +13,14 @@ import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 type FrontPageSlicesQueryResult = {
   hero?: {
-    nodes?: (PostFieldsFragment | null)[] | null
+    nodes?: (PostSummaryFieldsFragment | null)[] | null
   } | null
   latest?: {
     pageInfo?: {
       endCursor?: string | null
       hasNextPage?: boolean | null
     } | null
-    edges?: ({ cursor?: string | null; node?: PostFieldsFragment | null } | null)[] | null
+    edges?: ({ cursor?: string | null; node?: PostSummaryFieldsFragment | null } | null)[] | null
   } | null
 }
 
@@ -140,11 +140,12 @@ export async function getFrontPageSlicesForCountry(
     )
 
     if (gqlData) {
-      const heroNodes = gqlData.hero?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
+      const heroNodes =
+        gqlData.hero?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
       const heroPosts = heroNodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
 
       const latestEdges =
-        gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostFieldsFragment } =>
+        gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostSummaryFieldsFragment } =>
           Boolean(edge?.node),
         ) ?? []
 
