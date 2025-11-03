@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('@/lib/wordpress/client', () => ({
-  fetchWordPressGraphQL: vi.fn(),
-}))
+vi.mock('@/lib/wordpress/client', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/wordpress/client')>(
+    '@/lib/wordpress/client',
+  )
+
+  return {
+    ...actual,
+    fetchWordPressGraphQL: vi.fn(),
+  }
+})
 
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(),
@@ -31,6 +38,7 @@ import {
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
 } from '@/lib/wordpress-queries'
+import { buildArticleCountryPriority } from './article-data'
 
 describe('ArticlePage', () => {
   const createArticleNode = (overrides: Record<string, any> = {}) => ({
@@ -258,7 +266,7 @@ describe('ArticlePage', () => {
   it('uses the requested country path for african edition URLs', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        if (country === 'african-edition') {
+        if (country === 'sz') {
           return { posts: { nodes: [createArticleNode({ title: 'African Edition' })] } }
         }
 
@@ -293,7 +301,7 @@ describe('ArticlePage', () => {
   it('passes the route country to the article client for non-country editions', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        if (country === 'african-edition') {
+        if (country === 'sz') {
           return { posts: { nodes: [createArticleNode({ title: 'African' })] } }
         }
 
@@ -320,9 +328,13 @@ describe('ArticlePage', () => {
   it('treats the African edition alias as valid', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return {
-          posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },
+        if (country === 'sz') {
+          return {
+            posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },
+          }
         }
+
+        return { posts: { nodes: [] } }
       }
 
       if (query === POST_CATEGORIES_QUERY) {
@@ -339,14 +351,18 @@ describe('ArticlePage', () => {
     await Page({ params: { countryCode: 'african-edition', slug: 'African-Story' } })
 
     expect(notFound).not.toHaveBeenCalled()
-    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
-      'african-edition',
-      POST_BY_SLUG_QUERY,
-      expect.any(Object),
-      expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
-        tags: expect.arrayContaining(['slug:african-story']),
-      }),
-    )
+    const calledCountries = vi
+      .mocked(fetchWordPressGraphQL)
+      .mock.calls.map(([country]) => country)
+
+    expect(calledCountries).toContain('sz')
+    expect(calledCountries).not.toContain('african-edition')
+  })
+
+  it('excludes unsupported wordpress countries when prioritising fallbacks', () => {
+    const priority = buildArticleCountryPriority('african-edition')
+
+    expect(priority).toEqual(expect.arrayContaining(['sz', 'za']))
+    expect(priority).not.toContain('african-edition')
   })
 })
