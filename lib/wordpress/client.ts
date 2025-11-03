@@ -1,3 +1,5 @@
+import { cache } from "react"
+
 import { getWordPressGraphQLAuthHeaders } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
@@ -43,54 +45,97 @@ const dedupe = (values?: readonly string[]): string[] | undefined => {
   return Array.from(new Set(values))
 }
 
-export async function fetchWordPressGraphQL<T>(
+const FALLBACK_IN_FLIGHT_SYMBOL = Symbol.for("newsonafrica.wpGraphqlInFlight")
+
+const getRequestScopedInFlight = cache(() => new Map<string, Promise<unknown>>())
+
+type GlobalWithInFlight = typeof globalThis & {
+  [FALLBACK_IN_FLIGHT_SYMBOL]?: Map<string, Promise<unknown>>
+}
+
+const getInFlightRequests = (): Map<string, Promise<unknown>> => {
+  const requestScoped = getRequestScopedInFlight()
+  const validationCall = getRequestScopedInFlight()
+
+  if (requestScoped === validationCall) {
+    return requestScoped
+  }
+
+  const globalObject = globalThis as GlobalWithInFlight
+  const globalStore = globalObject[FALLBACK_IN_FLIGHT_SYMBOL]
+
+  if (globalStore) {
+    return globalStore
+  }
+
+  const fallbackStore = new Map<string, Promise<unknown>>()
+  globalObject[FALLBACK_IN_FLIGHT_SYMBOL] = fallbackStore
+  return fallbackStore
+}
+
+export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
   variables?: Record<string, string | number | string[]>,
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<T | null> {
   const base = getGraphQLEndpoint(countryCode)
+  const body = JSON.stringify({ query, variables })
+  const cacheKey = `${base}::${body}`
+  const inFlightRequests = getInFlightRequests()
 
-  try {
-    const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const cachedRequest = inFlightRequests.get(cacheKey) as Promise<T | null> | undefined
+  if (cachedRequest) {
+    return cachedRequest
+  }
 
-    if (typeof window === "undefined") {
-      const authHeaders = getWordPressGraphQLAuthHeaders()
-      if (authHeaders) {
-        for (const [key, value] of Object.entries(authHeaders)) {
-          headers[key] = value
-        }
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+
+  if (typeof window === "undefined") {
+    const authHeaders = getWordPressGraphQLAuthHeaders()
+    if (authHeaders) {
+      for (const [key, value] of Object.entries(authHeaders)) {
+        headers[key] = value
       }
     }
+  }
 
-    const res = await fetchWithRetry(base, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query, variables }),
-      next: {
-        revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,
-        ...(options.tags ? { tags: dedupe(options.tags) } : {}),
-      },
+  const requestPromise = fetchWithRetry(base, {
+    method: "POST",
+    headers,
+    body,
+    next: {
+      revalidate: options.revalidate ?? CACHE_DURATIONS.MEDIUM,
+      ...(options.tags ? { tags: dedupe(options.tags) } : {}),
+    },
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        console.error("[v0] GraphQL request failed:", res.status, res.statusText)
+        throw new Error(`WordPress GraphQL request failed with status ${res.status}`)
+      }
+
+      const json = (await res.json()) as {
+        data?: T
+        errors?: Array<{ message: string; [key: string]: unknown }>
+      }
+
+      if (json.errors && json.errors.length > 0) {
+        console.error("[v0] GraphQL errors:", json.errors)
+        throw new Error("WordPress GraphQL response contained errors")
+      }
+
+      return (json.data ?? null) as T | null
+    })
+    .catch((error) => {
+      console.error("[v0] GraphQL request exception:", error)
+      return null
     })
 
-    if (!res.ok) {
-      console.error("[v0] GraphQL request failed:", res.status, res.statusText)
-      throw new Error(`WordPress GraphQL request failed with status ${res.status}`)
-    }
+  inFlightRequests.set(cacheKey, requestPromise)
+  requestPromise.finally(() => {
+    inFlightRequests.delete(cacheKey)
+  })
 
-    const json = (await res.json()) as {
-      data?: T
-      errors?: Array<{ message: string; [key: string]: unknown }>
-    }
-
-    if (json.errors && json.errors.length > 0) {
-      console.error("[v0] GraphQL errors:", json.errors)
-      throw new Error("WordPress GraphQL response contained errors")
-    }
-
-    return (json.data ?? null) as T | null
-  } catch (error) {
-    console.error("[v0] GraphQL request exception:", error)
-    return null
-  }
+  return requestPromise
 }
