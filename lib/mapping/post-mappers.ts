@@ -11,6 +11,7 @@ import type {
   WordPressCategoryConnection,
   WordPressTagConnection,
 } from "@/types/wp"
+import type { WordPressRestPost, WordPressRestTerm } from "@/lib/wordpress/post-rest"
 
 // GraphQL fragments (shape for GQL nodes)
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -48,6 +49,209 @@ const resolveRelayId = (
     return candidate
   }
   return undefined
+}
+
+// ------------------------------
+// REST shapes → normalize
+// ------------------------------
+
+const first = <T>(values?: Array<T | null | undefined>): T | undefined => {
+  if (!values?.length) {
+    return undefined
+  }
+
+  for (const value of values) {
+    if (value) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+const selectAvatarUrl = (
+  avatarUrls?: Record<string, string | undefined>,
+): string | undefined => {
+  if (!avatarUrls) {
+    return undefined
+  }
+
+  const preferredSizes = ["512", "256", "128", "96", "64", "48", "32", "24"]
+
+  for (const size of preferredSizes) {
+    const candidate = avatarUrls[size]
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate
+    }
+  }
+
+  for (const value of Object.values(avatarUrls)) {
+    if (typeof value === "string" && value.length > 0) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+const mapRestAuthor = (post: WordPressRestPost): WordPressAuthor | undefined => {
+  const rawAuthor = first(post._embedded?.author)
+
+  if (!rawAuthor) {
+    return undefined
+  }
+
+  const databaseId = typeof rawAuthor.id === "number" ? rawAuthor.id : undefined
+  const name = typeof rawAuthor.name === "string" ? rawAuthor.name : ""
+  const slug = typeof rawAuthor.slug === "string" ? rawAuthor.slug : ""
+  const description = typeof rawAuthor.description === "string" ? rawAuthor.description : undefined
+  const avatarUrl = selectAvatarUrl(rawAuthor.avatar_urls)
+  const avatar = avatarUrl ? { url: avatarUrl } : undefined
+
+  return {
+    id: databaseId,
+    databaseId,
+    name,
+    slug,
+    description,
+    avatar,
+    node: {
+      id: databaseId,
+      databaseId,
+      name,
+      slug,
+      description,
+      avatar,
+    },
+  }
+}
+
+const mapRestFeaturedImage = (post: WordPressRestPost): WordPressMedia | undefined => {
+  const rawMedia = first(post._embedded?.["wp:featuredmedia"])
+
+  if (!rawMedia) {
+    return undefined
+  }
+
+  const caption =
+    typeof rawMedia.caption === "string"
+      ? rawMedia.caption
+      : typeof rawMedia.caption?.rendered === "string"
+        ? rawMedia.caption.rendered
+        : undefined
+
+  const mediaDetails =
+    rawMedia.media_details && typeof rawMedia.media_details === "object"
+      ? {
+          width:
+            typeof rawMedia.media_details.width === "number"
+              ? rawMedia.media_details.width
+              : undefined,
+          height:
+            typeof rawMedia.media_details.height === "number"
+              ? rawMedia.media_details.height
+              : undefined,
+        }
+      : undefined
+
+  return {
+    node: {
+      sourceUrl: typeof rawMedia.source_url === "string" ? rawMedia.source_url : undefined,
+      altText: typeof rawMedia.alt_text === "string" ? rawMedia.alt_text : undefined,
+      caption,
+      mediaDetails,
+    },
+  }
+}
+
+const flattenRestTerms = (post: WordPressRestPost): WordPressRestTerm[] => {
+  const groups = post._embedded?.["wp:term"] ?? []
+  const flattened: WordPressRestTerm[] = []
+
+  for (const group of groups) {
+    if (!Array.isArray(group)) {
+      continue
+    }
+
+    for (const term of group) {
+      if (term && typeof term === "object") {
+        flattened.push(term)
+      }
+    }
+  }
+
+  return flattened
+}
+
+const mapRestCategories = (post: WordPressRestPost): WordPressCategoryConnection => {
+  const terms = flattenRestTerms(post)
+  const categories = terms.filter((term) => term.taxonomy === "category")
+
+  return {
+    nodes: categories.map((term) => ({
+      databaseId: typeof term.id === "number" ? term.id : undefined,
+      id: typeof term.id === "number" ? term.id : undefined,
+      name: term.name ?? undefined,
+      slug: term.slug ?? undefined,
+      description: term.description ?? undefined,
+      count: typeof term.count === "number" ? term.count : undefined,
+    })),
+  }
+}
+
+const mapRestTags = (post: WordPressRestPost): WordPressTagConnection => {
+  const terms = flattenRestTerms(post)
+  const tags = terms.filter((term) => term.taxonomy === "post_tag" || term.taxonomy === "tag")
+
+  return {
+    nodes: tags.map((term) => ({
+      databaseId: typeof term.id === "number" ? term.id : undefined,
+      id: typeof term.id === "number" ? term.id : undefined,
+      name: term.name ?? undefined,
+      slug: term.slug ?? undefined,
+    })),
+  }
+}
+
+const resolveRestUri = (link?: string | null): string | undefined => {
+  if (typeof link !== "string" || link.length === 0) {
+    return undefined
+  }
+
+  try {
+    const url = new URL(link)
+    return url.pathname || undefined
+  } catch {
+    return undefined
+  }
+}
+
+export const mapRestPostToWordPressPost = (
+  post: WordPressRestPost,
+  countryCode?: string,
+): WordPressPost => {
+  const databaseId = typeof post.id === "number" ? post.id : undefined
+  const content =
+    typeof post.content?.rendered === "string"
+      ? rewriteLegacyLinks(post.content.rendered, countryCode)
+      : undefined
+
+  return {
+    databaseId,
+    id: databaseId != null ? String(databaseId) : undefined,
+    slug: post.slug ?? undefined,
+    date: post.date ?? undefined,
+    modified: post.modified ?? undefined,
+    title: post.title?.rendered ?? "",
+    excerpt: post.excerpt?.rendered ?? "",
+    content,
+    uri: resolveRestUri(post.link),
+    link: post.link ?? undefined,
+    author: mapRestAuthor(post),
+    featuredImage: mapRestFeaturedImage(post),
+    categories: mapRestCategories(post),
+    tags: mapRestTags(post),
+  }
 }
 
 // ------------------------------
