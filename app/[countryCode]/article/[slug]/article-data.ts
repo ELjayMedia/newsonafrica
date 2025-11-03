@@ -2,8 +2,9 @@ import { env } from "@/config/env"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost, mapRestPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { COUNTRIES, fetchWordPressGraphQL } from "@/lib/wordpress/client"
+import { fetchWordPressPostBySlugRest } from "@/lib/wordpress/post-rest"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -63,13 +64,16 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
     return null
   }
 
-  try {
-    const cacheTags = buildCacheTags({
-      country: countryCode,
-      section: "article",
-      extra: [`slug:${slug}`],
-    })
+  const cacheTags = buildCacheTags({
+    country: countryCode,
+    section: "article",
+    extra: [`slug:${slug}`],
+  })
 
+  let graphQlError: unknown = null
+  let graphQlMissing = false
+
+  try {
     const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
       countryCode,
       POST_BY_SLUG_QUERY,
@@ -79,18 +83,35 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
 
     const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
 
-    if (!node) {
-      console.log(`[v0] No article found for ${slug} in ${countryCode}`)
-      return null
+    if (node) {
+      return mapGraphqlPostToWordPressPost(node, countryCode)
     }
 
-    return mapGraphqlPostToWordPressPost(node, countryCode)
+    graphQlMissing = true
+    console.log(`[v0] No GraphQL article found for ${slug} in ${countryCode}, attempting REST fallback`)
   } catch (error) {
-    console.error("[v0] Failed to load article", { countryCode, slug, error })
-
-    // Re-throw so the calling layer can surface the failure to the error boundary
-    throw (error instanceof Error ? error : new Error("Failed to load article"))
+    graphQlError = error
+    console.error("[v0] Failed to load article via GraphQL", { countryCode, slug, error })
   }
+
+  const restPost = await fetchWordPressPostBySlugRest(countryCode, slug, {
+    tags: cacheTags,
+    revalidate: CACHE_DURATIONS.SHORT,
+  })
+
+  if (restPost) {
+    return mapRestPostToWordPressPost(restPost, countryCode)
+  }
+
+  if (graphQlError) {
+    throw (graphQlError instanceof Error ? graphQlError : new Error("Failed to load article"))
+  }
+
+  if (graphQlMissing) {
+    console.log(`[v0] No article found for ${slug} in ${countryCode}`)
+  }
+
+  return null
 }
 
 export interface ArticleLoadResult {
