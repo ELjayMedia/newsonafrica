@@ -47,13 +47,20 @@ const dedupe = (values?: readonly string[]): string[] | undefined => {
 
 const FALLBACK_IN_FLIGHT_SYMBOL = Symbol.for("newsonafrica.wpGraphqlInFlight")
 
-const getRequestScopedInFlight = cache(() => new Map<string, Promise<unknown>>())
-
-type GlobalWithInFlight = typeof globalThis & {
-  [FALLBACK_IN_FLIGHT_SYMBOL]?: Map<string, Promise<unknown>>
+type InFlightRequestEntry = {
+  promise: Promise<unknown>
+  metadataKey: string
 }
 
-const getInFlightRequests = (): Map<string, Promise<unknown>> => {
+const getRequestScopedInFlight = cache(
+  () => new Map<string, InFlightRequestEntry>(),
+)
+
+type GlobalWithInFlight = typeof globalThis & {
+  [FALLBACK_IN_FLIGHT_SYMBOL]?: Map<string, InFlightRequestEntry>
+}
+
+const getInFlightRequests = (): Map<string, InFlightRequestEntry> => {
   const requestScoped = getRequestScopedInFlight()
   const validationCall = getRequestScopedInFlight()
 
@@ -68,7 +75,7 @@ const getInFlightRequests = (): Map<string, Promise<unknown>> => {
     return globalStore
   }
 
-  const fallbackStore = new Map<string, Promise<unknown>>()
+  const fallbackStore = new Map<string, InFlightRequestEntry>()
   globalObject[FALLBACK_IN_FLIGHT_SYMBOL] = fallbackStore
   return fallbackStore
 }
@@ -83,14 +90,18 @@ export function fetchWordPressGraphQL<T>(
   const body = JSON.stringify({ query, variables })
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
   const dedupedTags = dedupe(options.tags)
-  const cacheKey = `${base}::${body}::${resolvedRevalidate}::${
-    dedupedTags?.join(",") ?? ""
-  }`
+  const requestedRevalidateKey =
+    options.revalidate === undefined ? "undefined" : String(options.revalidate)
+  const tagsKey = dedupedTags?.join(",") ?? ""
+  const metadataKey = `${requestedRevalidateKey}::${tagsKey}`
+  const cacheKey = `${base}::${body}`
   const inFlightRequests = getInFlightRequests()
 
-  const cachedRequest = inFlightRequests.get(cacheKey) as Promise<T | null> | undefined
-  if (cachedRequest) {
-    return cachedRequest
+  const cachedEntry = inFlightRequests.get(cacheKey) as
+    | InFlightRequestEntry
+    | undefined
+  if (cachedEntry && cachedEntry.metadataKey === metadataKey) {
+    return cachedEntry.promise as Promise<T | null>
   }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -136,9 +147,13 @@ export function fetchWordPressGraphQL<T>(
       return null
     })
 
-  inFlightRequests.set(cacheKey, requestPromise)
+  const entry: InFlightRequestEntry = { promise: requestPromise, metadataKey }
+  inFlightRequests.set(cacheKey, entry)
   requestPromise.finally(() => {
-    inFlightRequests.delete(cacheKey)
+    const currentEntry = inFlightRequests.get(cacheKey)
+    if (currentEntry === entry) {
+      inFlightRequests.delete(cacheKey)
+    }
   })
 
   return requestPromise

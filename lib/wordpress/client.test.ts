@@ -101,4 +101,23 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
   })
+
+  it("starts a new in-flight request when both revalidate and tags differ", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    const firstPromise = fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: 10,
+      tags: ["a"],
+    })
+    const secondPromise = fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: 20,
+      tags: ["b"],
+    })
+
+    expect(firstPromise).not.toBe(secondPromise)
+
+    await Promise.all([firstPromise, secondPromise])
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+  })
 })
