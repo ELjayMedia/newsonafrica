@@ -69,27 +69,16 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Wo
     extra: [`slug:${slug}`],
   })
 
-  try {
-    const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
-      countryCode,
-      POST_BY_SLUG_QUERY,
-      { slug },
-      { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
-    )
+  const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
+    countryCode,
+    POST_BY_SLUG_QUERY,
+    { slug },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+  )
 
-    const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
+  const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
 
-    if (node) {
-      return mapGraphqlPostToWordPressPost(node, countryCode)
-    }
-
-    console.log(`[v0] No GraphQL article found for ${slug} in ${countryCode}`)
-  } catch (error) {
-    console.error("[v0] Failed to load article via GraphQL", { countryCode, slug, error })
-    throw (error instanceof Error ? error : new Error("Failed to load article"))
-  }
-
-  return null
+  return node ? mapGraphqlPostToWordPressPost(node, countryCode) : null
 }
 
 export interface ArticleLoadResult {
