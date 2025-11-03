@@ -262,7 +262,12 @@ export function useBookmarks() {
   return context
 }
 
-export function BookmarksProvider({ children }: { children: React.ReactNode }) {
+export interface BookmarksProviderProps {
+  children: React.ReactNode
+  initialData?: BookmarkListPayload | null
+}
+
+export function BookmarksProvider({ children, initialData = null }: BookmarksProviderProps) {
   const { user, ensureSessionFreshness } = useUser()
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [stats, setStats] = useState<BookmarkStats>(DEFAULT_STATS)
@@ -276,6 +281,7 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
   const mutationQueueRef = useRef<(() => Promise<void>)[]>([])
   const processingQueueRef = useRef(false)
   const [, startTransition] = useTransition()
+  const initialDataAppliedRef = useRef(false)
 
   // Update cache when bookmarks change
   useEffect(() => {
@@ -606,13 +612,31 @@ export function BookmarksProvider({ children }: { children: React.ReactNode }) {
       setStats(DEFAULT_STATS)
       setPagination(DEFAULT_PAGINATION)
       setLoading(false)
+      initialDataAppliedRef.current = false
+      return
+    }
+
+    if (initialData && !initialDataAppliedRef.current) {
+      initialDataAppliedRef.current = true
+      setLoading(true)
+
+      startTransition(() => {
+        void (async () => {
+          try {
+            await applyListPayload(initialData)
+          } finally {
+            setLoading(false)
+          }
+        })()
+      })
+
       return
     }
 
     startTransition(() => {
       void fetchBookmarks()
     })
-  }, [fetchBookmarks, startTransition, user])
+  }, [applyListPayload, fetchBookmarks, initialData, startTransition, user])
 
   const addBookmark = useCallback(
     async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
