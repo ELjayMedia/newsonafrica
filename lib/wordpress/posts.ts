@@ -21,6 +21,7 @@ import type {
   LatestPostsQuery,
   PostCategoriesQuery,
   PostFieldsFragment,
+  PostSummaryFieldsFragment,
   RelatedPostsQuery,
 } from "@/types/wpgraphql"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
@@ -49,7 +50,7 @@ const FEATURED_POSTS_REVALIDATE = CACHE_DURATIONS.MEDIUM
 
 type PostsQueryResult = {
   posts?: {
-    nodes?: (PostFieldsFragment | null)[] | null
+    nodes?: (PostSummaryFieldsFragment | null)[] | null
     pageInfo?: {
       endCursor?: string | null
       hasNextPage?: boolean | null
@@ -602,7 +603,8 @@ export const fetchPosts = async (
     { tags: cacheTags, revalidate: LATEST_POSTS_REVALIDATE },
   )
 
-  const nodes = gqlData?.posts?.nodes?.filter((node): node is PostFieldsFragment => Boolean(node)) ?? []
+  const nodes =
+    gqlData?.posts?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
   const mapped = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
   const total = gqlData?.posts?.pageInfo?.offsetPagination?.total ?? mapped.length
 

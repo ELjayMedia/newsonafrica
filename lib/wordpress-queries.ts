@@ -1,7 +1,7 @@
 const gql = String.raw
 
-export const POST_FIELDS_FRAGMENT = gql`
-  fragment PostFields on Post {
+export const POST_SUMMARY_FIELDS_FRAGMENT = gql`
+  fragment PostSummaryFields on Post {
     databaseId
     id
     slug
@@ -9,7 +9,6 @@ export const POST_FIELDS_FRAGMENT = gql`
     modified
     title
     excerpt
-    content
     uri
     link
     featuredImage {
@@ -50,8 +49,16 @@ export const POST_FIELDS_FRAGMENT = gql`
   }
 `
 
+export const POST_FIELDS_FRAGMENT = gql`
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
+  fragment PostFields on Post {
+    ...PostSummaryFields
+    content
+  }
+`
+
 export const LATEST_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query LatestPosts($first: Int!, $after: String) {
     posts(
       first: $first
@@ -66,14 +73,14 @@ export const LATEST_POSTS_QUERY = gql`
         hasNextPage
       }
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const TAGGED_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query TaggedPosts($tagSlugs: [String!]!, $first: Int!, $after: String) {
     posts(
       first: $first
@@ -89,14 +96,14 @@ export const TAGGED_POSTS_QUERY = gql`
         hasNextPage
       }
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const RELATED_POSTS_BY_TAGS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query RelatedPostsByTags(
     $tagSlugs: [String!]!
     $exclude: ID!
@@ -112,14 +119,14 @@ export const RELATED_POSTS_BY_TAGS_QUERY = gql`
       }
     ) {
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const FP_TAGGED_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query FpTaggedPosts($tagSlugs: [String!]!, $first: Int!) {
     posts(
       first: $first
@@ -130,14 +137,14 @@ export const FP_TAGGED_POSTS_QUERY = gql`
       }
     ) {
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const FRONT_PAGE_SLICES_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query FrontPageSlices(
     $heroFirst: Int!
     $heroTagSlugs: [String!]
@@ -152,7 +159,7 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
       }
     ) {
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
     latest: posts(
@@ -169,7 +176,7 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
       edges {
         cursor
         node {
-          ...PostFields
+          ...PostSummaryFields
         }
       }
     }
@@ -177,7 +184,7 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
 `
 
 export const POSTS_BY_CATEGORY_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query PostsByCategory($category: String!, $first: Int!, $after: String) {
     categories(where: { slug: [$category] }) {
       nodes {
@@ -202,14 +209,14 @@ export const POSTS_BY_CATEGORY_QUERY = gql`
         hasNextPage
       }
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const CATEGORY_POSTS_BATCH_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query CategoryPostsBatch($slugs: [String!]!, $first: Int!) {
     categories(where: { slug: $slugs }) {
       nodes {
@@ -230,7 +237,7 @@ export const CATEGORY_POSTS_BATCH_QUERY = gql`
             hasNextPage
           }
           nodes {
-            ...PostFields
+            ...PostSummaryFields
           }
         }
       }
@@ -264,7 +271,6 @@ export const CATEGORIES_QUERY = gql`
 `
 
 export const POST_CATEGORIES_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
   query PostCategories($id: ID!) {
     post(id: $id, idType: DATABASE_ID) {
       categories {
@@ -277,7 +283,7 @@ export const POST_CATEGORIES_QUERY = gql`
 `
 
 export const RELATED_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query RelatedPosts(
     $catIds: [ID!]
     $exclude: ID!
@@ -293,14 +299,14 @@ export const RELATED_POSTS_QUERY = gql`
       }
     ) {
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const FEATURED_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query FeaturedPosts($tag: String!, $first: Int!) {
     posts(
       first: $first
@@ -311,14 +317,14 @@ export const FEATURED_POSTS_QUERY = gql`
       }
     ) {
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
 `
 
 export const POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query Posts(
     $first: Int!
     $after: String
@@ -353,7 +359,7 @@ export const POSTS_QUERY = gql`
         }
       }
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
@@ -403,7 +409,7 @@ export const POST_BY_SLUG_QUERY = gql`
 `
 
 export const AUTHOR_DATA_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query AuthorData($slug: String!, $after: String, $first: Int!) {
     user(id: $slug, idType: SLUG) {
       id
@@ -420,11 +426,11 @@ export const AUTHOR_DATA_QUERY = gql`
           hasNextPage
         }
         nodes {
-          ...PostFields
+          ...PostSummaryFields
         }
       }
+    }
   }
-}
 `
 
 export const AUTHORS_QUERY = gql`
@@ -448,7 +454,7 @@ export const AUTHORS_QUERY = gql`
 `
 
 export const CATEGORY_POSTS_QUERY = gql`
-  ${POST_FIELDS_FRAGMENT}
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
   query CategoryPosts($slug: String!, $after: String, $first: Int!) {
     categories(where: { slug: [$slug] }) {
       nodes {
@@ -473,7 +479,7 @@ export const CATEGORY_POSTS_QUERY = gql`
         hasNextPage
       }
       nodes {
-        ...PostFields
+        ...PostSummaryFields
       }
     }
   }
