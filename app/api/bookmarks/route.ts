@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import type { SupabaseServerClient } from "@/app/actions/supabase"
 
-import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
@@ -171,7 +170,6 @@ export async function POST(request: NextRequest) {
     }
 
     revalidateByTag(CACHE_TAGS.BOOKMARKS)
-    revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -228,7 +226,6 @@ export async function PUT(request: NextRequest) {
     }
 
     revalidateByTag(CACHE_TAGS.BOOKMARKS)
-    revalidatePath("/bookmarks")
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -274,7 +271,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     revalidateByTag(CACHE_TAGS.BOOKMARKS)
-    revalidatePath("/bookmarks")
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
