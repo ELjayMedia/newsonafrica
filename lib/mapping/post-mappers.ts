@@ -55,6 +55,9 @@ const resolveRelayId = (
 // ------------------------------
 export type GraphqlPostNode = PostFieldsFragment | PostSummaryFieldsFragment
 
+const hasRenderedContent = (post: GraphqlPostNode): post is PostFieldsFragment =>
+  typeof (post as { content?: unknown }).content === "string"
+
 const mapGraphqlFeaturedImage = (post: GraphqlPostNode): WordPressMedia | undefined => {
   if (!post.featuredImage?.node) return undefined
   const node = post.featuredImage.node
@@ -138,7 +141,7 @@ export const mapGraphqlPostToWordPressPost = (
   post: GraphqlPostNode,
   countryCode?: string,
 ): WordPressPost => {
-  const rawContent = "content" in post ? post.content : undefined
+  const rawContent = hasRenderedContent(post) ? post.content : undefined
 
   return {
     databaseId: post.databaseId ?? undefined,
