@@ -94,7 +94,7 @@ export function fetchWordPressGraphQL<T>(
     options.revalidate === undefined ? "undefined" : String(options.revalidate)
   const tagsKey = dedupedTags?.join(",") ?? ""
   const metadataKey = `${requestedRevalidateKey}::${tagsKey}`
-  const cacheKey = `${base}::${body}`
+  const cacheKey = `${base}::${body}::${metadataKey}`
   const inFlightRequests = getInFlightRequests()
 
   const cachedEntry = inFlightRequests.get(cacheKey) as
