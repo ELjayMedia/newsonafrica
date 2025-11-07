@@ -115,6 +115,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function invalidateBookmarksCache() {
+  revalidateByTag(CACHE_TAGS.BOOKMARKS)
+}
+
 export async function POST(request: NextRequest) {
   logRequest(request)
   try {
@@ -169,7 +173,7 @@ export async function POST(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 })
     }
 
-    revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    invalidateBookmarksCache()
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -225,7 +229,7 @@ export async function PUT(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 })
     }
 
-    revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    invalidateBookmarksCache()
     return NextResponse.json({ bookmark: data })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -270,7 +274,7 @@ export async function DELETE(request: NextRequest) {
       return jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 })
     }
 
-    revalidateByTag(CACHE_TAGS.BOOKMARKS)
+    invalidateBookmarksCache()
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error in bookmarks API:", error)
