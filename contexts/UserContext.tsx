@@ -83,17 +83,28 @@ function getSafeUrl(url: string | null): string | null {
 /**
  * Provider component for user authentication and profile management
  */
-export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+interface UserProviderProps {
+  children: React.ReactNode
+  initialState?: AuthStatePayload | null
+}
+
+export function UserProvider({ children, initialState = null }: UserProviderProps) {
+  const initialSession = initialState?.session ?? null
+  const initialUser = initialState?.user ?? null
+  const initialProfile = initialState?.profile ?? null
+  const hasInitialState = initialState !== null
+
+  const [user, setUser] = useState<User | null>(initialUser)
+  const [profile, setProfile] = useState<Profile | null>(initialProfile)
+  const [session, setSession] = useState<Session | null>(initialSession)
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser))
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
-  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false)
-  const [loadingState, setLoadingState] = useState(true)
+  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(hasInitialState)
+  const [loadingState, setLoadingState] = useState(!hasInitialState)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
+  const pendingInitialStateRef = useRef<AuthStatePayload | null>(initialState)
 
   const applyAuthState = useCallback(
     async (next: AuthStatePayload | null) => {
@@ -160,30 +171,66 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    setLoadingState(true)
+    const hydrateFromInitialState = async () => {
+      const initial = pendingInitialStateRef.current
+      if (!initial) {
+        return false
+      }
 
-    startTransition(() => {
-      getCurrentSession()
-        .then(async (result) => {
-          if (!isMounted) return
-          try {
-            await handleAuthResult(result)
-          } catch (error) {
-            console.error("Error getting current session:", error)
+      pendingInitialStateRef.current = null
+
+      try {
+        await applyAuthState(initial)
+      } catch (error) {
+        console.error("Failed to apply initial auth state:", error)
+        await applyAuthState(null)
+      }
+
+      if (isMounted) {
+        setLoadingState(false)
+        setInitialAuthCheckComplete(true)
+      }
+
+      return true
+    }
+
+    const fetchSession = () => {
+      setLoadingState(true)
+
+      startTransition(() => {
+        getCurrentSession()
+          .then(async (result) => {
+            if (!isMounted) return
+            try {
+              await handleAuthResult(result)
+            } catch (error) {
+              console.error("Error getting current session:", error)
+              await applyAuthState(null)
+            }
+          })
+          .catch(async (error) => {
+            if (!isMounted) return
+            console.error("Unexpected error loading session:", error)
             await applyAuthState(null)
-          }
-        })
-        .catch(async (error) => {
-          if (!isMounted) return
-          console.error("Unexpected error loading session:", error)
-          await applyAuthState(null)
-        })
-        .finally(() => {
-          if (!isMounted) return
-          setLoadingState(false)
-          setInitialAuthCheckComplete(true)
-        })
-    })
+          })
+          .finally(() => {
+            if (!isMounted) return
+            setLoadingState(false)
+            setInitialAuthCheckComplete(true)
+          })
+      })
+    }
+
+    hydrateFromInitialState()
+      .then((hydrated) => {
+        if (!hydrated) {
+          fetchSession()
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to hydrate initial auth state:", error)
+        fetchSession()
+      })
 
     return () => {
       isMounted = false

@@ -1,20 +1,21 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata } from "next"
-import dynamic from "next/dynamic"
+import Link from "next/link"
+
 import { SchemaOrg } from "@/components/SchemaOrg"
+import { LayoutStructure } from "@/components/LayoutStructure"
+import { TopBar } from "@/components/TopBar"
+import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
+import { PreferredCountrySync } from "@/components/PreferredCountrySync"
+import { BottomNavigation } from "@/components/BottomNavigation"
+import { ScrollToTop } from "@/components/ScrollToTop"
+import { Toaster } from "@/components/ui/toaster"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
-import { LayoutStructure } from "@/components/LayoutStructure"
-import { BookmarksProvider } from "@/contexts/BookmarksContext"
+import { Providers } from "./providers"
 import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
-
-const ClientProviders = dynamic(() =>
-  import("@/components/ClientProviders").then((mod) => ({ default: mod.ClientProviders })),
-)
-
-const ClientLayoutComponents = dynamic(() =>
-  import("@/components/ClientLayoutComponents").then((mod) => ({ default: mod.ClientLayoutComponents })),
-)
+import { getCurrentSession } from "@/app/actions/auth"
 
 import "./globals.css"
 
@@ -35,13 +36,20 @@ export const metadata: Metadata = {
     generator: 'v0.app'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
+
+  const sessionResult = await getCurrentSession()
+  if (sessionResult.error) {
+    console.error("Failed to load initial session", sessionResult.error)
+  }
+
+  const initialAuthState = sessionResult.data ?? null
 
   return (
     <html lang="en" className="font-sans">
@@ -51,19 +59,40 @@ export default function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="font-sans">
-        <ClientProviders>
+        <Providers initialAuthState={initialAuthState}>
           <ClientUserPreferencesProvider>
-            <BookmarksProvider>
-              <ClientLayoutComponents>
+            <PreferredCountrySync />
+            <Suspense fallback={null}>
+              <ScrollToTop />
+            </Suspense>
+            <ClientDynamicComponents />
+            <TopBar />
+            <div className="flex-grow rounded-xs shadow-none bg-transparent">
+              <div className="mx-auto max-w-full md:max-w-[980px]">
                 <LayoutStructure>
                   <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
                     <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
                   </main>
                 </LayoutStructure>
-              </ClientLayoutComponents>
-            </BookmarksProvider>
+              </div>
+            </div>
+            <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+              <Link href="/privacy-policy" className="hover:underline">
+                Privacy Policy
+              </Link>
+              {" | "}
+              <Link href="/terms-of-service" className="hover:underline">
+                Terms of Service
+              </Link>
+              {" | "}
+              <Link href="/sitemap.xml" className="hover:underline">
+                Sitemap
+              </Link>
+            </footer>
+            <BottomNavigation />
+            <Toaster />
           </ClientUserPreferencesProvider>
-        </ClientProviders>
+        </Providers>
       </body>
     </html>
   )
