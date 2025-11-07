@@ -15,6 +15,12 @@ import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-uti
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { DELETE, POST, PUT } from "./route"
 
+function expectOnlyBookmarkTagInvalidation() {
+  expect(revalidateByTag).toHaveBeenCalledTimes(1)
+  expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+  expect(revalidateMultiplePaths).not.toHaveBeenCalled()
+}
+
 describe("/api/bookmarks cache revalidation", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -57,9 +63,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await POST(request)
 
     expect(response.status).toBe(200)
-    expect(revalidateByTag).toHaveBeenCalledTimes(1)
-    expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
-    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
+    expectOnlyBookmarkTagInvalidation()
   })
 
   it("only revalidates bookmark tags after updating a bookmark", async () => {
@@ -90,9 +94,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await PUT(request)
 
     expect(response.status).toBe(200)
-    expect(revalidateByTag).toHaveBeenCalledTimes(1)
-    expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
-    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
+    expectOnlyBookmarkTagInvalidation()
   })
 
   it("only revalidates bookmark tags after deleting bookmarks", async () => {
@@ -123,8 +125,6 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await DELETE(request)
 
     expect(response.status).toBe(200)
-    expect(revalidateByTag).toHaveBeenCalledTimes(1)
-    expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
-    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
+    expectOnlyBookmarkTagInvalidation()
   })
 })
