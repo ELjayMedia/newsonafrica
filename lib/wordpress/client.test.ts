@@ -120,4 +120,40 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
   })
+
+  it("triggers a new fetch when cache hints change between calls", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: 15,
+      tags: ["a", "b"],
+    })
+
+    await fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: 30,
+      tags: ["c"],
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+    expect(fetchWithRetryMock).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      expect.objectContaining({
+        next: expect.objectContaining({
+          revalidate: 15,
+          tags: ["a", "b"],
+        }),
+      }),
+    )
+    expect(fetchWithRetryMock).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      expect.objectContaining({
+        next: expect.objectContaining({
+          revalidate: 30,
+          tags: ["c"],
+        }),
+      }),
+    )
+  })
 })
