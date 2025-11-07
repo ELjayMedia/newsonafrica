@@ -7,10 +7,11 @@ vi.mock("@/utils/supabase/server", () => ({
 
 vi.mock("@/lib/server-cache-utils", () => ({
   revalidateByTag: vi.fn(),
+  revalidateMultiplePaths: vi.fn(),
 }))
 
 import { createClient } from "@/utils/supabase/server"
-import { revalidateByTag } from "@/lib/server-cache-utils"
+import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { DELETE, POST, PUT } from "./route"
 
@@ -58,6 +59,7 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     expect(revalidateByTag).toHaveBeenCalledTimes(1)
     expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
   })
 
   it("only revalidates bookmark tags after updating a bookmark", async () => {
@@ -90,6 +92,7 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     expect(revalidateByTag).toHaveBeenCalledTimes(1)
     expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
   })
 
   it("only revalidates bookmark tags after deleting bookmarks", async () => {
@@ -122,5 +125,6 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     expect(revalidateByTag).toHaveBeenCalledTimes(1)
     expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
   })
 })
