@@ -4,6 +4,8 @@ import { SearchPageSkeleton } from "@/components/SearchPageSkeleton"
 import { SearchDebugger } from "@/components/SearchDebugger"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 
+export const dynamic = "force-dynamic"
+
 const PAN_AFRICAN_CODE = "all"
 const SUPPORTED_COUNTRY_CODES = new Set(SUPPORTED_COUNTRIES.map((country) => country.code))
 

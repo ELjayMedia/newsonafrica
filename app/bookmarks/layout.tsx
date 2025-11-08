@@ -9,6 +9,8 @@ import { env } from "@/config/env"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import type { BookmarkListPayload } from "@/types/bookmarks"
 
+export const dynamic = "force-dynamic"
+
 export default async function BookmarksLayout({ children }: { children: React.ReactNode }) {
   const supabase = createServerClient()
   const {

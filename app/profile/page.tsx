@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import type { Metadata } from "next"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "My Profile - News On Africa",
   description: "View and edit your News On Africa profile",

@@ -1,5 +1,6 @@
 import AuthPageClient from "./AuthPageClient"
 
+export const dynamic = "force-dynamic"
 export const metadata = {
   title: "Sign In - News on Africa",
   description: "Sign in or create an account to access personalized features on News on Africa",
