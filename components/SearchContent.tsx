@@ -500,7 +500,7 @@ function SearchBox({ placeholder, country, sort, query, onSearch, onClear, isSea
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="p-1 hover:bg-gray-100"
+              className="rounded-md p-1"
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Clear search</span>
@@ -517,14 +517,16 @@ function SearchBox({ placeholder, country, sort, query, onSearch, onClear, isSea
         <div className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
           <div className="py-2 text-sm">
             {suggestions.map((suggestion) => (
-              <button
+              <Button
                 key={suggestion}
                 type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto w-full justify-start rounded-md px-4 py-2 font-normal"
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50"
               >
                 {suggestion}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
