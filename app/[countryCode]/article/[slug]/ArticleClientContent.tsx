@@ -1,5 +1,6 @@
 import type { WordPressPost } from "@/types/wp"
 
+import { fetchArticleWithFallbackAction } from "./actions"
 import { ArticleClientShell } from "./ArticleClientShell"
 
 interface ArticleClientContentProps {
@@ -8,6 +9,7 @@ interface ArticleClientContentProps {
   sourceCountryCode?: string
   initialData: any
   relatedPosts: WordPressPost[]
+  fetchArticleWithFallback?: typeof fetchArticleWithFallbackAction
 }
 
 export function ArticleClientContent({
@@ -16,6 +18,7 @@ export function ArticleClientContent({
   sourceCountryCode,
   initialData,
   relatedPosts,
+  fetchArticleWithFallback = fetchArticleWithFallbackAction,
 }: ArticleClientContentProps) {
   return (
     <ArticleClientShell
@@ -24,6 +27,7 @@ export function ArticleClientContent({
       sourceCountryCode={sourceCountryCode}
       initialData={initialData}
       relatedPosts={relatedPosts}
+      fetchArticleWithFallback={fetchArticleWithFallback}
     />
   )
 }

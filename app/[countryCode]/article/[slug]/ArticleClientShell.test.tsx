@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, fireEvent, cleanup } from "@testing-library/react"
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react"
 
 const mockBookmarkButton = vi.fn(() => null)
 const mockShareButtons = vi.fn(() => null)
@@ -46,6 +46,12 @@ vi.mock("@/components/CommentList", () => ({
 import { ArticleClientShell } from "./ArticleClientShell"
 
 describe("ArticleClientShell", () => {
+  type ArticleFetcher = (input: { countryCode: string; slug: string }) => Promise<{
+    article: any
+    sourceCountry: string
+    relatedPosts: any[]
+  }>
+
   const baseInitialData = {
     categories: { nodes: [] },
     date: new Date().toISOString(),
@@ -72,6 +78,11 @@ describe("ArticleClientShell", () => {
 
   it("renders related posts when provided", () => {
     const relatedPosts = [{ id: "1", title: "Related" } as any]
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 123 },
+      sourceCountry: "ng",
+      relatedPosts,
+    })
 
     render(
       <ArticleClientShell
@@ -79,7 +90,8 @@ describe("ArticleClientShell", () => {
         countryCode="ng"
         initialData={{ ...baseInitialData, id: 123 }}
         relatedPosts={relatedPosts}
-      />, 
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
 
     expect(mockArticleList).toHaveBeenCalledWith(
@@ -93,26 +105,40 @@ describe("ArticleClientShell", () => {
   })
 
   it("renders fallback message when no related posts are available", () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 123 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
     render(
       <ArticleClientShell
         slug="test-slug"
         countryCode="ng"
         initialData={{ ...baseInitialData, id: 123 }}
         relatedPosts={[]}
-      />, 
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
 
     expect(screen.getByText("No related articles found.")).toBeInTheDocument()
   })
 
   it("renders the gift article button alongside share and bookmark controls", () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 123 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
     render(
       <ArticleClientShell
         slug="test-slug"
         countryCode="ng"
         initialData={{ ...baseInitialData, id: 123 }}
         relatedPosts={[]}
-      />, 
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
 
     const giftButton = screen.getByRole("button", { name: /gift article/i })
@@ -134,13 +160,20 @@ describe("ArticleClientShell", () => {
   })
 
   it("renders the comments heading when a post id is provided", () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 456 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
     render(
       <ArticleClientShell
         slug="test-slug"
         countryCode="ng"
         initialData={{ ...baseInitialData, id: 456 }}
         relatedPosts={[]}
-      />, 
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
 
     expect(screen.getByRole("heading", { name: /comments/i })).toBeInTheDocument()
@@ -155,13 +188,20 @@ describe("ArticleClientShell", () => {
         '<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube"><div class="wp-block-embed__wrapper">https://www.youtube.com/watch?v=dQw4w9WgXcQ</div></figure>',
     }
 
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: initialData,
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
     const { container } = render(
       <ArticleClientShell
         slug="test-slug"
         countryCode="ng"
         initialData={initialData}
         relatedPosts={[]}
-      />, 
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
 
     expect(container.querySelector("script")).toBeNull()
@@ -171,5 +211,74 @@ describe("ArticleClientShell", () => {
     const iframe = container.querySelector("iframe")
     expect(iframe).not.toBeNull()
     expect(iframe).toHaveAttribute("src", "https://www.youtube.com/embed/dQw4w9WgXcQ")
+  })
+
+  it("fetches updated article data when the refresh button is clicked", async () => {
+    const updatedArticle = {
+      ...baseInitialData,
+      id: 999,
+      title: "Updated Title",
+      content: "<p>Updated content</p>",
+    }
+    const updatedRelatedPosts = [{ id: "2", title: "Updated Related" }]
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: updatedArticle,
+      sourceCountry: "za",
+      relatedPosts: updatedRelatedPosts,
+    })
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 123 }}
+        relatedPosts={[{ id: "1", title: "Original" }] as any}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    const refreshButton = screen.getByRole("button", { name: /refresh article content/i })
+    fireEvent.click(refreshButton)
+
+    await screen.findByRole("heading", { name: "Updated Title" })
+    expect(fetcherMock).toHaveBeenCalledWith({ countryCode: "ng", slug: "test-slug" })
+
+    const lastArticleListCall = mockArticleList.mock.calls.at(-1)?.[0] as Record<string, any>
+    expect(lastArticleListCall?.articles).toEqual(updatedRelatedPosts)
+
+    const goToCountryButton = screen.getByRole("button", { name: /go to country page/i })
+    fireEvent.click(goToCountryButton)
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/za")
+    })
+  })
+
+  it("displays an error message when the refresh action fails", async () => {
+    const fetcherMock = vi
+      .fn<ArticleFetcher>()
+      .mockRejectedValue(new Error("Network error"))
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 123 }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    const refreshButton = screen.getByRole("button", { name: /refresh article content/i })
+    fireEvent.click(refreshButton)
+
+    await waitFor(() => {
+      expect(refreshButton).toBeDisabled()
+    })
+
+    await screen.findByText("We couldn't refresh the article: Network error")
+
+    await waitFor(() => {
+      expect(refreshButton).not.toBeDisabled()
+    })
   })
 })
