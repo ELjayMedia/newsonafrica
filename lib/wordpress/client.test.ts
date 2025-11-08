@@ -4,6 +4,7 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
   afterEach(() => {
     vi.resetModules()
     vi.doUnmock("../utils/fetchWithRetry")
+    vi.restoreAllMocks()
   })
 
   const setup = async () => {
@@ -23,9 +24,24 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
 
     fetchWithRetryMock.mockResolvedValue(mockResponse as unknown as Response)
 
-    const { fetchWordPressGraphQL } = await import("./client")
+    const memoSymbol = Symbol.for("newsonafrica.wpGraphqlMemo")
+    const globalWithMemo = globalThis as Record<string | symbol, unknown>
+    const existingMemoStore = globalWithMemo[memoSymbol]
 
-    return { fetchWordPressGraphQL, fetchWithRetryMock, mockJson }
+    if (existingMemoStore instanceof Map) {
+      existingMemoStore.clear()
+    }
+
+    const { fetchWordPressGraphQL, __getMemoizedRequestsForTests } = await import(
+      "./client",
+    )
+
+    return {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      mockJson,
+      getMemoStoreForTests: () => __getMemoizedRequestsForTests(),
+    }
   }
 
   it("returns the same promise for identical in-flight requests", async () => {
@@ -39,6 +55,22 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     const result = await firstPromise
 
     expect(result).toEqual({ posts: [] })
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
+    expect(mockJson).toHaveBeenCalledTimes(1)
+  })
+
+  it("memoizes resolved responses for sequential calls", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock, mockJson } = await setup()
+
+    const firstPromise = fetchWordPressGraphQL("sz", "query")
+    await firstPromise
+    const secondPromise = fetchWordPressGraphQL("sz", "query")
+
+    expect(secondPromise).toBe(firstPromise)
+
+    const secondResult = await secondPromise
+
+    expect(secondResult).toEqual({ posts: [] })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
     expect(mockJson).toHaveBeenCalledTimes(1)
   })
@@ -155,5 +187,20 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
         }),
       }),
     )
+  })
+
+  it("hashes the request body when memoizing", async () => {
+    const { fetchWordPressGraphQL, getMemoStoreForTests } = await setup()
+
+    await fetchWordPressGraphQL("sz", "query", { lang: "en" })
+
+    const memoStore = getMemoStoreForTests()
+    const [cacheKey] = memoStore.keys()
+    const expectedBody = JSON.stringify({ query: "query", variables: { lang: "en" } })
+    const expectedHash = (await import("crypto")).createHash("sha1")
+      .update(expectedBody)
+      .digest("hex")
+
+    expect(cacheKey).toContain(expectedHash)
   })
 })

@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { createHash } from "crypto"
 
 import { getWordPressGraphQLAuthHeaders } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
@@ -45,38 +46,39 @@ const dedupe = (values?: readonly string[]): string[] | undefined => {
   return Array.from(new Set(values)).sort()
 }
 
-const FALLBACK_IN_FLIGHT_SYMBOL = Symbol.for("newsonafrica.wpGraphqlInFlight")
+const FALLBACK_MEMO_SYMBOL = Symbol.for("newsonafrica.wpGraphqlMemo")
 
-type InFlightRequestEntry = {
+type MemoizedRequestEntry = {
   promise: Promise<unknown>
   metadataKey: string
+  expiresAt: number
 }
 
-const getRequestScopedInFlight = cache(
-  () => new Map<string, InFlightRequestEntry>(),
+const getRequestScopedMemo = cache(
+  () => new Map<string, MemoizedRequestEntry>(),
 )
 
-type GlobalWithInFlight = typeof globalThis & {
-  [FALLBACK_IN_FLIGHT_SYMBOL]?: Map<string, InFlightRequestEntry>
+type GlobalWithMemo = typeof globalThis & {
+  [FALLBACK_MEMO_SYMBOL]?: Map<string, MemoizedRequestEntry>
 }
 
-const getInFlightRequests = (): Map<string, InFlightRequestEntry> => {
-  const requestScoped = getRequestScopedInFlight()
-  const validationCall = getRequestScopedInFlight()
+const getMemoizedRequests = (): Map<string, MemoizedRequestEntry> => {
+  const requestScoped = getRequestScopedMemo()
+  const validationCall = getRequestScopedMemo()
 
   if (requestScoped === validationCall) {
     return requestScoped
   }
 
-  const globalObject = globalThis as GlobalWithInFlight
-  const globalStore = globalObject[FALLBACK_IN_FLIGHT_SYMBOL]
+  const globalObject = globalThis as GlobalWithMemo
+  const globalStore = globalObject[FALLBACK_MEMO_SYMBOL]
 
   if (globalStore) {
     return globalStore
   }
 
-  const fallbackStore = new Map<string, InFlightRequestEntry>()
-  globalObject[FALLBACK_IN_FLIGHT_SYMBOL] = fallbackStore
+  const fallbackStore = new Map<string, MemoizedRequestEntry>()
+  globalObject[FALLBACK_MEMO_SYMBOL] = fallbackStore
   return fallbackStore
 }
 
@@ -90,18 +92,23 @@ export function fetchWordPressGraphQL<T>(
   const body = JSON.stringify({ query, variables })
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
   const dedupedTags = dedupe(options.tags)
-  const requestedRevalidateKey =
-    options.revalidate === undefined ? "undefined" : String(options.revalidate)
   const tagsKey = dedupedTags?.join(",") ?? ""
-  const metadataKey = `${requestedRevalidateKey}::${tagsKey}`
-  const cacheKey = `${base}::${body}::${metadataKey}`
-  const inFlightRequests = getInFlightRequests()
+  const bodyHash = createHash("sha1").update(body).digest("hex")
+  const cacheKey = `${base}::${bodyHash}::${tagsKey}`
+  const metadataKey = String(resolvedRevalidate)
+  const memoizedRequests = getMemoizedRequests()
 
-  const cachedEntry = inFlightRequests.get(cacheKey) as
-    | InFlightRequestEntry
+  const cachedEntry = memoizedRequests.get(cacheKey) as
+    | MemoizedRequestEntry
     | undefined
-  if (cachedEntry && cachedEntry.metadataKey === metadataKey) {
-    return cachedEntry.promise as Promise<T | null>
+  if (cachedEntry) {
+    const isExpired =
+      cachedEntry.expiresAt !== Infinity && cachedEntry.expiresAt <= Date.now()
+    if (isExpired) {
+      memoizedRequests.delete(cacheKey)
+    } else if (cachedEntry.metadataKey === metadataKey) {
+      return cachedEntry.promise as Promise<T | null>
+    }
   }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -147,14 +154,32 @@ export function fetchWordPressGraphQL<T>(
       return null
     })
 
-  const entry: InFlightRequestEntry = { promise: requestPromise, metadataKey }
-  inFlightRequests.set(cacheKey, entry)
-  requestPromise.finally(() => {
-    const currentEntry = inFlightRequests.get(cacheKey)
-    if (currentEntry === entry) {
-      inFlightRequests.delete(cacheKey)
+  const expiresAt =
+    resolvedRevalidate > 0
+      ? Date.now() + resolvedRevalidate * 1000
+      : Number.POSITIVE_INFINITY
+
+  const entry: MemoizedRequestEntry = {
+    promise: requestPromise,
+    metadataKey,
+    expiresAt,
+  }
+  memoizedRequests.set(cacheKey, entry)
+
+  if (resolvedRevalidate > 0) {
+    const timeout = setTimeout(() => {
+      const currentEntry = memoizedRequests.get(cacheKey)
+      if (currentEntry === entry) {
+        memoizedRequests.delete(cacheKey)
+      }
+    }, resolvedRevalidate * 1000)
+
+    if (typeof timeout.unref === "function") {
+      timeout.unref()
     }
-  })
+  }
 
   return requestPromise
 }
+
+export const __getMemoizedRequestsForTests = () => getMemoizedRequests()
