@@ -388,7 +388,9 @@ describe('ArticlePage', () => {
   it('excludes unsupported wordpress countries when prioritising fallbacks', () => {
     const priority = buildArticleCountryPriority('african-edition')
 
-    expect(priority).toEqual(expect.arrayContaining(['sz', 'za']))
+    expect(priority).toEqual(
+      expect.arrayContaining(['sz', 'za', 'ng', 'ke', 'tz', 'eg', 'gh']),
+    )
     expect(priority).not.toContain('african-edition')
   })
 })

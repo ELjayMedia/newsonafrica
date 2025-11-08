@@ -28,9 +28,46 @@ describe('article-data', () => {
   it('returns only supported wordpress countries in the fallback priority', () => {
     const priority = buildArticleCountryPriority('african-edition')
 
-    expect(priority).toEqual(expect.arrayContaining(['sz', 'za']))
+    expect(priority).toEqual(
+      expect.arrayContaining(['sz', 'za', 'ng', 'ke', 'tz', 'eg', 'gh']),
+    )
     expect(priority).not.toContain('african-edition')
     expect(priority.every((code) => normalizeCountryCode(code) === code)).toBe(true)
+  })
+
+  it('attempts to load articles for every supported wordpress country', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
+      posts: {
+        nodes: [
+          {
+            slug: 'test-slug',
+            id: 'gid://wordpress/Post:99',
+            databaseId: 99,
+            date: '2024-05-01T00:00:00Z',
+            title: 'Nigeria title',
+            excerpt: 'Nigeria excerpt',
+            content: '<p>Hello Nigeria</p>',
+            categories: { nodes: [] },
+            tags: { nodes: [] },
+            author: { node: { databaseId: 7, name: 'Reporter', slug: 'reporter' } },
+          },
+        ],
+      },
+    } as any)
+
+    const result = await loadArticle('ng', 'test-slug')
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.any(Object),
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.SHORT,
+        tags: expect.arrayContaining(['slug:test-slug']),
+      }),
+    )
+    expect(result?.slug).toBe('test-slug')
+    expect(result?.databaseId).toBe(99)
   })
 
   it('does not call wordpress when asked to load an unsupported country', async () => {
