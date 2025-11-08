@@ -1,6 +1,7 @@
 import type { SupabaseClient, User, Session, AuthError } from "@supabase/supabase-js"
-import { getSupabaseBrowserClient, isSupabaseConfigured as hasSupabaseConfig } from "@/lib/supabase/client"
 import type { Database } from "@/types/supabase"
+
+export { createClient } from "@/utils/supabase/client"
 import {
   clearSessionCookieClient,
   persistSessionCookie,
@@ -9,147 +10,9 @@ import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 export const USER_PROFILE_SELECT_COLUMNS = "id, username, avatar_url, role, handle"
 
-const SUPABASE_CONFIG_WARNING =
-  "Supabase environment variables are not configured. Authentication features are disabled."
-
-let supabaseInstance: SupabaseClient<Database> | null = null
-let hasLoggedConfigWarning = false
-
 export function isSupabaseConfigured(): boolean {
-  return hasSupabaseConfig()
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 }
-
-function createStubSupabaseClient(): SupabaseClient<Database> {
-  const createStubError = () => new Error(SUPABASE_CONFIG_WARNING)
-
-  const createStubQueryPromise = () =>
-    Promise.resolve({ data: null, error: createStubError(), count: 0 })
-
-  const createQueryBuilder = () => {
-    const builder: any = {
-      select: () => builder,
-      eq: () => builder,
-      or: () => builder,
-      in: () => builder,
-      is: () => builder,
-      ilike: () => builder,
-      limit: () => builder,
-      range: () => builder,
-      order: () => builder,
-      returns: () => builder,
-      single: () => createStubQueryPromise(),
-      maybeSingle: () => createStubQueryPromise(),
-      insert: () => builder,
-      update: () => builder,
-      delete: () => builder,
-      upsert: () => builder,
-      selectQuery: () => builder,
-    }
-
-    const promise = createStubQueryPromise()
-    builder.then = promise.then.bind(promise)
-    builder.catch = promise.catch.bind(promise)
-    builder.finally = promise.finally.bind(promise)
-
-    return builder
-  }
-
-  const createStubChannel = () => {
-    const channel: any = {
-      on: (..._args: any[]) => channel,
-      subscribe: (callback?: (status: string) => void) => {
-        callback?.("SUBSCRIBED")
-        return channel
-      },
-      unsubscribe: async () => "ok" as const,
-    }
-
-    return channel
-  }
-
-  const stubClient = {
-    auth: {
-      getSession: async () => ({ data: { session: null }, error: createStubError() }),
-      signInWithPassword: async () => ({
-        data: { user: null, session: null },
-        error: createStubError(),
-      }),
-      signUp: async () => ({
-        data: { user: null, session: null },
-        error: createStubError(),
-      }),
-      signOut: async () => ({ error: createStubError() }),
-      getUser: async () => ({ data: { user: null }, error: createStubError() }),
-      resetPasswordForEmail: async () => ({ error: createStubError() }),
-      signInWithOAuth: async () => ({ data: null, error: createStubError() }),
-      exchangeCodeForSession: async () => ({
-        data: { user: null, session: null },
-        error: createStubError(),
-      }),
-      refreshSession: async () => ({
-        data: { user: null, session: null },
-        error: createStubError(),
-      }),
-      verifyOtp: async () => ({
-        data: { user: null, session: null },
-        error: createStubError(),
-      }),
-      updateUser: async () => ({ data: { user: null }, error: createStubError() }),
-      onAuthStateChange: () => ({
-        data: {
-          subscription: {
-            unsubscribe: () => void 0,
-          },
-        },
-        error: createStubError(),
-      }),
-    },
-    rpc: (_fn: string, _args?: Record<string, unknown>, _options?: Record<string, unknown>) =>
-      createStubQueryPromise(),
-    channel: (_name: string, _opts?: Record<string, unknown>) => createStubChannel(),
-    removeChannel: async (_channel: unknown) => "ok" as const,
-    from: () => createQueryBuilder(),
-    storage: {
-      from: () => ({
-        upload: async () => ({ data: null, error: createStubError() }),
-        getPublicUrl: () => ({ data: { publicUrl: null }, error: createStubError() }),
-        remove: async () => ({ data: null, error: createStubError() }),
-      }),
-    },
-  }
-
-  return stubClient as unknown as SupabaseClient<Database>
-}
-
-function initializeSupabaseClient(): SupabaseClient<Database> {
-  if (!hasSupabaseConfig()) {
-    if (!hasLoggedConfigWarning) {
-      hasLoggedConfigWarning = true
-      console.warn(SUPABASE_CONFIG_WARNING)
-    }
-    return createStubSupabaseClient()
-  }
-
-  try {
-    return getSupabaseBrowserClient()
-  } catch (error) {
-    if (!hasLoggedConfigWarning) {
-      hasLoggedConfigWarning = true
-      console.error("Failed to initialize Supabase client", error)
-    }
-    return createStubSupabaseClient()
-  }
-}
-
-export function getSupabaseClient(): SupabaseClient<Database> {
-  if (!supabaseInstance) {
-    supabaseInstance = initializeSupabaseClient()
-  }
-
-  return supabaseInstance
-}
-
-export const supabase = getSupabaseClient()
 
 function createSessionCookiePayload(
   userId: string,
@@ -234,7 +97,9 @@ function handleSupabaseError(error: AuthError | Error | null): string | null {
  * Get the current user session with profile data
  * @returns Promise with session data, user information, and profile
  */
-export async function getUserSession(): Promise<AuthResponse & { profile: UserProfile | null }> {
+export async function getUserSession(
+  supabase: SupabaseClient<Database>,
+): Promise<AuthResponse & { profile: UserProfile | null }> {
   if (typeof window === "undefined") {
     throw new Error(
       "getUserSession is only available in client-side environments. Import getServerUserSession from '@/lib/supabase/server-component-client' instead."
@@ -313,7 +178,11 @@ export async function getUserSession(): Promise<AuthResponse & { profile: UserPr
  * @param password - User's password
  * @returns Promise with authentication result
  */
-export async function signInWithEmail(email: string, password: string): Promise<AuthResponse> {
+export async function signInWithEmail(
+  supabase: SupabaseClient<Database>,
+  email: string,
+  password: string,
+): Promise<AuthResponse> {
   try {
     if (!email || !password) {
       return {
@@ -366,7 +235,12 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * @param username - User's desired username
  * @returns Promise with authentication result
  */
-export async function signUpWithEmail(email: string, password: string, username: string): Promise<AuthResponse> {
+export async function signUpWithEmail(
+  supabase: SupabaseClient<Database>,
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResponse> {
   try {
     if (!email || !password || !username) {
       return {
@@ -454,7 +328,9 @@ export async function signUpWithEmail(email: string, password: string, username:
  * Sign out the current user
  * @returns Promise with sign out result
  */
-export async function signOutUser(): Promise<SupabaseResponse<null>> {
+export async function signOutUser(
+  supabase: SupabaseClient<Database>,
+): Promise<SupabaseResponse<null>> {
   try {
     const { error } = await supabase.auth.signOut()
 
@@ -489,7 +365,11 @@ export async function signOutUser(): Promise<SupabaseResponse<null>> {
  * @param userId - The user's ID (optional, will get from session if not provided)
  * @returns Promise with upload result and public URL
  */
-export async function uploadUserAvatar(file: File, userId?: string): Promise<UploadResponse> {
+export async function uploadUserAvatar(
+  supabase: SupabaseClient<Database>,
+  file: File,
+  userId?: string,
+): Promise<UploadResponse> {
   try {
     if (!file) {
       return {
@@ -608,7 +488,10 @@ export async function uploadUserAvatar(file: File, userId?: string): Promise<Upl
  * @param userId - The user's ID
  * @returns Promise with user profile data
  */
-export async function getUserProfile(userId: string): Promise<SupabaseResponse<UserProfile>> {
+export async function getUserProfile(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<SupabaseResponse<UserProfile>> {
   try {
     if (!userId) {
       return {
@@ -654,6 +537,7 @@ export async function getUserProfile(userId: string): Promise<SupabaseResponse<U
  * @returns Promise with updated profile data
  */
 export async function updateUserProfile(
+  supabase: SupabaseClient<Database>,
   userId: string,
   updates: Partial<UserProfile>,
 ): Promise<SupabaseResponse<UserProfile>> {
@@ -714,7 +598,10 @@ export async function updateUserProfile(
  * @param email - User's email address
  * @returns Promise with reset result
  */
-export async function resetUserPassword(email: string): Promise<SupabaseResponse<null>> {
+export async function resetUserPassword(
+  supabase: SupabaseClient<Database>,
+  email: string,
+): Promise<SupabaseResponse<null>> {
   try {
     if (!email) {
       return {
@@ -756,7 +643,10 @@ export async function resetUserPassword(email: string): Promise<SupabaseResponse
  * @param provider - OAuth provider name
  * @returns Promise with authentication result
  */
-export async function signInWithOAuth(provider: "google" | "facebook"): Promise<SupabaseResponse<null>> {
+export async function signInWithOAuth(
+  supabase: SupabaseClient<Database>,
+  provider: "google" | "facebook",
+): Promise<SupabaseResponse<null>> {
   try {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -788,5 +678,3 @@ export async function signInWithOAuth(provider: "google" | "facebook"): Promise<
   }
 }
 
-// Export the Supabase client for direct use if needed
-export { supabase as supabaseClient }

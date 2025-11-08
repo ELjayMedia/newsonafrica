@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import {
-  USER_PROFILE_SELECT_COLUMNS,
-  isSupabaseConfigured,
-  supabaseClient,
-} from "@/lib/api/supabase"
+import { USER_PROFILE_SELECT_COLUMNS, createClient, isSupabaseConfigured } from "@/lib/api/supabase"
 import type { UserProfile } from "@/lib/api/supabase"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 import {
@@ -72,6 +68,7 @@ export function useUser(): UseUserReturn {
   const [error, setError] = useState<string | null>(null)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const supabaseAvailable = useMemo(() => isSupabaseConfigured(), [])
+  const supabase = useMemo(() => (supabaseAvailable ? createClient() : null), [supabaseAvailable])
 
   /**
    * Fetch user profile with caching
@@ -94,7 +91,11 @@ export function useUser(): UseUserReturn {
         }
 
         // Fetch from Supabase
-        const { data, error } = await supabaseClient
+        if (!supabase) {
+          return null
+        }
+
+        const { data, error } = await supabase
           .from("profiles")
           .select(USER_PROFILE_SELECT_COLUMNS)
           .eq("id", userId)
@@ -163,7 +164,7 @@ export function useUser(): UseUserReturn {
    * Refresh user data manually
    */
   const refreshUser = useCallback(async () => {
-    if (!supabaseAvailable) {
+    if (!supabaseAvailable || !supabase) {
       setError("Authentication is unavailable at the moment.")
       setLoading(false)
       return
@@ -176,7 +177,7 @@ export function useUser(): UseUserReturn {
       const {
         data: { session: currentSession },
         error: sessionError,
-      } = await supabaseClient.auth.getSession()
+      } = await supabase.auth.getSession()
 
       if (sessionError) {
         throw sessionError
@@ -206,7 +207,7 @@ export function useUser(): UseUserReturn {
     } finally {
       setLoading(false)
     }
-  }, [fetchUserProfile, supabaseAvailable])
+  }, [fetchUserProfile, supabase, supabaseAvailable])
 
   /**
    * Initialize auth state and set up listener
@@ -216,7 +217,7 @@ export function useUser(): UseUserReturn {
     let authListener: { subscription: { unsubscribe: () => void } } | null = null
 
     const initializeAuth = async () => {
-      if (!supabaseAvailable) {
+      if (!supabaseAvailable || !supabase) {
         setError("Authentication is unavailable at the moment.")
         setLoading(false)
         setInitialLoadComplete(true)
@@ -237,7 +238,7 @@ export function useUser(): UseUserReturn {
         const {
           data: { session: initialSession },
           error: sessionError,
-        } = await supabaseClient.auth.getSession()
+        } = await supabase.auth.getSession()
 
         if (!mounted) return
 
@@ -261,7 +262,7 @@ export function useUser(): UseUserReturn {
         }
 
         // Set up auth state listener
-        const { data: listener } = supabaseClient.auth.onAuthStateChange(handleAuthStateChange)
+        const { data: listener } = supabase.auth.onAuthStateChange(handleAuthStateChange)
         authListener = listener
 
         if (mounted) {
@@ -287,7 +288,7 @@ export function useUser(): UseUserReturn {
         authListener.subscription.unsubscribe()
       }
     }
-  }, [fetchUserProfile, handleAuthStateChange, supabaseAvailable])
+  }, [fetchUserProfile, handleAuthStateChange, supabase, supabaseAvailable])
 
   /**
    * Memoized return value to prevent unnecessary re-renders

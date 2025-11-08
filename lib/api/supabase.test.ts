@@ -1,13 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 
-describe("createStubSupabaseClient", () => {
+import { isSupabaseConfigured } from "./supabase"
+
+describe("isSupabaseConfigured", () => {
   const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const originalAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   beforeEach(() => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL
     delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    vi.resetModules()
   })
 
   afterEach(() => {
@@ -22,29 +23,16 @@ describe("createStubSupabaseClient", () => {
     } else {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalAnonKey
     }
-
-    vi.resetModules()
   })
 
-  it("provides noop implementations for rpc and channel when env vars are missing", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+  it("returns false when environment variables are missing", () => {
+    expect(isSupabaseConfigured()).toBe(false)
+  })
 
-    const { getSupabaseClient } = await import("./supabase")
-    const client = getSupabaseClient()
+  it("returns true when environment variables are set", () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co"
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key"
 
-    await expect(client.rpc("test" as any)).resolves.toMatchObject({
-      data: null,
-      error: expect.any(Error),
-    })
-
-    const channel = client
-      .channel("test-channel")
-      .on("event", {}, () => {})
-      .subscribe()
-
-    await expect(channel.unsubscribe()).resolves.toBe("ok")
-    await expect(client.removeChannel(channel as any)).resolves.toBe("ok")
-
-    warnSpy.mockRestore()
+    expect(isSupabaseConfigured()).toBe(true)
   })
 })
