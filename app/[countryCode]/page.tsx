@@ -8,6 +8,7 @@ import {
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
+export const dynamic = "force-static"
 export const revalidate = 60
 
 if (process.env.NODE_ENV !== "production" && revalidate !== HOME_FEED_REVALIDATE) {
