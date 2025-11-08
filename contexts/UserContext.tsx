@@ -14,7 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 
-import { isSupabaseConfigured, supabaseClient } from "@/lib/api/supabase"
+import { createClient, isSupabaseConfigured } from "@/lib/api/supabase"
 
 import {
   getCurrentSession,
@@ -105,6 +105,8 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
   const [isPending, startTransition] = useTransition()
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
   const pendingInitialStateRef = useRef<AuthStatePayload | null>(initialState)
+  const supabaseAvailable = useMemo(() => isSupabaseConfigured(), [])
+  const supabase = useMemo(() => (supabaseAvailable ? createClient() : null), [supabaseAvailable])
 
   const applyAuthState = useCallback(
     async (next: AuthStatePayload | null) => {
@@ -120,7 +122,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
         return
       }
 
-      if (!isSupabaseConfigured()) {
+      if (!supabaseAvailable || !supabase) {
         return
       }
 
@@ -134,7 +136,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
             return
           }
 
-          const { error } = await supabaseClient.auth.setSession({
+          const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           })
@@ -143,7 +145,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
             console.error("Failed to synchronize Supabase client session:", error)
           }
         } else {
-          const { error } = await supabaseClient.auth.signOut()
+          const { error } = await supabase.auth.signOut()
 
           if (error) {
             console.error("Failed to clear Supabase client session:", error)
@@ -153,7 +155,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
         console.error("Unexpected error synchronizing Supabase client session:", error)
       }
     },
-    [],
+    [supabase, supabaseAvailable],
   )
 
   const handleAuthResult = useCallback(
