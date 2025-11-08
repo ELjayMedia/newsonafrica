@@ -4,6 +4,8 @@ import type { Metadata } from "next"
 import BookmarksContent from "@/components/BookmarksContent"
 import BookmarksSkeleton from "@/components/BookmarksSkeleton"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Your Bookmarks | News on Africa",
   description: "View and manage your saved articles",

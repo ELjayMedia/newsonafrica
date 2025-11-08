@@ -4,6 +4,8 @@ import { createServerClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { SubscriptionsContent } from "@/components/SubscriptionsContent"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Manage Subscriptions",
   description: "Manage your News On Africa subscriptions and payment methods.",
