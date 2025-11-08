@@ -4,7 +4,7 @@ import type { CommentSortOption } from "@/lib/supabase-schema"
 import { fetchComments } from "@/lib/comment-service"
 import {
   SUPABASE_CONFIGURATION_ERROR_MESSAGE,
-  getSupabaseClient,
+  createServerComponentSupabaseClient,
 } from "@/lib/supabase/server-component-client"
 
 interface FetchCommentsPageActionInput {
@@ -22,12 +22,11 @@ export async function fetchCommentsPageAction({
   sortOption = "newest",
   cursor = null,
 }: FetchCommentsPageActionInput) {
-  const { client: supabase, isFallback, error } = getSupabaseClient()
-
-  if (isFallback) {
+  try {
+    const supabase = createServerComponentSupabaseClient()
+    return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
+  } catch (error) {
     console.error("Comments cannot be loaded because Supabase is not configured.", error)
     throw new Error(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
   }
-
-  return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
 }
