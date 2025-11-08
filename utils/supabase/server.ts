@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr"
+import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
@@ -37,10 +37,10 @@ export function getSupabaseConfig(): { supabaseUrl: string; supabaseKey: string 
   }
 }
 
-export function createClient(): SupabaseClient<Database> {
+export function createServerClient(): SupabaseClient<Database> {
   const { supabaseUrl, supabaseKey } = getSupabaseConfig()
 
-  return createServerClient<Database>(supabaseUrl, supabaseKey, {
+  return createSupabaseServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: createCookieAdapter(),
   })
 }
@@ -49,7 +49,7 @@ export function createAdminClient(): SupabaseClient<Database> {
   const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL")
   const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")
 
-  return createServerClient<Database>(supabaseUrl, serviceRoleKey, {
+  return createSupabaseServerClient<Database>(supabaseUrl, serviceRoleKey, {
     cookies: createCookieAdapter(),
   })
 }

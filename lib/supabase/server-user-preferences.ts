@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+import { createServerClient } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export interface ServerUserPreferences {
@@ -11,7 +11,7 @@ const EMPTY_PREFERENCES: ServerUserPreferences = {
 
 export async function getServerUserPreferences(): Promise<ServerUserPreferences> {
   try {
-    const supabase = createClient()
+    const supabase = createServerClient()
 
     const {
       data: { session },

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
-import type { SupabaseServerClient } from "@/app/actions/supabase"
+
+import { createSupabaseRouteClient } from "@/utils/supabase/route"
 
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
@@ -21,16 +21,17 @@ export const revalidate = 60
 
 export async function GET(request: NextRequest) {
   logRequest(request)
-  try {
-    const supabase = createClient() as SupabaseServerClient
+  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
+  try {
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
+      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
     const { searchParams } = new URL(request.url)
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching bookmarks:", error)
-      return jsonWithCors(request, { error: "Failed to fetch bookmarks" }, { status: 500 })
+      return respond(jsonWithCors(request, { error: "Failed to fetch bookmarks" }, { status: 500 }))
     }
 
     const { items: bookmarks, pagination } = derivePagination<BookmarkListRow>({
@@ -104,14 +105,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return jsonWithCors(request, {
-      bookmarks,
-      stats,
-      pagination,
-    })
+    return respond(
+      jsonWithCors(request, {
+        bookmarks,
+        stats,
+        pagination,
+      }),
+    )
   } catch (error) {
     console.error("Error in bookmarks API:", error)
-    return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
+    return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
   }
 }
 
@@ -121,23 +124,24 @@ function invalidateBookmarksCache() {
 
 export async function POST(request: NextRequest) {
   logRequest(request)
-  try {
-    const supabase = createClient() as SupabaseServerClient
+  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
+  try {
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
+      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
     const body = await request.json()
     const { postId, title, slug, excerpt, featuredImage, category, tags, notes, country } = body
 
     if (!postId) {
-      return jsonWithCors(request, { error: "Post ID is required" }, { status: 400 })
+      return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
     }
 
     // Check if bookmark already exists
@@ -149,7 +153,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingBookmark) {
-      return jsonWithCors(request, { error: "Bookmark already exists" }, { status: 409 })
+      return respond(jsonWithCors(request, { error: "Bookmark already exists" }, { status: 409 }))
     }
 
     const bookmarkData = {
@@ -170,36 +174,37 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("Error adding bookmark:", error)
-      return jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 })
+      return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
     }
 
     invalidateBookmarksCache()
-    return NextResponse.json({ bookmark: data })
+    return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
-    return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
+    return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
   }
 }
 
 export async function PUT(request: NextRequest) {
   logRequest(request)
-  try {
-    const supabase = createClient() as SupabaseServerClient
+  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
+  try {
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
+      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
     const body = await request.json()
     const { postId, updates } = body
 
     if (!postId) {
-      return jsonWithCors(request, { error: "Post ID is required" }, { status: 400 })
+      return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
     }
 
     const sanitizedUpdates = { ...updates }
@@ -226,29 +231,30 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error("Error updating bookmark:", error)
-      return jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 })
+      return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
     }
 
     invalidateBookmarksCache()
-    return NextResponse.json({ bookmark: data })
+    return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
-    return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
+    return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
   }
 }
 
 export async function DELETE(request: NextRequest) {
   logRequest(request)
-  try {
-    const supabase = createClient()
+  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
+  try {
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
+      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
     const { searchParams } = new URL(request.url)
@@ -256,7 +262,7 @@ export async function DELETE(request: NextRequest) {
     const postIds = searchParams.get("postIds")?.split(",")
 
     if (!postId && !postIds) {
-      return jsonWithCors(request, { error: "Post ID(s) required" }, { status: 400 })
+      return respond(jsonWithCors(request, { error: "Post ID(s) required" }, { status: 400 }))
     }
 
     let query = supabase.from("bookmarks").delete().eq("user_id", user.id)
@@ -271,13 +277,13 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error("Error removing bookmark(s):", error)
-      return jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 })
+      return respond(jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 }))
     }
 
     invalidateBookmarksCache()
-    return NextResponse.json({ success: true })
+    return respond(NextResponse.json({ success: true }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
-    return jsonWithCors(request, { error: "Internal server error" }, { status: 500 })
+    return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
   }
 }

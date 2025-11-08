@@ -1,12 +1,10 @@
 "use server"
 
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import { getSupabaseConfig } from "@/utils/supabase/server"
+import { createServerClient } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export type AuthFormState = {
@@ -92,12 +90,7 @@ function getAuthCallbackUrl(nextPath: string | null): string {
 }
 
 function createSupabaseClient(): SupabaseServerClient {
-  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
-
-  return createServerActionClient<Database>({ cookies }, {
-    supabaseUrl,
-    supabaseKey,
-  })
+  return createServerClient()
 }
 
 export async function signInWithPasswordAction(

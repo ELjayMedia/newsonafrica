@@ -4,13 +4,13 @@ import { cookies } from "next/headers"
 
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
-import { createClient } from "@/utils/supabase/server"
+import { createServerClient } from "@/utils/supabase/server"
 import { env } from "@/config/env"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import type { BookmarkListPayload } from "@/types/bookmarks"
 
 export default async function BookmarksLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
+  const supabase = createServerClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()

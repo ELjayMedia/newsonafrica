@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { createClient } from "@/utils/supabase/server"
+import { createServerClient } from "@/utils/supabase/server"
 import ProfileContent from "@/components/ProfileContent"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 export default async function ProfilePage() {
-  const supabase = createClient()
+  const supabase = createServerClient()
 
   const {
     data: { session },

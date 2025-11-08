@@ -1,23 +1,24 @@
-import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+
+import { createSupabaseRouteClient } from "@/utils/supabase/route"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
 
 export async function GET(request: NextRequest) {
+  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
   const next = requestUrl.searchParams.get("next") ?? "/"
 
   if (code) {
-    const supabase = createClient()
-
     try {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
       if (error) {
         console.error("Auth callback error:", error)
-        return NextResponse.redirect(`${requestUrl.origin}/auth?error=callback_error`)
+        return respond(NextResponse.redirect(`${requestUrl.origin}/auth?error=callback_error`))
       }
 
       if (data.session) {
@@ -77,14 +78,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Successful login - redirect to intended page or home
-        return NextResponse.redirect(`${requestUrl.origin}${next}`)
+        return respond(NextResponse.redirect(`${requestUrl.origin}${next}`))
       }
     } catch (error) {
       console.error("Session exchange error:", error)
-      return NextResponse.redirect(`${requestUrl.origin}/auth?error=session_error`)
+      return respond(NextResponse.redirect(`${requestUrl.origin}/auth?error=session_error`))
     }
   }
 
   // No code parameter - redirect to auth page
-  return NextResponse.redirect(`${requestUrl.origin}/auth?error=no_code`)
+  return respond(NextResponse.redirect(`${requestUrl.origin}/auth?error=no_code`))
 }
