@@ -1,13 +1,13 @@
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
-import { createClient } from "@/utils/supabase/server"
+import { createServerClient } from "@/utils/supabase/server"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 export type SupabaseServerComponentClient = SupabaseClient<Database>
 
 export function createServerComponentSupabaseClient(): SupabaseServerComponentClient {
-  return createClient()
+  return createServerClient()
 }
 
 export interface ServerUserSession {

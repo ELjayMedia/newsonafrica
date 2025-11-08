@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { NextRequest } from "next/server"
 
-vi.mock("@/utils/supabase/server", () => ({
-  createClient: vi.fn(),
+const applyCookiesMock = vi.fn((response: Response) => response)
+
+vi.mock("@/utils/supabase/route", () => ({
+  createSupabaseRouteClient: vi.fn(),
 }))
 
 vi.mock("@/lib/server-cache-utils", () => ({
@@ -10,7 +12,7 @@ vi.mock("@/lib/server-cache-utils", () => ({
   revalidateMultiplePaths: vi.fn(),
 }))
 
-import { createClient } from "@/utils/supabase/server"
+import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { DELETE, POST, PUT } from "./route"
@@ -24,7 +26,8 @@ function expectOnlyBookmarkTagInvalidation() {
 describe("/api/bookmarks cache revalidation", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(createClient).mockReset()
+    vi.mocked(createSupabaseRouteClient).mockReset()
+    applyCookiesMock.mockImplementation((response: Response) => response)
   })
 
   it("only revalidates bookmark tags after creating a bookmark", async () => {
@@ -52,7 +55,10 @@ describe("/api/bookmarks cache revalidation", () => {
         .mockImplementationOnce(() => insertChain),
     }
 
-    vi.mocked(createClient).mockReturnValueOnce(supabase as any)
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "POST",
@@ -64,6 +70,7 @@ describe("/api/bookmarks cache revalidation", () => {
 
     expect(response.status).toBe(200)
     expectOnlyBookmarkTagInvalidation()
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
   it("only revalidates bookmark tags after updating a bookmark", async () => {
@@ -83,7 +90,10 @@ describe("/api/bookmarks cache revalidation", () => {
       from: vi.fn().mockReturnValue(updateChain),
     }
 
-    vi.mocked(createClient).mockReturnValueOnce(supabase as any)
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "PUT",
@@ -95,6 +105,7 @@ describe("/api/bookmarks cache revalidation", () => {
 
     expect(response.status).toBe(200)
     expectOnlyBookmarkTagInvalidation()
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
   it("only revalidates bookmark tags after deleting bookmarks", async () => {
@@ -116,7 +127,10 @@ describe("/api/bookmarks cache revalidation", () => {
       from: vi.fn().mockReturnValue(deleteChain),
     }
 
-    vi.mocked(createClient).mockReturnValueOnce(supabase as any)
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
 
     const request = new NextRequest("https://example.com/api/bookmarks?postId=post-3", {
       method: "DELETE",
@@ -126,5 +140,6 @@ describe("/api/bookmarks cache revalidation", () => {
 
     expect(response.status).toBe(200)
     expectOnlyBookmarkTagInvalidation()
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 })
