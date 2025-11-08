@@ -1,4 +1,4 @@
-import { fetchAllTags, fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
+import { fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -7,23 +7,8 @@ import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
-export const revalidate = 60 // Revalidate every 60 seconds
+export const dynamic = "force-dynamic"
 export const dynamicParams = true
-
-const STATIC_TAG_COUNT = 20
-
-export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
-  try {
-    const tags = await fetchAllTags()
-    return tags
-      .filter((tag) => Boolean(tag.slug))
-      .slice(0, STATIC_TAG_COUNT)
-      .map((tag) => ({ slug: tag.slug! }))
-  } catch (error) {
-    console.error("Failed to generate static params for tag pages", { error })
-    return []
-  }
-}
 
 interface TagPageProps {
   params: { slug: string }
