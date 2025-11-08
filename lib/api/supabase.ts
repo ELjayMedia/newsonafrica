@@ -165,10 +165,6 @@ function createSessionCookiePayload(
   }
 }
 
-export function isSupabaseConfigured(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey)
-}
-
 // TypeScript types for API responses
 export interface SupabaseResponse<T = any> {
   data: T | null
