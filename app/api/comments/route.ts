@@ -3,7 +3,7 @@ import type { PostgrestError, Session } from "@supabase/supabase-js"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
-import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import { executeListQuery } from "@/lib/supabase/list-query"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
@@ -253,12 +253,15 @@ function validateUpdateCommentPayload(payload: unknown) {
 // Get comments for a post with pagination
 export async function GET(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
+  let applyCookies = <T extends NextResponse>(response: T): T => response
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 30, "COMMENTS_GET_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const supabase = createSupabaseRouteClient() as any
+    const routeClient = createSupabaseRouteClient(request)
+    applyCookies = routeClient.applyCookies
+    const { supabase } = routeClient
 
     const { searchParams } = new URL(request.url)
 
@@ -381,14 +384,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     if (typedComments.length === 0) {
-      return withCors(
-        request,
-        successResponse({
-          comments: [],
-          hasMore: false,
-          ...(totalCount !== undefined ? { totalCount } : {}),
-          nextCursor: null,
-        }),
+      return applyCookies(
+        withCors(
+          request,
+          successResponse({
+            comments: [],
+            hasMore: false,
+            ...(totalCount !== undefined ? { totalCount } : {}),
+            nextCursor: null,
+          }),
+        ),
       )
     }
 
@@ -414,37 +419,42 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     })
 
-    return withCors(
-      request,
-      successResponse(
-        {
-          comments: commentsWithProfiles,
-          hasMore,
-          ...(totalCount !== undefined ? { totalCount } : {}),
-          nextCursor,
-        },
-        {
-          pagination: {
-            page,
-            limit,
+    return applyCookies(
+      withCors(
+        request,
+        successResponse(
+          {
+            comments: commentsWithProfiles,
+            hasMore,
+            ...(totalCount !== undefined ? { totalCount } : {}),
+            nextCursor,
           },
-        },
+          {
+            pagination: {
+              page,
+              limit,
+            },
+          },
+        ),
       ),
     )
   } catch (error) {
-    return withCors(request, handleApiError(error))
+    return applyCookies(withCors(request, handleApiError(error)))
   }
 }
 
 // Create a new comment
 export async function POST(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
+  let applyCookies = <T extends NextResponse>(response: T): T => response
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 5, "COMMENTS_POST_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const supabase = createSupabaseRouteClient() as any
+    const routeClient = createSupabaseRouteClient(request)
+    applyCookies = routeClient.applyCookies
+    const { supabase } = routeClient
 
     // Check if user is authenticated
     const {
@@ -452,7 +462,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return withCors(request, handleApiError(new Error("Unauthorized")))
+      return applyCookies(withCors(request, handleApiError(new Error("Unauthorized"))))
     }
 
     let body: unknown
@@ -483,9 +493,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       // Rate limit: 10 seconds between comments
       if (timeDiff < 10000) {
-        return handleApiError(
-          new Error(
-            `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
+        return applyCookies(
+          handleApiError(
+            new Error(
+              `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
+            ),
           ),
         )
       }
@@ -520,32 +532,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Still return the comment, just without profile data
 
       revalidateByTag(CACHE_TAGS.COMMENTS)
-      return successResponse(comment)
+      return applyCookies(successResponse(comment))
     }
 
     // Return the comment with profile data
     revalidateByTag(CACHE_TAGS.COMMENTS)
-    return successResponse({
-      ...comment,
-      profile: {
-        username: profile.username,
-        avatar_url: profile.avatar_url,
-      },
-    })
+    return applyCookies(
+      successResponse({
+        ...comment,
+        profile: {
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+        },
+      }),
+    )
   } catch (error) {
-    return withCors(request, handleApiError(error))
+    return applyCookies(withCors(request, handleApiError(error)))
   }
 }
 
 // Update comment status (report, delete, approve)
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
   logRequest(request)
+  let applyCookies = <T extends NextResponse>(response: T): T => response
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 10, "COMMENTS_PATCH_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const supabase = createSupabaseRouteClient()
+    const routeClient = createSupabaseRouteClient(request)
+    applyCookies = routeClient.applyCookies
+    const { supabase } = routeClient
 
     // Check if user is authenticated
     const {
@@ -553,7 +570,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return withCors(request, handleApiError(new Error("Unauthorized")))
+      return applyCookies(withCors(request, handleApiError(new Error("Unauthorized"))))
     }
 
     let body: unknown
@@ -567,7 +584,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     const { id, action, reason } = validateUpdateCommentPayload(body)
 
     if (action === "report" && !reason) {
-      return handleApiError(new Error("Report reason is required"))
+      return applyCookies(handleApiError(new Error("Report reason is required")))
     }
 
     // Check if the comment exists
@@ -578,7 +595,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       .single()
 
     if (fetchError || !comment) {
-      return withCors(request, handleApiError(new Error("Comment not found")))
+      return applyCookies(withCors(request, handleApiError(new Error("Comment not found"))))
     }
 
     const commentRecord = comment as { user_id?: string | null }
@@ -596,7 +613,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       case "delete":
         // Only allow the author to delete their own comment
         if (commentRecord.user_id !== session.user.id) {
-          return withCors(request, handleApiError(new Error("You can only delete your own comments")))
+          return applyCookies(withCors(request, handleApiError(new Error("You can only delete your own comments"))))
         }
         updateData = { status: "deleted" }
         break
@@ -604,7 +621,9 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         // Check if user is a moderator (implement your own logic)
         // For now, we'll just check if the user is the author
         if (commentRecord.user_id !== session.user.id) {
-          return withCors(request, handleApiError(new Error("You don't have permission to approve this comment")))
+          return applyCookies(
+            withCors(request, handleApiError(new Error("You don't have permission to approve this comment"))),
+          )
         }
         updateData = {
           status: "active",
@@ -623,8 +642,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     }
 
     revalidateByTag(CACHE_TAGS.COMMENTS)
-    return successResponse({ success: true, action })
+    return applyCookies(successResponse({ success: true, action }))
   } catch (error) {
-    return withCors(request, handleApiError(error))
+    return applyCookies(withCors(request, handleApiError(error)))
   }
 }

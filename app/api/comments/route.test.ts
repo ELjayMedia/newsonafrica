@@ -17,8 +17,11 @@ interface ProfileRecord {
 
 let currentSupabaseClient: any
 
-vi.mock("@/utils/supabase/route-client", () => ({
-  createSupabaseRouteClient: () => currentSupabaseClient,
+vi.mock("@/utils/supabase/route", () => ({
+  createSupabaseRouteClient: () => ({
+    supabase: currentSupabaseClient,
+    applyCookies: <T>(response: T) => response,
+  }),
 }))
 
 vi.mock("@/lib/server-cache-utils", () => ({

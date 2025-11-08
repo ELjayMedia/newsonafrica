@@ -24,9 +24,6 @@ describe("signInWithPasswordAction", () => {
   })
 
   it("returns an error state when Supabase configuration is missing", async () => {
-    const { SUPABASE_CONFIGURATION_ERROR_MESSAGE } = await import(
-      "@/lib/supabase/server-component-client"
-    )
     const { signInWithPasswordAction, initialAuthFormState } = await import("./actions")
 
     const formData = new FormData()
@@ -36,6 +33,6 @@ describe("signInWithPasswordAction", () => {
     const result = await signInWithPasswordAction(initialAuthFormState, formData)
 
     expect(result.status).toBe("error")
-    expect(result.message).toBe(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    expect(result.message).toBe("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.")
   })
 })
