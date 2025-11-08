@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
-import { createSupabaseRouteClient } from "@/utils/supabase/route-client"
+import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import type { Database } from "@/types/supabase"
 
 export const runtime = "nodejs"
@@ -26,22 +26,25 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
   }
 
-  const supabase = createSupabaseRouteClient()
-
-  // Check if user is authenticated
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) {
-    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
-  }
+  let applyCookies = <T extends NextResponse>(response: T): T => response
 
   try {
+    const routeClient = createSupabaseRouteClient(request)
+    applyCookies = routeClient.applyCookies
+    const { supabase } = routeClient
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
+    }
+
     const { content }: { content?: string } = await request.json()
     const sanitizedContent = content?.trim()
 
     if (!sanitizedContent) {
-      return jsonWithCors(request, { error: "Content is required" }, { status: 400 })
+      return applyCookies(jsonWithCors(request, { error: "Content is required" }, { status: 400 }))
     }
 
     // First check if the user owns this comment
@@ -53,26 +56,28 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
-      return jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 })
+      return applyCookies(jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 }))
     }
 
     if (!comment) {
-      return jsonWithCors(request, { error: "Comment not found" }, { status: 404 })
+      return applyCookies(jsonWithCors(request, { error: "Comment not found" }, { status: 404 }))
     }
 
     // Verify ownership
     if (comment.user_id !== session.user.id) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 403 })
+      return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 403 }))
     }
 
     // Check if comment is deleted or flagged
     if (comment.status !== "active") {
-      return jsonWithCors(
-        request,
-        {
-          error: `Cannot edit a comment with status: ${comment.status}`,
-        },
-        { status: 400 },
+      return applyCookies(
+        jsonWithCors(
+          request,
+          {
+            error: `Cannot edit a comment with status: ${comment.status}`,
+          },
+          { status: 400 },
+        ),
       )
     }
 
@@ -92,11 +97,11 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 
     if (error) {
       console.error("Error updating comment:", error)
-      return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
+      return applyCookies(jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 }))
     }
 
     if (!data) {
-      return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
+      return applyCookies(jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 }))
     }
 
     // Fetch the profile data
@@ -111,7 +116,7 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     if (profileError) {
       console.error("Error fetching profile:", profileError)
       // Return the comment without profile data
-      return jsonWithCors(request, data)
+      return applyCookies(jsonWithCors(request, data))
     }
 
     // Return the updated comment with profile data
@@ -124,10 +129,10 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
       },
     }
 
-    return NextResponse.json(responsePayload)
+    return applyCookies(NextResponse.json(responsePayload))
   } catch (error) {
     console.error("Error updating comment:", error)
-    return jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 })
+    return applyCookies(jsonWithCors(request, { error: "Failed to update comment" }, { status: 500 }))
   }
 }
 
@@ -142,17 +147,20 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
     return jsonWithCors(request, { error: "Comment ID is required" }, { status: 400 })
   }
 
-  const supabase = createSupabaseRouteClient()
-
-  // Check if user is authenticated
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) {
-    return jsonWithCors(request, { error: "Unauthorized" }, { status: 401 })
-  }
+  let applyCookies = <T extends NextResponse>(response: T): T => response
 
   try {
+    const routeClient = createSupabaseRouteClient(request)
+    applyCookies = routeClient.applyCookies
+    const { supabase } = routeClient
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
+    }
+
     // First check if the user owns this comment
     type CommentOwner = { user_id: string }
 
@@ -164,16 +172,16 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
 
     if (fetchError) {
       console.error("Error fetching comment:", fetchError)
-      return jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 })
+      return applyCookies(jsonWithCors(request, { error: "Failed to fetch comment" }, { status: 500 }))
     }
 
     if (!comment) {
-      return jsonWithCors(request, { error: "Comment not found" }, { status: 404 })
+      return applyCookies(jsonWithCors(request, { error: "Comment not found" }, { status: 404 }))
     }
 
     // Verify ownership
     if (comment.user_id !== session.user.id) {
-      return jsonWithCors(request, { error: "Unauthorized" }, { status: 403 })
+      return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 403 }))
     }
 
     // Soft delete the comment by updating its status
@@ -188,13 +196,13 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
 
     if (error) {
       console.error("Error deleting comment:", error)
-      return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })
+      return applyCookies(jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 }))
     }
 
     revalidateByTag(CACHE_TAGS.COMMENTS)
-    return NextResponse.json({ success: true })
+    return applyCookies(NextResponse.json({ success: true }))
   } catch (error) {
     console.error("Error deleting comment:", error)
-    return jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 })
+    return applyCookies(jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 }))
   }
 }

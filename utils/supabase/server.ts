@@ -4,51 +4,52 @@ import { cookies } from "next/headers"
 
 import type { Database } from "@/types/supabase"
 
-function requireEnv(value: string | undefined, name: string): string {
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+
   if (!value) {
-    throw new Error(`Missing ${name} environment variable for Supabase configuration`)
+    throw new Error(`Missing ${name} environment variable.`)
   }
 
   return value
 }
 
-function createCookieMethods() {
+function createCookieAdapter() {
   const cookieStore = cookies()
 
   return {
-    getAll(): { name: string; value: string }[] {
-      try {
-        return cookieStore.getAll().map(({ name, value }) => ({ name, value }))
-      } catch {
-        return []
-      }
+    get(name: string) {
+      return cookieStore.get(name)?.value
     },
-    setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-      try {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set({ name, value, ...(options ?? {}) })
-        })
-      } catch {
-        // Setting cookies may not be supported in some server execution contexts.
-      }
+    set(name: string, value: string, options?: Record<string, unknown>) {
+      cookieStore.set({ name, value, ...(options ?? {}) })
+    },
+    remove(name: string, options?: Record<string, unknown>) {
+      cookieStore.set({ name, value: "", ...(options ?? {}) })
     },
   }
 }
 
-export function createClient(): SupabaseClient<Database> {
-  const supabaseUrl = requireEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL")
-  const supabaseAnonKey = requireEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY")
+export function getSupabaseConfig(): { supabaseUrl: string; supabaseKey: string } {
+  return {
+    supabaseUrl: getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    supabaseKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+  }
+}
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: createCookieMethods(),
+export function createClient(): SupabaseClient<Database> {
+  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
+
+  return createServerClient<Database>(supabaseUrl, supabaseKey, {
+    cookies: createCookieAdapter(),
   })
 }
 
 export function createAdminClient(): SupabaseClient<Database> {
-  const supabaseUrl = requireEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL")
-  const serviceRoleKey = requireEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")
+  const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL")
+  const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")
 
   return createServerClient<Database>(supabaseUrl, serviceRoleKey, {
-    cookies: createCookieMethods(),
+    cookies: createCookieAdapter(),
   })
 }

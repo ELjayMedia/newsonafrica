@@ -6,7 +6,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import { SUPABASE_CONFIGURATION_ERROR_MESSAGE } from "@/lib/supabase/server-component-client"
+import { getSupabaseConfig } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export type AuthFormState = {
@@ -91,23 +91,13 @@ function getAuthCallbackUrl(nextPath: string | null): string {
   return callbackUrl.toString()
 }
 
-function createSupabaseClient(): SupabaseServerClient | null {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+function createSupabaseClient(): SupabaseServerClient {
+  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-    }
-
-    return createServerActionClient<Database>({ cookies }, {
-      supabaseUrl,
-      supabaseKey: supabaseAnonKey,
-    })
-  } catch (error) {
-    console.error("Failed to initialize Supabase client for auth actions", error)
-    return null
-  }
+  return createServerActionClient<Database>({ cookies }, {
+    supabaseUrl,
+    supabaseKey,
+  })
 }
 
 export async function signInWithPasswordAction(
@@ -124,11 +114,6 @@ export async function signInWithPasswordAction(
     }
 
     const supabase = createSupabaseClient()
-
-    if (!supabase) {
-      console.error("Sign-in is unavailable because Supabase is not configured.")
-      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -164,6 +149,11 @@ export async function signInWithPasswordAction(
     redirect(redirectTo)
   } catch (error) {
     console.error("Failed to sign in", error)
+
+    if (error instanceof Error && error.message.startsWith("Missing ")) {
+      return createErrorState(error.message)
+    }
+
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 
@@ -198,11 +188,6 @@ export async function signUpWithPasswordAction(
 
     const supabase = createSupabaseClient()
 
-    if (!supabase) {
-      console.error("Sign-up is unavailable because Supabase is not configured.")
-      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-    }
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -234,6 +219,11 @@ export async function signUpWithPasswordAction(
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to sign up", error)
+
+    if (error instanceof Error && error.message.startsWith("Missing ")) {
+      return createErrorState(error.message)
+    }
+
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }
@@ -251,11 +241,6 @@ export async function resetPasswordAction(
 
     const supabase = createSupabaseClient()
 
-    if (!supabase) {
-      console.error("Reset password is unavailable because Supabase is not configured.")
-      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-    }
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: getAuthCallbackUrl("/auth/update-password"),
     })
@@ -267,6 +252,11 @@ export async function resetPasswordAction(
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to send reset password email", error)
+
+    if (error instanceof Error && error.message.startsWith("Missing ")) {
+      return createErrorState(error.message)
+    }
+
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }
@@ -285,11 +275,6 @@ export async function sendMagicLinkAction(
 
     const supabase = createSupabaseClient()
 
-    if (!supabase) {
-      console.error("Magic link sign-in is unavailable because Supabase is not configured.")
-      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-    }
-
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -304,6 +289,11 @@ export async function sendMagicLinkAction(
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to send magic link", error)
+
+    if (error instanceof Error && error.message.startsWith("Missing ")) {
+      return createErrorState(error.message)
+    }
+
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }

@@ -6,8 +6,8 @@ import { cookies } from "next/headers"
 
 import type { Database } from "@/types/supabase"
 
-import { ActionError, actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
-import { SUPABASE_CONFIGURATION_ERROR_MESSAGE } from "@/lib/supabase/server-component-client"
+import { actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
+import { getSupabaseConfig } from "@/utils/supabase/server"
 export type SupabaseServerClient = SupabaseClient<Database>
 
 async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Session | null> {
@@ -48,16 +48,11 @@ async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Se
 }
 
 function createSupabaseServerClient(): SupabaseServerClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
-  }
+  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
 
   return createServerActionClient<Database>({ cookies }, {
     supabaseUrl,
-    supabaseKey: supabaseAnonKey,
+    supabaseKey,
   })
 }
 
