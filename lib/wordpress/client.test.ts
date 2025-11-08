@@ -156,4 +156,17 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
       }),
     )
   })
+
+  it("passes the timeout override to fetchWithRetry", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL("ng", "query", undefined, {
+      timeout: 1234,
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ timeout: 1234 }),
+    )
+  })
 })

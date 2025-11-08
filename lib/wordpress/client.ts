@@ -35,6 +35,7 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
   revalidate?: number
+  timeout?: number
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -119,6 +120,7 @@ export function fetchWordPressGraphQL<T>(
     method: "POST",
     headers,
     body,
+    timeout: options.timeout,
     next: {
       revalidate: resolvedRevalidate,
       ...(dedupedTags ? { tags: dedupedTags } : {}),
