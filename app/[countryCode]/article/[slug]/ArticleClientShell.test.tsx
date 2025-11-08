@@ -76,6 +76,42 @@ describe("ArticleClientShell", () => {
     cleanup()
   })
 
+  it("fetches the latest article data on mount", async () => {
+    const latestArticle = {
+      ...baseInitialData,
+      id: 321,
+      title: "Latest Title",
+      content: "<p>Updated content</p>",
+    }
+    const latestRelatedPosts = [{ id: "55", title: "Latest Related" }]
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: latestArticle,
+      sourceCountry: "ke",
+      relatedPosts: latestRelatedPosts,
+    })
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 111, title: "Initial Title" }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(fetcherMock).toHaveBeenCalledWith({ countryCode: "ng", slug: "test-slug" })
+    })
+
+    await screen.findByRole("heading", { name: "Latest Title" })
+
+    await waitFor(() => {
+      const lastArticleListCall = mockArticleList.mock.calls.at(-1)?.[0] as Record<string, any>
+      expect(lastArticleListCall?.articles).toEqual(latestRelatedPosts)
+    })
+  })
+
   it("renders related posts when provided", () => {
     const relatedPosts = [{ id: "1", title: "Related" } as any]
     const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
