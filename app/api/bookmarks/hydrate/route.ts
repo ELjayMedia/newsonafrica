@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
+import pLimit from "p-limit"
+
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
 import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
 import { logRequest } from "@/lib/api-utils"
@@ -26,6 +28,8 @@ interface BookmarkHydrationPost {
 }
 
 type CacheValue = { posts: Record<string, BookmarkHydrationPost> }
+
+export const HYDRATE_CONCURRENCY = 4
 
 const extractText = (value: unknown): string | undefined => {
   if (!value) return undefined
@@ -125,50 +129,72 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(cached.data)
   }
 
-  const postsById: Record<string, BookmarkHydrationPost> = {}
+  if (
+    process.env.NODE_ENV === "development" ||
+    process.env.VERCEL_ENV === "preview" ||
+    process.env.BOOKMARKS_HYDRATE_LOG_LIMITER === "true"
+  ) {
+    console.info("[bookmarks.hydrate] Applying concurrency limiter", {
+      concurrency: HYDRATE_CONCURRENCY,
+      requestCount: requests.length,
+    })
+  }
 
-  await Promise.all(
-    requests.map(async ({ country, postIds }) => {
-      if (postIds.length === 0) return
-
-      let countryCode: string | undefined
-
-      if (country.length === 2) {
-        countryCode = country.toLowerCase()
-      } else {
-        countryCode = resolveCountryCode(country) ?? undefined
-      }
-
-      try {
-        const result = await fetchPosts({
-          ids: postIds,
-          perPage: Math.min(Math.max(postIds.length, 1), 100),
-          countryCode,
-        })
-        const postsArray = Array.isArray(result) ? result : result?.data || []
-
-        postsArray.forEach((post: any) => {
-          if (!post?.id) return
-          const id = String(post.id)
-          postsById[id] = {
-            id,
-            country,
-            slug: typeof post.slug === "string" ? post.slug : undefined,
-            title: extractText(post.title),
-            excerpt: extractText(post.excerpt),
-            featured_image:
-              extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) || null,
-          }
-        })
-      } catch (error) {
-        console.error("Failed to hydrate bookmarks", { country, postIds, error })
-      }
-    }),
-  )
+  const postsById = await hydrateBookmarkRequests(requests)
 
   const responsePayload: CacheValue = { posts: postsById }
 
   enhancedCache.set(cacheKey, responsePayload, 60000, 300000)
 
   return NextResponse.json(responsePayload)
+}
+
+export async function hydrateBookmarkRequests(
+  requests: Array<{ country: string; postIds: string[] }>,
+): Promise<Record<string, BookmarkHydrationPost>> {
+  const postsById: Record<string, BookmarkHydrationPost> = {}
+  const limit = pLimit(HYDRATE_CONCURRENCY)
+
+  await Promise.all(
+    requests.map(({ country, postIds }) =>
+      limit(async () => {
+        if (postIds.length === 0) return
+
+        let countryCode: string | undefined
+
+        if (country.length === 2) {
+          countryCode = country.toLowerCase()
+        } else {
+          countryCode = resolveCountryCode(country) ?? undefined
+        }
+
+        try {
+          const result = await fetchPosts({
+            ids: postIds,
+            perPage: Math.min(Math.max(postIds.length, 1), 100),
+            countryCode,
+          })
+          const postsArray = Array.isArray(result) ? result : result?.data || []
+
+          postsArray.forEach((post: any) => {
+            if (!post?.id) return
+            const id = String(post.id)
+            postsById[id] = {
+              id,
+              country,
+              slug: typeof post.slug === "string" ? post.slug : undefined,
+              title: extractText(post.title),
+              excerpt: extractText(post.excerpt),
+              featured_image:
+                extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) || null,
+            }
+          })
+        } catch (error) {
+          console.error("Failed to hydrate bookmarks", { country, postIds, error })
+        }
+      }),
+    ),
+  )
+
+  return postsById
 }
