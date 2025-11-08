@@ -1,14 +1,13 @@
 "use server"
 
+import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
 import type { Session, SupabaseClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
 
 import type { Database } from "@/types/supabase"
 
 import { ActionError, actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
-import {
-  SUPABASE_CONFIGURATION_ERROR_MESSAGE,
-  getSupabaseClient,
-} from "@/lib/supabase/server-component-client"
+import { SUPABASE_CONFIGURATION_ERROR_MESSAGE } from "@/lib/supabase/server-component-client"
 export type SupabaseServerClient = SupabaseClient<Database>
 
 async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Session | null> {
@@ -48,21 +47,25 @@ async function getSessionWithRefresh(supabase: SupabaseServerClient): Promise<Se
   return null
 }
 
+function createSupabaseServerClient(): SupabaseServerClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+  }
+
+  return createServerActionClient<Database>({ cookies }, {
+    supabaseUrl,
+    supabaseKey: supabaseAnonKey,
+  })
+}
+
 export async function withSupabaseSession<T>(
   callback: (context: { supabase: SupabaseServerClient; session: Session | null }) => Promise<T> | T,
 ): Promise<ActionResult<T>> {
-  const result = getSupabaseClient()
-
-  if (result.isFallback) {
-    const error = new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE, {
-      cause: result.error,
-    })
-    return actionFailure<T>(error)
-  }
-
-  const supabase = result.client
-
   try {
+    const supabase = createSupabaseServerClient()
     const session = await getSessionWithRefresh(supabase)
     const data = await callback({ supabase, session })
     return actionSuccess(data)
@@ -72,18 +75,8 @@ export async function withSupabaseSession<T>(
 }
 
 export async function getSupabaseSession(): Promise<ActionResult<Session | null>> {
-  const result = getSupabaseClient()
-
-  if (result.isFallback) {
-    const error = new ActionError(SUPABASE_CONFIGURATION_ERROR_MESSAGE, {
-      cause: result.error,
-    })
-    return actionFailure<Session | null>(error)
-  }
-
-  const supabase = result.client
-
   try {
+    const supabase = createSupabaseServerClient()
     const session = await getSessionWithRefresh(supabase)
     return actionSuccess<Session | null>(session)
   } catch (error) {

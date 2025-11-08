@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient, User, Session, AuthError } from "@supabase/supabase-js"
+import { getSupabaseBrowserClient, isSupabaseConfigured as hasSupabaseConfig } from "@/lib/supabase/client"
 import type { Database } from "@/types/supabase"
 import {
   clearSessionCookieClient,
@@ -7,18 +7,17 @@ import {
 } from "@/lib/auth/session-cookie-client"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
 export const USER_PROFILE_SELECT_COLUMNS = "id, username, avatar_url, role, handle"
-
-export const SUPABASE_AUTH_STORAGE_KEY = "noa_supabase_auth"
 
 const SUPABASE_CONFIG_WARNING =
   "Supabase environment variables are not configured. Authentication features are disabled."
 
 let supabaseInstance: SupabaseClient<Database> | null = null
 let hasLoggedConfigWarning = false
+
+export function isSupabaseConfigured(): boolean {
+  return hasSupabaseConfig()
+}
 
 function createStubSupabaseClient(): SupabaseClient<Database> {
   const createStubError = () => new Error(SUPABASE_CONFIG_WARNING)
@@ -123,7 +122,7 @@ function createStubSupabaseClient(): SupabaseClient<Database> {
 }
 
 function initializeSupabaseClient(): SupabaseClient<Database> {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!hasSupabaseConfig()) {
     if (!hasLoggedConfigWarning) {
       hasLoggedConfigWarning = true
       console.warn(SUPABASE_CONFIG_WARNING)
@@ -131,15 +130,15 @@ function initializeSupabaseClient(): SupabaseClient<Database> {
     return createStubSupabaseClient()
   }
 
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: SUPABASE_AUTH_STORAGE_KEY,
-      flowType: "pkce",
-    },
-  })
+  try {
+    return getSupabaseBrowserClient()
+  } catch (error) {
+    if (!hasLoggedConfigWarning) {
+      hasLoggedConfigWarning = true
+      console.error("Failed to initialize Supabase client", error)
+    }
+    return createStubSupabaseClient()
+  }
 }
 
 export function getSupabaseClient(): SupabaseClient<Database> {

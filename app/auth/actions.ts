@@ -1,12 +1,13 @@
 "use server"
 
+import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import {
-  SUPABASE_CONFIGURATION_ERROR_MESSAGE,
-  getSupabaseClient,
-} from "@/lib/supabase/server-component-client"
+import { SUPABASE_CONFIGURATION_ERROR_MESSAGE } from "@/lib/supabase/server-component-client"
+import type { Database } from "@/types/supabase"
 
 export type AuthFormState = {
   status: "idle" | "success" | "error"
@@ -20,6 +21,8 @@ export const initialAuthFormState: AuthFormState = Object.freeze({
 
 const DEFAULT_SUCCESS_MESSAGE = "We've sent a confirmation link to your email."
 const DEFAULT_ERROR_MESSAGE = "We couldn't process your request. Please try again."
+
+type SupabaseServerClient = SupabaseClient<Database>
 
 function createSuccessState(message: string): AuthFormState {
   return { status: "success", message }
@@ -88,6 +91,25 @@ function getAuthCallbackUrl(nextPath: string | null): string {
   return callbackUrl.toString()
 }
 
+function createSupabaseClient(): SupabaseServerClient | null {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    }
+
+    return createServerActionClient<Database>({ cookies }, {
+      supabaseUrl,
+      supabaseKey: supabaseAnonKey,
+    })
+  } catch (error) {
+    console.error("Failed to initialize Supabase client for auth actions", error)
+    return null
+  }
+}
+
 export async function signInWithPasswordAction(
   _prevState: AuthFormState,
   formData: FormData,
@@ -101,12 +123,13 @@ export async function signInWithPasswordAction(
       return createErrorState("Email and password are required.")
     }
 
-    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+    const supabase = createSupabaseClient()
 
-    if (isFallback) {
-      console.error("Sign-in is unavailable because Supabase is not configured.", fallbackError)
+    if (!supabase) {
+      console.error("Sign-in is unavailable because Supabase is not configured.")
       return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
     }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -158,27 +181,28 @@ export async function signUpWithPasswordAction(
     const redirectTo = getRedirectPath(formData.get("redirectTo"))
 
     if (!email) {
-      return createErrorState("Please provide a valid email address.")
+      return createErrorState("Email is required.")
     }
 
     if (!password) {
       return createErrorState("Password is required.")
     }
 
-    if (password.length < 6) {
-      return createErrorState("Password must be at least 6 characters long.")
+    if (!confirmPassword) {
+      return createErrorState("Please confirm your password.")
     }
 
-    if (!confirmPassword || confirmPassword !== password) {
+    if (password !== confirmPassword) {
       return createErrorState("Passwords do not match.")
     }
 
-    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+    const supabase = createSupabaseClient()
 
-    if (isFallback) {
-      console.error("Sign-up is unavailable because Supabase is not configured.", fallbackError)
+    if (!supabase) {
+      console.error("Sign-up is unavailable because Supabase is not configured.")
       return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
     }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -194,30 +218,55 @@ export async function signUpWithPasswordAction(
     const userId = data.user?.id
     if (userId) {
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, avatar_url, role, created_at, updated_at")
-          .eq("id", userId)
-          .maybeSingle()
-
         await writeSessionCookie({
           userId,
-          username: profile?.username ?? null,
-          avatar_url: profile?.avatar_url ?? null,
-          role: profile?.role ?? null,
-          created_at: profile?.created_at ?? null,
-          updated_at: profile?.updated_at ?? null,
+          username: data.user.email ?? null,
+          avatar_url: null,
+          role: data.user.role ?? null,
+          created_at: data.user.created_at ?? null,
+          updated_at: data.user.updated_at ?? null,
         })
       } catch (cookieError) {
-        console.error("Failed to prime session cookie after password sign-up", cookieError)
+        console.error("Failed to prime session cookie after sign-up", cookieError)
       }
     }
 
-    return createSuccessState(
-      "Check your email for a confirmation link to finish setting up your account.",
-    )
+    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to sign up", error)
+    return createErrorState(DEFAULT_ERROR_MESSAGE)
+  }
+}
+
+export async function resetPasswordAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  try {
+    const email = normalizeEmail(formData.get("email"))
+
+    if (!email) {
+      return createErrorState("Email is required.")
+    }
+
+    const supabase = createSupabaseClient()
+
+    if (!supabase) {
+      console.error("Reset password is unavailable because Supabase is not configured.")
+      return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getAuthCallbackUrl("/auth/update-password"),
+    })
+
+    if (error) {
+      return createErrorState(error.message)
+    }
+
+    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
+  } catch (error) {
+    console.error("Failed to send reset password email", error)
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }
@@ -228,18 +277,19 @@ export async function sendMagicLinkAction(
 ): Promise<AuthFormState> {
   try {
     const email = normalizeEmail(formData.get("email"))
-    const redirectTo = getRedirectPath(formData.get("redirectTo"))
+    const redirectTo = getRedirectPath(formData.get("redirectTo")) ?? "/"
 
     if (!email) {
-      return createErrorState("Please provide an email address.")
+      return createErrorState("Email is required.")
     }
 
-    const { client: supabase, isFallback, error: fallbackError } = getSupabaseClient()
+    const supabase = createSupabaseClient()
 
-    if (isFallback) {
-      console.error("Magic link sign-in is unavailable because Supabase is not configured.", fallbackError)
+    if (!supabase) {
+      console.error("Magic link sign-in is unavailable because Supabase is not configured.")
       return createErrorState(SUPABASE_CONFIGURATION_ERROR_MESSAGE)
     }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -251,22 +301,9 @@ export async function sendMagicLinkAction(
       return createErrorState(error.message)
     }
 
-    return createSuccessState("We've sent a secure sign-in link to your email address.")
+    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to send magic link", error)
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
-}
-
-export async function registerWithPasswordAction(
-  prevState: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  const result = await signUpWithPasswordAction(prevState, formData)
-
-  if (result.status === "success" && !result.message) {
-    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
-  }
-
-  return result
 }
