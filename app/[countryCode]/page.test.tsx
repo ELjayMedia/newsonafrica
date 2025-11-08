@@ -14,6 +14,18 @@ vi.mock("@/components/HomeContent", () => ({
   HomeContent: homeContentMock,
 }))
 
+const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
+  initialPosts: [{ id: `initial-${edition.code}` }],
+  featuredPosts: [{ id: `featured-${edition.code}` }],
+  countryPosts: { [edition.code]: [{ id: `country-${edition.code}` }] },
+  initialData: { edition: edition.code },
+}))
+
+vi.mock("../(home)/home-data", () => ({
+  HOME_FEED_REVALIDATE: 60,
+  buildHomeContentPropsForEdition: buildHomeContentPropsForEditionMock,
+}))
+
 beforeAll(() => {
   process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://newsonafrica.com/sz/graphql"
   process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://newsonafrica.com/za/graphql"
@@ -61,6 +73,26 @@ describe("CountryPage", () => {
     const { default: CountryPage } = await import("./page")
 
     const countryUi = await CountryPage({ params: { countryCode: "african-edition" } })
+    render(countryUi)
+
+    expect(homeContentMock).toHaveBeenCalledTimes(1)
+    const [props] = homeContentMock.mock.calls[0]
+
+    const expectedProps = await propsSpy.mock.results[0]?.value
+    expect(expectedProps).toBeDefined()
+    expect(props).toEqual(expectedProps)
+    expect(props.countryPosts).toHaveProperty("african-edition")
+    expect(notFoundMock).not.toHaveBeenCalled()
+    propsSpy.mockRestore()
+  })
+
+  it("resolves the African alias to the aggregated home feed", async () => {
+    const homeData = await import("../(home)/home-data")
+    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+
+    const { default: CountryPage } = await import("./page")
+
+    const countryUi = await CountryPage({ params: { countryCode: "african" } })
     render(countryUi)
 
     expect(homeContentMock).toHaveBeenCalledTimes(1)
