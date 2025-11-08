@@ -3,6 +3,8 @@
 import type { Session, User } from "@supabase/supabase-js"
 
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
 import { createAdminClient as createSupabaseAdminClient } from "@/utils/supabase/server"
@@ -232,6 +234,8 @@ export async function updateAuthCountry(
       console.error("Failed to refresh Supabase session after updating country", refreshError)
     }
 
+    revalidateByTag(CACHE_TAGS.USERS)
+
     return { success: true }
   })
 }
@@ -330,6 +334,8 @@ export async function updateProfile(
     if (error || !data) {
       throw new ActionError("Failed to update profile", { cause: error })
     }
+
+    revalidateByTag(CACHE_TAGS.USERS)
 
     return toSerializable(data)
   })
