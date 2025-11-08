@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from "lucide-react"
 import { useUser } from "@/contexts/UserContext"
 import Link from "next/link"
@@ -250,12 +251,9 @@ export function SubscribeContent() {
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-center">
-                      <button
-                        onClick={goToNextStep}
-                        className="w-full py-3 px-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-                      >
+                      <Button onClick={goToNextStep} className="w-full" size="lg">
                         Select {plan.name} Plan
-                      </button>
+                      </Button>
                     </CardFooter>
                   </Card>
                 </TabsContent>
@@ -333,21 +331,12 @@ export function SubscribeContent() {
             </div>
 
             <div className="mt-6 flex justify-between">
-              <button
-                onClick={goToPreviousStep}
-                className="px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50"
-              >
+              <Button onClick={goToPreviousStep} variant="outline">
                 Back
-              </button>
-              <button
-                onClick={goToNextStep}
-                disabled={!isFormValid}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 ${
-                  !isFormValid ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
+              </Button>
+              <Button onClick={goToNextStep} disabled={!isFormValid} size="lg">
                 Continue to Payment
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -414,13 +403,9 @@ export function SubscribeContent() {
             </div>
 
             <div className="mt-6 flex justify-between">
-              <button
-                onClick={goToPreviousStep}
-                className="px-4 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50"
-                disabled={isRedirecting}
-              >
+              <Button onClick={goToPreviousStep} variant="outline" disabled={isRedirecting}>
                 Back
-              </button>
+              </Button>
             </div>
           </div>
         )}
