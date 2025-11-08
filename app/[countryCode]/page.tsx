@@ -5,7 +5,7 @@ import {
   HOME_FEED_REVALIDATE,
   buildHomeContentPropsForEdition,
 } from "../(home)/home-data"
-import { SUPPORTED_EDITIONS } from "@/lib/editions"
+import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
 export const revalidate = 60
@@ -20,8 +20,7 @@ type Props = { params: { countryCode: string } }
 
 export default async function CountryPage({ params }: Props) {
   const { countryCode } = await params
-  const slug = countryCode.toLowerCase()
-  const edition = SUPPORTED_EDITIONS.find(({ code }) => code === slug)
+  const edition = resolveEdition(countryCode)
 
   if (!edition) {
     return notFound()
