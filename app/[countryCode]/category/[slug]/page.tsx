@@ -1,17 +1,14 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getCategoriesForCountry, getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
-import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
 import * as log from "@/lib/log"
 import { env } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
-import { siteConfig } from "@/config/site"
 import { CategoryHeader } from "@/components/category/CategoryHeader"
 import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
-import type { WordPressCategory } from "@/types/wp"
 
 interface Params {
   countryCode: string
@@ -19,13 +16,11 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-export const revalidate = 300
+export const dynamic = "force-dynamic"
 export const dynamicParams = true
 
-type CategoriesResult = Awaited<ReturnType<typeof getCategoriesForCountry>>
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 
-const categoriesMemo = new Map<string, Promise<CategoriesResult>>()
 const categoryPostsMemo = new Map<string, Promise<CategoryPostsResult>>()
 
 const getRenderedText = (value: unknown): string | null => {
@@ -57,62 +52,12 @@ function memoize<T>(map: Map<string, Promise<T>>, key: string, factory: () => Pr
   return map.get(key)!
 }
 
-const getMemoizedCategories = (
-  countryCode: string,
-  factory: () => Promise<CategoriesResult>,
-) => memoize(categoriesMemo, countryCode, factory)
-
 const getMemoizedCategoryPosts = (
   countryCode: string,
   slug: string,
   limit: number,
   factory: () => Promise<CategoryPostsResult>,
 ) => memoize(categoryPostsMemo, `${countryCode}:${slug}:${limit}`, factory)
-
-export async function generateStaticParams(): Promise<Params[]> {
-  try {
-    const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
-    const params: Params[] = []
-    const prioritizedCategorySlugs = siteConfig.categories.map((category) => category.slug)
-    for (const country of SUPPORTED_COUNTRIES) {
-      try {
-        const categories = await getMemoizedCategories(
-          country,
-          () =>
-            circuitBreaker.execute(
-              `wordpress-categories-static-${country}`,
-              async () => await getCategoriesForCountry(country),
-              async () => [],
-              { country, endpoint: "rest:categories" },
-            ),
-        )
-
-        const topCategories = prioritizedCategorySlugs
-          .map((slug) => categories.find((category) => category.slug === slug))
-          .filter(
-            (category): category is WordPressCategory & { slug: string } =>
-              typeof category?.slug === "string" && category.slug.length > 0,
-          )
-
-        for (const category of topCategories) {
-          const slug = category.slug
-          if (typeof slug === "string" && slug.length > 0) {
-            params.push({
-              countryCode: country,
-              slug,
-            })
-          }
-        }
-      } catch (error) {
-        log.error(`Error generating static params for ${country} categories`, { error })
-      }
-    }
-    return params
-  } catch (error) {
-    log.error("generateStaticParams for country categories failed", { error })
-    return []
-  }
-}
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
