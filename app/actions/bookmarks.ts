@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateTag } from "next/cache"
 
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
@@ -31,7 +31,6 @@ export type {
   BookmarkStatsDelta,
 } from "@/types/bookmarks"
 
-const BOOKMARK_PATHS = ["/bookmarks"]
 const BOOKMARK_EXPORT_COLUMNS =
   "title, slug, excerpt, created_at, category, tags, read_status, notes"
 
@@ -70,9 +69,6 @@ function ensureUserId(session: { user: { id: string } } | null | undefined): str
 
 async function revalidateBookmarkCache() {
   revalidateTag(CACHE_TAGS.BOOKMARKS)
-  for (const path of BOOKMARK_PATHS) {
-    revalidatePath(path)
-  }
 }
 
 async function fetchBookmarkList(
