@@ -1,6 +1,8 @@
 "use server"
 
 import { withSupabaseSession } from "@/app/actions/supabase"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
 import { executeListQuery } from "@/lib/supabase/list-query"
@@ -85,6 +87,8 @@ export async function recordSubscription(input: RecordSubscriptionInput): Promis
     if (error || !data) {
       throw new ActionError("Failed to record subscription", { cause: error })
     }
+
+    revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
 
     return toSerializable(data)
   })

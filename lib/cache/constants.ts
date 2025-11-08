@@ -18,8 +18,8 @@ export const CACHE_TAGS = {
   FEATURED: "featured",
   TRENDING: "trending",
   BOOKMARKS: "bookmarks",
-  USERS: "users",
-  SUBSCRIPTIONS: "subscriptions",
+  USERS: "users", // Preferences, profile updates, avatar uploads, and auth metadata mutations.
+  SUBSCRIPTIONS: "subscriptions", // Subscription mutations and payment webhook handlers.
 } as const
 
 export const KV_CACHE_KEYS = {

@@ -1,5 +1,7 @@
 "use server"
 
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError } from "@/lib/supabase/action-result"
 import { sanitizeProfilePreferences, parseProfilePreferences } from "@/lib/preferences/profile-preferences"
 import type { RawProfilePreferences, StoredProfilePreferences } from "@/lib/preferences/profile-preferences"
@@ -240,6 +242,8 @@ export async function updatePreferences(input: UpdatePreferencesInput) {
       throw new ActionError("Authentication required", { status: 401 })
     }
 
+    let didMutate = false
+
     if (hasUpdates(input.settings)) {
       const { theme, language, email_notifications, push_notifications } = input.settings!
       const payload: Partial<UserSettingsRow> & { user_id: string; updated_at: string } = {
@@ -268,6 +272,8 @@ export async function updatePreferences(input: UpdatePreferencesInput) {
       if (error) {
         throw error
       }
+
+      didMutate = true
     }
 
     if (hasUpdates(input.content)) {
@@ -292,6 +298,12 @@ export async function updatePreferences(input: UpdatePreferencesInput) {
       if (error) {
         throw error
       }
+
+      didMutate = true
+    }
+
+    if (didMutate) {
+      revalidateByTag(CACHE_TAGS.USERS)
     }
 
     return ensureUserPreferencesSnapshot(supabase, userId)
@@ -305,6 +317,8 @@ export async function updateProfilePreferences(input: UpdateProfilePreferencesIn
     if (!userId) {
       throw new ActionError("Authentication required", { status: 401 })
     }
+
+    let didMutate = false
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
@@ -346,6 +360,12 @@ export async function updateProfilePreferences(input: UpdateProfilePreferencesIn
       if (updateError) {
         throw updateError
       }
+
+      didMutate = true
+    }
+
+    if (didMutate) {
+      revalidateByTag(CACHE_TAGS.USERS)
     }
 
     return ensureUserPreferencesSnapshot(supabase, userId)

@@ -3,6 +3,8 @@
 import { randomUUID } from "node:crypto"
 
 import { withSupabaseSession } from "@/app/actions/supabase"
+import { CACHE_TAGS } from "@/lib/cache/constants"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
 
@@ -64,6 +66,8 @@ export async function uploadProfileAvatar(formData: FormData): Promise<ActionRes
 
     const { data } = supabase.storage.from("profiles").getPublicUrl(filePath)
     const avatarUrl = data.publicUrl
+
+    revalidateByTag(CACHE_TAGS.USERS)
 
     return toSerializable({ avatarUrl })
   })
