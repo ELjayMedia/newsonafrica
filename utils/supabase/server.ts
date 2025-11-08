@@ -44,12 +44,3 @@ export function createServerClient(): SupabaseClient<Database> {
     cookies: createCookieAdapter(),
   })
 }
-
-export function createAdminClient(): SupabaseClient<Database> {
-  const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL")
-  const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")
-
-  return createSupabaseServerClient<Database>(supabaseUrl, serviceRoleKey, {
-    cookies: createCookieAdapter(),
-  })
-}

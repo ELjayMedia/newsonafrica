@@ -1,55 +1,9 @@
-import {
-  createClient as createSupabaseAdminClient,
-  type GenericSchema,
-  type Session,
-  type SupabaseClient,
-  type User,
-} from "@supabase/supabase-js"
+import { type Session, type User } from "@supabase/supabase-js"
 import { createClient as createBrowserClient } from "@/lib/api/supabase"
 import type { Database } from "@/types/supabase"
 
-type PublicSchema = Database["public"] & GenericSchema
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-let adminClient: SupabaseClient<Database, "public", PublicSchema> | null = null
-let hasWarnedAboutAdminConfig = false
-
 // Create a single instance of the Supabase client to be reused
 export const supabase = createBrowserClient()
-
-// Create a client with service role for admin operations
-// IMPORTANT: This should only be used in server-side code
-export const createAdminClient = (): SupabaseClient<Database, "public", PublicSchema> => {
-  if (adminClient) {
-    return adminClient
-  }
-
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    if (!hasWarnedAboutAdminConfig) {
-      hasWarnedAboutAdminConfig = true
-      console.warn(
-        "Supabase admin environment variables are not configured. Returning default client instance."
-      )
-    }
-    return supabase as SupabaseClient<Database, "public", PublicSchema>
-  }
-
-  adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    global: {
-      headers: {
-        "x-application-name": "news-on-africa-admin",
-      },
-    },
-  }) as SupabaseClient<Database, "public", PublicSchema>
-
-  return adminClient
-}
 
 type CachedProfile = { data: Profile; timestamp: number }
 

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { createAdminClient } from "./supabase"
+import { createAdminClient } from "./supabase/admin"
 
 /**
  * Setup Row-Level Security policies for News On Africa

@@ -28,7 +28,7 @@ vi.mock("@/app/actions/supabase", () => ({
 
 const updateUserByIdMock = vi.fn()
 
-vi.mock("@/utils/supabase/server", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     auth: {
       admin: {
