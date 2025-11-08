@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation"
 
 import { env } from "@/config/env"
 import { stripHtml } from "@/lib/search"
-import { SUPPORTED_EDITIONS, isCountryEdition } from "@/lib/editions"
-import { getLatestPostsForCountry, getRelatedPostsForCountry } from "@/lib/wordpress/posts"
+import { isCountryEdition } from "@/lib/editions"
+import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -19,39 +19,8 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = 60
+export const dynamic = "force-dynamic"
 export const dynamicParams = true
-
-export async function generateStaticParams(): Promise<Array<{ countryCode: string; slug: string }>> {
-  const editionPromises = SUPPORTED_EDITIONS.filter(isCountryEdition).map(async (edition) => {
-    const { posts } = await getLatestPostsForCountry(edition.code, 50)
-    const normalizedCountry = normalizeCountryCode(edition.code)
-
-    return (
-      posts
-        ?.map((post) => (typeof post?.slug === "string" ? post.slug.trim() : ""))
-        .filter((slug): slug is string => Boolean(slug))
-        .map((slug) => ({ countryCode: normalizedCountry, slug: normalizeSlug(slug) })) ?? []
-    )
-  })
-
-  const staticEntries = (await Promise.all(editionPromises)).flat()
-  const seen = new Set<string>()
-
-  return staticEntries.filter(({ countryCode, slug }) => {
-    if (!slug) {
-      return false
-    }
-
-    const key = `${countryCode}:${slug}`
-    if (seen.has(key)) {
-      return false
-    }
-
-    seen.add(key)
-    return true
-  })
-}
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
