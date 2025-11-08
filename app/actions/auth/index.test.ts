@@ -9,7 +9,7 @@ vi.mock("@/lib/server-cache-utils", () => ({
 }))
 
 const supabaseRef: { current: any } = { current: null }
-const sessionRef: { current: any } = { current: { user: { id: "user-1", app_metadata: {} } } }
+const sessionRef: { current: any } = { current: { user: { id: "user-1" } } }
 
 vi.mock("@/app/actions/supabase", () => ({
   withSupabaseSession: async (callback: any) => {
@@ -26,36 +26,27 @@ vi.mock("@/app/actions/supabase", () => ({
   },
 }))
 
-const updateUserByIdMock = vi.fn()
-
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    auth: {
-      admin: {
-        updateUserById: updateUserByIdMock,
-      },
-    },
-  }),
-}))
-
 describe("auth actions cache invalidation", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
     supabaseRef.current = null
-    sessionRef.current = { user: { id: "user-1", app_metadata: {} } }
-    updateUserByIdMock.mockResolvedValue({ error: null })
+    sessionRef.current = { user: { id: "user-1" } }
   })
 
   it("revalidates user cache after updating auth country", async () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test"
+    const selectMaybeSingleMock = vi.fn(async () => ({ data: { country: null }, error: null }))
+    const selectEqMock = vi.fn(() => ({ maybeSingle: selectMaybeSingleMock }))
+    const selectMock = vi.fn(() => ({ eq: selectEqMock }))
 
-    const refreshSessionMock = vi.fn().mockResolvedValue({})
+    const updateEqMock = vi.fn(async () => ({ error: null }))
+    const updateMock = vi.fn(() => ({ eq: updateEqMock }))
 
     supabaseRef.current = {
-      auth: {
-        refreshSession: refreshSessionMock,
-      },
+      from: vi.fn(() => ({
+        select: selectMock,
+        update: updateMock,
+      })),
     }
 
     const { updateAuthCountry } = await import("./index")
@@ -63,8 +54,12 @@ describe("auth actions cache invalidation", () => {
     const result = await updateAuthCountry("ng")
 
     expect(result.error).toBeNull()
-    expect(updateUserByIdMock).toHaveBeenCalled()
-    expect(refreshSessionMock).toHaveBeenCalled()
+    expect(selectMock).toHaveBeenCalledWith("country")
+    expect(updateMock).toHaveBeenCalledWith({
+      country: "ng",
+      updated_at: expect.any(String),
+    })
+    expect(updateEqMock).toHaveBeenCalledWith("id", "user-1")
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
     expect(revalidateByTagMock).toHaveBeenCalledWith(CACHE_TAGS.USERS)
   })

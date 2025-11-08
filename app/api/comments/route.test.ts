@@ -13,6 +13,7 @@ interface CommentRecord {
 interface ProfileRecord {
   id: string
   is_admin?: boolean
+  country?: string | null
 }
 
 let currentSupabaseClient: any
@@ -279,10 +280,12 @@ describe("POST /api/comments", () => {
   function createPostSupabaseClient({
     session,
     profile,
+    profileError = null,
     onInsert,
   }: {
     session: { user: { id: string; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } }
     profile: ProfileRecord | null
+    profileError?: { message: string } | null
     onInsert: (payload: Record<string, unknown>) => void
   }) {
     const createCommentsBuilder = () => {
@@ -309,7 +312,10 @@ describe("POST /api/comments", () => {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            single: vi.fn(async () => ({ data: profile, error: profile ? null : { message: "not found" } })),
+            maybeSingle: vi.fn(async () => ({
+              data: profile,
+              error: profileError,
+            })),
           })),
         })),
       }
@@ -333,12 +339,12 @@ describe("POST /api/comments", () => {
     }
   }
 
-  it("includes the session edition when inserting a comment", async () => {
+  it("includes the profile edition when inserting a comment", async () => {
     const onInsert = vi.fn()
 
     currentSupabaseClient = createPostSupabaseClient({
-      session: { user: { id: "user-1", app_metadata: { country: "sz" }, user_metadata: {} } },
-      profile: { id: "user-1" },
+      session: { user: { id: "user-1", app_metadata: {}, user_metadata: {} } },
+      profile: { id: "user-1", country: "sz" },
       onInsert,
     })
 
@@ -365,7 +371,7 @@ describe("POST /api/comments", () => {
 
     currentSupabaseClient = createPostSupabaseClient({
       session: { user: { id: "user-1", app_metadata: {}, user_metadata: {} } },
-      profile: { id: "user-1" },
+      profile: null,
       onInsert,
     })
 
