@@ -8,7 +8,7 @@ import { actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/
 import { createServerClient } from "@/utils/supabase/server"
 export type SupabaseServerClient = SupabaseClient<Database>
 
-export function createSupabaseServerClient(): SupabaseServerClient {
+export async function createSupabaseServerClient(): Promise<SupabaseServerClient> {
   return createServerClient()
 }
 
@@ -16,7 +16,7 @@ export async function withSupabaseSession<T>(
   callback: (context: { supabase: SupabaseServerClient; session: Session | null }) => Promise<T> | T,
 ): Promise<ActionResult<T>> {
   try {
-    const supabase = createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
     const {
       data: { session },
       error,
@@ -35,7 +35,7 @@ export async function withSupabaseSession<T>(
 
 export async function getSupabaseSession(): Promise<ActionResult<Session | null>> {
   try {
-    const supabase = createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
     const {
       data: { session },
       error,
