@@ -139,6 +139,22 @@ The application is deployed on Vercel with the following configuration:
 2. **Output Directory**: `.next`
 3. **Environment Variables**: Set all required variables in Vercel dashboard
 
+## 🧰 Cache Revalidation API
+
+Editorial tooling that calls `/api/revalidate` can target both broad content sweeps and specific tag-driven caches.
+
+- The `type=content` run now refreshes the following cache tags: `posts`, `categories`, `featured`, `trending`, and the newly
+  added `tags` bucket. This keeps dynamic tag feeds aligned with ISR refreshes.
+- Targeted revalidation supports additional query parameters:
+  - `tagSlug` + optional `country` (defaults to the primary site edition) invalidates the `country:{code}`, `section:tags`, and
+    `tag:{slug}` cache tags produced by WordPress fetch helpers.
+  - `categorySlug` generates `section:categories` + `category:{slug}` cache tags for manual category refreshes.
+  - Repeating `section` parameters allows power users to pass custom cache sections (e.g. `section=frontpage`) which the API
+    maps through the cache tag builder.
+
+Update newsroom automation or webhook integrations to include these parameters where appropriate so manual revalidation stays in
+sync with ISR intervals.
+
 **Important:** For WordPress endpoints, ensure every country override (e.g. `NEXT_PUBLIC_WP_SZ_GRAPHQL`) follows the correct format with the country slug:
 - GraphQL: `https://newsonafrica.com/{country}/graphql`
 
