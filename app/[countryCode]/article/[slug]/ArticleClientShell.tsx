@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,10 @@ import { ArrowUp, Calendar, ChevronLeft, ChevronRight, Gift, User } from "lucide
 import { formatDistanceToNow } from "date-fns"
 
 import type { WordPressPost } from "@/types/wp"
+import type {
+  FetchArticleWithFallbackActionInput,
+  FetchArticleWithFallbackActionResult,
+} from "./actions"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { transformWordPressEmbeds } from "@/lib/utils/wordpressEmbeds"
@@ -24,6 +28,9 @@ interface ArticleClientShellProps {
   sourceCountryCode?: string
   initialData: any
   relatedPosts: WordPressPost[]
+  fetchArticleWithFallback: (
+    input: FetchArticleWithFallbackActionInput,
+  ) => Promise<FetchArticleWithFallbackActionResult>
 }
 
 const resolveRenderedText = (value: unknown): string => {
@@ -49,12 +56,27 @@ export function ArticleClientShell({
   sourceCountryCode,
   initialData,
   relatedPosts,
+  fetchArticleWithFallback,
 }: ArticleClientShellProps) {
+  const [articleData, setArticleData] = useState<WordPressPost | null>(initialData ?? null)
+  const [currentRelatedPosts, setCurrentRelatedPosts] = useState<WordPressPost[]>(relatedPosts)
+  const [currentSourceCountry, setCurrentSourceCountry] = useState<string | undefined>(
+    sourceCountryCode,
+  )
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [isRefreshing, startRefresh] = useTransition()
   const contentRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  const postId = initialData?.id != null ? String(initialData.id) : undefined
+  useEffect(() => {
+    setArticleData(initialData ?? null)
+    setCurrentRelatedPosts(relatedPosts)
+    setCurrentSourceCountry(sourceCountryCode)
+    setRefreshError(null)
+  }, [initialData, relatedPosts, sourceCountryCode])
+
+  const postId = articleData?.id != null ? String(articleData.id) : undefined
 
   useEffect(() => {
     const handleScroll = () => {
@@ -79,21 +101,42 @@ export function ArticleClientShell({
     router.push(`/subscribe?${searchParams.toString()}`)
   }
 
-  const title = resolveRenderedText(initialData?.title)
-  const excerpt = resolveRenderedText(initialData?.excerpt)
-  const content = resolveRenderedText(initialData?.content)
+  const refreshArticle = () => {
+    if (isRefreshing) {
+      return
+    }
+
+    startRefresh(async () => {
+      try {
+        setRefreshError(null)
+        const result = await fetchArticleWithFallback({ countryCode, slug })
+        setArticleData(result.article)
+        setCurrentRelatedPosts(result.relatedPosts)
+        setCurrentSourceCountry(result.sourceCountry)
+      } catch (error) {
+        setRefreshError(error instanceof Error ? error.message : "Unexpected error")
+      }
+    })
+  }
+
+  const title = resolveRenderedText(articleData?.title)
+  const excerpt = resolveRenderedText(articleData?.excerpt)
+  const content = resolveRenderedText(articleData?.content)
+  const publicationDistance = articleData?.date
+    ? formatDistanceToNow(new Date(articleData.date))
+    : null
 
   const authorName =
-    resolveRenderedText(initialData?.author?.node?.name ?? initialData?.author?.name) ||
-    initialData?.author?.node?.name ||
-    initialData?.author?.name ||
+    resolveRenderedText(articleData?.author?.node?.name ?? articleData?.author?.name) ||
+    articleData?.author?.node?.name ||
+    articleData?.author?.name ||
     null
   const authorAvatar =
-    initialData?.author?.node?.avatar?.url ??
-    initialData?.author?.avatar_urls?.["96"] ??
-    initialData?.author?.avatar_urls?.["48"] ??
+    articleData?.author?.node?.avatar?.url ??
+    articleData?.author?.avatar_urls?.["96"] ??
+    articleData?.author?.avatar_urls?.["48"] ??
     null
-  const featuredImageNode = initialData?.featuredImage?.node
+  const featuredImageNode = articleData?.featuredImage?.node
   const heroImage = featuredImageNode?.sourceUrl
     ? {
         url: featuredImageNode.sourceUrl,
@@ -119,7 +162,7 @@ export function ArticleClientShell({
         <header className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
             <div className="flex flex-wrap gap-2">
-              {initialData.categories?.nodes?.map((category: any) => {
+              {articleData?.categories?.nodes?.map((category: any) => {
                 const renderedName = resolveRenderedText(category?.name)
                 const fallbackName = typeof category?.name === "string" ? category.name : ""
                 const name = renderedName || fallbackName
@@ -138,7 +181,9 @@ export function ArticleClientShell({
             </div>
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Calendar className="w-4 h-4" />
-              <time dateTime={initialData.date}>{formatDistanceToNow(new Date(initialData.date))} ago</time>
+              {publicationDistance ? (
+                <time dateTime={articleData?.date}>{publicationDistance} ago</time>
+              ) : null}
             </div>
           </div>
 
@@ -201,7 +246,24 @@ export function ArticleClientShell({
                 className="flex items-center"
               />
             )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refreshArticle}
+              disabled={isRefreshing}
+              aria-label="Refresh article content"
+              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh article"}
+            </Button>
           </div>
+
+          {refreshError && (
+            <p className="text-sm text-destructive" role="alert" aria-live="polite">
+              We couldn&apos;t refresh the article: {refreshError}
+            </p>
+          )}
 
           {featuredImageNode?.sourceUrl && (
             <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden">
@@ -234,8 +296,8 @@ export function ArticleClientShell({
             <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
           </div>
 
-          {relatedPosts.length > 0 ? (
-            <ArticleList articles={relatedPosts} layout="compact" showLoadMore={false} />
+          {currentRelatedPosts.length > 0 ? (
+            <ArticleList articles={currentRelatedPosts} layout="compact" showLoadMore={false} />
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <p className="text-lg">No related articles found.</p>
@@ -273,7 +335,7 @@ export function ArticleClientShell({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push(`/${sourceCountryCode ?? countryCode}`)}
+              onClick={() => router.push(`/${currentSourceCountry ?? countryCode}`)}
               className="p-3 hover:bg-primary hover:text-primary-foreground transition-colors"
               aria-label="Go to country page"
             >
