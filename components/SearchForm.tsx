@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Search, X, Loader2, Clock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface SearchFormProps {
   placeholder?: string
@@ -262,7 +263,7 @@ export function SearchForm({
                 variant="ghost"
                 size="sm"
                 onClick={clearSearch}
-                className={`${config.button} hover:bg-gray-100 p-1`}
+                className={cn(config.button, "h-auto rounded-md p-1")}
                 tabIndex={-1}
               >
                 <X className={config.icon} />
@@ -295,13 +296,17 @@ export function SearchForm({
           {suggestions.length > 0 ? (
             <div className="py-2">
               {suggestions.map((suggestion, index) => (
-                <button
+                <Button
                   key={`${suggestion.type}-${suggestion.text}`}
                   type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-auto w-full justify-start gap-2 rounded-md px-4 py-2 text-left font-normal",
+                    index === selectedSuggestion && "bg-accent text-accent-foreground",
+                  )}
+                  aria-selected={index === selectedSuggestion}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 ${
-                    index === selectedSuggestion ? "bg-blue-50 text-blue-600" : ""
-                  }`}
                 >
                   {suggestion.type === "recent" ? (
                     <Clock className="h-3 w-3 text-gray-400" />
@@ -310,18 +315,20 @@ export function SearchForm({
                   )}
                   <span className="flex-1">{suggestion.text}</span>
                   {suggestion.type === "recent" && <span className="text-xs text-gray-400">Recent</span>}
-                </button>
+                </Button>
               ))}
 
               {recentSearches.length > 0 && (
                 <div className="border-t border-gray-100 pt-2 mt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto w-full justify-start rounded-md px-4 py-1 text-left text-xs font-medium text-muted-foreground"
                     onClick={clearRecentSearches}
-                    className="w-full text-left px-4 py-1 text-xs text-gray-500 hover:text-gray-700"
                   >
                     Clear recent searches
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -333,23 +340,27 @@ export function SearchForm({
                   Recent Searches
                 </div>
                 {recentSearches.map((search) => (
-                  <button
+                  <Button
                     key={search}
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto w-full justify-start gap-2 rounded-md px-4 py-2 text-left font-normal"
                     onClick={() => handleSuggestionClick({ text: search, type: "recent" })}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Clock className="h-3 w-3 text-gray-400" />
                     <span>{search}</span>
-                  </button>
+                  </Button>
                 ))}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-auto w-full justify-start rounded-md border-t border-gray-100 px-4 py-1 text-left text-xs font-medium text-muted-foreground"
                   onClick={clearRecentSearches}
-                  className="w-full text-left px-4 py-1 text-xs text-gray-500 hover:text-gray-700 border-t border-gray-100 mt-2"
                 >
                   Clear recent searches
-                </button>
+                </Button>
               </div>
             )
           )}
