@@ -7,7 +7,6 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
-import { createAdminClient as createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
@@ -199,39 +198,35 @@ export async function updateAuthCountry(
     }
 
     const normalized = countryCode?.trim().toLowerCase() || null
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("country")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    if (profileError) {
+      throw new ActionError("Failed to load profile", { cause: profileError })
+    }
+
     const existingCountry =
-      typeof user.app_metadata?.country === "string" ? user.app_metadata.country.toLowerCase() : null
+      typeof profile?.country === "string" ? profile.country.toLowerCase() : null
 
     if (existingCountry === normalized) {
       return { success: true }
     }
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.warn("Cannot update auth country without SUPABASE_SERVICE_ROLE_KEY configured")
-      return { success: true }
-    }
+    const payload = {
+      country: normalized,
+      updated_at: new Date().toISOString(),
+    } satisfies Partial<Database["public"]["Tables"]["profiles"]["Update"]>
 
-    const adminClient = createSupabaseAdminClient()
-    const nextAppMetadata = { ...(user.app_metadata ?? {}) }
-
-    if (normalized) {
-      nextAppMetadata.country = normalized
-    } else {
-      delete nextAppMetadata.country
-    }
-
-    const { error } = await adminClient.auth.admin.updateUserById(user.id, {
-      app_metadata: nextAppMetadata,
-    })
+    const { error } = await supabase
+      .from("profiles")
+      .update(payload as never)
+      .eq("id", user.id)
 
     if (error) {
       throw new ActionError("Failed to update user country", { cause: error })
-    }
-
-    try {
-      await supabase.auth.refreshSession()
-    } catch (refreshError) {
-      console.error("Failed to refresh Supabase session after updating country", refreshError)
     }
 
     revalidateByTag(CACHE_TAGS.USERS)
