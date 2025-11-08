@@ -15,7 +15,6 @@ import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { env } from "@/config/env"
 import { Providers } from "./providers"
 import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
-import { getCurrentSession } from "@/app/actions/auth"
 
 import "./globals.css"
 
@@ -36,20 +35,13 @@ export const metadata: Metadata = {
     generator: 'v0.app'
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
-
-  const sessionResult = await getCurrentSession()
-  if (sessionResult.error) {
-    console.error("Failed to load initial session", sessionResult.error)
-  }
-
-  const initialAuthState = sessionResult.data ?? null
 
   return (
     <html lang="en" className="font-sans">
@@ -59,7 +51,7 @@ export default async function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="font-sans">
-        <Providers initialAuthState={initialAuthState}>
+        <Providers initialAuthState={null}>
           <ClientUserPreferencesProvider>
             <PreferredCountrySync />
             <Suspense fallback={null}>
