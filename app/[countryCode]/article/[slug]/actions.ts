@@ -6,6 +6,7 @@ import { createServerComponentSupabaseClient } from "@/lib/supabase/server-compo
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import type { WordPressPost } from "@/types/wp"
 
+import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"
 import {
   buildArticleCountryPriority,
   loadArticleWithFallback,
@@ -44,8 +45,6 @@ export interface FetchArticleWithFallbackActionResult {
   relatedPosts: WordPressPost[]
 }
 
-const ARTICLE_NOT_FOUND_ERROR_MESSAGE = "Article not found"
-
 export async function fetchArticleWithFallbackAction({
   countryCode,
   slug,
@@ -77,4 +76,3 @@ export async function fetchArticleWithFallbackAction({
   }
 }
 
-export { ARTICLE_NOT_FOUND_ERROR_MESSAGE }

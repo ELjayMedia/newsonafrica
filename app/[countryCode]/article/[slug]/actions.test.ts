@@ -37,10 +37,8 @@ vi.mock("@/lib/supabase/server-component-client", () => ({
 process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://supabase.local"
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "anon-key"
 
-import {
-  ARTICLE_NOT_FOUND_ERROR_MESSAGE,
-  fetchArticleWithFallbackAction,
-} from "./actions"
+import { fetchArticleWithFallbackAction } from "./actions"
+import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"
 
 describe("fetchArticleWithFallbackAction", () => {
   beforeEach(() => {
