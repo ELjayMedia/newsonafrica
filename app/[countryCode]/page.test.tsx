@@ -34,9 +34,27 @@ describe("CountryPage", () => {
   it.each([
     ["sz", "sz"],
     ["ZA", "za"],
+    ["ng", "ng"],
+    ["KE", "ke"],
+    ["tz", "tz"],
+    ["Eg", "eg"],
+    ["GH", "gh"],
   ])("provides HomeContent props for the %s edition", async (countryCode, expectedCode) => {
     const homeData = await import("../(home)/home-data")
-    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+    const fakeProps = {
+      initialPosts: [{ id: `${expectedCode}-initial` }] as any,
+      featuredPosts: [{ id: `${expectedCode}-featured` }] as any,
+      countryPosts: { [expectedCode]: [{ id: `${expectedCode}-post` }] } as any,
+      initialData: {
+        taggedPosts: [],
+        recentPosts: [],
+        categories: [],
+        featuredPosts: [],
+      },
+    }
+    const propsSpy = vi
+      .spyOn(homeData, "buildHomeContentPropsForEdition")
+      .mockResolvedValue(fakeProps)
 
     const { default: CountryPage } = await import("./page")
 
@@ -46,11 +64,10 @@ describe("CountryPage", () => {
     expect(homeContentMock).toHaveBeenCalledTimes(1)
     const [props] = homeContentMock.mock.calls[0]
 
-    const expectedProps = await propsSpy.mock.results[0]?.value
-    expect(expectedProps).toBeDefined()
-    expect(props).toEqual(expectedProps)
+    expect(props).toEqual(fakeProps)
     expect(props.countryPosts).toHaveProperty(expectedCode)
     expect(notFoundMock).not.toHaveBeenCalled()
+    expect(propsSpy).toHaveBeenCalledTimes(1)
     propsSpy.mockRestore()
   })
 
@@ -82,7 +99,7 @@ describe("CountryPage", () => {
       throw notFoundError
     })
 
-    await expect(CountryPage({ params: { countryCode: "gh" } })).rejects.toThrow(notFoundError)
+    await expect(CountryPage({ params: { countryCode: "xx" } })).rejects.toThrow(notFoundError)
 
     expect(notFoundMock).toHaveBeenCalledTimes(1)
     expect(homeContentMock).not.toHaveBeenCalled()
