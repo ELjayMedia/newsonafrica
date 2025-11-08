@@ -1,4 +1,4 @@
-import { createAdminClient } from "./supabase"
+import { createAdminClient } from "./supabase/admin"
 
 export type Migration = {
   id: string

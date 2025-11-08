@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { createAdminClient } from "@/lib/supabase"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { Database } from "@/types/supabase"
 import { buildSubscriptionUpsert } from "@/supabase/functions/_shared/paystack"
 

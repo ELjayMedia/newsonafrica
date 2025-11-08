@@ -7,7 +7,7 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
-import { createAdminClient as createSupabaseAdminClient } from "@/utils/supabase/server"
+import { createAdminClient as createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 

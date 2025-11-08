@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { createAdminClient } from "../../../../lib/supabase"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { startWebhookTunnel } from "../../../../lib/paystack-utils"
 import {
   buildInvoiceMetadataUpdate,
