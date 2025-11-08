@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -101,6 +101,39 @@ export function ArticleClientShell({
     router.push(`/subscribe?${searchParams.toString()}`)
   }
 
+  const applyArticleUpdate = useCallback(
+    (result: FetchArticleWithFallbackActionResult) => {
+      setArticleData(result.article)
+      setCurrentRelatedPosts(result.relatedPosts)
+      setCurrentSourceCountry(result.sourceCountry)
+      setRefreshError(null)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const fetchLatestArticle = async () => {
+      try {
+        const result = await fetchArticleWithFallback({ countryCode, slug })
+        if (!isCancelled) {
+          applyArticleUpdate(result)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Failed to fetch latest article", error)
+        }
+      }
+    }
+
+    void fetchLatestArticle()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [applyArticleUpdate, countryCode, slug, fetchArticleWithFallback])
+
   const refreshArticle = () => {
     if (isRefreshing) {
       return
@@ -110,9 +143,7 @@ export function ArticleClientShell({
       try {
         setRefreshError(null)
         const result = await fetchArticleWithFallback({ countryCode, slug })
-        setArticleData(result.article)
-        setCurrentRelatedPosts(result.relatedPosts)
-        setCurrentSourceCountry(result.sourceCountry)
+        applyArticleUpdate(result)
       } catch (error) {
         setRefreshError(error instanceof Error ? error.message : "Unexpected error")
       }
