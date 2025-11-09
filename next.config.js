@@ -1,7 +1,20 @@
+const withAnalyzer = require("@next/bundle-analyzer")
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  modularizeImports: {
+    "date-fns": {
+      transform: "date-fns/{{member}}",
+    },
+    "lodash-es": {
+      transform: "lodash-es/{{member}}",
+    },
+    "lucide-react": {
+      transform: "lucide-react/icons/{{member}}",
+    },
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },
@@ -104,9 +117,8 @@ const nextConfig = {
   experimental: {
     scrollRestoration: true,
     largePageDataBytes: 12800000,
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["lucide-react", "date-fns", "lodash-es"],
   },
   serverExternalPackages: ["sharp", "react-dom/server"],
 }
-
-module.exports = nextConfig
+module.exports = withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
