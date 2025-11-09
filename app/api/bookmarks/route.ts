@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 
 import { createSupabaseRouteClient } from "@/utils/supabase/route"
 
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { derivePagination } from "@/lib/bookmarks/pagination"
@@ -177,8 +177,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function invalidateBookmarksCache() {
-  revalidateByTag(CACHE_TAGS.BOOKMARKS)
+function invalidateBookmarksCache(userId: string) {
+  revalidateByTag(cacheTags.bmUser(userId))
 }
 
 export async function POST(request: NextRequest) {
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache()
+    invalidateBookmarksCache(user.id)
     return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -305,7 +305,7 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache()
+    invalidateBookmarksCache(user.id)
     return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -357,7 +357,7 @@ export async function DELETE(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache()
+    invalidateBookmarksCache(user.id)
     return respond(NextResponse.json({ success: true }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)

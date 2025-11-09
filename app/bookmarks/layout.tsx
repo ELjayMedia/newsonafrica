@@ -6,7 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import { env } from "@/config/env"
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import type { BookmarkListPayload } from "@/types/bookmarks"
 
 export const dynamic = "force-dynamic"
@@ -43,7 +43,7 @@ export default async function BookmarksLayout({ children }: { children: React.Re
           accept: "application/json",
           ...(serializedCookies ? { cookie: serializedCookies } : {}),
         },
-        next: { tags: [CACHE_TAGS.BOOKMARKS] },
+        next: { tags: [cacheTags.bmUser(session.user.id)] },
       })
 
       if (response.ok) {

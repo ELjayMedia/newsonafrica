@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import type { PostgrestError, Session } from "@supabase/supabase-js"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import { executeListQuery } from "@/lib/supabase/list-query"
@@ -556,15 +556,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new Error(`Failed to create comment: ${error.message}`)
     }
 
+    const commentTag = cacheTags.comments(requestCountry, postId)
+
     if (profileError || !profile) {
       // Still return the comment, just without profile data
 
-      revalidateByTag(CACHE_TAGS.COMMENTS)
+      revalidateByTag(commentTag)
       return applyCookies(successResponse(comment))
     }
 
     // Return the comment with profile data
-    revalidateByTag(CACHE_TAGS.COMMENTS)
+    revalidateByTag(commentTag)
     return applyCookies(
       successResponse({
         ...comment,
@@ -631,7 +633,11 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       return applyCookies(withCors(request, handleApiError(new Error("Comment not found"))))
     }
 
-    const commentRecord = comment as { user_id?: string | null }
+    const commentRecord = comment as {
+      user_id?: string | null
+      post_id?: string | number | null
+      country?: string | null
+    }
 
     let updateData = {}
 
@@ -674,7 +680,13 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       throw new Error(`Failed to ${action} comment: ${error.message}`)
     }
 
-    revalidateByTag(CACHE_TAGS.COMMENTS)
+    const targetEdition =
+      normalizeEditionCode(commentRecord.country) ?? AFRICAN_EDITION.code
+    const targetPostId = commentRecord.post_id != null ? String(commentRecord.post_id) : null
+
+    if (targetPostId) {
+      revalidateByTag(cacheTags.comments(targetEdition, targetPostId))
+    }
     return applyCookies(successResponse({ success: true, action }))
   } catch (error) {
     return applyCookies(withCors(request, handleApiError(error)))
