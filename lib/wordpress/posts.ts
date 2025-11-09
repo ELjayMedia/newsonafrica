@@ -43,6 +43,7 @@ const MAX_GRAPHQL_BATCH_SIZE = 100
 
 const LATEST_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const RELATED_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
+const RELATED_POSTS_TIMEOUT_MS = 5000
 const TAG_LISTING_REVALIDATE = CACHE_DURATIONS.SHORT
 const TAG_INDEX_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const POST_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
@@ -175,7 +176,11 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
           exclude: Number(postId),
           first: limit,
         },
-        { tags, revalidate: RELATED_POSTS_REVALIDATE },
+        {
+          tags,
+          revalidate: RELATED_POSTS_REVALIDATE,
+          timeout: RELATED_POSTS_TIMEOUT_MS,
+        },
       )
       if (gqlData?.posts) {
         const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
@@ -210,7 +215,11 @@ export const getRelatedPosts = async (
         exclude: Number(postId),
         first: limit,
       },
-      { tags: cacheTags, revalidate: RELATED_POSTS_REVALIDATE },
+      {
+        tags: cacheTags,
+        revalidate: RELATED_POSTS_REVALIDATE,
+        timeout: RELATED_POSTS_TIMEOUT_MS,
+      },
     )
 
     const nodes = gqlData?.posts?.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []

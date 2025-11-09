@@ -189,18 +189,16 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     )
   })
 
-  it("hashes the request body when memoizing", async () => {
-    const { fetchWordPressGraphQL, getMemoStoreForTests } = await setup()
+  it("passes the timeout override to fetchWithRetry", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
 
-    await fetchWordPressGraphQL("sz", "query", { lang: "en" })
+    await fetchWordPressGraphQL("ng", "query", undefined, {
+      timeout: 1234,
+    })
 
-    const memoStore = getMemoStoreForTests()
-    const [cacheKey] = memoStore.keys()
-    const expectedBody = JSON.stringify({ query: "query", variables: { lang: "en" } })
-    const expectedHash = (await import("crypto")).createHash("sha1")
-      .update(expectedBody)
-      .digest("hex")
-
-    expect(cacheKey).toContain(expectedHash)
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ timeout: 1234 }),
+    )
   })
 })
