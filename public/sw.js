@@ -4,6 +4,16 @@ const DB_NAME = "bookmark-sync-db"
 const DB_VERSION = 1
 const STORE_NAME = "queue"
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
+const BOOKMARK_ACTION_ENDPOINT = "/api/bookmarks"
+
+const ACTION_NAME_MAP = new Map([
+  ["addBookmark", "add"],
+  ["removeBookmark", "remove"],
+  ["bulkRemoveBookmarks", "bulk-remove"],
+  ["updateBookmark", "update"],
+  ["markRead", "mark-read"],
+  ["markUnread", "mark-unread"],
+])
 let replayInProgress = false
 
 function isOnline() {
@@ -68,56 +78,225 @@ function withStore(mode, callback) {
   )
 }
 
-function bufferToBase64(buffer) {
-  let binary = ""
-  const bytes = new Uint8Array(buffer)
-  const len = bytes.byteLength
-  for (let i = 0; i < len; i += 1) {
-    binary += String.fromCharCode(bytes[i])
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    console.warn("Failed to parse JSON payload for background sync", error)
+    return null
   }
-  return btoa(binary)
 }
 
-function base64ToUint8Array(base64) {
-  const binary = atob(base64)
-  const len = binary.length
-  const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i += 1) {
-    bytes[i] = binary.charCodeAt(i)
+function normalizeActionName(actionId) {
+  if (!actionId) return null
+  const trimmed = actionId.slice(2) // drop info byte prefix
+  const hashIndex = trimmed.lastIndexOf("#")
+  if (hashIndex === -1) return trimmed
+  return trimmed.slice(hashIndex + 1)
+}
+
+function ensureStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string" && item)
   }
-  return bytes
+  if (typeof value === "string" && value) {
+    return value.split(",").map((item) => item.trim()).filter(Boolean)
+  }
+  return []
+}
+
+function extractAuthToken(request) {
+  const authHeader = request.headers.get("authorization")
+  if (authHeader) {
+    return authHeader
+  }
+  const supabaseHeader = request.headers.get("x-supabase-auth")
+  if (supabaseHeader) {
+    return supabaseHeader
+  }
+  return null
+}
+
+function classifyUpdateAction(postId, updates) {
+  if (!postId || typeof updates !== "object" || updates === null) {
+    return { action: "update", postId, note: null, updates: {} }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, "read_status")) {
+    const status = updates.read_status
+    if (status === "read") {
+      return { action: "mark-read", postId, note: null, updates: null }
+    }
+    if (status === "unread") {
+      return { action: "mark-unread", postId, note: null, updates: null }
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
+    const noteValue = updates.notes
+    let note = null
+    if (typeof noteValue === "string") {
+      note = noteValue
+    } else if (noteValue === null) {
+      note = null
+    }
+    return { action: "update-note", postId, note, updates: null }
+  }
+
+  return { action: "update", postId, note: null, updates }
+}
+
+async function extractBookmarkMutation(request) {
+  const url = new URL(request.url)
+  const method = request.method.toUpperCase()
+  const authToken = extractAuthToken(request)
+
+  const baseEntry = {
+    queue: BOOKMARK_QUEUE_NAME,
+    timestamp: Date.now(),
+    authToken,
+    endpoint: BOOKMARK_ACTION_ENDPOINT,
+  }
+
+  if (url.pathname.startsWith(BOOKMARK_ACTION_ENDPOINT)) {
+    if (method === "DELETE") {
+      const singlePostId = url.searchParams.get("postId")
+      const postIdsParam = url.searchParams.get("postIds")
+      const postIds = ensureStringArray(postIdsParam)
+
+      if (singlePostId) {
+        return { ...baseEntry, action: "remove", postId: singlePostId }
+      }
+
+      if (postIds.length > 0) {
+        return { ...baseEntry, action: "bulk-remove", postIds }
+      }
+
+      throw new Error("Unable to determine bookmark IDs for DELETE request")
+    }
+
+    if (method === "POST" || method === "PUT" || method === "PATCH") {
+      let body = null
+      try {
+        body = await request.clone().json()
+      } catch (error) {
+        console.warn("Failed to parse bookmark mutation body", error)
+        body = null
+      }
+
+      if (!body || typeof body !== "object") {
+        throw new Error("Bookmark mutation body is empty or invalid")
+      }
+
+      const postId = typeof body.postId === "string" ? body.postId : null
+
+      if (method === "POST") {
+        if (!postId) {
+          throw new Error("Missing postId for bookmark add mutation")
+        }
+        const note = typeof body.notes === "string" ? body.notes : body.notes ?? null
+        return { ...baseEntry, action: "add", postId, note }
+      }
+
+      if (!postId) {
+        throw new Error("Missing postId for bookmark update mutation")
+      }
+
+      const { action, note, updates } = classifyUpdateAction(postId, body.updates)
+
+      if (action === "update") {
+        return { ...baseEntry, action, postId, updates }
+      }
+
+      return { ...baseEntry, action, postId, note: note ?? null }
+    }
+
+    throw new Error(`Unsupported HTTP method for bookmark queue: ${method}`)
+  }
+
+  const actionHeader = request.headers.get("next-action") || ""
+  if (!actionHeader) {
+    return null
+  }
+
+  const actionName = normalizeActionName(actionHeader)
+  const mapped = ACTION_NAME_MAP.get(actionName || "")
+  if (!mapped) {
+    return null
+  }
+
+  const rawBody = await request.clone().text()
+  if (!rawBody) {
+    throw new Error("Server action request body is empty")
+  }
+
+  const parsed = safeJsonParse(rawBody)
+  if (!Array.isArray(parsed)) {
+    throw new Error("Unexpected server action payload")
+  }
+
+  const firstArg = parsed[0]
+
+  switch (mapped) {
+    case "add": {
+      const postId = typeof firstArg?.postId === "string" ? firstArg.postId : null
+      if (!postId) {
+        throw new Error("Missing postId for add bookmark action")
+      }
+      const note = typeof firstArg?.notes === "string" ? firstArg.notes : firstArg?.notes ?? null
+      return { ...baseEntry, action: "add", postId, note }
+    }
+    case "remove": {
+      const postId = typeof firstArg === "string" ? firstArg : typeof firstArg?.postId === "string" ? firstArg.postId : null
+      if (!postId) {
+        throw new Error("Missing postId for remove bookmark action")
+      }
+      return { ...baseEntry, action: "remove", postId }
+    }
+    case "bulk-remove": {
+      const postIds = ensureStringArray(firstArg?.postIds)
+      if (postIds.length === 0) {
+        throw new Error("Missing postIds for bulk remove action")
+      }
+      return { ...baseEntry, action: "bulk-remove", postIds }
+    }
+    case "update": {
+      const postId = typeof firstArg?.postId === "string" ? firstArg.postId : null
+      if (!postId) {
+        throw new Error("Missing postId for update bookmark action")
+      }
+      const { action, note, updates } = classifyUpdateAction(postId, firstArg?.updates)
+      if (action === "update") {
+        return { ...baseEntry, action, postId, updates }
+      }
+      return { ...baseEntry, action, postId, note: note ?? null }
+    }
+    case "mark-read": {
+      const postId = typeof firstArg === "string" ? firstArg : typeof firstArg?.postId === "string" ? firstArg.postId : null
+      if (!postId) {
+        throw new Error("Missing postId for markRead action")
+      }
+      return { ...baseEntry, action: "mark-read", postId }
+    }
+    case "mark-unread": {
+      const postId = typeof firstArg === "string" ? firstArg : typeof firstArg?.postId === "string" ? firstArg.postId : null
+      if (!postId) {
+        throw new Error("Missing postId for markUnread action")
+      }
+      return { ...baseEntry, action: "mark-unread", postId }
+    }
+    default:
+      return null
+  }
 }
 
 async function serializeRequest(request) {
-  const headers = {}
-  for (const [key, value] of request.headers.entries()) {
-    headers[key] = value
+  const mutation = await extractBookmarkMutation(request)
+  if (!mutation) {
+    return null
   }
 
-  const serialized = {
-    queue: BOOKMARK_QUEUE_NAME,
-    url: request.url,
-    method: request.method,
-    headers,
-    timestamp: Date.now(),
-    mode: request.mode,
-    credentials: request.credentials,
-    cache: request.cache,
-    redirect: request.redirect,
-    referrer: request.referrer,
-    referrerPolicy: request.referrerPolicy,
-    hasBody: false,
-    body: null,
-  }
-
-  if (MUTATION_METHODS.has(request.method.toUpperCase())) {
-    const cloned = request.clone()
-    const arrayBuffer = await cloned.arrayBuffer()
-    serialized.hasBody = true
-    serialized.body = arrayBuffer.byteLength ? bufferToBase64(arrayBuffer) : ""
-  }
-
-  return serialized
+  return mutation
 }
 
 async function addToQueue(entry) {
@@ -145,8 +324,18 @@ async function notifyClients(type, extra = {}) {
 
 async function enqueueRequest(request) {
   const entry = await serializeRequest(request)
+  if (!entry) {
+    console.warn("Skipping background sync queue entry: unsupported request")
+    return
+  }
   await addToQueue(entry)
-  await notifyClients("BACKGROUND_SYNC_ENQUEUE")
+  try {
+    const pendingEntries = await readQueue()
+    await notifyClients("BACKGROUND_SYNC_ENQUEUE", { pending: pendingEntries.length })
+  } catch (error) {
+    console.warn("Failed to read queue size after enqueue", error)
+    await notifyClients("BACKGROUND_SYNC_ENQUEUE")
+  }
 
   if (self.registration.sync && typeof self.registration.sync.register === "function") {
     try {
@@ -198,6 +387,81 @@ function isNetworkError(error) {
   return Boolean(message && message.includes("Failed to fetch"))
 }
 
+function buildReplayRequest(entry) {
+  const action = entry.action
+  const url = new URL(entry.endpoint || BOOKMARK_ACTION_ENDPOINT, self.location.origin)
+  const headers = new Headers()
+  headers.set("x-sw-background-sync", "1")
+  const init = {
+    method: "POST",
+    headers,
+    credentials: "include",
+  }
+
+  if (entry.authToken) {
+    headers.set("authorization", entry.authToken)
+  }
+
+  switch (action) {
+    case "add": {
+      init.method = "POST"
+      const payload = { postId: entry.postId }
+      if (typeof entry.note === "string") {
+        payload.notes = entry.note
+      } else if (entry.note === null) {
+        payload.notes = null
+      }
+      init.body = JSON.stringify(payload)
+      headers.set("content-type", "application/json")
+      break
+    }
+    case "remove": {
+      init.method = "DELETE"
+      if (entry.postId) {
+        url.searchParams.set("postId", entry.postId)
+      }
+      break
+    }
+    case "bulk-remove": {
+      init.method = "DELETE"
+      if (Array.isArray(entry.postIds) && entry.postIds.length > 0) {
+        url.searchParams.set("postIds", entry.postIds.join(","))
+      }
+      break
+    }
+    case "mark-read": {
+      init.method = "PUT"
+      init.body = JSON.stringify({ postId: entry.postId, updates: { read_status: "read" } })
+      headers.set("content-type", "application/json")
+      break
+    }
+    case "mark-unread": {
+      init.method = "PUT"
+      init.body = JSON.stringify({ postId: entry.postId, updates: { read_status: "unread" } })
+      headers.set("content-type", "application/json")
+      break
+    }
+    case "update-note": {
+      init.method = "PUT"
+      const note = typeof entry.note === "string" ? entry.note : entry.note ?? null
+      init.body = JSON.stringify({ postId: entry.postId, updates: { notes: note } })
+      headers.set("content-type", "application/json")
+      break
+    }
+    case "update": {
+      init.method = "PUT"
+      const updates = entry.updates && typeof entry.updates === "object" ? entry.updates : {}
+      init.body = JSON.stringify({ postId: entry.postId, updates })
+      headers.set("content-type", "application/json")
+      break
+    }
+    default:
+      throw new Error(`Unsupported bookmark action: ${action}`)
+  }
+
+  return { url: url.toString(), init }
+}
+
 async function replayQueue() {
   if (replayInProgress) {
     return
@@ -215,39 +479,14 @@ async function replayQueue() {
     }
 
     let encounteredError = null
+    let remaining = entries.length
+
+    await notifyClients("BACKGROUND_SYNC_REPLAYING", { pending: remaining })
 
     for (const entry of entries) {
-      const headers = new Headers(entry.headers || {})
-      headers.set("x-sw-background-sync", "1")
-
-      const init = {
-        method: entry.method,
-        headers,
-        credentials: entry.credentials || "include",
-      }
-
-      if (entry.mode) {
-        init.mode = entry.mode
-      }
-      if (entry.cache) {
-        init.cache = entry.cache
-      }
-      if (entry.redirect) {
-        init.redirect = entry.redirect
-      }
-      if (entry.referrer && entry.referrer !== "about:client") {
-        init.referrer = entry.referrer
-      }
-      if (entry.referrerPolicy) {
-        init.referrerPolicy = entry.referrerPolicy
-      }
-
-      if (entry.hasBody) {
-        init.body = entry.body ? base64ToUint8Array(entry.body) : new Uint8Array()
-      }
-
       try {
-        const response = await fetch(entry.url, init)
+        const { url, init } = buildReplayRequest(entry)
+        const response = await fetch(url, init)
         if (!response.ok) {
           const errorMessage = `Sync request failed with status ${response.status}`
           encounteredError = new Error(errorMessage)
@@ -259,6 +498,8 @@ async function replayQueue() {
         if (encounteredError) {
           break
         }
+        remaining -= 1
+        await notifyClients("BACKGROUND_SYNC_QUEUE_PROGRESS", { remaining })
       } catch (error) {
         if (isNetworkError(error)) {
           encounteredError = error
@@ -269,6 +510,8 @@ async function replayQueue() {
           await removeFromQueue(entry.id)
         }
         encounteredError = error instanceof Error ? error : new Error(String(error))
+        remaining -= 1
+        await notifyClients("BACKGROUND_SYNC_QUEUE_PROGRESS", { remaining })
       }
     }
 
