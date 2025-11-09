@@ -120,8 +120,54 @@ export function ArticleClientShell({
     [],
   )
 
+  const hydrationStateRef = useRef({
+    hasHydrated: false,
+    lastSlug: slug,
+    lastCountryCode: countryCode,
+  })
+
+  const shouldRefetchOnHydration = useMemo(() => {
+    if (!initialData) {
+      return true
+    }
+
+    const initialSlug =
+      typeof initialData === "object" && initialData && "slug" in initialData
+        ? (initialData as { slug?: unknown }).slug
+        : undefined
+
+    if (typeof initialSlug === "string" && initialSlug !== slug) {
+      return true
+    }
+
+    if (sourceCountryCode && sourceCountryCode !== countryCode) {
+      return true
+    }
+
+    return false
+  }, [initialData, slug, sourceCountryCode, countryCode])
+
   useEffect(() => {
     let isCancelled = false
+
+    const hydrationState = hydrationStateRef.current
+    const hasHydrated = hydrationState.hasHydrated
+    const slugChanged = hydrationState.lastSlug !== slug
+    const countryChanged = hydrationState.lastCountryCode !== countryCode
+
+    const shouldFetch = hasHydrated
+      ? slugChanged || countryChanged
+      : shouldRefetchOnHydration
+
+    hydrationState.hasHydrated = true
+    hydrationState.lastSlug = slug
+    hydrationState.lastCountryCode = countryCode
+
+    if (!shouldFetch) {
+      return () => {
+        isCancelled = true
+      }
+    }
 
     const fetchLatestArticle = async () => {
       try {
@@ -141,7 +187,13 @@ export function ArticleClientShell({
     return () => {
       isCancelled = true
     }
-  }, [applyArticleUpdate, countryCode, slug, fetchArticleWithFallback])
+  }, [
+    applyArticleUpdate,
+    countryCode,
+    slug,
+    fetchArticleWithFallback,
+    shouldRefetchOnHydration,
+  ])
 
   const refreshArticle = () => {
     if (isRefreshing) {
