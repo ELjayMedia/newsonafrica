@@ -48,11 +48,11 @@ const mapCategoryPostsForConfigs = (
 
   return configs.reduce<Record<string, HomePost[]>>((acc, config) => {
     const resolvedSlug = resolveCategorySlug(config)
-    const posts =
-      categoryPostsBySlug[resolvedSlug.toLowerCase()] ?? categoryPostsBySlug[resolvedSlug]
+    const normalizedSlug = resolvedSlug.toLowerCase()
+    const posts = categoryPostsBySlug[normalizedSlug] ?? categoryPostsBySlug[resolvedSlug]
 
     if (posts?.length) {
-      acc[config.name] = posts
+      acc[normalizedSlug] = posts
     }
 
     return acc
@@ -157,15 +157,21 @@ export function HomeContentClient({
     },
   ]
 
-  const CategorySection = ({ name, layout, typeOverride }: CategoryConfig) => {
-    const posts = categoryPosts[name] || []
+  const CategorySection = (config: CategoryConfig) => {
+    const { name, layout, typeOverride } = config
+    const resolvedSlug = resolveCategorySlug(config)
+    const normalizedSlug = resolvedSlug.toLowerCase()
+    const posts = categoryPosts[normalizedSlug] || []
 
     if (posts.length === 0) return null
 
     return (
-      <section key={name} className="bg-white rounded-lg">
+      <section key={normalizedSlug} className="bg-white rounded-lg">
         <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-          <Link href={getCategoryUrl(name.toLowerCase())} className="hover:text-blue-600 transition-colors">
+          <Link
+            href={getCategoryUrl(normalizedSlug)}
+            className="hover:text-blue-600 transition-colors"
+          >
             {name}
           </Link>
         </h2>
@@ -250,9 +256,10 @@ export function HomeContentClient({
         )}
 
         <div className="grid grid-cols-1 gap-3 md:gap-4">
-          {categoryConfigs.map((config) => (
-            <CategorySection key={config.name} {...config} />
-          ))}
+          {categoryConfigs.map((config) => {
+            const normalizedSlug = resolveCategorySlug(config).toLowerCase()
+            return <CategorySection key={normalizedSlug} {...config} />
+          })}
         </div>
       </div>
     )
