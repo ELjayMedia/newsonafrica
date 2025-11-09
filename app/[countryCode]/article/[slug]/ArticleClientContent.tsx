@@ -1,6 +1,6 @@
 import type { WordPressPost } from "@/types/wp"
 
-import { fetchArticleWithFallbackAction } from "./actions"
+import { fetchArticleWithFallbackAction, fetchCommentsPageAction } from "./actions"
 import { ArticleClientShell } from "./ArticleClientShell"
 
 interface ArticleClientContentProps {
@@ -12,7 +12,7 @@ interface ArticleClientContentProps {
   fetchArticleWithFallback?: typeof fetchArticleWithFallbackAction
 }
 
-export function ArticleClientContent({
+export async function ArticleClientContent({
   slug,
   countryCode,
   sourceCountryCode,
@@ -20,6 +20,12 @@ export function ArticleClientContent({
   relatedPosts,
   fetchArticleWithFallback = fetchArticleWithFallbackAction,
 }: ArticleClientContentProps) {
+  const postId = initialData?.id != null ? String(initialData.id) : null
+  const initialCommentsResult =
+    postId !== null
+      ? await fetchCommentsPageAction({ postId, pageSize: 10 })
+      : { comments: [], hasMore: false, nextCursor: null, total: 0 }
+
   return (
     <ArticleClientShell
       slug={slug}
@@ -28,6 +34,14 @@ export function ArticleClientContent({
       initialData={initialData}
       relatedPosts={relatedPosts}
       fetchArticleWithFallback={fetchArticleWithFallback}
+      initialComments={initialCommentsResult.comments}
+      initialCommentCursor={initialCommentsResult.nextCursor ?? null}
+      initialCommentHasMore={initialCommentsResult.hasMore}
+      initialCommentTotal={
+        typeof initialCommentsResult.total === "number"
+          ? initialCommentsResult.total
+          : initialCommentsResult.comments.length
+      }
     />
   )
 }

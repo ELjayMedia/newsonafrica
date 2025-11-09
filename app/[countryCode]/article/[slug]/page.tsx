@@ -32,7 +32,6 @@ const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_
 
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
-  const routeCountry = normalizeCountryCode(countryCode)
   const routeCountryAlias = normalizeRouteCountry(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)

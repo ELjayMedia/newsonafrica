@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, useTransition } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo, useTransition } from "react"
+import { Virtuoso } from "react-virtuoso"
 import { supabase } from "@/lib/supabase"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
@@ -8,7 +9,6 @@ import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
 import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -16,16 +16,42 @@ import { fetchCommentsPageAction } from "@/app/[countryCode]/article/[slug]/acti
 
 interface CommentListProps {
   postId: string
+  initialComments?: Comment[]
+  initialCursor?: string | null
+  initialHasMore?: boolean
+  initialTotal?: number
 }
 
-export function CommentList({ postId }: CommentListProps) {
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(true)
+export function CommentList({
+  postId,
+  initialComments = [],
+  initialCursor = null,
+  initialHasMore = false,
+  initialTotal,
+}: CommentListProps) {
+  const commentCacheRef = useRef<Map<string, Comment>>(new Map())
+  const commentOrderRef = useRef<string[]>([])
+  const paginationRef = useRef({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
+  const [pagination, setPagination] = useState({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
+  const [commentsVersion, setCommentsVersion] = useState(() => {
+    if (initialComments.length > 0) {
+      const cache = commentCacheRef.current
+      const order: string[] = []
+      initialComments.forEach((comment) => {
+        cache.set(comment.id, comment)
+        order.push(comment.id)
+      })
+      commentOrderRef.current = order
+      return 1
+    }
+
+    return 0
+  })
+  const [loading, setLoading] = useState(initialComments.length === 0)
   const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [totalComments, setTotalComments] = useState(0)
+  const [totalComments, setTotalComments] = useState(
+    typeof initialTotal === "number" ? initialTotal : initialComments.length,
+  )
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const [showMigrationInfo, setShowMigrationInfo] = useState(false)
   const { preferences, setCommentSortPreference } = useUserPreferences()
@@ -34,13 +60,50 @@ export function CommentList({ postId }: CommentListProps) {
   const maxRetries = 3
   const [isPending, startTransition] = useTransition()
   const isFetching = loading || isPending
-  const isInitialLoad = isFetching && page === 0
-  const isLoadingMore = isFetching && page > 0
+  const hasHydratedInitial = useRef(initialComments.length > 0)
+  const isInitialLoad = isFetching && !hasHydratedInitial.current
+  const isLoadingMore = isFetching && pagination.page > 0
 
-  // For infinite scroll
-  const { ref, inView } = useIntersectionObserver<HTMLDivElement>({
-    threshold: 0.1,
-  })
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
+
+  const mergeComments = useCallback(
+    (incoming: Comment[], append: boolean) => {
+      const cache = commentCacheRef.current
+      if (!append) {
+        cache.clear()
+        commentOrderRef.current = []
+      }
+
+      incoming.forEach((comment) => {
+        const alreadyPresent = cache.has(comment.id)
+        cache.set(comment.id, comment)
+
+        if (!append) {
+          commentOrderRef.current.push(comment.id)
+        } else if (!alreadyPresent) {
+          commentOrderRef.current.push(comment.id)
+        }
+      })
+
+      if (!append) {
+        commentOrderRef.current = incoming.map((comment) => comment.id)
+      }
+
+      setCommentsVersion((version) => version + 1)
+    },
+    [],
+  )
+
+  const displayComments = useMemo(() => {
+    void commentsVersion
+    const ordered = commentOrderRef.current
+      .map((id) => commentCacheRef.current.get(id))
+      .filter((comment): comment is Comment => Boolean(comment))
+
+    return [...optimisticComments, ...ordered]
+  }, [commentsVersion, optimisticComments])
 
   // For rate limiting
   const lastCommentTime = useRef<number | null>(null)
@@ -50,20 +113,17 @@ export function CommentList({ postId }: CommentListProps) {
   const [failedComments, setFailedComments] = useState<string[]>([])
 
   const loadComments = useCallback(
-    async (pageNum = 0, append = false, cursorValue?: string | null) => {
+    async ({ append = false, cursorOverride }: { append?: boolean; cursorOverride?: string | null } = {}) => {
       try {
         setLoading(true)
 
-        // Add a small delay to prevent rapid retries
         if (retryCount > 0) {
           await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
         }
 
-        if (!append) {
-          setNextCursor(null)
-        } else {
-          setPage(pageNum)
-        }
+        const currentPagination = paginationRef.current
+        const nextPage = append ? currentPagination.page + 1 : 0
+        const cursorValue = cursorOverride ?? (append ? currentPagination.cursor : null)
 
         const {
           comments: fetchedComments,
@@ -72,45 +132,40 @@ export function CommentList({ postId }: CommentListProps) {
           total,
         } = await fetchCommentsPageAction({
           postId,
-          page: pageNum,
+          page: nextPage,
           pageSize: 10,
           sortOption,
           cursor: cursorValue ?? null,
         })
 
         startTransition(() => {
-          if (append) {
-            setComments((prevComments) => {
-              const existingIds = new Set(prevComments.map((comment) => comment.id))
-              const deduped = fetchedComments.filter((comment) => !existingIds.has(comment.id))
-              return [...prevComments, ...deduped]
-            })
-          } else {
-            setComments(fetchedComments)
-          }
+          mergeComments(fetchedComments, append)
 
-          setHasMore(moreAvailable)
-          setNextCursor(fetchedNextCursor ?? null)
+          setPagination({
+            page: nextPage,
+            cursor: fetchedNextCursor ?? null,
+            hasMore: moreAvailable,
+          })
+
           if (typeof total === "number") {
             setTotalComments(total)
-          } else if (!append && pageNum === 0 && fetchedComments.length === 0) {
+          } else if (!append && fetchedComments.length === 0) {
             setTotalComments(0)
           }
+
           setError(null)
-          setRetryCount(0) // Reset retry count on success
-          setPage(pageNum)
+          setRetryCount(0)
+          hasHydratedInitial.current = true
         })
       } catch (err: any) {
         console.error("Error loading comments:", err)
 
-        // Check if we should retry
         if (retryCount < maxRetries) {
           setRetryCount((prev) => prev + 1)
           console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
-          return loadComments(pageNum, append)
+          return loadComments({ append, cursorOverride })
         }
 
-        // Check if this is a schema-related error
         if (
           err.message &&
           (err.message.includes("status") ||
@@ -127,23 +182,27 @@ export function CommentList({ postId }: CommentListProps) {
         setLoading(false)
       }
     },
-    [postId, sortOption, retryCount, maxRetries, startTransition],
+    [maxRetries, mergeComments, postId, retryCount, sortOption, startTransition],
   )
 
-  // Load initial comments
-  useEffect(() => {
-    setPage(0)
-    setRetryCount(0) // Reset retry count when sort option changes
-    loadComments()
-  }, [loadComments, sortOption])
+  const loadCommentsRef = useRef(loadComments)
 
-  // Handle infinite scroll
   useEffect(() => {
-    if (inView && hasMore && !isFetching && nextCursor) {
-      const nextPage = page + 1
-      loadComments(nextPage, true, nextCursor)
+    loadCommentsRef.current = loadComments
+  }, [loadComments])
+
+  const skipInitialFetchRef = useRef(initialComments.length > 0)
+
+  useEffect(() => {
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false
+      return
     }
-  }, [hasMore, inView, isFetching, loadComments, nextCursor, page])
+
+    setRetryCount(0)
+    hasHydratedInitial.current = false
+    void loadCommentsRef.current({ append: false })
+  }, [postId, sortOption])
 
   // Subscribe to realtime updates for this post's comments
   useEffect(() => {
@@ -153,7 +212,7 @@ export function CommentList({ postId }: CommentListProps) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` },
         () => {
-          loadComments()
+          void loadCommentsRef.current({ append: false })
         },
       )
       .subscribe()
@@ -161,7 +220,7 @@ export function CommentList({ postId }: CommentListProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [postId, loadComments])
+  }, [postId])
 
   // Handle optimistic updates
   const handleCommentAdded = useCallback(
@@ -172,7 +231,7 @@ export function CommentList({ postId }: CommentListProps) {
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
         setRetryCount(0) // Reset retry count
-        loadComments()
+        void loadComments({ append: false })
         setOptimisticComments([])
       }
     },
@@ -234,11 +293,18 @@ export function CommentList({ postId }: CommentListProps) {
   const handleRetry = () => {
     setRetryCount(0)
     setError(null)
-    loadComments()
+    void loadComments({ append: false })
   }
 
-  // Combine real and optimistic comments for display
-  const displayComments = [...optimisticComments, ...comments]
+  const failedCommentSet = useMemo(() => new Set(failedComments), [failedComments])
+
+  const loadMoreComments = useCallback(() => {
+    if (!paginationRef.current.hasMore || isFetching) {
+      return
+    }
+
+    void loadComments({ append: true })
+  }, [isFetching, loadComments])
 
   return (
     <div id="comments" className="mt-4 space-y-4">
@@ -312,44 +378,40 @@ export function CommentList({ postId }: CommentListProps) {
           <p>No comments yet. Be the first to comment!</p>
         </div>
       ) : (
-        <>
-          <div className="space-y-4 mt-4">
-            {displayComments.map((comment) => (
+        <div className="mt-4">
+          <Virtuoso
+            data={displayComments}
+            computeItemKey={(_, comment) => comment.id}
+            itemContent={(_, comment) => (
               <CommentItem
-                key={comment.id}
                 comment={comment}
                 postId={postId}
-                onCommentUpdated={() => loadComments()}
+                onCommentUpdated={() => void loadComments({ append: false })}
                 onReplyAdded={handleCommentAdded}
                 onReplyFailed={handleCommentFailed}
                 isRateLimited={isRateLimited}
                 rateLimitTimeRemaining={getRateLimitTimeRemaining}
-                isFailed={failedComments.includes(comment.id)}
+                isFailed={failedCommentSet.has(comment.id)}
               />
-            ))}
-          </div>
-
-          {/* Infinite scroll trigger */}
-          {hasMore && (
-            <div ref={ref} className="flex justify-center py-4" aria-live="polite">
-              {isLoadingMore ? (
-                <p className="text-gray-500">Loading more comments...</p>
-              ) : (
-                <Button
-                  variant="outline"
-                  disabled={isLoadingMore}
-                  onClick={() => {
-                    const nextPage = page + 1
-                    setPage(nextPage)
-                    loadComments(nextPage, true)
-                  }}
-                >
-                  Load More Comments
-                </Button>
-              )}
-            </div>
-          )}
-        </>
+            )}
+            endReached={loadMoreComments}
+            useWindowScroll
+            components={{
+              Footer: () =>
+                paginationRef.current.hasMore ? (
+                  <div className="flex justify-center py-4" aria-live="polite">
+                    {isLoadingMore ? (
+                      <p className="text-gray-500">Loading more comments...</p>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={loadMoreComments} disabled={isFetching}>
+                        Load More Comments
+                      </Button>
+                    )}
+                  </div>
+                ) : null,
+            }}
+          />
+        </div>
       )}
     </div>
   )

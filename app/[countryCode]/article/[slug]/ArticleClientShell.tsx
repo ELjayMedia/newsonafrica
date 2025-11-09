@@ -14,6 +14,7 @@ import { ArrowUp, Calendar, ChevronLeft, ChevronRight, Gift, User } from "lucide
 import { formatDistanceToNow } from "date-fns"
 
 import type { WordPressPost } from "@/types/wp"
+import type { Comment } from "@/lib/supabase-schema"
 import type {
   FetchArticleWithFallbackActionInput,
   FetchArticleWithFallbackActionResult,
@@ -31,6 +32,10 @@ interface ArticleClientShellProps {
   fetchArticleWithFallback: (
     input: FetchArticleWithFallbackActionInput,
   ) => Promise<FetchArticleWithFallbackActionResult>
+  initialComments?: Comment[]
+  initialCommentCursor?: string | null
+  initialCommentHasMore?: boolean
+  initialCommentTotal?: number
 }
 
 const resolveRenderedText = (value: unknown): string => {
@@ -57,6 +62,10 @@ export function ArticleClientShell({
   initialData,
   relatedPosts,
   fetchArticleWithFallback,
+  initialComments,
+  initialCommentCursor,
+  initialCommentHasMore,
+  initialCommentTotal,
 }: ArticleClientShellProps) {
   const [articleData, setArticleData] = useState<WordPressPost | null>(initialData ?? null)
   const [currentRelatedPosts, setCurrentRelatedPosts] = useState<WordPressPost[]>(relatedPosts)
@@ -318,7 +327,13 @@ export function ArticleClientShell({
 
         {postId && (
           <section id="comments" className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
-            <CommentList postId={postId} />
+            <CommentList
+              postId={postId}
+              initialComments={initialComments}
+              initialCursor={initialCommentCursor}
+              initialHasMore={initialCommentHasMore}
+              initialTotal={initialCommentTotal}
+            />
           </section>
         )}
 
