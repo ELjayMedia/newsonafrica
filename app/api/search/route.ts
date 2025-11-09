@@ -1,30 +1,15 @@
 import type { NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { stripHtml } from "@/lib/search"
-import {
-  resolveSearchIndex,
-  type AlgoliaSearchRecord,
-  type AlgoliaSortMode,
-} from "@/lib/algolia/client"
-import { searchWordPressPosts as wpSearchPosts } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
-import {
-  DEFAULT_COUNTRY,
-  normalizeBaseSearchParams,
-  normalizeIntegerParam,
-  type SearchScope,
-} from "./shared"
-import {
-  executeWordPressSearchForScope,
-  fromWordPressResults,
-  uniqueSuggestions,
-} from "./wordpress"
+import { normalizeBaseSearchParams, type NormalizedBaseSearchParams } from "./shared"
+import { executeWordPressSearchForScope } from "./wordpress-fallback"
 
-export { MAX_PAGES_PER_COUNTRY } from "./wordpress"
+export { MAX_PAGES_PER_COUNTRY } from "./wordpress-fallback"
 
 export const runtime = "nodejs"
+export const revalidate = 30
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -54,12 +39,9 @@ const FALLBACK_RECORDS: SearchRecord[] = [
   },
 ]
 
-type NormalizedSearchParams = {
-  query: string
+type NormalizedSearchParams = NormalizedBaseSearchParams & {
   page: number
   perPage: number
-  scope: SearchScope
-  sort: AlgoliaSortMode
 }
 
 const getRateLimitKey = (request: NextRequest): string => {
@@ -95,16 +77,33 @@ const checkRateLimit = (request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-const normalizeSearchParams = (searchParams: URLSearchParams): NormalizedSearchParams => {
-  const base = normalizeBaseSearchParams(searchParams)
-  const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
-  const perPage = normalizeIntegerParam(searchParams.get("per_page"), {
-    fallback: 20,
-    min: 1,
-    max: 100,
-  })
+const normalizeIntegerParam = (
+  value: string | null,
+  { fallback, min, max }: { fallback: number; min: number; max?: number },
+): number => {
+  const parsed = Number.parseInt(value ?? "", 10)
 
-  return { ...base, page, perPage }
+  if (Number.isNaN(parsed)) {
+    return fallback
+  }
+
+  const clamped = Math.max(min, parsed)
+  return typeof max === "number" ? Math.min(clamped, max) : clamped
+}
+
+const normalizeSearchParams = (searchParams: URLSearchParams): NormalizedSearchParams => {
+  const baseParams = normalizeBaseSearchParams(searchParams)
+  const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
+  const perPage = normalizeIntegerParam(searchParams.get("per_page"), { fallback: 20, min: 1, max: 100 })
+  return { ...baseParams, page, perPage }
+}
+
+const FULL_SEARCH_CACHE_HEADER = "private, no-store, no-cache, must-revalidate"
+
+const respondWithSearch = (request: NextRequest, body: unknown, init?: ResponseInit) => {
+  const response = jsonWithCors(request, body, init)
+  response.headers.set("Cache-Control", FULL_SEARCH_CACHE_HEADER)
+  return response
 }
 
 const buildFallbackResponse = (
@@ -152,32 +151,29 @@ const buildFallbackResponse = (
   }
 }
 
-const mapAlgoliaHits = (hits: AlgoliaSearchRecord[], fallbackCountry: string): SearchRecord[] =>
-  hits.map((hit, index) => {
-    const title = stripHtml(hit.title || "").trim() || hit.title || "Untitled"
-    const excerpt = stripHtml(hit.excerpt || "").trim()
-    const categories = Array.isArray(hit.categories)
-      ? hit.categories.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
-      : []
-    const country = (hit.country || fallbackCountry || DEFAULT_COUNTRY).toLowerCase()
-    const publishedAt = hit.published_at ? new Date(hit.published_at).toISOString() : undefined
-
-    return {
-      objectID: String(hit.objectID ?? `${country}:algolia-${index}`),
-      title,
-      excerpt,
-      categories,
-      country,
-      published_at: publishedAt,
-    }
+const buildWordPressResponse = (
+  request: NextRequest,
+  params: NormalizedSearchParams,
+  startTime: number,
+  result: Awaited<ReturnType<typeof executeWordPressSearchForScope>>,
+) =>
+  respondWithSearch(request, {
+    results: result.results,
+    total: result.total,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    hasMore: result.hasMore,
+    query: params.query,
+    suggestions: result.suggestions,
+    performance: {
+      responseTime: Date.now() - startTime,
+      source: "wordpress",
+      wordpressRequestCount: result.performance.totalRequests,
+      wordpressRequestBudget: result.performance.requestBudget,
+      wordpressBudgetExhausted: result.performance.budgetExhausted,
+      wordpressSearchElapsed: result.performance.elapsedMs,
+    },
   })
-
-const buildWordPressOptions = (params: NormalizedSearchParams) => ({
-  page: params.page,
-  perPage: params.perPage,
-  orderBy: params.sort === "latest" ? "date" : "relevance",
-  order: "desc" as const,
-})
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -185,7 +181,7 @@ export async function GET(request: NextRequest) {
 
   const rateLimitCheck = checkRateLimit(request)
   if (rateLimitCheck.limited) {
-    return jsonWithNoStore(
+    return respondWithSearch(
       request,
       {
         error: "Too many search requests",
@@ -204,115 +200,21 @@ export async function GET(request: NextRequest) {
   const normalizedParams = normalizeSearchParams(searchParams)
 
   if (!normalizedParams.query) {
-    return jsonWithNoStore(request, { error: "Missing search query" }, { status: 400 })
-  }
-
-  const scope = normalizedParams.scope
-  const fallbackCountry = scope.type === "country" ? scope.country : DEFAULT_COUNTRY
-  const searchIndex = resolveSearchIndex(scope, normalizedParams.sort)
-
-  if (!searchIndex) {
-    if (scope.type === "panAfrican") {
-      try {
-        const fallback = await executeWordPressSearchForScope(
-          normalizedParams.query,
-          scope,
-          normalizedParams.page,
-          normalizedParams.perPage,
-        )
-
-        return jsonWithNoStore(request, {
-          results: fallback.results,
-          total: fallback.total,
-          totalPages: fallback.totalPages,
-          currentPage: fallback.currentPage,
-          hasMore: fallback.hasMore,
-          query: normalizedParams.query,
-          suggestions: fallback.suggestions,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "wordpress",
-            wordpressRequestCount: fallback.performance.totalRequests,
-            wordpressRequestBudget: fallback.performance.requestBudget,
-            wordpressBudgetExhausted: fallback.performance.budgetExhausted,
-            wordpressSearchElapsed: fallback.performance.elapsedMs,
-          },
-        })
-      } catch (error) {
-        console.error("WordPress pan-African fallback failed", error)
-        return jsonWithNoStore(request, buildFallbackResponse(normalizedParams, startTime))
-      }
-    }
-
-    try {
-      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
-      const records = fromWordPressResults(wpResults, fallbackCountry)
-      return jsonWithNoStore(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: Math.max(1, wpResults.totalPages || 1),
-        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
-        hasMore: wpResults.hasMore,
-        query: normalizedParams.query,
-        suggestions: uniqueSuggestions(records),
-        performance: {
-          responseTime: wpResults.searchTime || Date.now() - startTime,
-          source: "wordpress",
-        },
-      })
-    } catch (error) {
-      console.error("WordPress search fallback failed", error)
-      return jsonWithNoStore(request, buildFallbackResponse(normalizedParams, startTime))
-    }
+    return respondWithSearch(request, { error: "Missing search query" }, { status: 400 })
   }
 
   try {
-    const response = await searchIndex.search<AlgoliaSearchRecord>(normalizedParams.query, {
-      page: normalizedParams.page - 1,
-      hitsPerPage: normalizedParams.perPage,
-      attributesToRetrieve: ["objectID", "title", "excerpt", "categories", "country", "published_at"],
-    })
+    const result = await executeWordPressSearchForScope(
+      normalizedParams.query,
+      normalizedParams.scope,
+      normalizedParams.page,
+      normalizedParams.perPage,
+    )
 
-    const mappedHits = mapAlgoliaHits(response.hits as AlgoliaSearchRecord[], fallbackCountry)
-    const total = typeof response.nbHits === "number" ? response.nbHits : mappedHits.length
-    const totalPages = Math.max(1, response.nbPages || Math.ceil(total / normalizedParams.perPage))
-
-    return jsonWithNoStore(request, {
-      results: mappedHits,
-      total,
-      totalPages,
-      currentPage: normalizedParams.page,
-      hasMore: normalizedParams.page < totalPages,
-      query: normalizedParams.query,
-      suggestions: uniqueSuggestions(mappedHits),
-      performance: {
-        responseTime: Date.now() - startTime,
-        source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${normalizedParams.sort}`,
-      },
-    })
+    return buildWordPressResponse(request, normalizedParams, startTime, result)
   } catch (error) {
-    console.error("Algolia search failed", error)
-
-    try {
-      const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
-      const records = fromWordPressResults(wpResults, fallbackCountry)
-
-      return jsonWithNoStore(request, {
-        results: records,
-        total: wpResults.total,
-        totalPages: Math.max(1, wpResults.totalPages || 1),
-        currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
-        hasMore: wpResults.hasMore,
-        query: normalizedParams.query,
-        suggestions: uniqueSuggestions(records),
-        performance: {
-          responseTime: wpResults.searchTime || Date.now() - startTime,
-          source: "wordpress-fallback",
-        },
-      })
-    } catch (wpError) {
-      console.error("WordPress fallback failed", wpError)
-      return jsonWithNoStore(request, buildFallbackResponse(normalizedParams, startTime))
-    }
+    console.error("WordPress search failed", error)
   }
+
+  return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
 }

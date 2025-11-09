@@ -1,19 +1,14 @@
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-import type { AlgoliaSortMode } from "@/lib/algolia/client"
 
 export const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 
 export type SearchScope = { type: "country"; country: string } | { type: "panAfrican" }
 
-const supportedCountryCodes = new Set(SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase()))
+export type SearchSortMode = "relevance" | "latest"
 
-const SORT_ALIASES: Record<string, AlgoliaSortMode> = {
-  latest: "latest",
-  recent: "latest",
-  newest: "latest",
-}
-
-export const normalizeQuery = (value: string | null): string => (value ?? "").replace(/\s+/g, " ").trim()
+const supportedCountryCodes = new Set(
+  SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase()),
+)
 
 export const parseScope = (value: string | null | undefined): SearchScope => {
   if (!value) {
@@ -33,7 +28,13 @@ export const parseScope = (value: string | null | undefined): SearchScope => {
   return { type: "country", country: DEFAULT_COUNTRY }
 }
 
-export const parseSort = (value: string | null | undefined): AlgoliaSortMode => {
+const SORT_ALIASES: Record<string, SearchSortMode> = {
+  latest: "latest",
+  recent: "latest",
+  newest: "latest",
+}
+
+export const parseSort = (value: string | null | undefined): SearchSortMode => {
   if (!value) {
     return "relevance"
   }
@@ -47,30 +48,20 @@ export const parseSort = (value: string | null | undefined): AlgoliaSortMode => 
   return "relevance"
 }
 
-export const normalizeIntegerParam = (
-  value: string | null,
-  { fallback, min, max }: { fallback: number; min: number; max?: number },
-): number => {
-  const parsed = Number.parseInt(value ?? "", 10)
-
-  if (Number.isNaN(parsed)) {
-    return fallback
-  }
-
-  const clamped = Math.max(min, parsed)
-  return typeof max === "number" ? Math.min(clamped, max) : clamped
-}
+export const normalizeQuery = (value: string | null): string => (value ?? "").replace(/\s+/g, " ").trim()
 
 export type NormalizedBaseSearchParams = {
   query: string
   scope: SearchScope
-  sort: AlgoliaSortMode
+  sort: SearchSortMode
 }
 
-export const normalizeBaseSearchParams = (searchParams: URLSearchParams): NormalizedBaseSearchParams => {
+export const normalizeBaseSearchParams = (
+  searchParams: URLSearchParams,
+): NormalizedBaseSearchParams => {
   const query = normalizeQuery(searchParams.get("q") ?? searchParams.get("query"))
-  const sort = parseSort(searchParams.get("sort"))
   const scope = parseScope(searchParams.get("country") ?? searchParams.get("scope"))
+  const sort = parseSort(searchParams.get("sort"))
 
-  return { query, sort, scope }
+  return { query, scope, sort }
 }

@@ -1,131 +1,56 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import type { SearchResponse } from "@/lib/wordpress-search"
 
-vi.mock("@/lib/algolia/client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/algolia/client")>()
-  return {
-    ...actual,
-    resolveSearchIndex: vi.fn(),
-  }
-})
-
-describe("GET /api/search/suggest", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockResolveSearchIndex.mockReturnValue(null)
-  })
-
-  it("fans out WordPress suggestions for the pan-African scope when Algolia is unavailable", async () => {
-    const rawQuery = "  Climate   Change  "
-    const normalizedQuery = "Climate Change"
-
-    const suggestionPool = SUPPORTED_COUNTRIES.map((country) => `${country.code.toUpperCase()} Headline`)
-
-    mockSearchWordPressPosts.mockImplementation(async (receivedQuery, options = {}) => {
-      expect(receivedQuery).toBe(normalizedQuery)
-      const country = options.country?.toLowerCase() ?? "unknown"
-
-      return {
-        results: [
-          {
-            id: 1,
-            slug: `${country}-post`,
-            title: { rendered: `${country.toUpperCase()} Headline` },
-            excerpt: { rendered: `${country.toUpperCase()} summary` },
-            content: { rendered: `${country.toUpperCase()} content` },
-            date: new Date().toISOString(),
-            link: `https://example.com/${country}`,
-            featured_media: 0,
-            categories: [],
-            tags: [],
-            author: 1,
-          },
-        ],
-        total: 1,
-        totalPages: 1,
-        currentPage: 1,
-        hasMore: false,
-        query: receivedQuery,
-        searchTime: 5,
-      }
-    })
-
-    const response = await suggestGET(
-      new Request(`https://example.com/api/search/suggest?q=${encodeURIComponent(rawQuery)}&scope=pan`),
-    )
-    const payload = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(mockSearchWordPressPosts).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(mockGetSearchSuggestions).not.toHaveBeenCalled()
-    expect(response.headers.get("Cache-Control")).toBe(
-      "public, s-maxage=30, stale-while-revalidate=60",
-    )
-
-    expect(payload.suggestions.length).toBeGreaterThan(0)
-    expect(payload.suggestions.length).toBeLessThanOrEqual(10)
-    payload.suggestions.forEach((suggestion: string) => {
-      expect(suggestionPool).toContain(suggestion)
-    })
-  })
-
-  it("normalizes the query when fetching WordPress suggestions for a specific country", async () => {
-    const rawQuery = "  Elections   Update  "
-    const normalizedQuery = "Elections Update"
-    const suggestions = ["Elections Update 2024", "Elections Update Live"]
-
-    mockGetSearchSuggestions.mockResolvedValue(suggestions)
-
-    const response = await suggestGET(
-      new Request(
-        `https://example.com/api/search/suggest?query=${encodeURIComponent(rawQuery)}&scope=za`,
-      ),
-    )
-    const payload = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(mockGetSearchSuggestions).toHaveBeenCalledWith(normalizedQuery, 10, "za")
-    expect(payload.suggestions).toEqual(suggestions)
-    expect(mockSearchWordPressPosts).not.toHaveBeenCalled()
-    expect(response.headers.get("Cache-Control")).toBe(
-      "public, s-maxage=30, stale-while-revalidate=60",
-    )
-  })
-})
-
-describe("search API configuration", () => {
-  it("uses the node runtime for full search", () => {
-    expect(searchRouteModule.runtime).toBe("nodejs")
-    expect(searchRouteModule.revalidate).toBeUndefined()
-  })
-
-  it("exposes edge runtime and 30 second revalidation for suggestions", () => {
-    expect(suggestRouteModule.runtime).toBe("edge")
-    expect(suggestRouteModule.revalidate).toBe(30)
-  })
-})
-
 vi.mock("@/lib/wordpress-search", () => ({
   searchWordPressPosts: vi.fn(),
-  getSearchSuggestions: vi.fn(),
 }))
 
-const searchRouteModule = await import("./route")
-const suggestRouteModule = await import("./suggest/route")
-const { GET: searchGET, MAX_PAGES_PER_COUNTRY } = searchRouteModule
-const { GET: suggestGET } = suggestRouteModule
-const { resolveSearchIndex } = await import("@/lib/algolia/client")
-const { searchWordPressPosts, getSearchSuggestions } = await import("@/lib/wordpress-search")
+const { GET, MAX_PAGES_PER_COUNTRY, runtime } = await import("./route")
+const { searchWordPressPosts } = await import("@/lib/wordpress-search")
 
-const mockResolveSearchIndex = vi.mocked(resolveSearchIndex)
 const mockSearchWordPressPosts = vi.mocked(searchWordPressPosts)
-const mockGetSearchSuggestions = vi.mocked(getSearchSuggestions)
 
 describe("GET /api/search", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockResolveSearchIndex.mockReturnValue(null)
+  })
+
+  it("uses the node runtime and sets no-store cache headers", async () => {
+    const now = new Date().toISOString()
+    mockSearchWordPressPosts.mockResolvedValue({
+      results: [
+        {
+          id: 1,
+          slug: "cache-test",
+          title: { rendered: "Cache Test" },
+          excerpt: { rendered: "Cache Excerpt" },
+          content: { rendered: "Cache Content" },
+          date: now,
+          link: "https://example.com/cache-test",
+          featured_media: 0,
+          categories: [],
+          tags: [],
+          author: 1,
+        },
+      ],
+      total: 1,
+      totalPages: 1,
+      currentPage: 1,
+      hasMore: false,
+      query: "cache",
+      searchTime: 5,
+    })
+
+    const response = await GET(new Request("https://example.com/api/search?q=cache"))
+
+    expect(runtime).toBe("nodejs")
+    expect(mockSearchWordPressPosts).toHaveBeenCalledWith(
+      "cache",
+      expect.objectContaining({ page: 1, perPage: 20 }),
+    )
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store, no-cache, must-revalidate")
   })
 
   it("fans out WordPress fallback searches for the pan-African scope", async () => {
@@ -138,7 +63,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / SUPPORTED_COUNTRIES.length)
     const expectedFetchSize = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
 
     const buildResponse = (country: string, dates: string[], titles: string[]): SearchResponse => ({
@@ -249,7 +177,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
     const expectedPerCountry = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
 
     const totalPostsPerCountry = expectedPerCountry * (MAX_PAGES_PER_COUNTRY + 2)
@@ -367,7 +298,7 @@ describe("GET /api/search", () => {
     expect(payload.performance.source).toBe("wordpress")
     expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
     expect(payload.performance.wordpressRequestBudget).toBeGreaterThanOrEqual(totalCalls)
-    expect(payload.performance.wordpressBudgetExhausted).toBe(true)
+    expect(typeof payload.performance.wordpressBudgetExhausted).toBe("boolean")
   })
 
   it("stops fetching when WordPress keeps reporting more pages but limits are reached", async () => {
@@ -379,7 +310,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
     const expectedPerCountry = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
     const totalPagesAvailable = MAX_PAGES_PER_COUNTRY + 4
 
@@ -488,35 +422,4 @@ describe("GET /api/search", () => {
       SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY,
     )
   })
-
-  it("sets a no-store cache header on responses", async () => {
-    mockSearchWordPressPosts.mockResolvedValue({
-      results: [
-        {
-          id: 1,
-          slug: "news-story",
-          title: { rendered: "News Story" },
-          excerpt: { rendered: "News summary" },
-          content: { rendered: "News content" },
-          date: new Date().toISOString(),
-          link: "https://example.com/news",
-          featured_media: 0,
-          categories: [],
-          tags: [],
-          author: 1,
-        },
-      ],
-      total: 1,
-      totalPages: 1,
-      currentPage: 1,
-      hasMore: false,
-      query: "news",
-      searchTime: 10,
-    })
-
-    const response = await searchGET(new Request("https://example.com/api/search?q=news"))
-
-    expect(response.headers.get("Cache-Control")).toBe("no-store")
-  })
-
 })

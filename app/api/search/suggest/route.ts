@@ -1,19 +1,62 @@
 import type { NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { resolveSearchIndex, type AlgoliaSearchRecord } from "@/lib/algolia/client"
 import { getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
 
 import { normalizeBaseSearchParams } from "../shared"
-import { executeWordPressSearchForScope } from "../wordpress"
+import { executeWordPressSearchForScope } from "../wordpress-fallback"
 
 export const runtime = "edge"
 export const revalidate = 30
 
-const jsonWithRevalidateCache = (request: NextRequest, data: any, init?: ResponseInit) => {
-  const response = jsonWithCors(request, data, init)
-  response.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60")
+const SUGGESTION_LIMIT = 10
+const SUGGEST_CACHE_HEADER = "public, s-maxage=30, stale-while-revalidate=60"
+
+type SuggestionResponse = {
+  suggestions: string[]
+  performance?: {
+    responseTime: number
+    source: string
+  }
+}
+
+const respondWithSuggestions = (request: NextRequest, body: SuggestionResponse, init?: ResponseInit) => {
+  const response = jsonWithCors(request, body, init)
+  response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
   return response
+}
+
+type SuggestionFetchResult = {
+  suggestions: string[]
+  source: string
+  elapsedMs?: number
+}
+
+const fetchWordPressSuggestions = async (
+  params: ReturnType<typeof normalizeBaseSearchParams>,
+): Promise<SuggestionFetchResult> => {
+  if (params.scope.type === "panAfrican") {
+    const fallback = await executeWordPressSearchForScope(params.query, params.scope, 1, SUGGESTION_LIMIT)
+
+    return {
+      suggestions: fallback.suggestions.slice(0, SUGGESTION_LIMIT),
+      source: "wordpress",
+      elapsedMs: fallback.performance.elapsedMs,
+    }
+  }
+
+  const start = Date.now()
+  const suggestions = await wpGetSearchSuggestions(
+    params.query,
+    SUGGESTION_LIMIT,
+    params.scope.type === "country" ? params.scope.country : undefined,
+  )
+
+  return {
+    suggestions,
+    source: "wordpress",
+    elapsedMs: Date.now() - start,
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -23,83 +66,22 @@ export async function GET(request: NextRequest) {
   const normalizedParams = normalizeBaseSearchParams(searchParams)
 
   if (!normalizedParams.query) {
-    return jsonWithRevalidateCache(request, { error: "Missing search query" }, { status: 400 })
-  }
-
-  const scope = normalizedParams.scope
-  const searchIndex = resolveSearchIndex(scope, normalizedParams.sort)
-
-  if (!searchIndex) {
-    if (scope.type === "panAfrican") {
-      try {
-        const fallback = await executeWordPressSearchForScope(normalizedParams.query, scope, 1, 10)
-        return jsonWithRevalidateCache(request, {
-          suggestions: fallback.suggestions,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "wordpress-fallback",
-          },
-        })
-      } catch (error) {
-        console.error("WordPress suggestion fallback failed", error)
-        return jsonWithRevalidateCache(request, { suggestions: [] })
-      }
-    }
-
-    try {
-      const suggestions = await wpGetSearchSuggestions(
-        normalizedParams.query,
-        10,
-        scope.type === "country" ? scope.country : undefined,
-      )
-      return jsonWithRevalidateCache(request, {
-        suggestions,
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: "wordpress-fallback",
-        },
-      })
-    } catch (error) {
-      console.error("WordPress suggestion lookup failed", error)
-      return jsonWithRevalidateCache(request, { suggestions: [] })
-    }
+    return respondWithSuggestions(request, { suggestions: [] }, { status: 400 })
   }
 
   try {
-    const response = await searchIndex.search<AlgoliaSearchRecord>(normalizedParams.query, {
-      page: 0,
-      hitsPerPage: 10,
-      attributesToRetrieve: ["title"],
-    })
+    const result = await fetchWordPressSuggestions(normalizedParams)
 
-    const suggestions = Array.from(new Set(response.hits.map((hit) => hit.title))).slice(0, 10)
-
-    return jsonWithRevalidateCache(request, {
-      suggestions,
+    return respondWithSuggestions(request, {
+      suggestions: result.suggestions,
       performance: {
-        responseTime: Date.now() - startTime,
-        source: `algolia-${normalizedParams.sort}`,
+        responseTime: result.elapsedMs ?? Date.now() - startTime,
+        source: result.source,
       },
     })
   } catch (error) {
-    console.error("Algolia suggestion search failed", error)
-
-    try {
-      const suggestions = await wpGetSearchSuggestions(
-        normalizedParams.query,
-        10,
-        scope.type === "country" ? scope.country : undefined,
-      )
-      return jsonWithRevalidateCache(request, {
-        suggestions,
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: "wordpress-fallback",
-        },
-      })
-    } catch (wordpressError) {
-      console.error("WordPress suggestion fallback failed", wordpressError)
-      return jsonWithRevalidateCache(request, { suggestions: [] })
-    }
+    console.error("WordPress suggestion fetch failed", error)
   }
+
+  return respondWithSuggestions(request, { suggestions: [] })
 }

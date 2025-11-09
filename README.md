@@ -168,7 +168,7 @@ The application now communicates with WordPress exclusively through GraphQL, so 
 
 ## 🔍 Search
 
-The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Suggestions can be retrieved by passing `suggestions=true` alongside the search query.
+The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Typeahead suggestions are served from `/api/search/suggest`, which shares the same query, `country`, and `sort` parameters while returning lightweight suggestion lists.
 
 ## 🧪 Testing
 
