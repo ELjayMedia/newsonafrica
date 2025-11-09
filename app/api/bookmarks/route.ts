@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
     const limit = Math.max(Number.parseInt(searchParams.get("limit") || "20"), 1)
     const search = searchParams.get("search")
     const category = searchParams.get("category")
@@ -43,7 +42,42 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "created_at"
     const sortOrder = searchParams.get("sortOrder") || "desc"
 
-    const offset = (page - 1) * limit
+    const cursorParam = searchParams.get("cursor")
+    let cursor: {
+      sortBy: string
+      sortOrder: string
+      value: string | number | null
+      id: string | null
+    } | null = null
+
+    if (cursorParam) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(cursorParam))
+        if (decoded && typeof decoded === "object") {
+          const parsed = decoded as Record<string, unknown>
+          const cursorSortBy = typeof parsed.sortBy === "string" ? parsed.sortBy : sortBy
+          const cursorSortOrder = typeof parsed.sortOrder === "string" ? parsed.sortOrder : sortOrder
+          const cursorValue =
+            typeof parsed.value === "string" || typeof parsed.value === "number"
+              ? (parsed.value as string | number)
+              : null
+          const cursorId = typeof parsed.id === "string" ? parsed.id : null
+
+          if (cursorValue !== null && cursorId) {
+            cursor = {
+              sortBy: cursorSortBy,
+              sortOrder: cursorSortOrder,
+              value: cursorValue,
+              id: cursorId,
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Failed to decode bookmark cursor", error)
+      }
+    }
+
+    const ascending = sortOrder === "asc"
 
     const { data: rows, error } = await executeListQuery(supabase, "bookmarks", (query) => {
       let builder = query.select(BOOKMARK_LIST_SELECT_COLUMNS).eq("user_id", user.id)
@@ -64,9 +98,25 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      builder = builder.order(sortBy, { ascending: sortOrder === "asc" })
+      builder = builder
+        .order(sortBy, { ascending })
+        .order("id", { ascending })
 
-      return builder.range(offset, offset + limit)
+      if (cursor && cursor.sortBy === sortBy && cursor.sortOrder === sortOrder) {
+        const comparator = ascending ? "gt" : "lt"
+        const idComparator = ascending ? "gt" : "lt"
+        const cursorValue = cursor.value
+        const cursorId = cursor.id
+
+        const filterClauses = [
+          `${cursor.sortBy}.${comparator}.${cursorValue}`,
+          `and(${cursor.sortBy}.eq.${cursorValue},id.${idComparator}.${cursorId})`,
+        ]
+
+        builder = builder.or(filterClauses.join(","))
+      }
+
+      return builder.limit(limit + 1)
     })
 
     if (error) {
@@ -75,7 +125,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { items: bookmarks, pagination } = derivePagination<BookmarkListRow>({
-      page,
       limit,
       rows: (rows ?? []) as BookmarkListRow[],
       cursorEncoder: (row) => {
@@ -96,7 +145,7 @@ export async function GET(request: NextRequest) {
     })
 
     let stats: BookmarkStats | null = null
-    if (page === 1) {
+    if (!cursor) {
       try {
         stats = await fetchBookmarkStats(supabase, user.id)
       } catch (statsError) {

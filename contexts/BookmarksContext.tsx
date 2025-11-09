@@ -91,10 +91,8 @@ const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCa
 const BOOKMARK_SYNC_QUEUE = "bookmarks-write-queue"
 const DEFAULT_STATS: BookmarkStats = { total: 0, unread: 0, categories: {} }
 const DEFAULT_PAGINATION: BookmarkPagination = {
-  page: 1,
   limit: 0,
   hasMore: false,
-  nextPage: null,
   nextCursor: null,
 }
 

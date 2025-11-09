@@ -57,7 +57,7 @@ describe("BookmarksProvider optimistic updates", () => {
       data: {
         bookmarks: [],
         stats: { total: 0, unread: 0, categories: {} },
-        pagination: { page: 1, limit: 0, hasMore: false, nextPage: null, nextCursor: null },
+        pagination: { limit: 0, hasMore: false, nextCursor: null },
       },
       error: null,
     })
@@ -168,7 +168,7 @@ describe("BookmarksProvider optimistic updates", () => {
           },
         ],
         stats: { total: 1, unread: 1, categories: { Tech: 1 } },
-        pagination: { page: 1, limit: 1, hasMore: false, nextPage: null, nextCursor: null },
+        pagination: { limit: 1, hasMore: false, nextCursor: null },
       },
       error: null,
     })

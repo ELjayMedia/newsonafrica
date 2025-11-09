@@ -91,7 +91,6 @@ async function fetchBookmarkList(
     ? await fetchBookmarkStats(supabase, userId)
     : getDefaultBookmarkStats()
   const { items } = derivePagination({
-    page: 1,
     limit: rows.length || 1,
     rows,
   })
@@ -100,10 +99,8 @@ async function fetchBookmarkList(
     bookmarks: items,
     stats,
     pagination: {
-      page: 1,
       limit: rows.length || 1,
       hasMore: false,
-      nextPage: null,
       nextCursor: null,
     },
   }
