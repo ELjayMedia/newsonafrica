@@ -206,7 +206,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       "za",
       expect.any(Number),
       expect.objectContaining({
-        timeout: expect.any(Number),
+        timeout: 900,
         signal: expect.any(Object),
       }),
     )
@@ -216,7 +216,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       null,
       expect.objectContaining({
         request: expect.objectContaining({
-          timeout: expect.any(Number),
+          timeout: 1200,
           signal: expect.any(Object),
         }),
       }),
@@ -272,7 +272,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       "za",
       expect.any(Number),
       expect.objectContaining({
-        timeout: expect.any(Number),
+        timeout: 900,
         signal: expect.any(Object),
       }),
     )
@@ -282,7 +282,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       null,
       expect.objectContaining({
         request: expect.objectContaining({
-          timeout: expect.any(Number),
+          timeout: 1200,
           signal: expect.any(Object),
         }),
       }),
@@ -374,12 +374,12 @@ describe("fetchAggregatedHomeForCountry", () => {
       }
     })
 
-    vi.spyOn(wordpressApi, "getLatestPostsForCountry").mockImplementation(async () => {
+    const latestSpy = vi.spyOn(wordpressApi, "getLatestPostsForCountry").mockImplementation(async () => {
       await delay()
       return { posts: [], hasNextPage: false, endCursor: null }
     })
 
-    vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockImplementation(async () => {
+    const fpTagSpy = vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockImplementation(async () => {
       await delay()
       return []
     })
@@ -397,6 +397,14 @@ describe("fetchAggregatedHomeForCountry", () => {
     expect(limiterMetrics.instances).toBe(1)
     expect(limiterMetrics.scheduled).toBe(6)
     expect(limiterMetrics.maxActive).toBe(1)
+
+    latestSpy.mock.calls.forEach(([, , , options]) => {
+      expect(options?.request?.timeout).toBe(1200)
+    })
+
+    fpTagSpy.mock.calls.forEach(([, , options]) => {
+      expect(options?.timeout).toBe(900)
+    })
 
     vi.unmock("p-limit")
   })
