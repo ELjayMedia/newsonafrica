@@ -37,6 +37,7 @@ export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
   revalidate?: number
   timeout?: number
+  signal?: AbortSignal
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -128,6 +129,7 @@ export function fetchWordPressGraphQL<T>(
     headers,
     body,
     timeout: options.timeout,
+    signal: options.signal,
     next: {
       revalidate: resolvedRevalidate,
       ...(dedupedTags ? { tags: dedupedTags } : {}),

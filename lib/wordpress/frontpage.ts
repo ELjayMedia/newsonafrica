@@ -111,12 +111,14 @@ export async function getFrontPageSlicesForCountry(
     heroFallbackLimit?: number
     trendingLimit?: number
     latestLimit?: number
+    request?: { timeout?: number; signal?: AbortSignal }
   },
 ): Promise<FrontPageSlicesResult> {
   const heroLimit = options?.heroLimit ?? FRONT_PAGE_HERO_LIMIT
   const heroFallbackLimit = options?.heroFallbackLimit ?? FRONT_PAGE_HERO_FALLBACK_LIMIT
   const trendingLimit = options?.trendingLimit ?? FRONT_PAGE_TRENDING_LIMIT
   const latestLimit = options?.latestLimit ?? FRONT_PAGE_LATEST_LIMIT
+  const request = options?.request
 
   const totalLatest = heroFallbackLimit + trendingLimit + latestLimit
   const tags = buildCacheTags({
@@ -136,7 +138,12 @@ export async function getFrontPageSlicesForCountry(
         heroTagSlugs: FRONT_PAGE_HERO_TAGS,
         latestFirst: totalLatest,
       },
-      { tags, revalidate: FRONTPAGE_REVALIDATE },
+      {
+        tags,
+        revalidate: FRONTPAGE_REVALIDATE,
+        timeout: request?.timeout,
+        signal: request?.signal,
+      },
     )
 
     if (gqlData) {
@@ -173,7 +180,11 @@ export async function getFrontPageSlicesForCountry(
   return createEmptyFrontPageSlices()
 }
 
-export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8): Promise<HomePost[]> {
+export async function getFpTaggedPostsForCountry(
+  countryCode: string,
+  limit = 8,
+  request?: { timeout?: number; signal?: AbortSignal },
+): Promise<HomePost[]> {
   const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: [`tag:${FP_TAG_SLUG}`] })
 
   try {
@@ -186,7 +197,12 @@ export async function getFpTaggedPostsForCountry(countryCode: string, limit = 8)
         tagSlugs: [FP_TAG_SLUG],
         first: limit,
       },
-      { tags, revalidate: FP_TAG_REVALIDATE },
+      {
+        tags,
+        revalidate: FP_TAG_REVALIDATE,
+        timeout: request?.timeout,
+        signal: request?.signal,
+      },
     )
 
     const nodes = gqlData?.posts?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))

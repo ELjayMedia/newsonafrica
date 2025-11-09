@@ -181,6 +181,9 @@ describe("fetchAggregatedHomeForCountry", () => {
       trending: { posts: trending, hasNextPage: false, endCursor: null },
       latest: { posts: latest, hasNextPage: false, endCursor: null },
     })
+    const latestSpy = vi
+      .spyOn(wordpressApi, "getLatestPostsForCountry")
+      .mockResolvedValue({ posts: [], hasNextPage: false, endCursor: null })
     const fpTagSpy = vi
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue([])
@@ -193,9 +196,31 @@ describe("fetchAggregatedHomeForCountry", () => {
       expect.objectContaining({
         trendingLimit: expect.any(Number),
         latestLimit: expect.any(Number),
+        request: expect.objectContaining({
+          timeout: expect.any(Number),
+          signal: expect.any(Object),
+        }),
       }),
     )
-    expect(fpTagSpy).not.toHaveBeenCalled()
+    expect(fpTagSpy).toHaveBeenCalledWith(
+      "za",
+      expect.any(Number),
+      expect.objectContaining({
+        timeout: expect.any(Number),
+        signal: expect.any(Object),
+      }),
+    )
+    expect(latestSpy).toHaveBeenCalledWith(
+      "za",
+      expect.any(Number),
+      null,
+      expect.objectContaining({
+        request: expect.objectContaining({
+          timeout: expect.any(Number),
+          signal: expect.any(Object),
+        }),
+      }),
+    )
     expect(result.heroPost?.slug).toBe("lead-story")
     expect(result.secondaryPosts.map((post) => post.slug)).toEqual([
       "secondary-story",
@@ -232,6 +257,9 @@ describe("fetchAggregatedHomeForCountry", () => {
       trending: { posts: [], hasNextPage: false, endCursor: null },
       latest: { posts: [], hasNextPage: false, endCursor: null },
     })
+    const latestSpy = vi
+      .spyOn(wordpressApi, "getLatestPostsForCountry")
+      .mockResolvedValue({ posts: [], hasNextPage: false, endCursor: null })
     const fpTagSpy = vi
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue(fallbackPosts)
@@ -240,7 +268,178 @@ describe("fetchAggregatedHomeForCountry", () => {
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 2)
 
     expect(frontPageSpy).toHaveBeenCalled()
-    expect(fpTagSpy).toHaveBeenCalledWith("za", expect.any(Number))
+    expect(fpTagSpy).toHaveBeenCalledWith(
+      "za",
+      expect.any(Number),
+      expect.objectContaining({
+        timeout: expect.any(Number),
+        signal: expect.any(Object),
+      }),
+    )
+    expect(latestSpy).toHaveBeenCalledWith(
+      "za",
+      expect.any(Number),
+      null,
+      expect.objectContaining({
+        request: expect.objectContaining({
+          timeout: expect.any(Number),
+          signal: expect.any(Object),
+        }),
+      }),
+    )
+    expect(result.heroPost?.slug).toBe("fallback-one")
+    expect(result.secondaryPosts.map((post) => post.slug)).toEqual(["fallback-two"])
+    expect(result.remainingPosts).toEqual([])
+  })
+
+  it("reuses shared limiter across concurrent home feed requests", async () => {
+    vi.resetModules()
+
+    const limiterMetrics = {
+      instances: 0,
+      maxActive: 0,
+      scheduled: 0,
+    }
+
+    vi.doMock("p-limit", () => {
+      return {
+        __esModule: true,
+        default: () => {
+          limiterMetrics.instances += 1
+          const queue: Array<() => void> = []
+          let active = 0
+
+          const runNext = () => {
+            if (queue.length === 0 || active >= 1) {
+              return
+            }
+
+            const task = queue.shift()
+            if (!task) {
+              return
+            }
+
+            active += 1
+            limiterMetrics.maxActive = Math.max(limiterMetrics.maxActive, active)
+            task()
+          }
+
+          return function limit<T>(fn: () => Promise<T>): Promise<T> {
+            limiterMetrics.scheduled += 1
+
+            return new Promise<T>((resolve, reject) => {
+              const execute = async () => {
+                try {
+                  const result = await fn()
+                  resolve(result)
+                } catch (error) {
+                  reject(error)
+                } finally {
+                  active -= 1
+                  runNext()
+                }
+              }
+
+              queue.push(() => {
+                execute()
+              })
+
+              runNext()
+            })
+          }
+        },
+      }
+    })
+
+    await setupServerMocks()
+
+    const wordpressApi = await import("@/lib/wordpress-api")
+
+    const delay = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+    const hero = {
+      id: "hero",
+      slug: "lead-story",
+      title: "Lead Story",
+      excerpt: "Lead Story excerpt",
+      date: "2024-05-01T00:00:00Z",
+    } as unknown as WordPressPost
+
+    vi.spyOn(wordpressApi, "getFrontPageSlicesForCountry").mockImplementation(async () => {
+      await delay()
+      return {
+        hero: { heroPost: hero, secondaryStories: [] },
+        trending: { posts: [], hasNextPage: false, endCursor: null },
+        latest: { posts: [], hasNextPage: false, endCursor: null },
+      }
+    })
+
+    vi.spyOn(wordpressApi, "getLatestPostsForCountry").mockImplementation(async () => {
+      await delay()
+      return { posts: [], hasNextPage: false, endCursor: null }
+    })
+
+    vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockImplementation(async () => {
+      await delay()
+      return []
+    })
+
+    const homeDataModule = await import("./home-data")
+
+    const [first, second] = await Promise.all([
+      homeDataModule.fetchAggregatedHomeForCountry("za", 4),
+      homeDataModule.fetchAggregatedHomeForCountry("ng", 4),
+    ])
+
+    expect(first.heroPost?.slug).toBe("lead-story")
+    expect(second.heroPost?.slug).toBe("lead-story")
+
+    expect(limiterMetrics.instances).toBe(1)
+    expect(limiterMetrics.scheduled).toBe(6)
+    expect(limiterMetrics.maxActive).toBe(1)
+
+    vi.unmock("p-limit")
+  })
+
+  it("returns aggregated data when some loaders fail", async () => {
+    vi.resetModules()
+    await setupServerMocks()
+
+    const wordpressApi = await import("@/lib/wordpress-api")
+
+    vi
+      .spyOn(wordpressApi, "getFrontPageSlicesForCountry")
+      .mockRejectedValue(new Error("frontpage failed"))
+
+    vi
+      .spyOn(wordpressApi, "getLatestPostsForCountry")
+      .mockRejectedValue(new Error("recent failed"))
+
+    const fallbackPosts: HomePost[] = [
+      {
+        id: "fallback-1",
+        slug: "fallback-one",
+        title: "Fallback one",
+        excerpt: "Fallback one excerpt",
+        date: "2024-05-01T00:00:00Z",
+      },
+      {
+        id: "fallback-2",
+        slug: "fallback-two",
+        title: "Fallback two",
+        excerpt: "Fallback two excerpt",
+        date: "2024-05-02T00:00:00Z",
+      },
+    ]
+
+    vi
+      .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
+      .mockResolvedValue(fallbackPosts)
+
+    const homeDataModule = await import("./home-data")
+
+    const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 3)
+
     expect(result.heroPost?.slug).toBe("fallback-one")
     expect(result.secondaryPosts.map((post) => post.slug)).toEqual(["fallback-two"])
     expect(result.remainingPosts).toEqual([])
@@ -405,7 +604,10 @@ describe("buildHomeContentProps", () => {
     const frontPageSpy = vi
       .spyOn(wordpressApi, "getFrontPageSlicesForCountry")
       .mockImplementation(async (countryCode: string) => frontPageSlicesByCountry[countryCode])
-    const fpSpy = vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry")
+    const latestSpy = vi
+      .spyOn(wordpressApi, "getLatestPostsForCountry")
+      .mockResolvedValue({ posts: [], hasNextPage: false, endCursor: null })
+    const fpSpy = vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockResolvedValue([])
 
     const homeDataModule = await import("./home-data")
 
@@ -413,7 +615,8 @@ describe("buildHomeContentProps", () => {
 
     expect(aggregatedSpy).not.toHaveBeenCalled()
     expect(frontPageSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(fpSpy).not.toHaveBeenCalled()
+    expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
+    expect(latestSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
     expect(categoriesSpy).toHaveBeenCalledTimes(1)
 
     const expectedInitialPosts = SUPPORTED_COUNTRIES.flatMap(
