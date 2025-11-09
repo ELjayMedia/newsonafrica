@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import { createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export type AuthFormState = {
@@ -19,6 +19,8 @@ export const initialAuthFormState: AuthFormState = Object.freeze({
 
 const DEFAULT_SUCCESS_MESSAGE = "We've sent a confirmation link to your email."
 const DEFAULT_ERROR_MESSAGE = "We couldn't process your request. Please try again."
+const AUTH_SERVICE_UNAVAILABLE_MESSAGE =
+  "Authentication is temporarily unavailable. Please try again later."
 
 type SupabaseServerClient = SupabaseClient<Database>
 
@@ -89,8 +91,14 @@ function getAuthCallbackUrl(nextPath: string | null): string {
   return callbackUrl.toString()
 }
 
-function createSupabaseClient(): SupabaseServerClient {
-  return createServerClient()
+function createSupabaseClient(): SupabaseServerClient | null {
+  const client = createServerClient()
+
+  if (!client) {
+    console.warn(SUPABASE_UNAVAILABLE_ERROR)
+  }
+
+  return client
 }
 
 export async function signInWithPasswordAction(
@@ -107,6 +115,10 @@ export async function signInWithPasswordAction(
     }
 
     const supabase = createSupabaseClient()
+
+    if (!supabase) {
+      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -181,6 +193,10 @@ export async function signUpWithPasswordAction(
 
     const supabase = createSupabaseClient()
 
+    if (!supabase) {
+      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -234,6 +250,10 @@ export async function resetPasswordAction(
 
     const supabase = createSupabaseClient()
 
+    if (!supabase) {
+      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: getAuthCallbackUrl("/auth/update-password"),
     })
@@ -267,6 +287,10 @@ export async function sendMagicLinkAction(
     }
 
     const supabase = createSupabaseClient()
+
+    if (!supabase) {
+      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+    }
 
     const { error } = await supabase.auth.signInWithOtp({
       email,

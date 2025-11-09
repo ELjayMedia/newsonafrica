@@ -15,6 +15,10 @@ type CommentRouteContext = {
   params?: Promise<Record<string, string | string[] | undefined>>
 }
 
+function serviceUnavailable(request: NextRequest) {
+  return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
+}
+
 // Update a comment
 export async function PATCH(request: NextRequest, context: CommentRouteContext) {
   logRequest(request)
@@ -30,6 +34,11 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 
   try {
     const routeClient = createSupabaseRouteClient(request)
+
+    if (!routeClient) {
+      return serviceUnavailable(request)
+    }
+
     applyCookies = routeClient.applyCookies
     const { supabase } = routeClient
 
@@ -151,6 +160,11 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
 
   try {
     const routeClient = createSupabaseRouteClient(request)
+
+    if (!routeClient) {
+      return serviceUnavailable(request)
+    }
+
     applyCookies = routeClient.applyCookies
     const { supabase } = routeClient
 

@@ -5,8 +5,18 @@ import { createSupabaseRouteClient } from "@/utils/supabase/route"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
 
+function serviceUnavailable() {
+  return NextResponse.json({ error: "Supabase service unavailable" }, { status: 503 })
+}
+
 export async function GET(request: NextRequest) {
-  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const routeClient = createSupabaseRouteClient(request)
+
+  if (!routeClient) {
+    return serviceUnavailable()
+  }
+
+  const { supabase, applyCookies } = routeClient
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")

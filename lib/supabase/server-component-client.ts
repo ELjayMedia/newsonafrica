@@ -1,13 +1,19 @@
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
-import { createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 export type SupabaseServerComponentClient = SupabaseClient<Database>
 
-export function createServerComponentSupabaseClient(): SupabaseServerComponentClient {
-  return createServerClient()
+export function createServerComponentSupabaseClient(): SupabaseServerComponentClient | null {
+  const client = createServerClient()
+
+  if (!client) {
+    console.warn(SUPABASE_UNAVAILABLE_ERROR)
+  }
+
+  return client
 }
 
 export interface ServerUserSession {
@@ -38,6 +44,10 @@ async function fetchProfileSummary(
 
 export async function getServerUserSession(): Promise<ServerUserSession> {
   const supabase = createServerComponentSupabaseClient()
+
+  if (!supabase) {
+    return { session: null, user: null, profile: null }
+  }
   const {
     data: { session },
   } = await supabase.auth.getSession()

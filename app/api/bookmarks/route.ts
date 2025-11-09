@@ -19,9 +19,19 @@ export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
+function serviceUnavailable(request: NextRequest) {
+  return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
+}
+
 export async function GET(request: NextRequest) {
   logRequest(request)
-  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const routeClient = createSupabaseRouteClient(request)
+
+  if (!routeClient) {
+    return serviceUnavailable(request)
+  }
+
+  const { supabase, applyCookies } = routeClient
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
   try {
@@ -124,7 +134,13 @@ function invalidateBookmarksCache() {
 
 export async function POST(request: NextRequest) {
   logRequest(request)
-  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const routeClient = createSupabaseRouteClient(request)
+
+  if (!routeClient) {
+    return serviceUnavailable(request)
+  }
+
+  const { supabase, applyCookies } = routeClient
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
   try {
@@ -187,7 +203,13 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   logRequest(request)
-  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const routeClient = createSupabaseRouteClient(request)
+
+  if (!routeClient) {
+    return serviceUnavailable(request)
+  }
+
+  const { supabase, applyCookies } = routeClient
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
   try {
@@ -244,7 +266,13 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   logRequest(request)
-  const { supabase, applyCookies } = createSupabaseRouteClient(request)
+  const routeClient = createSupabaseRouteClient(request)
+
+  if (!routeClient) {
+    return serviceUnavailable(request)
+  }
+
+  const { supabase, applyCookies } = routeClient
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
 
   try {

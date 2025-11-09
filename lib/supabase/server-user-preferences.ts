@@ -1,4 +1,4 @@
-import { createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export interface ServerUserPreferences {
@@ -12,6 +12,11 @@ const EMPTY_PREFERENCES: ServerUserPreferences = {
 export async function getServerUserPreferences(): Promise<ServerUserPreferences> {
   try {
     const supabase = createServerClient()
+
+    if (!supabase) {
+      console.warn(SUPABASE_UNAVAILABLE_ERROR)
+      return EMPTY_PREFERENCES
+    }
 
     const {
       data: { session },

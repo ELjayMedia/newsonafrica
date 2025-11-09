@@ -15,7 +15,7 @@ vi.mock("@/lib/server-cache-utils", () => ({
 import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
-import { DELETE, POST, PUT } from "./route"
+import { DELETE, GET, POST, PUT } from "./route"
 
 function expectOnlyBookmarkTagInvalidation() {
   expect(revalidateByTag).toHaveBeenCalledTimes(1)
@@ -141,5 +141,19 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     expectOnlyBookmarkTagInvalidation()
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns 503 when Supabase is unavailable", async () => {
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce(null as any)
+
+    const request = new NextRequest("https://example.com/api/bookmarks")
+
+    const response = await GET(request)
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get("access-control-allow-origin")).toBeNull()
+    expect(applyCookiesMock).not.toHaveBeenCalled()
+    expect(revalidateByTag).not.toHaveBeenCalled()
+    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
   })
 })

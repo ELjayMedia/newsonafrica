@@ -31,6 +31,9 @@ export async function fetchCommentsPageAction({
   cursor = null,
 }: FetchCommentsPageActionInput) {
   const supabase = createServerComponentSupabaseClient()
+  if (!supabase) {
+    return { comments: [], hasMore: false, nextCursor: null, total: 0 }
+  }
   return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
 }
 
