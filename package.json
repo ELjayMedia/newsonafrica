@@ -39,6 +39,7 @@
     "path": "latest",
     "react": "latest",
     "react-dom": "^19.0.0",
+    "react-virtuoso": "^4.14.1",
     "server-only": "latest",
     "sharp": "latest",
     "swr": "latest",
