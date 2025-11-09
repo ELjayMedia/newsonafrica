@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
         currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
         hasMore: wpResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: uniqueSuggestions(records),
         performance: {
           responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress",
@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
       currentPage: normalizedParams.page,
       hasMore: normalizedParams.page < totalPages,
       query: normalizedParams.query,
-      suggestions: mappedHits.map((hit) => hit.title).slice(0, 10),
+      suggestions: uniqueSuggestions(mappedHits),
       performance: {
         responseTime: Date.now() - startTime,
         source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${normalizedParams.sort}`,
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
         currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
         hasMore: wpResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: uniqueSuggestions(records),
         performance: {
           responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress-fallback",
