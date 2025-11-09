@@ -28,9 +28,15 @@ function createCookieAdapter() {
   }
 }
 
+function readEnv(value: string | undefined): string | null {
+  const trimmed = value?.trim()
+
+  return trimmed ? trimmed : null
+}
+
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = readEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const supabaseKey = readEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
   if (!supabaseUrl || !supabaseKey) {
     return null
@@ -47,7 +53,12 @@ export function createServerClient(): SupabaseClient<Database> | null {
     return null
   }
 
-  return createSupabaseServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
-    cookies: createCookieAdapter(),
-  })
+  try {
+    return createSupabaseServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
+      cookies: createCookieAdapter(),
+    })
+  } catch (error) {
+    console.error("Failed to create Supabase server client", error)
+    return null
+  }
 }
