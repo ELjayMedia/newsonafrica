@@ -29,10 +29,8 @@ export interface BookmarkStats {
 }
 
 export interface BookmarkPagination {
-  page: number
   limit: number
   hasMore: boolean
-  nextPage: number | null
   nextCursor: string | null
 }
 

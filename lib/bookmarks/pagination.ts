@@ -1,7 +1,6 @@
 import type { BookmarkPagination } from "@/types/bookmarks"
 
 export interface DerivePaginationOptions<T> {
-  page: number
   limit: number
   rows: T[]
   cursorEncoder?: (row: T) => string | null
@@ -13,7 +12,6 @@ export interface PaginationResult<T> {
 }
 
 export function derivePagination<T>({
-  page,
   limit,
   rows,
   cursorEncoder,
@@ -34,10 +32,8 @@ export function derivePagination<T>({
   return {
     items,
     pagination: {
-      page,
       limit: safeLimit,
       hasMore,
-      nextPage: hasMore ? page + 1 : null,
       nextCursor,
     },
   }
