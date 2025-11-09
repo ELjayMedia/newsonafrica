@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const createServerClientMock = vi.fn()
 
+const SUPABASE_UNAVAILABLE_ERROR = "Supabase unavailable"
+
 vi.mock("@/utils/supabase/server", () => ({
   createServerClient: createServerClientMock,
+  SUPABASE_UNAVAILABLE_ERROR,
 }))
 
 describe("supabase server actions", () => {
@@ -33,6 +36,19 @@ describe("supabase server actions", () => {
     expect(result.error).toBeNull()
     expect(result.data).toEqual({ ok: true })
     expect(supabase.auth.getSession).toHaveBeenCalledTimes(1)
+  })
+
+  it("short-circuits withSupabaseSession when Supabase is unavailable", async () => {
+    createServerClientMock.mockReturnValueOnce(null)
+
+    const { withSupabaseSession } = await import("./supabase")
+
+    const callback = vi.fn()
+    const result = await withSupabaseSession(callback)
+
+    expect(callback).not.toHaveBeenCalled()
+    expect(result.data).toBeNull()
+    expect(result.error?.message).toBe(SUPABASE_UNAVAILABLE_ERROR)
   })
 
   it("propagates errors from getSession in withSupabaseSession", async () => {
@@ -69,5 +85,16 @@ describe("supabase server actions", () => {
 
     expect(result.error).toBeNull()
     expect(result.data).toEqual(session)
+  })
+
+  it("short-circuits getSupabaseSession when Supabase is unavailable", async () => {
+    createServerClientMock.mockReturnValueOnce(null)
+
+    const { getSupabaseSession } = await import("./supabase")
+
+    const result = await getSupabaseSession()
+
+    expect(result.data).toBeNull()
+    expect(result.error?.message).toBe(SUPABASE_UNAVAILABLE_ERROR)
   })
 })

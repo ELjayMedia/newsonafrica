@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import ProfileContent from "@/components/ProfileContent"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
@@ -14,6 +14,20 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   const supabase = createServerClient()
+
+  if (!supabase) {
+    console.warn(SUPABASE_UNAVAILABLE_ERROR)
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold">My Profile</h1>
+          <p className="text-muted-foreground">
+            Profile details are temporarily unavailable. Please try again later.
+          </p>
+        </div>
+      </main>
+    )
+  }
 
   const {
     data: { session },

@@ -4,14 +4,12 @@ import { cookies } from "next/headers"
 
 import type { Database } from "@/types/supabase"
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name]
+export const SUPABASE_UNAVAILABLE_ERROR =
+  "Supabase configuration is missing. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
 
-  if (!value) {
-    throw new Error(`Missing ${name} environment variable.`)
-  }
-
-  return value
+export interface SupabaseConfig {
+  supabaseUrl: string
+  supabaseKey: string
 }
 
 function createCookieAdapter() {
@@ -30,17 +28,26 @@ function createCookieAdapter() {
   }
 }
 
-export function getSupabaseConfig(): { supabaseUrl: string; supabaseKey: string } {
-  return {
-    supabaseUrl: getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    supabaseKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+export function getSupabaseConfig(): SupabaseConfig | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    return null
   }
+
+  return { supabaseUrl, supabaseKey }
 }
 
-export function createServerClient(): SupabaseClient<Database> {
-  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
+export function createServerClient(): SupabaseClient<Database> | null {
+  const config = getSupabaseConfig()
 
-  return createSupabaseServerClient<Database>(supabaseUrl, supabaseKey, {
+  if (!config) {
+    console.error(SUPABASE_UNAVAILABLE_ERROR)
+    return null
+  }
+
+  return createSupabaseServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
     cookies: createCookieAdapter(),
   })
 }

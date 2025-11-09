@@ -1,4 +1,4 @@
-import type { NextRequest, NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import type { PostgrestError, Session } from "@supabase/supabase-js"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { CACHE_TAGS } from "@/lib/cache/constants"
@@ -19,6 +19,13 @@ export const runtime = "nodejs"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
+
+function serviceUnavailable(request: NextRequest) {
+  return withCors(
+    request,
+    NextResponse.json({ success: false, error: "Supabase service unavailable" }, { status: 503 }),
+  )
+}
 
 const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
 const COMMENT_STATUS_SET = new Set(COMMENT_STATUSES)
@@ -269,6 +276,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
+
+    if (!routeClient) {
+      return serviceUnavailable(request)
+    }
+
     applyCookies = routeClient.applyCookies
     const { supabase } = routeClient
 
@@ -462,6 +474,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
+
+    if (!routeClient) {
+      return serviceUnavailable(request)
+    }
+
     applyCookies = routeClient.applyCookies
     const { supabase } = routeClient
 
@@ -572,6 +589,11 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
+
+    if (!routeClient) {
+      return serviceUnavailable(request)
+    }
+
     applyCookies = routeClient.applyCookies
     const { supabase } = routeClient
 

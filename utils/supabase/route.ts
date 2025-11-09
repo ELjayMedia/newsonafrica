@@ -3,14 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
 import type { Database } from "@/types/supabase"
-import { getSupabaseConfig } from "./server"
+import { SUPABASE_UNAVAILABLE_ERROR, getSupabaseConfig } from "./server"
 
 export interface RouteClientResult {
   supabase: SupabaseClient<Database>
   applyCookies<T extends NextResponse>(response: T): T
 }
 
-export function createSupabaseRouteClient(request: NextRequest): RouteClientResult {
+export function createSupabaseRouteClient(
+  request: NextRequest,
+): RouteClientResult | null {
   const baseResponse = NextResponse.next()
   const deletedCookies = new Set<string>()
 
@@ -31,11 +33,16 @@ export function createSupabaseRouteClient(request: NextRequest): RouteClientResu
     },
   }
 
-  const { supabaseUrl, supabaseKey } = getSupabaseConfig()
+  const config = getSupabaseConfig()
+
+  if (!config) {
+    console.error(SUPABASE_UNAVAILABLE_ERROR)
+    return null
+  }
 
   const supabase = createRouteHandlerClient<Database>(
     { cookies: () => cookieStore as any },
-    { supabaseUrl, supabaseKey },
+    { supabaseUrl: config.supabaseUrl, supabaseKey: config.supabaseKey },
   )
 
   const applyCookies = <T extends NextResponse>(response: T): T => {

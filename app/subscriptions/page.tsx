@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { SubscriptionsContent } from "@/components/SubscriptionsContent"
 
@@ -13,6 +13,18 @@ export const metadata: Metadata = {
 
 export default async function SubscriptionsPage() {
   const supabase = createServerClient()
+
+  if (!supabase) {
+    console.warn(SUPABASE_UNAVAILABLE_ERROR)
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Manage Your Subscriptions</h1>
+        <p className="text-muted-foreground">
+          Subscriptions are temporarily unavailable. Please try again later.
+        </p>
+      </div>
+    )
+  }
 
   const {
     data: { session },
