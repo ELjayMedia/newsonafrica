@@ -1,9 +1,7 @@
-"use client"
-
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
-import { memo, useMemo } from "react"
+import { memo } from "react"
 import { generateBlurDataURL } from "@/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { cn, motionSafe } from "@/lib/utils"
@@ -28,31 +26,28 @@ interface VerticalCardProps {
 }
 
 export const VerticalCard = memo(function VerticalCard({ post, className = "" }: VerticalCardProps) {
-  const formattedDate = useMemo(() => {
-    return new Date(post.date).toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-    })
-  }, [post.date])
+  const formattedDate = new Date(post.date).toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "short",
+  })
 
-  const blurDataURL = useMemo(() => generateBlurDataURL(300, 200), [])
+  const blurDataURL = generateBlurDataURL(300, 200)
 
-  // Get featured image URL with fallback - handle both new and old API formats
-  const imageUrl = (() => {
+  const getImageUrl = () => {
     if (!post.featuredImage) return "/placeholder.svg"
 
-    // New API format
     if ("sourceUrl" in post.featuredImage) {
       return post.featuredImage.sourceUrl
     }
 
-    // Old API format
     if ("node" in post.featuredImage) {
       return post.featuredImage.node.sourceUrl
     }
 
     return "/placeholder.svg"
-  })()
+  }
+
+  const imageUrl = getImageUrl()
 
   return (
     <Link href={getArticleUrl(post.slug)} className={cn("group block h-full", className)}>
