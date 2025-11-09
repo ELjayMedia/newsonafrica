@@ -47,13 +47,13 @@ export function SearchBox({
 
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, suggestions: "true" })
+        const params = new URLSearchParams({ q: query })
         if (country) {
           params.set("country", country)
         }
         params.set("sort", sort)
 
-        const response = await fetch(`/api/search?${params.toString()}`)
+        const response = await fetch(`/api/search/suggest?${params.toString()}`)
         if (response.ok) {
           const data = await response.json()
           setSuggestions(data.suggestions || [])
