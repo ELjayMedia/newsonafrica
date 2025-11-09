@@ -13,7 +13,7 @@ describe("derivePagination", () => {
 
     expect(items).toEqual([1, 2, 3])
     expect(pagination.hasMore).toBe(true)
-    expect(pagination.nextCursor).toBe(JSON.stringify({ last: 3 }))
+    expect(pagination.nextCursor).toBe(encodeURIComponent(JSON.stringify({ last: 3 })))
   })
 
   it("resets hasMore when the filtered set fits in a single page", () => {
