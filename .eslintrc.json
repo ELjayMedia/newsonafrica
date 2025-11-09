@@ -17,6 +17,19 @@
         "argsIgnorePattern": "^_"
       }
     ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "lodash"
+          },
+          {
+            "name": "moment"
+          }
+        ]
+      }
+    ],
     "no-restricted-syntax": [
       "error",
       {
