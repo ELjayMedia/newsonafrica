@@ -469,7 +469,7 @@ export async function buildCountryPosts(
   const fetchCountryAggregate = options?.fetchCountryAggregate ?? fetchAggregatedHomeForCountry
   const pendingCountries = new Set<string>()
 
-  await Promise.all(
+  await Promise.allSettled(
     countryCodes.map(async (countryCode) => {
       if (aggregatedByCountry.has(countryCode) || pendingCountries.has(countryCode)) {
         return
@@ -477,8 +477,17 @@ export async function buildCountryPosts(
 
       pendingCountries.add(countryCode)
 
-      const aggregated = await limit(() => fetchCountryAggregate(countryCode))
-      aggregatedByCountry.set(countryCode, aggregated)
+      try {
+        const aggregated = await limit(() => fetchCountryAggregate(countryCode))
+        aggregatedByCountry.set(countryCode, aggregated)
+      } catch (error) {
+        console.error(`Failed to fetch aggregated home feed for country ${countryCode}`, {
+          error,
+        })
+        aggregatedByCountry.set(countryCode, createEmptyAggregatedHome())
+      } finally {
+        pendingCountries.delete(countryCode)
+      }
     }),
   )
 
