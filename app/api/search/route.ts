@@ -9,13 +9,8 @@ import {
 import { searchWordPressPosts as wpSearchPosts } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
-import {
-  DEFAULT_COUNTRY,
-  type NormalizedBaseSearchParams,
-  type SearchScope,
-  normalizeBaseSearchParams,
-} from "./shared"
-import { REQUEST_BUDGET, executeWordPressSearchForScope, fromWordPressResults } from "./wordpress-fallback"
+import { DEFAULT_COUNTRY, type NormalizedBaseSearchParams, normalizeBaseSearchParams } from "./shared"
+import { executeWordPressSearchForScope, fromWordPressResults } from "./wordpress-fallback"
 
 export { MAX_PAGES_PER_COUNTRY } from "./wordpress-fallback"
 
