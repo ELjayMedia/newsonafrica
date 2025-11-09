@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
 const createRouteHandlerClientMock = vi.fn()
@@ -14,9 +14,16 @@ vi.mock("./server", () => ({
 }))
 
 describe("createSupabaseRouteClient", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined
+
   beforeEach(() => {
     createRouteHandlerClientMock.mockReset()
     getSupabaseConfigMock.mockReset()
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore()
   })
 
   it("returns null when Supabase configuration is missing", async () => {
