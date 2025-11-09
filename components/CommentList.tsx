@@ -30,23 +30,26 @@ export function CommentList({
   initialTotal,
 }: CommentListProps) {
   const commentCacheRef = useRef<Map<string, Comment>>(new Map())
-  const commentOrderRef = useRef<string[]>([])
+  const commentLocationRef = useRef<Map<string, { pageIndex: number; itemIndex: number }>>(new Map())
+  const commentSlicesRef = useRef<Comment[][]>(initialComments.length > 0 ? [initialComments] : [])
   const paginationRef = useRef({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
   const [pagination, setPagination] = useState({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
-  const [commentsVersion, setCommentsVersion] = useState(() => {
+  const [baseCommentCount, setBaseCommentCount] = useState(() => {
     if (initialComments.length > 0) {
       const cache = commentCacheRef.current
-      const order: string[] = []
-      initialComments.forEach((comment) => {
+      const locationMap = commentLocationRef.current
+      cache.clear()
+      locationMap.clear()
+      initialComments.forEach((comment, index) => {
         cache.set(comment.id, comment)
-        order.push(comment.id)
+        locationMap.set(comment.id, { pageIndex: 0, itemIndex: index })
       })
-      commentOrderRef.current = order
-      return 1
+      return initialComments.length
     }
 
     return 0
   })
+  const [listVersion, setListVersion] = useState(initialComments.length > 0 ? 1 : 0)
   const [loading, setLoading] = useState(initialComments.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [totalComments, setTotalComments] = useState(
@@ -71,39 +74,85 @@ export function CommentList({
   const mergeComments = useCallback(
     (incoming: Comment[], append: boolean) => {
       const cache = commentCacheRef.current
+      const locationMap = commentLocationRef.current
+
       if (!append) {
         cache.clear()
-        commentOrderRef.current = []
+        locationMap.clear()
+        commentSlicesRef.current = incoming.length > 0 ? [incoming] : []
+        incoming.forEach((comment, index) => {
+          cache.set(comment.id, comment)
+          locationMap.set(comment.id, { pageIndex: 0, itemIndex: index })
+        })
+        setBaseCommentCount(incoming.length)
+        setListVersion((version) => version + 1)
+        return
       }
 
-      incoming.forEach((comment) => {
-        const alreadyPresent = cache.has(comment.id)
-        cache.set(comment.id, comment)
+      if (incoming.length === 0) {
+        setListVersion((version) => version + 1)
+        return
+      }
 
-        if (!append) {
-          commentOrderRef.current.push(comment.id)
-        } else if (!alreadyPresent) {
-          commentOrderRef.current.push(comment.id)
+      const newEntries: Comment[] = []
+
+      incoming.forEach((comment) => {
+        cache.set(comment.id, comment)
+        const existingLocation = locationMap.get(comment.id)
+
+        if (existingLocation) {
+          const page = commentSlicesRef.current[existingLocation.pageIndex]
+          if (page) {
+            page[existingLocation.itemIndex] = comment
+          }
+        } else {
+          newEntries.push(comment)
         }
       })
 
-      if (!append) {
-        commentOrderRef.current = incoming.map((comment) => comment.id)
+      if (newEntries.length > 0) {
+        const newPageIndex = commentSlicesRef.current.length
+        commentSlicesRef.current.push(newEntries)
+        newEntries.forEach((comment, index) => {
+          locationMap.set(comment.id, { pageIndex: newPageIndex, itemIndex: index })
+        })
       }
 
-      setCommentsVersion((version) => version + 1)
+      setBaseCommentCount(locationMap.size)
+      setListVersion((version) => version + 1)
     },
     [],
   )
 
-  const displayComments = useMemo(() => {
-    void commentsVersion
-    const ordered = commentOrderRef.current
-      .map((id) => commentCacheRef.current.get(id))
-      .filter((comment): comment is Comment => Boolean(comment))
+  const totalRenderableComments = optimisticComments.length + baseCommentCount
 
-    return [...optimisticComments, ...ordered]
-  }, [commentsVersion, optimisticComments])
+  const getCommentAtIndex = useCallback(
+    (index: number): Comment | undefined => {
+      void listVersion
+
+      if (index < optimisticComments.length) {
+        return optimisticComments[index]
+      }
+
+      let normalizedIndex = index - optimisticComments.length
+      const slices = commentSlicesRef.current
+
+      for (let pageIndex = 0; pageIndex < slices.length; pageIndex++) {
+        const page = slices[pageIndex]
+        if (normalizedIndex < page.length) {
+          const comment = page[normalizedIndex]
+          if (!comment) {
+            return undefined
+          }
+          return commentCacheRef.current.get(comment.id) ?? comment
+        }
+        normalizedIndex -= page.length
+      }
+
+      return undefined
+    },
+    [listVersion, optimisticComments],
+  )
 
   // For rate limiting
   const lastCommentTime = useRef<number | null>(null)
@@ -373,27 +422,42 @@ export function CommentList({
             Try Again
           </Button>
         </div>
-      ) : displayComments.length === 0 ? (
+      ) : totalRenderableComments === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>No comments yet. Be the first to comment!</p>
         </div>
       ) : (
         <div className="mt-4">
           <Virtuoso
-            data={displayComments}
-            computeItemKey={(_, comment) => comment.id}
-            itemContent={(_, comment) => (
-              <CommentItem
-                comment={comment}
-                postId={postId}
-                onCommentUpdated={() => void loadComments({ append: false })}
-                onReplyAdded={handleCommentAdded}
-                onReplyFailed={handleCommentFailed}
-                isRateLimited={isRateLimited}
-                rateLimitTimeRemaining={getRateLimitTimeRemaining}
-                isFailed={failedCommentSet.has(comment.id)}
-              />
-            )}
+            totalCount={totalRenderableComments}
+            itemContent={(index) => {
+              const comment = getCommentAtIndex(index)
+
+              if (!comment) {
+                return (
+                  <div className="py-4">
+                    <p className="text-sm text-gray-500">Unable to load this comment.</p>
+                  </div>
+                )
+              }
+
+              return (
+                <CommentItem
+                  comment={comment}
+                  postId={postId}
+                  onCommentUpdated={() => void loadComments({ append: false })}
+                  onReplyAdded={handleCommentAdded}
+                  onReplyFailed={handleCommentFailed}
+                  isRateLimited={isRateLimited}
+                  rateLimitTimeRemaining={getRateLimitTimeRemaining}
+                  isFailed={failedCommentSet.has(comment.id)}
+                />
+              )
+            }}
+            computeItemKey={(index) => {
+              const comment = getCommentAtIndex(index)
+              return comment ? comment.id : `missing-${index}`
+            }}
             endReached={loadMoreComments}
             useWindowScroll
             components={{
