@@ -1,6 +1,6 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
-import { cacheTags as editionCacheTags } from "../cache"
+import { tag } from "../cache"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { fetchWordPressGraphQL } from "./client"
 import {
@@ -102,8 +102,8 @@ export async function fetchPendingComments(
 ): Promise<WordPressComment[]> {
   const tags = [
     ...buildCacheTags({ country: countryCode, section: "comments" }),
-    editionCacheTags.edition(countryCode),
-    editionCacheTags.comments(countryCode, "pending"),
+    tag.edition(countryCode),
+    tag.comments(countryCode, "pending"),
   ]
 
   try {

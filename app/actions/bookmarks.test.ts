@@ -66,8 +66,10 @@ describe("bookmark actions cache invalidation", () => {
     const result = await listBookmarks({ revalidate: true })
 
     expect(result.error).toBeNull()
-    expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
+    expect(revalidateTagMock).toHaveBeenCalledTimes(2)
+    expect(new Set(revalidateTagMock.mock.calls.map(([tag]) => tag))).toEqual(
+      new Set([cacheTags.bmUser("user-1"), cacheTags.bookmarks(undefined)]),
+    )
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 
@@ -91,7 +93,7 @@ describe("bookmark actions cache invalidation", () => {
       excerpt: "",
       featured_image: null,
       notes: null,
-      country: null,
+      country: "ng",
     }
 
     const insertChain = {
@@ -112,8 +114,10 @@ describe("bookmark actions cache invalidation", () => {
     const result = await addBookmark({ postId: "post-1" })
 
     expect(result.error).toBeNull()
-    expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
+    expect(revalidateTagMock).toHaveBeenCalledTimes(2)
+    expect(new Set(revalidateTagMock.mock.calls.map(([tag]) => tag))).toEqual(
+      new Set([cacheTags.bmUser("user-1"), cacheTags.bookmarks("ng")]),
+    )
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 
@@ -131,7 +135,7 @@ describe("bookmark actions cache invalidation", () => {
       excerpt: "",
       featured_image: null,
       notes: null,
-      country: null,
+      country: "za",
     }
 
     const deleteChain = {
@@ -149,8 +153,10 @@ describe("bookmark actions cache invalidation", () => {
     const result = await removeBookmark("post-2")
 
     expect(result.error).toBeNull()
-    expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
+    expect(revalidateTagMock).toHaveBeenCalledTimes(2)
+    expect(new Set(revalidateTagMock.mock.calls.map(([tag]) => tag))).toEqual(
+      new Set([cacheTags.bmUser("user-1"), cacheTags.bookmarks("za")]),
+    )
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 })
