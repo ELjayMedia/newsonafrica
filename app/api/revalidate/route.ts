@@ -4,6 +4,7 @@ import { applyRateLimit, handleApiError, successResponse, withCors, logRequest }
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { cacheTags } from "@/lib/cache"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import {
   ValidationError,
@@ -28,6 +29,8 @@ interface RevalidateParams {
   country?: string
   tagSlug?: string
   categorySlug?: string
+  postSlug?: string
+  postId?: string
   sections: string[]
 }
 
@@ -56,6 +59,13 @@ function validateRevalidateParams(searchParams: URLSearchParams): RevalidatePara
   const categorySlug =
     categorySlugValue && categorySlugValue.trim().length > 0 ? categorySlugValue.trim() : undefined
 
+  const postSlugValue = searchParams.get("postSlug")
+  const postSlug =
+    postSlugValue && postSlugValue.trim().length > 0 ? postSlugValue.trim().toLowerCase() : undefined
+
+  const postIdValue = searchParams.get("postId")
+  const postId = postIdValue && postIdValue.trim().length > 0 ? postIdValue.trim() : undefined
+
   const sectionValues = searchParams.getAll("section")
   const sections = sectionValues
     .map((value) => value.trim())
@@ -76,7 +86,7 @@ function validateRevalidateParams(searchParams: URLSearchParams): RevalidatePara
     throw new ValidationError("Invalid revalidation request", errors)
   }
 
-  return { secret, path, tag, type, country, tagSlug, categorySlug, sections }
+  return { secret, path, tag, type, country, tagSlug, categorySlug, postSlug, postId, sections }
 }
 
 export async function GET(request: NextRequest) {
@@ -89,7 +99,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
 
     // Validate query parameters
-    const { secret, path, tag, type, country, tagSlug, categorySlug, sections } =
+    const { secret, path, tag, type, country, tagSlug, categorySlug, postSlug, postId, sections } =
       validateRevalidateParams(searchParams)
 
     if (secret !== process.env.REVALIDATION_SECRET) {
@@ -117,15 +127,27 @@ export async function GET(request: NextRequest) {
     const resolvedCountry = country ?? DEFAULT_COUNTRY
 
     if (tagSlug) {
+      targetedTags.add(cacheTags.tags(resolvedCountry))
+      targetedTags.add(cacheTags.tag(resolvedCountry, tagSlug))
       buildCacheTags({ country: resolvedCountry, section: "tags", extra: [`tag:${tagSlug}`] }).forEach((cacheTag) =>
         targetedTags.add(cacheTag),
       )
     }
 
     if (categorySlug) {
+      targetedTags.add(cacheTags.categories(resolvedCountry))
+      targetedTags.add(cacheTags.category(resolvedCountry, categorySlug))
       buildCacheTags({ country: resolvedCountry, section: "categories", extra: [`category:${categorySlug}`] }).forEach(
         (cacheTag) => targetedTags.add(cacheTag),
       )
+    }
+
+    if (postSlug) {
+      targetedTags.add(cacheTags.postSlug(resolvedCountry, postSlug))
+    }
+
+    if (postId) {
+      targetedTags.add(cacheTags.post(resolvedCountry, postId))
     }
 
     const uniqueSections = Array.from(new Set(sections))

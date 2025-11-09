@@ -19,6 +19,7 @@ import {
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
+import { cacheTags } from '@/lib/cache'
 
 describe('article-data', () => {
   beforeEach(() => {
@@ -63,11 +64,17 @@ describe('article-data', () => {
       expect.any(Object),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.SHORT,
-        tags: expect.arrayContaining(['slug:test-slug']),
+        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
       }),
     )
-    expect(result?.slug).toBe('test-slug')
-    expect(result?.databaseId).toBe(99)
+    expect(result?.article.slug).toBe('test-slug')
+    expect(result?.article.databaseId).toBe(99)
+    expect(result?.tags).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug('ng', 'test-slug'),
+        cacheTags.post('ng', 99),
+      ]),
+    )
   })
 
   it('does not call wordpress when asked to load an unsupported country', async () => {
@@ -105,11 +112,17 @@ describe('article-data', () => {
       expect.any(Object),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.SHORT,
-        tags: expect.arrayContaining(['slug:test-slug']),
+        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
       }),
     )
-    expect(result?.slug).toBe('test-slug')
-    expect(result?.databaseId).toBe(42)
+    expect(result?.article.slug).toBe('test-slug')
+    expect(result?.article.databaseId).toBe(42)
+    expect(result?.tags).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug('za', 'test-slug'),
+        cacheTags.post('za', 42),
+      ]),
+    )
   })
 
   it('returns null when GraphQL returns no nodes', async () => {
