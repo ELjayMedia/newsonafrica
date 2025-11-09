@@ -16,6 +16,7 @@ import {
   getAggregatedLatestHome,
   getFpTaggedPostsForCountry,
   getFrontPageSlicesForCountry,
+  getLatestPostsForCountry,
   mapWordPressPostToHomePost,
   type AggregatedHomeData,
   type WordPressPost,
@@ -104,6 +105,25 @@ const FEATURED_POST_LIMIT = 6
 const TAGGED_POST_LIMIT = 8
 const RECENT_POST_LIMIT = 10
 export const COUNTRY_AGGREGATE_CONCURRENCY = 4
+const homeFeedRequestLimit = pLimit(6)
+
+const scheduleHomeFeedTask = <T>(
+  timeoutMs: number,
+  task: (options: { signal: AbortSignal; timeout?: number }) => Promise<T>,
+) =>
+  homeFeedRequestLimit(async () => {
+    const controller = new AbortController()
+    const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : undefined
+    const timer = timeout ? setTimeout(() => controller.abort(), timeout) : undefined
+
+    try {
+      return await task({ signal: controller.signal, timeout })
+    } finally {
+      if (timer) {
+        clearTimeout(timer)
+      }
+    }
+  })
 
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
@@ -168,47 +188,128 @@ async function fetchAggregatedHomeForCountryUncached(
   countryCode: string,
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
-  try {
-    const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
-      heroLimit: Math.max(limit, FEATURED_POST_LIMIT),
-      heroFallbackLimit: Math.max(3, Math.min(limit, FEATURED_POST_LIMIT)),
-      trendingLimit: Math.max(limit, FEATURED_POST_LIMIT),
-      latestLimit: Math.max(RECENT_POST_LIMIT, limit * 2),
-    })
+  const FRONT_PAGE_TIMEOUT_MS = 2500
+  const RECENT_TIMEOUT_MS = 1800
+  const TAG_TIMEOUT_MS = 1500
 
-    const frontPagePosts = mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices)
-    const aggregatedFromSlices = buildAggregatedHomeFromPosts(frontPagePosts)
+  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({
+    signal,
+    timeout,
+  }) => {
+    try {
+      const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
+        heroLimit: Math.max(limit, FEATURED_POST_LIMIT),
+        heroFallbackLimit: Math.max(3, Math.min(limit, FEATURED_POST_LIMIT)),
+        trendingLimit: Math.max(limit, FEATURED_POST_LIMIT),
+        latestLimit: Math.max(RECENT_POST_LIMIT, limit * 2),
+        request: {
+          ...(timeout ? { timeout } : {}),
+          signal,
+        },
+      })
 
-    if (hasAggregatedHomeContent(aggregatedFromSlices)) {
+      const frontPagePosts = mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices)
+      const aggregatedFromSlices = buildAggregatedHomeFromPosts(frontPagePosts)
+
+      if (!hasAggregatedHomeContent(aggregatedFromSlices)) {
+        console.warn(
+          `[v0] Frontpage slices returned no content for ${countryCode}, falling back to fp-tag`,
+        )
+      }
+
       return aggregatedFromSlices
+    } catch (error) {
+      console.error(
+        `[v0] Failed to assemble home feed for country ${countryCode} from frontpage slices`,
+        { error },
+      )
+      throw error
     }
+  })
 
-    console.warn(
-      `[v0] Frontpage slices returned no content for ${countryCode}, falling back to fp-tag`,
-    )
-  } catch (error) {
-    console.error(
-      `[v0] Failed to assemble home feed for country ${countryCode} from frontpage slices`,
-      { error },
-    )
-  }
+  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
+      const recentPosts = await getLatestPostsForCountry(
+        countryCode,
+        Math.max(limit, RECENT_POST_LIMIT),
+        null,
+        {
+          request: {
+            ...(timeout ? { timeout } : {}),
+            signal,
+          },
+        },
+      )
 
-  try {
-    const fpTaggedPosts = await getFpTaggedPostsForCountry(countryCode, Math.max(limit, TAGGED_POST_LIMIT))
+      const mappedPosts = recentPosts.posts.map((post) =>
+        mapWordPressPostToHomePost(post, countryCode),
+      )
+      return buildAggregatedHomeFromPosts(mappedPosts)
+    } catch (error) {
+      console.error(
+        `[v0] Failed to assemble home feed for country ${countryCode} from recent posts`,
+        { error },
+      )
+      throw error
+    }
+  })
 
-    const aggregatedFromTags = buildAggregatedHomeFromPosts(fpTaggedPosts)
+  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
+      const fpTaggedPosts = await getFpTaggedPostsForCountry(
+        countryCode,
+        Math.max(limit, TAGGED_POST_LIMIT),
+        {
+          ...(timeout ? { timeout } : {}),
+          signal,
+        },
+      )
 
-    if (hasAggregatedHomeContent(aggregatedFromTags)) {
+      const aggregatedFromTags = buildAggregatedHomeFromPosts(fpTaggedPosts)
+
+      if (!hasAggregatedHomeContent(aggregatedFromTags)) {
+        console.warn(
+          `[v0] FP tag fallback returned no content for ${countryCode}, using empty aggregated home`,
+        )
+      }
+
       return aggregatedFromTags
+    } catch (error) {
+      console.error(`[v0] Failed to assemble home feed for country ${countryCode} from fp-tag`, {
+        error,
+      })
+      throw error
     }
+  })
 
-    console.warn(
-      `[v0] FP tag fallback returned no content for ${countryCode}, using empty aggregated home`,
-    )
-  } catch (error) {
-    console.error(`[v0] Failed to assemble home feed for country ${countryCode} from fp-tag`, {
-      error,
-    })
+  const results = await Promise.allSettled([frontPagePromise, recentPromise, taggedPromise])
+
+  const best = results.reduce<{
+    aggregate: AggregatedHomeData | null
+    score: number
+  }>(
+    (acc, result) => {
+      if (result.status !== "fulfilled") {
+        return acc
+      }
+
+      const aggregate = result.value
+      const score =
+        (aggregate.heroPost ? 100 : 0) +
+        aggregate.secondaryPosts.length +
+        aggregate.remainingPosts.length
+
+      if (score > acc.score) {
+        return { aggregate, score }
+      }
+
+      return acc
+    },
+    { aggregate: null, score: -1 },
+  )
+
+  if (best.aggregate && best.score > 0) {
+    return best.aggregate
   }
 
   return createEmptyAggregatedHome()

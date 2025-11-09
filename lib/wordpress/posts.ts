@@ -95,8 +95,10 @@ export async function getLatestPostsForCountry(
   countryCode: string,
   limit = 20,
   cursor?: string | null,
+  options?: { request?: { timeout?: number; signal?: AbortSignal } },
 ): Promise<PaginatedPostsResult> {
   const tags = buildCacheTags({ country: countryCode, section: "news" })
+  const request = options?.request
 
   try {
     console.log("[v0] Fetching latest posts for:", countryCode)
@@ -115,7 +117,12 @@ export async function getLatestPostsForCountry(
         countryCode,
         LATEST_POSTS_QUERY,
         variables,
-        { tags, revalidate: LATEST_POSTS_REVALIDATE },
+        {
+          tags,
+          revalidate: LATEST_POSTS_REVALIDATE,
+          timeout: request?.timeout,
+          signal: request?.signal,
+        },
       )
 
       if (!gqlData?.posts) {
