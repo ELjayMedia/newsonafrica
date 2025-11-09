@@ -29,9 +29,16 @@ import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-uti
 import { cacheTags } from "@/lib/cache"
 import { DELETE, GET, POST, PUT } from "./route"
 
-function expectOnlyBookmarkTagInvalidation(userId: string) {
-  expect(revalidateByTag).toHaveBeenCalledTimes(1)
-  expect(revalidateByTag).toHaveBeenCalledWith(cacheTags.bmUser(userId))
+function expectBookmarkTagInvalidation(userId: string, editions: Array<string | null | undefined>) {
+  const expectedTags = new Set([
+    cacheTags.bmUser(userId),
+    ...editions.map((edition) => cacheTags.bookmarks(edition)),
+  ])
+
+  const calls = vi.mocked(revalidateByTag).mock.calls.map(([tag]) => tag)
+
+  expect(new Set(calls)).toEqual(expectedTags)
+  expect(calls).toHaveLength(expectedTags.size)
   expect(revalidateMultiplePaths).not.toHaveBeenCalled()
 }
 
@@ -45,7 +52,7 @@ describe("/api/bookmarks cache revalidation", () => {
     applyCookiesMock.mockImplementation((response: Response) => response)
   })
 
-  it("only revalidates bookmark tags after creating a bookmark", async () => {
+  it("revalidates the user and edition tags after creating a bookmark", async () => {
     const user = { id: "user-1" }
 
     const existingCheck = {
@@ -57,7 +64,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const insertChain = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-1" } }),
+      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-1", country: "ng" } }),
     }
 
     const supabase = {
@@ -77,25 +84,68 @@ describe("/api/bookmarks cache revalidation", () => {
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ postId: "post-1" }),
+      body: JSON.stringify({ postId: "post-1", country: "ng" }),
       headers: { "content-type": "application/json" },
     })
 
     const response = await POST(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation(user.id)
+    expectBookmarkTagInvalidation(user.id, ["ng"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
-  it("only revalidates bookmark tags after updating a bookmark", async () => {
+  it("falls back to the default edition tag when no bookmark country is provided", async () => {
+    const user = { id: "user-4" }
+
+    const existingCheck = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+    }
+
+    const insertChain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-4", country: null } }),
+    }
+
+    const supabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+      from: vi
+        .fn()
+        .mockImplementationOnce(() => existingCheck)
+        .mockImplementationOnce(() => insertChain),
+    }
+
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
+
+    const request = new NextRequest("https://example.com/api/bookmarks", {
+      method: "POST",
+      body: JSON.stringify({ postId: "post-4" }),
+      headers: { "content-type": "application/json" },
+    })
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(200)
+    expectBookmarkTagInvalidation(user.id, [null])
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("revalidates the user and edition tags after updating a bookmark", async () => {
     const user = { id: "user-2" }
 
     const updateChain = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-2" } }),
+      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-2", country: "ke" } }),
     }
 
     const supabase = {
@@ -119,19 +169,27 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await PUT(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation(user.id)
+    expectBookmarkTagInvalidation(user.id, ["ke"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
-  it("only revalidates bookmark tags after deleting bookmarks", async () => {
+  it("revalidates the user and edition tags after deleting bookmarks", async () => {
     const user = { id: "user-3" }
 
     const deleteChain: any = {
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
-      then: vi.fn((onFulfilled: (value: { error: null }) => void) => {
-        return Promise.resolve(onFulfilled({ error: null }))
+      select: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "bookmark-3",
+            user_id: "user-3",
+            post_id: "post-3",
+            country: "za",
+          },
+        ],
+        error: null,
       }),
     }
 
@@ -154,7 +212,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await DELETE(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation(user.id)
+    expectBookmarkTagInvalidation(user.id, ["za"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -283,7 +341,7 @@ describe("/api/bookmarks cursor pagination", () => {
       expect.objectContaining({ hasMore: true, limit: 2, nextCursor: expect.any(String) }),
     )
 
-    const decodedCursor = JSON.parse(body.pagination.nextCursor)
+    const decodedCursor = JSON.parse(decodeURIComponent(body.pagination.nextCursor))
     expect(decodedCursor).toMatchObject({
       sortBy: "created_at",
       sortOrder: "desc",

@@ -19,8 +19,23 @@ export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
+const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
+
 function serviceUnavailable(request: NextRequest) {
   return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
+}
+
+function getRequestEditionPreferences(request: NextRequest): string[] {
+  const editions = new Set<string>()
+
+  for (const key of EDITION_COOKIE_KEYS) {
+    const value = request.cookies.get(key)?.value
+    if (typeof value === "string" && value.trim()) {
+      editions.add(value.trim())
+    }
+  }
+
+  return Array.from(editions)
 }
 
 export async function GET(request: NextRequest) {
@@ -177,8 +192,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function invalidateBookmarksCache(userId: string) {
+function invalidateBookmarksCache(
+  userId: string,
+  editions: Iterable<string | null | undefined> = [],
+) {
+  const tags = new Set<string>()
+
+  for (const edition of editions) {
+    tags.add(cacheTags.bookmarks(edition))
+  }
+
+  if (tags.size === 0) {
+    tags.add(cacheTags.bookmarks(undefined))
+  }
+
   revalidateByTag(cacheTags.bmUser(userId))
+  tags.forEach((tag) => revalidateByTag(tag))
 }
 
 export async function POST(request: NextRequest) {
@@ -242,7 +271,14 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache(user.id)
+    const insertedBookmark = (data ?? null) as { country?: string | null } | null
+    const primaryEdition =
+      typeof insertedBookmark?.country === "string"
+        ? insertedBookmark.country
+        : bookmarkData.country ?? null
+    const editionSources = [primaryEdition, ...getRequestEditionPreferences(request)]
+
+    invalidateBookmarksCache(user.id, editionSources)
     return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -305,7 +341,16 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache(user.id)
+    const updatedBookmark = (data ?? null) as { country?: string | null } | null
+    const updatedCountry =
+      typeof updatedBookmark?.country === "string"
+        ? updatedBookmark.country
+        : typeof sanitizedUpdates.country === "string"
+          ? sanitizedUpdates.country
+          : null
+    const editionSources = [updatedCountry, ...getRequestEditionPreferences(request)]
+
+    invalidateBookmarksCache(user.id, editionSources)
     return respond(NextResponse.json({ bookmark: data }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)
@@ -350,14 +395,19 @@ export async function DELETE(request: NextRequest) {
       query = query.eq("post_id", postId)
     }
 
-    const { error } = await query
+    const { data: removedRows, error } = await query.select("post_id, country")
 
     if (error) {
       console.error("Error removing bookmark(s):", error)
       return respond(jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache(user.id)
+    const removedCountries = Array.isArray(removedRows)
+      ? removedRows.map((row) => (row as { country?: string | null }).country ?? null)
+      : []
+    const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
+
+    invalidateBookmarksCache(user.id, editionSources)
     return respond(NextResponse.json({ success: true }))
   } catch (error) {
     console.error("Error in bookmarks API:", error)

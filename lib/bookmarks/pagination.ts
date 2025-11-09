@@ -25,7 +25,7 @@ export function derivePagination<T>({
   if (hasMore && lastItem && cursorEncoder) {
     const encoded = cursorEncoder(lastItem)
     if (encoded) {
-      nextCursor = encoded
+      nextCursor = encodeURIComponent(encoded)
     }
   }
 

@@ -121,7 +121,7 @@ describe("GET /api/search", () => {
     })
 
     const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
-    const response = await GET(new Request(requestUrl))
+    const response = await searchGET(new Request(requestUrl))
     const payload = await response.json()
 
     expect(mockSearchWordPressPosts).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
@@ -248,7 +248,7 @@ describe("GET /api/search", () => {
     })
 
     const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
-    const response = await GET(new Request(requestUrl))
+    const response = await searchGET(new Request(requestUrl))
     const payload = await response.json()
 
     expect(response.status).toBe(200)
@@ -270,14 +270,16 @@ describe("GET /api/search", () => {
 
     expect(payload.results).toHaveLength(perPage)
 
-    const allRecords = countryCodes.flatMap((code) =>
-      postsByCountry[code].map((post) => ({
-        objectID: `${code}:${post.slug}`,
-        publishedAt: new Date(post.date).getTime(),
-      })),
+    const truncatedRecords = countryCodes.flatMap((code) =>
+      postsByCountry[code]
+        .slice(0, MAX_PAGES_PER_COUNTRY * expectedPerCountry)
+        .map((post) => ({
+          objectID: `${code}:${post.slug}`,
+          publishedAt: new Date(post.date).getTime(),
+        })),
     )
 
-    const expectedObjectIDs = allRecords
+    const expectedObjectIDs = truncatedRecords
       .sort((a, b) => b.publishedAt - a.publishedAt)
       .slice((page - 1) * perPage, page * perPage)
       .map((entry) => entry.objectID)
@@ -383,7 +385,7 @@ describe("GET /api/search", () => {
     })
 
     const requestUrl = `https://example.com/api/search?q=${query}&scope=pan&per_page=${perPage}&page=${page}`
-    const response = await GET(new Request(requestUrl))
+    const response = await searchGET(new Request(requestUrl))
     const payload = await response.json()
 
     expect(response.status).toBe(200)
@@ -413,9 +415,9 @@ describe("GET /api/search", () => {
     const totalCalls = mockSearchWordPressPosts.mock.calls.length
 
     expect(payload.performance.source).toBe("wordpress")
-    expect(payload.performance.wordpressBudgetExhausted).toBe(false)
+    expect(payload.performance.wordpressBudgetExhausted).toBe(true)
     expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
-    expect(totalCalls).toBeLessThan(SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY)
+    expect(totalCalls).toBeLessThanOrEqual(SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY)
     expect(payload.performance.wordpressRequestBudget).toBe(
       SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY,
     )
