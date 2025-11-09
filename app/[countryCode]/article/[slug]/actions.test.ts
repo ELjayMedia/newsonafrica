@@ -52,6 +52,7 @@ describe("fetchArticleWithFallbackAction", () => {
     mockLoadArticleWithFallback.mockResolvedValue({
       article: { id: 42, title: "Test" },
       sourceCountry: "za",
+      tags: ["edition:za:post:42"],
     })
     const relatedPosts = [{ id: "r1" }]
     mockGetRelatedPostsForCountry.mockResolvedValue(relatedPosts)

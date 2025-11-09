@@ -21,7 +21,7 @@ vi.mock("next/cache", () => ({
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { revalidatePath } from "next/cache"
 import { CACHE_TAGS } from "@/lib/cache/constants"
-import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { cacheTags } from "@/lib/cache"
 import { GET } from "./route"
 
 const SECRET = "test-secret"
@@ -59,30 +59,45 @@ describe("/api/revalidate", () => {
 
     await GET(request)
 
-    const expectedTags = buildCacheTags({
-      country: "za",
-      section: "tags",
-      extra: ["tag:finance"],
-    })
-
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
-    expect(tagCalls).toEqual(expect.arrayContaining(expectedTags))
+    expect(tagCalls).toEqual(
+      expect.arrayContaining([
+        cacheTags.tags("za"),
+        cacheTags.tag("za", "finance"),
+      ]),
+    )
     expect(tagCalls).not.toContain(CACHE_TAGS.POSTS)
   })
 
   it("revalidates category caches when categorySlug is provided", async () => {
     const request = new NextRequest(
-      `https://example.com/api/revalidate?secret=${SECRET}&categorySlug=politics`,
+      `https://example.com/api/revalidate?secret=${SECRET}&country=ng&categorySlug=politics`,
     )
 
     await GET(request)
 
-    const expectedTags = buildCacheTags({
-      section: "categories",
-      extra: ["category:politics"],
-    })
+    const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
+    expect(tagCalls).toEqual(
+      expect.arrayContaining([
+        cacheTags.categories("ng"),
+        cacheTags.category("ng", "politics"),
+      ]),
+    )
+  })
+
+  it("revalidates post caches when post identifiers are provided", async () => {
+    const request = new NextRequest(
+      `https://example.com/api/revalidate?secret=${SECRET}&country=ng&postSlug=My-Story&postId=77`,
+    )
+
+    await GET(request)
 
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
-    expect(tagCalls).toEqual(expect.arrayContaining(expectedTags))
+    expect(tagCalls).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug("ng", "my-story"),
+        cacheTags.post("ng", "77"),
+      ]),
+    )
   })
 })

@@ -265,18 +265,6 @@ export async function POST(request: NextRequest) {
               section: "posts",
             }).forEach((tag) => tagsToRevalidate.add(tag))
 
-            buildCacheTags({
-              country,
-              section: "article",
-              extra: [`slug:${post.slug}`],
-            }).forEach((tag) => tagsToRevalidate.add(tag))
-
-            buildCacheTags({
-              country,
-              section: "post",
-              extra: [`slug:${post.slug}`],
-            }).forEach((tag) => tagsToRevalidate.add(tag))
-
             if (postId) {
               buildCacheTags({
                 country,
@@ -372,15 +360,6 @@ export async function POST(request: NextRequest) {
 
             buildCacheTags({ country, section: "news" }).forEach((tag) => tagsToRevalidate.add(tag))
             buildCacheTags({ country, section: "posts" }).forEach((tag) => tagsToRevalidate.add(tag))
-            buildCacheTags({
-              country,
-              section: "article",
-              extra: [`slug:${post.slug}`],
-            }).forEach((tag) => tagsToRevalidate.add(tag))
-            buildCacheTags({ country, section: "post", extra: [`slug:${post.slug}`] }).forEach((tag) =>
-              tagsToRevalidate.add(tag),
-            )
-
             if (postId) {
               buildCacheTags({ country, section: "related", extra: [`post:${postId}`] }).forEach((tag) =>
                 tagsToRevalidate.add(tag),

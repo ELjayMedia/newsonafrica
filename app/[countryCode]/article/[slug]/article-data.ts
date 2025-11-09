@@ -1,6 +1,6 @@
 import { env } from "@/config/env"
-import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { COUNTRIES, fetchWordPressGraphQL } from "@/lib/wordpress/client"
@@ -58,31 +58,43 @@ type PostBySlugQueryResult = {
   } | null
 }
 
-export async function loadArticle(countryCode: string, slug: string): Promise<WordPressPost | null> {
+export interface LoadedArticle {
+  article: WordPressPost
+  tags: string[]
+}
+
+export async function loadArticle(countryCode: string, slug: string): Promise<LoadedArticle | null> {
   if (!hasWordPressEndpoint(countryCode)) {
     return null
   }
 
-  const cacheTags = buildCacheTags({
-    country: countryCode,
-    section: "article",
-    extra: [`slug:${slug}`],
-  })
+  const slugTag = cacheTags.postSlug(countryCode, slug)
+  const requestTags = [slugTag]
 
   const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
     countryCode,
     POST_BY_SLUG_QUERY,
     { slug },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+    { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
 
-  return node ? mapGraphqlPostToWordPressPost(node, countryCode) : null
+  if (!node) {
+    return null
+  }
+
+  const article = mapGraphqlPostToWordPressPost(node, countryCode)
+  const tags = [slugTag]
+
+  if (node?.databaseId != null) {
+    tags.push(cacheTags.post(countryCode, node.databaseId))
+  }
+
+  return { article, tags }
 }
 
-export interface ArticleLoadResult {
-  article: WordPressPost
+export interface ArticleLoadResult extends LoadedArticle {
   sourceCountry: string
 }
 
@@ -126,7 +138,7 @@ export async function loadArticleWithFallback(
   for (const country of countryPriority) {
     const article = await loadArticle(country, normalizedSlug)
     if (article) {
-      return { article, sourceCountry: country }
+      return { ...article, sourceCountry: country }
     }
   }
 
