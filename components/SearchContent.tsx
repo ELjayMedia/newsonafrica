@@ -380,14 +380,14 @@ function SearchBox({ placeholder, country, sort, query, onSearch, onClear, isSea
     const timer = window.setTimeout(async () => {
       try {
         setIsFetchingSuggestions(true)
-        const params = new URLSearchParams({ q: trimmed, suggestions: "true", sort })
+        const params = new URLSearchParams({ q: trimmed, sort })
         if (country && country !== PAN_AFRICAN_CODE) {
           params.set("country", country)
         } else {
           params.set("country", PAN_AFRICAN_CODE)
         }
 
-        const response = await fetch(`/api/search?${params.toString()}`, {
+        const response = await fetch(`/api/search/suggest?${params.toString()}`, {
           signal: controller.signal,
           headers: { Accept: "application/json" },
           cache: "no-store",

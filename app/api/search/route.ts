@@ -1,27 +1,26 @@
 import type { NextRequest } from "next/server"
-import pLimit from "p-limit"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { stripHtml } from "@/lib/search"
-import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import {
   resolveSearchIndex,
-  type AlgoliaSortMode,
   type AlgoliaSearchRecord,
 } from "@/lib/algolia/client"
-import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
+import { searchWordPressPosts as wpSearchPosts } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
-export const runtime = "edge"
+import {
+  DEFAULT_COUNTRY,
+  type NormalizedBaseSearchParams,
+  type SearchScope,
+  normalizeBaseSearchParams,
+} from "./shared"
+import { REQUEST_BUDGET, executeWordPressSearchForScope, fromWordPressResults } from "./wordpress-fallback"
+
+export { MAX_PAGES_PER_COUNTRY } from "./wordpress-fallback"
+
+export const runtime = "nodejs"
 export const revalidate = 30
-
-const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
-export const MAX_PAGES_PER_COUNTRY = 6
-export const MAX_CONCURRENT_COUNTRY_FETCHES = 3
-const RESULT_BUFFER_RATIO = 0.2
-const RESULT_BUFFER_MIN = 10
-
-const REQUEST_BUDGET = SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -45,17 +44,9 @@ const FALLBACK_RECORDS: SearchRecord[] = [
   },
 ]
 
-const supportedCountryCodes = new Set(SUPPORTED_COUNTRIES.map((country) => country.code.toLowerCase()))
-
-type SearchScope = { type: "country"; country: string } | { type: "panAfrican" }
-
-type NormalizedSearchParams = {
-  query: string
+type NormalizedSearchParams = NormalizedBaseSearchParams & {
   page: number
   perPage: number
-  sort: AlgoliaSortMode
-  scope: SearchScope
-  suggestionsOnly: boolean
 }
 
 const getRateLimitKey = (request: NextRequest): string => {
@@ -91,53 +82,6 @@ const checkRateLimit = (request: NextRequest): { limited: boolean; retryAfter?: 
   return { limited: false }
 }
 
-const parseScope = (value: string | null | undefined): SearchScope => {
-  if (!value) {
-    return { type: "country", country: DEFAULT_COUNTRY }
-  }
-
-  const normalized = value.trim().toLowerCase()
-
-  if (["all", "pan", "africa", "pan-africa", "african"].includes(normalized)) {
-    return { type: "panAfrican" }
-  }
-
-  if (supportedCountryCodes.has(normalized)) {
-    return { type: "country", country: normalized }
-  }
-
-  return { type: "country", country: DEFAULT_COUNTRY }
-}
-
-const SORT_ALIASES: Record<string, AlgoliaSortMode> = {
-  latest: "latest",
-  recent: "latest",
-  newest: "latest",
-}
-
-const parseSort = (value: string | null | undefined): AlgoliaSortMode => {
-  if (!value) {
-    return "relevance"
-  }
-
-  const normalized = value.trim().toLowerCase()
-
-  if (normalized in SORT_ALIASES) {
-    return SORT_ALIASES[normalized]
-  }
-
-  return "relevance"
-}
-
-const normalizeBooleanParam = (value: string | null): boolean => {
-  if (!value) {
-    return false
-  }
-
-  const normalized = value.trim().toLowerCase()
-  return ["1", "true", "yes", "on"].includes(normalized)
-}
-
 const normalizeIntegerParam = (
   value: string | null,
   { fallback, min, max }: { fallback: number; min: number; max?: number },
@@ -152,289 +96,19 @@ const normalizeIntegerParam = (
   return typeof max === "number" ? Math.min(clamped, max) : clamped
 }
 
-const normalizeQuery = (value: string | null): string => (value ?? "").replace(/\s+/g, " ").trim()
-
 const normalizeSearchParams = (searchParams: URLSearchParams): NormalizedSearchParams => {
-  const query = normalizeQuery(searchParams.get("q") ?? searchParams.get("query"))
+  const baseParams = normalizeBaseSearchParams(searchParams)
   const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
   const perPage = normalizeIntegerParam(searchParams.get("per_page"), { fallback: 20, min: 1, max: 100 })
-  const sort = parseSort(searchParams.get("sort"))
-  const scope = parseScope(searchParams.get("country") ?? searchParams.get("scope"))
-  const suggestionsOnly = normalizeBooleanParam(searchParams.get("suggestions"))
-
-  return { query, page, perPage, sort, scope, suggestionsOnly }
+  return { ...baseParams, page, perPage }
 }
 
-const fromWordPressResults = (
-  results: Awaited<ReturnType<typeof wpSearchPosts>>,
-  country: string,
-): SearchRecord[] =>
-  results.results.map((post) => ({
-    objectID: `${country}:${post.slug || post.id}`,
-    title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",
-    excerpt: stripHtml(post.excerpt?.rendered || "").trim(),
-    categories:
-      post._embedded?.["wp:term"]?.[0]?.map((term) => term.name)?.filter((name): name is string => Boolean(name)) || [],
-    country,
-    published_at: new Date(post.date || new Date().toISOString()).toISOString(),
-  }))
+const FULL_SEARCH_CACHE_HEADER = "private, no-store, no-cache, must-revalidate"
 
-type WordPressScopeResult = {
-  results: SearchRecord[]
-  total: number
-  totalPages: number
-  currentPage: number
-  hasMore: boolean
-  suggestions: string[]
-  performance: {
-    totalRequests: number
-    requestBudget: number
-    budgetExhausted: boolean
-    elapsedMs: number
-  }
-}
-
-const uniqueSuggestions = (records: SearchRecord[]): string[] =>
-  Array.from(new Set(records.map((record) => record.title).filter(Boolean))).slice(0, 10)
-
-const executeWordPressSearchForScope = async (
-  query: string,
-  scope: SearchScope,
-  page: number,
-  perPage: number,
-): Promise<WordPressScopeResult> => {
-  const safePage = Math.max(1, page)
-  const safePerPage = Math.max(1, perPage)
-
-  if (scope.type === "panAfrican") {
-    const desiredTotal = safePage * safePerPage
-    const countryCount = Math.max(1, SUPPORTED_COUNTRIES.length)
-    const basePerCountry = Math.ceil(desiredTotal / countryCount)
-    const buffer = Math.max(2, Math.ceil(basePerCountry * 0.1))
-    const perCountryFetchSize = Math.min(100, Math.max(1, basePerCountry + buffer))
-    const desiredWithBuffer = desiredTotal + Math.max(
-      RESULT_BUFFER_MIN,
-      Math.ceil(desiredTotal * RESULT_BUFFER_RATIO),
-    )
-    const limit = pLimit(MAX_CONCURRENT_COUNTRY_FETCHES)
-    const searchStart = Date.now()
-    let totalRequests = 0
-    let budgetExhausted = false
-    type HeapNode = { record: SearchRecord; timestamp: number }
-
-    const heap: HeapNode[] = []
-    const maxHeapSize = Math.max(1, desiredWithBuffer)
-    let total = 0
-    const suggestionSet = new Set<string>()
-    const countryTotals = new Map<string, number>()
-
-    const siftUp = (index: number) => {
-      let current = index
-      while (current > 0) {
-        const parent = Math.floor((current - 1) / 2)
-        if (heap[current].timestamp >= heap[parent].timestamp) {
-          break
-        }
-        ;[heap[current], heap[parent]] = [heap[parent], heap[current]]
-        current = parent
-      }
-    }
-
-    const siftDown = (index: number) => {
-      let current = index
-      const length = heap.length
-
-      while (true) {
-        const left = current * 2 + 1
-        const right = left + 1
-        let smallest = current
-
-        if (left < length && heap[left].timestamp < heap[smallest].timestamp) {
-          smallest = left
-        }
-
-        if (right < length && heap[right].timestamp < heap[smallest].timestamp) {
-          smallest = right
-        }
-
-        if (smallest === current) {
-          break
-        }
-
-        ;[heap[current], heap[smallest]] = [heap[smallest], heap[current]]
-        current = smallest
-      }
-    }
-
-    const addToHeap = (record: SearchRecord) => {
-      const timestamp = new Date(record.published_at ?? 0).getTime()
-      const node: HeapNode = { record, timestamp }
-
-      if (heap.length < maxHeapSize) {
-        heap.push(node)
-        siftUp(heap.length - 1)
-        return
-      }
-
-      if (heap[0].timestamp >= timestamp) {
-        return
-      }
-
-      heap[0] = node
-      siftDown(0)
-    }
-
-    const addSuggestion = (title: string | undefined) => {
-      if (!title) {
-        return
-      }
-
-      if (suggestionSet.has(title) || suggestionSet.size < 10) {
-        suggestionSet.add(title)
-      }
-    }
-
-    type CountryState = {
-      code: string
-      nextPage: number
-      hasMore: boolean
-      pagesFetched: number
-      oldestTimestampFetched?: number
-    }
-
-    const fetchAndProcessPage = async (state: CountryState, pageToFetch: number) => {
-      if (budgetExhausted || totalRequests >= REQUEST_BUDGET) {
-        budgetExhausted = true
-        return 0
-      }
-
-      totalRequests += 1
-      const response = await wpSearchPosts(query, {
-        page: pageToFetch,
-        perPage: perCountryFetchSize,
-        country: state.code,
-      })
-      const records = fromWordPressResults(response, state.code)
-
-      if (!countryTotals.has(state.code)) {
-        total += response.total
-        countryTotals.set(state.code, response.total)
-      }
-
-      let pageOldestTimestamp: number | undefined
-
-      records.forEach((record) => {
-        addToHeap(record)
-        addSuggestion(record.title)
-        const timestamp = new Date(record.published_at ?? 0).getTime()
-        pageOldestTimestamp = typeof pageOldestTimestamp === "number"
-          ? Math.min(pageOldestTimestamp, timestamp)
-          : timestamp
-      })
-
-      if (typeof pageOldestTimestamp === "number") {
-        state.oldestTimestampFetched = typeof state.oldestTimestampFetched === "number"
-          ? Math.min(state.oldestTimestampFetched, pageOldestTimestamp)
-          : pageOldestTimestamp
-      }
-
-      state.nextPage = response.currentPage + 1
-      state.pagesFetched += 1
-      state.hasMore = response.hasMore && state.pagesFetched < MAX_PAGES_PER_COUNTRY
-
-      if (totalRequests >= REQUEST_BUDGET) {
-        budgetExhausted = true
-      }
-      return records.length
-    }
-
-    const countryStates: CountryState[] = SUPPORTED_COUNTRIES.map((country) => ({
-      code: country.code.toLowerCase(),
-      nextPage: 1,
-      hasMore: true,
-      pagesFetched: 0,
-    }))
-
-    await Promise.all(countryStates.map((state) => limit(() => fetchAndProcessPage(state, 1))))
-
-    while (true) {
-      if (budgetExhausted) {
-        break
-      }
-
-      const statesWithMore = countryStates.filter((state) => state.hasMore)
-
-      if (statesWithMore.length === 0) {
-        break
-      }
-
-      const heapOldestTimestamp = heap[0]?.timestamp ?? Number.NEGATIVE_INFINITY
-      const shouldContinue =
-        heap.length < desiredWithBuffer ||
-        statesWithMore.some((state) => {
-          const oldestForCountry = state.oldestTimestampFetched
-          return typeof oldestForCountry === "number" && oldestForCountry > heapOldestTimestamp
-        })
-
-      if (!shouldContinue) {
-        break
-      }
-
-      const additions = await Promise.all(
-        statesWithMore.map((state) => limit(() => fetchAndProcessPage(state, state.nextPage))),
-      )
-
-      const addedRecords = additions.reduce((sum, count) => sum + count, 0)
-
-      if (addedRecords === 0) {
-        break
-      }
-    }
-
-    const getRecordTimestamp = (record: SearchRecord) => new Date(record.published_at ?? 0).getTime()
-
-    const sortedRecords = heap
-      .map((entry) => entry.record)
-      .sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a))
-
-    const startIndex = (safePage - 1) * safePerPage
-    const paginatedRecords = sortedRecords.slice(startIndex, startIndex + safePerPage)
-    const totalPages = Math.max(1, Math.ceil(total / safePerPage))
-
-    return {
-      results: paginatedRecords,
-      total,
-      totalPages,
-      currentPage: safePage,
-      hasMore: safePage < totalPages,
-      suggestions: Array.from(suggestionSet),
-      performance: {
-        totalRequests,
-        requestBudget: REQUEST_BUDGET,
-        budgetExhausted,
-        elapsedMs: Date.now() - searchStart,
-      },
-    }
-  }
-
-  const countryCode = scope.country
-  const response = await wpSearchPosts(query, { page: safePage, perPage: safePerPage, country: countryCode })
-  const records = fromWordPressResults(response, countryCode)
-
-  return {
-    results: records,
-    total: response.total,
-    totalPages: response.totalPages,
-    currentPage: response.currentPage,
-    hasMore: response.hasMore,
-    suggestions: uniqueSuggestions(records),
-    performance: {
-      totalRequests: 1,
-      requestBudget: REQUEST_BUDGET,
-      budgetExhausted: false,
-      elapsedMs: 0,
-    },
-  }
+const respondWithSearch = (request: NextRequest, body: unknown, init?: ResponseInit) => {
+  const response = jsonWithCors(request, body, init)
+  response.headers.set("Cache-Control", FULL_SEARCH_CACHE_HEADER)
+  return response
 }
 
 const buildFallbackResponse = (
@@ -515,7 +189,7 @@ export async function GET(request: NextRequest) {
 
   const rateLimitCheck = checkRateLimit(request)
   if (rateLimitCheck.limited) {
-    return jsonWithCors(
+    return respondWithSearch(
       request,
       {
         error: "Too many search requests",
@@ -534,85 +208,12 @@ export async function GET(request: NextRequest) {
   const normalizedParams = normalizeSearchParams(searchParams)
 
   if (!normalizedParams.query) {
-    return jsonWithCors(request, { error: "Missing search query" }, { status: 400 })
+    return respondWithSearch(request, { error: "Missing search query" }, { status: 400 })
   }
 
   const scope = normalizedParams.scope
   const fallbackCountry = scope.type === "country" ? scope.country : DEFAULT_COUNTRY
   const searchIndex = resolveSearchIndex(scope, normalizedParams.sort)
-
-  if (normalizedParams.suggestionsOnly) {
-    if (!searchIndex) {
-      if (scope.type === "panAfrican") {
-        try {
-          const fallback = await executeWordPressSearchForScope(
-            normalizedParams.query,
-            scope,
-            1,
-            10,
-          )
-          return jsonWithCors(request, {
-            suggestions: fallback.suggestions,
-            performance: {
-              responseTime: Date.now() - startTime,
-              source: "wordpress-fallback",
-            },
-          })
-        } catch {
-          return jsonWithCors(request, { suggestions: [] })
-        }
-      }
-
-      try {
-        const suggestions = await wpGetSearchSuggestions(
-          normalizedParams.query,
-          10,
-          scope.type === "country" ? scope.country : undefined,
-        )
-        return jsonWithCors(request, {
-          suggestions,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "wordpress-fallback",
-          },
-        })
-      } catch {
-        return jsonWithCors(request, { suggestions: [] })
-      }
-    }
-
-    try {
-      const response = await searchIndex.search<AlgoliaSearchRecord>(normalizedParams.query, {
-        page: 0,
-        hitsPerPage: 10,
-        attributesToRetrieve: ["title"],
-      })
-
-      const suggestions = Array.from(new Set(response.hits.map((hit) => hit.title))).slice(0, 10)
-
-      return jsonWithCors(request, {
-        suggestions,
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: `algolia-${normalizedParams.sort}`,
-        },
-      })
-    } catch (error) {
-      console.error("Algolia suggestion search failed", error)
-      try {
-        const suggestions = await wpGetSearchSuggestions(normalizedParams.query)
-        return jsonWithCors(request, {
-          suggestions,
-          performance: {
-            responseTime: Date.now() - startTime,
-            source: "wordpress-fallback",
-          },
-        })
-      } catch {
-        return jsonWithCors(request, { suggestions: [] })
-      }
-    }
-  }
 
   if (!searchIndex) {
     if (scope.type === "panAfrican") {
@@ -624,7 +225,7 @@ export async function GET(request: NextRequest) {
           normalizedParams.perPage,
         )
 
-        return jsonWithCors(request, {
+        return respondWithSearch(request, {
           results: fallback.results,
           total: fallback.total,
           totalPages: fallback.totalPages,
@@ -643,14 +244,14 @@ export async function GET(request: NextRequest) {
         })
       } catch (error) {
         console.error("WordPress pan-African fallback failed", error)
-        return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
+        return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
       }
     }
 
     try {
       const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
       const records = fromWordPressResults(wpResults, fallbackCountry)
-      return jsonWithCors(request, {
+      return respondWithSearch(request, {
         results: records,
         total: wpResults.total,
         totalPages: Math.max(1, wpResults.totalPages || 1),
@@ -665,7 +266,7 @@ export async function GET(request: NextRequest) {
       })
     } catch (error) {
       console.error("WordPress search fallback failed", error)
-      return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
+      return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
     }
   }
 
@@ -680,7 +281,7 @@ export async function GET(request: NextRequest) {
     const total = typeof response.nbHits === "number" ? response.nbHits : mappedHits.length
     const totalPages = Math.max(1, response.nbPages || Math.ceil(total / normalizedParams.perPage))
 
-    return jsonWithCors(request, {
+    return respondWithSearch(request, {
       results: mappedHits,
       total,
       totalPages,
@@ -700,7 +301,7 @@ export async function GET(request: NextRequest) {
       const wpResults = await wpSearchPosts(normalizedParams.query, buildWordPressOptions(normalizedParams))
       const records = fromWordPressResults(wpResults, fallbackCountry)
 
-      return jsonWithCors(request, {
+      return respondWithSearch(request, {
         results: records,
         total: wpResults.total,
         totalPages: Math.max(1, wpResults.totalPages || 1),
@@ -715,7 +316,7 @@ export async function GET(request: NextRequest) {
       })
     } catch (wpError) {
       console.error("WordPress fallback failed", wpError)
-      return jsonWithCors(request, buildFallbackResponse(normalizedParams, startTime))
+      return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
     }
   }
 }
