@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import type { Database } from "@/types/supabase"
@@ -129,7 +129,12 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     }
 
     // Return the updated comment with profile data
-    revalidateByTag(CACHE_TAGS.COMMENTS)
+    const commentEdition = (data as CommentRow).country ?? null
+    const commentPostId = (data as CommentRow).post_id ?? null
+
+    if (commentPostId !== null) {
+      revalidateByTag(cacheTags.comments(commentEdition, commentPostId))
+    }
     const responsePayload = {
       ...data,
       profile: {
@@ -176,11 +181,11 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
     }
 
     // First check if the user owns this comment
-    type CommentOwner = { user_id: string }
+    type CommentOwner = { user_id: string; post_id: number | string | null; country: string | null }
 
     const { data: comment, error: fetchError } = await supabase
       .from("comments")
-      .select("user_id")
+      .select("user_id, post_id, country")
       .eq("id", commentId)
       .single<CommentOwner>()
 
@@ -213,7 +218,9 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
       return applyCookies(jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 }))
     }
 
-    revalidateByTag(CACHE_TAGS.COMMENTS)
+    if (comment.post_id !== null) {
+      revalidateByTag(cacheTags.comments(comment.country ?? null, comment.post_id))
+    }
     return applyCookies(NextResponse.json({ success: true }))
   } catch (error) {
     console.error("Error deleting comment:", error)
