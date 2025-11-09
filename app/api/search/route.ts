@@ -12,8 +12,8 @@ import {
 import { searchWordPressPosts as wpSearchPosts, getSearchSuggestions as wpGetSearchSuggestions } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
 
-export const runtime = "nodejs"
-export const revalidate = 0
+export const runtime = "edge"
+export const revalidate = 30
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 export const MAX_PAGES_PER_COUNTRY = 6
