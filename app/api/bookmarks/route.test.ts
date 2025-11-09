@@ -341,7 +341,7 @@ describe("/api/bookmarks cursor pagination", () => {
       expect.objectContaining({ hasMore: true, limit: 2, nextCursor: expect.any(String) }),
     )
 
-    const decodedCursor = JSON.parse(body.pagination.nextCursor)
+    const decodedCursor = JSON.parse(decodeURIComponent(body.pagination.nextCursor))
     expect(decodedCursor).toMatchObject({
       sortBy: "created_at",
       sortOrder: "desc",
