@@ -44,7 +44,7 @@ const MAX_GRAPHQL_BATCH_SIZE = 100
 
 const LATEST_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const RELATED_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
-const RELATED_POSTS_TIMEOUT_MS = 5000
+const RELATED_POSTS_TIMEOUT_MS = 1000
 const TAG_LISTING_REVALIDATE = CACHE_DURATIONS.SHORT
 const TAG_INDEX_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const POST_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
@@ -177,7 +177,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
     countryCode,
     POST_CATEGORIES_QUERY,
     { id: Number(postId) },
-    { tags, revalidate: RELATED_POSTS_REVALIDATE },
+    { tags, revalidate: RELATED_POSTS_REVALIDATE, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
   if (gqlPost?.post) {
     const catIds =
