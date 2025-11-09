@@ -22,7 +22,30 @@ const DEFAULT_BACKOFF_FACTOR = 2
 const DEFAULT_TIMEOUT = process.env.NODE_ENV === "production" ? 20000 : 10000
 
 const defaultRetryOnError = () => true
-const defaultRetryOnResponse = (response: Response) => response.status >= 500
+const TRANSIENT_STATUS_CODES = new Set([408, 425, 429])
+
+const defaultRetryOnResponse = (response: Response) =>
+  response.status >= 500 || TRANSIENT_STATUS_CODES.has(response.status)
+
+const getRetryAfterDelayMs = (response: Response): number | null => {
+  const retryAfter = response.headers.get("Retry-After")
+  if (!retryAfter) {
+    return null
+  }
+
+  const seconds = Number(retryAfter)
+  if (!Number.isNaN(seconds)) {
+    return seconds > 0 ? seconds * 1000 : 0
+  }
+
+  const retryDate = Date.parse(retryAfter)
+  if (!Number.isNaN(retryDate)) {
+    const delayMs = retryDate - Date.now()
+    return delayMs > 0 ? delayMs : 0
+  }
+
+  return null
+}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -52,8 +75,14 @@ export async function fetchWithRetry(
       })
 
       if (attempt < attempts && retryOnResponse(response, attempt)) {
-        const delay = backoffMs * Math.pow(backoffFactor, attempt - 1)
-        await wait(delay)
+        const baseDelay = backoffMs * Math.pow(backoffFactor, attempt - 1)
+        const retryAfterDelay = getRetryAfterDelayMs(response)
+        const delay =
+          retryAfterDelay === null ? baseDelay : Math.max(baseDelay, retryAfterDelay)
+
+        if (delay > 0) {
+          await wait(delay)
+        }
         continue
       }
 
