@@ -79,7 +79,16 @@ function normalizeEditionCode(value: unknown): string | null {
   return null
 }
 
-function resolveRequestCountry(request: NextRequest, session: Session | null): string {
+function resolveRequestCountry(
+  request: NextRequest,
+  session: Session | null,
+  profileCountry?: string | null,
+): string {
+  const normalizedProfileCountry = normalizeEditionCode(profileCountry)
+  if (normalizedProfileCountry) {
+    return normalizedProfileCountry
+  }
+
   const appMetadataCountry = normalizeEditionCode(session?.user?.app_metadata?.country)
   if (appMetadataCountry) {
     return appMetadataCountry
@@ -503,7 +512,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const requestCountry = resolveRequestCountry(request, session)
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabase
+      .from("profiles")
+      .select("username, avatar_url, country")
+      .eq("id", session.user.id)
+      .maybeSingle()
+
+    const requestCountry = resolveRequestCountry(request, session, profile?.country)
 
     const newComment = {
       post_id: postId,
@@ -521,14 +539,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new Error(`Failed to create comment: ${error.message}`)
     }
 
-    // Fetch the profile for this user
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("username, avatar_url")
-      .eq("id", session.user.id)
-      .single()
-
-    if (profileError) {
+    if (profileError || !profile) {
       // Still return the comment, just without profile data
 
       revalidateByTag(CACHE_TAGS.COMMENTS)
