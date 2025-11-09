@@ -189,8 +189,8 @@ async function fetchAggregatedHomeForCountryUncached(
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
   const FRONT_PAGE_TIMEOUT_MS = 2500
-  const RECENT_TIMEOUT_MS = 1800
-  const TAG_TIMEOUT_MS = 1500
+  const RECENT_TIMEOUT_MS = 1200
+  const TAG_TIMEOUT_MS = 900
 
   const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({
     signal,

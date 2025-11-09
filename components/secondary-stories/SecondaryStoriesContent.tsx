@@ -53,6 +53,7 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
     >
       {formattedPosts.map((post, index) => {
         const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
+        const isPriority = index < 2
 
         return (
           <Link
@@ -76,8 +77,8 @@ export function SecondaryStoriesContent({ posts, layout = "vertical" }: Secondar
                     motionSafe.transform,
                   )}
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                  priority={index === 0}
-                  loading={index === 0 ? "eager" : "lazy"}
+                  priority={isPriority}
+                  loading={isPriority ? "eager" : "lazy"}
                   placeholder="blur"
                   blurDataURL={post.blurDataURL}
                 />

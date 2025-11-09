@@ -7,6 +7,7 @@ import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
 import { env } from "@/config/env"
 import { cacheTags } from "@/lib/cache"
+import { getServerCountry } from "@/lib/utils/routing"
 import type { BookmarkListPayload } from "@/types/bookmarks"
 
 export const dynamic = "force-dynamic"
@@ -37,13 +38,19 @@ export default async function BookmarksLayout({ children }: { children: React.Re
       .join("; ")
 
     try {
+      const edition = getServerCountry()
+      const bookmarkTags = new Set([
+        cacheTags.bookmarks(edition),
+        cacheTags.bmUser(session.user.id),
+      ])
+
       const response = await fetch(`${env.NEXT_PUBLIC_SITE_URL}/api/bookmarks`, {
         method: "GET",
         headers: {
           accept: "application/json",
           ...(serializedCookies ? { cookie: serializedCookies } : {}),
         },
-        next: { tags: [cacheTags.bmUser(session.user.id)] },
+        next: { tags: Array.from(bookmarkTags) },
       })
 
       if (response.ok) {

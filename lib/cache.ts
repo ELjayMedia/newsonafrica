@@ -79,3 +79,5 @@ type CacheTags = typeof cacheTags
 export type CacheTagBuilder = {
   [K in keyof CacheTags]: CacheTags[K]
 }
+
+export const tag: CacheTagBuilder = cacheTags

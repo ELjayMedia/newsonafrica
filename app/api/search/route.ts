@@ -5,6 +5,7 @@ import { stripHtml } from "@/lib/search"
 import {
   resolveSearchIndex,
   type AlgoliaSearchRecord,
+  type AlgoliaSortMode,
 } from "@/lib/algolia/client"
 import { searchWordPressPosts as wpSearchPosts } from "@/lib/wordpress-search"
 import type { SearchRecord } from "@/types/search"
@@ -19,6 +20,12 @@ export const revalidate = 30
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+const jsonWithNoStore = (request: NextRequest, data: any, init?: ResponseInit) => {
+  const response = jsonWithCors(request, data, init)
+  response.headers.set("Cache-Control", "no-store")
+  return response
+}
 
 const FALLBACK_RECORDS: SearchRecord[] = [
   {
@@ -253,7 +260,7 @@ export async function GET(request: NextRequest) {
         currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
         hasMore: wpResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: uniqueSuggestions(records),
         performance: {
           responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress",
@@ -283,7 +290,7 @@ export async function GET(request: NextRequest) {
       currentPage: normalizedParams.page,
       hasMore: normalizedParams.page < totalPages,
       query: normalizedParams.query,
-      suggestions: mappedHits.map((hit) => hit.title).slice(0, 10),
+      suggestions: uniqueSuggestions(mappedHits),
       performance: {
         responseTime: Date.now() - startTime,
         source: `algolia-${scope.type === "country" ? scope.country : "pan"}-${normalizedParams.sort}`,
@@ -303,7 +310,7 @@ export async function GET(request: NextRequest) {
         currentPage: Math.max(1, wpResults.currentPage || normalizedParams.page),
         hasMore: wpResults.hasMore,
         query: normalizedParams.query,
-        suggestions: records.map((record) => record.title).slice(0, 10),
+        suggestions: uniqueSuggestions(records),
         performance: {
           responseTime: wpResults.searchTime || Date.now() - startTime,
           source: "wordpress-fallback",

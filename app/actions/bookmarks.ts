@@ -67,8 +67,22 @@ function ensureUserId(session: { user: { id: string } } | null | undefined): str
   return userId
 }
 
-async function revalidateBookmarkCache(userId: string) {
+async function revalidateBookmarkCache(
+  userId: string,
+  editions: Iterable<string | null | undefined> = [],
+) {
+  const tags = new Set<string>()
+
+  for (const edition of editions) {
+    tags.add(cacheTags.bookmarks(edition))
+  }
+
+  if (tags.size === 0) {
+    tags.add(cacheTags.bookmarks(undefined))
+  }
+
   revalidateTag(cacheTags.bmUser(userId))
+  tags.forEach((tag) => revalidateTag(tag))
 }
 
 async function fetchBookmarkList(
@@ -232,9 +246,12 @@ export async function addBookmark(
       throw new ActionError("Failed to add bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache(userId)
-
     const inserted = data as BookmarkListRow
+    const edition =
+      typeof inserted.country === "string" ? inserted.country : payload.country ?? null
+
+    await revalidateBookmarkCache(userId, [edition])
+
     return {
       added: [inserted],
       statsDelta: computeStatsDelta({ next: inserted }),
@@ -263,9 +280,11 @@ export async function removeBookmark(
       throw new ActionError("Failed to remove bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache(userId)
-
     const removedRows = (data ?? []) as BookmarkListRow[]
+    await revalidateBookmarkCache(
+      userId,
+      removedRows.map((row) => (typeof row.country === "string" ? row.country : null)),
+    )
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -298,9 +317,11 @@ export async function bulkRemoveBookmarks(
       throw new ActionError("Failed to remove bookmarks", { cause: error })
     }
 
-    await revalidateBookmarkCache(userId)
-
     const removedRows = (data ?? []) as BookmarkListRow[]
+    await revalidateBookmarkCache(
+      userId,
+      removedRows.map((row) => (typeof row.country === "string" ? row.country : null)),
+    )
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -358,9 +379,16 @@ export async function updateBookmark(
       throw new ActionError("Failed to update bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache(userId)
-
     const updated = data as BookmarkListRow
+    const edition =
+      typeof updated.country === "string"
+        ? updated.country
+        : typeof sanitizedUpdates.country === "string"
+          ? sanitizedUpdates.country
+          : (existing as BookmarkListRow).country ?? null
+
+    await revalidateBookmarkCache(userId, [edition])
+
     return {
       updated: [updated],
       statsDelta: computeStatsDelta({
