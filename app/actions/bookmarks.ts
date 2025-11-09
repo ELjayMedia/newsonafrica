@@ -2,7 +2,7 @@
 
 import { revalidateTag } from "next/cache"
 
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
 import type { Database } from "@/types/supabase"
@@ -67,8 +67,8 @@ function ensureUserId(session: { user: { id: string } } | null | undefined): str
   return userId
 }
 
-async function revalidateBookmarkCache() {
-  revalidateTag(CACHE_TAGS.BOOKMARKS)
+async function revalidateBookmarkCache(userId: string) {
+  revalidateTag(cacheTags.bmUser(userId))
 }
 
 async function fetchBookmarkList(
@@ -176,7 +176,7 @@ export async function listBookmarks(
     const userId = ensureUserId(session)
 
     if (options.revalidate) {
-      await revalidateBookmarkCache()
+      await revalidateBookmarkCache(userId)
     }
 
     return fetchBookmarkList(supabase, userId)
@@ -232,7 +232,7 @@ export async function addBookmark(
       throw new ActionError("Failed to add bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache()
+    await revalidateBookmarkCache(userId)
 
     const inserted = data as BookmarkListRow
     return {
@@ -263,7 +263,7 @@ export async function removeBookmark(
       throw new ActionError("Failed to remove bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache()
+    await revalidateBookmarkCache(userId)
 
     const removedRows = (data ?? []) as BookmarkListRow[]
     const statsDelta = combineStatsDeltas(
@@ -298,7 +298,7 @@ export async function bulkRemoveBookmarks(
       throw new ActionError("Failed to remove bookmarks", { cause: error })
     }
 
-    await revalidateBookmarkCache()
+    await revalidateBookmarkCache(userId)
 
     const removedRows = (data ?? []) as BookmarkListRow[]
     const statsDelta = combineStatsDeltas(
@@ -358,7 +358,7 @@ export async function updateBookmark(
       throw new ActionError("Failed to update bookmark", { cause: error })
     }
 
-    await revalidateBookmarkCache()
+    await revalidateBookmarkCache(userId)
 
     const updated = data as BookmarkListRow
     return {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 
 const revalidateTagMock = vi.fn()
 const revalidatePathMock = vi.fn()
@@ -67,7 +67,7 @@ describe("bookmark actions cache invalidation", () => {
 
     expect(result.error).toBeNull()
     expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 
@@ -113,7 +113,7 @@ describe("bookmark actions cache invalidation", () => {
 
     expect(result.error).toBeNull()
     expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 
@@ -150,7 +150,7 @@ describe("bookmark actions cache invalidation", () => {
 
     expect(result.error).toBeNull()
     expect(revalidateTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateTagMock).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+    expect(revalidateTagMock).toHaveBeenCalledWith(cacheTags.bmUser("user-1"))
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
 })

@@ -26,12 +26,12 @@ vi.mock("@/lib/bookmarks/stats", () => ({
 
 import { createSupabaseRouteClient } from "@/utils/supabase/route"
 import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
-import { CACHE_TAGS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { DELETE, GET, POST, PUT } from "./route"
 
-function expectOnlyBookmarkTagInvalidation() {
+function expectOnlyBookmarkTagInvalidation(userId: string) {
   expect(revalidateByTag).toHaveBeenCalledTimes(1)
-  expect(revalidateByTag).toHaveBeenCalledWith(CACHE_TAGS.BOOKMARKS)
+  expect(revalidateByTag).toHaveBeenCalledWith(cacheTags.bmUser(userId))
   expect(revalidateMultiplePaths).not.toHaveBeenCalled()
 }
 
@@ -84,7 +84,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await POST(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation()
+    expectOnlyBookmarkTagInvalidation(user.id)
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -119,7 +119,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await PUT(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation()
+    expectOnlyBookmarkTagInvalidation(user.id)
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -154,7 +154,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await DELETE(request)
 
     expect(response.status).toBe(200)
-    expectOnlyBookmarkTagInvalidation()
+    expectOnlyBookmarkTagInvalidation(user.id)
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 

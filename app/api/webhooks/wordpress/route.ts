@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { CACHE_TAGS, KV_CACHE_KEYS } from "@/lib/cache/constants"
+import { KV_CACHE_KEYS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
@@ -246,8 +247,10 @@ export async function POST(request: NextRequest) {
             })
           }
 
+          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
+
           // Revalidate the specific post page for all supported countries
-          for (const country of SUPPORTED_COUNTRIES) {
+          for (const country of revalidationCountries) {
             const articlePath = getArticleUrl(post.slug, country)
             revalidatePath(articlePath)
             revalidatePath(`${articlePath}/opengraph-image`)
@@ -311,21 +314,33 @@ export async function POST(request: NextRequest) {
                 tagsToRevalidate.add(tag),
               )
             }
+
+            tagsToRevalidate.add(cacheTags.posts(country))
+            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
+            if (postId) {
+              tagsToRevalidate.add(cacheTags.post(country, postId))
+            }
           }
           if (postId) {
-            revalidateByTag(CACHE_TAGS.POST(postId))
+            for (const country of revalidationCountries) {
+              revalidateByTag(cacheTags.post(country, postId))
+            }
           }
 
           // Revalidate category pages if categories are present
           if (post.categories?.length > 0) {
             for (const categoryId of post.categories) {
-              revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
+              for (const country of revalidationCountries) {
+                revalidateByTag(cacheTags.category(country, categoryId))
+              }
             }
           }
 
           // Revalidate home page to show latest posts
           revalidatePath("/")
-          revalidateByTag(CACHE_TAGS.POSTS)
+          for (const country of revalidationCountries) {
+            revalidateByTag(cacheTags.posts(country))
+          }
           buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
             tagsToRevalidate.add(tag),
           )
@@ -344,11 +359,13 @@ export async function POST(request: NextRequest) {
           const tagSlugs = extractTagSlugs(post)
           const tagsToRevalidate = new Set<string>()
           const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
+          const resolvedCountry = deriveCountryFromPost(post)
+          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
           await deleteLegacyPostRoute(post.slug)
 
           // Revalidate pages that might have referenced this post
-          for (const country of SUPPORTED_COUNTRIES) {
+          for (const country of revalidationCountries) {
             const articlePath = getArticleUrl(post.slug, country)
             revalidatePath(articlePath)
             revalidatePath(`${articlePath}/opengraph-image`)
@@ -383,15 +400,25 @@ export async function POST(request: NextRequest) {
                 tagsToRevalidate.add(tag),
               )
             })
+
+            tagsToRevalidate.add(cacheTags.posts(country))
+            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
+            if (postId) {
+              tagsToRevalidate.add(cacheTags.post(country, postId))
+            }
           }
 
           if (post.categories?.length > 0) {
             for (const categoryId of post.categories) {
-              revalidateByTag(CACHE_TAGS.CATEGORY(categoryId))
+              for (const country of revalidationCountries) {
+                revalidateByTag(cacheTags.category(country, categoryId))
+              }
             }
           }
           revalidatePath("/")
-          revalidateByTag(CACHE_TAGS.POSTS)
+          for (const country of revalidationCountries) {
+            revalidateByTag(cacheTags.posts(country))
+          }
           buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
             tagsToRevalidate.add(tag),
           )
@@ -399,7 +426,9 @@ export async function POST(request: NextRequest) {
           await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 
           if (postId) {
-            revalidateByTag(CACHE_TAGS.POST(postId))
+            for (const country of revalidationCountries) {
+              revalidateByTag(cacheTags.post(country, postId))
+            }
           }
 
           tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
@@ -410,13 +439,18 @@ export async function POST(request: NextRequest) {
 
       case "category_updated":
         if (post?.slug) {
+          const resolvedCountry = deriveCountryFromPost(post)
+          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
+
           // Revalidate country-specific category pages
-          for (const country of SUPPORTED_COUNTRIES) {
+          for (const country of revalidationCountries) {
             revalidatePath(getCategoryUrl(post.slug, country))
           }
           // Legacy path
           revalidatePath(`/category/${post.slug}`)
-          revalidateByTag(CACHE_TAGS.CATEGORY(post.id))
+          for (const country of revalidationCountries) {
+            revalidateByTag(cacheTags.category(country, post.id))
+          }
 
           console.log(`Revalidated category: ${post.slug}`)
         }

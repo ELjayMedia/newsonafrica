@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
+import { cacheTags } from "@/lib/cache"
+
 interface CommentRecord {
   id: string
   post_id: string
@@ -25,8 +27,10 @@ vi.mock("@/utils/supabase/route", () => ({
   }),
 }))
 
+const revalidateByTagMock = vi.fn()
+
 vi.mock("@/lib/server-cache-utils", () => ({
-  revalidateByTag: vi.fn(),
+  revalidateByTag: revalidateByTagMock,
 }))
 
 function createCommentsQuery(
@@ -364,6 +368,8 @@ describe("POST /api/comments", () => {
         country: "sz",
       }),
     )
+    expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("sz", "post-1"))
   })
 
   it("falls back to the primary edition when no country context is available", async () => {
@@ -390,6 +396,85 @@ describe("POST /api/comments", () => {
       expect.objectContaining({
         country: "african-edition",
       }),
+    )
+    expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
+    expect(revalidateByTagMock).toHaveBeenCalledWith(
+      cacheTags.comments("african-edition", "post-1"),
+    )
+  })
+})
+
+describe("PATCH /api/comments", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    currentSupabaseClient = null
+  })
+
+  afterEach(() => {
+    vi.resetModules()
+  })
+
+  function createPatchSupabaseClient({
+    session,
+    comment,
+  }: {
+    session: { user: { id: string } }
+    comment: CommentRecord
+  }) {
+    const selectBuilder: any = {
+      eq: vi.fn(() => selectBuilder),
+      single: vi.fn(async () => ({ data: comment, error: null })),
+    }
+
+    const commentsBuilder: any = {
+      select: vi.fn(() => selectBuilder),
+      update: vi.fn(() => ({
+        eq: vi.fn(async () => ({ error: null })),
+      })),
+    }
+
+    return {
+      auth: {
+        getSession: vi.fn(async () => ({ data: { session }, error: null })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "comments") {
+          return commentsBuilder
+        }
+
+        throw new Error(`Unexpected table ${table}`)
+      }),
+    }
+  }
+
+  it("revalidates the edition scoped comment tag", async () => {
+    const comment: CommentRecord = {
+      id: "comment-1",
+      post_id: "post-123",
+      user_id: "user-1",
+      status: "active",
+      country: "ng",
+    }
+
+    currentSupabaseClient = createPatchSupabaseClient({
+      session: { user: { id: "user-1" } },
+      comment,
+    })
+
+    const { PATCH } = await import("./route")
+
+    const response = await PATCH(
+      new NextRequest("https://example.com/api/comments", {
+        method: "PATCH",
+        body: JSON.stringify({ id: "comment-1", action: "delete" }),
+        headers: { "content-type": "application/json" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
+    expect(revalidateByTagMock).toHaveBeenCalledWith(
+      cacheTags.comments("ng", "post-123"),
     )
   })
 })
