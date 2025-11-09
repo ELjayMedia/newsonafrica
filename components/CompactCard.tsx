@@ -1,9 +1,7 @@
-"use client"
-
 import Image from "next/image"
 import Link from "next/link"
 import { Clock } from "lucide-react"
-import { memo, useMemo } from "react"
+import { memo } from "react"
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
@@ -47,23 +45,21 @@ export const CompactCard = memo(function CompactCard({
   showExcerpt = false,
   className = "",
 }: CompactCardProps) {
-  const formattedDate = useMemo(() => {
-    return formatDistanceToNow(new Date(post.date), { addSuffix: true })
-  }, [post.date])
+  const formattedDate = formatDistanceToNow(new Date(post.date), {
+    addSuffix: true,
+  })
 
-  const imageUrl = useMemo(() => {
-    if (!post.featuredImage) return "/placeholder.svg"
+  let imageUrl = "/placeholder.svg"
+  if (post.featuredImage) {
     if ("sourceUrl" in post.featuredImage) {
-      return post.featuredImage.sourceUrl
+      imageUrl = post.featuredImage.sourceUrl
+    } else if ("node" in post.featuredImage) {
+      imageUrl = post.featuredImage.node.sourceUrl
     }
-    if ("node" in post.featuredImage) {
-      return post.featuredImage.node.sourceUrl
-    }
-    return "/placeholder.svg"
-  }, [post.featuredImage])
+  }
 
   const category = post.categories?.nodes?.[0]
-  const sanitizedExcerpt = useMemo(() => sanitizeExcerpt(post.excerpt), [post.excerpt])
+  const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
 
   if (layout === "minimal") {
     return (
