@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import * as wordpressApi from "./wordpress-api"
+import { __getMemoizedRequestsForTests } from "./wordpress/client"
 
 const createGraphqlPost = (id: number, prefix = "post") => ({
   databaseId: id,
@@ -24,6 +25,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
   vi.restoreAllMocks()
+  __getMemoizedRequestsForTests().clear()
 })
 
 describe("fetchPost", () => {

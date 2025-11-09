@@ -19,12 +19,21 @@ interface ProfileRecord {
 }
 
 let currentSupabaseClient: any
+let isSupabaseAvailable = true
 
-vi.mock("@/utils/supabase/route", () => ({
-  createSupabaseRouteClient: () => ({
+const createSupabaseRouteClientMock = vi.fn(() => {
+  if (!isSupabaseAvailable) {
+    return null
+  }
+
+  return {
     supabase: currentSupabaseClient,
     applyCookies: <T>(response: T) => response,
-  }),
+  }
+})
+
+vi.mock("@/utils/supabase/route", () => ({
+  createSupabaseRouteClient: createSupabaseRouteClientMock,
 }))
 
 const revalidateByTagMock = vi.fn()
@@ -170,10 +179,23 @@ describe("GET /api/comments", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     currentSupabaseClient = null
+    isSupabaseAvailable = true
+    createSupabaseRouteClientMock.mockClear()
   })
 
   afterEach(() => {
     vi.resetModules()
+  })
+
+  it("returns 503 when Supabase is unavailable", async () => {
+    isSupabaseAvailable = false
+
+    const { GET } = await import("./route")
+    const request = createRequest("")
+
+    const response = await GET(request)
+
+    expect(response.status).toBe(503)
   })
 
   it("falls back to active comments for unauthenticated status=all requests", async () => {
