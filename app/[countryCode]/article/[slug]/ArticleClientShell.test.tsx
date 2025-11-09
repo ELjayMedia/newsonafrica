@@ -60,6 +60,7 @@ describe("ArticleClientShell", () => {
     content: "<p>Content</p>",
     featuredImage: { node: { sourceUrl: "https://example.com/image.jpg", altText: "Alt text" } },
     excerpt: "An excerpt",
+    slug: "test-slug",
   }
 
   beforeEach(() => {
@@ -76,39 +77,61 @@ describe("ArticleClientShell", () => {
     cleanup()
   })
 
-  it("fetches the latest article data on mount", async () => {
-    const latestArticle = {
-      ...baseInitialData,
-      id: 321,
-      title: "Latest Title",
-      content: "<p>Updated content</p>",
-    }
-    const latestRelatedPosts = [{ id: "55", title: "Latest Related" }]
+  it("does not fetch new data on mount when initial data matches the requested article", async () => {
     const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
-      article: latestArticle,
-      sourceCountry: "ke",
-      relatedPosts: latestRelatedPosts,
+      article: { ...baseInitialData, id: 321 },
+      sourceCountry: "ng",
+      relatedPosts: [],
     })
 
     render(
       <ArticleClientShell
         slug="test-slug"
         countryCode="ng"
-        initialData={{ ...baseInitialData, id: 111, title: "Initial Title" }}
+        initialData={{ ...baseInitialData, id: 111 }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(fetcherMock).not.toHaveBeenCalled()
+  })
+
+  it("fetches the latest article when navigating to a different slug after hydration", async () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 321, slug: "next-slug", title: "Next Title" },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
+    const { rerender } = render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 111 }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(fetcherMock).not.toHaveBeenCalled()
+
+    rerender(
+      <ArticleClientShell
+        slug="next-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 222, slug: "next-slug", title: "Next Title" }}
         relatedPosts={[]}
         fetchArticleWithFallback={fetcherMock}
       />,
     )
 
     await waitFor(() => {
-      expect(fetcherMock).toHaveBeenCalledWith({ countryCode: "ng", slug: "test-slug" })
-    })
-
-    await screen.findByRole("heading", { name: "Latest Title" })
-
-    await waitFor(() => {
-      const lastArticleListCall = mockArticleList.mock.calls.at(-1)?.[0] as Record<string, any>
-      expect(lastArticleListCall?.articles).toEqual(latestRelatedPosts)
+      expect(fetcherMock).toHaveBeenCalledWith({ countryCode: "ng", slug: "next-slug" })
     })
   })
 
