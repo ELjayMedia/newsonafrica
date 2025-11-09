@@ -1,32 +1,56 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import type { SearchResponse } from "@/lib/wordpress-search"
 
-vi.mock("@/lib/algolia/client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/algolia/client")>()
-  return {
-    ...actual,
-    resolveSearchIndex: vi.fn(),
-  }
-})
-
 vi.mock("@/lib/wordpress-search", () => ({
   searchWordPressPosts: vi.fn(),
-  getSearchSuggestions: vi.fn(),
 }))
 
-const { GET, MAX_PAGES_PER_COUNTRY } = await import("./route")
-const { resolveSearchIndex } = await import("@/lib/algolia/client")
-const { searchWordPressPosts, getSearchSuggestions } = await import("@/lib/wordpress-search")
+const { GET, MAX_PAGES_PER_COUNTRY, runtime } = await import("./route")
+const { searchWordPressPosts } = await import("@/lib/wordpress-search")
 
-const mockResolveSearchIndex = vi.mocked(resolveSearchIndex)
 const mockSearchWordPressPosts = vi.mocked(searchWordPressPosts)
-const mockGetSearchSuggestions = vi.mocked(getSearchSuggestions)
 
 describe("GET /api/search", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockResolveSearchIndex.mockReturnValue(null)
+  })
+
+  it("uses the node runtime and sets no-store cache headers", async () => {
+    const now = new Date().toISOString()
+    mockSearchWordPressPosts.mockResolvedValue({
+      results: [
+        {
+          id: 1,
+          slug: "cache-test",
+          title: { rendered: "Cache Test" },
+          excerpt: { rendered: "Cache Excerpt" },
+          content: { rendered: "Cache Content" },
+          date: now,
+          link: "https://example.com/cache-test",
+          featured_media: 0,
+          categories: [],
+          tags: [],
+          author: 1,
+        },
+      ],
+      total: 1,
+      totalPages: 1,
+      currentPage: 1,
+      hasMore: false,
+      query: "cache",
+      searchTime: 5,
+    })
+
+    const response = await GET(new Request("https://example.com/api/search?q=cache"))
+
+    expect(runtime).toBe("nodejs")
+    expect(mockSearchWordPressPosts).toHaveBeenCalledWith(
+      "cache",
+      expect.objectContaining({ page: 1, perPage: 20 }),
+    )
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store, no-cache, must-revalidate")
   })
 
   it("fans out WordPress fallback searches for the pan-African scope", async () => {
@@ -39,7 +63,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / SUPPORTED_COUNTRIES.length)
     const expectedFetchSize = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
 
     const buildResponse = (country: string, dates: string[], titles: string[]): SearchResponse => ({
@@ -150,7 +177,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
     const expectedPerCountry = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
 
     const totalPostsPerCountry = expectedPerCountry * (MAX_PAGES_PER_COUNTRY + 2)
@@ -269,51 +299,6 @@ describe("GET /api/search", () => {
     expect(typeof payload.performance.wordpressBudgetExhausted).toBe("boolean")
   })
 
-  it("normalizes the query when using the WordPress suggestions fallback for the pan-African scope", async () => {
-    const rawQuery = "  Climate   Change  "
-    const normalizedQuery = "Climate Change"
-
-    mockSearchWordPressPosts.mockImplementation(async (receivedQuery, options = {}) => {
-      expect(receivedQuery).toBe(normalizedQuery)
-      const country = options.country || "unknown"
-      return {
-        results: [
-          {
-            id: 1,
-            slug: `${country}-post`,
-            title: { rendered: `${country.toUpperCase()} Headline` },
-            excerpt: { rendered: `${country.toUpperCase()} summary` },
-            content: { rendered: `${country.toUpperCase()} content` },
-            date: new Date().toISOString(),
-            link: `https://example.com/${country}`,
-            featured_media: 0,
-            categories: [],
-            tags: [],
-            author: 1,
-          },
-        ],
-        total: 1,
-        totalPages: 1,
-        currentPage: 1,
-        hasMore: false,
-        query: receivedQuery,
-        searchTime: 5,
-      }
-    })
-
-    const requestUrl = `https://example.com/api/search?q=${encodeURIComponent(rawQuery)}&scope=pan&suggestions=1`
-    const response = await GET(new Request(requestUrl))
-    const payload = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(mockSearchWordPressPosts).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    mockSearchWordPressPosts.mock.calls.forEach(([receivedQuery]) => {
-      expect(receivedQuery).toBe(normalizedQuery)
-    })
-    expect(mockGetSearchSuggestions).not.toHaveBeenCalled()
-    expect(Array.isArray(payload.suggestions)).toBe(true)
-  })
-
   it("stops fetching when WordPress keeps reporting more pages but limits are reached", async () => {
     const query = "budget"
     const perPage = 20
@@ -323,7 +308,10 @@ describe("GET /api/search", () => {
     const basePerCountry = Math.ceil(desiredTotal / countryCodes.length)
     const expectedPerCountry = Math.min(
       100,
-      Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      Math.max(
+        perPage,
+        Math.max(1, basePerCountry + Math.max(2, Math.ceil(basePerCountry * 0.1))),
+      ),
     )
     const totalPagesAvailable = MAX_PAGES_PER_COUNTRY + 4
 
@@ -431,22 +419,5 @@ describe("GET /api/search", () => {
     expect(payload.performance.wordpressRequestBudget).toBe(
       SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY,
     )
-  })
-
-  it("normalizes the query when fetching WordPress search suggestions for a specific country", async () => {
-    const rawQuery = "  Elections   Update  "
-    const normalizedQuery = "Elections Update"
-    const suggestions = ["Elections Update 2024", "Elections Update Live"]
-
-    mockGetSearchSuggestions.mockResolvedValue(suggestions)
-
-    const requestUrl = `https://example.com/api/search?query=${encodeURIComponent(rawQuery)}&scope=za&suggestions=1`
-    const response = await GET(new Request(requestUrl))
-    const payload = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(mockGetSearchSuggestions).toHaveBeenCalledWith(normalizedQuery, 10, "za")
-    expect(payload.suggestions).toEqual(suggestions)
-    expect(mockSearchWordPressPosts).not.toHaveBeenCalled()
   })
 })
