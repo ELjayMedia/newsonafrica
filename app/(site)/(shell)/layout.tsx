@@ -1,20 +1,9 @@
 import type { ReactNode } from "react"
-import dynamic from "next/dynamic"
 
 import { AppChrome } from "@/components/layout/AppChrome"
-
-const TopBar = dynamic(() => import("@/components/leaves/TopBarClient"), {
-  ssr: false,
-  loading: () => null,
-})
-const BottomNavigation = dynamic(() => import("@/components/leaves/BottomNavigationClient"), {
-  ssr: false,
-  loading: () => null,
-})
-const GlobalToaster = dynamic(() => import("@/components/leaves/GlobalToaster"), {
-  ssr: false,
-  loading: () => null,
-})
+import TopBar from "@/components/leaves/TopBarClient"
+import BottomNavigation from "@/components/leaves/BottomNavigationClient"
+import GlobalToaster from "@/components/leaves/GlobalToaster"
 
 type LayoutParams = Record<string, string | string[] | undefined>
 
