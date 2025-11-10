@@ -1,6 +1,8 @@
+type ExtendedRequestInit = RequestInit & { agent?: unknown }
+
 export async function fetchWithTimeout(
   resource: RequestInfo | URL,
-  options: (RequestInit & { timeout?: number; next?: NextFetchRequestConfig }) = {},
+  options: (ExtendedRequestInit & { timeout?: number; next?: NextFetchRequestConfig }) = {},
 ): Promise<Response> {
   const { timeout = 10000, next, signal, ...rest } = options
   const controller = new AbortController()
@@ -16,7 +18,8 @@ export async function fetchWithTimeout(
   }
 
   try {
-    return await fetch(resource, { ...rest, next, signal: controller.signal })
+    const fetchOptions = { ...rest, next, signal: controller.signal } as ExtendedRequestInit
+    return await fetch(resource, fetchOptions)
   } finally {
     if (timeoutId) {
       clearTimeout(timeoutId)

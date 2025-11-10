@@ -26,4 +26,6 @@ export const KV_CACHE_KEYS = {
   HOME_FEED: "kv:home-feed:aggregated:v1",
   LEGACY_POST_ROUTES: "kv:legacy-post-routes",
   HOMEPAGE_DATA: "kv:homepage-data:v1",
+  ARTICLE_BY_SLUG: (countryCode: string, slug: string) =>
+    `kv:article:${countryCode}:${slug}`,
 } as const
