@@ -25,6 +25,23 @@ export const dynamicParams = true
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
 
+const resolveRelatedPostId = (article: {
+  databaseId?: number | null
+  id?: unknown
+} | null | undefined) => {
+  if (typeof article?.databaseId === "number") {
+    return article.databaseId
+  }
+
+  const relayId = article?.id
+  if (typeof relayId !== "string") {
+    return null
+  }
+
+  const decodedId = Number(relayId.split(":").pop())
+  return Number.isFinite(decodedId) ? decodedId : null
+}
+
 const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =>
   `${baseUrl}/${countryCode}/article/${slug}/opengraph-image`
 
@@ -119,8 +136,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   const postId = resolvedArticle.article?.id != null ? String(resolvedArticle.article.id) : null
   const relatedCountry = resolvedArticle.sourceCountry ?? editionCountry
+  const relatedPostId = resolveRelatedPostId(resolvedArticle.article)
   const relatedPosts =
-    postId !== null ? await getRelatedPostsForCountry(relatedCountry, postId, 6) : []
+    relatedPostId !== null ? await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6) : []
 
   return (
     <ArticleClientContent

@@ -50,7 +50,7 @@ describe("fetchArticleWithFallbackAction", () => {
     mockResolveEdition.mockReturnValue(edition)
     mockBuildArticleCountryPriority.mockReturnValue(["ng", "za"])
     mockLoadArticleWithFallback.mockResolvedValue({
-      article: { id: 42, title: "Test" },
+      article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
       sourceCountry: "za",
       tags: ["edition:za:post:42"],
     })
@@ -62,9 +62,9 @@ describe("fetchArticleWithFallbackAction", () => {
     expect(mockResolveEdition).toHaveBeenCalledWith("NG")
     expect(mockBuildArticleCountryPriority).toHaveBeenCalledWith("ng")
     expect(mockLoadArticleWithFallback).toHaveBeenCalledWith("some-slug", ["ng", "za"])
-    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith("za", "42", 6)
+    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith("za", 42, 6)
     expect(result).toEqual({
-      article: { id: 42, title: "Test" },
+      article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
       sourceCountry: "za",
       relatedPosts,
     })
