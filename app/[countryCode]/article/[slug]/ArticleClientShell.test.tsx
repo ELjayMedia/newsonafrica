@@ -7,6 +7,14 @@ const mockArticleList = vi.fn(() => null)
 const pushMock = vi.fn()
 const backMock = vi.fn()
 
+vi.mock("next/image", () => ({
+  __esModule: true,
+  default: ({ priority: _priority, fill: _fill, ...props }: Record<string, any>) => {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img {...props} />
+  },
+}))
+
 vi.mock("@/components/BookmarkButton", () => ({
   BookmarkButton: (props: Record<string, unknown>) => {
     mockBookmarkButton(props)
@@ -58,7 +66,13 @@ describe("ArticleClientShell", () => {
     title: "Test Title",
     author: { node: { name: "Author Name" } },
     content: "<p>Content</p>",
-    featuredImage: { node: { sourceUrl: "https://example.com/image.jpg", altText: "Alt text" } },
+    featuredImage: {
+      node: {
+        sourceUrl: "https://example.com/image.jpg",
+        altText: "Alt text",
+        mediaDetails: { width: 1200, height: 800 },
+      },
+    },
     excerpt: "An excerpt",
     slug: "test-slug",
   }

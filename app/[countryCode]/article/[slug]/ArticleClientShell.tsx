@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -224,10 +225,15 @@ export function ArticleClientShell({
     articleData?.author?.node?.name ||
     articleData?.author?.name ||
     null
-  const authorAvatar =
-    articleData?.author?.node?.avatar?.url ??
-    articleData?.author?.avatar_urls?.["96"] ??
-    articleData?.author?.avatar_urls?.["48"] ??
+  const authorAvatarNode = articleData?.author?.node?.avatar
+  const authorAvatarUrl =
+    (typeof authorAvatarNode?.url === "string" && authorAvatarNode.url) ??
+    (typeof articleData?.author?.avatar_urls?.["96"] === "string"
+      ? articleData.author.avatar_urls["96"]
+      : null) ??
+    (typeof articleData?.author?.avatar_urls?.["48"] === "string"
+      ? articleData.author.avatar_urls["48"]
+      : null) ??
     null
   const featuredImageNode = articleData?.featuredImage?.node
   const heroImage = featuredImageNode?.sourceUrl
@@ -235,6 +241,7 @@ export function ArticleClientShell({
         url: featuredImageNode.sourceUrl,
         width: featuredImageNode.mediaDetails?.width ?? 1200,
         height: featuredImageNode.mediaDetails?.height ?? 800,
+        alt: featuredImageNode.altText || title || "Article image",
       }
     : undefined
 
@@ -289,11 +296,13 @@ export function ArticleClientShell({
           {authorName && (
             <div className="flex items-center gap-3 mb-6 lg:mb-8">
               <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex-shrink-0">
-                {authorAvatar ? (
-                  <img
-                    src={authorAvatar || "/placeholder.svg"}
+                {authorAvatarUrl ? (
+                  <Image
+                    src={authorAvatarUrl || "/placeholder.svg"}
                     alt={authorName}
-                    className="w-full h-full rounded-full object-cover ring-2 ring-border shadow-sm"
+                    fill
+                    sizes="(max-width: 640px) 3rem, (max-width: 1024px) 3.5rem, 4rem"
+                    className="rounded-full object-cover ring-2 ring-border shadow-sm"
                   />
                 ) : (
                   <div className="w-full h-full rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
@@ -360,13 +369,16 @@ export function ArticleClientShell({
             </p>
           )}
 
-          {featuredImageNode?.sourceUrl && (
+          {featuredImageNode?.sourceUrl && heroImage && (
             <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden">
-              <img
-                src={featuredImageNode.sourceUrl || "/placeholder.svg"}
-                alt={featuredImageNode.altText || title}
+              <Image
+                src={heroImage.url || "/placeholder.svg"}
+                alt={heroImage.alt}
+                width={heroImage.width}
+                height={heroImage.height}
+                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 768px"
+                priority
                 className="w-full h-auto aspect-video object-cover rounded-xs shadow-none"
-                loading="eager"
               />
               {featuredImageNode.caption && (
                 <figcaption className="text-sm text-muted-foreground text-center mt-3 px-4">

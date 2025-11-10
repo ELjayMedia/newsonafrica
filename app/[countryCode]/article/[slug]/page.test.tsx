@@ -56,7 +56,11 @@ describe('ArticlePage', () => {
     excerpt: '',
     content: '<p>Content</p>',
     featuredImage: {
-      node: { sourceUrl: 'https://example.com/feature.jpg', altText: 'Feature image' },
+      node: {
+        sourceUrl: 'https://example.com/feature.jpg',
+        altText: 'Feature image',
+        mediaDetails: { width: 1200, height: 800 },
+      },
     },
     categories: { nodes: [] },
     tags: { nodes: [] },
