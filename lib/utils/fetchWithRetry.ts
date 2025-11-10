@@ -115,10 +115,13 @@ const getRequestProtocol = (resource: RequestInfo | URL): string | null => {
   return null
 }
 
-let httpModulePromise: Promise<typeof import("node:http")> | null = null
-let httpsModulePromise: Promise<typeof import("node:https")> | null = null
-let sharedHttpAgent: import("node:http").Agent | undefined
-let sharedHttpsAgent: import("node:https").Agent | undefined
+type HttpModule = typeof import("http")
+type HttpsModule = typeof import("https")
+
+let httpModulePromise: Promise<HttpModule> | null = null
+let httpsModulePromise: Promise<HttpsModule> | null = null
+let sharedHttpAgent: import("http").Agent | undefined
+let sharedHttpsAgent: import("https").Agent | undefined
 
 const resolveDefaultAgent: AgentResolver = async (resource) => {
   if (!isNodeServer()) {
@@ -129,15 +132,15 @@ const resolveDefaultAgent: AgentResolver = async (resource) => {
 
   if (protocol === "http:") {
     if (!sharedHttpAgent) {
-      const module = await (httpModulePromise ??= import("node:http"))
-      sharedHttpAgent = new module.Agent({ keepAlive: true })
+      const httpLib = await (httpModulePromise ??= import("http"))
+      sharedHttpAgent = new httpLib.Agent({ keepAlive: true })
     }
     return sharedHttpAgent
   }
 
   if (!sharedHttpsAgent) {
-    const module = await (httpsModulePromise ??= import("node:https"))
-    sharedHttpsAgent = new module.Agent({ keepAlive: true })
+    const httpsLib = await (httpsModulePromise ??= import("https"))
+    sharedHttpsAgent = new httpsLib.Agent({ keepAlive: true })
   }
   return sharedHttpsAgent
 }
