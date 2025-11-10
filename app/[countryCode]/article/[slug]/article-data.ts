@@ -6,6 +6,7 @@ import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
   COUNTRIES,
   fetchWordPressGraphQL,
+  type WordPressGraphQLFailure,
   type WordPressGraphQLResult,
 } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
@@ -69,8 +70,8 @@ export interface LoadedArticle {
 
 export type LoadArticleResult =
   | ({ status: "found" } & LoadedArticle)
-  | { status: "not-found" }
-  | { status: "temporary-error"; error: unknown }
+  | { status: "not_found" }
+  | { status: "temporary_error"; error: unknown; failure?: WordPressGraphQLFailure }
 
 const asLoadArticleResult = (
   countryCode: string,
@@ -78,7 +79,7 @@ const asLoadArticleResult = (
   slug: string,
 ): LoadArticleResult => {
   if (!result.ok) {
-    return { status: "temporary-error", error: result.error }
+    return { status: "temporary_error", error: result.error, failure: result }
   }
 
   const node = result.posts?.nodes?.find(
@@ -86,7 +87,7 @@ const asLoadArticleResult = (
   )
 
   if (!node) {
-    return { status: "not-found" }
+    return { status: "not_found" }
   }
 
   const article = mapGraphqlPostToWordPressPost(node, countryCode)
@@ -102,23 +103,25 @@ const asLoadArticleResult = (
 
 export async function loadArticle(countryCode: string, slug: string): Promise<LoadArticleResult> {
   if (!hasWordPressEndpoint(countryCode)) {
-    return { status: "not-found" }
+    return { status: "not_found" }
   }
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
   const requestTags = [slugTag]
 
-  const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
-    countryCode,
-    POST_BY_SLUG_QUERY,
-    { slug },
-    { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
-  )
+  try {
+    const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
+      countryCode,
+      POST_BY_SLUG_QUERY,
+      { slug },
+      { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
+    )
 
-  return asLoadArticleResult(countryCode, gqlResult, slug)
+    return asLoadArticleResult(countryCode, gqlResult, slug)
+  } catch (error) {
+    return { status: "temporary_error", error }
+  }
 }
-
-export type ArticleLoadResult = { status: "found"; sourceCountry: string } & LoadedArticle
 
 const unique = (values: string[]): string[] => {
   const seen = new Set<string>()
@@ -151,39 +154,66 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
   return unique(supportedPriority)
 }
 
+export type ArticleFallbackNotFound = { status: "not_found" }
+
+type ArticleTemporaryFailure = {
+  country: string
+  error: unknown
+  failure?: WordPressGraphQLFailure
+}
+
+export type ArticleFallbackTemporaryError = {
+  status: "temporary_error"
+  error: AggregateError
+  failures: ArticleTemporaryFailure[]
+}
+
+export type ArticleLoadResult =
+  | ({ status: "found"; sourceCountry: string } & LoadedArticle)
+  | ArticleFallbackNotFound
+  | ArticleFallbackTemporaryError
+
 export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
-): Promise<ArticleLoadResult | null> {
+): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
 
   const [primaryCountry, ...fallbackCountries] = countryPriority
 
   if (!primaryCountry) {
-    return null
+    return { status: "not_found" }
   }
 
-  const temporaryFailures: Array<{ country: string; error: unknown }> = []
+  const temporaryFailures: ArticleTemporaryFailure[] = []
 
   const primaryArticle = await loadArticle(primaryCountry, normalizedSlug)
 
-  if (primaryArticle.status === "temporary-error") {
-    temporaryFailures.push({ country: primaryCountry, error: primaryArticle.error })
+  if (primaryArticle.status === "temporary_error") {
+    temporaryFailures.push({
+      country: primaryCountry,
+      error: primaryArticle.error,
+      failure: primaryArticle.failure,
+    })
   } else if (primaryArticle.status === "found") {
     return { ...primaryArticle, sourceCountry: primaryCountry }
   }
 
   if (fallbackCountries.length === 0) {
     if (temporaryFailures.length > 0) {
-      throw new AggregateError(
-        temporaryFailures.map(({ error }) => error),
-        `Temporary WordPress failure for countries: ${temporaryFailures
-          .map(({ country }) => country)
-          .join(", ")}`,
-      )
+      return {
+        status: "temporary_error",
+        error: new AggregateError(
+          temporaryFailures.map(({ error, failure }) => failure?.error ?? error),
+          `Temporary WordPress failure for countries: ${temporaryFailures
+            .map(({ country }) => country)
+            .join(", ")}`,
+        ),
+        failures: temporaryFailures,
+      }
     }
 
-    return null
+    return { status: "not_found" }
   }
 
   const fallbackEntries = fallbackCountries.map((country) => ({
@@ -201,11 +231,16 @@ export async function loadArticleWithFallback(
     const result = await promise
 
     if (result.status === "rejected") {
-      throw result.error
+      temporaryFailures.push({ country, error: result.error })
+      continue
     }
 
-    if (result.result.status === "temporary-error") {
-      temporaryFailures.push({ country, error: result.result.error })
+    if (result.result.status === "temporary_error") {
+      temporaryFailures.push({
+        country,
+        error: result.result.error,
+        failure: result.result.failure,
+      })
       continue
     }
 
@@ -215,15 +250,19 @@ export async function loadArticleWithFallback(
   }
 
   if (temporaryFailures.length > 0) {
-    throw new AggregateError(
-      temporaryFailures.map(({ error }) => error),
-      `Temporary WordPress failure for countries: ${temporaryFailures
-        .map(({ country }) => country)
-        .join(", ")}`,
-    )
+    return {
+      status: "temporary_error",
+      error: new AggregateError(
+        temporaryFailures.map(({ error, failure }) => failure?.error ?? error),
+        `Temporary WordPress failure for countries: ${temporaryFailures
+          .map(({ country }) => country)
+          .join(", ")}`,
+      ),
+      failures: temporaryFailures,
+    }
   }
 
-  return null
+  return { status: "not_found" }
 }
 
 export { PLACEHOLDER_IMAGE_PATH }

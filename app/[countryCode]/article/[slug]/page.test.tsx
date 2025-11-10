@@ -100,9 +100,12 @@ describe('ArticlePage', () => {
     ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
   })
 
-  const graphqlFailure = (error: unknown = new Error('GraphQL failure')) => ({
+  const graphqlFailure = (message = 'GraphQL failure') => ({
     ok: false as const,
-    error,
+    kind: 'graphql_error' as const,
+    message,
+    errors: [{ message }],
+    error: new Error(message),
   })
 
   it('renders post content', async () => {
@@ -226,9 +229,9 @@ describe('ArticlePage', () => {
 
   it('propagates fetch failures to the error boundary', async () => {
     const failure = new Error('Network down')
-    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return graphqlFailure(failure) as any
+        throw failure
       }
 
       return graphqlSuccess({}) as any

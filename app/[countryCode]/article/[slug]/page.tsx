@@ -78,12 +78,16 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
-  const article = resolvedArticle?.article ?? null
+  const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedArticle?.sourceCountry ?? editionCountry)
+    ? normalizeRouteCountry(
+        resolvedArticle.status === "found"
+          ? resolvedArticle.sourceCountry ?? editionCountry
+          : editionCountry,
+      )
     : routeCountryAlias
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
@@ -122,7 +126,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
-  if (resolvedArticle === null) {
+  if (resolvedArticle.status === "temporary_error") {
+    throw resolvedArticle.error
+  }
+
+  if (resolvedArticle.status === "not_found") {
     notFound()
   }
 
