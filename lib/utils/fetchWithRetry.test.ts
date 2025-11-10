@@ -51,4 +51,55 @@ describe("fetchWithRetry", () => {
 
     setTimeoutSpy.mockRestore()
   })
+
+  it("applies jitter to backoff delays when enabled", async () => {
+    vi.useFakeTimers()
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout")
+
+    fetchWithTimeoutMock
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 200,
+        }),
+      )
+
+    const fetchPromise = fetchWithRetry("https://example.com", {
+      attempts: 2,
+      backoffMs: 1000,
+      jitter: true,
+      random: () => 0.25,
+    })
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fetchWithTimeoutMock).toHaveBeenCalledTimes(1)
+    expect(setTimeoutSpy).toHaveBeenCalled()
+    const [, delay] = setTimeoutSpy.mock.calls[0] ?? []
+    expect(delay).toBe(250)
+
+    await vi.advanceTimersByTimeAsync(250)
+    await fetchPromise
+    expect(fetchWithTimeoutMock).toHaveBeenCalledTimes(2)
+
+    setTimeoutSpy.mockRestore()
+  })
+
+  it("allows dependency injection for keep-alive agents", async () => {
+    const agent = { keepAlive: true }
+
+    fetchWithTimeoutMock.mockResolvedValue(
+      new Response(null, {
+        status: 200,
+      }),
+    )
+
+    await fetchWithRetry("https://example.com/graphql", {
+      getAgent: () => agent,
+    })
+
+    expect(fetchWithTimeoutMock).toHaveBeenCalledWith(
+      "https://example.com/graphql",
+      expect.objectContaining({ agent }),
+    )
+  })
 })
