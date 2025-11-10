@@ -8,6 +8,7 @@ vi.mock("@/lib/wordpress-search", () => ({
 }))
 
 const { GET, MAX_PAGES_PER_COUNTRY, runtime } = await import("./route")
+const searchGET = GET
 const { searchWordPressPosts } = await import("@/lib/wordpress-search")
 
 const mockSearchWordPressPosts = vi.mocked(searchWordPressPosts)
