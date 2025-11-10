@@ -78,16 +78,22 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
-  const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
+  const article =
+    resolvedArticle.status === "found"
+      ? resolvedArticle.article
+      : resolvedArticle.status === "temporary_error"
+        ? resolvedArticle.staleArticle ?? null
+        : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
+  const resolvedSourceCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.sourceCountry ?? editionCountry
+    : resolvedArticle.status === "temporary_error"
+      ? resolvedArticle.staleSourceCountry ?? editionCountry
+      : editionCountry
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(
-        resolvedArticle.status === "found"
-          ? resolvedArticle.sourceCountry ?? editionCountry
-          : editionCountry,
-      )
+    ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
     : routeCountryAlias
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
@@ -126,34 +132,69 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
-  if (resolvedArticle.status === "temporary_error") {
-    throw resolvedArticle.error
-  }
-
   if (resolvedArticle.status === "not_found") {
     notFound()
   }
 
+  const usingStaleContent = resolvedArticle.status === "temporary_error"
+  const articleData =
+    resolvedArticle.status === "found"
+      ? resolvedArticle.article
+      : resolvedArticle.staleArticle ?? null
+
+  if (!articleData) {
+    if (usingStaleContent) {
+      throw resolvedArticle.error
+    }
+
+    notFound()
+  }
+
+  if (usingStaleContent && process.env.NODE_ENV !== "production") {
+    console.warn("Serving stale article content due to temporary failure", {
+      error: resolvedArticle.error,
+      slug: normalizedSlug,
+      countryPriority,
+    })
+  }
+
+  const resolvedSourceCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.sourceCountry ?? editionCountry
+    : resolvedArticle.staleSourceCountry ?? editionCountry
+
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedArticle.sourceCountry ?? editionCountry)
+    ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
     : routeCountry
 
   if (targetCountry !== routeCountry) {
     redirect(`/${targetCountry}/article/${normalizedSlug}`)
   }
 
-  const postId = resolvedArticle.article?.id != null ? String(resolvedArticle.article.id) : null
-  const relatedCountry = resolvedArticle.sourceCountry ?? editionCountry
-  const relatedPostId = resolveRelatedPostId(resolvedArticle.article)
-  const relatedPosts =
-    relatedPostId !== null ? await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6) : []
+  const relatedCountry = resolvedSourceCountry ?? editionCountry
+  const relatedPostId = resolveRelatedPostId(articleData)
+  let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
+
+  if (relatedPostId !== null) {
+    try {
+      relatedPosts = await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6)
+    } catch (relatedError) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Failed to load related posts for article", { relatedError, relatedCountry, relatedPostId })
+      }
+      relatedPosts = []
+    }
+  }
 
   return (
     <ArticleClientContent
       slug={normalizedSlug}
       countryCode={targetCountry}
-      sourceCountryCode={resolvedArticle.sourceCountry}
-      initialData={resolvedArticle.article}
+      sourceCountryCode={
+        resolvedArticle.status === "found"
+          ? resolvedArticle.sourceCountry
+          : resolvedArticle.staleSourceCountry
+      }
+      initialData={articleData}
       relatedPosts={relatedPosts}
     />
   )
