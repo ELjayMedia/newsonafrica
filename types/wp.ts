@@ -18,13 +18,19 @@ export interface WordPressMedia {
   node?: WordPressMediaNode
 }
 
+export interface WordPressAuthorNodeAvatar {
+  url?: string
+  width?: number
+  height?: number
+}
+
 export interface WordPressAuthorNode {
   id?: number
   databaseId?: number
   name?: string
   slug?: string
   description?: string
-  avatar?: { url?: string }
+  avatar?: WordPressAuthorNodeAvatar
 }
 
 export interface WordPressAuthor {
@@ -33,7 +39,8 @@ export interface WordPressAuthor {
   name: string
   slug: string
   description?: string
-  avatar?: { url?: string }
+  avatar?: WordPressAuthorNodeAvatar
+  avatar_urls?: Record<string, string>
   node?: WordPressAuthorNode
 }
 
