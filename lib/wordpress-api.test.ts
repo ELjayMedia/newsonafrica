@@ -109,7 +109,9 @@ describe("fetchWordPressGraphQL", () => {
     ;(globalThis as { window?: unknown }).window = undefined
 
     try {
-      await wordpressApi.fetchWordPressGraphQL("sz", "query")
+      vi.resetModules()
+      const { fetchWordPressGraphQL } = await import("./wordpress-api")
+      await fetchWordPressGraphQL("sz", "query")
     } finally {
       if (typeof originalWindow === "undefined") {
         delete (globalThis as { window?: unknown }).window

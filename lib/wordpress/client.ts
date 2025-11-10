@@ -1,7 +1,7 @@
 import { cache } from "react"
 import { createHash } from "crypto"
 
-import { getWordPressGraphQLAuthHeaders } from "@/config/env"
+import { WP_AUTH_HEADERS } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithRetry } from "../utils/fetchWithRetry"
@@ -115,12 +115,9 @@ export function fetchWordPressGraphQL<T>(
 
   const headers: Record<string, string> = { "Content-Type": "application/json" }
 
-  if (typeof window === "undefined") {
-    const authHeaders = getWordPressGraphQLAuthHeaders()
-    if (authHeaders) {
-      for (const [key, value] of Object.entries(authHeaders)) {
-        headers[key] = value
-      }
+  if (typeof window === "undefined" && WP_AUTH_HEADERS) {
+    for (const [key, value] of Object.entries(WP_AUTH_HEADERS)) {
+      headers[key] = value
     }
   }
 

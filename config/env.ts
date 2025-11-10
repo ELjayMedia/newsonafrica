@@ -1,127 +1,166 @@
+import { z } from "zod"
+
 const DEFAULT_SITE_URL = "http://app.newsonafrica.com"
-type EnvConfig = {
-  NEXT_PUBLIC_SITE_URL: string
-  NEXT_PUBLIC_DEFAULT_SITE: string
-  NEXT_PUBLIC_WP_SZ_GRAPHQL?: string
-  NEXT_PUBLIC_WP_ZA_GRAPHQL?: string
-  ANALYTICS_API_BASE_URL: string
-  WORDPRESS_REQUEST_TIMEOUT_MS: number
-}
 
-type WordPressGraphQLAuthHeaders = Record<string, string>
-
-function readEnvValue(name: string): string | undefined {
-  const value = process.env[name]
+const trimToUndefined = (value: unknown): string | undefined => {
   if (typeof value !== "string") {
     return undefined
   }
+
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function readString(name: string, defaultValue: string): string {
-  const value = readEnvValue(name)
-  if (value == null) {
-    return defaultValue
-  }
-  return value
-}
+const stringWithDefault = (defaultValue: string) =>
+  z
+    .preprocess(trimToUndefined, z.string().default(defaultValue))
 
-function readOptionalString(name: string): string | undefined {
-  return readEnvValue(name)
-}
-
-function readPositiveInteger(name: string, defaultValue: number): number {
-  const rawValue = readEnvValue(name)
-  if (!rawValue) {
-    return defaultValue
-  }
-
-  const parsed = Number.parseInt(rawValue, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    console.warn(
-      `Invalid value provided for ${name}="${rawValue}". Falling back to default ${defaultValue}.`,
-    )
-    return defaultValue
-  }
-
-  return parsed
-}
-
-function parseWordPressGraphQLAuthHeaders(
-  rawValue: string,
-): WordPressGraphQLAuthHeaders | undefined {
-  const trimmed = rawValue.trim()
-  if (!trimmed) {
-    return undefined
-  }
-
-  if (trimmed.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(trimmed) as unknown
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        console.warn(
-          "WORDPRESS_GRAPHQL_AUTH_HEADER must be a JSON object when using JSON syntax.",
-        )
+const positiveIntegerWithDefault = (defaultValue: number) =>
+  z.preprocess(
+    (value) => {
+      const trimmed = trimToUndefined(value)
+      if (!trimmed) {
         return undefined
       }
 
-      const entries = Object.entries(parsed).filter((entry): entry is [string, string] => {
-        const [key, value] = entry
-        return typeof key === "string" && typeof value === "string" && value.trim().length > 0
-      })
+      const parsed = Number.parseInt(trimmed, 10)
+      return parsed
+    },
+    z
+      .number({ required_error: "Expected a number" })
+      .int({ message: "Expected an integer" })
+      .positive({ message: "Expected a positive integer" })
+      .default(defaultValue),
+  )
 
-      if (!entries.length) {
-        console.warn(
-          "WORDPRESS_GRAPHQL_AUTH_HEADER JSON object did not contain any string header values.",
-        )
-        return undefined
+const graphQlEndpointOverride = (countryCode: string) =>
+  z.preprocess(
+    trimToUndefined,
+    z
+      .string()
+      .url({ message: "Expected an absolute GraphQL endpoint URL" })
+      .superRefine((value, ctx) => {
+        try {
+          const url = new URL(value)
+          const normalizedPath = url.pathname.replace(/\/+$/, "").toLowerCase()
+          const expectedSuffix = `/${countryCode.toLowerCase()}/graphql`
+
+          if (!normalizedPath.endsWith(expectedSuffix)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Expected the GraphQL endpoint to end with "${expectedSuffix}"`,
+            })
+          }
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Expected a valid GraphQL endpoint URL",
+          })
+        }
+      })
+      .optional(),
+  )
+
+const BASE_ENV_SCHEMA = z.object({
+  NEXT_PUBLIC_SITE_URL: stringWithDefault(DEFAULT_SITE_URL),
+  NEXT_PUBLIC_DEFAULT_SITE: stringWithDefault("sz"),
+  NEXT_PUBLIC_WP_SZ_GRAPHQL: graphQlEndpointOverride("sz"),
+  NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
+  ANALYTICS_API_BASE_URL: stringWithDefault("https://newsonafrica.com/api/analytics"),
+  WORDPRESS_REQUEST_TIMEOUT_MS: positiveIntegerWithDefault(30000),
+})
+
+const WORDPRESS_AUTH_HEADERS_SCHEMA = z.preprocess(
+  (value) => {
+    const trimmed = trimToUndefined(value)
+    return trimmed ?? undefined
+  },
+  z
+    .string()
+    .transform((value, ctx) => {
+      if (!value.startsWith("{")) {
+        return { Authorization: value }
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(value)
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "WORDPRESS_GRAPHQL_AUTH_HEADER must be valid JSON when using object syntax",
+        })
+        return z.NEVER
+      }
+
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "WORDPRESS_GRAPHQL_AUTH_HEADER JSON must be an object of header key/value pairs",
+        })
+        return z.NEVER
+      }
+
+      const entries: [string, string][] = []
+
+      for (const [key, rawValue] of Object.entries(parsed)) {
+        if (typeof rawValue !== "string") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "WORDPRESS_GRAPHQL_AUTH_HEADER JSON values must all be strings",
+          })
+          return z.NEVER
+        }
+
+        const trimmedKey = key.trim()
+        const trimmedValue = rawValue.trim()
+
+        if (!trimmedKey || !trimmedValue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "WORDPRESS_GRAPHQL_AUTH_HEADER headers must have non-empty keys and values",
+          })
+          return z.NEVER
+        }
+
+        entries.push([trimmedKey, trimmedValue])
+      }
+
+      if (entries.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "WORDPRESS_GRAPHQL_AUTH_HEADER JSON must contain at least one header",
+        })
+        return z.NEVER
       }
 
       return Object.fromEntries(entries)
-    } catch (error) {
-      console.warn(
-        "Failed to parse WORDPRESS_GRAPHQL_AUTH_HEADER as JSON. The value will be ignored.",
-        error,
-      )
-      return undefined
-    }
-  }
+    })
+    .optional(),
+)
 
-  return { Authorization: trimmed }
-}
+const parsedEnv = BASE_ENV_SCHEMA.parse(process.env)
 
-/**
- * Reads optional server-only headers (Authorization and companions) that should be attached to WordPress GraphQL fetches.
- *
- * The value can either be a raw Authorization token (e.g. "Bearer <token>") or a JSON object of header key/value pairs.
- * The string is trimmed before parsing. Invalid or empty values are ignored.
- */
-function getWordPressGraphQLAuthHeaders(): WordPressGraphQLAuthHeaders | undefined {
-  const rawValue = readEnvValue("WORDPRESS_GRAPHQL_AUTH_HEADER")
-  if (!rawValue) {
-    return undefined
-  }
+type EnvConfig = z.infer<typeof BASE_ENV_SCHEMA>
 
-  return parseWordPressGraphQLAuthHeaders(rawValue)
-}
+const ENV: Readonly<EnvConfig> = Object.freeze(parsedEnv)
 
-function createEnv(): EnvConfig {
-  return {
-    NEXT_PUBLIC_SITE_URL: readString("NEXT_PUBLIC_SITE_URL", DEFAULT_SITE_URL),
-    NEXT_PUBLIC_DEFAULT_SITE: readString("NEXT_PUBLIC_DEFAULT_SITE", "sz"),
-    NEXT_PUBLIC_WP_SZ_GRAPHQL: readOptionalString("NEXT_PUBLIC_WP_SZ_GRAPHQL"),
-    NEXT_PUBLIC_WP_ZA_GRAPHQL: readOptionalString("NEXT_PUBLIC_WP_ZA_GRAPHQL"),
-    ANALYTICS_API_BASE_URL: readString(
-      "ANALYTICS_API_BASE_URL",
-      "https://newsonafrica.com/api/analytics",
-    ),
-    WORDPRESS_REQUEST_TIMEOUT_MS: readPositiveInteger("WORDPRESS_REQUEST_TIMEOUT_MS", 30000),
-  }
-}
+const parsedWordPressAuthHeaders = WORDPRESS_AUTH_HEADERS_SCHEMA.parse(
+  process.env.WORDPRESS_GRAPHQL_AUTH_HEADER,
+)
 
-const env = createEnv()
+type WordPressGraphQLAuthHeaders =
+  | Readonly<Record<string, string>>
+  | undefined
 
-export { env }
-export { getWordPressGraphQLAuthHeaders }
+const WP_AUTH_HEADERS: WordPressGraphQLAuthHeaders = parsedWordPressAuthHeaders
+  ? Object.freeze({ ...parsedWordPressAuthHeaders })
+  : undefined
+
+export { ENV, WP_AUTH_HEADERS }
 export type { EnvConfig, WordPressGraphQLAuthHeaders }

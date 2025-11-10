@@ -1,4 +1,4 @@
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 
 export interface WordPressEndpoints {
   graphql: string
@@ -6,7 +6,7 @@ export interface WordPressEndpoints {
 }
 
 const BASE_URL = "https://newsonafrica.com"
-const DEFAULT_SITE = env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
+const DEFAULT_SITE = ENV.NEXT_PUBLIC_DEFAULT_SITE || "sz"
 
 const GRAPHQL_SUFFIX = "GRAPHQL"
 const REST_SUFFIX = "REST_BASE"
@@ -61,7 +61,7 @@ const toSignature = (country: string) =>
   [
     process.env[buildEnvKey(country, GRAPHQL_SUFFIX)],
     process.env[buildEnvKey(country, REST_SUFFIX)],
-    process.env.NEXT_PUBLIC_DEFAULT_SITE,
+    ENV.NEXT_PUBLIC_DEFAULT_SITE,
     country,
   ].join("|")
 
