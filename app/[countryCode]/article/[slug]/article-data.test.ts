@@ -29,6 +29,17 @@ describe('article-data', () => {
     vi.mocked(fetchWordPressGraphQL).mockReset()
   })
 
+  const graphqlSuccess = <T,>(data: T) => ({
+    ok: true,
+    data,
+    ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
+  })
+
+  const graphqlFailure = (error: unknown = new Error('GraphQL fatal')) => ({
+    ok: false as const,
+    error,
+  })
+
   it('returns only supported wordpress countries in the fallback priority', () => {
     const priority = buildArticleCountryPriority('african-edition')
 
@@ -40,24 +51,26 @@ describe('article-data', () => {
   })
 
   it('attempts to load articles for every supported wordpress country', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
-      posts: {
-        nodes: [
-          {
-            slug: 'test-slug',
-            id: 'gid://wordpress/Post:99',
-            databaseId: 99,
-            date: '2024-05-01T00:00:00Z',
-            title: 'Nigeria title',
-            excerpt: 'Nigeria excerpt',
-            content: '<p>Hello Nigeria</p>',
-            categories: { nodes: [] },
-            tags: { nodes: [] },
-            author: { node: { databaseId: 7, name: 'Reporter', slug: 'reporter' } },
-          },
-        ],
-      },
-    } as any)
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({
+        posts: {
+          nodes: [
+            {
+              slug: 'test-slug',
+              id: 'gid://wordpress/Post:99',
+              databaseId: 99,
+              date: '2024-05-01T00:00:00Z',
+              title: 'Nigeria title',
+              excerpt: 'Nigeria excerpt',
+              content: '<p>Hello Nigeria</p>',
+              categories: { nodes: [] },
+              tags: { nodes: [] },
+              author: { node: { databaseId: 7, name: 'Reporter', slug: 'reporter' } },
+            },
+          ],
+        },
+      }) as any,
+    )
 
     const result = await loadArticle('ng', 'test-slug')
 
@@ -70,9 +83,10 @@ describe('article-data', () => {
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
       }),
     )
-    expect(result?.article.slug).toBe('test-slug')
-    expect(result?.article.databaseId).toBe(99)
-    expect(result?.tags).toEqual(
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('test-slug')
+    expect(result.article.databaseId).toBe(99)
+    expect(result.tags).toEqual(
       expect.arrayContaining([
         cacheTags.postSlug('ng', 'test-slug'),
         cacheTags.post('ng', 99),
@@ -83,29 +97,31 @@ describe('article-data', () => {
   it('does not call wordpress when asked to load an unsupported country', async () => {
     const result = await loadArticle('african-edition', 'test-slug')
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'not-found' })
     expect(fetchWordPressGraphQL).not.toHaveBeenCalled()
   })
 
   it('returns the mapped article when GraphQL resolves with a node', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
-      posts: {
-        nodes: [
-          {
-            slug: 'test-slug',
-            id: 'gid://wordpress/Post:42',
-            databaseId: 42,
-            date: '2024-05-01T00:00:00Z',
-            title: 'GraphQL title',
-            excerpt: 'GraphQL excerpt',
-            content: '<p>Hello</p>',
-            categories: { nodes: [] },
-            tags: { nodes: [] },
-            author: { node: { databaseId: 1, name: 'Author', slug: 'author' } },
-          },
-        ],
-      },
-    } as any)
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({
+        posts: {
+          nodes: [
+            {
+              slug: 'test-slug',
+              id: 'gid://wordpress/Post:42',
+              databaseId: 42,
+              date: '2024-05-01T00:00:00Z',
+              title: 'GraphQL title',
+              excerpt: 'GraphQL excerpt',
+              content: '<p>Hello</p>',
+              categories: { nodes: [] },
+              tags: { nodes: [] },
+              author: { node: { databaseId: 1, name: 'Author', slug: 'author' } },
+            },
+          ],
+        },
+      }) as any,
+    )
 
     const result = await loadArticle('za', 'test-slug')
 
@@ -118,9 +134,10 @@ describe('article-data', () => {
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
       }),
     )
-    expect(result?.article.slug).toBe('test-slug')
-    expect(result?.article.databaseId).toBe(42)
-    expect(result?.tags).toEqual(
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('test-slug')
+    expect(result.article.databaseId).toBe(42)
+    expect(result.tags).toEqual(
       expect.arrayContaining([
         cacheTags.postSlug('za', 'test-slug'),
         cacheTags.post('za', 42),
@@ -129,18 +146,22 @@ describe('article-data', () => {
   })
 
   it('returns null when GraphQL returns no nodes', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({ posts: { nodes: [] } } as any)
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ posts: { nodes: [] } }) as any,
+    )
 
     const result = await loadArticle('za', 'missing-slug')
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'not-found' })
   })
 
-  it('re-throws GraphQL errors', async () => {
+  it('returns a temporary error when GraphQL fails', async () => {
     const failure = new Error('GraphQL fatal')
-    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(failure)
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(graphqlFailure(failure) as any)
 
-    await expect(loadArticle('za', 'test-slug')).rejects.toBe(failure)
+    const result = await loadArticle('za', 'test-slug')
+
+    expect(result).toEqual({ status: 'temporary-error', error: failure })
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {
@@ -164,7 +185,7 @@ describe('article-data', () => {
       callLog.push({ country: countryCode, slug: (variables as { slug?: string })?.slug })
 
       if (countryCode === 'ng') {
-        return Promise.resolve({ posts: { nodes: [] } }) as any
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
       }
 
       if (countryCode === 'za') {
@@ -207,11 +228,11 @@ describe('article-data', () => {
       { country: 'ke', slug: 'mixed-slug' },
     ])
 
-    keResponse.resolve({ posts: { nodes: [keNode] } })
+    keResponse.resolve(graphqlSuccess({ posts: { nodes: [keNode] } }))
     await Promise.resolve()
     expect(settled).toBeUndefined()
 
-    zaResponse.resolve({ posts: { nodes: [] } })
+    zaResponse.resolve(graphqlSuccess({ posts: { nodes: [] } }))
     const result = await loadPromise
 
     expect(result?.sourceCountry).toBe('ke')
@@ -219,5 +240,68 @@ describe('article-data', () => {
     expect(result?.tags).toEqual(
       expect.arrayContaining([cacheTags.postSlug('ke', 'mixed-slug')]),
     )
+  })
+
+  it('throws an aggregate error when every country encounters a temporary failure', async () => {
+    const errorNg = new Error('ng outage')
+    const errorZa = new Error('za outage')
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((country) => {
+      if (country === 'ng') {
+        return Promise.resolve(graphqlFailure(errorNg)) as any
+      }
+
+      if (country === 'za') {
+        return Promise.resolve(graphqlFailure(errorZa)) as any
+      }
+
+      return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+    })
+
+    await expect(loadArticleWithFallback('slug', ['ng', 'za'])).rejects.toMatchObject({
+      errors: expect.arrayContaining([errorNg, errorZa]),
+      message: expect.stringContaining('Temporary WordPress failure'),
+    })
+  })
+
+  it('continues fallbacks when some countries temporarily fail', async () => {
+    const temporaryError = new Error('ng outage')
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((country, _query, variables) => {
+      if (country === 'ng') {
+        return Promise.resolve(graphqlFailure(temporaryError)) as any
+      }
+
+      if (country === 'za') {
+        return Promise.resolve(
+          graphqlSuccess({
+            posts: {
+              nodes: [
+                {
+                  slug: (variables as { slug: string }).slug,
+                  id: 'gid://wordpress/Post:55',
+                  databaseId: 55,
+                  date: '2024-05-01T00:00:00Z',
+                  title: 'Recovered',
+                  excerpt: 'Recovered excerpt',
+                  content: '<p>Recovered</p>',
+                  categories: { nodes: [] },
+                  tags: { nodes: [] },
+                  author: { node: { databaseId: 4, name: 'Reporter', slug: 'reporter' } },
+                },
+              ],
+            },
+          }),
+        ) as any
+      }
+
+      return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+    })
+
+    const result = await loadArticleWithFallback('slug', ['ng', 'za'])
+
+    expect(result?.status).toBe('found')
+    expect(result?.sourceCountry).toBe('za')
+    expect(result?.article.slug).toBe('slug')
   })
 })
