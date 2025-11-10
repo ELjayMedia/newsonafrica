@@ -54,7 +54,11 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
 
     const result = await firstPromise
 
-    expect(result).toEqual({ posts: [] })
+    expect(result).toMatchObject({
+      ok: true,
+      data: { posts: [] },
+      posts: [],
+    })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
     expect(mockJson).toHaveBeenCalledTimes(1)
   })
@@ -70,7 +74,11 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
 
     const secondResult = await secondPromise
 
-    expect(secondResult).toEqual({ posts: [] })
+    expect(secondResult).toMatchObject({
+      ok: true,
+      data: { posts: [] },
+      posts: [],
+    })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
     expect(mockJson).toHaveBeenCalledTimes(1)
   })

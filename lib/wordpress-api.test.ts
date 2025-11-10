@@ -91,7 +91,7 @@ describe("fetchWordPressGraphQL", () => {
     )
 
     const result = await wordpressApi.fetchWordPressGraphQL<typeof mockData>("sz", "query")
-    expect(result).toEqual(mockData)
+    expect(result).toMatchObject({ ok: true, data: mockData })
   })
 
   it("forwards configured WordPress auth headers during server fetches", async () => {

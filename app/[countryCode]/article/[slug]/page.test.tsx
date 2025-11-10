@@ -94,21 +94,32 @@ describe('ArticlePage', () => {
     mockGetRelatedPostsForCountry.mockResolvedValue([])
   })
 
+  const graphqlSuccess = <T,>(data: T) => ({
+    ok: true as const,
+    data,
+    ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
+  })
+
+  const graphqlFailure = (error: unknown = new Error('GraphQL failure')) => ({
+    ok: false as const,
+    error,
+  })
+
   it('renders post content', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return { posts: { nodes: [createArticleNode({ title: 'Hello' })] } }
+        return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'Hello' })] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
@@ -121,18 +132,20 @@ describe('ArticlePage', () => {
   it('passes the database ID to related post lookup when available', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return { posts: { nodes: [createArticleNode({ databaseId: 42, id: 'gid://wordpress/Post:42' })] } }
+        return graphqlSuccess({
+          posts: { nodes: [createArticleNode({ databaseId: 42, id: 'gid://wordpress/Post:42' })] },
+        }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     await Page({ params: { countryCode: 'sz', slug: 'test' } })
@@ -143,18 +156,18 @@ describe('ArticlePage', () => {
   it('calls notFound when the article cannot be resolved via GraphQL', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow(
@@ -167,25 +180,25 @@ describe('ArticlePage', () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
-          return { posts: { nodes: [] } }
+          return graphqlSuccess({ posts: { nodes: [] } }) as any
         }
 
         if (country === 'za') {
-          return { posts: { nodes: [createArticleNode({ title: 'From South Africa' })] } }
+          return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'From South Africa' })] } }) as any
         }
 
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('NEXT_REDIRECT')
@@ -212,9 +225,19 @@ describe('ArticlePage', () => {
   })
 
   it('propagates fetch failures to the error boundary', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Network down'))
+    const failure = new Error('Network down')
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return graphqlFailure(failure) as any
+      }
 
-    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('Network down')
+      return graphqlSuccess({}) as any
+    })
+
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toMatchObject({
+      message: expect.stringContaining('Temporary WordPress failure'),
+      errors: expect.arrayContaining([failure]),
+    })
 
     expect(notFound).not.toHaveBeenCalled()
   })
@@ -222,7 +245,7 @@ describe('ArticlePage', () => {
   it('generates metadata that prefers the dynamic OG image', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return {
+        return graphqlSuccess({
           posts: {
             nodes: [
               createArticleNode({
@@ -234,18 +257,18 @@ describe('ArticlePage', () => {
               }),
             ],
           },
-        }
+        }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     const metadata = await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
@@ -265,18 +288,18 @@ describe('ArticlePage', () => {
   it('falls back to the placeholder image when the article is missing', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     const metadata = await generateMetadata({
@@ -299,25 +322,27 @@ describe('ArticlePage', () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
-          return { posts: { nodes: [] } }
+          return graphqlSuccess({ posts: { nodes: [] } }) as any
         }
 
         if (country === 'za') {
-          return { posts: { nodes: [createArticleNode({ slug: 'test', title: 'Canonical' })] } }
+          return graphqlSuccess({
+            posts: { nodes: [createArticleNode({ slug: 'test', title: 'Canonical' })] },
+          }) as any
         }
 
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     const metadata = await generateMetadata({
@@ -338,21 +363,21 @@ describe('ArticlePage', () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
-          return { posts: { nodes: [createArticleNode({ title: 'African Edition' })] } }
+          return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'African Edition' })] } }) as any
         }
 
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     const metadata = await generateMetadata({
@@ -373,21 +398,21 @@ describe('ArticlePage', () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
-          return { posts: { nodes: [createArticleNode({ title: 'African' })] } }
+          return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'African' })] } }) as any
         }
 
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     const ui = await Page({ params: { countryCode: 'african', slug: 'test' } })
@@ -400,23 +425,23 @@ describe('ArticlePage', () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
-          return {
+          return graphqlSuccess({
             posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },
-          }
+          }) as any
         }
 
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
       if (query === POST_CATEGORIES_QUERY) {
-        return { post: { categories: { nodes: [] } } }
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
       }
 
       if (query === RELATED_POSTS_QUERY) {
-        return { posts: { nodes: [] } }
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
-      return null
+      return graphqlSuccess({}) as any
     })
 
     await Page({ params: { countryCode: 'african-edition', slug: 'African-Story' } })

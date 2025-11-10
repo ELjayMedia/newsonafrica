@@ -3,7 +3,11 @@ import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { COUNTRIES, fetchWordPressGraphQL } from "@/lib/wordpress/client"
+import {
+  COUNTRIES,
+  fetchWordPressGraphQL,
+  type WordPressGraphQLResult,
+} from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -63,40 +67,58 @@ export interface LoadedArticle {
   tags: string[]
 }
 
-export async function loadArticle(countryCode: string, slug: string): Promise<LoadedArticle | null> {
-  if (!hasWordPressEndpoint(countryCode)) {
-    return null
+export type LoadArticleResult =
+  | ({ status: "found" } & LoadedArticle)
+  | { status: "not-found" }
+  | { status: "temporary-error"; error: unknown }
+
+const asLoadArticleResult = (
+  countryCode: string,
+  result: WordPressGraphQLResult<PostBySlugQueryResult>,
+  slug: string,
+): LoadArticleResult => {
+  if (!result.ok) {
+    return { status: "temporary-error", error: result.error }
   }
 
-  const slugTag = cacheTags.postSlug(countryCode, slug)
-  const requestTags = [slugTag]
-
-  const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
-    countryCode,
-    POST_BY_SLUG_QUERY,
-    { slug },
-    { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
+  const node = result.posts?.nodes?.find(
+    (value): value is PostFieldsFragment => Boolean(value),
   )
 
-  const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
-
   if (!node) {
-    return null
+    return { status: "not-found" }
   }
 
   const article = mapGraphqlPostToWordPressPost(node, countryCode)
+  const slugTag = cacheTags.postSlug(countryCode, slug)
   const tags = [slugTag]
 
   if (node?.databaseId != null) {
     tags.push(cacheTags.post(countryCode, node.databaseId))
   }
 
-  return { article, tags }
+  return { status: "found", article, tags }
 }
 
-export interface ArticleLoadResult extends LoadedArticle {
-  sourceCountry: string
+export async function loadArticle(countryCode: string, slug: string): Promise<LoadArticleResult> {
+  if (!hasWordPressEndpoint(countryCode)) {
+    return { status: "not-found" }
+  }
+
+  const slugTag = cacheTags.postSlug(countryCode, slug)
+  const requestTags = [slugTag]
+
+  const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
+    countryCode,
+    POST_BY_SLUG_QUERY,
+    { slug },
+    { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
+  )
+
+  return asLoadArticleResult(countryCode, gqlResult, slug)
 }
+
+export type ArticleLoadResult = { status: "found"; sourceCountry: string } & LoadedArticle
 
 const unique = (values: string[]): string[] => {
   const seen = new Set<string>()
@@ -141,22 +163,36 @@ export async function loadArticleWithFallback(
     return null
   }
 
+  const temporaryFailures: Array<{ country: string; error: unknown }> = []
+
   const primaryArticle = await loadArticle(primaryCountry, normalizedSlug)
-  if (primaryArticle) {
+
+  if (primaryArticle.status === "temporary-error") {
+    temporaryFailures.push({ country: primaryCountry, error: primaryArticle.error })
+  } else if (primaryArticle.status === "found") {
     return { ...primaryArticle, sourceCountry: primaryCountry }
   }
 
   if (fallbackCountries.length === 0) {
+    if (temporaryFailures.length > 0) {
+      throw new AggregateError(
+        temporaryFailures.map(({ error }) => error),
+        `Temporary WordPress failure for countries: ${temporaryFailures
+          .map(({ country }) => country)
+          .join(", ")}`,
+      )
+    }
+
     return null
   }
 
   const fallbackEntries = fallbackCountries.map((country) => ({
     country,
     promise: loadArticle(country, normalizedSlug).then<
-      | { status: "fulfilled"; article: LoadedArticle | null }
+      | { status: "fulfilled"; result: LoadArticleResult }
       | { status: "rejected"; error: unknown }
     >(
-      (article) => ({ status: "fulfilled", article }),
+      (result) => ({ status: "fulfilled", result }),
       (error) => ({ status: "rejected", error }),
     ),
   }))
@@ -168,9 +204,23 @@ export async function loadArticleWithFallback(
       throw result.error
     }
 
-    if (result.article) {
-      return { ...result.article, sourceCountry: country }
+    if (result.result.status === "temporary-error") {
+      temporaryFailures.push({ country, error: result.result.error })
+      continue
     }
+
+    if (result.result.status === "found") {
+      return { ...result.result, sourceCountry: country }
+    }
+  }
+
+  if (temporaryFailures.length > 0) {
+    throw new AggregateError(
+      temporaryFailures.map(({ error }) => error),
+      `Temporary WordPress failure for countries: ${temporaryFailures
+        .map(({ country }) => country)
+        .join(", ")}`,
+    )
   }
 
   return null

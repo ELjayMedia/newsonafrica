@@ -84,12 +84,64 @@ const getMemoizedRequests = (): Map<string, MemoizedRequestEntry> => {
   return fallbackStore
 }
 
+export class WordPressGraphQLHTTPError extends Error {
+  public readonly status: number
+  public readonly statusText: string
+  public readonly response: Response
+
+  constructor(response: Response) {
+    const { status, statusText } = response
+    super(`WordPress GraphQL request failed with status ${status}`)
+    this.name = "WordPressGraphQLHTTPError"
+    this.status = status
+    this.statusText = statusText
+    this.response = response
+  }
+}
+
+export class WordPressGraphQLResponseError extends Error {
+  public readonly errors: Array<{ message: string; [key: string]: unknown }>
+
+  constructor(errors: Array<{ message: string; [key: string]: unknown }>) {
+    super("WordPress GraphQL response contained errors")
+    this.name = "WordPressGraphQLResponseError"
+    this.errors = errors
+  }
+}
+
+export type WordPressGraphQLSuccess<T> =
+  { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
+
+export interface WordPressGraphQLFailure {
+  ok: false
+  error: unknown
+}
+
+export type WordPressGraphQLResult<T> =
+  | WordPressGraphQLSuccess<T>
+  | WordPressGraphQLFailure
+
+const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {
+  const base: { ok: true; data: T | null } = { ok: true, data }
+
+  if (data && typeof data === "object") {
+    return Object.assign({}, data, base) as WordPressGraphQLSuccess<T>
+  }
+
+  return base as WordPressGraphQLSuccess<T>
+}
+
+const buildFailureResult = (error: unknown): WordPressGraphQLFailure => ({
+  ok: false,
+  error,
+})
+
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
   variables?: Record<string, string | number | string[]>,
   options: FetchWordPressGraphQLOptions = {},
-): Promise<T | null> {
+): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
@@ -109,7 +161,7 @@ export function fetchWordPressGraphQL<T>(
     if (isExpired) {
       memoizedRequests.delete(cacheKey)
     } else if (cachedEntry.metadataKey === metadataKey) {
-      return cachedEntry.promise as Promise<T | null>
+      return cachedEntry.promise as Promise<WordPressGraphQLResult<T>>
     }
   }
 
@@ -121,7 +173,7 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  const requestPromise = fetchWithRetry(base, {
+  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, {
     method: "POST",
     headers,
     body,
@@ -135,7 +187,7 @@ export function fetchWordPressGraphQL<T>(
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", res.status, res.statusText)
-        throw new Error(`WordPress GraphQL request failed with status ${res.status}`)
+        throw new WordPressGraphQLHTTPError(res)
       }
 
       const json = (await res.json()) as {
@@ -145,14 +197,14 @@ export function fetchWordPressGraphQL<T>(
 
       if (json.errors && json.errors.length > 0) {
         console.error("[v0] GraphQL errors:", json.errors)
-        throw new Error("WordPress GraphQL response contained errors")
+        throw new WordPressGraphQLResponseError(json.errors)
       }
 
-      return (json.data ?? null) as T | null
+      return buildSuccessResult<T>(json.data ?? null)
     })
     .catch((error) => {
       console.error("[v0] GraphQL request exception:", error)
-      return null
+      return buildFailureResult(error)
     })
 
   const expiresAt =
