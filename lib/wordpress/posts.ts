@@ -165,18 +165,29 @@ export async function getLatestPostsForCountry(
 
 export const getLatestPosts = (limit = 20) => getLatestPostsForCountry(DEFAULT_COUNTRY, limit)
 
-export async function getRelatedPostsForCountry(countryCode: string, postId: string, limit = 6) {
+export async function getRelatedPostsForCountry(
+  countryCode: string,
+  postId: number | string,
+  limit = 6,
+) {
+  const postCacheKey = String(postId)
+  const numericPostId = typeof postId === "number" ? postId : Number(postId)
+
+  if (!Number.isFinite(numericPostId)) {
+    return []
+  }
+
   const tags = [
-    ...buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postId}`] }),
+    ...buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postCacheKey}`] }),
     tag.edition(countryCode),
     tag.posts(countryCode),
-    tag.post(countryCode, postId),
+    tag.post(countryCode, postCacheKey),
   ]
 
   const gqlPost = await fetchWordPressGraphQL<PostCategoriesQuery>(
     countryCode,
     POST_CATEGORIES_QUERY,
-    { id: Number(postId) },
+    { id: numericPostId },
     { tags, revalidate: RELATED_POSTS_REVALIDATE, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
   if (gqlPost?.post) {
@@ -190,7 +201,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
         RELATED_POSTS_QUERY,
         {
           catIds,
-          exclude: Number(postId),
+          exclude: numericPostId,
           first: limit,
         },
         {
@@ -202,7 +213,7 @@ export async function getRelatedPostsForCountry(countryCode: string, postId: str
       if (gqlData?.posts) {
         const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
         const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
-        return posts.filter((p) => p.databaseId !== Number(postId))
+        return posts.filter((p) => p.databaseId !== numericPostId)
       }
     }
   }

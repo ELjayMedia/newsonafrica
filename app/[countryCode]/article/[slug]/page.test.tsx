@@ -17,8 +17,9 @@ vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }))
 
-const { capturedArticleClientProps } = vi.hoisted(() => ({
+const { capturedArticleClientProps, mockGetRelatedPostsForCountry } = vi.hoisted(() => ({
   capturedArticleClientProps: [] as Array<Record<string, any>>,
+  mockGetRelatedPostsForCountry: vi.fn(),
 }))
 
 vi.mock('./ArticleClientContent', () => ({
@@ -28,9 +29,14 @@ vi.mock('./ArticleClientContent', () => ({
   },
 }))
 
+vi.mock('@/lib/wordpress/posts', () => ({
+  getRelatedPostsForCountry: (...args: unknown[]) => mockGetRelatedPostsForCountry(...args),
+}))
+
 import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
+import { cacheTags } from '@/lib/cache'
 import { env } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
 import {
@@ -69,6 +75,8 @@ describe('ArticlePage', () => {
       throw new Error('NEXT_REDIRECT')
     })
     capturedArticleClientProps.length = 0
+    mockGetRelatedPostsForCountry.mockReset()
+    mockGetRelatedPostsForCountry.mockResolvedValue([])
   })
 
   it('renders post content', async () => {
@@ -93,6 +101,28 @@ describe('ArticlePage', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalled()
     expect(capturedArticleClientProps[0]?.countryCode).toBe('sz')
     expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('passes the database ID to related post lookup when available', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return { posts: { nodes: [createArticleNode({ databaseId: 42, id: 'gid://wordpress/Post:42' })] } }
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return { post: { categories: { nodes: [] } } }
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return { posts: { nodes: [] } }
+      }
+
+      return null
+    })
+
+    await Page({ params: { countryCode: 'sz', slug: 'test' } })
+
+    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith('sz', 42, 6)
   })
 
   it('calls notFound when the article cannot be resolved via GraphQL', async () => {
@@ -151,7 +181,7 @@ describe('ArticlePage', () => {
       expect.any(Object),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.SHORT,
-        tags: expect.arrayContaining(['slug:test']),
+        tags: expect.arrayContaining([cacheTags.postSlug('sz', 'test')]),
       }),
     )
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
@@ -160,7 +190,7 @@ describe('ArticlePage', () => {
       expect.any(Object),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.SHORT,
-        tags: expect.arrayContaining(['slug:test']),
+        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test')]),
       }),
     )
     expect(redirect).toHaveBeenCalledWith('/za/article/test')
