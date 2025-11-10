@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
+vi.mock("@/config/env", () => ({
+  ENV: {
+    NEXT_PUBLIC_SITE_URL: "https://example.com",
+    NEXT_PUBLIC_DEFAULT_SITE: "sz",
+    NEXT_PUBLIC_WP_SZ_GRAPHQL: undefined,
+    NEXT_PUBLIC_WP_ZA_GRAPHQL: undefined,
+    ANALYTICS_API_BASE_URL: "https://example.com/api/analytics",
+    WORDPRESS_REQUEST_TIMEOUT_MS: 30_000,
+  },
+}))
+
 const {
   mockResolveEdition,
   mockBuildArticleCountryPriority,
