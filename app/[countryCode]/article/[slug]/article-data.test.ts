@@ -30,14 +30,17 @@ describe('article-data', () => {
   })
 
   const graphqlSuccess = <T,>(data: T) => ({
-    ok: true,
+    ok: true as const,
     data,
     ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
   })
 
-  const graphqlFailure = (error: unknown = new Error('GraphQL fatal')) => ({
+  const graphqlFailure = (message = 'GraphQL fatal') => ({
     ok: false as const,
-    error,
+    kind: 'graphql_error' as const,
+    message,
+    errors: [{ message }],
+    error: new Error(message),
   })
 
   it('returns only supported wordpress countries in the fallback priority', () => {
@@ -97,7 +100,7 @@ describe('article-data', () => {
   it('does not call wordpress when asked to load an unsupported country', async () => {
     const result = await loadArticle('african-edition', 'test-slug')
 
-    expect(result).toEqual({ status: 'not-found' })
+    expect(result).toEqual({ status: 'not_found' })
     expect(fetchWordPressGraphQL).not.toHaveBeenCalled()
   })
 
@@ -152,16 +155,17 @@ describe('article-data', () => {
 
     const result = await loadArticle('za', 'missing-slug')
 
-    expect(result).toEqual({ status: 'not-found' })
+    expect(result).toEqual({ status: 'not_found' })
   })
 
   it('returns a temporary error when GraphQL fails', async () => {
-    const failure = new Error('GraphQL fatal')
-    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(graphqlFailure(failure) as any)
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(graphqlFailure() as any)
 
     const result = await loadArticle('za', 'test-slug')
 
-    expect(result).toEqual({ status: 'temporary-error', error: failure })
+    expect(result.status).toBe('temporary_error')
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.failure).toMatchObject({ kind: 'graphql_error', message: 'GraphQL fatal' })
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {
@@ -212,9 +216,9 @@ describe('article-data', () => {
       author: { node: { databaseId: 9, name: 'Reporter', slug: 'reporter' } },
     }
 
-    const loadPromise = loadArticleWithFallback('MiXeD-SluG', ['ng', 'za', 'ke'])
-    let settled: Awaited<typeof loadPromise> | undefined
-    loadPromise.then((value) => {
+    const resultPromise = loadArticleWithFallback('MiXeD-SluG', ['ng', 'za', 'ke'])
+    let settled: Awaited<typeof resultPromise> | undefined
+    resultPromise.then((value) => {
       settled = value
     })
 
@@ -233,35 +237,43 @@ describe('article-data', () => {
     expect(settled).toBeUndefined()
 
     zaResponse.resolve(graphqlSuccess({ posts: { nodes: [] } }))
-    const result = await loadPromise
+    const result = await resultPromise
 
-    expect(result?.sourceCountry).toBe('ke')
-    expect(result?.article.slug).toBe('mixed-slug')
-    expect(result?.tags).toEqual(
+    expect(result.status).toBe('found')
+    expect(result.sourceCountry).toBe('ke')
+    expect(result.article.slug).toBe('mixed-slug')
+    expect(result.tags).toEqual(
       expect.arrayContaining([cacheTags.postSlug('ke', 'mixed-slug')]),
     )
   })
 
-  it('throws an aggregate error when every country encounters a temporary failure', async () => {
+  it('aggregates temporary failures when every country encounters an error', async () => {
     const errorNg = new Error('ng outage')
     const errorZa = new Error('za outage')
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation((country) => {
       if (country === 'ng') {
-        return Promise.resolve(graphqlFailure(errorNg)) as any
+        return Promise.reject(errorNg)
       }
 
       if (country === 'za') {
-        return Promise.resolve(graphqlFailure(errorZa)) as any
+        return Promise.reject(errorZa)
       }
 
       return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
     })
 
-    await expect(loadArticleWithFallback('slug', ['ng', 'za'])).rejects.toMatchObject({
-      errors: expect.arrayContaining([errorNg, errorZa]),
-      message: expect.stringContaining('Temporary WordPress failure'),
-    })
+    const result = await loadArticleWithFallback('slug', ['ng', 'za'])
+
+    expect(result.status).toBe('temporary_error')
+    expect(result.error).toBeInstanceOf(AggregateError)
+    expect(result.error.errors).toEqual(expect.arrayContaining([errorNg, errorZa]))
+    expect(result.failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ country: 'ng', error: errorNg }),
+        expect.objectContaining({ country: 'za', error: errorZa }),
+      ]),
+    )
   })
 
   it('continues fallbacks when some countries temporarily fail', async () => {
@@ -269,7 +281,7 @@ describe('article-data', () => {
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation((country, _query, variables) => {
       if (country === 'ng') {
-        return Promise.resolve(graphqlFailure(temporaryError)) as any
+        return Promise.reject(temporaryError)
       }
 
       if (country === 'za') {
@@ -300,8 +312,8 @@ describe('article-data', () => {
 
     const result = await loadArticleWithFallback('slug', ['ng', 'za'])
 
-    expect(result?.status).toBe('found')
-    expect(result?.sourceCountry).toBe('za')
-    expect(result?.article.slug).toBe('slug')
+    expect(result.status).toBe('found')
+    expect(result.sourceCountry).toBe('za')
+    expect(result.article.slug).toBe('slug')
   })
 })

@@ -112,10 +112,33 @@ export class WordPressGraphQLResponseError extends Error {
 export type WordPressGraphQLSuccess<T> =
   { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
 
-export interface WordPressGraphQLFailure {
+export type WordPressGraphQLFailureKind = "http_error" | "graphql_error"
+
+export interface WordPressGraphQLFailureBase {
   ok: false
-  error: unknown
+  kind: WordPressGraphQLFailureKind
+  message: string
+  error: Error
 }
+
+export interface WordPressGraphQLHTTPFailure extends WordPressGraphQLFailureBase {
+  kind: "http_error"
+  status: number
+  statusText: string
+  response: Response
+  error: WordPressGraphQLHTTPError
+}
+
+export interface WordPressGraphQLResponseFailure
+  extends WordPressGraphQLFailureBase {
+  kind: "graphql_error"
+  errors: Array<{ message: string; [key: string]: unknown }>
+  error: WordPressGraphQLResponseError
+}
+
+export type WordPressGraphQLFailure =
+  | WordPressGraphQLHTTPFailure
+  | WordPressGraphQLResponseFailure
 
 export type WordPressGraphQLResult<T> =
   | WordPressGraphQLSuccess<T>
@@ -131,10 +154,35 @@ const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {
   return base as WordPressGraphQLSuccess<T>
 }
 
-const buildFailureResult = (error: unknown): WordPressGraphQLFailure => ({
-  ok: false,
-  error,
-})
+const buildHTTPFailureResult = (
+  response: Response,
+): WordPressGraphQLHTTPFailure => {
+  const error = new WordPressGraphQLHTTPError(response)
+
+  return {
+    ok: false,
+    kind: "http_error",
+    message: error.message,
+    status: error.status,
+    statusText: error.statusText,
+    response,
+    error,
+  }
+}
+
+const buildGraphQLFailureResult = (
+  errors: Array<{ message: string; [key: string]: unknown }>,
+): WordPressGraphQLResponseFailure => {
+  const error = new WordPressGraphQLResponseError(errors)
+
+  return {
+    ok: false,
+    kind: "graphql_error",
+    message: error.message,
+    errors,
+    error,
+  }
+}
 
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
@@ -187,7 +235,7 @@ export function fetchWordPressGraphQL<T>(
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", res.status, res.statusText)
-        throw new WordPressGraphQLHTTPError(res)
+        return buildHTTPFailureResult(res)
       }
 
       const json = (await res.json()) as {
@@ -197,14 +245,14 @@ export function fetchWordPressGraphQL<T>(
 
       if (json.errors && json.errors.length > 0) {
         console.error("[v0] GraphQL errors:", json.errors)
-        throw new WordPressGraphQLResponseError(json.errors)
+        return buildGraphQLFailureResult(json.errors)
       }
 
       return buildSuccessResult<T>(json.data ?? null)
     })
     .catch((error) => {
       console.error("[v0] GraphQL request exception:", error)
-      return buildFailureResult(error)
+      throw error
     })
 
   const expiresAt =
