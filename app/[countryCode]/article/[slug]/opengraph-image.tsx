@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { ImageResponse } from "next/og"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 import { stripHtml } from "@/lib/search"
 
@@ -70,7 +70,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
   const edition = resolveEdition(countryCode)
   const normalizedCountry = edition
     ? edition.code.toLowerCase()
-    : normalizeCountryCode(countryCode || env.NEXT_PUBLIC_DEFAULT_SITE)
+    : normalizeCountryCode(countryCode || ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const normalizedSlug = normalizeSlug(slug)
 
   const badge = resolveCountryOgBadge(normalizedCountry)

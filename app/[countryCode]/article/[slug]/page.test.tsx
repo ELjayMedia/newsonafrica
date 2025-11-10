@@ -37,7 +37,7 @@ import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { cacheTags } from '@/lib/cache'
-import { env } from '@/config/env'
+import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
 import {
   POST_BY_SLUG_QUERY,
@@ -235,7 +235,7 @@ describe('ArticlePage', () => {
 
     const metadata = await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
 
-    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
     const canonical = `${baseUrl}/sz/article/test`
 
@@ -268,7 +268,7 @@ describe('ArticlePage', () => {
       params: Promise.resolve({ countryCode: 'za', slug: 'missing-post' }),
     })
 
-    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const dynamicUrl = `${baseUrl}/za/article/missing-post/opengraph-image`
     const fallbackUrl = `${baseUrl}/news-placeholder.png`
 
@@ -309,7 +309,7 @@ describe('ArticlePage', () => {
       params: Promise.resolve({ countryCode: 'sz', slug: 'test' }),
     })
 
-    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const expectedCanonical = `${baseUrl}/za/article/test`
     const expectedOg = `${baseUrl}/za/article/test/opengraph-image`
 
@@ -344,7 +344,7 @@ describe('ArticlePage', () => {
       params: Promise.resolve({ countryCode: 'african', slug: 'test' }),
     })
 
-    const baseUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
     const expectedOgUrl = `${baseUrl}/african/article/test/opengraph-image`
     const expectedCanonical = `${baseUrl}/african/article/test`
 

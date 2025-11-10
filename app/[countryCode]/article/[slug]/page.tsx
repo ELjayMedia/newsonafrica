@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const normalizedSlug = normalizeSlug(slug)
 
   if (!edition) {
-    const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
+    const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
     const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountryAlias, normalizedSlug)
     const placeholderImage = buildPlaceholderUrl(baseUrl)
 
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   }
 
   const editionCountry = normalizeCountryCode(edition.code)
-  const baseUrl = sanitizeBaseUrl(env.NEXT_PUBLIC_SITE_URL)
+  const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
   const countryPriority = buildArticleCountryPriority(editionCountry)

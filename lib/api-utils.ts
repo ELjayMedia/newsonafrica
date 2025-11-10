@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { rateLimit } from "./rateLimit"
 import logger from "@/utils/logger"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { ValidationError } from "./validation"
 
 export type ApiResponse<T = any> = {
@@ -90,8 +90,8 @@ export function logRequest(req: Request) {
 export function withCors<T extends Response>(req: Request, res: T): T {
   const allowedOrigins =
     process.env.NODE_ENV === "production"
-      ? [env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]
-      : [env.NEXT_PUBLIC_SITE_URL || "http://app.newsonafrica.com"]
+      ? [ENV.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"]
+      : [ENV.NEXT_PUBLIC_SITE_URL || "http://app.newsonafrica.com"]
 
   const origin = req.headers.get("origin") || ""
 

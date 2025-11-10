@@ -46,7 +46,8 @@
     "swr": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "uuid": "latest"
+    "uuid": "latest",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",

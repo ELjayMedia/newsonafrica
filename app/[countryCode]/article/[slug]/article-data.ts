@@ -1,4 +1,4 @@
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
@@ -115,7 +115,7 @@ const unique = (values: string[]): string[] => {
 
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
-  const defaultSite = normalizeCountryCode(env.NEXT_PUBLIC_DEFAULT_SITE)
+  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
 
   const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>

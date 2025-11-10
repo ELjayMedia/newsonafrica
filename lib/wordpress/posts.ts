@@ -1,4 +1,4 @@
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { buildCacheTags } from "../cache/tag-utils"
 import { tag } from "../cache"
 import { CACHE_DURATIONS } from "../cache/constants"
@@ -405,7 +405,7 @@ const buildMostReadRequestUrl = (countryCode: string, limit: number, requestUrl?
   if (typeof window === "undefined") {
     const candidateBases: string[] = []
 
-    const configuredBase = env.NEXT_PUBLIC_SITE_URL?.trim()
+    const configuredBase = ENV.NEXT_PUBLIC_SITE_URL
     if (configuredBase) {
       candidateBases.push(configuredBase)
     }

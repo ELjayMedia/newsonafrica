@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
 import * as log from "@/lib/log"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
 import { CategoryHeader } from "@/components/category/CategoryHeader"
 import { PostList } from "@/components/posts/PostList"
@@ -99,9 +99,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
           follow: false,
           noarchive: true,
         },
-        alternates: {
-          canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
-        },
+      alternates: {
+        canonical: `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
+      },
       }
     }
 
@@ -113,7 +113,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
     const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
-    const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
+    const canonicalUrl = `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 
     const topPostKeywords = posts
       .map((post) => getRenderedText(post.title))
@@ -206,7 +206,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
       alternates: {
-        canonical: `${env.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
+        canonical: `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
       },
     }
   }

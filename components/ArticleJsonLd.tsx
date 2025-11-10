@@ -1,7 +1,7 @@
 import { JsonLd } from "@/components/JsonLd"
 import { getNewsArticleSchema } from "@/lib/schema"
 import type { Post } from "@/lib/types"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 
 interface ArticleJsonLdProps {
   post: Post
@@ -11,7 +11,7 @@ interface ArticleJsonLdProps {
 export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
   const authorSlug = post.author.node.slug
   const imageUrl =
-    post.featuredImage?.node?.sourceUrl ?? `${env.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`
+    post.featuredImage?.node?.sourceUrl ?? `${ENV.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`
   const schema = getNewsArticleSchema({
     url,
     title: post.title,
@@ -20,7 +20,7 @@ export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
     datePublished: post.date,
     dateModified: post.modified,
     authorName: post.author.node.name,
-    authorUrl: authorSlug ? `${env.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}` : undefined,
+    authorUrl: authorSlug ? `${ENV.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}` : undefined,
     speakableSelectors: ["article#article-content h1", "article#article-content .prose"],
   })
 

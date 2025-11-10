@@ -1,12 +1,12 @@
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 
 const WORDPRESS_GRAPHQL_API_URL = getGraphQLEndpoint()
 
 export const siteConfig = {
   name: "News On Africa",
   description: "Your premier source for African news, politics, business, and culture",
-  url: env.NEXT_PUBLIC_SITE_URL,
+  url: ENV.NEXT_PUBLIC_SITE_URL,
   ogImage: "/news-on-africa-logo.png",
   links: {
     twitter: "https://twitter.com/newsonafrica",

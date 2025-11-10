@@ -12,7 +12,7 @@ import { BottomNavigation } from "@/components/BottomNavigation"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { Toaster } from "@/components/ui/toaster"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { Providers } from "./providers"
 import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
 
@@ -21,7 +21,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(ENV.NEXT_PUBLIC_SITE_URL),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],

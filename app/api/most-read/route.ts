@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { fetchWithTimeout } from "@/lib/utils/fetchWithTimeout"
 import { decodeHtmlEntities } from "@/lib/utils/decodeHtmlEntities"
 import type { HomePost } from "@/types/home"
@@ -114,14 +114,14 @@ const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost
 }
 
 const getBaseAnalyticsUrl = () => {
-  const base = env.ANALYTICS_API_BASE_URL?.trim() || "https://newsonafrica.com/api/analytics"
+  const base = ENV.ANALYTICS_API_BASE_URL
   return base.replace(/\/?$/, "")
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const countryParam = searchParams.get("country")?.toLowerCase()
-  const country = countryParam && countryParam.length > 0 ? countryParam : env.NEXT_PUBLIC_DEFAULT_SITE || "sz"
+  const country = countryParam && countryParam.length > 0 ? countryParam : ENV.NEXT_PUBLIC_DEFAULT_SITE || "sz"
   const limitParam = Number(searchParams.get("limit"))
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(Math.floor(limitParam), MAX_LIMIT) : DEFAULT_LIMIT
 

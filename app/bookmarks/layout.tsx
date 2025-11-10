@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 import { cacheTags } from "@/lib/cache"
 import { getServerCountry } from "@/lib/utils/routing"
 import type { BookmarkListPayload } from "@/types/bookmarks"
@@ -44,7 +44,7 @@ export default async function BookmarksLayout({ children }: { children: React.Re
         cacheTags.bmUser(session.user.id),
       ])
 
-      const response = await fetch(`${env.NEXT_PUBLIC_SITE_URL}/api/bookmarks`, {
+      const response = await fetch(`${ENV.NEXT_PUBLIC_SITE_URL}/api/bookmarks`, {
         method: "GET",
         headers: {
           accept: "application/json",

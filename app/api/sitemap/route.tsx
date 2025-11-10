@@ -4,7 +4,7 @@ const fetchRecentPosts = async () => []
 import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { logRequest, withCors } from "@/lib/api-utils"
-import { env } from "@/config/env"
+import { ENV } from "@/config/env"
 
 // Cache policy: long (30 minutes)
 export const revalidate = 1800
@@ -14,7 +14,7 @@ export const runtime = "nodejs"
 
 export async function GET(request: Request) {
   logRequest(request)
-  const baseUrl = env.NEXT_PUBLIC_SITE_URL
+  const baseUrl = ENV.NEXT_PUBLIC_SITE_URL
 
   try {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
