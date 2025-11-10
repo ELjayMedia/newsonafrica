@@ -11,11 +11,14 @@ vi.mock('@/lib/wordpress/client', async () => {
   }
 })
 
-import {
+import * as articleData from './article-data'
+
+const {
   buildArticleCountryPriority,
   loadArticle,
+  loadArticleWithFallback,
   normalizeCountryCode,
-} from './article-data'
+} = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
@@ -138,5 +141,83 @@ describe('article-data', () => {
     vi.mocked(fetchWordPressGraphQL).mockRejectedValue(failure)
 
     await expect(loadArticle('za', 'test-slug')).rejects.toBe(failure)
+  })
+
+  it('runs fallback lookups concurrently while preserving priority order', async () => {
+    const callLog: Array<{ country: string; slug?: string }> = []
+
+    const createDeferred = <T,>() => {
+      let resolve!: (value: T) => void
+      let reject!: (reason?: unknown) => void
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+
+      return { promise, resolve, reject }
+    }
+
+    const zaResponse = createDeferred<any>()
+    const keResponse = createDeferred<any>()
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((countryCode, _query, variables) => {
+      callLog.push({ country: countryCode, slug: (variables as { slug?: string })?.slug })
+
+      if (countryCode === 'ng') {
+        return Promise.resolve({ posts: { nodes: [] } }) as any
+      }
+
+      if (countryCode === 'za') {
+        return zaResponse.promise
+      }
+
+      if (countryCode === 'ke') {
+        return keResponse.promise
+      }
+
+      throw new Error(`Unexpected country: ${countryCode}`)
+    })
+
+    const keNode = {
+      slug: 'mixed-slug',
+      id: 'gid://wordpress/Post:101',
+      databaseId: 101,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Kenya title',
+      excerpt: 'Kenya excerpt',
+      content: '<p>Hello Kenya</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 9, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    const loadPromise = loadArticleWithFallback('MiXeD-SluG', ['ng', 'za', 'ke'])
+    let settled: Awaited<typeof loadPromise> | undefined
+    loadPromise.then((value) => {
+      settled = value
+    })
+
+    await vi.waitFor(() => {
+      expect(callLog).toHaveLength(3)
+    })
+
+    expect(callLog).toEqual([
+      { country: 'ng', slug: 'mixed-slug' },
+      { country: 'za', slug: 'mixed-slug' },
+      { country: 'ke', slug: 'mixed-slug' },
+    ])
+
+    keResponse.resolve({ posts: { nodes: [keNode] } })
+    await Promise.resolve()
+    expect(settled).toBeUndefined()
+
+    zaResponse.resolve({ posts: { nodes: [] } })
+    const result = await loadPromise
+
+    expect(result?.sourceCountry).toBe('ke')
+    expect(result?.article.slug).toBe('mixed-slug')
+    expect(result?.tags).toEqual(
+      expect.arrayContaining([cacheTags.postSlug('ke', 'mixed-slug')]),
+    )
   })
 })

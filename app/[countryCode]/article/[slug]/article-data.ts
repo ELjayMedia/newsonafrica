@@ -135,10 +135,41 @@ export async function loadArticleWithFallback(
 ): Promise<ArticleLoadResult | null> {
   const normalizedSlug = normalizeSlug(slug)
 
-  for (const country of countryPriority) {
-    const article = await loadArticle(country, normalizedSlug)
-    if (article) {
-      return { ...article, sourceCountry: country }
+  const [primaryCountry, ...fallbackCountries] = countryPriority
+
+  if (!primaryCountry) {
+    return null
+  }
+
+  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug)
+  if (primaryArticle) {
+    return { ...primaryArticle, sourceCountry: primaryCountry }
+  }
+
+  if (fallbackCountries.length === 0) {
+    return null
+  }
+
+  const fallbackEntries = fallbackCountries.map((country) => ({
+    country,
+    promise: loadArticle(country, normalizedSlug).then<
+      | { status: "fulfilled"; article: LoadedArticle | null }
+      | { status: "rejected"; error: unknown }
+    >(
+      (article) => ({ status: "fulfilled", article }),
+      (error) => ({ status: "rejected", error }),
+    ),
+  }))
+
+  for (const { country, promise } of fallbackEntries) {
+    const result = await promise
+
+    if (result.status === "rejected") {
+      throw result.error
+    }
+
+    if (result.article) {
+      return { ...result.article, sourceCountry: country }
     }
   }
 
