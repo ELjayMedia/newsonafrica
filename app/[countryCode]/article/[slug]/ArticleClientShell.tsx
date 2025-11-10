@@ -22,6 +22,7 @@ import type {
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { transformWordPressEmbeds } from "@/lib/utils/wordpressEmbeds"
+import { stripHtml } from "@/lib/search"
 
 interface ArticleClientShellProps {
   slug: string
@@ -243,6 +244,8 @@ export function ArticleClientShell({
   )
 
   const shareUrl = `/${countryCode}/article/${slug}`
+  const shareTitle = stripHtml(title)
+  const shareDescription = stripHtml(excerpt || title)
 
   return (
     <>
@@ -307,9 +310,9 @@ export function ArticleClientShell({
 
           <div className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
             <ShareButtons
-              title={title}
+              title={shareTitle}
               url={shareUrl}
-              description={excerpt || title}
+              description={shareDescription || shareTitle}
               variant="outline"
               size="sm"
               className="flex items-center"
