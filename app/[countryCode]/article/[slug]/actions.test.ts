@@ -50,6 +50,7 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "anon-key"
 
 import { fetchArticleWithFallbackAction } from "./actions"
 import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"
+import type { WordPressPost } from "@/types/wp"
 
 describe("fetchArticleWithFallbackAction", () => {
   beforeEach(() => {
@@ -61,6 +62,7 @@ describe("fetchArticleWithFallbackAction", () => {
     mockResolveEdition.mockReturnValue(edition)
     mockBuildArticleCountryPriority.mockReturnValue(["ng", "za"])
     mockLoadArticleWithFallback.mockResolvedValue({
+      status: "found",
       article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
       sourceCountry: "za",
       tags: ["edition:za:post:42"],
@@ -81,6 +83,27 @@ describe("fetchArticleWithFallbackAction", () => {
     })
   })
 
+  it("falls back to stale article data when the latest request fails", async () => {
+    const edition = { code: "NG", type: "country" } as const
+    mockResolveEdition.mockReturnValue(edition)
+    mockBuildArticleCountryPriority.mockReturnValue(["ng"])
+    const staleArticle = { id: "gid://wordpress/Post:99", databaseId: 99, title: "Stale" }
+    const relatedPosts = [{ id: "related" } as WordPressPost]
+    mockLoadArticleWithFallback.mockResolvedValue({
+      status: "temporary_error",
+      error: new Error("Temporary"),
+      failures: [{ country: "ng", error: new Error("Outage") }],
+      staleArticle,
+      staleSourceCountry: "ng",
+    })
+    mockGetRelatedPostsForCountry.mockResolvedValue(relatedPosts)
+
+    const result = await fetchArticleWithFallbackAction({ countryCode: "NG", slug: "Some-Slug" })
+
+    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith("ng", 99, 6)
+    expect(result).toEqual({ article: staleArticle, sourceCountry: "ng", relatedPosts })
+  })
+
   it("throws a consistent error when no edition is resolved", async () => {
     mockResolveEdition.mockReturnValue(null)
 
@@ -92,7 +115,7 @@ describe("fetchArticleWithFallbackAction", () => {
   it("throws a consistent error when the article cannot be found", async () => {
     mockResolveEdition.mockReturnValue({ code: "NG", type: "country" })
     mockBuildArticleCountryPriority.mockReturnValue(["ng"])
-    mockLoadArticleWithFallback.mockResolvedValue(null)
+    mockLoadArticleWithFallback.mockResolvedValue({ status: "not_found" })
 
     await expect(
       fetchArticleWithFallbackAction({ countryCode: "NG", slug: "missing" }),

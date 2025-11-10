@@ -1,6 +1,8 @@
 import { ENV } from "@/config/env"
 import { CACHE_DURATIONS, KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache"
+import { enhancedCache } from "@/lib/cache/enhanced-cache"
+import { createCacheEntry, kvCache } from "@/lib/cache/kv"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
@@ -18,6 +20,11 @@ import { getRestBase } from "@/lib/wp-endpoints"
 import { rewriteLegacyLinks } from "@/lib/utils/routing"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
+
+const ARTICLE_CACHE_KEY_PREFIX = "article"
+const ARTICLE_CACHE_TTL_MS = 90_000
+const ARTICLE_CACHE_STALE_MS = 10 * 60 * 1000
+const ARTICLE_CACHE_KV_TTL_SECONDS = 15 * 60
 
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
 
@@ -67,6 +74,15 @@ type PostBySlugQueryResult = {
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
+}
+
+type CachedArticlePayload = {
+  article: WordPressPost
+  sourceCountry: string
+}
+
+type CachedArticleResolution = CachedArticlePayload & {
+  cacheCountry: string
 }
 
 export interface LoadedArticle {
@@ -447,6 +463,75 @@ const unique = (values: string[]): string[] => {
   return result
 }
 
+const buildArticleCacheKey = (country: string, slug: string): string =>
+  `${ARTICLE_CACHE_KEY_PREFIX}:${normalizeCountryCode(country)}:${normalizeSlug(slug)}`
+
+const persistArticleCache = (country: string, slug: string, payload: CachedArticlePayload): void => {
+  const cacheKey = buildArticleCacheKey(country, slug)
+
+  try {
+    enhancedCache.set(cacheKey, payload, ARTICLE_CACHE_TTL_MS, ARTICLE_CACHE_STALE_MS)
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Failed to seed in-memory article cache", { cacheKey, error })
+    }
+  }
+
+  void (async () => {
+    try {
+      await kvCache.set(cacheKey, createCacheEntry(payload), ARTICLE_CACHE_KV_TTL_SECONDS)
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Failed to persist article cache entry", { cacheKey, error })
+      }
+    }
+  })()
+}
+
+const readArticleCache = async (country: string, slug: string): Promise<CachedArticlePayload | null> => {
+  const cacheKey = buildArticleCacheKey(country, slug)
+
+  const cached = enhancedCache.get<CachedArticlePayload>(cacheKey)
+  if (cached.exists && cached.data) {
+    return cached.data
+  }
+
+  try {
+    const kvEntry = await kvCache.get<CachedArticlePayload>(cacheKey)
+    if (kvEntry?.value) {
+      try {
+        enhancedCache.set(cacheKey, kvEntry.value, ARTICLE_CACHE_TTL_MS, ARTICLE_CACHE_STALE_MS)
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Failed to hydrate in-memory article cache", { cacheKey, error })
+        }
+      }
+
+      return kvEntry.value
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Failed to read article cache entry", { cacheKey, error })
+    }
+  }
+
+  return null
+}
+
+const readStaleArticleFromCache = async (
+  countryPriority: string[],
+  slug: string,
+): Promise<CachedArticleResolution | null> => {
+  for (const country of countryPriority) {
+    const cached = await readArticleCache(country, slug)
+    if (cached) {
+      return { ...cached, cacheCountry: country }
+    }
+  }
+
+  return null
+}
+
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
@@ -473,14 +558,42 @@ type ArticleTemporaryFailure = {
 
 export type ArticleFallbackTemporaryError = {
   status: "temporary_error"
-  error: AggregateError
+  error: ArticleTemporarilyUnavailableError
   failures: ArticleTemporaryFailure[]
+  staleArticle?: WordPressPost | null
+  staleSourceCountry?: string | null
 }
 
 export type ArticleLoadResult =
   | ({ status: "found"; sourceCountry: string } & LoadedArticle)
   | ArticleFallbackNotFound
   | ArticleFallbackTemporaryError
+
+export class ArticleTemporarilyUnavailableError extends AggregateError {
+  public readonly failures: ArticleTemporaryFailure[]
+
+  public readonly staleArticle: WordPressPost | null
+
+  public readonly staleSourceCountry: string | null
+
+  constructor(
+    failures: ArticleTemporaryFailure[],
+    message: string,
+    options?: { staleArticle?: WordPressPost | null; staleSourceCountry?: string | null },
+  ) {
+    super(
+      failures.map(({ error, failure }) => failure?.error ?? error),
+      message,
+    )
+    this.name = "ArticleTemporarilyUnavailableError"
+    this.failures = failures
+    this.staleArticle = options?.staleArticle ?? null
+    this.staleSourceCountry = options?.staleSourceCountry ?? null
+  }
+}
+
+const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
+  `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
 
 export async function loadArticleWithFallback(
   slug: string,
@@ -505,20 +618,27 @@ export async function loadArticleWithFallback(
       failure: primaryArticle.failure,
     })
   } else if (primaryArticle.status === "found") {
+    persistArticleCache(primaryCountry, normalizedSlug, {
+      article: primaryArticle.article,
+      sourceCountry: primaryCountry,
+    })
     return { ...primaryArticle, sourceCountry: primaryCountry }
   }
 
   if (fallbackCountries.length === 0) {
     if (temporaryFailures.length > 0) {
+      const stale = await readStaleArticleFromCache(countryPriority, normalizedSlug)
+      const message = buildTemporaryFailureMessage(temporaryFailures)
+      const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message, {
+        staleArticle: stale?.article,
+        staleSourceCountry: stale?.sourceCountry ?? stale?.cacheCountry ?? null,
+      })
       return {
         status: "temporary_error",
-        error: new AggregateError(
-          temporaryFailures.map(({ error, failure }) => failure?.error ?? error),
-          `Temporary WordPress failure for countries: ${temporaryFailures
-            .map(({ country }) => country)
-            .join(", ")}`,
-        ),
+        error,
         failures: temporaryFailures,
+        staleArticle: stale?.article,
+        staleSourceCountry: stale?.sourceCountry ?? stale?.cacheCountry ?? null,
       }
     }
 
@@ -554,20 +674,27 @@ export async function loadArticleWithFallback(
     }
 
     if (result.result.status === "found") {
+      persistArticleCache(country, normalizedSlug, {
+        article: result.result.article,
+        sourceCountry: country,
+      })
       return { ...result.result, sourceCountry: country }
     }
   }
 
   if (temporaryFailures.length > 0) {
+    const stale = await readStaleArticleFromCache(countryPriority, normalizedSlug)
+    const message = buildTemporaryFailureMessage(temporaryFailures)
+    const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message, {
+      staleArticle: stale?.article,
+      staleSourceCountry: stale?.sourceCountry ?? stale?.cacheCountry ?? null,
+    })
     return {
       status: "temporary_error",
-      error: new AggregateError(
-        temporaryFailures.map(({ error, failure }) => failure?.error ?? error),
-        `Temporary WordPress failure for countries: ${temporaryFailures
-          .map(({ country }) => country)
-          .join(", ")}`,
-      ),
+      error,
       failures: temporaryFailures,
+      staleArticle: stale?.article,
+      staleSourceCountry: stale?.sourceCountry ?? stale?.cacheCountry ?? null,
     }
   }
 

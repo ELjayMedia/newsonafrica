@@ -55,7 +55,12 @@ import {
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
 } from '@/lib/wordpress-queries'
-import { buildArticleCountryPriority } from './article-data'
+import {
+  ArticleTemporarilyUnavailableError,
+  buildArticleCountryPriority,
+  loadArticleWithFallback,
+} from './article-data'
+import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
 describe('ArticlePage', () => {
   const createArticleNode = (overrides: Record<string, any> = {}) => ({
@@ -92,6 +97,7 @@ describe('ArticlePage', () => {
     capturedArticleClientProps.length = 0
     mockGetRelatedPostsForCountry.mockReset()
     mockGetRelatedPostsForCountry.mockResolvedValue([])
+    enhancedCache.clear()
   })
 
   const graphqlSuccess = <T,>(data: T) => ({
@@ -238,11 +244,42 @@ describe('ArticlePage', () => {
     })
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toMatchObject({
+      name: 'ArticleTemporarilyUnavailableError',
       message: expect.stringContaining('Temporary WordPress failure'),
       errors: expect.arrayContaining([failure]),
     })
 
     expect(notFound).not.toHaveBeenCalled()
+  })
+
+  it('renders using stale cached article data when new requests temporarily fail', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return graphqlSuccess({
+          posts: { nodes: [createArticleNode({ title: 'Cached article' })] },
+        }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    await loadArticleWithFallback('test', buildArticleCountryPriority('sz'))
+
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Outage'))
+
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
+
+    expect(screen.getByText('Cached article')).toBeInTheDocument()
+    expect(capturedArticleClientProps[0]?.initialData?.title).toBe('Cached article')
+  })
+
+  it('throws the temporary error when no stale article exists', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Service unavailable'))
+
+    await expect(Page({ params: { countryCode: 'sz', slug: 'missing' } })).rejects.toBeInstanceOf(
+      ArticleTemporarilyUnavailableError,
+    )
   })
 
   it('generates metadata that prefers the dynamic OG image', async () => {
