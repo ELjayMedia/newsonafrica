@@ -210,12 +210,41 @@ describe("ArticleClientShell", () => {
     fireEvent.click(giftButton)
 
     expect(pushMock).toHaveBeenCalledWith("/subscribe?intent=gift&article=test-slug&country=ng")
-    expect(mockShareButtons).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: "/ng/article/test-slug",
-        title: "Test Title",
-      }),
+    const shareProps = mockShareButtons.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(shareProps).toMatchObject({
+      url: "/ng/article/test-slug",
+      title: "Test Title",
+      description: "An excerpt",
+    })
+  })
+
+  it("sanitizes share metadata before passing it to the share buttons", () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 789 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{
+          ...baseInitialData,
+          id: 789,
+          title: "Breaking &amp; <em>News</em>",
+          excerpt: "<strong>Summary &amp; details</strong>",
+        }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
     )
+
+    const shareProps = mockShareButtons.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(shareProps).toMatchObject({
+      title: "Breaking & News",
+      description: "Summary & details",
+    })
   })
 
   it("renders the comments heading when a post id is provided", () => {
