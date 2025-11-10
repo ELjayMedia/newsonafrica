@@ -18,15 +18,18 @@ const {
   loadArticle,
   loadArticleWithFallback,
   normalizeCountryCode,
+  ArticleTemporarilyUnavailableError,
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
+import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
 describe('article-data', () => {
   beforeEach(() => {
     vi.mocked(fetchWordPressGraphQL).mockReset()
+    enhancedCache.clear()
   })
 
   const graphqlSuccess = <T,>(data: T) => ({
@@ -266,7 +269,7 @@ describe('article-data', () => {
     const result = await loadArticleWithFallback('slug', ['ng', 'za'])
 
     expect(result.status).toBe('temporary_error')
-    expect(result.error).toBeInstanceOf(AggregateError)
+    expect(result.error).toBeInstanceOf(ArticleTemporarilyUnavailableError)
     expect(result.error.errors).toEqual(expect.arrayContaining([errorNg, errorZa]))
     expect(result.failures).toEqual(
       expect.arrayContaining([
@@ -315,5 +318,42 @@ describe('article-data', () => {
     expect(result.status).toBe('found')
     expect(result.sourceCountry).toBe('za')
     expect(result.article.slug).toBe('slug')
+  })
+
+  it('returns stale cached content when all countries encounter a temporary failure', async () => {
+    const cachedNode = {
+      slug: 'stale-slug',
+      id: 'gid://wordpress/Post:75',
+      databaseId: 75,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Cached headline',
+      excerpt: '<p>Cached summary</p>',
+      content: '<p>Body</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 3, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country) => {
+      if (country === 'ng') {
+        return graphqlSuccess({ posts: { nodes: [cachedNode] } }) as any
+      }
+
+      return graphqlSuccess({ posts: { nodes: [] } }) as any
+    })
+
+    await loadArticleWithFallback('stale-slug', ['ng', 'za'])
+
+    const outage = new Error('service down')
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(outage)
+
+    const result = await loadArticleWithFallback('stale-slug', ['ng', 'za'])
+
+    expect(result.status).toBe('temporary_error')
+    expect(result.staleArticle?.slug).toBe('stale-slug')
+    expect(result.staleSourceCountry).toBe('ng')
+    expect(result.error).toBeInstanceOf(ArticleTemporarilyUnavailableError)
+    expect(result.error.staleArticle?.slug).toBe('stale-slug')
+    expect(result.error.errors).toEqual(expect.arrayContaining([outage]))
   })
 })
