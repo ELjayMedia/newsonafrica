@@ -52,7 +52,7 @@ const resolveRelatedPostId = (article: {
   databaseId?: number | null
   id?: unknown
 } | null | undefined) => {
-  if (typeof article?.databaseId === "number") {
+  if (typeof article?.databaseId === "number" && Number.isFinite(article.databaseId)) {
     return article.databaseId
   }
 
