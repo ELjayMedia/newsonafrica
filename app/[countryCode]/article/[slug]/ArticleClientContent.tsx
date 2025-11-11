@@ -2,6 +2,7 @@ import type { WordPressPost } from "@/types/wp"
 
 import { fetchArticleWithFallbackAction, fetchCommentsPageAction } from "./actions"
 import { ArticleClientShell } from "./ArticleClientShell"
+import { isSupabaseConfigured } from "@/utils/supabase/env"
 
 interface ArticleClientContentProps {
   slug: string
@@ -21,8 +22,9 @@ export async function ArticleClientContent({
   fetchArticleWithFallback = fetchArticleWithFallbackAction,
 }: ArticleClientContentProps) {
   const postId = initialData?.id != null ? String(initialData.id) : null
+  const supabaseAvailable = isSupabaseConfigured()
   const initialCommentsResult =
-    postId !== null
+    postId !== null && supabaseAvailable
       ? await fetchCommentsPageAction({ postId, pageSize: 10 })
       : { comments: [], hasMore: false, nextCursor: null, total: 0 }
 

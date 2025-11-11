@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
 import type { Database } from "@/types/supabase"
+import { getSupabaseEnv, isSupabaseConfigured } from "@/utils/supabase/env"
 
 export const SUPABASE_UNAVAILABLE_ERROR =
   "Supabase configuration is missing. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
@@ -28,26 +29,23 @@ function createCookieAdapter() {
   }
 }
 
-function readEnv(value: string | undefined): string | null {
-  const trimmed = value?.trim()
-
-  return trimmed ? trimmed : null
-}
-
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const supabaseUrl = readEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)
-  const supabaseKey = readEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  const { url, anonKey } = getSupabaseEnv()
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!url || !anonKey) {
     return null
   }
 
-  return { supabaseUrl, supabaseKey }
+  return { supabaseUrl: url, supabaseKey: anonKey }
 }
 
 export function createServerClient(): SupabaseClient<Database> | null {
-  const config = getSupabaseConfig()
+  if (!isSupabaseConfigured()) {
+    console.error(SUPABASE_UNAVAILABLE_ERROR)
+    return null
+  }
 
+  const config = getSupabaseConfig()
   if (!config) {
     console.error(SUPABASE_UNAVAILABLE_ERROR)
     return null

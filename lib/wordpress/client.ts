@@ -4,7 +4,7 @@ import { createHash } from "crypto"
 import { WP_AUTH_HEADERS } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { fetchWithRetry } from "../utils/fetchWithRetry"
+import { fetchWithRetry, type FetchWithRetryOptions } from "../utils/fetchWithRetry"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 export interface CountryConfig {
@@ -38,6 +38,17 @@ export interface FetchWordPressGraphQLOptions {
   revalidate?: number
   timeout?: number
   signal?: AbortSignal
+  fetch?: Pick<
+    FetchWithRetryOptions,
+    | "attempts"
+    | "backoffMs"
+    | "backoffFactor"
+    | "retryOnError"
+    | "retryOnResponse"
+    | "jitter"
+    | "random"
+    | "timeout"
+  >
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -221,17 +232,38 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, {
+  const fetchOverrides = options.fetch ?? {}
+  const resolvedTimeout = fetchOverrides.timeout ?? options.timeout
+  const requestInit: FetchWithRetryOptions = {
     method: "POST",
     headers,
     body,
-    timeout: options.timeout,
+    timeout: resolvedTimeout,
     signal: options.signal,
     next: {
       revalidate: resolvedRevalidate,
       ...(dedupedTags ? { tags: dedupedTags } : {}),
     },
-  })
+  }
+
+  const overrideKeys: Array<keyof FetchWithRetryOptions> = [
+    "attempts",
+    "backoffMs",
+    "backoffFactor",
+    "retryOnError",
+    "retryOnResponse",
+    "jitter",
+    "random",
+  ]
+
+  for (const key of overrideKeys) {
+    const value = fetchOverrides[key]
+    if (value !== undefined) {
+      requestInit[key] = value as never
+    }
+  }
+
+  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, requestInit)
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", res.status, res.statusText)

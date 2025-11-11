@@ -2,7 +2,7 @@
 
 import type { CommentSortOption } from "@/lib/supabase-schema"
 import { fetchComments } from "@/lib/comment-service"
-import { createServerComponentSupabaseClient } from "@/lib/supabase/server-component-client"
+import { isSupabaseConfigured } from "@/utils/supabase/env"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import type { WordPressPost } from "@/types/wp"
 
@@ -23,6 +23,25 @@ interface FetchCommentsPageActionInput {
   cursor?: string | null
 }
 
+type SupabaseServerModule = typeof import("@/lib/supabase/server-component-client")
+
+let supabaseModulePromise: Promise<SupabaseServerModule> | null = null
+
+const resolveSupabaseClient = async () => {
+  if (!isSupabaseConfigured()) {
+    return null
+  }
+
+  try {
+    const supabaseModule = await (supabaseModulePromise ??=
+      import("@/lib/supabase/server-component-client"))
+    return supabaseModule.createServerComponentSupabaseClient()
+  } catch (error) {
+    console.error("Failed to initialize Supabase client", { error })
+    return null
+  }
+}
+
 export async function fetchCommentsPageAction({
   postId,
   page = 0,
@@ -30,11 +49,27 @@ export async function fetchCommentsPageAction({
   sortOption = "newest",
   cursor = null,
 }: FetchCommentsPageActionInput) {
-  const supabase = createServerComponentSupabaseClient()
-  if (!supabase) {
+  try {
+    const supabase = await resolveSupabaseClient()
+    if (!supabase) {
+      return { comments: [], hasMore: false, nextCursor: null, total: 0 }
+    }
+
+    return fetchComments(
+      postId,
+      page,
+      pageSize,
+      sortOption,
+      supabase,
+      cursor ?? undefined,
+    )
+  } catch (error) {
+    console.error("Failed to fetch comments for article", {
+      postId,
+      error,
+    })
     return { comments: [], hasMore: false, nextCursor: null, total: 0 }
   }
-  return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
 }
 
 export interface FetchArticleWithFallbackActionInput {

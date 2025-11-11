@@ -2,6 +2,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
+import { getSupabaseEnv, isSupabaseConfigured as isSupabaseEnvConfigured } from "@/utils/supabase/env"
 
 let browserClient: SupabaseClient<Database> | null = null
 
@@ -14,13 +15,14 @@ function requireEnv(value: string | undefined, name: string): string {
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  return isSupabaseEnvConfigured()
 }
 
 export function getSupabaseBrowserClient(): SupabaseClient<Database> {
   if (!browserClient) {
-    const supabaseUrl = requireEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL")
-    const supabaseAnonKey = requireEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    const { url, anonKey } = getSupabaseEnv()
+    const supabaseUrl = requireEnv(url ?? undefined, "NEXT_PUBLIC_SUPABASE_URL")
+    const supabaseAnonKey = requireEnv(anonKey ?? undefined, "NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
     browserClient = createClientComponentClient<Database>({
       supabaseUrl,

@@ -16,11 +16,15 @@ const {
   mockBuildArticleCountryPriority,
   mockLoadArticleWithFallback,
   mockGetRelatedPostsForCountry,
+  mockFetchComments,
+  mockCreateServerComponentSupabaseClient,
 } = vi.hoisted(() => ({
   mockResolveEdition: vi.fn(),
   mockBuildArticleCountryPriority: vi.fn(),
   mockLoadArticleWithFallback: vi.fn(),
   mockGetRelatedPostsForCountry: vi.fn(),
+  mockFetchComments: vi.fn(),
+  mockCreateServerComponentSupabaseClient: vi.fn(),
 }))
 
 vi.mock("./article-data", async () => {
@@ -38,17 +42,18 @@ vi.mock("@/lib/wordpress/posts", () => ({
 }))
 
 vi.mock("@/lib/comment-service", () => ({
-  fetchComments: vi.fn(),
+  fetchComments: (...args: unknown[]) => mockFetchComments(...args),
 }))
 
 vi.mock("@/lib/supabase/server-component-client", () => ({
-  createServerComponentSupabaseClient: vi.fn(),
+  createServerComponentSupabaseClient: (...args: unknown[]) =>
+    mockCreateServerComponentSupabaseClient(...args),
 }))
 
-process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://supabase.local"
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "anon-key"
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.local"
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key"
 
-import { fetchArticleWithFallbackAction } from "./actions"
+import { fetchArticleWithFallbackAction, fetchCommentsPageAction } from "./actions"
 import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"
 
 describe("fetchArticleWithFallbackAction", () => {
@@ -97,5 +102,81 @@ describe("fetchArticleWithFallbackAction", () => {
     await expect(
       fetchArticleWithFallbackAction({ countryCode: "NG", slug: "missing" }),
     ).rejects.toThrow(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
+  })
+})
+
+describe("fetchCommentsPageAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("returns fetched comments when Supabase is available", async () => {
+    const supabase = { client: true } as any
+    mockCreateServerComponentSupabaseClient.mockReturnValue(supabase)
+    mockFetchComments.mockResolvedValue({
+      comments: [{ id: "c1" }],
+      hasMore: true,
+      nextCursor: "cursor",
+      total: 5,
+    } as any)
+
+    const result = await fetchCommentsPageAction({ postId: "42" })
+
+    expect(mockCreateServerComponentSupabaseClient).toHaveBeenCalled()
+    expect(mockFetchComments).toHaveBeenCalledWith("42", 0, 10, "newest", supabase, undefined)
+    expect(result).toEqual({
+      comments: [{ id: "c1" }],
+      hasMore: true,
+      nextCursor: "cursor",
+      total: 5,
+    })
+  })
+
+  it("returns an empty result when Supabase is unavailable", async () => {
+    mockCreateServerComponentSupabaseClient.mockReturnValue(null)
+
+    const result = await fetchCommentsPageAction({ postId: "42" })
+
+    expect(result).toEqual({ comments: [], hasMore: false, nextCursor: null, total: 0 })
+    expect(mockFetchComments).not.toHaveBeenCalled()
+  })
+
+  it("returns an empty result when Supabase configuration is missing", async () => {
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const result = await fetchCommentsPageAction({ postId: "42" })
+
+    expect(result).toEqual({ comments: [], hasMore: false, nextCursor: null, total: 0 })
+    expect(mockCreateServerComponentSupabaseClient).not.toHaveBeenCalled()
+    expect(mockFetchComments).not.toHaveBeenCalled()
+
+    if (originalUrl) {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl
+    }
+    if (originalKey) {
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey
+    }
+  })
+
+  it("swallows errors thrown during Supabase initialization", async () => {
+    const error = new Error("supabase boom")
+    mockCreateServerComponentSupabaseClient.mockImplementation(() => {
+      throw error
+    })
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const result = await fetchCommentsPageAction({ postId: "42", page: 2 })
+
+    expect(result).toEqual({ comments: [], hasMore: false, nextCursor: null, total: 0 })
+    expect(mockFetchComments).not.toHaveBeenCalled()
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to initialize Supabase client", {
+      error,
+    })
+
+    consoleErrorSpy.mockRestore()
   })
 })

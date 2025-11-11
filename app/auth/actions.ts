@@ -237,6 +237,8 @@ export async function signUpWithPasswordAction(
   }
 }
 
+export const registerWithPasswordAction = signUpWithPasswordAction
+
 export async function resetPasswordAction(
   _prevState: AuthFormState,
   formData: FormData,

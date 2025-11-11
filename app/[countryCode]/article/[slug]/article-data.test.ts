@@ -1,5 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const { kvGetMock, kvSetMock } = vi.hoisted(() => ({
+  kvGetMock: vi.fn(),
+  kvSetMock: vi.fn(),
+}))
+
+vi.mock('@/lib/utils/fetchWithRetry', () => ({
+  fetchWithRetry: vi.fn(),
+}))
+
+vi.mock('@/lib/cache/kv', () => ({
+  kvCache: {
+    get: kvGetMock,
+    set: kvSetMock,
+    isEnabled: true,
+  },
+  createCacheEntry: (value: unknown) => ({
+    value,
+    metadata: { updatedAt: Date.now() },
+  }),
+}))
+
 vi.mock('@/lib/wordpress/client', async () => {
   const actual = await vi.importActual<typeof import('@/lib/wordpress/client')>(
     '@/lib/wordpress/client',
@@ -19,14 +40,20 @@ const {
   loadArticleWithFallback,
   normalizeCountryCode,
 } = articleData
+import { fetchWithRetry } from '@/lib/utils/fetchWithRetry'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { CACHE_DURATIONS } from '@/lib/cache/constants'
+import { CACHE_DURATIONS, KV_CACHE_KEYS } from '@/lib/cache/constants'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
 
 describe('article-data', () => {
   beforeEach(() => {
+    kvGetMock.mockReset()
+    kvSetMock.mockReset()
+    kvGetMock.mockResolvedValue(null)
+    kvSetMock.mockResolvedValue(undefined)
     vi.mocked(fetchWordPressGraphQL).mockReset()
+    vi.mocked(fetchWithRetry).mockReset()
   })
 
   const graphqlSuccess = <T,>(data: T) => ({
@@ -95,6 +122,16 @@ describe('article-data', () => {
         cacheTags.post('ng', 99),
       ]),
     )
+    expect(kvSetMock).toHaveBeenCalledTimes(1)
+    expect(kvSetMock).toHaveBeenCalledWith(
+      KV_CACHE_KEYS.ARTICLE_BY_SLUG('ng', 'test-slug'),
+      expect.objectContaining({
+        value: expect.objectContaining({
+          article: expect.objectContaining({ slug: 'test-slug' }),
+        }),
+      }),
+      CACHE_DURATIONS.SHORT,
+    )
   })
 
   it('does not call wordpress when asked to load an unsupported country', async () => {
@@ -102,6 +139,8 @@ describe('article-data', () => {
 
     expect(result).toEqual({ status: 'not_found' })
     expect(fetchWordPressGraphQL).not.toHaveBeenCalled()
+    expect(fetchWithRetry).not.toHaveBeenCalled()
+    expect(kvSetMock).not.toHaveBeenCalled()
   })
 
   it('returns the mapped article when GraphQL resolves with a node', async () => {
@@ -146,6 +185,16 @@ describe('article-data', () => {
         cacheTags.post('za', 42),
       ]),
     )
+    expect(kvSetMock).toHaveBeenCalledTimes(1)
+    expect(kvSetMock).toHaveBeenCalledWith(
+      KV_CACHE_KEYS.ARTICLE_BY_SLUG('za', 'test-slug'),
+      expect.objectContaining({
+        value: expect.objectContaining({
+          article: expect.objectContaining({ slug: 'test-slug' }),
+        }),
+      }),
+      CACHE_DURATIONS.SHORT,
+    )
   })
 
   it('returns null when GraphQL returns no nodes', async () => {
@@ -156,6 +205,7 @@ describe('article-data', () => {
     const result = await loadArticle('za', 'missing-slug')
 
     expect(result).toEqual({ status: 'not_found' })
+    expect(kvSetMock).not.toHaveBeenCalled()
   })
 
   it('returns a temporary error when GraphQL fails', async () => {
@@ -166,6 +216,113 @@ describe('article-data', () => {
     expect(result.status).toBe('temporary_error')
     expect(result.error).toBeInstanceOf(Error)
     expect(result.failure).toMatchObject({ kind: 'graphql_error', message: 'GraphQL fatal' })
+    expect(fetchWithRetry).not.toHaveBeenCalled()
+    expect(kvSetMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to REST when GraphQL returns a retryable failure', async () => {
+    const restPost = {
+      id: 77,
+      slug: 'rest-slug',
+      date: '2024-05-02T00:00:00Z',
+      modified: '2024-05-02T00:00:00Z',
+      link: 'https://example.com/za/rest-slug',
+      title: { rendered: 'REST title' },
+      excerpt: { rendered: 'REST excerpt' },
+      content: { rendered: '<p>REST content</p>' },
+      _embedded: {
+        author: [
+          { id: 9, name: 'Reporter', slug: 'reporter', avatar_urls: { 96: 'https://example.com/avatar.jpg' } },
+        ],
+        'wp:featuredmedia': [
+          {
+            source_url: 'https://example.com/image.jpg',
+            alt_text: 'Image alt',
+            media_details: { width: 100, height: 50 },
+          },
+        ],
+        'wp:term': [
+          [{ id: 3, name: 'News', slug: 'news' }],
+          [{ id: 4, name: 'Tag', slug: 'tag' }],
+        ],
+      },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
+      ok: false,
+      kind: 'http_error',
+      status: 502,
+      statusText: 'Bad Gateway',
+      message: 'Bad Gateway',
+      response: new Response(null, { status: 502 }),
+      error: new Error('Bad Gateway'),
+    } as any)
+
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response(JSON.stringify([restPost]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const result = await loadArticle('za', 'rest-slug')
+
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('rest-slug')
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      expect.stringContaining('rest-slug'),
+      expect.objectContaining({
+        attempts: 2,
+        timeout: 10000,
+      }),
+    )
+    expect(kvSetMock).toHaveBeenCalledTimes(1)
+    expect(kvSetMock).toHaveBeenCalledWith(
+      KV_CACHE_KEYS.ARTICLE_BY_SLUG('za', 'rest-slug'),
+      expect.objectContaining({
+        value: expect.objectContaining({
+          article: expect.objectContaining({ slug: 'rest-slug' }),
+        }),
+      }),
+      CACHE_DURATIONS.SHORT,
+    )
+    expect(kvGetMock).not.toHaveBeenCalled()
+  })
+
+  it('serves the cached article when REST fallback fails', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue({
+      ok: false,
+      kind: 'http_error',
+      status: 503,
+      statusText: 'Service Unavailable',
+      message: 'Service Unavailable',
+      response: new Response(null, { status: 503 }),
+      error: new Error('Service Unavailable'),
+    } as any)
+
+    vi.mocked(fetchWithRetry).mockRejectedValue(new Error('network down'))
+
+    kvGetMock.mockResolvedValue({
+      value: {
+        article: {
+          slug: 'cached-slug',
+          title: 'Cached title',
+          excerpt: 'Cached excerpt',
+        },
+        tags: ['cached-tag'],
+      },
+      metadata: { updatedAt: Date.now() },
+    })
+
+    const result = await loadArticle('za', 'cached-slug')
+
+    expect(result).toEqual({
+      status: 'found',
+      article: expect.objectContaining({ slug: 'cached-slug' }),
+      tags: ['cached-tag'],
+    })
+    expect(fetchWithRetry).toHaveBeenCalled()
+    expect(kvSetMock).not.toHaveBeenCalled()
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {

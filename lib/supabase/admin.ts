@@ -10,8 +10,11 @@ type PublicSchema = Database["public"] & GenericSchema
 
 export type AdminSupabaseClient = SupabaseClient<Database, "public", PublicSchema>
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+import { getSupabaseEnv } from "@/utils/supabase/env"
+
+const { url: supabaseUrlEnv, anonKey: supabaseAnonKeyEnv } = getSupabaseEnv()
+const supabaseUrl = supabaseUrlEnv ?? ""
+const supabaseAnonKey = supabaseAnonKeyEnv ?? ""
 
 let adminClient: AdminSupabaseClient | null = null
 let hasWarnedAboutAdminConfig = false
