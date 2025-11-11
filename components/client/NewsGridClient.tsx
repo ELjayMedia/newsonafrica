@@ -1,9 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect } from "react"
 
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
-import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 
 import {
   AuthorNewsList,
@@ -48,15 +47,6 @@ export function NewsGridClient({
     }
   }, [hasMorePosts, setIsFetching])
 
-  const blurPlaceholders = useMemo(() => {
-    const safeLength = Math.max(posts?.length ?? 0, sportCategoryPosts?.length ?? 0, 1)
-
-    return {
-      main: generateBlurDataURL(400, 300),
-      secondary: Array.from({ length: safeLength }, () => generateBlurDataURL(70, 70)),
-    }
-  }, [posts?.length, sportCategoryPosts?.length])
-
   const hasPosts = posts?.length > 0
   const hasSportCategoryPosts = sportCategoryPosts?.length > 0
 
@@ -67,7 +57,7 @@ export function NewsGridClient({
   if (isAuthorPage) {
     return (
       <div className={className}>
-        <AuthorNewsList posts={posts} blurPlaceholder={blurPlaceholders.main} className="space-y-3" />
+        <AuthorNewsList posts={posts} className="space-y-3" />
         <div ref={loadMoreRef} aria-hidden="true" />
         {isFetching && (
           <div className="py-3 text-center text-sm text-muted-foreground" role="status" aria-live="polite">
@@ -87,13 +77,9 @@ export function NewsGridClient({
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 ${className}`.trim()}>
       {showSportCategory && hasSportCategoryPosts ? (
-        <SportCategorySection sportCategoryPosts={sportCategoryPosts} blurURLs={blurPlaceholders} />
+        <SportCategorySection sportCategoryPosts={sportCategoryPosts} />
       ) : (
-        <RegularCategorySection
-          mainPost={mainPost}
-          secondaryPosts={secondaryPosts}
-          blurURLs={blurPlaceholders}
-        />
+        <RegularCategorySection mainPost={mainPost} secondaryPosts={secondaryPosts} />
       )}
     </div>
   )
