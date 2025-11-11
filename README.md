@@ -131,6 +131,22 @@ pnpm install
 pnpm dev
 \`\`\`
 
+
+### Database setup
+
+Supabase schema changes are managed exclusively through the Supabase CLI migrations in [`supabase/migrations`](./supabase/migrations).
+
+```bash
+# Apply the latest migrations to your local database
+supabase db reset --no-backup
+
+# Or push migrations to a linked remote project
+supabase db push
+```
+
+> [!IMPORTANT]
+> Legacy helper scripts that lived in `lib/supabase/sql` have been removed. Always edit or add new SQL through the CLI migration files so the schema stays in sync across every environment.
+
 ## 📦 Deployment
 
 The application is deployed on Vercel with the following configuration:
