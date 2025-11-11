@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 
-import { isSupabaseConfigured } from "./supabase"
+import { isSupabaseConfigured } from "./browser-helpers"
 
 describe("isSupabaseConfigured", () => {
   const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

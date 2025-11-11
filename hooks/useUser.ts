@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import { USER_PROFILE_SELECT_COLUMNS, createClient, isSupabaseConfigured } from "@/lib/api/supabase"
-import type { UserProfile } from "@/lib/api/supabase"
+import {
+  USER_PROFILE_SELECT_COLUMNS,
+  createClient,
+  isSupabaseConfigured,
+  type UserProfile,
+} from "@/lib/supabase/browser-helpers"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 import {
   clearSessionCookieClient,

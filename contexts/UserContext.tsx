@@ -14,7 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 
-import { createClient, isSupabaseConfigured } from "@/lib/api/supabase"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/browser-helpers"
 
 import {
   getCurrentSession,

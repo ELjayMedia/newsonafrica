@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo, useTransition } from "react"
 import { Virtuoso } from "react-virtuoso"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase/browser-helpers"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
