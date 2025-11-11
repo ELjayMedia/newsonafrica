@@ -30,6 +30,31 @@ export interface PostListItemData {
   countryCode: string
 }
 
+const buildStableFallbackId = (post: WordPressPost): string => {
+  const relevantFields = [
+    post.slug,
+    (post as { link?: string }).link,
+    post.title,
+    post.date,
+    post.modified,
+  ].filter((value): value is string => typeof value === "string" && value.length > 0)
+
+  if (relevantFields.length === 0) {
+    return "legacy-post"
+  }
+
+  const fallbackSource = relevantFields.join("|")
+  let hash = 0
+
+  for (let index = 0; index < fallbackSource.length; index += 1) {
+    const charCode = fallbackSource.charCodeAt(index)
+    hash = (hash << 5) - hash + charCode
+    hash |= 0
+  }
+
+  return `legacy-post-${Math.abs(hash)}`
+}
+
 const resolvePostId = (post: WordPressPost): string => {
   if (post.id) {
     return String(post.id)
@@ -51,7 +76,7 @@ const resolvePostId = (post: WordPressPost): string => {
     return crypto.randomUUID()
   }
 
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return buildStableFallbackId(post)
 }
 
 const mapCategories = (categories: WordPressCategory[] | undefined, countryCode: string): PostListCategory[] => {
