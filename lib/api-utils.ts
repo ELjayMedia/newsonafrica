@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { rateLimit } from "./rateLimit"
-import logger from "@/utils/logger"
+import { error as logError, info as logInfo, warn as logWarn } from "@/lib/log"
 import { ENV } from "@/config/env"
 import { ValidationError } from "./validation"
 
@@ -23,7 +23,7 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
     await limiter.check(limit, identifier)
     return null
   } catch (error) {
-    console.warn("Rate limit exceeded", error)
+    logWarn("Rate limit exceeded", { error })
     return NextResponse.json(
       {
         success: false,
@@ -35,7 +35,7 @@ export async function applyRateLimit(request: NextRequest, limit: number, token:
 }
 
 export function handleApiError(error: unknown): NextResponse<ApiResponse> {
-  console.error("API Error:", error)
+  logError("API Error", { error })
 
   if (error instanceof ValidationError) {
     return NextResponse.json(
@@ -84,7 +84,7 @@ export function setCacheHeaders(res: NextResponse, maxAge = 60) {
 
 export function logRequest(req: Request) {
   const { pathname, search } = new URL(req.url)
-  logger.log(`[${req.method}] ${pathname}${search}`)
+  logInfo(`[${req.method}] ${pathname}${search}`)
 }
 
 export function withCors<T extends Response>(req: Request, res: T): T {

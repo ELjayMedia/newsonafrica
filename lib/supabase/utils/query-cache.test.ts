@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { clearQueryCache, executeWithCache } from "./supabase-query-utils"
+import { clearQueryCache, executeWithCache } from "."
 
 describe("executeWithCache", () => {
   beforeEach(() => {

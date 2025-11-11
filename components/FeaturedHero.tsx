@@ -4,7 +4,7 @@ import { Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 
 import { cn, motionSafe } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 export interface FeaturedHeroProps {

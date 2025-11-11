@@ -4,7 +4,7 @@ import { Clock } from "lucide-react"
 
 import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 export interface NewsGridPost {
   id: string

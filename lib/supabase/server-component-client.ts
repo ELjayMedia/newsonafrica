@@ -1,7 +1,7 @@
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
-import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 export type SupabaseServerComponentClient = SupabaseClient<Database>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react"
 
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 
 import {
   AuthorNewsList,

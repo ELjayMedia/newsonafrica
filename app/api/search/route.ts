@@ -218,3 +218,5 @@ export async function GET(request: NextRequest) {
 
   return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
 }
+
+export const searchGET = GET

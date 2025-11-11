@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-import { createSupabaseRouteClient } from "@/utils/supabase/route"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
 

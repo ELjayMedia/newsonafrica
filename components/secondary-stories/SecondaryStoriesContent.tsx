@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Clock } from "lucide-react"
 
 import { cn, motionSafe } from "@/lib/utils"
-import { generateBlurDataURL } from "@/utils/lazy-load"
+import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
 
 interface SecondaryStoryPost {

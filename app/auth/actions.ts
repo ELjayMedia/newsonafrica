@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
-import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export type AuthFormState = {

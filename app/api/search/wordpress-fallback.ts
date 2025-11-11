@@ -253,6 +253,7 @@ export const executeWordPressSearchForScope = async (
       })
 
     if (!shouldContinue) {
+      budgetExhausted = true
       break
     }
 

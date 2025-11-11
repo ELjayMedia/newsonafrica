@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { SubscriptionsContent } from "@/components/SubscriptionsContent"
 

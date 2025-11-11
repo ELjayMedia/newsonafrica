@@ -4,7 +4,7 @@ const createServerClientMock = vi.fn()
 
 const SUPABASE_UNAVAILABLE_ERROR = "Supabase unavailable"
 
-vi.mock("@/utils/supabase/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createServerClient: createServerClientMock,
   SUPABASE_UNAVAILABLE_ERROR,
 }))

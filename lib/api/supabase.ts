@@ -1,7 +1,7 @@
 import type { SupabaseClient, User, Session, AuthError } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
-export { createClient } from "@/utils/supabase/client"
+export { createClient } from "@/lib/supabase/browser-client"
 import {
   clearSessionCookieClient,
   persistSessionCookie,
