@@ -5,7 +5,7 @@ import type { Comment, NewComment, ReportCommentData, CommentSortOption, Comment
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import type { Database } from "@/types/supabase"
 import { v4 as uuidv4 } from "uuid"
-import { clearQueryCache } from "@/utils/supabase-query-utils"
+import { clearQueryCache } from "@/lib/supabase/utils"
 import { toast } from "@/hooks/use-toast"
 import { executeListQuery } from "@/lib/supabase/list-query"
 

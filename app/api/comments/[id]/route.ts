@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
-import { createSupabaseRouteClient } from "@/utils/supabase/route"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 import type { Database } from "@/types/supabase"
 
 export const runtime = "nodejs"

@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getArticleUrl } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
-import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"

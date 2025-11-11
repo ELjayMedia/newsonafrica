@@ -32,7 +32,7 @@ const createSupabaseRouteClientMock = vi.fn(() => {
   }
 })
 
-vi.mock("@/utils/supabase/route", () => ({
+vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: createSupabaseRouteClientMock,
 }))
 

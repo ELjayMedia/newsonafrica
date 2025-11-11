@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useTransition } from "react"
-import { clearQueryCache, executeWithCache } from "@/utils/supabase-query-utils"
+import { clearQueryCache, executeWithCache } from "@/lib/supabase/utils"
 
 interface UseSupabaseQueryOptions<T> {
   enabled?: boolean

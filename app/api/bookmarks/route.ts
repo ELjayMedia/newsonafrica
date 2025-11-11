@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSupabaseRouteClient } from "@/utils/supabase/route"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 
 import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"

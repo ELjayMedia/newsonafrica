@@ -11,7 +11,7 @@ import { SocialShare } from "@/components/SocialShare"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { formatDate } from "@/utils/date-utils"
+import { formatDate } from "@/lib/utils/date"
 import { getArticleUrl, getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
 import { ENV } from "@/config/env"
 

@@ -5,7 +5,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/supabase/action-result"
-import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 export type SupabaseServerClient = SupabaseClient<Database>
 
 export async function createSupabaseServerClient(): Promise<SupabaseServerClient | null> {

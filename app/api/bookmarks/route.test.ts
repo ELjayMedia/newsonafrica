@@ -3,7 +3,7 @@ import { NextRequest } from "next/server"
 
 const applyCookiesMock = vi.fn((response: Response) => response)
 
-vi.mock("@/utils/supabase/route", () => ({
+vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: vi.fn(),
 }))
 
@@ -24,7 +24,7 @@ vi.mock("@/lib/bookmarks/stats", () => ({
   getDefaultBookmarkStats: (...args: unknown[]) => getDefaultBookmarkStatsMock(...args),
 }))
 
-import { createSupabaseRouteClient } from "@/utils/supabase/route"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
 import { cacheTags } from "@/lib/cache"
 import { DELETE, GET, POST, PUT } from "./route"

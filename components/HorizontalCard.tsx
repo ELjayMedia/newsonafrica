@@ -2,7 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 interface HorizontalCardProps {
   post: {

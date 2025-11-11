@@ -1,4 +1,4 @@
-import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/utils/supabase/server"
+import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/supabase"
 
 export interface ServerUserPreferences {

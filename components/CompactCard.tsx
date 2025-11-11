@@ -4,7 +4,7 @@ import { Clock } from "lucide-react"
 import { memo } from "react"
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { sanitizeExcerpt } from "@/utils/text/sanitizeExcerpt"
+import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 interface CompactCardProps {
   post: {
