@@ -4,7 +4,6 @@ import { Clock } from "lucide-react"
 
 import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 export interface NewsGridPost {
   id: string
@@ -38,8 +37,6 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
   }
 
   const [mainPost, ...secondaryPosts] = sportCategoryPosts
-  const sanitizedMainExcerpt = sanitizeExcerpt(mainPost?.excerpt)
-
   return (
     <>
       <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
@@ -75,17 +72,12 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
         <div className="p-2 md:p-3">
           <h2
             className={cn(
-              "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+              "text-sm md:text-base font-bold mb-2 group-hover:text-blue-600 transition-colors duration-200",
               motionSafe.transition,
             )}
           >
             {mainPost?.title}
           </h2>
-          {sanitizedMainExcerpt && (
-            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
-              {sanitizedMainExcerpt}
-            </div>
-          )}
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={mainPost?.date}>{formatDate(mainPost?.date)}</time>
@@ -106,7 +98,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <h3
                 className={cn(
-                  "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+                  "text-sm md:text-base font-bold mb-2 group-hover:text-blue-600 transition-colors duration-200",
                   motionSafe.transition,
                 )}
               >
@@ -151,8 +143,6 @@ interface RegularCategorySectionProps {
 export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: RegularCategorySectionProps) {
   if (!mainPost) return null
 
-  const sanitizedMainExcerpt = sanitizeExcerpt(mainPost.excerpt)
-
   return (
     <>
       <Link
@@ -181,17 +171,12 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         <div className="p-2 md:p-3 md:px-2.5 shadow-none">
           <h2
             className={cn(
-              "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+              "text-sm md:text-base font-bold mb-2 group-hover:text-blue-600 transition-colors duration-200",
               motionSafe.transition,
             )}
           >
             {mainPost.title}
           </h2>
-          {sanitizedMainExcerpt && (
-            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
-              {sanitizedMainExcerpt}
-            </div>
-          )}
           <div className="flex items-center text-gray-500 text-xs">
             <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
             <time dateTime={mainPost.date}>{formatDate(mainPost.date)}</time>
@@ -213,7 +198,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
               <div>
                 <h3
                   className={cn(
-                    "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
+                    "text-xs md:text-sm font-bold mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
                     motionSafe.transition,
                   )}
                 >
@@ -264,8 +249,6 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
   return (
     <div className={cn("space-y-3", className)}>
       {posts.map((post) => {
-        const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
-
         return (
           <Link
             key={post.id}
@@ -295,15 +278,12 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
               <div>
                 <h2
                   className={cn(
-                    "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
+                    "text-sm md:text-base font-bold mb-2 group-hover:text-blue-600 transition-colors duration-200",
                     motionSafe.transition,
                   )}
                 >
                   {post.title}
                 </h2>
-                {sanitizedExcerpt && (
-                  <div className="text-gray-600 text-sm mb-3 line-clamp-3">{sanitizedExcerpt}</div>
-                )}
               </div>
               <div className="flex items-center text-gray-500 text-xs">
                 <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
