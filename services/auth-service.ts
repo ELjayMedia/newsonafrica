@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase/browser-helpers"
 import type { Provider } from "@supabase/supabase-js"
 
 

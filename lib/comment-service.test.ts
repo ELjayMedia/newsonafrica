@@ -5,7 +5,7 @@ const fromMock = vi.fn()
 const rpcMock = vi.fn()
 const authMock = { getUser: vi.fn() }
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/browser-helpers", () => ({
   supabase: {
     from: (...args: any[]) => fromMock(...args),
     rpc: (...args: any[]) => rpcMock(...args),

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase/browser-helpers"
 import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import type { Database } from "@/types/supabase"

@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   mockSignOutAction: vi.fn(),
 }))
 
-vi.mock("@/lib/api/supabase", () => ({
+vi.mock("@/lib/supabase/browser-helpers", () => ({
   isSupabaseConfigured: () => true,
   createClient: () => ({
     auth: {

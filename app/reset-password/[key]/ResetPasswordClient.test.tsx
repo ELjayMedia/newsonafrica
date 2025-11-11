@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   }),
 }))
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase/browser-helpers", () => ({
   supabase: {
     auth: {
       updateUser: updateUserMock,

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase/browser-helpers"
 
 export const COMMENT_REACTIONS_RLS_MIGRATION = {
   version: "1.0.1",
