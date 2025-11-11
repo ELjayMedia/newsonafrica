@@ -115,18 +115,47 @@ export async function fetchArticleWithFallbackAction({
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
-  if (resolvedArticle === null) {
+  if (resolvedArticle.status === "not_found") {
     throw new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
   }
 
-  const relatedCountry = resolvedArticle.sourceCountry ?? editionCountry
-  const relatedPostId = resolveRelatedPostId(resolvedArticle.article)
-  const relatedPosts =
-    relatedPostId !== null ? await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6) : []
+  const usingStaleContent = resolvedArticle.status === "temporary_error"
+  const articleData =
+    resolvedArticle.status === "found"
+      ? resolvedArticle.article
+      : resolvedArticle.staleArticle ?? null
+
+  if (!articleData) {
+    throw resolvedArticle.error ?? new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
+  }
+
+  const sourceCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.sourceCountry ?? editionCountry
+    : resolvedArticle.staleSourceCountry ?? editionCountry
+
+  const relatedPostId = resolveRelatedPostId(articleData)
+  let relatedPosts: WordPressPost[] = []
+
+  if (relatedPostId !== null) {
+    try {
+      relatedPosts = await getRelatedPostsForCountry(sourceCountry, relatedPostId, 6)
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Failed to load related posts in fetchArticleWithFallbackAction", {
+          error,
+          sourceCountry,
+          relatedPostId,
+          slug: normalizedSlug,
+          usingStaleContent,
+        })
+      }
+      relatedPosts = []
+    }
+  }
 
   return {
-    article: resolvedArticle.article,
-    sourceCountry: resolvedArticle.sourceCountry,
+    article: articleData,
+    sourceCountry,
     relatedPosts,
   }
 }
