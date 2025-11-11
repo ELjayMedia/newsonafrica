@@ -2,6 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { Clock } from "lucide-react"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
@@ -9,14 +11,23 @@ import { Card, CardContent } from "@/components/ui/card"
 import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/types/wp"
+import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
-type ArticleCardLayout = "compact" | "standard" | "featured"
+type ArticleCardLayout =
+  | "compact"
+  | "standard"
+  | "featured"
+  | "horizontal"
+  | "minimal"
+  | "vertical"
 
 interface ArticleCardProps {
   article: Article | WordPressPost
   layout?: ArticleCardLayout
   className?: string
   priority?: boolean
+  showExcerpt?: boolean
+  eyebrow?: string
 }
 
 function normalizeCountry(candidate?: string | null) {
@@ -187,7 +198,14 @@ function normalizeArticleData(article: Article | WordPressPost) {
   }
 }
 
-export function ArticleCard({ article, layout = "standard", className, priority = false }: ArticleCardProps) {
+export function ArticleCard({
+  article,
+  layout = "standard",
+  className,
+  priority = false,
+  showExcerpt,
+  eyebrow,
+}: ArticleCardProps) {
   let data
   try {
     data = normalizeArticleData(article)
@@ -207,6 +225,146 @@ export function ArticleCard({ article, layout = "standard", className, priority 
 
   const fallbackImage = "/placeholder.svg?height=400&width=600&text=News+Article"
   const imageUrl = data.featuredImage || fallbackImage
+  const hasImage = Boolean(data.featuredImage)
+
+  const dateValue = data.date ? new Date(data.date) : undefined
+  const hasValidDate = dateValue && !Number.isNaN(dateValue.getTime())
+  const relativeDate = hasValidDate
+    ? formatDistanceToNow(dateValue as Date, {
+        addSuffix: true,
+      })
+    : undefined
+  const shortDate = hasValidDate
+    ? (dateValue as Date).toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "short",
+      })
+    : undefined
+  const sanitizedExcerpt = data.excerpt ? sanitizeExcerpt(data.excerpt) : ""
+  const resolvedShowExcerpt = showExcerpt ?? layout === "horizontal"
+
+  if (layout === "minimal") {
+    return (
+      <Link href={data.link} className={cn("block", className)}>
+        <article className="py-2 border-b border-gray-100 last:border-b-0">
+          <div className="flex gap-2">
+            <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={data.title}
+                fill
+                className="object-cover"
+                sizes="64px"
+                loading={priority ? "eager" : "lazy"}
+                quality={75}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1">{data.title}</h3>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Clock className="h-3 w-3" />
+                <span>{relativeDate ?? formatDate(data.date)}</span>
+                {primaryCategory && (
+                  <>
+                    <span>•</span>
+                    <span className="text-blue-600">{primaryCategory.name}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </article>
+      </Link>
+    )
+  }
+
+  if (layout === "horizontal") {
+    return (
+      <Link href={data.link} className={cn("block", className)}>
+        <article className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          <div className="sm:w-1/3 h-40 sm:h-auto relative">
+            {hasImage ? (
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={data.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+                loading={priority ? "eager" : "lazy"}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-300 text-sm">No image</span>
+              </div>
+            )}
+          </div>
+          <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{data.title}</h3>
+              {resolvedShowExcerpt && sanitizedExcerpt ? (
+                <p className="text-gray-600 dark:text-gray-400 line-clamp-3">{sanitizedExcerpt}</p>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500 dark:text-gray-300">{relativeDate ?? formatDate(data.date)}</span>
+              {data.author && (
+                <span className="text-sm text-gray-500 dark:text-gray-300">by {data.author}</span>
+              )}
+            </div>
+          </div>
+        </article>
+      </Link>
+    )
+  }
+
+  if (layout === "vertical") {
+    return (
+      <Link href={data.link} className={cn("group block h-full", className)}>
+        <article
+          className={cn(
+            "flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200",
+            motionSafe.transition,
+          )}
+        >
+          {hasImage && (
+            <div className="relative h-32 overflow-hidden">
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={data.title}
+                fill
+                className={cn(
+                  "transition-transform duration-300 group-hover:scale-105 object-cover",
+                  motionSafe.transform,
+                )}
+                sizes="(max-width: 640px) 100vw, 240px"
+                placeholder="blur"
+                blurDataURL={generateBlurDataURL(300, 200)}
+                loading={priority ? "eager" : "lazy"}
+              />
+            </div>
+          )}
+          <div className="p-3 flex-1 flex flex-col">
+            {eyebrow && <div className="text-sm font-bold text-red-600 mb-1">{eyebrow}</div>}
+            <h3
+              className={cn(
+                "font-bold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-200",
+                motionSafe.transition,
+              )}
+            >
+              {data.title}
+            </h3>
+            {resolvedShowExcerpt && sanitizedExcerpt && (
+              <p className="text-xs text-gray-600 line-clamp-2 mt-1">{sanitizedExcerpt}</p>
+            )}
+            <div className="flex items-center gap-1 text-gray-500 text-xs mt-auto pt-2">
+              <Clock className="h-3 w-3" />
+              <time>{shortDate ?? formatDate(data.date)}</time>
+            </div>
+          </div>
+        </article>
+      </Link>
+    )
+  }
 
   if (layout === "compact") {
     return (
