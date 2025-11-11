@@ -9,6 +9,7 @@ import {
 import { AFRICAN_EDITION } from "@/lib/editions"
 import { getLegacyPostRoute } from "@/lib/legacy-routes"
 import type { Database } from "@/types/supabase"
+import { getSupabaseEnv, isSupabaseConfigured } from "@/utils/supabase/env"
 
 
 // Legacy routes that should be redirected to their category equivalents
@@ -95,15 +96,15 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createMiddlewareClient<Database>({ req: request, res: response }, {
-        supabaseUrl,
-        supabaseKey: supabaseAnonKey,
-      })
-      await supabase.auth.getSession()
+    if (isSupabaseConfigured()) {
+      const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseEnv()
+      if (supabaseUrl && supabaseAnonKey) {
+        const supabase = createMiddlewareClient<Database>({ req: request, res: response }, {
+          supabaseUrl,
+          supabaseKey: supabaseAnonKey,
+        })
+        await supabase.auth.getSession()
+      }
     }
   } catch (error) {
     console.warn("Supabase middleware session refresh skipped", error)

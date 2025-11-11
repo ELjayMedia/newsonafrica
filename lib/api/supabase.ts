@@ -7,11 +7,12 @@ import {
   persistSessionCookie,
 } from "@/lib/auth/session-cookie-client"
 import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
+import { isSupabaseConfigured as isSupabaseEnvConfigured } from "@/utils/supabase/env"
 
 export const USER_PROFILE_SELECT_COLUMNS = "id, username, avatar_url, role, handle"
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  return isSupabaseEnvConfigured()
 }
 
 function createSessionCookiePayload(
