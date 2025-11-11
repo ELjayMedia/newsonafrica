@@ -7,8 +7,8 @@ export const POST_SUMMARY_FIELDS_FRAGMENT = gql`
     slug
     date
     modified
-    title
-    excerpt
+    title(format: RENDERED)
+    excerpt(format: RENDERED)
     uri
     link
     featuredImage {
@@ -41,6 +41,7 @@ export const POST_SUMMARY_FIELDS_FRAGMENT = gql`
         databaseId
         name
         slug
+        description
         avatar {
           url
         }
@@ -53,7 +54,7 @@ export const POST_FIELDS_FRAGMENT = gql`
   ${POST_SUMMARY_FIELDS_FRAGMENT}
   fragment PostFields on Post {
     ...PostSummaryFields
-    content
+    content(format: RENDERED)
   }
 `
 
