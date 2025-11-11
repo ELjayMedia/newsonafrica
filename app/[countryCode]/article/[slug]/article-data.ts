@@ -2,7 +2,7 @@ import { ENV } from "@/config/env"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
-import { createCacheEntry, kvCache } from "@/lib/cache/kv"
+import { createCacheEntry as createKvCacheEntry, kvCache } from "@/lib/cache/kv"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
@@ -170,7 +170,7 @@ const persistArticleCache = (country: string, slug: string, payload: CachedArtic
 
   void (async () => {
     try {
-      await kvCache.set(cacheKey, createCacheEntry(payload), ARTICLE_CACHE_KV_TTL_SECONDS)
+      await kvCache.set(cacheKey, createKvCacheEntry(payload), ARTICLE_CACHE_KV_TTL_SECONDS)
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
         console.warn("Failed to persist article cache entry", { cacheKey, error })
