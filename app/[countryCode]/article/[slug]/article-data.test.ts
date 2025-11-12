@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/wordpress/client', async () => {
   const actual = await vi.importActual<typeof import('@/lib/wordpress/client')>(
@@ -28,8 +28,13 @@ import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
 describe('article-data', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     vi.mocked(fetchWordPressGraphQL).mockReset()
     enhancedCache.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const graphqlSuccess = <T,>(data: T) => ({
@@ -169,6 +174,63 @@ describe('article-data', () => {
     expect(result.status).toBe('temporary_error')
     expect(result.error).toBeInstanceOf(Error)
     expect(result.failure).toMatchObject({ kind: 'graphql_error', message: 'GraphQL fatal' })
+  })
+
+  it('fetches from wordpress when no cached article exists', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ posts: { nodes: [] } }) as any,
+    )
+
+    await loadArticleWithFallback('uncached', ['ng'])
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'uncached' }),
+      expect.any(Object),
+    )
+  })
+
+  it('returns cached article without querying wordpress when within ttl', async () => {
+    vi.useFakeTimers()
+    const initialTime = new Date('2024-01-01T00:00:00Z')
+    vi.setSystemTime(initialTime)
+
+    const node = {
+      slug: 'cached-slug',
+      id: 'gid://wordpress/Post:222',
+      databaseId: 222,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Cached title',
+      excerpt: 'Cached excerpt',
+      content: '<p>Cached</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 12, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ posts: { nodes: [node] } }) as any,
+    )
+
+    await loadArticleWithFallback('cached-slug', ['ng'])
+
+    vi.mocked(fetchWordPressGraphQL).mockClear()
+
+    vi.setSystemTime(new Date(initialTime.getTime() + 60_000))
+
+    const result = await loadArticleWithFallback('cached-slug', ['ng'])
+
+    expect(fetchWordPressGraphQL).not.toHaveBeenCalled()
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('cached-slug')
+    expect(result.tags).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug('ng', 'cached-slug'),
+        cacheTags.post('ng', 222),
+      ]),
+    )
+    expect(result.sourceCountry).toBe('ng')
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {
@@ -342,10 +404,16 @@ describe('article-data', () => {
       return graphqlSuccess({ posts: { nodes: [] } }) as any
     })
 
+    vi.useFakeTimers()
+    const initialTime = new Date('2024-05-01T00:00:00Z')
+    vi.setSystemTime(initialTime)
+
     await loadArticleWithFallback('stale-slug', ['ng', 'za'])
 
     const outage = new Error('service down')
     vi.mocked(fetchWordPressGraphQL).mockRejectedValue(outage)
+
+    vi.setSystemTime(new Date(initialTime.getTime() + 120_000))
 
     const result = await loadArticleWithFallback('stale-slug', ['ng', 'za'])
 

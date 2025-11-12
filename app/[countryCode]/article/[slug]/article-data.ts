@@ -1,7 +1,11 @@
 import { ENV } from "@/config/env"
 import { cacheTags } from "@/lib/cache"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
-import { createCacheEntry as createKvCacheEntry, kvCache } from "@/lib/cache/kv"
+import {
+  createCacheEntry as createKvCacheEntry,
+  getEntryAge as getKvEntryAge,
+  kvCache,
+} from "@/lib/cache/kv"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
@@ -80,6 +84,11 @@ type CachedArticleResolution = CachedArticlePayload & {
   cacheCountry: string
 }
 
+type CachedArticleReadResult = {
+  payload: CachedArticlePayload
+  isStale: boolean
+}
+
 export interface LoadedArticle {
   article: WordPressPost
   tags: string[]
@@ -108,12 +117,7 @@ const asLoadArticleResult = (
   }
 
   const article = mapGraphqlPostToWordPressPost(node, countryCode)
-  const slugTag = cacheTags.postSlug(countryCode, slug)
-  const tags = [slugTag]
-
-  if (node?.databaseId != null) {
-    tags.push(cacheTags.post(countryCode, node.databaseId))
-  }
+  const tags = buildArticleCacheTags(countryCode, slug, article)
 
   return { status: "found", article, tags }
 }
@@ -158,6 +162,17 @@ const unique = (values: string[]): string[] => {
 const buildArticleCacheKey = (country: string, slug: string): string =>
   `${ARTICLE_CACHE_KEY_PREFIX}:${normalizeCountryCode(country)}:${normalizeSlug(slug)}`
 
+const buildArticleCacheTags = (country: string, slug: string, article: WordPressPost): string[] => {
+  const slugTag = cacheTags.postSlug(country, slug)
+  const tags = [slugTag]
+
+  if (article?.databaseId != null) {
+    tags.push(cacheTags.post(country, article.databaseId))
+  }
+
+  return tags
+}
+
 const persistArticleCache = (country: string, slug: string, payload: CachedArticlePayload): void => {
   const cacheKey = buildArticleCacheKey(country, slug)
 
@@ -180,17 +195,22 @@ const persistArticleCache = (country: string, slug: string, payload: CachedArtic
   })()
 }
 
-const readArticleCache = async (country: string, slug: string): Promise<CachedArticlePayload | null> => {
+const readArticleCache = async (
+  country: string,
+  slug: string,
+): Promise<CachedArticleReadResult | null> => {
   const cacheKey = buildArticleCacheKey(country, slug)
 
   const cached = enhancedCache.get<CachedArticlePayload>(cacheKey)
   if (cached.exists && cached.data) {
-    return cached.data
+    return { payload: cached.data, isStale: cached.isStale }
   }
 
   try {
     const kvEntry = await kvCache.get<CachedArticlePayload>(cacheKey)
     if (kvEntry?.value) {
+      const age = getKvEntryAge(kvEntry)
+      const isStale = age > ARTICLE_CACHE_TTL_MS
       try {
         enhancedCache.set(cacheKey, kvEntry.value, ARTICLE_CACHE_TTL_MS, ARTICLE_CACHE_STALE_MS)
       } catch (error) {
@@ -199,7 +219,7 @@ const readArticleCache = async (country: string, slug: string): Promise<CachedAr
         }
       }
 
-      return kvEntry.value
+      return { payload: kvEntry.value, isStale }
     }
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
@@ -216,8 +236,8 @@ const readStaleArticleFromCache = async (
 ): Promise<CachedArticleResolution | null> => {
   for (const country of countryPriority) {
     const cached = await readArticleCache(country, slug)
-    if (cached) {
-      return { ...cached, cacheCountry: country }
+    if (cached?.payload) {
+      return { ...cached.payload, cacheCountry: country }
     }
   }
 
@@ -297,6 +317,17 @@ export async function loadArticleWithFallback(
 
   if (!primaryCountry) {
     return { status: "not_found" }
+  }
+
+  const primaryCached = await readArticleCache(primaryCountry, normalizedSlug)
+  if (primaryCached?.payload && !primaryCached.isStale) {
+    const { article, sourceCountry } = primaryCached.payload
+    return {
+      status: "found",
+      article,
+      tags: buildArticleCacheTags(primaryCountry, normalizedSlug, article),
+      sourceCountry: sourceCountry ?? primaryCountry,
+    }
   }
 
   const temporaryFailures: ArticleTemporaryFailure[] = []
