@@ -19,9 +19,9 @@ const {
   loadArticleWithFallback,
   normalizeCountryCode,
   ArticleTemporarilyUnavailableError,
+  ARTICLE_PAGE_REVALIDATE_SECONDS,
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
@@ -85,7 +85,7 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
       }),
     )
@@ -136,7 +136,7 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
       }),
     )

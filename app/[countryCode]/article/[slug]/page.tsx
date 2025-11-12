@@ -15,11 +15,12 @@ import {
   normalizeSlug,
   resolveEdition,
   sanitizeBaseUrl,
+  ARTICLE_PAGE_REVALIDATE_SECONDS,
 } from "./article-data"
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const dynamic = "force-dynamic"
+export const revalidate = ARTICLE_PAGE_REVALIDATE_SECONDS
 export const dynamicParams = true
 
 type RouteParams = { params: { countryCode: string; slug: string } }
