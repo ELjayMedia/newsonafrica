@@ -405,40 +405,68 @@ export async function loadArticleWithFallback(
     return { status: "not_found" }
   }
 
-  const fallbackEntries = fallbackCountries.map((country) => ({
+  type FallbackState =
+    | { kind: "success"; country: string; result: Extract<LoadArticleResult, { status: "found" }> }
+    | { kind: "failure" }
+
+  const fallbackStates: Array<FallbackState | undefined> = new Array(fallbackCountries.length)
+
+  const fallbackEntries = fallbackCountries.map((country, index) => ({
     country,
-    promise: loadArticle(country, normalizedSlug).then<
-      | { status: "fulfilled"; result: LoadArticleResult }
-      | { status: "rejected"; error: unknown }
-    >(
-      (result) => ({ status: "fulfilled", result }),
-      (error) => ({ status: "rejected", error }),
+    index,
+    ready: loadArticle(country, normalizedSlug).then(
+      (result):
+        | { type: "fulfilled"; country: string; index: number; result: LoadArticleResult }
+        | { type: "rejected"; country: string; index: number; error: unknown } =>
+        ({ type: "fulfilled", country, index, result }),
+      (error): { type: "rejected"; country: string; index: number; error: unknown } => ({
+        type: "rejected",
+        country,
+        index,
+        error,
+      }),
     ),
   }))
 
-  for (const { country, promise } of fallbackEntries) {
-    const result = await promise
+  const pending = [...fallbackEntries]
 
-    if (result.status === "rejected") {
-      temporaryFailures.push({ country, error: result.error })
-      continue
+  while (pending.length > 0) {
+    const resolution = await Promise.race(pending.map((entry) => entry.ready))
+
+    const pendingIndex = pending.findIndex((entry) => entry.index === resolution.index)
+    if (pendingIndex !== -1) {
+      pending.splice(pendingIndex, 1)
     }
 
-    if (result.result.status === "temporary_error") {
-      temporaryFailures.push({
-        country,
-        error: result.result.error,
-        failure: result.result.failure,
-      })
-      continue
+    if (resolution.type === "rejected") {
+      temporaryFailures.push({ country: resolution.country, error: resolution.error })
+      fallbackStates[resolution.index] = { kind: "failure" }
+    } else {
+      const { result, country, index } = resolution
+
+      if (result.status === "temporary_error") {
+        temporaryFailures.push({ country, error: result.error, failure: result.failure })
+        fallbackStates[index] = { kind: "failure" }
+      } else if (result.status === "found") {
+        fallbackStates[index] = { kind: "success", country, result }
+      } else {
+        fallbackStates[index] = { kind: "failure" }
+      }
     }
 
-    if (result.result.status === "found") {
-      persistArticleCache(country, normalizedSlug, {
-        article: result.result.article,
-        sourceCountry: country,
-      })
-      return { ...result.result, sourceCountry: country }
+    for (let i = 0; i < fallbackStates.length; i += 1) {
+      const state = fallbackStates[i]
+      if (!state) {
+        break
+      }
+
+      if (state.kind === "success") {
+        persistArticleCache(state.country, normalizedSlug, {
+          article: state.result.article,
+          sourceCountry: state.country,
+        })
+        return { ...state.result, sourceCountry: state.country }
+      }
     }
   }
 
