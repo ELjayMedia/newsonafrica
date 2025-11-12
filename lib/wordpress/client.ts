@@ -193,23 +193,26 @@ export function fetchWordPressGraphQL<T>(
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
+  const shouldCache = resolvedRevalidate > CACHE_DURATIONS.NONE
   const dedupedTags = dedupe(options.tags)
   const tagsKey = dedupedTags?.join(",") ?? ""
   const bodyHash = createHash("sha1").update(body).digest("hex")
   const cacheKey = `${base}::${bodyHash}::${tagsKey}`
   const metadataKey = String(resolvedRevalidate)
-  const memoizedRequests = getMemoizedRequests()
+  const memoizedRequests = shouldCache ? getMemoizedRequests() : undefined
 
-  const cachedEntry = memoizedRequests.get(cacheKey) as
-    | MemoizedRequestEntry
-    | undefined
-  if (cachedEntry) {
-    const isExpired =
-      cachedEntry.expiresAt !== Infinity && cachedEntry.expiresAt <= Date.now()
-    if (isExpired) {
-      memoizedRequests.delete(cacheKey)
-    } else if (cachedEntry.metadataKey === metadataKey) {
-      return cachedEntry.promise as Promise<WordPressGraphQLResult<T>>
+  if (shouldCache && memoizedRequests) {
+    const cachedEntry = memoizedRequests.get(cacheKey) as
+      | MemoizedRequestEntry
+      | undefined
+    if (cachedEntry) {
+      const isExpired =
+        cachedEntry.expiresAt !== Infinity && cachedEntry.expiresAt <= Date.now()
+      if (isExpired) {
+        memoizedRequests.delete(cacheKey)
+      } else if (cachedEntry.metadataKey === metadataKey) {
+        return cachedEntry.promise as Promise<WordPressGraphQLResult<T>>
+      }
     }
   }
 
@@ -221,17 +224,27 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, {
+  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {
     method: "POST",
     headers,
     body,
     timeout: options.timeout,
     signal: options.signal,
-    next: {
+  }
+
+  if (shouldCache) {
+    fetchOptions.next = {
       revalidate: resolvedRevalidate,
       ...(dedupedTags ? { tags: dedupedTags } : {}),
-    },
-  })
+    }
+  } else {
+    fetchOptions.cache = "no-store"
+  }
+
+  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(
+    base,
+    fetchOptions,
+  )
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", res.status, res.statusText)
@@ -255,28 +268,30 @@ export function fetchWordPressGraphQL<T>(
       throw error
     })
 
-  const expiresAt =
-    resolvedRevalidate > 0
-      ? Date.now() + resolvedRevalidate * 1000
-      : Number.POSITIVE_INFINITY
+  if (shouldCache && memoizedRequests) {
+    const expiresAt =
+      resolvedRevalidate > 0
+        ? Date.now() + resolvedRevalidate * 1000
+        : Number.POSITIVE_INFINITY
 
-  const entry: MemoizedRequestEntry = {
-    promise: requestPromise,
-    metadataKey,
-    expiresAt,
-  }
-  memoizedRequests.set(cacheKey, entry)
+    const entry: MemoizedRequestEntry = {
+      promise: requestPromise,
+      metadataKey,
+      expiresAt,
+    }
+    memoizedRequests.set(cacheKey, entry)
 
-  if (resolvedRevalidate > 0) {
-    const timeout = setTimeout(() => {
-      const currentEntry = memoizedRequests.get(cacheKey)
-      if (currentEntry === entry) {
-        memoizedRequests.delete(cacheKey)
+    if (resolvedRevalidate > 0) {
+      const timeout = setTimeout(() => {
+        const currentEntry = memoizedRequests.get(cacheKey)
+        if (currentEntry === entry) {
+          memoizedRequests.delete(cacheKey)
+        }
+      }, resolvedRevalidate * 1000)
+
+      if (typeof timeout.unref === "function") {
+        timeout.unref()
       }
-    }, resolvedRevalidate * 1000)
-
-    if (typeof timeout.unref === "function") {
-      timeout.unref()
     }
   }
 
