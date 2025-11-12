@@ -378,10 +378,6 @@ describe('article-data', () => {
 
     await vi.advanceTimersByTimeAsync(50)
     await Promise.resolve()
-    expect(settled).toBeUndefined()
-
-    await vi.advanceTimersByTimeAsync(50)
-    await Promise.resolve()
     expect(settled).toBeDefined()
 
     const result = await resultPromise

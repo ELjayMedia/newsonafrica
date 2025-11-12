@@ -405,12 +405,6 @@ export async function loadArticleWithFallback(
     return { status: "not_found" }
   }
 
-  type FallbackState =
-    | { kind: "success"; country: string; result: Extract<LoadArticleResult, { status: "found" }> }
-    | { kind: "failure" }
-
-  const fallbackStates: Array<FallbackState | undefined> = new Array(fallbackCountries.length)
-
   const fallbackEntries = fallbackCountries.map((country, index) => ({
     country,
     index,
@@ -440,33 +434,22 @@ export async function loadArticleWithFallback(
 
     if (resolution.type === "rejected") {
       temporaryFailures.push({ country: resolution.country, error: resolution.error })
-      fallbackStates[resolution.index] = { kind: "failure" }
-    } else {
-      const { result, country, index } = resolution
-
-      if (result.status === "temporary_error") {
-        temporaryFailures.push({ country, error: result.error, failure: result.failure })
-        fallbackStates[index] = { kind: "failure" }
-      } else if (result.status === "found") {
-        fallbackStates[index] = { kind: "success", country, result }
-      } else {
-        fallbackStates[index] = { kind: "failure" }
-      }
+      continue
     }
 
-    for (let i = 0; i < fallbackStates.length; i += 1) {
-      const state = fallbackStates[i]
-      if (!state) {
-        break
-      }
+    const { result, country } = resolution
 
-      if (state.kind === "success") {
-        persistArticleCache(state.country, normalizedSlug, {
-          article: state.result.article,
-          sourceCountry: state.country,
-        })
-        return { ...state.result, sourceCountry: state.country }
-      }
+    if (result.status === "temporary_error") {
+      temporaryFailures.push({ country, error: result.error, failure: result.failure })
+      continue
+    }
+
+    if (result.status === "found") {
+      persistArticleCache(country, normalizedSlug, {
+        article: result.article,
+        sourceCountry: country,
+      })
+      return { ...result, sourceCountry: country }
     }
   }
 
