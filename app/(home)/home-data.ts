@@ -27,7 +27,7 @@ import { getPostsForCategories } from "@/lib/wp-server/categories"
 import type { Category } from "@/types/content"
 import type { CountryPosts, HomePost } from "@/types/home"
 
-export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.NONE
+export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const HOME_FEED_FALLBACK_LIMIT = 6
 
 const createEmptyAggregatedHome = (): AggregatedHomeData => ({
@@ -88,7 +88,8 @@ const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => 
 }
 
 export const HOME_FEED_CACHE_TAGS = buildCacheTags({
-  section: "home-feed",
+  country: "all",
+  section: "home",
   extra: ["tag:home-feed"],
 })
 

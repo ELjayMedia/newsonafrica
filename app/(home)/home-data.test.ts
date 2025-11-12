@@ -4,7 +4,7 @@ import type { AggregatedHomeData, WordPressPost } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
 const BASE_URL = "https://example.com"
-const CACHE_TAGS = ["section:home-feed"]
+const CACHE_TAGS = ["country:all", "section:home", "tag:home-feed"]
 
 const setupServerMocks = async () => {
   vi.doMock("server-only", () => ({}))

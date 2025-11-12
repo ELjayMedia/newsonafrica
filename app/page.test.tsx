@@ -35,11 +35,12 @@ describe("HomePage", () => {
     vi.restoreAllMocks()
   })
 
-  it("exports dynamic rendering configuration", async () => {
+  it("exports incremental cache configuration", async () => {
     const pageModule = await import("./page")
+    const homeDataModule = await import("./(home)/home-data")
 
-    expect(pageModule.dynamic).toBe("force-dynamic")
-    expect(pageModule.revalidate).toBeUndefined()
+    expect(pageModule.dynamic).toBeUndefined()
+    expect(pageModule.revalidate).toBe(homeDataModule.HOME_FEED_REVALIDATE)
   })
 
   it("passes the server-generated fallback into HomeContent", async () => {

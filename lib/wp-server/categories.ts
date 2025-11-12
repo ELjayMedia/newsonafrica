@@ -17,6 +17,8 @@ import type {
 } from "@/types/wpgraphql"
 import { buildWpCacheTags } from "./common"
 
+export const CATEGORY_PAGE_REVALIDATE = CACHE_DURATIONS.MEDIUM
+
 const createEmptyResult = (): CategoryPostsResult => ({
   category: null,
   posts: [],
@@ -88,7 +90,7 @@ export async function getPostsForCategories(
         slugs: normalizedSlugs,
         first: limit,
       },
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      { tags, revalidate: CATEGORY_PAGE_REVALIDATE },
     )
   } catch (error) {
     console.error(
@@ -151,7 +153,7 @@ export async function getPostsByCategoryForCountry(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      { tags, revalidate: CATEGORY_PAGE_REVALIDATE },
     )
   } catch (error) {
     console.error(
@@ -184,7 +186,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
       countryCode,
       CATEGORIES_QUERY,
       undefined,
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      { tags, revalidate: CATEGORY_PAGE_REVALIDATE },
     )
     const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
     return nodes.map((node) => mapCategoryFromGraphql(node))
@@ -219,7 +221,7 @@ export async function fetchCategoryPosts(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
-    { tags, revalidate: CACHE_DURATIONS.NONE },
+    { tags, revalidate: CATEGORY_PAGE_REVALIDATE },
   )
 
   if (!data?.posts || !data?.categories) {

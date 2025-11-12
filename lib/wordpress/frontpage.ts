@@ -29,6 +29,7 @@ const FRONT_PAGE_HERO_FALLBACK_LIMIT = 3
 const FRONT_PAGE_TRENDING_LIMIT = 7
 const FRONT_PAGE_LATEST_LIMIT = 20
 const FRONT_PAGE_HERO_TAGS = [FP_TAG_SLUG] as const
+const FRONT_PAGE_REVALIDATE = CACHE_DURATIONS.MEDIUM
 
 const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
   hero: { heroPost: undefined, secondaryStories: [] },
@@ -137,7 +138,7 @@ export async function getFrontPageSlicesForCountry(
       },
       {
         tags,
-        revalidate: CACHE_DURATIONS.NONE,
+        revalidate: FRONT_PAGE_REVALIDATE,
         timeout: request?.timeout,
         signal: request?.signal,
       },
@@ -196,7 +197,7 @@ export async function getFpTaggedPostsForCountry(
       },
       {
         tags,
-        revalidate: CACHE_DURATIONS.NONE,
+        revalidate: FRONT_PAGE_REVALIDATE,
         timeout: request?.timeout,
         signal: request?.signal,
       },

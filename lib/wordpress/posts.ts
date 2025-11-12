@@ -32,6 +32,8 @@ import type { PaginatedPostsResult } from "./types"
 import type { WordPressTag } from "@/types/wp"
 import type { HomePost } from "@/types/home"
 
+const LISTING_REVALIDATE = CACHE_DURATIONS.MEDIUM
+
 const toErrorDetails = (error: unknown) => {
   if (error instanceof Error) {
     const { message, name, stack } = error
@@ -118,7 +120,7 @@ export async function getLatestPostsForCountry(
         variables,
         {
           tags,
-          revalidate: CACHE_DURATIONS.NONE,
+          revalidate: LISTING_REVALIDATE,
           timeout: request?.timeout,
           signal: request?.signal,
         },
@@ -512,7 +514,7 @@ export const fetchTaggedPosts = async ({
         first,
         ...(after ? { after } : {}),
       },
-      { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+      { tags: cacheTags, revalidate: LISTING_REVALIDATE },
     )
 
     if (gqlData?.posts) {
@@ -667,7 +669,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
       countryCode,
       TAGS_QUERY,
       { first: 100, hideEmpty: true },
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      { tags, revalidate: LISTING_REVALIDATE },
     )
 
     const nodes = gqlData?.tags?.nodes ?? []
@@ -691,7 +693,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTags, revalidate: LISTING_REVALIDATE },
   )
 
   return mapGraphqlTagNode(gqlData?.tag) ?? null
@@ -707,7 +709,7 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
     countryCode,
     TAGS_QUERY,
     { first: 100, hideEmpty: true },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTags, revalidate: LISTING_REVALIDATE },
   )
 
   const nodes = gqlData?.tags?.nodes ?? []

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
+import { CATEGORY_PAGE_REVALIDATE, getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
 import * as log from "@/lib/log"
 import { ENV } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
@@ -16,7 +16,7 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+export const revalidate = CATEGORY_PAGE_REVALIDATE
 export const dynamicParams = true
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
