@@ -102,8 +102,13 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
     : resolvedArticle.status === "temporary_error"
       ? resolvedArticle.staleSourceCountry ?? editionCountry
       : editionCountry
+  const resolvedCanonicalCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry
+    : resolvedArticle.status === "temporary_error"
+      ? resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry
+      : editionCountry
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
+    ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
     : routeCountryAlias
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
@@ -171,9 +176,12 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const resolvedSourceCountry = resolvedArticle.status === "found"
     ? resolvedArticle.sourceCountry ?? editionCountry
     : resolvedArticle.staleSourceCountry ?? editionCountry
+  const resolvedCanonicalCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry
+    : resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry
 
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
+    ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
     : routeCountry
 
   if (targetCountry !== routeCountry) {

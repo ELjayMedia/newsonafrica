@@ -66,6 +66,8 @@ describe("fetchArticleWithFallbackAction", () => {
       article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
       sourceCountry: "za",
       tags: ["edition:za:post:42"],
+      canonicalCountry: "za",
+      version: "2024-05-01t00-00-00z",
     })
     const relatedPosts = [{ id: "r1" }]
     mockGetRelatedPostsForCountry.mockResolvedValue(relatedPosts)
@@ -95,6 +97,7 @@ describe("fetchArticleWithFallbackAction", () => {
       failures: [{ country: "ng", error: new Error("Outage") }],
       staleArticle,
       staleSourceCountry: "ng",
+      staleCanonicalCountry: "ng",
     })
     mockGetRelatedPostsForCountry.mockResolvedValue(relatedPosts)
 
