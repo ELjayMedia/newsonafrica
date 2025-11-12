@@ -242,6 +242,72 @@ describe('article-data', () => {
     expect(result.sourceCountry).toBe('ng')
   })
 
+  it('returns cached fallback articles before querying wordpress for fallbacks', async () => {
+    vi.useFakeTimers()
+    const initialTime = new Date('2024-01-01T00:00:00Z')
+    vi.setSystemTime(initialTime)
+
+    const fallbackNode = {
+      slug: 'cached-slug',
+      id: 'gid://wordpress/Post:333',
+      databaseId: 333,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Fallback title',
+      excerpt: 'Fallback excerpt',
+      content: '<p>Fallback</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 18, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((country) => {
+      if (country === 'ng') {
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+      }
+
+      if (country === 'za') {
+        return Promise.resolve(
+          graphqlSuccess({ posts: { nodes: [fallbackNode] } }),
+        ) as any
+      }
+
+      throw new Error(`Unexpected country: ${country}`)
+    })
+
+    await loadArticleWithFallback('cached-slug', ['ng', 'za'])
+
+    vi.mocked(fetchWordPressGraphQL).mockReset()
+
+    vi.setSystemTime(new Date(initialTime.getTime() + 60_000))
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((country, _query, _variables) => {
+      if (country === 'ng') {
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+      }
+
+      throw new Error(`WordPress should not be queried for ${country}`)
+    })
+
+    const result = await loadArticleWithFallback('cached-slug', ['ng', 'za'])
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledTimes(1)
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'cached-slug' }),
+      expect.any(Object),
+    )
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('cached-slug')
+    expect(result.sourceCountry).toBe('za')
+    expect(result.tags).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug('za', 'cached-slug'),
+        cacheTags.post('za', 333),
+      ]),
+    )
+  })
+
   it('runs fallback lookups concurrently while preserving priority order', async () => {
     const callLog: Array<{ country: string; slug?: string }> = []
 
