@@ -3,6 +3,7 @@ import "server-only"
 import { cache } from "react"
 import pLimit from "p-limit"
 
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { categoryConfigs, homePageConfig } from "@/config/homeConfig"
 import {
@@ -26,7 +27,7 @@ import { getPostsForCategories } from "@/lib/wp-server/categories"
 import type { Category } from "@/types/content"
 import type { CountryPosts, HomePost } from "@/types/home"
 
-export const HOME_FEED_REVALIDATE = 60
+export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.NONE
 const HOME_FEED_FALLBACK_LIMIT = 6
 
 const createEmptyAggregatedHome = (): AggregatedHomeData => ({
