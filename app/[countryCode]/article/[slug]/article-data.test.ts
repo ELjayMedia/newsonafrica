@@ -312,6 +312,77 @@ describe('article-data', () => {
     )
   })
 
+  it('returns lower-priority success without waiting for slower failures', async () => {
+    vi.useFakeTimers()
+
+    const keNode = {
+      slug: 'priority-slug',
+      id: 'gid://wordpress/Post:303',
+      databaseId: 303,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Priority title',
+      excerpt: 'Priority excerpt',
+      content: '<p>Priority</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 15, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    const zaError = new Error('za outage')
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((countryCode, _query, variables) => {
+      if (countryCode === 'ng') {
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+      }
+
+      if (countryCode === 'za') {
+        return new Promise((_, reject) => {
+          setTimeout(() => reject(zaError), 100)
+        }) as any
+      }
+
+      if (countryCode === 'ke') {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(graphqlSuccess({ posts: { nodes: [keNode] } }))
+          }, 10)
+        }) as any
+      }
+
+      if (countryCode === 'tz') {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(graphqlSuccess({ posts: { nodes: [] } }))
+          }, 1_000)
+        }) as any
+      }
+
+      throw new Error(`Unexpected country: ${countryCode}`)
+    })
+
+    const resultPromise = loadArticleWithFallback('priority-slug', ['ng', 'za', 'ke', 'tz'])
+
+    let settled: Awaited<typeof resultPromise> | undefined
+    resultPromise.then((value) => {
+      settled = value
+    })
+
+    await vi.advanceTimersByTimeAsync(50)
+    await Promise.resolve()
+    expect(settled).toBeUndefined()
+
+    await vi.advanceTimersByTimeAsync(50)
+    await Promise.resolve()
+    expect(settled).toBeDefined()
+
+    const result = await resultPromise
+    expect(result.status).toBe('found')
+    expect(result.sourceCountry).toBe('ke')
+    expect(result.article.slug).toBe('priority-slug')
+
+    await vi.advanceTimersByTimeAsync(1_000)
+  })
+
   it('aggregates temporary failures when every country encounters an error', async () => {
     const errorNg = new Error('ng outage')
     const errorZa = new Error('za outage')
