@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
+
 vi.mock("server-only", () => ({}))
 
 const homeContentMock = vi.fn(() => <div data-testid="home-content" />)
@@ -22,7 +24,7 @@ const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, editi
 }))
 
 vi.mock("../(home)/home-data", () => ({
-  HOME_FEED_REVALIDATE: 60,
+  HOME_FEED_REVALIDATE: CACHE_DURATIONS.NONE,
   buildHomeContentPropsForEdition: buildHomeContentPropsForEditionMock,
 }))
 
@@ -43,6 +45,13 @@ afterEach(() => {
 })
 
 describe("CountryPage", () => {
+  it("exports dynamic rendering configuration", async () => {
+    const pageModule = await import("./page")
+
+    expect(pageModule.dynamic).toBe("force-dynamic")
+    expect(pageModule.revalidate).toBeUndefined()
+  })
+
   it.each([
     ["sz", "sz"],
     ["ZA", "za"],

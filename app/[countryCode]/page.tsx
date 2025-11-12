@@ -1,21 +1,11 @@
 import { notFound } from "next/navigation"
 
 import { HomeContent } from "@/components/HomeContent"
-import {
-  HOME_FEED_REVALIDATE,
-  buildHomeContentPropsForEdition,
-} from "../(home)/home-data"
+import { buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const dynamic = "force-static"
-export const revalidate = 60
-
-if (process.env.NODE_ENV !== "production" && revalidate !== HOME_FEED_REVALIDATE) {
-  throw new Error(
-    `Country home feed revalidate interval mismatch: page=${revalidate}, data=${HOME_FEED_REVALIDATE}`,
-  )
-}
+export const dynamic = "force-dynamic"
 
 type Props = { params: { countryCode: string } }
 

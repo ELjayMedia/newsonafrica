@@ -35,6 +35,13 @@ describe("HomePage", () => {
     vi.restoreAllMocks()
   })
 
+  it("exports dynamic rendering configuration", async () => {
+    const pageModule = await import("./page")
+
+    expect(pageModule.dynamic).toBe("force-dynamic")
+    expect(pageModule.revalidate).toBeUndefined()
+  })
+
   it("passes the server-generated fallback into HomeContent", async () => {
     const homeDataModule = await import("./(home)/home-data")
     const { SUPPORTED_COUNTRIES } = await import("@/lib/utils/routing")
@@ -100,7 +107,9 @@ describe("HomePage", () => {
     const ui = await Page()
     const { getByTestId } = render(ui)
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const expectedFetchCalls = SUPPORTED_COUNTRIES.length * 2 + 1
+
+    expect(fetchMock).toHaveBeenCalledTimes(expectedFetchCalls)
     expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length * 2)
     const [props] = homeContentMock.mock.calls.at(-1) ?? []
 
