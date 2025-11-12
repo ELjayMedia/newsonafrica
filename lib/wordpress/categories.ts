@@ -1,7 +1,5 @@
 import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
-
-const CATEGORY_REVALIDATE = CACHE_DURATIONS.MEDIUM
 import {
   CATEGORY_POSTS_BATCH_QUERY,
   CATEGORY_POSTS_QUERY,
@@ -75,7 +73,7 @@ export async function getPostsForCategories(
         slugs: normalizedSlugs,
         first: limit,
       },
-      { tags, revalidate: CATEGORY_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     const nodes = gqlData?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
@@ -141,7 +139,7 @@ export async function getPostsByCategoryForCountry(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
-      { tags, revalidate: CATEGORY_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     if (gqlData?.posts && gqlData?.categories) {
@@ -182,7 +180,7 @@ export async function getCategoriesForCountry(countryCode: string) {
       countryCode,
       CATEGORIES_QUERY,
       undefined,
-      { tags, revalidate: CATEGORY_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
     if (gqlData?.categories?.nodes) {
       const nodes = gqlData.categories.nodes.filter(
@@ -328,7 +326,7 @@ export async function fetchCategoryPosts(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
-    { tags, revalidate: CACHE_DURATIONS.MEDIUM },
+    { tags, revalidate: CACHE_DURATIONS.NONE },
   )
   if (!data?.posts || !data?.categories) return null
   const catNode = data.categories.nodes?.[0] ?? null

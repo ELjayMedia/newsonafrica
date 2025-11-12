@@ -1,5 +1,4 @@
 import { getRestBase } from "@/lib/wp-endpoints"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 const DEFAULT_WORDPRESS_REST_API_URL = getRestBase()
 
@@ -143,7 +142,7 @@ export async function searchWordPressPosts(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      next: { revalidate: CACHE_DURATIONS.MEDIUM }, // Cache for 5 minutes
+      cache: "no-store",
     })
 
     if (!response.ok) {

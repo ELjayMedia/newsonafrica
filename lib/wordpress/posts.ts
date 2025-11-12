@@ -42,13 +42,7 @@ const toErrorDetails = (error: unknown) => {
 
 const MAX_GRAPHQL_BATCH_SIZE = 100
 
-const LATEST_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
-const RELATED_POSTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const RELATED_POSTS_TIMEOUT_MS = 1000
-const TAG_LISTING_REVALIDATE = CACHE_DURATIONS.SHORT
-const TAG_INDEX_REVALIDATE = CACHE_DURATIONS.MEDIUM
-const POST_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
-const FEATURED_POSTS_REVALIDATE = CACHE_DURATIONS.MEDIUM
 
 type PostsQueryResult = {
   posts?: {
@@ -124,7 +118,7 @@ export async function getLatestPostsForCountry(
         variables,
         {
           tags,
-          revalidate: LATEST_POSTS_REVALIDATE,
+          revalidate: CACHE_DURATIONS.NONE,
           timeout: request?.timeout,
           signal: request?.signal,
         },
@@ -188,7 +182,7 @@ export async function getRelatedPostsForCountry(
     countryCode,
     POST_CATEGORIES_QUERY,
     { id: numericPostId },
-    { tags, revalidate: RELATED_POSTS_REVALIDATE, timeout: RELATED_POSTS_TIMEOUT_MS },
+    { tags, revalidate: CACHE_DURATIONS.NONE, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
   if (gqlPost?.post) {
     const catIds =
@@ -206,7 +200,7 @@ export async function getRelatedPostsForCountry(
         },
         {
           tags,
-          revalidate: RELATED_POSTS_REVALIDATE,
+          revalidate: CACHE_DURATIONS.NONE,
           timeout: RELATED_POSTS_TIMEOUT_MS,
         },
       )
@@ -250,7 +244,7 @@ export const getRelatedPosts = async (
       },
       {
         tags: relatedTags,
-        revalidate: RELATED_POSTS_REVALIDATE,
+        revalidate: CACHE_DURATIONS.NONE,
         timeout: RELATED_POSTS_TIMEOUT_MS,
       },
     )
@@ -518,7 +512,7 @@ export const fetchTaggedPosts = async ({
         first,
         ...(after ? { after } : {}),
       },
-      { tags: cacheTags, revalidate: TAG_LISTING_REVALIDATE },
+      { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     if (gqlData?.posts) {
@@ -651,7 +645,7 @@ export const fetchPosts = async (
     countryCode,
     POSTS_QUERY,
     variables,
-    { tags: cacheTagList, revalidate: LATEST_POSTS_REVALIDATE },
+    { tags: cacheTagList, revalidate: CACHE_DURATIONS.NONE },
   )
 
   const nodes =
@@ -673,7 +667,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
       countryCode,
       TAGS_QUERY,
       { first: 100, hideEmpty: true },
-      { tags, revalidate: TAG_INDEX_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     const nodes = gqlData?.tags?.nodes ?? []
@@ -697,7 +691,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
-    { tags: cacheTags, revalidate: TAG_LISTING_REVALIDATE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
   )
 
   return mapGraphqlTagNode(gqlData?.tag) ?? null
@@ -713,7 +707,7 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
     countryCode,
     TAGS_QUERY,
     { first: 100, hideEmpty: true },
-    { tags: cacheTags, revalidate: TAG_INDEX_REVALIDATE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
   )
 
   const nodes = gqlData?.tags?.nodes ?? []
@@ -739,7 +733,7 @@ export async function fetchPost({
     countryCode,
     POST_BY_SLUG_QUERY,
     { slug },
-    { tags, revalidate: POST_DETAIL_REVALIDATE },
+    { tags, revalidate: CACHE_DURATIONS.NONE },
   )
 
   const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
@@ -809,7 +803,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
       tag: "featured",
       first: limit,
     },
-    { tags: cacheTags, revalidate: FEATURED_POSTS_REVALIDATE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
   )
   if (gqlData?.posts) {
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []

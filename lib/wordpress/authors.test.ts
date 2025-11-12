@@ -46,7 +46,7 @@ describe("wordpress authors GraphQL helpers", () => {
       AUTHORS_QUERY,
       { first: 100 },
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.LONG,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: ["country:za", "section:authors"],
       }),
     )
@@ -93,7 +93,7 @@ describe("wordpress authors GraphQL helpers", () => {
       AUTHOR_DATA_QUERY,
       { slug: "john-doe", after: null, first: 5 },
       expect.objectContaining({
-        revalidate: 600,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: ["country:ng", "section:authors", "author:john-doe"],
       }),
     )
@@ -146,7 +146,7 @@ describe("wordpress authors GraphQL helpers", () => {
       AUTHOR_DATA_QUERY,
       { slug: "alex-smith", after: null, first: 2 },
       expect.objectContaining({
-        revalidate: 600,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: ["country:za", "section:authors", "author:alex-smith"],
       }),
     )

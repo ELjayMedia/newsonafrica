@@ -44,8 +44,6 @@ export const mapGraphqlTagNode = (node: GraphqlTagNode): WordPressTag | null => 
 export const DEFAULT_COUNTRY = DEFAULT_SITE_COUNTRY
 export const FP_TAG_SLUG = "fp" as const
 
-const TAG_DETAIL_REVALIDATE = CACHE_DURATIONS.SHORT
-
 type GetFpTagForCountryOptions = {
   slug?: string
 }
@@ -67,7 +65,7 @@ export const getFpTagForCountry = async (
       countryCode,
       TAG_BY_SLUG_QUERY,
       { slug },
-      { tags: cacheTags, revalidate: TAG_DETAIL_REVALIDATE },
+      { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     return mapGraphqlTagNode(gqlResult?.tag ?? null)
