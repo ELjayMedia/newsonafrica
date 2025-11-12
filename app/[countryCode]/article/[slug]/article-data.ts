@@ -38,7 +38,34 @@ const SUPPORTED_WORDPRESS_COUNTRIES = new Set(
 const hasWordPressEndpoint = (countryCode: string): boolean =>
   SUPPORTED_WORDPRESS_COUNTRIES.has(normalizeCountryCode(countryCode))
 
-const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
+const SUPPORTED_EDITION_LOOKUP = new Map(
+  SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]),
+)
+
+type ArticleCountryPriorityCacheEntry = {
+  priority: string[]
+  signature: string
+}
+
+const articleCountryPriorityCache = new Map<string, ArticleCountryPriorityCacheEntry>()
+
+const computeEditionConfigSignature = (): string => {
+  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
+  const editions = SUPPORTED_EDITIONS.map((edition) => ({
+    code: normalizeCountryCode(edition.code),
+    isCountryEdition: isCountryEdition(edition),
+  }))
+
+  return JSON.stringify({ defaultSite, editions })
+}
+
+export const resetArticleCountryPriorityCache = (): void => {
+  if (process.env.NODE_ENV === "production") {
+    return
+  }
+
+  articleCountryPriorityCache.clear()
+}
 
 export const AFRICAN_ROUTE_ALIAS = "african"
 
@@ -246,6 +273,13 @@ const readStaleArticleFromCache = async (
 
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
+  const signature = computeEditionConfigSignature()
+
+  const cached = articleCountryPriorityCache.get(normalizedPrimary)
+  if (cached?.signature === signature) {
+    return cached.priority
+  }
+
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
 
@@ -257,7 +291,10 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
 
   const supportedPriority = prioritized.filter(hasWordPressEndpoint)
 
-  return unique(supportedPriority)
+  const priority = unique(supportedPriority)
+  articleCountryPriorityCache.set(normalizedPrimary, { priority, signature })
+
+  return priority
 }
 
 export type ArticleFallbackNotFound = { status: "not_found" }

@@ -20,6 +20,7 @@ const {
   normalizeCountryCode,
   ArticleTemporarilyUnavailableError,
   ARTICLE_PAGE_REVALIDATE_SECONDS,
+  resetArticleCountryPriorityCache,
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
@@ -31,6 +32,7 @@ describe('article-data', () => {
     vi.useRealTimers()
     vi.mocked(fetchWordPressGraphQL).mockReset()
     enhancedCache.clear()
+    resetArticleCountryPriorityCache()
   })
 
   afterEach(() => {
@@ -59,6 +61,13 @@ describe('article-data', () => {
     )
     expect(priority).not.toContain('african-edition')
     expect(priority.every((code) => normalizeCountryCode(code) === code)).toBe(true)
+  })
+
+  it('reuses the cached priority for repeated calls with the same edition', () => {
+    const first = buildArticleCountryPriority('za')
+    const second = buildArticleCountryPriority('za')
+
+    expect(second).toBe(first)
   })
 
   it('attempts to load articles for every supported wordpress country', async () => {
