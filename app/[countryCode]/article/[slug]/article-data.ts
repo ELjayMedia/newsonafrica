@@ -534,7 +534,25 @@ export async function loadArticleWithFallback(
     return { status: "not_found" }
   }
 
-  const fallbackEntries = fallbackCountries.map((country, index) => ({
+  const fallbackLoadCandidates: Array<{ country: string; index: number }> = []
+
+  for (const [index, country] of fallbackCountries.entries()) {
+    const cached = await readArticleCache(country, normalizedSlug)
+    if (cached?.payload && !cached.isStale) {
+      const { article, sourceCountry } = cached.payload
+      const cacheSourceCountry = sourceCountry ?? country
+      return {
+        status: "found",
+        article,
+        tags: buildArticleCacheTags(cacheSourceCountry, normalizedSlug, article),
+        sourceCountry: cacheSourceCountry,
+      }
+    }
+
+    fallbackLoadCandidates.push({ country, index })
+  }
+
+  const fallbackEntries = fallbackLoadCandidates.map(({ country, index }) => ({
     country,
     index,
     ready: loadArticle(country, normalizedSlug).then(
