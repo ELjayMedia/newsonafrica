@@ -3,7 +3,9 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 
 import { HOME_FEED_REVALIDATE, buildHomeContentProps } from "./(home)/home-data";
 
-export const revalidate = HOME_FEED_REVALIDATE;
+const HOME_PAGE_REVALIDATE = HOME_FEED_REVALIDATE;
+
+export const revalidate = HOME_PAGE_REVALIDATE;
 
 export default async function Page() {
   const baseUrl = getSiteBaseUrl();

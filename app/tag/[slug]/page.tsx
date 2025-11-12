@@ -7,7 +7,9 @@ import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
-export const revalidate = TAG_PAGE_REVALIDATE
+const TAG_PAGE_REVALIDATE_SECONDS = TAG_PAGE_REVALIDATE
+
+export const revalidate = TAG_PAGE_REVALIDATE_SECONDS
 export const dynamicParams = true
 
 interface TagPageProps {

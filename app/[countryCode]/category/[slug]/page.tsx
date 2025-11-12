@@ -16,7 +16,9 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-export const revalidate = CATEGORY_PAGE_REVALIDATE
+const CATEGORY_PAGE_REVALIDATE_SECONDS = CATEGORY_PAGE_REVALIDATE
+
+export const revalidate = CATEGORY_PAGE_REVALIDATE_SECONDS
 export const dynamicParams = true
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
