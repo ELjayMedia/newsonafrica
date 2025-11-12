@@ -112,6 +112,8 @@ describe('article-data', () => {
         cacheTags.post('ng', 99),
       ]),
     )
+    expect(result.canonicalCountry).toBe('ng')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
   })
 
   it('does not call wordpress when asked to load an unsupported country', async () => {
@@ -163,6 +165,8 @@ describe('article-data', () => {
         cacheTags.post('za', 42),
       ]),
     )
+    expect(result.canonicalCountry).toBe('za')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
   })
 
   it('returns null when GraphQL returns no nodes', async () => {
@@ -240,6 +244,8 @@ describe('article-data', () => {
       ]),
     )
     expect(result.sourceCountry).toBe('ng')
+    expect(result.canonicalCountry).toBe('ng')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {
@@ -319,6 +325,8 @@ describe('article-data', () => {
     expect(result.tags).toEqual(
       expect.arrayContaining([cacheTags.postSlug('ke', 'mixed-slug')]),
     )
+    expect(result.canonicalCountry).toBe('ke')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
   })
 
   it('returns lower-priority success without waiting for slower failures', async () => {
@@ -384,6 +392,8 @@ describe('article-data', () => {
     expect(result.status).toBe('found')
     expect(result.sourceCountry).toBe('ke')
     expect(result.article.slug).toBe('priority-slug')
+    expect(result.canonicalCountry).toBe('ke')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
 
     await vi.advanceTimersByTimeAsync(1_000)
   })
@@ -415,6 +425,7 @@ describe('article-data', () => {
         expect.objectContaining({ country: 'za', error: errorZa }),
       ]),
     )
+    expect(result.staleCanonicalCountry).toBeNull()
   })
 
   it('continues fallbacks when some countries temporarily fail', async () => {
@@ -456,6 +467,8 @@ describe('article-data', () => {
     expect(result.status).toBe('found')
     expect(result.sourceCountry).toBe('za')
     expect(result.article.slug).toBe('slug')
+    expect(result.canonicalCountry).toBe('za')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
   })
 
   it('returns stale cached content when all countries encounter a temporary failure', async () => {
@@ -496,8 +509,10 @@ describe('article-data', () => {
     expect(result.status).toBe('temporary_error')
     expect(result.staleArticle?.slug).toBe('stale-slug')
     expect(result.staleSourceCountry).toBe('ng')
+    expect(result.staleCanonicalCountry).toBe('ng')
     expect(result.error).toBeInstanceOf(ArticleTemporarilyUnavailableError)
     expect(result.error.staleArticle?.slug).toBe('stale-slug')
+    expect(result.error.staleCanonicalCountry).toBe('ng')
     expect(result.error.errors).toEqual(expect.arrayContaining([outage]))
   })
 })
