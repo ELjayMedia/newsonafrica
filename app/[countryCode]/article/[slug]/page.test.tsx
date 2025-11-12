@@ -46,7 +46,6 @@ vi.mock('@/lib/wordpress/posts', () => ({
 
 import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { cacheTags } from '@/lib/cache'
 import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
@@ -58,6 +57,7 @@ import {
 import {
   ArticleTemporarilyUnavailableError,
   buildArticleCountryPriority,
+  ARTICLE_REVALIDATE_SECONDS,
   loadArticleWithFallback,
 } from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
@@ -217,7 +217,7 @@ describe('ArticlePage', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: ARTICLE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('sz', 'test')]),
       }),
     )
@@ -226,7 +226,7 @@ describe('ArticlePage', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: ARTICLE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test')]),
       }),
     )

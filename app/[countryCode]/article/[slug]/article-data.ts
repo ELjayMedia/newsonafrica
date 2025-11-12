@@ -1,5 +1,4 @@
 import { ENV } from "@/config/env"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
 import { createCacheEntry as createKvCacheEntry, kvCache } from "@/lib/cache/kv"
@@ -16,6 +15,8 @@ import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
+
+export const ARTICLE_REVALIDATE_SECONDS = 600
 
 const ARTICLE_CACHE_KEY_PREFIX = "article"
 const ARTICLE_CACHE_TTL_MS = 90_000
@@ -130,7 +131,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Lo
       countryCode,
       POST_BY_SLUG_QUERY,
       { slug },
-      { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
+      { tags: requestTags, revalidate: ARTICLE_REVALIDATE_SECONDS },
     )
 
     return asLoadArticleResult(countryCode, gqlResult, slug)

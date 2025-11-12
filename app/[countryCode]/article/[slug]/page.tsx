@@ -7,6 +7,7 @@ import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 
 import {
+  ARTICLE_REVALIDATE_SECONDS,
   PLACEHOLDER_IMAGE_PATH,
   buildArticleCountryPriority,
   loadArticleWithFallback,
@@ -19,7 +20,7 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const dynamic = "force-dynamic"
+export const revalidate = ARTICLE_REVALIDATE_SECONDS
 export const dynamicParams = true
 
 type RouteParams = { params: { countryCode: string; slug: string } }
