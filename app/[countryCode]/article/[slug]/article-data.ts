@@ -130,7 +130,7 @@ export async function loadArticle(countryCode: string, slug: string): Promise<Lo
       countryCode,
       POST_BY_SLUG_QUERY,
       { slug },
-      { tags: requestTags, revalidate: CACHE_DURATIONS.SHORT },
+      { tags: requestTags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     return asLoadArticleResult(countryCode, gqlResult, slug)

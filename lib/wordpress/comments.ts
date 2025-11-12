@@ -49,7 +49,6 @@ type DeleteCommentMutationResult = {
 
 const COMMENT_QUERY_PAGE_SIZE = 100
 
-const COMMENTS_REVALIDATE = CACHE_DURATIONS.SHORT
 const COMMENTS_MUTATION_REVALIDATE = CACHE_DURATIONS.NONE
 
 const encodeBase64 = (value: string): string => {
@@ -111,7 +110,7 @@ export async function fetchPendingComments(
       countryCode,
       PENDING_COMMENTS_QUERY,
       { first: COMMENT_QUERY_PAGE_SIZE },
-      { tags, revalidate: COMMENTS_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
 
     if (!data) {

@@ -47,8 +47,13 @@ describe("fetchPendingComments", () => {
       expect.stringContaining("PendingComments"),
       { first: 100 },
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
-        tags: ["country:ng", "section:comments"],
+        revalidate: CACHE_DURATIONS.NONE,
+        tags: expect.arrayContaining([
+          "country:ng",
+          "section:comments",
+          "edition:ng",
+          "edition:ng:comments:pending",
+        ]),
       }),
     )
     expect(result).toEqual([

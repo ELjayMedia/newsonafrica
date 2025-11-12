@@ -42,9 +42,6 @@ const mapCategoryFromGraphql = (node: GraphqlCategoryNode | null | undefined): W
   count: node?.count ?? undefined,
 })
 
-const CATEGORY_LISTING_REVALIDATE = CACHE_DURATIONS.MEDIUM
-const CATEGORY_METADATA_REVALIDATE = CACHE_DURATIONS.MEDIUM
-
 const ensureResultEntries = (
   results: Record<string, CategoryPostsResult>,
   slugs: string[],
@@ -91,7 +88,7 @@ export async function getPostsForCategories(
         slugs: normalizedSlugs,
         first: limit,
       },
-      { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
   } catch (error) {
     console.error(
@@ -154,7 +151,7 @@ export async function getPostsByCategoryForCountry(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
-      { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
   } catch (error) {
     console.error(
@@ -187,7 +184,7 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
       countryCode,
       CATEGORIES_QUERY,
       undefined,
-      { tags, revalidate: CATEGORY_METADATA_REVALIDATE },
+      { tags, revalidate: CACHE_DURATIONS.NONE },
     )
     const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
     return nodes.map((node) => mapCategoryFromGraphql(node))
@@ -222,7 +219,7 @@ export async function fetchCategoryPosts(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
-    { tags, revalidate: CATEGORY_LISTING_REVALIDATE },
+    { tags, revalidate: CACHE_DURATIONS.NONE },
   )
 
   if (!data?.posts || !data?.categories) {

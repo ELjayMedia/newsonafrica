@@ -217,7 +217,7 @@ describe('ArticlePage', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: expect.arrayContaining([cacheTags.postSlug('sz', 'test')]),
       }),
     )
@@ -226,7 +226,7 @@ describe('ArticlePage', () => {
       POST_BY_SLUG_QUERY,
       expect.any(Object),
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test')]),
       }),
     )

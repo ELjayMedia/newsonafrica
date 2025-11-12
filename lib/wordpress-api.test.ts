@@ -313,11 +313,18 @@ describe("getFrontPageSlicesForCountry", () => {
       }),
     )
 
+    const fetchMock = vi.mocked(fetch as unknown as typeof globalThis.fetch)
+
     const result = await wordpressApi.getFrontPageSlicesForCountry("za")
 
     expect(result.hero.heroPost?.slug).toBe("hero-101")
     expect(result.trending.posts).toHaveLength(7)
     expect(result.latest.posts).toHaveLength(20)
+    expect(fetchMock).toHaveBeenCalled()
+    fetchMock.mock.calls.forEach(([, init]) => {
+      expect(init?.cache).toBe("no-store")
+      expect(init?.next).toBeUndefined()
+    })
   })
 })
 
@@ -340,10 +347,17 @@ describe("getFpTaggedPostsForCountry", () => {
       }),
     )
 
+    const fetchMock = vi.mocked(fetch as unknown as typeof globalThis.fetch)
+
     const result = await wordpressApi.getFpTaggedPostsForCountry("za", 2)
 
     expect(result).toHaveLength(2)
     expect(result[0].slug).toBe("fp-201")
+    expect(fetchMock).toHaveBeenCalled()
+    fetchMock.mock.calls.forEach(([, init]) => {
+      expect(init?.cache).toBe("no-store")
+      expect(init?.next).toBeUndefined()
+    })
   })
 })
 
@@ -367,11 +381,18 @@ describe("getLatestPostsForCountry", () => {
       }),
     )
 
+    const fetchMock = vi.mocked(fetch as unknown as typeof globalThis.fetch)
+
     const result = await wordpressApi.getLatestPostsForCountry("za", 2)
 
     expect(result.posts).toHaveLength(2)
     expect(result.hasNextPage).toBe(true)
     expect(result.endCursor).toBe("cursor-2")
+    expect(fetchMock).toHaveBeenCalled()
+    fetchMock.mock.calls.forEach(([, init]) => {
+      expect(init?.cache).toBe("no-store")
+      expect(init?.next).toBeUndefined()
+    })
   })
 
   it("returns empty pagination when GraphQL returns null", async () => {
@@ -390,8 +411,15 @@ describe("getLatestPostsForCountry", () => {
       }),
     )
 
+    const fetchMock = vi.mocked(fetch as unknown as typeof globalThis.fetch)
+
     const result = await wordpressApi.getLatestPostsForCountry("za", 3)
 
     expect(result).toEqual({ posts: [], hasNextPage: false, endCursor: null })
+    expect(fetchMock).toHaveBeenCalled()
+    fetchMock.mock.calls.forEach(([, init]) => {
+      expect(init?.cache).toBe("no-store")
+      expect(init?.next).toBeUndefined()
+    })
   })
 })

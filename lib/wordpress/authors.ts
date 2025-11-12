@@ -47,9 +47,6 @@ const selectAvatarUrl = (
   return url ? { url } : undefined
 }
 
-const AUTHORS_INDEX_REVALIDATE = CACHE_DURATIONS.LONG
-const AUTHOR_PAGE_REVALIDATE = 600
-
 type GraphqlAuthorLike =
   | NonNullable<AuthorDataQuery["user"]>
   | NonNullable<NonNullable<AuthorsQuery["users"]>["nodes"]>[number]
@@ -88,7 +85,7 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordP
     countryCode,
     AUTHORS_QUERY,
     { first: 100 },
-    { tags, revalidate: AUTHORS_INDEX_REVALIDATE },
+    { tags, revalidate: CACHE_DURATIONS.NONE },
   )
 
   const nodes =
@@ -128,7 +125,7 @@ export async function fetchAuthorData(
       after: cursor,
       first: limit,
     },
-    { tags, revalidate: AUTHOR_PAGE_REVALIDATE },
+    { tags, revalidate: CACHE_DURATIONS.NONE },
   )
   if (!data?.user) return null
   const author = mapGraphqlAuthorToWordPressAuthor(data.user, slug)
