@@ -409,6 +409,15 @@ export const POST_BY_SLUG_QUERY = gql`
   }
 `
 
+export const POST_PREVIEW_BY_SLUG_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query PostPreviewBySlug($slug: ID!) {
+    post(id: $slug, idType: SLUG, asPreview: true) {
+      ...PostFields
+    }
+  }
+`
+
 export const AUTHOR_DATA_QUERY = gql`
   ${POST_SUMMARY_FIELDS_FRAGMENT}
   query AuthorData($slug: String!, $after: String, $first: Int!) {

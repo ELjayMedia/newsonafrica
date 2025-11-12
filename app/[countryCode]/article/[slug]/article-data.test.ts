@@ -22,7 +22,7 @@ const {
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
-import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
+import { POST_BY_SLUG_QUERY, POST_PREVIEW_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
@@ -134,7 +134,7 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'za',
       POST_BY_SLUG_QUERY,
-      expect.any(Object),
+      expect.objectContaining({ slug: 'test-slug' }),
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.NONE,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
@@ -169,6 +169,46 @@ describe('article-data', () => {
     expect(result.status).toBe('temporary_error')
     expect(result.error).toBeInstanceOf(Error)
     expect(result.failure).toMatchObject({ kind: 'graphql_error', message: 'GraphQL fatal' })
+  })
+
+  it('fetches preview content when preview mode is requested', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({
+        post: {
+          slug: 'test-slug',
+          id: 'gid://wordpress/Post:101',
+          databaseId: 101,
+          date: '2024-05-01T00:00:00Z',
+          title: 'Preview title',
+          excerpt: 'Preview excerpt',
+          content: '<p>Preview</p>',
+          categories: { nodes: [] },
+          tags: { nodes: [] },
+          featuredImage: { node: null },
+          author: { node: { databaseId: 2, name: 'Editor', slug: 'editor' } },
+        },
+      }) as any,
+    )
+
+    const result = await loadArticle('za', 'Test-Slug', { preview: true })
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'za',
+      POST_PREVIEW_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'test-slug' }),
+      expect.objectContaining({
+        revalidate: CACHE_DURATIONS.NONE,
+        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
+      }),
+    )
+    expect(result.status).toBe('found')
+    expect(result.article.title).toBe('Preview title')
+    expect(result.tags).toEqual(
+      expect.arrayContaining([
+        cacheTags.postSlug('za', 'test-slug'),
+        cacheTags.post('za', 101),
+      ]),
+    )
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {

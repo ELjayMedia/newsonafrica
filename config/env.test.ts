@@ -7,6 +7,7 @@ const resetBaseEnv = () => {
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
   process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   process.env.ANALYTICS_API_BASE_URL = "https://analytics.example.com"
+  process.env.WORDPRESS_PREVIEW_SECRET = "preview-secret"
 
   delete process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL
   delete process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL
@@ -34,6 +35,7 @@ describe("config/env", () => {
     expect(ENV.NEXT_PUBLIC_DEFAULT_SITE).toBe("sz")
     expect(ENV.ANALYTICS_API_BASE_URL).toBe("https://analytics.example.com")
     expect(ENV.WORDPRESS_REQUEST_TIMEOUT_MS).toBe(45000)
+    expect(ENV.WORDPRESS_PREVIEW_SECRET).toBe("preview-secret")
     expect(WP_AUTH_HEADERS).toBeUndefined()
   })
 
@@ -74,6 +76,14 @@ describe("config/env", () => {
 
     await expect(import("./env")).rejects.toThrowError(
       /must be valid JSON/i,
+    )
+  })
+
+  it("throws when the preview secret is missing", async () => {
+    delete process.env.WORDPRESS_PREVIEW_SECRET
+
+    await expect(import("./env")).rejects.toThrowError(
+      /WORDPRESS_PREVIEW_SECRET/i,
     )
   })
 })

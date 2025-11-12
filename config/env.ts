@@ -68,6 +68,12 @@ const BASE_ENV_SCHEMA = z.object({
   NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
   ANALYTICS_API_BASE_URL: stringWithDefault("https://newsonafrica.com/api/analytics"),
   WORDPRESS_REQUEST_TIMEOUT_MS: positiveIntegerWithDefault(30000),
+  WORDPRESS_PREVIEW_SECRET: z.preprocess(
+    trimToUndefined,
+    z
+      .string({ required_error: "WORDPRESS_PREVIEW_SECRET is required" })
+      .min(1, "WORDPRESS_PREVIEW_SECRET cannot be empty"),
+  ),
 })
 
 const WORDPRESS_AUTH_HEADERS_SCHEMA = z.preprocess(

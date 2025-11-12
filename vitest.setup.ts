@@ -15,6 +15,7 @@ vi.mock('isomorphic-dompurify', () => ({
 // Provide default environment variables required by config/env.ts
 process.env.NEXT_PUBLIC_SITE_URL ||= 'https://example.com'
 process.env.NEXT_PUBLIC_DEFAULT_SITE ||= 'sz'
+process.env.WORDPRESS_PREVIEW_SECRET ||= 'test-preview-secret'
 
 const defaultSite = process.env.NEXT_PUBLIC_DEFAULT_SITE ?? 'sz'
 const graphQLKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_GRAPHQL`

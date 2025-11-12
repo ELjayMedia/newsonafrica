@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { draftMode } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
 import { ENV } from "@/config/env"
@@ -9,6 +10,7 @@ import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import {
   PLACEHOLDER_IMAGE_PATH,
   buildArticleCountryPriority,
+  loadArticle,
   loadArticleWithFallback,
   normalizeCountryCode,
   normalizeRouteCountry,
@@ -52,6 +54,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const routeCountryAlias = normalizeRouteCountry(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
+  const { isEnabled: previewEnabled } = draftMode()
 
   if (!edition) {
     const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
@@ -77,21 +80,32 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
-  const article =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.article
-      : resolvedArticle.status === "temporary_error"
-        ? resolvedArticle.staleArticle ?? null
-        : null
+  let article = null
+  let resolvedSourceCountry = editionCountry
+
+  if (previewEnabled) {
+    const previewArticle = await loadArticle(editionCountry, normalizedSlug, { preview: true })
+    if (previewArticle.status === "found") {
+      article = previewArticle.article
+    }
+  } else {
+    const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+    article =
+      resolvedArticle.status === "found"
+        ? resolvedArticle.article
+        : resolvedArticle.status === "temporary_error"
+          ? resolvedArticle.staleArticle ?? null
+          : null
+    resolvedSourceCountry =
+      resolvedArticle.status === "found"
+        ? resolvedArticle.sourceCountry ?? editionCountry
+        : resolvedArticle.status === "temporary_error"
+          ? resolvedArticle.staleSourceCountry ?? editionCountry
+          : editionCountry
+  }
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const resolvedSourceCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.sourceCountry ?? editionCountry
-    : resolvedArticle.status === "temporary_error"
-      ? resolvedArticle.staleSourceCountry ?? editionCountry
-      : editionCountry
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
     : routeCountryAlias
@@ -130,6 +144,55 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const routeCountry = normalizeRouteCountry(countryCode)
   const normalizedSlug = normalizeSlug(slug)
   const countryPriority = buildArticleCountryPriority(editionCountry)
+  const { isEnabled: previewEnabled } = draftMode()
+
+  if (previewEnabled) {
+    const previewArticle = await loadArticle(editionCountry, normalizedSlug, { preview: true })
+
+    if (previewArticle.status !== "found") {
+      notFound()
+    }
+
+    const articleData = previewArticle.article
+    const resolvedSourceCountry = editionCountry
+    const targetCountry = isCountryEdition(edition)
+      ? normalizeRouteCountry(resolvedSourceCountry ?? editionCountry)
+      : routeCountry
+
+    if (targetCountry !== routeCountry) {
+      redirect(`/${targetCountry}/article/${normalizedSlug}`)
+    }
+
+    const relatedCountry = resolvedSourceCountry
+    const relatedPostId = resolveRelatedPostId(articleData)
+    let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
+
+    if (relatedPostId !== null) {
+      try {
+        relatedPosts = await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6)
+      } catch (relatedError) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Failed to load related posts for article", {
+            relatedError,
+            relatedCountry,
+            relatedPostId,
+          })
+        }
+        relatedPosts = []
+      }
+    }
+
+    return (
+      <ArticleClientContent
+        slug={normalizedSlug}
+        countryCode={targetCountry}
+        sourceCountryCode={resolvedSourceCountry}
+        initialData={articleData}
+        relatedPosts={relatedPosts}
+      />
+    )
+  }
+
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
 
   if (resolvedArticle.status === "not_found") {

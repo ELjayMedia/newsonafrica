@@ -12,7 +12,7 @@ import {
   type WordPressGraphQLResult,
 } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
-import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
+import { POST_BY_SLUG_QUERY, POST_PREVIEW_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
@@ -70,6 +70,10 @@ type PostBySlugQueryResult = {
   } | null
 }
 
+type PostPreviewQueryResult = {
+  post?: PostFieldsFragment | null
+}
+
 type CachedArticlePayload = {
   article: WordPressPost
   sourceCountry: string
@@ -117,23 +121,65 @@ const asLoadArticleResult = (
   return { status: "found", article, tags }
 }
 
-export async function loadArticle(countryCode: string, slug: string): Promise<LoadArticleResult> {
+const asPreviewLoadArticleResult = (
+  countryCode: string,
+  result: WordPressGraphQLResult<PostPreviewQueryResult>,
+  slug: string,
+): LoadArticleResult => {
+  if (!result.ok) {
+    return { status: "temporary_error", error: result.error, failure: result }
+  }
+
+  const node = result.post ?? null
+
+  if (!node) {
+    return { status: "not_found" }
+  }
+
+  const article = mapGraphqlPostToWordPressPost(node, countryCode)
+  const slugTag = cacheTags.postSlug(countryCode, slug)
+  const tags = [slugTag]
+
+  if (node?.databaseId != null) {
+    tags.push(cacheTags.post(countryCode, node.databaseId))
+  }
+
+  return { status: "found", article, tags }
+}
+
+export async function loadArticle(
+  countryCode: string,
+  slug: string,
+  options: { preview?: boolean } = {},
+): Promise<LoadArticleResult> {
   if (!hasWordPressEndpoint(countryCode)) {
     return { status: "not_found" }
   }
 
-  const slugTag = cacheTags.postSlug(countryCode, slug)
+  const normalizedSlug = normalizeSlug(slug)
+  const slugTag = cacheTags.postSlug(countryCode, normalizedSlug)
   const requestTags = [slugTag]
 
   try {
+    if (options.preview) {
+      const gqlResult = await fetchWordPressGraphQL<PostPreviewQueryResult>(
+        countryCode,
+        POST_PREVIEW_BY_SLUG_QUERY,
+        { slug: normalizedSlug },
+        { tags: requestTags, revalidate: CACHE_DURATIONS.NONE },
+      )
+
+      return asPreviewLoadArticleResult(countryCode, gqlResult, normalizedSlug)
+    }
+
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
       countryCode,
       POST_BY_SLUG_QUERY,
-      { slug },
+      { slug: normalizedSlug },
       { tags: requestTags, revalidate: CACHE_DURATIONS.NONE },
     )
 
-    return asLoadArticleResult(countryCode, gqlResult, slug)
+    return asLoadArticleResult(countryCode, gqlResult, normalizedSlug)
   } catch (error) {
     return { status: "temporary_error", error }
   }

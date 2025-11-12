@@ -28,6 +28,10 @@ vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }))
 
+vi.mock('next/headers', () => ({
+  draftMode: vi.fn(),
+}))
+
 const { capturedArticleClientProps, mockGetRelatedPostsForCountry } = vi.hoisted(() => ({
   capturedArticleClientProps: [] as Array<Record<string, any>>,
   mockGetRelatedPostsForCountry: vi.fn(),
@@ -50,10 +54,12 @@ import { CACHE_DURATIONS } from '@/lib/cache/constants'
 import { cacheTags } from '@/lib/cache'
 import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
+import { draftMode } from 'next/headers'
 import {
   POST_BY_SLUG_QUERY,
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
+  POST_PREVIEW_BY_SLUG_QUERY,
 } from '@/lib/wordpress-queries'
 import {
   ArticleTemporarilyUnavailableError,
@@ -94,6 +100,7 @@ describe('ArticlePage', () => {
     vi.mocked(redirect).mockImplementation(() => {
       throw new Error('NEXT_REDIRECT')
     })
+    vi.mocked(draftMode).mockReturnValue({ isEnabled: false } as any)
     capturedArticleClientProps.length = 0
     mockGetRelatedPostsForCountry.mockReset()
     mockGetRelatedPostsForCountry.mockResolvedValue([])
@@ -136,6 +143,30 @@ describe('ArticlePage', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalled()
     expect(capturedArticleClientProps[0]?.countryCode).toBe('sz')
     expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('renders preview content when draft mode is enabled', async () => {
+    vi.mocked(draftMode).mockReturnValue({ isEnabled: true } as any)
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
+      if (query === POST_PREVIEW_BY_SLUG_QUERY) {
+        return graphqlSuccess({ post: createArticleNode({ title: 'Preview Story' }) }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'preview-slug' } })
+    render(ui)
+
+    expect(screen.getByText('Preview Story')).toBeInTheDocument()
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'sz',
+      POST_PREVIEW_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'preview-slug' }),
+      expect.any(Object),
+    )
+    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith('sz', 1, 6)
   })
 
   it('passes the database ID to related post lookup when available', async () => {
