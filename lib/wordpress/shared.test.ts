@@ -32,7 +32,7 @@ describe("getFpTagForCountry", () => {
       TAG_BY_SLUG_QUERY,
       { slug: "fp" },
       expect.objectContaining({
-        revalidate: CACHE_DURATIONS.SHORT,
+        revalidate: CACHE_DURATIONS.NONE,
         tags: ["country:za", "section:tags", "tag:fp"],
       }),
     )
