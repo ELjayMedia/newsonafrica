@@ -20,7 +20,16 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = ARTICLE_PAGE_REVALIDATE_SECONDS
+export const revalidate = 600
+
+if (process.env.NODE_ENV !== "production") {
+  const expectedRevalidateSeconds = revalidate
+  if (ARTICLE_PAGE_REVALIDATE_SECONDS !== expectedRevalidateSeconds) {
+    throw new Error(
+      `ARTICLE_PAGE_REVALIDATE_SECONDS (${ARTICLE_PAGE_REVALIDATE_SECONDS}) does not match ISR TTL (${expectedRevalidateSeconds})`,
+    )
+  }
+}
 export const dynamicParams = true
 
 type RouteParams = { params: { countryCode: string; slug: string } }
