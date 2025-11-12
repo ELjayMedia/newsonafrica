@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import * as wordpressApi from "./wordpress-api"
+import { CACHE_DURATIONS } from "./cache/constants"
 import { __getMemoizedRequestsForTests } from "./wordpress/client"
 
 const createGraphqlPost = (id: number, prefix = "post") => ({
@@ -92,6 +93,28 @@ describe("fetchWordPressGraphQL", () => {
 
     const result = await wordpressApi.fetchWordPressGraphQL<typeof mockData>("sz", "query")
     expect(result).toMatchObject({ ok: true, data: mockData })
+  })
+
+  it("does not memoize or cache requests when revalidate is disabled", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    await wordpressApi.fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: CACHE_DURATIONS.NONE,
+    })
+
+    await wordpressApi.fetchWordPressGraphQL("sz", "query", undefined, {
+      revalidate: CACHE_DURATIONS.NONE,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init?.cache).toBe("no-store")
+    expect(init?.next).toBeUndefined()
+    expect(__getMemoizedRequestsForTests().size).toBe(0)
   })
 
   it("forwards configured WordPress auth headers during server fetches", async () => {
