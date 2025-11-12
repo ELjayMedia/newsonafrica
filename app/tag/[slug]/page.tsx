@@ -1,4 +1,4 @@
-import { TAG_PAGE_REVALIDATE, fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
+import { fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -7,7 +7,7 @@ import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
-const TAG_PAGE_REVALIDATE_SECONDS = TAG_PAGE_REVALIDATE
+const TAG_PAGE_REVALIDATE_SECONDS = 5 * 60
 
 export const revalidate = TAG_PAGE_REVALIDATE_SECONDS
 export const dynamicParams = true

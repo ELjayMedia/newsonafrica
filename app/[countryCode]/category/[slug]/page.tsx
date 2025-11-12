@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { CATEGORY_PAGE_REVALIDATE, getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
+import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
 import * as log from "@/lib/log"
 import { ENV } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
@@ -16,7 +16,7 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-const CATEGORY_PAGE_REVALIDATE_SECONDS = CATEGORY_PAGE_REVALIDATE
+const CATEGORY_PAGE_REVALIDATE_SECONDS = 5 * 60
 
 export const revalidate = CATEGORY_PAGE_REVALIDATE_SECONDS
 export const dynamicParams = true

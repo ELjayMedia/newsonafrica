@@ -42,6 +42,14 @@ describe("CountryCategoryPage", () => {
     mocks.getCategoryPageData.mockReset()
   })
 
+  it("exports incremental cache configuration", async () => {
+    const pageModule = await import("./page")
+    const categoriesModule = await import("@/lib/wp-server/categories")
+
+    expect(pageModule.dynamic).toBeUndefined()
+    expect(pageModule.revalidate).toBe(categoriesModule.CATEGORY_PAGE_REVALIDATE)
+  })
+
   it("invokes notFound when the category is missing", async () => {
     const notFoundError = new Error("NEXT_NOT_FOUND")
     notFoundMock.mockImplementation(() => {
