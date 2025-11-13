@@ -16,12 +16,17 @@ import {
 import type { CommentListRecord } from "@/types/comments"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
-// Cache policy: short (1 minute)
-export const revalidate = 60
+function withCorsNoStore(request: NextRequest, response: NextResponse) {
+  const result = withCors(request, response)
+  result.headers.set("Cache-Control", "no-store")
+  return result
+}
 
 function serviceUnavailable(request: NextRequest) {
-  return withCors(
+  return withCorsNoStore(
     request,
     NextResponse.json({ success: false, error: "Supabase service unavailable" }, { status: 503 }),
   )
@@ -273,7 +278,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 30, "COMMENTS_GET_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCors(request, rateLimitResponse)
+    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
 
@@ -406,7 +411,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (typedComments.length === 0) {
       return applyCookies(
-        withCors(
+        withCorsNoStore(
           request,
           successResponse({
             comments: [],
@@ -441,7 +446,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     })
 
     return applyCookies(
-      withCors(
+      withCorsNoStore(
         request,
         successResponse(
           {
@@ -460,7 +465,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       ),
     )
   } catch (error) {
-    return applyCookies(withCors(request, handleApiError(error)))
+    return applyCookies(withCorsNoStore(request, handleApiError(error)))
   }
 }
 
@@ -471,7 +476,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 5, "COMMENTS_POST_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCors(request, rateLimitResponse)
+    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
 
@@ -488,7 +493,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return applyCookies(withCors(request, handleApiError(new Error("Unauthorized"))))
+      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Unauthorized"))))
     }
 
     let body: unknown
@@ -577,7 +582,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }),
     )
   } catch (error) {
-    return applyCookies(withCors(request, handleApiError(error)))
+    return applyCookies(withCorsNoStore(request, handleApiError(error)))
   }
 }
 
@@ -588,7 +593,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   try {
     // Apply rate limiting
     const rateLimitResponse = await applyRateLimit(request, 10, "COMMENTS_PATCH_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCors(request, rateLimitResponse)
+    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
 
     const routeClient = createSupabaseRouteClient(request)
 
@@ -605,7 +610,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      return applyCookies(withCors(request, handleApiError(new Error("Unauthorized"))))
+      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Unauthorized"))))
     }
 
     let body: unknown
@@ -630,7 +635,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       .single()
 
     if (fetchError || !comment) {
-      return applyCookies(withCors(request, handleApiError(new Error("Comment not found"))))
+      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Comment not found"))))
     }
 
     const commentRecord = comment as {
@@ -652,7 +657,9 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       case "delete":
         // Only allow the author to delete their own comment
         if (commentRecord.user_id !== session.user.id) {
-          return applyCookies(withCors(request, handleApiError(new Error("You can only delete your own comments"))))
+          return applyCookies(
+            withCorsNoStore(request, handleApiError(new Error("You can only delete your own comments"))),
+          )
         }
         updateData = { status: "deleted" }
         break
@@ -661,7 +668,10 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         // For now, we'll just check if the user is the author
         if (commentRecord.user_id !== session.user.id) {
           return applyCookies(
-            withCors(request, handleApiError(new Error("You don't have permission to approve this comment"))),
+            withCorsNoStore(
+              request,
+              handleApiError(new Error("You don't have permission to approve this comment")),
+            ),
           )
         }
         updateData = {
@@ -689,6 +699,6 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     }
     return applyCookies(successResponse({ success: true, action }))
   } catch (error) {
-    return applyCookies(withCors(request, handleApiError(error)))
+    return applyCookies(withCorsNoStore(request, handleApiError(error)))
   }
 }
