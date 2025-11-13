@@ -535,6 +535,7 @@ export async function buildCountryPosts(
 async function buildHomeContentPropsUncached(
   _baseUrl: string,
 ): Promise<HomeContentServerProps> {
+  const categoryPostsPromise = loadCategoryPostsForHome(DEFAULT_COUNTRY)
   const { countryPosts, africanAggregate } =
     (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
@@ -547,7 +548,7 @@ async function buildHomeContentPropsUncached(
     : await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
-  const categoryPosts = await loadCategoryPostsForHome(DEFAULT_COUNTRY)
+  const categoryPosts = await categoryPostsPromise
   const enrichedInitialData = { ...initialData, categoryPosts }
 
   return {
@@ -562,6 +563,12 @@ async function buildHomeContentPropsForEditionUncached(
   _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
+  const categoryCountry = isCountryEdition(edition)
+    ? edition.code
+    : isAfricanEdition(edition)
+      ? AFRICAN_EDITION.code
+      : DEFAULT_COUNTRY
+  const categoryPostsPromise = loadCategoryPostsForHome(categoryCountry)
   const aggregatedHome = isAfricanEdition(edition)
     ? await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
     : await fetchAggregatedHomeForCountry(edition.code)
@@ -572,12 +579,7 @@ async function buildHomeContentPropsForEditionUncached(
     ? await buildCountryPosts([edition.code], { [edition.code]: aggregatedHome })
     : { [AFRICAN_EDITION.code]: initialPosts }
 
-  const categoryCountry = isCountryEdition(edition)
-    ? edition.code
-    : isAfricanEdition(edition)
-      ? AFRICAN_EDITION.code
-      : DEFAULT_COUNTRY
-  const categoryPosts = await loadCategoryPostsForHome(categoryCountry)
+  const categoryPosts = await categoryPostsPromise
   const enrichedInitialData = { ...initialData, categoryPosts }
 
   return {
