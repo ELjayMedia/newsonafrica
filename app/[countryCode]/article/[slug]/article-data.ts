@@ -20,7 +20,7 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
-export const ARTICLE_PAGE_REVALIDATE_SECONDS = 600
+export const ARTICLE_PAGE_REVALIDATE_SECONDS = 0
 
 const ARTICLE_CACHE_KEY_PREFIX = "article"
 const ARTICLE_CACHE_TTL_MS = 90_000
@@ -182,7 +182,7 @@ export async function loadArticle(
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
   const requestTags = [slugTag]
-  const revalidateSeconds = preview ? 0 : ARTICLE_PAGE_REVALIDATE_SECONDS
+  const shouldUseOnDemandRevalidation = ARTICLE_PAGE_REVALIDATE_SECONDS <= 0
 
   try {
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
@@ -190,8 +190,10 @@ export async function loadArticle(
       POST_BY_SLUG_QUERY,
       { slug, asPreview: preview },
       preview
-        ? { revalidate: revalidateSeconds }
-        : { tags: requestTags, revalidate: revalidateSeconds },
+        ? { cache: "no-store" }
+        : shouldUseOnDemandRevalidation
+          ? { tags: requestTags, revalidate: false }
+          : { tags: requestTags, revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS },
     )
 
     return asLoadArticleResult(countryCode, gqlResult, slug, preview)

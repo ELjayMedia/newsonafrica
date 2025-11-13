@@ -23,7 +23,7 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = 600
+export const revalidate = 0
 
 if (process.env.NODE_ENV !== "production") {
   const expectedRevalidateSeconds = revalidate

@@ -35,9 +35,10 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
 
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
-  revalidate?: number
+  revalidate?: number | false
   timeout?: number
   signal?: AbortSignal
+  cache?: RequestCache
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -192,13 +193,18 @@ export function fetchWordPressGraphQL<T>(
 ): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
-  const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
-  const shouldCache = resolvedRevalidate > CACHE_DURATIONS.NONE
+  const resolvedRevalidate =
+    options.revalidate === false
+      ? false
+      : options.revalidate ?? CACHE_DURATIONS.MEDIUM
+  const shouldCache =
+    resolvedRevalidate === false || resolvedRevalidate > CACHE_DURATIONS.NONE
   const dedupedTags = dedupe(options.tags)
   const tagsKey = dedupedTags?.join(",") ?? ""
   const bodyHash = createHash("sha1").update(body).digest("hex")
   const cacheKey = `${base}::${bodyHash}::${tagsKey}`
-  const metadataKey = String(resolvedRevalidate)
+  const metadataKey =
+    resolvedRevalidate === false ? "false" : String(resolvedRevalidate)
   const memoizedRequests = shouldCache ? getMemoizedRequests() : undefined
 
   if (shouldCache && memoizedRequests) {
@@ -234,11 +240,11 @@ export function fetchWordPressGraphQL<T>(
 
   if (shouldCache) {
     fetchOptions.next = {
-      revalidate: resolvedRevalidate,
+      revalidate: resolvedRevalidate === false ? false : resolvedRevalidate,
       ...(dedupedTags ? { tags: dedupedTags } : {}),
     }
   } else {
-    fetchOptions.cache = "no-store"
+    fetchOptions.cache = options.cache ?? "no-store"
   }
 
   const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(
@@ -270,9 +276,11 @@ export function fetchWordPressGraphQL<T>(
 
   if (shouldCache && memoizedRequests) {
     const expiresAt =
-      resolvedRevalidate > 0
-        ? Date.now() + resolvedRevalidate * 1000
-        : Number.POSITIVE_INFINITY
+      resolvedRevalidate === false
+        ? Number.POSITIVE_INFINITY
+        : resolvedRevalidate > 0
+          ? Date.now() + resolvedRevalidate * 1000
+          : Number.POSITIVE_INFINITY
 
     const entry: MemoizedRequestEntry = {
       promise: requestPromise,
@@ -281,7 +289,7 @@ export function fetchWordPressGraphQL<T>(
     }
     memoizedRequests.set(cacheKey, entry)
 
-    if (resolvedRevalidate > 0) {
+    if (typeof resolvedRevalidate === "number" && resolvedRevalidate > 0) {
       const timeout = setTimeout(() => {
         const currentEntry = memoizedRequests.get(cacheKey)
         if (currentEntry === entry) {

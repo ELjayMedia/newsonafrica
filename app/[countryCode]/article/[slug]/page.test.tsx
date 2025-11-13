@@ -68,6 +68,17 @@ import {
 import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
+const expectCachedRequestOptions = (tags: string[]) =>
+  ARTICLE_PAGE_REVALIDATE_SECONDS > 0
+    ? expect.objectContaining({
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
+        tags: expect.arrayContaining(tags),
+      })
+    : expect.objectContaining({
+        revalidate: false,
+        tags: expect.arrayContaining(tags),
+      })
+
 describe('ArticlePage', () => {
   const createArticleNode = (overrides: Record<string, any> = {}) => ({
     databaseId: 1,
@@ -223,19 +234,13 @@ describe('ArticlePage', () => {
       'sz',
       POST_BY_SLUG_QUERY,
       expect.any(Object),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('sz', 'test')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('sz', 'test')]),
     )
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'za',
       POST_BY_SLUG_QUERY,
       expect.any(Object),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('za', 'test')]),
     )
     expect(redirect).toHaveBeenCalledWith('/za/article/test')
   })

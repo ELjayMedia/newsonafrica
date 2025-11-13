@@ -45,13 +45,26 @@ describe('article-data', () => {
     ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
   })
 
-  const graphqlFailure = (message = 'GraphQL fatal') => ({
-    ok: false as const,
-    kind: 'graphql_error' as const,
-    message,
-    errors: [{ message }],
-    error: new Error(message),
-  })
+const graphqlFailure = (message = 'GraphQL fatal') => ({
+  ok: false as const,
+  kind: 'graphql_error' as const,
+  message,
+  errors: [{ message }],
+  error: new Error(message),
+})
+
+const expectCachedRequestOptions = (tags: string[]) =>
+  ARTICLE_PAGE_REVALIDATE_SECONDS > 0
+    ? expect.objectContaining({
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
+        tags: expect.arrayContaining(tags),
+      })
+    : expect.objectContaining({
+        revalidate: false,
+        tags: expect.arrayContaining(tags),
+      })
+
+const expectPreviewRequestOptions = () => expect.objectContaining({ cache: 'no-store' })
 
   it('returns only supported wordpress countries in the fallback priority', () => {
     const priority = buildArticleCountryPriority('african-edition')
@@ -98,10 +111,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('ng', 'test-slug')]),
     )
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
@@ -151,10 +161,7 @@ describe('article-data', () => {
       'za',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('za', 'test-slug')]),
     )
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
@@ -213,7 +220,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expectPreviewRequestOptions(),
     )
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('preview-slug')
@@ -230,10 +237,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'uncached', asPreview: false }),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'uncached')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('ng', 'uncached')]),
     )
   })
 
@@ -261,7 +265,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expectPreviewRequestOptions(),
     )
 
     vi.mocked(fetchWordPressGraphQL).mockClear()
@@ -275,7 +279,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expectPreviewRequestOptions(),
     )
   })
 
@@ -376,10 +380,7 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'cached-slug', asPreview: false }),
-      expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'cached-slug')]),
-      }),
+      expectCachedRequestOptions([cacheTags.postSlug('ng', 'cached-slug')]),
     )
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('cached-slug')
