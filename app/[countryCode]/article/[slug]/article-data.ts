@@ -1,5 +1,6 @@
 import { ENV } from "@/config/env"
 import { cacheTags } from "@/lib/cache"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
 import {
   createCacheEntry as createKvCacheEntry,
@@ -19,8 +20,6 @@ import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
-
-export const ARTICLE_PAGE_REVALIDATE_SECONDS = 0
 
 const ARTICLE_CACHE_KEY_PREFIX = "article"
 const ARTICLE_CACHE_TTL_MS = 90_000
@@ -182,16 +181,16 @@ export async function loadArticle(
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
   const requestTags = [slugTag]
-  const revalidateSeconds = preview ? 0 : ARTICLE_PAGE_REVALIDATE_SECONDS
+  const fetchOptions = preview
+    ? { revalidate: CACHE_DURATIONS.NONE }
+    : { tags: requestTags }
 
   try {
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
       countryCode,
       POST_BY_SLUG_QUERY,
       { slug, asPreview: preview },
-      preview
-        ? { revalidate: revalidateSeconds }
-        : { tags: requestTags, revalidate: revalidateSeconds },
+      fetchOptions,
     )
 
     return asLoadArticleResult(countryCode, gqlResult, slug, preview)

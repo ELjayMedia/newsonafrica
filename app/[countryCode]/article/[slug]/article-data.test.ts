@@ -19,13 +19,13 @@ const {
   loadArticleWithFallback,
   normalizeCountryCode,
   ArticleTemporarilyUnavailableError,
-  ARTICLE_PAGE_REVALIDATE_SECONDS,
   resetArticleCountryPriorityCache,
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
+import { CACHE_DURATIONS } from '@/lib/cache/constants'
 
 describe('article-data', () => {
   beforeEach(() => {
@@ -52,6 +52,11 @@ describe('article-data', () => {
     errors: [{ message }],
     error: new Error(message),
   })
+
+  const getLastFetchOptions = () =>
+    vi.mocked(fetchWordPressGraphQL).mock.calls.at(-1)?.[3] as
+      | Record<string, unknown>
+      | undefined
 
   it('returns only supported wordpress countries in the fallback priority', () => {
     const priority = buildArticleCountryPriority('african-edition')
@@ -99,10 +104,12 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
       }),
     )
+    const options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('revalidate')
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
     expect(result.article.databaseId).toBe(99)
@@ -152,10 +159,12 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
       }),
     )
+    const options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('revalidate')
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
     expect(result.article.databaseId).toBe(42)
@@ -213,8 +222,11 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expect.objectContaining({ revalidate: CACHE_DURATIONS.NONE }),
     )
+    const options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('tags')
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('preview-slug')
   })
@@ -231,10 +243,12 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'uncached', asPreview: false }),
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'uncached')]),
       }),
     )
+    const options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('revalidate')
   })
 
   it('does not cache preview articles when loading with fallback', async () => {
@@ -261,8 +275,11 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expect.objectContaining({ revalidate: CACHE_DURATIONS.NONE }),
     )
+    let options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('tags')
 
     vi.mocked(fetchWordPressGraphQL).mockClear()
     vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
@@ -275,8 +292,11 @@ describe('article-data', () => {
       'ng',
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
-      expect.objectContaining({ revalidate: 0 }),
+      expect.objectContaining({ revalidate: CACHE_DURATIONS.NONE }),
     )
+    options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('tags')
   })
 
   it('returns cached article without querying wordpress when within ttl', async () => {
@@ -377,10 +397,12 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'cached-slug', asPreview: false }),
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'cached-slug')]),
       }),
     )
+    const options = getLastFetchOptions()
+    expect(options).toBeDefined()
+    expect(options).not.toHaveProperty('revalidate')
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('cached-slug')
     expect(result.sourceCountry).toBe('za')
