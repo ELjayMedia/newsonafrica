@@ -1,5 +1,4 @@
-import { fetchRecentPosts } from "@/lib/wordpress-api"
-import { fetchMostReadPosts } from "@/lib/wordpress/posts"
+import { fetchMostReadPosts, getLatestPostsForCountry } from "@/lib/wordpress/posts"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
 const normalizeArray = <T>(value: unknown): T[] => {
@@ -23,7 +22,7 @@ export async function fetchSidebarContent({
   requestUrl,
 }: SidebarContentRequest): Promise<SidebarContentPayload> {
   const [recentResult, mostReadResult] = await Promise.allSettled([
-    fetchRecentPosts(recentLimit, country),
+    getLatestPostsForCountry(country, recentLimit).then((result) => result.posts),
     fetchMostReadPosts(country, mostReadLimit, { requestUrl }),
   ])
 
