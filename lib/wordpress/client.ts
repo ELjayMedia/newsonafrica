@@ -192,16 +192,16 @@ export function fetchWordPressGraphQL<T>(
 ): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
-  const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
-  const shouldCache = resolvedRevalidate > CACHE_DURATIONS.NONE
   const dedupedTags = dedupe(options.tags)
+  const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
+  const shouldMemoize = resolvedRevalidate > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
   const bodyHash = createHash("sha1").update(body).digest("hex")
   const cacheKey = `${base}::${bodyHash}::${tagsKey}`
   const metadataKey = String(resolvedRevalidate)
-  const memoizedRequests = shouldCache ? getMemoizedRequests() : undefined
+  const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
 
-  if (shouldCache && memoizedRequests) {
+  if (shouldMemoize && memoizedRequests) {
     const cachedEntry = memoizedRequests.get(cacheKey) as
       | MemoizedRequestEntry
       | undefined
@@ -232,11 +232,18 @@ export function fetchWordPressGraphQL<T>(
     signal: options.signal,
   }
 
-  if (shouldCache) {
-    fetchOptions.next = {
-      revalidate: resolvedRevalidate,
-      ...(dedupedTags ? { tags: dedupedTags } : {}),
-    }
+  const nextCacheConfig =
+    resolvedRevalidate > CACHE_DURATIONS.NONE || (dedupedTags?.length ?? 0) > 0
+      ? {
+          ...(resolvedRevalidate > CACHE_DURATIONS.NONE
+            ? { revalidate: resolvedRevalidate }
+            : {}),
+          ...(dedupedTags && dedupedTags.length > 0 ? { tags: dedupedTags } : {}),
+        }
+      : undefined
+
+  if (nextCacheConfig) {
+    fetchOptions.next = nextCacheConfig
   } else {
     fetchOptions.cache = "no-store"
   }
@@ -268,7 +275,7 @@ export function fetchWordPressGraphQL<T>(
       throw error
     })
 
-  if (shouldCache && memoizedRequests) {
+  if (shouldMemoize && memoizedRequests) {
     const expiresAt =
       resolvedRevalidate > 0
         ? Date.now() + resolvedRevalidate * 1000

@@ -23,13 +23,12 @@ import {
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = 600
+export const revalidate = 0
 
 if (process.env.NODE_ENV !== "production") {
-  const expectedRevalidateSeconds = revalidate
-  if (ARTICLE_PAGE_REVALIDATE_SECONDS !== expectedRevalidateSeconds) {
+  if (ARTICLE_PAGE_REVALIDATE_SECONDS !== revalidate) {
     throw new Error(
-      `ARTICLE_PAGE_REVALIDATE_SECONDS (${ARTICLE_PAGE_REVALIDATE_SECONDS}) does not match ISR TTL (${expectedRevalidateSeconds})`,
+      `ARTICLE_PAGE_REVALIDATE_SECONDS (${ARTICLE_PAGE_REVALIDATE_SECONDS}) must remain ${revalidate} to rely on on-demand revalidation`,
     )
   }
 }
