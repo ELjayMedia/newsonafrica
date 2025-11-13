@@ -7,8 +7,9 @@ import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+export const dynamic = "force-static"
 export const dynamicParams = true
+export const revalidate = 300
 
 interface TagPageProps {
   params: { slug: string }
