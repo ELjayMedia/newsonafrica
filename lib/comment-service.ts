@@ -1,7 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase/browser-helpers"
-import type { Comment, NewComment, ReportCommentData, CommentSortOption, CommentReaction } from "@/lib/supabase-schema"
+import type {
+  Comment,
+  NewComment,
+  ReportCommentData,
+  CommentSortOption,
+  CommentReaction,
+  CommentReport,
+  CommentReportSummary,
+} from "@/lib/supabase-schema"
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
 import type { Database } from "@/types/supabase"
 import { v4 as uuidv4 } from "uuid"
@@ -17,6 +25,36 @@ const RATE_LIMIT_SECONDS = 10
 
 // Cache TTLs
 const COMMENT_SYNC_QUEUE = "comments-write-queue"
+
+type CommentReportRow = Database["public"]["Tables"]["comment_reports"]["Row"]
+
+type CommentQueryRow = Database["public"]["Tables"]["comments"]["Row"] & {
+  profile?: { username: string | null; avatar_url: string | null } | null
+  reports?: CommentReportRow[] | null
+}
+
+function summarizeReports(reports?: CommentReportRow[] | null): CommentReportSummary | undefined {
+  if (!reports || reports.length === 0) {
+    return undefined
+  }
+
+  const counts = new Map<string | null, number>()
+
+  for (const report of reports) {
+    const trimmed = report.reason?.trim() ?? null
+    const key = trimmed && trimmed.length > 0 ? trimmed : null
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+
+  const reasons = Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return {
+    total: reports.length,
+    reasons,
+  }
+}
 
 type ApiResult<T> = {
   success?: boolean
@@ -261,7 +299,9 @@ export async function fetchComments(
 
     const { data: commentsData, error } = await executeListQuery(client, "comments", (query) => {
       let commentsQuery = query
-        .select("*, profile:profiles(username, avatar_url)")
+        .select(
+          "*, profile:profiles(username, avatar_url), reports:comment_reports!comment_reports_comment_id_fkey(id, reported_by, reason, created_at)",
+        )
         .eq("post_id", postId)
         .is("parent_id", null)
 
@@ -304,7 +344,7 @@ export async function fetchComments(
       throw error
     }
 
-    const rootComments = (commentsData ?? []) as Comment[]
+    const rootComments = (commentsData ?? []) as CommentQueryRow[]
 
     const hasMore = rootComments.length > pageSize
     const limitedComments = hasMore ? rootComments.slice(0, pageSize) : rootComments
@@ -350,14 +390,16 @@ export async function fetchComments(
 
     const rootCommentIds = limitedComments.map((comment) => comment.id)
 
-    let replies: Comment[] = []
+    let replies: CommentQueryRow[] = []
     if (rootCommentIds.length > 0) {
       const { data: repliesData, error: repliesError } = await executeListQuery(
         client,
         "comments",
         (query) => {
           let repliesQuery = query
-            .select("*, profile:profiles(username, avatar_url)")
+            .select(
+              "*, profile:profiles(username, avatar_url), reports:comment_reports!comment_reports_comment_id_fkey(id, reported_by, reason, created_at)",
+            )
             .eq("post_id", postId)
             .in("parent_id", rootCommentIds)
 
@@ -374,7 +416,7 @@ export async function fetchComments(
         throw repliesError
       }
 
-      replies = (repliesData ?? []) as Comment[]
+      replies = (repliesData ?? []) as CommentQueryRow[]
     }
 
     const allCommentIds = [
@@ -442,6 +484,10 @@ export async function fetchComments(
     // Create a map of comment_id to reactions
     // Process all comments with profile data and reactions
     const processedComments: Comment[] = limitedComments.map((comment) => {
+      const reports = Array.isArray(comment.reports)
+        ? (comment.reports.filter(Boolean) as CommentReport[])
+        : []
+      const reportSummary = summarizeReports(reports)
       const reactionsForComment = reactionsByComment.get(comment.id)
       const reactionList = reactionsForComment
         ? Array.from(reactionsForComment.values())
@@ -457,11 +503,17 @@ export async function fetchComments(
         reactions: reactionList,
         reaction_count: reactionCount,
         user_reaction: userReaction,
+        reports,
+        report_summary: reportSummary,
       }
     })
 
     // Process all replies with profile data and reactions
     const processedReplies: Comment[] = replies.map((reply) => {
+      const reports = Array.isArray(reply.reports)
+        ? (reply.reports.filter(Boolean) as CommentReport[])
+        : []
+      const reportSummary = summarizeReports(reports)
       const reactionsForReply = reactionsByComment.get(reply.id)
       const reactionList = reactionsForReply
         ? Array.from(reactionsForReply.values())
@@ -477,6 +529,8 @@ export async function fetchComments(
         reactions: reactionList,
         reaction_count: reactionCount,
         user_reaction: userReaction,
+        reports,
+        report_summary: reportSummary,
       }
     })
 
@@ -673,7 +727,8 @@ export async function reportComment(data: ReportCommentData): Promise<void> {
     throw new Error("Comment reporting requires database migration. Please run the migration script first.")
   }
 
-  const { commentId, reportedBy: _reportedBy, reason } = data
+  const { commentId, reason } = data
+  const normalizedReason = reason.trim()
 
   try {
     let response: Response
@@ -681,7 +736,7 @@ export async function reportComment(data: ReportCommentData): Promise<void> {
       response = await fetch("/api/comments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: commentId, action: "report", reason }),
+        body: JSON.stringify({ id: commentId, action: "report", reason: normalizedReason }),
         credentials: "include",
       })
     } catch (error) {

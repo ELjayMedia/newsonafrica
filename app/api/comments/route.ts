@@ -71,7 +71,32 @@ const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
 const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
 
 const COMMENT_LIST_SELECT_COLUMNS =
-  "id, post_id, user_id, content, parent_id, country, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, profile:profiles(username, avatar_url)"
+  "id, post_id, user_id, content, parent_id, country, status, created_at, reviewed_at, reviewed_by, profile:profiles(username, avatar_url), reports:comment_reports!comment_reports_comment_id_fkey(id, reported_by, reason, created_at)"
+
+function aggregateReportData(
+  reports: CommentReportRow[] | null | undefined,
+): { total: number; reasons: Array<{ reason: string | null; count: number }> } | undefined {
+  if (!reports || reports.length === 0) {
+    return undefined
+  }
+
+  const counts = new Map<string | null, number>()
+
+  for (const report of reports) {
+    const trimmed = report.reason?.trim() ?? null
+    const key = trimmed && trimmed.length > 0 ? trimmed : null
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+
+  const reasons = Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return {
+    total: reports.length,
+    reasons,
+  }
+}
 
 function normalizeEditionCode(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -439,9 +464,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         : null
 
     const commentsWithProfiles = limitedComments.map((comment) => {
+      const reports = Array.isArray(comment.reports)
+        ? (comment.reports.filter(Boolean) as CommentReportRow[])
+        : []
+      const reportSummary = aggregateReportData(reports)
+
       return {
         ...comment,
         profile: comment.profile ?? undefined,
+        reports,
+        ...(reportSummary ? { report_summary: reportSummary } : {}),
       }
     })
 
@@ -648,18 +680,37 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       user_id?: string | null
       post_id?: string | number | null
       country?: string | null
+      status?: string | null
     }
 
-    let updateData = {}
+    let updateData: Record<string, unknown> | null = null
+    let reportCreated = false
 
     switch (action) {
-      case "report":
-        updateData = {
-          status: "flagged",
-          reported_by: session.user.id,
-          report_reason: reason,
+      case "report": {
+        const normalizedReason = reason?.trim() ?? null
+        const { error: reportError } = await supabase
+          .from("comment_reports")
+          .insert({
+            comment_id: id,
+            reported_by: session.user.id,
+            reason: normalizedReason,
+          })
+
+        if (reportError) {
+          // Treat duplicate reports as success to keep UX simple
+          if (reportError.code !== "23505") {
+            throw new Error(`Failed to submit comment report: ${reportError.message}`)
+          }
+        } else {
+          reportCreated = true
+        }
+
+        if ((commentRecord.status ?? "active") === "active") {
+          updateData = { status: "flagged" }
         }
         break
+      }
       case "delete":
         // Only allow the author to delete their own comment
         if (commentRecord.user_id !== session.user.id) {
@@ -688,12 +739,14 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         break
     }
 
-    // Update the comment
-    // @ts-expect-error -- Supabase type inference does not recognize our generic schema in route handlers
-    const { error } = await supabase.from("comments").update(updateData).eq("id", id)
+    if (updateData) {
+      // Update the comment
+      // @ts-expect-error -- Supabase type inference does not recognize our generic schema in route handlers
+      const { error } = await supabase.from("comments").update(updateData).eq("id", id)
 
-    if (error) {
-      throw new Error(`Failed to ${action} comment: ${error.message}`)
+      if (error) {
+        throw new Error(`Failed to ${action} comment: ${error.message}`)
+      }
     }
 
     const targetEdition =
@@ -703,7 +756,20 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     if (targetPostId) {
       revalidateByTag(cacheTags.comments(targetEdition, targetPostId))
     }
-    return applyCookies(withCorsNoStore(request, successResponse({ success: true, action })))
+    const responsePayload: { success: true; action: CommentAction; statusUpdated?: boolean; reportCreated?: boolean } = {
+      success: true,
+      action,
+    }
+
+    if (updateData) {
+      responsePayload.statusUpdated = true
+    }
+
+    if (reportCreated) {
+      responsePayload.reportCreated = true
+    }
+
+    return applyCookies(withCorsNoStore(request, successResponse(responsePayload)))
   } catch (error) {
     return applyCookies(withCorsNoStore(request, handleApiError(error)))
   }

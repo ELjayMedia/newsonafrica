@@ -13,14 +13,14 @@ export type Comment = {
   created_at: string
   // Moderation fields
   status: "active" | "flagged" | "deleted"
-  reported_by?: string
-  report_reason?: string
   reviewed_at?: string
   reviewed_by?: string
   // New fields
   is_rich_text: boolean
   reaction_count: number
   user_reaction?: string | null
+  report_summary?: CommentReportSummary
+  reports?: CommentReport[]
   // For UI state
   isReplying?: boolean
   isEditing?: boolean
@@ -46,8 +46,23 @@ export type NewComment = {
 
 export type ReportCommentData = {
   commentId: string
-  reportedBy: string
   reason: string
+}
+
+export type CommentReport = {
+  id: string
+  comment_id: string
+  reported_by: string
+  reason: string | null
+  created_at: string
+}
+
+export type CommentReportSummary = {
+  total: number
+  reasons: Array<{
+    reason: string | null
+    count: number
+  }>
 }
 
 // For rate limiting
