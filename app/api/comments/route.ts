@@ -525,9 +525,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Rate limit: 10 seconds between comments
       if (timeDiff < 10000) {
         return applyCookies(
-          handleApiError(
-            new Error(
-              `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
+          withCorsNoStore(
+            request,
+            handleApiError(
+              new Error(
+                `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
+              ),
             ),
           ),
         )
@@ -567,19 +570,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Still return the comment, just without profile data
 
       revalidateByTag(commentTag)
-      return applyCookies(successResponse(comment))
+      return applyCookies(withCorsNoStore(request, successResponse(comment)))
     }
 
     // Return the comment with profile data
     revalidateByTag(commentTag)
     return applyCookies(
-      successResponse({
-        ...comment,
-        profile: {
-          username: profile.username,
-          avatar_url: profile.avatar_url,
-        },
-      }),
+      withCorsNoStore(
+        request,
+        successResponse({
+          ...comment,
+          profile: {
+            username: profile.username,
+            avatar_url: profile.avatar_url,
+          },
+        }),
+      ),
     )
   } catch (error) {
     return applyCookies(withCorsNoStore(request, handleApiError(error)))
@@ -624,7 +630,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     const { id, action, reason } = validateUpdateCommentPayload(body)
 
     if (action === "report" && !reason) {
-      return applyCookies(handleApiError(new Error("Report reason is required")))
+      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Report reason is required"))))
     }
 
     // Check if the comment exists
@@ -697,7 +703,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     if (targetPostId) {
       revalidateByTag(cacheTags.comments(targetEdition, targetPostId))
     }
-    return applyCookies(successResponse({ success: true, action }))
+    return applyCookies(withCorsNoStore(request, successResponse({ success: true, action })))
   } catch (error) {
     return applyCookies(withCorsNoStore(request, handleApiError(error)))
   }

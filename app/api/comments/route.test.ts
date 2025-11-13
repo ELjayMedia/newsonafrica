@@ -225,6 +225,7 @@ describe("GET /api/comments", () => {
     const response = await GET(createRequest("&status=all"))
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const filteredComments = currentSupabaseClient.getLastCommentsResult()
     expect(filteredComments).toHaveLength(1)
@@ -271,6 +272,7 @@ describe("GET /api/comments", () => {
     const response = await GET(createRequest("&status=all"))
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const filteredComments = currentSupabaseClient.getLastCommentsResult()
     const returnedIds = filteredComments.map((comment) => comment.id)
@@ -285,6 +287,7 @@ describe("GET /api/comments", () => {
     const response = await GET(new NextRequest("https://example.com/api/comments"))
 
     expect(response.status).toBe(400)
+    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const body = (await response.json()) as { success: boolean; error: string; errors?: Record<string, string[]> }
     expect(body.success).toBe(false)
@@ -385,6 +388,7 @@ describe("POST /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         country: "sz",
@@ -414,6 +418,7 @@ describe("POST /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         country: "african-edition",
@@ -494,6 +499,7 @@ describe("PATCH /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
     expect(revalidateByTagMock).toHaveBeenCalledWith(
       cacheTags.comments("ng", "post-123"),
