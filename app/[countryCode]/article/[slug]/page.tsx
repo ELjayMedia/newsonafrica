@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound, redirect } from "next/navigation"
@@ -6,6 +7,7 @@ import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
+import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -203,6 +205,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const relatedPostId = resolveRelatedPostId(articleData)
   let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
 
+  const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
+  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
+
   if (relatedPostId !== null) {
     try {
       relatedPosts = await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6)
@@ -215,16 +220,21 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   }
 
   return (
-    <ArticleClientContent
-      slug={normalizedSlug}
-      countryCode={targetCountry}
-      sourceCountryCode={
-        resolvedArticle.status === "found"
-          ? resolvedArticle.sourceCountry
-          : resolvedArticle.staleSourceCountry
-      }
-      initialData={articleData}
-      relatedPosts={relatedPosts}
-    />
+    <>
+      <Suspense fallback={null}>
+        <ArticleJsonLd post={articleData} url={canonicalUrl} />
+      </Suspense>
+      <ArticleClientContent
+        slug={normalizedSlug}
+        countryCode={targetCountry}
+        sourceCountryCode={
+          resolvedArticle.status === "found"
+            ? resolvedArticle.sourceCountry
+            : resolvedArticle.staleSourceCountry
+        }
+        initialData={articleData}
+        relatedPosts={relatedPosts}
+      />
+    </>
   )
 }
