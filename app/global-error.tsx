@@ -1,6 +1,5 @@
-"use client"
-
-import { Button } from "@/components/ui/button"
+import { AppShell } from "@/components/AppShell"
+import { GlobalErrorContent } from "@/components/GlobalErrorContent"
 
 export default function GlobalError({
   reset,
@@ -9,12 +8,11 @@ export default function GlobalError({
   reset: () => void
 }) {
   return (
-    <html>
-      <body>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-4">Something went wrong!</h2>
-          <Button onClick={reset}>Try again</Button>
-        </div>
+    <html lang="en" className="font-sans">
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <AppShell>
+          <GlobalErrorContent reset={reset} />
+        </AppShell>
       </body>
     </html>
   )
