@@ -90,6 +90,8 @@ export interface Database {
           parent_id: string | null
           country: string | null
           status: string
+          reported_by: string | null
+          report_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reaction_count: number
@@ -104,6 +106,8 @@ export interface Database {
           parent_id?: string | null
           country?: string | null
           status?: string
+          reported_by?: string | null
+          report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reaction_count?: number
@@ -118,6 +122,8 @@ export interface Database {
           parent_id?: string | null
           country?: string | null
           status?: string
+          reported_by?: string | null
+          report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reaction_count?: number
@@ -398,7 +404,15 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      column_exists: {
+        Args: {
+          table_name: string
+          column_name: string
+        }
+        Returns: {
+          exists: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
