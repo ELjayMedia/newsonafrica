@@ -15,7 +15,7 @@ export function LayoutStructure({ children, countryCode }: LayoutStructureProps)
   const resolvedCountry = (countryCode ?? DEFAULT_COUNTRY).toLowerCase()
 
   return (
-    <Stack space={6} className="space-y-6">
+    <Stack space={6} className="mx-auto w-full max-w-[980px] space-y-6">
       <Suspense fallback={<div className="h-20 w-full rounded-xl border border-border/60 bg-card shadow-sm" />}>
         <Header countryCode={resolvedCountry} />
       </Suspense>
