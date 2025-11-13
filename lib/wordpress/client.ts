@@ -200,6 +200,8 @@ export function fetchWordPressGraphQL<T>(
   const shouldCache =
     resolvedRevalidate === false || resolvedRevalidate > CACHE_DURATIONS.NONE
   const dedupedTags = dedupe(options.tags)
+  const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
+  const shouldMemoize = resolvedRevalidate > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
   const bodyHash = createHash("sha1").update(body).digest("hex")
   const cacheKey = `${base}::${bodyHash}::${tagsKey}`
@@ -207,7 +209,7 @@ export function fetchWordPressGraphQL<T>(
     resolvedRevalidate === false ? "false" : String(resolvedRevalidate)
   const memoizedRequests = shouldCache ? getMemoizedRequests() : undefined
 
-  if (shouldCache && memoizedRequests) {
+  if (shouldMemoize && memoizedRequests) {
     const cachedEntry = memoizedRequests.get(cacheKey) as
       | MemoizedRequestEntry
       | undefined
@@ -274,7 +276,7 @@ export function fetchWordPressGraphQL<T>(
       throw error
     })
 
-  if (shouldCache && memoizedRequests) {
+  if (shouldMemoize && memoizedRequests) {
     const expiresAt =
       resolvedRevalidate === false
         ? Number.POSITIVE_INFINITY
