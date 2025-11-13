@@ -9,6 +9,7 @@ import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 interface Params {
   countryCode: string
@@ -16,8 +17,8 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
 export const dynamicParams = true
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 

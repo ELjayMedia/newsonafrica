@@ -1,9 +1,10 @@
 import { HomeContent } from "@/components/HomeContent";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { CACHE_DURATIONS } from "@/lib/cache/constants";
 
 import { buildHomeContentProps } from "./(home)/home-data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = CACHE_DURATIONS.MEDIUM;
 
 export default async function Page() {
   const baseUrl = getSiteBaseUrl();

@@ -4,8 +4,9 @@ import { HomeContent } from "@/components/HomeContent"
 import { buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
-export const dynamic = "force-dynamic"
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 type Props = { params: { countryCode: string } }
 
