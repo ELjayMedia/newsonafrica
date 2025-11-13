@@ -73,7 +73,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockResolvedValue(aggregatedWithContent)
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
     const result = await homeDataModule.fetchAggregatedHome(CACHE_TAGS)
 
     expect(result).toBe(aggregatedWithContent)
@@ -89,7 +89,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
     const result = await homeDataModule.fetchAggregatedHome(CACHE_TAGS)
 
     expect(result).toEqual({
@@ -109,7 +109,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
 
     const [first, second] = await Promise.all([
       homeDataModule.fetchAggregatedHome(CACHE_TAGS),
@@ -188,7 +188,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue([])
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 4)
 
     expect(frontPageSpy).toHaveBeenCalledWith(
@@ -264,7 +264,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue(fallbackPosts)
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 2)
 
     expect(frontPageSpy).toHaveBeenCalled()
@@ -384,7 +384,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       return []
     })
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
 
     const [first, second] = await Promise.all([
       homeDataModule.fetchAggregatedHomeForCountry("za", 4),
@@ -444,7 +444,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue(fallbackPosts)
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
 
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 3)
 
@@ -459,7 +459,7 @@ describe("buildCountryPosts", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
 
     const aggregatedFor = (countryCode: string): AggregatedHomeData => ({
       heroPost: {
@@ -617,7 +617,7 @@ describe("buildHomeContentProps", () => {
       .mockResolvedValue({ posts: [], hasNextPage: false, endCursor: null })
     const fpSpy = vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockResolvedValue([])
 
-    const homeDataModule = await import("./home-data")
+    const homeDataModule = await import("@/lib/home-builder")
 
     const result = await homeDataModule.buildHomeContentProps(BASE_URL)
 
