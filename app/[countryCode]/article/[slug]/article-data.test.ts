@@ -306,6 +306,8 @@ describe('article-data', () => {
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('cached-slug')
     expect(result.sourceCountry).toBe('za')
+    expect(result.canonicalCountry).toBe('za')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
     expect(result.tags).toEqual(
       expect.arrayContaining([
         cacheTags.postSlug('za', 'cached-slug'),
