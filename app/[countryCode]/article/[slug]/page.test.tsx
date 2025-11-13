@@ -63,7 +63,6 @@ import {
   ArticleTemporarilyUnavailableError,
   buildArticleCountryPriority,
   loadArticleWithFallback,
-  ARTICLE_PAGE_REVALIDATE_SECONDS,
 } from './article-data'
 import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
@@ -219,24 +218,27 @@ describe('ArticlePage', () => {
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('NEXT_REDIRECT')
 
-    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
-      'sz',
-      POST_BY_SLUG_QUERY,
-      expect.any(Object),
+    const calls = vi.mocked(fetchWordPressGraphQL).mock.calls
+    const szCall = calls.find(([country]) => country === 'sz')
+    const zaCall = calls.find(([country]) => country === 'za')
+    const szOptions = szCall?.[3] as Record<string, unknown> | undefined
+    const zaOptions = zaCall?.[3] as Record<string, unknown> | undefined
+    expect(szCall?.[0]).toBe('sz')
+    expect(szOptions).toBeDefined()
+    expect(szOptions).toEqual(
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('sz', 'test')]),
       }),
     )
-    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
-      'za',
-      POST_BY_SLUG_QUERY,
-      expect.any(Object),
+    expect(szOptions).not.toHaveProperty('revalidate')
+    expect(zaCall?.[0]).toBe('za')
+    expect(zaOptions).toBeDefined()
+    expect(zaOptions).toEqual(
       expect.objectContaining({
-        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test')]),
       }),
     )
+    expect(zaOptions).not.toHaveProperty('revalidate')
     expect(redirect).toHaveBeenCalledWith('/za/article/test')
   })
 

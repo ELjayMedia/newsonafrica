@@ -18,20 +18,11 @@ import {
   normalizeSlug,
   resolveEdition,
   sanitizeBaseUrl,
-  ARTICLE_PAGE_REVALIDATE_SECONDS,
 } from "./article-data"
 
 import { ArticleClientContent } from "./ArticleClientContent"
 
-export const revalidate = 0
-
-if (process.env.NODE_ENV !== "production") {
-  if (ARTICLE_PAGE_REVALIDATE_SECONDS !== revalidate) {
-    throw new Error(
-      `ARTICLE_PAGE_REVALIDATE_SECONDS (${ARTICLE_PAGE_REVALIDATE_SECONDS}) must remain ${revalidate} to rely on on-demand revalidation`,
-    )
-  }
-}
+export const dynamic = "force-static"
 export const dynamicParams = true
 
 type RouteParams = { params: { countryCode: string; slug: string } }
