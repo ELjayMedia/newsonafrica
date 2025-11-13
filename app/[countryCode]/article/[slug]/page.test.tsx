@@ -28,6 +28,10 @@ vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }))
 
+vi.mock('next/headers', () => ({
+  draftMode: vi.fn(() => ({ isEnabled: false })),
+}))
+
 const { capturedArticleClientProps, mockGetRelatedPostsForCountry } = vi.hoisted(() => ({
   capturedArticleClientProps: [] as Array<Record<string, any>>,
   mockGetRelatedPostsForCountry: vi.fn(),
@@ -49,6 +53,7 @@ import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { cacheTags } from '@/lib/cache'
 import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
+import { draftMode } from 'next/headers'
 import {
   POST_BY_SLUG_QUERY,
   POST_CATEGORIES_QUERY,
@@ -60,6 +65,7 @@ import {
   loadArticleWithFallback,
   ARTICLE_PAGE_REVALIDATE_SECONDS,
 } from './article-data'
+import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
 describe('ArticlePage', () => {
@@ -94,6 +100,7 @@ describe('ArticlePage', () => {
     vi.mocked(redirect).mockImplementation(() => {
       throw new Error('NEXT_REDIRECT')
     })
+    vi.mocked(draftMode).mockReturnValue({ isEnabled: false })
     capturedArticleClientProps.length = 0
     mockGetRelatedPostsForCountry.mockReset()
     mockGetRelatedPostsForCountry.mockResolvedValue([])
@@ -274,12 +281,50 @@ describe('ArticlePage', () => {
     expect(capturedArticleClientProps[0]?.initialData?.title).toBe('Cached article')
   })
 
+  it('passes the preview flag to the article loader when draft mode is enabled', async () => {
+    vi.mocked(draftMode).mockReturnValue({ isEnabled: true })
+    const loadSpy = vi.spyOn(articleDataModule, 'loadArticleWithFallback')
+    loadSpy.mockResolvedValue({
+      status: 'found',
+      article: createArticleNode(),
+      tags: [],
+      version: null,
+      canonicalCountry: 'sz',
+      sourceCountry: 'sz',
+    })
+
+    await Page({ params: { countryCode: 'sz', slug: 'test' } })
+
+    expect(loadSpy).toHaveBeenCalledWith('test', expect.any(Array), true)
+
+    loadSpy.mockRestore()
+  })
+
   it('throws the temporary error when no stale article exists', async () => {
     vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Service unavailable'))
 
     await expect(Page({ params: { countryCode: 'sz', slug: 'missing' } })).rejects.toBeInstanceOf(
       ArticleTemporarilyUnavailableError,
     )
+  })
+
+  it('passes the preview flag to the article loader when generating metadata in draft mode', async () => {
+    vi.mocked(draftMode).mockReturnValue({ isEnabled: true })
+    const loadSpy = vi.spyOn(articleDataModule, 'loadArticleWithFallback')
+    loadSpy.mockResolvedValue({
+      status: 'found',
+      article: createArticleNode(),
+      tags: [],
+      version: null,
+      canonicalCountry: 'sz',
+      sourceCountry: 'sz',
+    })
+
+    await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
+
+    expect(loadSpy).toHaveBeenCalledWith('test', expect.any(Array), true)
+
+    loadSpy.mockRestore()
   })
 
   it('generates metadata that prefers the dynamic OG image', async () => {

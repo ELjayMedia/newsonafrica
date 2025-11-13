@@ -394,7 +394,10 @@ export const TAG_BY_SLUG_QUERY = gql`
 
 export const POST_BY_SLUG_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
-  query PostBySlug($slug: ID!) {
+  query PostBySlug($slug: ID!, $asPreview: Boolean = false) {
+    post(id: $slug, idType: SLUG, asPreview: $asPreview) {
+      ...PostFields
+    }
     posts(
       first: 1
       where: {

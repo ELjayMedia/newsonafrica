@@ -97,7 +97,7 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'ng',
       POST_BY_SLUG_QUERY,
-      expect.any(Object),
+      expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
         revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
@@ -150,7 +150,7 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'za',
       POST_BY_SLUG_QUERY,
-      expect.any(Object),
+      expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
         revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
         tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
@@ -189,6 +189,36 @@ describe('article-data', () => {
     expect(result.failure).toMatchObject({ kind: 'graphql_error', message: 'GraphQL fatal' })
   })
 
+  it('requests preview content when preview mode is enabled', async () => {
+    const node = {
+      slug: 'preview-slug',
+      id: 'gid://wordpress/Post:777',
+      databaseId: 777,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Preview title',
+      excerpt: 'Preview excerpt',
+      content: '<p>Preview</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 5, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ post: node, posts: { nodes: [] } }) as any,
+    )
+
+    const result = await loadArticle('ng', 'preview-slug', true)
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
+      expect.objectContaining({ revalidate: 0 }),
+    )
+    expect(result.status).toBe('found')
+    expect(result.article.slug).toBe('preview-slug')
+  })
+
   it('fetches from wordpress when no cached article exists', async () => {
     vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
       graphqlSuccess({ posts: { nodes: [] } }) as any,
@@ -199,8 +229,53 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'ng',
       POST_BY_SLUG_QUERY,
-      expect.objectContaining({ slug: 'uncached' }),
-      expect.any(Object),
+      expect.objectContaining({ slug: 'uncached', asPreview: false }),
+      expect.objectContaining({
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
+        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'uncached')]),
+      }),
+    )
+  })
+
+  it('does not cache preview articles when loading with fallback', async () => {
+    const node = {
+      slug: 'preview-slug',
+      id: 'gid://wordpress/Post:555',
+      databaseId: 555,
+      date: '2024-05-01T00:00:00Z',
+      title: 'Preview title',
+      excerpt: 'Preview excerpt',
+      content: '<p>Preview</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 11, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ post: node, posts: { nodes: [] } }) as any,
+    )
+
+    await loadArticleWithFallback('preview-slug', ['ng'], true)
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
+      expect.objectContaining({ revalidate: 0 }),
+    )
+
+    vi.mocked(fetchWordPressGraphQL).mockClear()
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ post: node, posts: { nodes: [] } }) as any,
+    )
+
+    await loadArticleWithFallback('preview-slug', ['ng'], true)
+
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'ng',
+      POST_BY_SLUG_QUERY,
+      expect.objectContaining({ slug: 'preview-slug', asPreview: true }),
+      expect.objectContaining({ revalidate: 0 }),
     )
   })
 
@@ -300,8 +375,11 @@ describe('article-data', () => {
     expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
       'ng',
       POST_BY_SLUG_QUERY,
-      expect.objectContaining({ slug: 'cached-slug' }),
-      expect.any(Object),
+      expect.objectContaining({ slug: 'cached-slug', asPreview: false }),
+      expect.objectContaining({
+        revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS,
+        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'cached-slug')]),
+      }),
     )
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('cached-slug')
