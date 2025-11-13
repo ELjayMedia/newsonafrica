@@ -16,7 +16,19 @@ export type CacheMetricPayload = {
   metadata?: Record<string, unknown>
 }
 
-export type MetricsEventPayload = WebVitalsMetricPayload | CacheMetricPayload
+export type HomeRebuildMetricPayload = {
+  event: "home-rebuild"
+  edition: string
+  durationMs: number
+  status: "success" | "error"
+  ttfbDeltaMs?: number | null
+  errorMessage?: string
+}
+
+export type MetricsEventPayload =
+  | WebVitalsMetricPayload
+  | CacheMetricPayload
+  | HomeRebuildMetricPayload
 
 export type MetricsEnvelope = MetricsEventPayload & {
   timestamp: string

@@ -1,8 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
-
 vi.mock("server-only", () => ({}))
 
 const homeContentMock = vi.fn(() => <div data-testid="home-content" />)
@@ -16,7 +14,7 @@ vi.mock("@/components/HomeContent", () => ({
   HomeContent: homeContentMock,
 }))
 
-const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
+const getHomeContentSnapshotForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
   initialPosts: [{ id: `initial-${edition.code}` }],
   featuredPosts: [{ id: `featured-${edition.code}` }],
   countryPosts: { [edition.code]: [{ id: `country-${edition.code}` }] },
@@ -24,8 +22,7 @@ const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, editi
 }))
 
 vi.mock("../(home)/home-data", () => ({
-  HOME_FEED_REVALIDATE: CACHE_DURATIONS.MEDIUM,
-  buildHomeContentPropsForEdition: buildHomeContentPropsForEditionMock,
+  getHomeContentSnapshotForEdition: getHomeContentSnapshotForEditionMock,
 }))
 
 beforeAll(() => {
@@ -48,8 +45,8 @@ describe("CountryPage", () => {
   it("configures incremental static regeneration", async () => {
     const pageModule = await import("./page")
 
-    expect(pageModule.dynamic).toBeUndefined()
-    expect(pageModule.revalidate).toBe(CACHE_DURATIONS.MEDIUM)
+    expect(pageModule.dynamic).toBe("force-static")
+    expect(pageModule.revalidate).toBe(false)
   })
 
   it.each([
@@ -74,7 +71,7 @@ describe("CountryPage", () => {
       },
     }
     const propsSpy = vi
-      .spyOn(homeData, "buildHomeContentPropsForEdition")
+      .spyOn(homeData, "getHomeContentSnapshotForEdition")
       .mockResolvedValue(fakeProps)
 
     const { default: CountryPage } = await import("./page")
@@ -94,7 +91,7 @@ describe("CountryPage", () => {
 
   it("uses the aggregated home feed for the African edition fallback", async () => {
     const homeData = await import("../(home)/home-data")
-    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+    const propsSpy = vi.spyOn(homeData, "getHomeContentSnapshotForEdition")
 
     const { default: CountryPage } = await import("./page")
 
@@ -114,7 +111,7 @@ describe("CountryPage", () => {
 
   it("resolves the African alias to the aggregated home feed", async () => {
     const homeData = await import("../(home)/home-data")
-    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
+    const propsSpy = vi.spyOn(homeData, "getHomeContentSnapshotForEdition")
 
     const { default: CountryPage } = await import("./page")
 
