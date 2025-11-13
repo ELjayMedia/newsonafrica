@@ -21,6 +21,7 @@ vi.mock("next/cache", () => ({
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { revalidatePath } from "next/cache"
 import { cacheTags } from "@/lib/cache"
+import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
 import { POST } from "./route"
 
@@ -56,16 +57,16 @@ describe("/api/revalidate", () => {
     expect(revalidatePath).toHaveBeenCalledWith(getArticleUrl("my-story", "ng"))
 
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
+    const sectionTags = buildCacheTags({ country: "ng", section: "news" })
     expect(tagCalls).toEqual(
       expect.arrayContaining([
         cacheTags.posts("ng"),
-        cacheTags.categories("ng"),
-        cacheTags.tags("ng"),
         cacheTags.postSlug("ng", "my-story"),
         cacheTags.post("ng", "77"),
         cacheTags.category("ng", "politics"),
         cacheTags.tag("ng", "breaking"),
         cacheTags.tag("ng", "finance"),
+        ...sectionTags,
       ]),
     )
   })
@@ -84,13 +85,12 @@ describe("/api/revalidate", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/extra-path")
 
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
+    const sectionTags = buildCacheTags({ country: DEFAULT_COUNTRY, section: "frontpage" })
     expect(tagCalls).toEqual(
       expect.arrayContaining([
         cacheTags.posts(DEFAULT_COUNTRY),
-        cacheTags.categories(DEFAULT_COUNTRY),
-        cacheTags.tags(DEFAULT_COUNTRY),
-        "country:" + DEFAULT_COUNTRY,
-        "section:frontpage",
+        cacheTags.postSlug(DEFAULT_COUNTRY, "latest-update"),
+        ...sectionTags,
       ]),
     )
   })

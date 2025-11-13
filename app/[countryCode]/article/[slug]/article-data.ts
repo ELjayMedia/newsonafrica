@@ -180,10 +180,12 @@ export async function loadArticle(
   }
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
-  const requestTags = [slugTag]
+  const requestTags = Array.from(
+    new Set([slugTag, cacheTags.posts(countryCode)]),
+  )
   const fetchOptions = preview
     ? { revalidate: CACHE_DURATIONS.NONE }
-    : { tags: requestTags }
+    : { tags: requestTags, revalidate: CACHE_DURATIONS.NONE }
 
   try {
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(

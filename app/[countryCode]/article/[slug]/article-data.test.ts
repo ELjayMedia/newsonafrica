@@ -104,12 +104,16 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'test-slug')]),
+        tags: expect.arrayContaining([
+          cacheTags.postSlug('ng', 'test-slug'),
+          cacheTags.posts('ng'),
+        ]),
+        revalidate: CACHE_DURATIONS.NONE,
       }),
     )
     const options = getLastFetchOptions()
     expect(options).toBeDefined()
-    expect(options).not.toHaveProperty('revalidate')
+    expect(options).toMatchObject({ revalidate: CACHE_DURATIONS.NONE })
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
     expect(result.article.databaseId).toBe(99)
@@ -159,12 +163,16 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'test-slug', asPreview: false }),
       expect.objectContaining({
-        tags: expect.arrayContaining([cacheTags.postSlug('za', 'test-slug')]),
+        tags: expect.arrayContaining([
+          cacheTags.postSlug('za', 'test-slug'),
+          cacheTags.posts('za'),
+        ]),
+        revalidate: CACHE_DURATIONS.NONE,
       }),
     )
     const options = getLastFetchOptions()
     expect(options).toBeDefined()
-    expect(options).not.toHaveProperty('revalidate')
+    expect(options).toMatchObject({ revalidate: CACHE_DURATIONS.NONE })
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('test-slug')
     expect(result.article.databaseId).toBe(42)
@@ -243,12 +251,16 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'uncached', asPreview: false }),
       expect.objectContaining({
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'uncached')]),
+        tags: expect.arrayContaining([
+          cacheTags.postSlug('ng', 'uncached'),
+          cacheTags.posts('ng'),
+        ]),
+        revalidate: CACHE_DURATIONS.NONE,
       }),
     )
     const options = getLastFetchOptions()
     expect(options).toBeDefined()
-    expect(options).not.toHaveProperty('revalidate')
+    expect(options).toMatchObject({ revalidate: CACHE_DURATIONS.NONE })
   })
 
   it('does not cache preview articles when loading with fallback', async () => {
@@ -397,12 +409,16 @@ describe('article-data', () => {
       POST_BY_SLUG_QUERY,
       expect.objectContaining({ slug: 'cached-slug', asPreview: false }),
       expect.objectContaining({
-        tags: expect.arrayContaining([cacheTags.postSlug('ng', 'cached-slug')]),
+        tags: expect.arrayContaining([
+          cacheTags.postSlug('ng', 'cached-slug'),
+          cacheTags.posts('ng'),
+        ]),
+        revalidate: CACHE_DURATIONS.NONE,
       }),
     )
     const options = getLastFetchOptions()
     expect(options).toBeDefined()
-    expect(options).not.toHaveProperty('revalidate')
+    expect(options).toMatchObject({ revalidate: CACHE_DURATIONS.NONE })
     expect(result.status).toBe('found')
     expect(result.article.slug).toBe('cached-slug')
     expect(result.sourceCountry).toBe('za')

@@ -48,7 +48,8 @@ vi.mock('@/lib/wordpress/posts', () => ({
   getRelatedPostsForCountry: (...args: unknown[]) => mockGetRelatedPostsForCountry(...args),
 }))
 
-import Page, { generateMetadata } from './page'
+import Page, { generateMetadata, dynamic, dynamicParams } from './page'
+import * as pageModule from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { cacheTags } from '@/lib/cache'
 import { ENV } from '@/config/env'
@@ -68,6 +69,12 @@ import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
 describe('ArticlePage', () => {
+  it('exposes a static ISR shell without a TTL export', () => {
+    expect(dynamic).toBe('force-static')
+    expect(dynamicParams).toBe(true)
+    expect('revalidate' in pageModule).toBe(false)
+  })
+
   const createArticleNode = (overrides: Record<string, any> = {}) => ({
     databaseId: 1,
     id: 'gid://post/1',

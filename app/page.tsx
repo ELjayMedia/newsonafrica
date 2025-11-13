@@ -2,6 +2,7 @@ import { HomeContent } from "@/components/HomeContent";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { buildHomeContentProps } from "./(home)/home-data";
 
+export const dynamic = "force-static";
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
 export const revalidate = 300;
 

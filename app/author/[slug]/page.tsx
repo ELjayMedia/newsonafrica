@@ -12,6 +12,7 @@ interface AuthorPageProps {
 }
 
 export const runtime = "nodejs"
+export const dynamic = "force-static"
 export const revalidate = 3600 // Revalidate the page once per hour (3600 seconds)
 
 // Enhanced metadata generation for author pages

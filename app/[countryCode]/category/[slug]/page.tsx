@@ -18,6 +18,7 @@ interface Params {
 export const runtime = "nodejs"
 export const dynamicParams = true
 
+export const dynamic = "force-static"
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with category caching.
 export const revalidate = 300
 
