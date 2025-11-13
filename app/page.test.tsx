@@ -3,14 +3,12 @@ import { cleanup, render } from "@testing-library/react"
 
 vi.mock("server-only", () => ({}))
 
-const homeContentMock = vi.fn(
-  ({ initialData }: { initialData: { taggedPosts: unknown[] } }) => (
-    <div data-testid="home-content">
-      <div data-testid="initial-data" data-value={JSON.stringify(initialData)} />
-      <nav data-testid="country-navigation" />
-    </div>
-  ),
-)
+const homeContentMock = vi.fn((props: any) => (
+  <div data-testid="home-content">
+    <div data-testid="props" data-value={JSON.stringify(props)} />
+    <nav data-testid="country-navigation" />
+  </div>
+))
 
 vi.mock("@/components/HomeContent", () => ({
   HomeContent: homeContentMock,
@@ -19,6 +17,10 @@ vi.mock("@/components/HomeContent", () => ({
 vi.mock("@/lib/site-url", () => ({
   getSiteBaseUrl: () => "https://example.com",
   SITE_BASE_URL: "https://example.com",
+}))
+
+vi.mock("@/lib/utils/routing", () => ({
+  getServerCountry: () => "sz",
 }))
 
 describe("HomePage", () => {
@@ -39,12 +41,14 @@ describe("HomePage", () => {
     expect(pageModule.revalidate).toBe(false)
   })
 
-  it("passes the server-generated fallback into HomeContent", async () => {
+  it("passes the server-generated payload into HomeContent", async () => {
     const snapshot = {
-      initialPosts: [{ id: "one" }],
-      featuredPosts: [{ id: "two" }],
+      hero: { id: "one" },
+      secondaryStories: [{ id: "two" }],
+      featuredPosts: [{ id: "three" }],
+      categorySections: [],
       countryPosts: { za: [{ id: "za" }] },
-      initialData: { taggedPosts: [{ id: "tagged" }] },
+      contentState: "ready",
     }
 
     const homeDataModule = await import("./(home)/home-data")
@@ -59,10 +63,10 @@ describe("HomePage", () => {
     expect(snapshotSpy).toHaveBeenCalledWith("https://example.com")
     const [props] = homeContentMock.mock.calls.at(-1) ?? []
 
-    expect(props).toMatchObject(snapshot)
+    expect(props).toMatchObject({ ...snapshot, currentCountry: "sz" })
     expect(getByTestId("country-navigation")).toBeInTheDocument()
-    expect(JSON.parse(getByTestId("initial-data").getAttribute("data-value") ?? "{}")).toEqual(
-      snapshot.initialData,
-    )
+    expect(JSON.parse(getByTestId("props").getAttribute("data-value") ?? "{}")).toMatchObject({
+      currentCountry: "sz",
+    })
   })
 })

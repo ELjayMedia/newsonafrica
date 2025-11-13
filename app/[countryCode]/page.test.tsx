@@ -15,10 +15,12 @@ vi.mock("@/components/HomeContent", () => ({
 }))
 
 const getHomeContentSnapshotForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
-  initialPosts: [{ id: `initial-${edition.code}` }],
+  hero: { id: `hero-${edition.code}` },
+  secondaryStories: [{ id: `secondary-${edition.code}` }],
   featuredPosts: [{ id: `featured-${edition.code}` }],
+  categorySections: [],
   countryPosts: { [edition.code]: [{ id: `country-${edition.code}` }] },
-  initialData: { edition: edition.code },
+  contentState: "ready",
 }))
 
 vi.mock("../(home)/home-data", () => ({
@@ -60,15 +62,12 @@ describe("CountryPage", () => {
   ])("provides HomeContent props for the %s edition", async (countryCode, expectedCode) => {
     const homeData = await import("../(home)/home-data")
     const fakeProps = {
-      initialPosts: [{ id: `${expectedCode}-initial` }] as any,
-      featuredPosts: [{ id: `${expectedCode}-featured` }] as any,
-      countryPosts: { [expectedCode]: [{ id: `${expectedCode}-post` }] } as any,
-      initialData: {
-        taggedPosts: [],
-        recentPosts: [],
-        categories: [],
-        featuredPosts: [],
-      },
+      hero: { id: `${expectedCode}-hero` },
+      secondaryStories: [{ id: `${expectedCode}-secondary` }],
+      featuredPosts: [{ id: `${expectedCode}-featured` }],
+      categorySections: [],
+      countryPosts: { [expectedCode]: [{ id: `${expectedCode}-post` }] },
+      contentState: "ready",
     }
     const propsSpy = vi
       .spyOn(homeData, "getHomeContentSnapshotForEdition")
@@ -82,7 +81,7 @@ describe("CountryPage", () => {
     expect(homeContentMock).toHaveBeenCalledTimes(1)
     const [props] = homeContentMock.mock.calls[0]
 
-    expect(props).toEqual(fakeProps)
+    expect(props).toEqual({ ...fakeProps, currentCountry: expectedCode })
     expect(props.countryPosts).toHaveProperty(expectedCode)
     expect(notFoundMock).not.toHaveBeenCalled()
     expect(propsSpy).toHaveBeenCalledTimes(1)
@@ -103,7 +102,7 @@ describe("CountryPage", () => {
 
     const expectedProps = await propsSpy.mock.results[0]?.value
     expect(expectedProps).toBeDefined()
-    expect(props).toEqual(expectedProps)
+    expect(props).toEqual({ ...(expectedProps as any), currentCountry: "african-edition" })
     expect(props.countryPosts).toHaveProperty("african-edition")
     expect(notFoundMock).not.toHaveBeenCalled()
     propsSpy.mockRestore()
@@ -123,7 +122,7 @@ describe("CountryPage", () => {
 
     const expectedProps = await propsSpy.mock.results[0]?.value
     expect(expectedProps).toBeDefined()
-    expect(props).toEqual(expectedProps)
+    expect(props).toEqual({ ...(expectedProps as any), currentCountry: "african-edition" })
     expect(props.countryPosts).toHaveProperty("african-edition")
     expect(notFoundMock).not.toHaveBeenCalled()
     propsSpy.mockRestore()
