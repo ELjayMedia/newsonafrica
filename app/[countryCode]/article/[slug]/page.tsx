@@ -162,7 +162,13 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (usingStaleContent) {
-      throw resolvedArticle.error
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to serve article fallback content", {
+          error: resolvedArticle.error,
+          slug: normalizedSlug,
+          countryPriority,
+        })
+      }
     }
 
     notFound()
