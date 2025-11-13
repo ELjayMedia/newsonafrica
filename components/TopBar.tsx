@@ -39,7 +39,7 @@ export function TopBar() {
 
   return (
     <div className="hidden bg-foreground text-background md:block">
-      <Container size="2xl" className="py-2">
+      <Container size="2xl" className="max-w-[980px] py-2">
         <Flex justify="between" align="center" className="gap-4" wrap>
           <TypographySmall className="font-medium text-background/80">
             {showWelcome && user ? (
