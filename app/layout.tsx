@@ -11,6 +11,8 @@ import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { Toaster } from "@/components/ui/toaster"
+import { Container, Stack } from "@/components/ui/grid"
+import { TypographyMuted } from "@/components/ui/typography"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { ENV } from "@/config/env"
 import { Providers } from "./providers"
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -42,6 +44,7 @@ export default function RootLayout({
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
+  const currentYear = new Date().getFullYear()
 
   return (
     <html lang="en" className="font-sans">
@@ -50,7 +53,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className="font-sans">
+      <body className="min-h-screen bg-background font-sans antialiased">
         <Providers initialAuthState={null}>
           <ClientUserPreferencesProvider>
             <PreferredCountrySync />
@@ -59,28 +62,27 @@ export default function RootLayout({
             </Suspense>
             <ClientDynamicComponents />
             <TopBar />
-            <div className="flex-grow rounded-xs shadow-none bg-transparent">
-              <div className="mx-auto max-w-full md:max-w-[980px]">
-                <LayoutStructure>
-                  <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                    <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                  </main>
-                </LayoutStructure>
-              </div>
-            </div>
-            <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-              <Link href="/privacy-policy" className="hover:underline">
-                Privacy Policy
-              </Link>
-              {" | "}
-              <Link href="/terms-of-service" className="hover:underline">
-                Terms of Service
-              </Link>
-              {" | "}
-              <Link href="/sitemap.xml" className="hover:underline">
-                Sitemap
-              </Link>
-            </footer>
+            <Container size="2xl" className="flex w-full flex-1 flex-col gap-10 pb-20 pt-6 md:pt-10 lg:pt-12">
+              <LayoutStructure>{children}</LayoutStructure>
+              <footer className="border-t border-border/60 pt-6">
+                <Stack align="center" space={2} className="items-center space-y-2 text-center">
+                  <TypographyMuted className="text-sm">
+                    © {currentYear} News On Africa. All rights reserved.
+                  </TypographyMuted>
+                  <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+                    <Link href="/privacy-policy" className="text-muted-foreground transition-colors hover:text-foreground">
+                      Privacy Policy
+                    </Link>
+                    <Link href="/terms-of-service" className="text-muted-foreground transition-colors hover:text-foreground">
+                      Terms of Service
+                    </Link>
+                    <Link href="/sitemap.xml" className="text-muted-foreground transition-colors hover:text-foreground">
+                      Sitemap
+                    </Link>
+                  </div>
+                </Stack>
+              </footer>
+            </Container>
             <BottomNavigation />
             <Toaster />
           </ClientUserPreferencesProvider>

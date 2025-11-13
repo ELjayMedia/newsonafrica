@@ -2,6 +2,8 @@ import { Suspense, type ReactNode } from "react"
 
 import { Header } from "@/components/Header"
 import { Sidebar } from "@/components/Sidebar"
+import { Card } from "@/components/ui/card"
+import { NewsSidebarLayout, Stack } from "@/components/ui/grid"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 interface LayoutStructureProps {
@@ -13,30 +15,26 @@ export function LayoutStructure({ children, countryCode }: LayoutStructureProps)
   const resolvedCountry = (countryCode ?? DEFAULT_COUNTRY).toLowerCase()
 
   return (
-    <>
-      <Suspense fallback={<div className="h-16 bg-white shadow-md" />}>
+    <Stack space={6} className="space-y-6">
+      <Suspense fallback={<div className="h-20 w-full rounded-xl border border-border/60 bg-card shadow-sm" />}>
         <Header countryCode={resolvedCountry} />
       </Suspense>
-      <div className="mt-4 md:mt-6">
-        <div className="flex flex-col lg:flex-row lg:gap-2 lg:items-start">
-          <Suspense
-            fallback={
-              <div className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)] p-4">
-                <div className="h-8 bg-gray-200 w-1/3 mb-4 rounded"></div>
-                <div className="h-4 bg-gray-200 w-full mb-2 rounded"></div>
-                <div className="h-4 bg-gray-200 w-5/6 mb-4 rounded"></div>
-              </div>
-            }
-          >
-            {children}
+      <NewsSidebarLayout className="items-start gap-6">
+        <Suspense
+          fallback={
+            <Card className="h-[560px] w-full border border-border/60 shadow-sm" aria-hidden="true" />
+          }
+        >
+          <Card className="w-full overflow-hidden border border-border/60 shadow-sm">
+            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+          </Card>
+        </Suspense>
+        <aside>
+          <Suspense fallback={<Card className="h-[480px] w-full border border-border/60 shadow-sm" aria-hidden="true" />}>
+            <Sidebar country={resolvedCountry} />
           </Suspense>
-          <aside className="mt-6 lg:mt-0 lg:w-80 lg:flex-shrink-0">
-            <Suspense fallback={<div className="w-full bg-white shadow-md h-96" />}>
-              <Sidebar country={resolvedCountry} />
-            </Suspense>
-          </aside>
-        </div>
-      </div>
-    </>
+        </aside>
+      </NewsSidebarLayout>
+    </Stack>
   )
 }
