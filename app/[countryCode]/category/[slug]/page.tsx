@@ -16,8 +16,10 @@ interface Params {
 }
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
 export const dynamicParams = true
+
+// Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with category caching.
+export const revalidate = 300
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 

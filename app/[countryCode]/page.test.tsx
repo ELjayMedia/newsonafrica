@@ -24,7 +24,7 @@ const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, editi
 }))
 
 vi.mock("../(home)/home-data", () => ({
-  HOME_FEED_REVALIDATE: CACHE_DURATIONS.NONE,
+  HOME_FEED_REVALIDATE: CACHE_DURATIONS.MEDIUM,
   buildHomeContentPropsForEdition: buildHomeContentPropsForEditionMock,
 }))
 
@@ -45,11 +45,11 @@ afterEach(() => {
 })
 
 describe("CountryPage", () => {
-  it("exports dynamic rendering configuration", async () => {
+  it("configures incremental static regeneration", async () => {
     const pageModule = await import("./page")
 
-    expect(pageModule.dynamic).toBe("force-dynamic")
-    expect(pageModule.revalidate).toBeUndefined()
+    expect(pageModule.dynamic).toBeUndefined()
+    expect(pageModule.revalidate).toBe(CACHE_DURATIONS.MEDIUM)
   })
 
   it.each([

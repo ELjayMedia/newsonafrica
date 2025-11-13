@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import type { AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
@@ -35,11 +36,11 @@ describe("HomePage", () => {
     vi.restoreAllMocks()
   })
 
-  it("exports dynamic rendering configuration", async () => {
+  it("configures incremental static regeneration", async () => {
     const pageModule = await import("./page")
 
-    expect(pageModule.dynamic).toBe("force-dynamic")
-    expect(pageModule.revalidate).toBeUndefined()
+    expect(pageModule.dynamic).toBeUndefined()
+    expect(pageModule.revalidate).toBe(CACHE_DURATIONS.MEDIUM)
   })
 
   it("passes the server-generated fallback into HomeContent", async () => {
@@ -110,7 +111,7 @@ describe("HomePage", () => {
     const expectedFetchCalls = SUPPORTED_COUNTRIES.length * 2 + 1
 
     expect(fetchMock).toHaveBeenCalledTimes(expectedFetchCalls)
-    expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length * 2)
+    expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
     const [props] = homeContentMock.mock.calls.at(-1) ?? []
 
     expect(props).toMatchObject({
