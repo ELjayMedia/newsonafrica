@@ -84,6 +84,38 @@ const buildFallbackData = (
   }
 }
 
+interface CategorySectionProps {
+  config: CategoryConfig
+  posts: HomePost[]
+}
+
+const CategorySection = ({ config, posts }: CategorySectionProps) => {
+  const { name, layout, typeOverride } = config
+  const resolvedSlug = resolveCategorySlug(config)
+  const normalizedSlug = resolvedSlug.toLowerCase()
+
+  if (posts.length === 0) return null
+
+  const postsWithOverrides =
+    typeof typeOverride === "undefined"
+      ? posts
+      : posts.map((post) => ({
+          ...post,
+          type: typeOverride,
+        }))
+
+  return (
+    <section className="bg-white rounded-lg">
+      <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
+        <Link href={getCategoryUrl(normalizedSlug)} className="hover:text-blue-600 transition-colors">
+          {name}
+        </Link>
+      </h2>
+      <NewsGrid posts={postsWithOverrides} layout={layout} className="compact-grid" />
+    </section>
+  )
+}
+
 export function HomeContentClient({
   initialPosts = [],
   countryPosts = {},
@@ -157,36 +189,6 @@ export function HomeContentClient({
     },
   ]
 
-  const CategorySection = (config: CategoryConfig) => {
-    const { name, layout, typeOverride } = config
-    const resolvedSlug = resolveCategorySlug(config)
-    const normalizedSlug = resolvedSlug.toLowerCase()
-    const posts = categoryPosts[normalizedSlug] || []
-
-    if (posts.length === 0) return null
-
-    return (
-      <section key={normalizedSlug} className="bg-white rounded-lg">
-        <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
-          <Link
-            href={getCategoryUrl(normalizedSlug)}
-            className="hover:text-blue-600 transition-colors"
-          >
-            {name}
-          </Link>
-        </h2>
-        <NewsGrid
-          posts={posts.map((post) => ({
-            ...post,
-            type: typeOverride,
-          }))}
-          layout={layout}
-          className="compact-grid"
-        />
-      </section>
-    )
-  }
-
   const offlineNotification = isOffline ? (
     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3" role="status" aria-live="polite">
       <div className="flex">
@@ -258,7 +260,9 @@ export function HomeContentClient({
         <div className="grid grid-cols-1 gap-3 md:gap-4">
           {categoryConfigs.map((config) => {
             const normalizedSlug = resolveCategorySlug(config).toLowerCase()
-            return <CategorySection key={normalizedSlug} {...config} />
+            const postsForCategory = categoryPosts[normalizedSlug] || []
+
+            return <CategorySection key={normalizedSlug} config={config} posts={postsForCategory} />
           })}
         </div>
       </div>
