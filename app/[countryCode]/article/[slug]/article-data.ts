@@ -539,13 +539,19 @@ export async function loadArticleWithFallback(
   for (const [index, country] of fallbackCountries.entries()) {
     const cached = await readArticleCache(country, normalizedSlug)
     if (cached?.payload && !cached.isStale) {
-      const { article, sourceCountry } = cached.payload
-      const cacheSourceCountry = sourceCountry ?? country
+      const cachedPayload = buildCachedArticlePayload(
+        country,
+        normalizedSlug,
+        cached.payload,
+        cached.payload.sourceCountry ?? country,
+      )
       return {
         status: "found",
-        article,
-        tags: buildArticleCacheTags(cacheSourceCountry, normalizedSlug, article),
-        sourceCountry: cacheSourceCountry,
+        article: cachedPayload.article,
+        tags: cachedPayload.tags,
+        version: cachedPayload.version,
+        canonicalCountry: cachedPayload.canonicalCountry,
+        sourceCountry: cachedPayload.sourceCountry ?? country,
       }
     }
 
