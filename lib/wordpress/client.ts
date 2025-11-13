@@ -187,7 +187,7 @@ const buildGraphQLFailureResult = (
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
-  variables?: Record<string, string | number | string[]>,
+  variables?: Record<string, string | number | string[] | boolean>,
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)

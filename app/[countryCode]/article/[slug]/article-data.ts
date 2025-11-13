@@ -97,6 +97,7 @@ export const resolveEdition = (countryCode: string): SupportedEdition | null => 
 export const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "")
 
 type PostBySlugQueryResult = {
+  post?: PostFieldsFragment | null
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
@@ -135,14 +136,28 @@ const asLoadArticleResult = (
   countryCode: string,
   result: WordPressGraphQLResult<PostBySlugQueryResult>,
   slug: string,
+  preview: boolean,
 ): LoadArticleResult => {
   if (!result.ok) {
     return { status: "temporary_error", error: result.error, failure: result }
   }
 
-  const node = result.posts?.nodes?.find(
-    (value): value is PostFieldsFragment => Boolean(value),
-  )
+  let node: PostFieldsFragment | null = null
+
+  if (preview && result.post) {
+    node = result.post
+  }
+
+  if (!node) {
+    node =
+      result.posts?.nodes?.find(
+        (value): value is PostFieldsFragment => Boolean(value),
+      ) ?? null
+  }
+
+  if (!node && !preview && result.post) {
+    node = result.post
+  }
 
   if (!node) {
     return { status: "not_found" }
@@ -156,23 +171,30 @@ const asLoadArticleResult = (
   return { status: "found", article, tags, version, canonicalCountry }
 }
 
-export async function loadArticle(countryCode: string, slug: string): Promise<LoadArticleResult> {
+export async function loadArticle(
+  countryCode: string,
+  slug: string,
+  preview = false,
+): Promise<LoadArticleResult> {
   if (!hasWordPressEndpoint(countryCode)) {
     return { status: "not_found" }
   }
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
   const requestTags = [slugTag]
+  const revalidateSeconds = preview ? 0 : ARTICLE_PAGE_REVALIDATE_SECONDS
 
   try {
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
       countryCode,
       POST_BY_SLUG_QUERY,
-      { slug },
-      { tags: requestTags, revalidate: ARTICLE_PAGE_REVALIDATE_SECONDS },
+      { slug, asPreview: preview },
+      preview
+        ? { revalidate: revalidateSeconds }
+        : { tags: requestTags, revalidate: revalidateSeconds },
     )
 
-    return asLoadArticleResult(countryCode, gqlResult, slug)
+    return asLoadArticleResult(countryCode, gqlResult, slug, preview)
   } catch (error) {
     return { status: "temporary_error", error }
   }
@@ -448,6 +470,7 @@ const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): stri
 export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
+  preview = false,
 ): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
 
@@ -457,8 +480,12 @@ export async function loadArticleWithFallback(
     return { status: "not_found" }
   }
 
-  const primaryCached = await readArticleCache(primaryCountry, normalizedSlug)
-  if (primaryCached?.payload && !primaryCached.isStale) {
+  const shouldUseCache = !preview
+
+  const primaryCached = shouldUseCache
+    ? await readArticleCache(primaryCountry, normalizedSlug)
+    : null
+  if (shouldUseCache && primaryCached?.payload && !primaryCached.isStale) {
     const cachedPayload = buildCachedArticlePayload(
       primaryCountry,
       normalizedSlug,
@@ -477,7 +504,7 @@ export async function loadArticleWithFallback(
 
   const temporaryFailures: ArticleTemporaryFailure[] = []
 
-  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug)
+  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview)
 
   if (primaryArticle.status === "temporary_error") {
     temporaryFailures.push({
@@ -492,7 +519,9 @@ export async function loadArticleWithFallback(
       primaryArticle,
       primaryCountry,
     )
-    persistArticleCache(primaryCountry, normalizedSlug, cachedPayload)
+    if (shouldUseCache) {
+      persistArticleCache(primaryCountry, normalizedSlug, cachedPayload)
+    }
     return {
       status: "found",
       article: cachedPayload.article,
@@ -505,9 +534,11 @@ export async function loadArticleWithFallback(
 
   if (fallbackCountries.length === 0) {
     if (temporaryFailures.length > 0) {
-      const stale = await readStaleArticleFromCache(countryPriority, normalizedSlug)
+      const stale = shouldUseCache
+        ? await readStaleArticleFromCache(countryPriority, normalizedSlug)
+        : null
       const stalePayload =
-        stale && stale.article
+        shouldUseCache && stale?.article
           ? buildCachedArticlePayload(
               stale.sourceCountry ?? stale.cacheCountry,
               normalizedSlug,
@@ -515,20 +546,20 @@ export async function loadArticleWithFallback(
               stale.sourceCountry ?? stale.cacheCountry,
             )
           : null
-      const message = buildTemporaryFailureMessage(temporaryFailures)
-      const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message, {
-        staleArticle: stalePayload?.article ?? stale?.article ?? null,
-        staleSourceCountry: stalePayload?.sourceCountry ?? stale?.sourceCountry ?? stale?.cacheCountry ?? null,
-        staleCanonicalCountry: stalePayload?.canonicalCountry ?? null,
-      })
-      return {
-        status: "temporary_error",
-        error,
-        failures: temporaryFailures,
-        staleArticle: stalePayload?.article ?? stale?.article,
-        staleSourceCountry: stalePayload?.sourceCountry ?? stale?.sourceCountry ?? stale?.cacheCountry ?? null,
-        staleCanonicalCountry: stalePayload?.canonicalCountry ?? null,
-      }
+        const message = buildTemporaryFailureMessage(temporaryFailures)
+        const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message, {
+          staleArticle: stalePayload?.article ?? stale?.article ?? null,
+          staleSourceCountry: stalePayload?.sourceCountry ?? stale?.sourceCountry ?? stale?.cacheCountry ?? null,
+          staleCanonicalCountry: stalePayload?.canonicalCountry ?? null,
+        })
+        return {
+          status: "temporary_error",
+          error,
+          failures: temporaryFailures,
+          staleArticle: stalePayload?.article ?? stale?.article ?? null,
+          staleSourceCountry: stalePayload?.sourceCountry ?? stale?.sourceCountry ?? stale?.cacheCountry ?? null,
+          staleCanonicalCountry: stalePayload?.canonicalCountry ?? null,
+        }
     }
 
     return { status: "not_found" }
@@ -537,21 +568,23 @@ export async function loadArticleWithFallback(
   const fallbackLoadCandidates: Array<{ country: string; index: number }> = []
 
   for (const [index, country] of fallbackCountries.entries()) {
-    const cached = await readArticleCache(country, normalizedSlug)
-    if (cached?.payload && !cached.isStale) {
-      const cachedPayload = buildCachedArticlePayload(
-        country,
-        normalizedSlug,
-        cached.payload,
-        cached.payload.sourceCountry ?? country,
-      )
-      return {
-        status: "found",
-        article: cachedPayload.article,
-        tags: cachedPayload.tags,
-        version: cachedPayload.version,
-        canonicalCountry: cachedPayload.canonicalCountry,
-        sourceCountry: cachedPayload.sourceCountry ?? country,
+    if (shouldUseCache) {
+      const cached = await readArticleCache(country, normalizedSlug)
+      if (cached?.payload && !cached.isStale) {
+        const cachedPayload = buildCachedArticlePayload(
+          country,
+          normalizedSlug,
+          cached.payload,
+          cached.payload.sourceCountry ?? country,
+        )
+        return {
+          status: "found",
+          article: cachedPayload.article,
+          tags: cachedPayload.tags,
+          version: cachedPayload.version,
+          canonicalCountry: cachedPayload.canonicalCountry,
+          sourceCountry: cachedPayload.sourceCountry ?? country,
+        }
       }
     }
 
@@ -561,7 +594,7 @@ export async function loadArticleWithFallback(
   const fallbackEntries = fallbackLoadCandidates.map(({ country, index }) => ({
     country,
     index,
-    ready: loadArticle(country, normalizedSlug).then(
+    ready: loadArticle(country, normalizedSlug, preview).then(
       (result):
         | { type: "fulfilled"; country: string; index: number; result: LoadArticleResult }
         | { type: "rejected"; country: string; index: number; error: unknown } =>
@@ -606,7 +639,9 @@ export async function loadArticleWithFallback(
         result,
         country,
       )
-      persistArticleCache(country, normalizedSlug, cachedPayload)
+      if (shouldUseCache) {
+        persistArticleCache(country, normalizedSlug, cachedPayload)
+      }
       return {
         status: "found",
         article: cachedPayload.article,
@@ -619,9 +654,11 @@ export async function loadArticleWithFallback(
   }
 
   if (temporaryFailures.length > 0) {
-    const stale = await readStaleArticleFromCache(countryPriority, normalizedSlug)
+    const stale = shouldUseCache
+      ? await readStaleArticleFromCache(countryPriority, normalizedSlug)
+      : null
     const stalePayload =
-      stale && stale.article
+      shouldUseCache && stale?.article
         ? buildCachedArticlePayload(
             stale.sourceCountry ?? stale.cacheCountry,
             normalizedSlug,
@@ -639,7 +676,7 @@ export async function loadArticleWithFallback(
       status: "temporary_error",
       error,
       failures: temporaryFailures,
-      staleArticle: stalePayload?.article ?? stale?.article,
+      staleArticle: stalePayload?.article ?? stale?.article ?? null,
       staleSourceCountry: stalePayload?.sourceCountry ?? stale?.sourceCountry ?? stale?.cacheCountry ?? null,
       staleCanonicalCountry: stalePayload?.canonicalCountry ?? null,
     }

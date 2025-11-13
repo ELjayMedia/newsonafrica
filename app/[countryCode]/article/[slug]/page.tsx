@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { draftMode } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
 import { ENV } from "@/config/env"
@@ -62,6 +63,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const routeCountryAlias = normalizeRouteCountry(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
+  const { isEnabled: preview } = draftMode()
 
   if (!edition) {
     const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
@@ -87,7 +89,11 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+  const resolvedArticle = await loadArticleWithFallback(
+    normalizedSlug,
+    countryPriority,
+    preview,
+  )
   const article =
     resolvedArticle.status === "found"
       ? resolvedArticle.article
@@ -136,6 +142,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 export default async function ArticlePage({ params }: RouteParamsPromise) {
   const { countryCode, slug } = await params
   const edition = resolveEdition(countryCode)
+  const { isEnabled: preview } = draftMode()
 
   if (!edition) {
     notFound()
@@ -145,7 +152,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const routeCountry = normalizeRouteCountry(countryCode)
   const normalizedSlug = normalizeSlug(slug)
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+  const resolvedArticle = await loadArticleWithFallback(
+    normalizedSlug,
+    countryPriority,
+    preview,
+  )
 
   if (resolvedArticle.status === "not_found") {
     notFound()
