@@ -1,5 +1,6 @@
 import { fetchSingleTag, fetchTaggedPosts } from "@/lib/wp-server/tags"
 import { TagPageSkeleton } from "@/components/TagPageSkeleton"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
@@ -7,8 +8,9 @@ import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { TagFeedClient } from "./TagFeedClient"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+export const dynamic = "force-static"
 export const dynamicParams = true
+export const revalidate = CACHE_DURATIONS.MEDIUM
 
 interface TagPageProps {
   params: { slug: string }
