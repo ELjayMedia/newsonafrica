@@ -569,15 +569,17 @@ export async function loadArticleWithFallback(
     ),
   }))
 
-  const pending = [...fallbackEntries]
+  const resolutions = fallbackEntries.map((entry) => entry.ready)
+  const remainingPositions = new Set(resolutions.map((_, position) => position))
 
-  while (pending.length > 0) {
-    const resolution = await Promise.race(pending.map((entry) => entry.ready))
+  while (remainingPositions.size > 0) {
+    const resolution = await Promise.race(
+      Array.from(remainingPositions, (position) =>
+        resolutions[position]!.then((value) => ({ ...value, position })),
+      ),
+    )
 
-    const pendingIndex = pending.findIndex((entry) => entry.index === resolution.index)
-    if (pendingIndex !== -1) {
-      pending.splice(pendingIndex, 1)
-    }
+    remainingPositions.delete(resolution.position)
 
     if (resolution.type === "rejected") {
       temporaryFailures.push({ country: resolution.country, error: resolution.error })

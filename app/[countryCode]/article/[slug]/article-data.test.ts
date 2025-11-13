@@ -464,6 +464,74 @@ describe('article-data', () => {
     await vi.advanceTimersByTimeAsync(1_000)
   })
 
+  it('returns the fastest successful fallback even when a higher-priority country resolves later', async () => {
+    vi.useFakeTimers()
+
+    const zaNode = {
+      slug: 'priority-slug',
+      id: 'gid://wordpress/Post:404',
+      databaseId: 404,
+      date: '2024-05-01T00:00:00Z',
+      title: 'ZA title',
+      excerpt: 'ZA excerpt',
+      content: '<p>ZA body</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 17, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    const keNode = {
+      slug: 'priority-slug',
+      id: 'gid://wordpress/Post:405',
+      databaseId: 405,
+      date: '2024-05-01T00:00:00Z',
+      title: 'KE title',
+      excerpt: 'KE excerpt',
+      content: '<p>KE body</p>',
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 18, name: 'Reporter', slug: 'reporter' } },
+    }
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((countryCode, _query, variables) => {
+      if (countryCode === 'ng') {
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+      }
+
+      if (countryCode === 'za') {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(graphqlSuccess({ posts: { nodes: [zaNode] } }))
+          }, 120)
+        }) as any
+      }
+
+      if (countryCode === 'ke') {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(graphqlSuccess({ posts: { nodes: [keNode] } }))
+          }, 20)
+        }) as any
+      }
+
+      throw new Error(`Unexpected country: ${countryCode}`)
+    })
+
+    const resultPromise = loadArticleWithFallback('priority-slug', ['ng', 'za', 'ke'])
+
+    await vi.advanceTimersByTimeAsync(25)
+    await Promise.resolve()
+
+    const result = await resultPromise
+    expect(result.status).toBe('found')
+    expect(result.sourceCountry).toBe('ke')
+    expect(result.article.slug).toBe('priority-slug')
+    expect(result.canonicalCountry).toBe('ke')
+    expect(result.version).toBe('2024-05-01t00-00-00z')
+
+    await vi.advanceTimersByTimeAsync(1_000)
+  })
+
   it('aggregates temporary failures when every country encounters an error', async () => {
     const errorNg = new Error('ng outage')
     const errorZa = new Error('za outage')
