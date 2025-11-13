@@ -20,7 +20,7 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
-export const ARTICLE_PAGE_REVALIDATE_SECONDS = 600
+export const ARTICLE_PAGE_REVALIDATE_SECONDS = 0
 
 const ARTICLE_CACHE_KEY_PREFIX = "article"
 const ARTICLE_CACHE_TTL_MS = 90_000
