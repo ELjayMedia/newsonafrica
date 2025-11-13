@@ -545,13 +545,14 @@ export async function loadArticleWithFallback(
         cached.payload,
         cached.payload.sourceCountry ?? country,
       )
+      const cacheSourceCountry = cachedPayload.sourceCountry ?? country
       return {
         status: "found",
         article: cachedPayload.article,
         tags: cachedPayload.tags,
         version: cachedPayload.version,
         canonicalCountry: cachedPayload.canonicalCountry,
-        sourceCountry: cachedPayload.sourceCountry ?? country,
+        sourceCountry: cacheSourceCountry,
       }
     }
 
