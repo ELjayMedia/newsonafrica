@@ -58,6 +58,22 @@ describe("fetchComments", () => {
             status: "active",
             is_rich_text: false,
             reaction_count: 0,
+            reports: [
+              {
+                id: "report-1",
+                comment_id: "comment-1",
+                reported_by: "user-9",
+                reason: "spam",
+                created_at: "2024-01-02T00:00:00Z",
+              },
+              {
+                id: "report-2",
+                comment_id: "comment-1",
+                reported_by: "user-8",
+                reason: null,
+                created_at: "2024-01-03T00:00:00Z",
+              },
+            ],
           },
         ],
         error: null,
@@ -154,6 +170,14 @@ describe("fetchComments", () => {
     ])
     expect(rootComment.reaction_count).toBe(3)
     expect(rootComment.user_reaction).toBe("like")
+    expect(rootComment.reports).toHaveLength(2)
+    expect(rootComment.report_summary).toEqual({
+      total: 2,
+      reasons: [
+        { reason: "spam", count: 1 },
+        { reason: null, count: 1 },
+      ],
+    })
 
     expect(rootComment.replies).toHaveLength(1)
     const [reply] = rootComment.replies ?? []

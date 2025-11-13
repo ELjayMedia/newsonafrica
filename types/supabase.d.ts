@@ -90,8 +90,6 @@ export interface Database {
           parent_id: string | null
           country: string | null
           status: string
-          reported_by: string | null
-          report_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reaction_count: number
@@ -106,8 +104,6 @@ export interface Database {
           parent_id?: string | null
           country?: string | null
           status?: string
-          reported_by?: string | null
-          report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reaction_count?: number
@@ -122,12 +118,34 @@ export interface Database {
           parent_id?: string | null
           country?: string | null
           status?: string
-          reported_by?: string | null
-          report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reaction_count?: number
           is_rich_text?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      comment_reports: {
+        Row: {
+          id: string
+          comment_id: string
+          reported_by: string
+          reason: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          reported_by: string
+          reason?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          reported_by?: string
+          reason?: string | null
           created_at?: string
         }
         Relationships: []
