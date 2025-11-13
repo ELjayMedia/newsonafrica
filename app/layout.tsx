@@ -1,22 +1,10 @@
 import type React from "react"
-import { Suspense } from "react"
 import type { Metadata } from "next"
-import Link from "next/link"
 
 import { SchemaOrg } from "@/components/SchemaOrg"
-import { LayoutStructure } from "@/components/LayoutStructure"
-import { TopBar } from "@/components/TopBar"
-import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
-import { PreferredCountrySync } from "@/components/PreferredCountrySync"
-import { BottomNavigation } from "@/components/BottomNavigation"
-import { ScrollToTop } from "@/components/ScrollToTop"
-import { Toaster } from "@/components/ui/toaster"
-import { Container, Stack } from "@/components/ui/grid"
-import { TypographyMuted } from "@/components/ui/typography"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { ENV } from "@/config/env"
-import { Providers } from "./providers"
-import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
+import { AppShell } from "@/components/AppShell"
 
 import "./globals.css"
 
@@ -44,8 +32,6 @@ export default function RootLayout({
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
-  const currentYear = new Date().getFullYear()
-
   return (
     <html lang="en" className="font-sans">
       <head>
@@ -54,39 +40,7 @@ export default function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers initialAuthState={null}>
-          <ClientUserPreferencesProvider>
-            <PreferredCountrySync />
-            <Suspense fallback={null}>
-              <ScrollToTop />
-            </Suspense>
-            <ClientDynamicComponents />
-            <TopBar />
-            <Container size="2xl" className="flex w-full flex-1 flex-col gap-10 pb-20 pt-6 md:pt-10 lg:pt-12">
-              <LayoutStructure>{children}</LayoutStructure>
-              <footer className="border-t border-border/60 pt-6">
-                <Stack align="center" space={2} className="items-center space-y-2 text-center">
-                  <TypographyMuted className="text-sm">
-                    © {currentYear} News On Africa. All rights reserved.
-                  </TypographyMuted>
-                  <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-                    <Link href="/privacy-policy" className="text-muted-foreground transition-colors hover:text-foreground">
-                      Privacy Policy
-                    </Link>
-                    <Link href="/terms-of-service" className="text-muted-foreground transition-colors hover:text-foreground">
-                      Terms of Service
-                    </Link>
-                    <Link href="/sitemap.xml" className="text-muted-foreground transition-colors hover:text-foreground">
-                      Sitemap
-                    </Link>
-                  </div>
-                </Stack>
-              </footer>
-            </Container>
-            <BottomNavigation />
-            <Toaster />
-          </ClientUserPreferencesProvider>
-        </Providers>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   )
