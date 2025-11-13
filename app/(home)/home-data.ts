@@ -1,6 +1,7 @@
 import "server-only"
 
 import { cache } from "react"
+import { unstable_cache as unstableCache } from "next/cache"
 import pLimit from "p-limit"
 
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
@@ -27,7 +28,7 @@ import { getPostsForCategories } from "@/lib/wp-server/categories"
 import type { Category } from "@/types/content"
 import type { CountryPosts, HomePost } from "@/types/home"
 
-export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.NONE
+export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const HOME_FEED_FALLBACK_LIMIT = 6
 
 const createEmptyAggregatedHome = (): AggregatedHomeData => ({
@@ -531,7 +532,9 @@ export async function buildCountryPosts(
   }
 }
 
-export async function buildHomeContentProps(_baseUrl: string): Promise<HomeContentServerProps> {
+async function buildHomeContentPropsUncached(
+  _baseUrl: string,
+): Promise<HomeContentServerProps> {
   const { countryPosts, africanAggregate } =
     (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
@@ -555,7 +558,7 @@ export async function buildHomeContentProps(_baseUrl: string): Promise<HomeConte
   }
 }
 
-export async function buildHomeContentPropsForEdition(
+async function buildHomeContentPropsForEditionUncached(
   _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
@@ -583,4 +586,120 @@ export async function buildHomeContentPropsForEdition(
     countryPosts,
     initialData: enrichedInitialData,
   }
+}
+
+const mergeTags = (
+  ...tagGroups: Array<readonly string[] | string[] | undefined>
+): string[] => {
+  const set = new Set<string>()
+  for (const group of tagGroups) {
+    if (!group) continue
+    for (const tag of group) {
+      if (tag) {
+        set.add(tag)
+      }
+    }
+  }
+
+  return Array.from(set)
+}
+
+type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
+
+const isNextCacheUnavailableError = (error: unknown): boolean =>
+  Boolean(
+    error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      (error as { digest?: unknown }).digest === "E469",
+  )
+
+const shouldUseFallbackCache =
+  typeof process !== "undefined" &&
+  (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST))
+
+const createCachedFetcher = (
+  keyParts: string[],
+  tags: readonly string[] | string[],
+  fn: HomeContentFetcher,
+): HomeContentFetcher => {
+  if (shouldUseFallbackCache) {
+    const fallbackStore = new Map<string, Promise<HomeContentServerProps>>()
+
+    return async (_baseUrl: string) => {
+      const fallbackKey = JSON.stringify([keyParts, _baseUrl])
+
+      if (!fallbackStore.has(fallbackKey)) {
+        fallbackStore.set(fallbackKey, fn(_baseUrl))
+      }
+
+      return fallbackStore.get(fallbackKey)!
+    }
+  }
+
+  const cached = unstableCache(fn, keyParts, {
+    revalidate: HOME_FEED_REVALIDATE,
+    tags,
+  })
+
+  return async (_baseUrl: string) => {
+    try {
+      return await cached(_baseUrl)
+    } catch (error) {
+      if (isNextCacheUnavailableError(error)) {
+        return fn(_baseUrl)
+      }
+
+      throw error
+    }
+  }
+}
+
+const cachedBuildHomeContentProps = createCachedFetcher(
+  ["home-content", "default"],
+  HOME_FEED_CACHE_TAGS,
+  buildHomeContentPropsUncached,
+)
+
+const editionCache = new Map<string, HomeContentFetcher>()
+
+const getEditionCache = (edition: SupportedEdition) => {
+  const cacheKey = edition.code
+  let cached = editionCache.get(cacheKey)
+
+  if (!cached) {
+    const editionTags = buildCacheTags({
+      country: isCountryEdition(edition) ? edition.code : undefined,
+      section: "home-feed",
+      extra: [
+        `edition:${edition.code}`,
+        isAfricanEdition(edition) ? "edition:africa" : undefined,
+      ],
+    })
+
+    cached = createCachedFetcher(
+      ["home-content", cacheKey],
+      mergeTags(HOME_FEED_CACHE_TAGS, editionTags),
+      async (_baseUrl: string) =>
+        buildHomeContentPropsForEditionUncached(_baseUrl, edition),
+    )
+
+    editionCache.set(cacheKey, cached)
+  }
+
+  return cached
+}
+
+export async function buildHomeContentProps(
+  _baseUrl: string,
+): Promise<HomeContentServerProps> {
+  return cachedBuildHomeContentProps(_baseUrl)
+}
+
+export async function buildHomeContentPropsForEdition(
+  _baseUrl: string,
+  edition: SupportedEdition,
+): Promise<HomeContentServerProps> {
+  const cached = getEditionCache(edition)
+  return cached(_baseUrl)
 }

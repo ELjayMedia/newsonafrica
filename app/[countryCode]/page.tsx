@@ -5,7 +5,8 @@ import { buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const dynamic = "force-dynamic"
+// Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
+export const revalidate = 300
 
 type Props = { params: { countryCode: string } }
 
