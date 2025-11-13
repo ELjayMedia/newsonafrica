@@ -32,7 +32,9 @@ The application follows a feature-based architecture with the following structur
 news-on-africa/
 ├── app/                         # Next.js App Router pages, layouts, and route groups
 │   ├── api/                     # API routes
-│   ├── auth/                    # Authentication flows (login, register, reset password)
+│   ├── auth/                    # Sign-in experience and supporting flows
+│   ├── register/                # Dedicated registration route
+│   ├── reset-password/          # Password reset route
 │   ├── [countryCode]/           # Country-specific edition routing
 │   │   ├── article/[slug]/      # Article pages and supporting components
 │   │   └── category/[slug]/     # Category landing pages
