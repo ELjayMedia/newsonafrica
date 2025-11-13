@@ -1,10 +1,8 @@
 import { HomeContent } from "@/components/HomeContent";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { CACHE_DURATIONS } from "@/lib/cache/constants";
+import { HOME_FEED_REVALIDATE, buildHomeContentProps } from "./(home)/home-data";
 
-import { buildHomeContentProps } from "./(home)/home-data";
-
-export const revalidate = CACHE_DURATIONS.MEDIUM;
+export const revalidate = HOME_FEED_REVALIDATE;
 
 export default async function Page() {
   const baseUrl = getSiteBaseUrl();

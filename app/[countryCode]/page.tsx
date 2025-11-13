@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation"
 
 import { HomeContent } from "@/components/HomeContent"
-import { buildHomeContentPropsForEdition } from "../(home)/home-data"
+import { HOME_FEED_REVALIDATE, buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
-export const revalidate = CACHE_DURATIONS.MEDIUM
+const COUNTRY_PAGE_REVALIDATE = HOME_FEED_REVALIDATE
+
+export const revalidate = COUNTRY_PAGE_REVALIDATE
 
 type Props = { params: { countryCode: string } }
 
