@@ -1,26 +1,45 @@
 import { JsonLd } from "@/components/JsonLd"
 import { getNewsArticleSchema } from "@/lib/schema"
 import type { Post } from "@/lib/types"
+import type { WordPressPost } from "@/types/wp"
 import { ENV } from "@/config/env"
 
+type ArticleJsonLdPost = Post | WordPressPost
+
 interface ArticleJsonLdProps {
-  post: Post
+  post: ArticleJsonLdPost
   url: string
 }
 
 export function ArticleJsonLd({ post, url }: ArticleJsonLdProps) {
-  const authorSlug = post.author.node.slug
+  const authorNode =
+    ((post as Post).author?.node ?? (post as WordPressPost).author?.node) ??
+    ((post as WordPressPost).author ?? null)
+  const resolvedAuthorNode = authorNode as { slug?: string; name?: string } | null
+  const authorSlug =
+    resolvedAuthorNode && typeof resolvedAuthorNode.slug === "string"
+      ? resolvedAuthorNode.slug
+      : undefined
+  const authorName =
+    resolvedAuthorNode && typeof resolvedAuthorNode.name === "string"
+      ? resolvedAuthorNode.name
+      : undefined
   const imageUrl =
-    post.featuredImage?.node?.sourceUrl ?? `${ENV.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`
+    (post.featuredImage?.node?.sourceUrl ??
+      (post as WordPressPost).featuredImage?.node?.sourceUrl) ??
+    `${ENV.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`
   const schema = getNewsArticleSchema({
     url,
-    title: post.title,
-    description: post.excerpt,
+    title: post.title ?? "",
+    description: post.excerpt ?? "",
     images: [imageUrl],
     datePublished: post.date,
     dateModified: post.modified,
-    authorName: post.author.node.name,
-    authorUrl: authorSlug ? `${ENV.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}` : undefined,
+    authorName,
+    authorUrl:
+      authorSlug && authorSlug.length > 0
+        ? `${ENV.NEXT_PUBLIC_SITE_URL}/author/${authorSlug}`
+        : undefined,
     speakableSelectors: ["article#article-content h1", "article#article-content .prose"],
   })
 
