@@ -314,3 +314,5 @@ export async function sendMagicLinkAction(
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }
+
+export const registerWithPasswordAction = signUpWithPasswordAction
