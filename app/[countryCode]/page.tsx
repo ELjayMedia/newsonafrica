@@ -19,15 +19,7 @@ export default async function CountryPage({ params }: Props) {
   }
 
   const baseUrl = getSiteBaseUrl()
-  const { initialPosts, featuredPosts, countryPosts, initialData } =
-    await getHomeContentSnapshotForEdition(baseUrl, edition)
+  const homeContent = await getHomeContentSnapshotForEdition(baseUrl, edition)
 
-  return (
-    <HomeContent
-      initialPosts={initialPosts}
-      featuredPosts={featuredPosts}
-      countryPosts={countryPosts}
-      initialData={initialData}
-    />
-  )
+  return <HomeContent {...homeContent} currentCountry={edition.code} />
 }

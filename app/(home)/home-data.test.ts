@@ -648,3 +648,53 @@ describe("buildHomeContentProps", () => {
     expect(Object.keys(result.countryPosts).sort()).toEqual([...SUPPORTED_COUNTRIES].sort())
   })
 })
+
+describe("selectHeroAndSecondary", () => {
+  const makePost = (slug: string): HomePost => ({
+    id: slug,
+    slug,
+    title: slug,
+    excerpt: slug,
+    date: "2024-01-01T00:00:00.000Z",
+  })
+
+  it("prefers tagged posts when they are available", async () => {
+    vi.resetModules()
+    const homeDataModule = await import("./home-data")
+    const tagged = [makePost("tagged-hero"), makePost("tagged-secondary"), makePost("tagged-extra")]
+    const featured = [makePost("featured-hero"), makePost("featured-secondary")]
+    const fallbackFeatured = [makePost("fallback-hero"), makePost("fallback-secondary")]
+    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
+
+    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, fallbackFeatured, recent)
+
+    expect(result.hero?.slug).toBe("tagged-hero")
+    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["tagged-secondary", "tagged-extra"])
+  })
+
+  it("falls back to featured posts when no tagged posts exist", async () => {
+    vi.resetModules()
+    const homeDataModule = await import("./home-data")
+    const tagged: HomePost[] = []
+    const featured = [makePost("featured-hero"), makePost("featured-secondary"), makePost("featured-third")]
+    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
+
+    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, featured, recent)
+
+    expect(result.hero?.slug).toBe("featured-hero")
+    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["featured-secondary", "featured-third"])
+  })
+
+  it("uses recent posts when neither tagged nor featured posts are available", async () => {
+    vi.resetModules()
+    const homeDataModule = await import("./home-data")
+    const tagged: HomePost[] = []
+    const featured: HomePost[] = []
+    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
+
+    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, featured, recent)
+
+    expect(result.hero?.slug).toBe("recent-hero")
+    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["recent-secondary"])
+  })
+})
