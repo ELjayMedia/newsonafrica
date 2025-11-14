@@ -35,7 +35,9 @@ export function NewsGrid({
   const secondaryPosts = posts.slice(1, 4)
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 ${className}`.trim()}>
+    <div
+      className={`grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-5 ${className}`.trim()}
+    >
       {showSportCategory && hasSportCategoryPosts ? (
         <SportCategorySection sportCategoryPosts={sportCategoryPosts} blurURLs={blurPlaceholders} />
       ) : (
