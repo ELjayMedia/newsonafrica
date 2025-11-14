@@ -6,8 +6,8 @@ vi.mock("@/hooks/use-intersection-observer", () => ({
   useIntersectionObserver: () => ({ ref: () => {}, inView: false }),
 }))
 
-vi.mock("./ArticleCard", () => ({
-  ArticleCard: ({ article, layout }: any) => (
+vi.mock("./ArticleListCard", () => ({
+  ArticleListCard: ({ article, layout }: any) => (
     <div data-testid={`article-card-${layout}`}>{article.title}</div>
   ),
 }))

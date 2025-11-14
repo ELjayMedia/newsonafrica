@@ -1,7 +1,7 @@
 import { memo } from "react"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/types/wp"
-import { ArticleCard } from "@/components/ArticleCard"
+import { ArticleListCard } from "@/components/ArticleListCard"
 
 interface HorizontalCardProps {
   post: Article | WordPressPost
@@ -17,7 +17,7 @@ export const HorizontalCard = memo(function HorizontalCard({
   priority = false,
 }: HorizontalCardProps) {
   return (
-    <ArticleCard
+    <ArticleListCard
       article={post}
       layout="horizontal"
       className={className}

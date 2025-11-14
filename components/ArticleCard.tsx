@@ -1,506 +1,246 @@
 "use client"
 
+import { type MouseEvent, type ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Clock } from "lucide-react"
-import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
-import { cn, formatDate, motionSafe } from "@/lib/utils"
-import { generateBlurDataURL } from "@/lib/utils/lazy-load"
+import { Bookmark, BookmarkCheck, Clock, Heart, Share2 } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import type { Article } from "@/types/article"
-import type { WordPressPost } from "@/types/wp"
-import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
+import { cn, formatDate } from "@/lib/utils"
 
-type ArticleCardLayout =
-  | "compact"
-  | "standard"
-  | "featured"
-  | "horizontal"
-  | "minimal"
-  | "vertical"
+export type ArticleCardLayout = "vertical" | "horizontal"
+export type ArticleCardVariant = "default" | "featured" | "compact"
 
-interface ArticleCardProps {
-  article: Article | WordPressPost
-  layout?: ArticleCardLayout
-  className?: string
+interface ArticleCardImageProps {
+  src?: string | null
+  alt?: string
+  blurDataURL?: string
+  sizes?: string
   priority?: boolean
+}
+
+export interface ArticleCardProps {
+  href: string
+  headline: string
+  excerpt?: string
+  category?: string
+  timestamp?: string | Date
+  image?: ArticleCardImageProps
+  layout?: ArticleCardLayout
+  variant?: ArticleCardVariant
+  className?: string
+  articleClassName?: string
+  mediaClassName?: string
+  contentClassName?: string
+  headlineClassName?: string
+  excerptClassName?: string
+  categoryClassName?: string
+  metadata?: ReactNode
   showExcerpt?: boolean
-  eyebrow?: string
+  onShare?: () => void
+  onSave?: () => void
+  onLike?: () => void
+  isSaved?: boolean
+  isLiked?: boolean
 }
 
-function normalizeCountry(candidate?: string | null) {
-  if (!candidate) return undefined
-  const normalized = candidate.toLowerCase()
-  return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : undefined
+const FALLBACK_IMAGE = "/placeholder.svg?height=360&width=640&text=News+Article"
+
+const VARIANT_STYLES: Record<ArticleCardVariant, { headline: string; excerpt: string; content: string; category: string }> = {
+  featured: {
+    headline: "text-lg font-semibold leading-tight md:text-xl",
+    excerpt: "text-sm text-muted-foreground/90 md:text-base",
+    content: "gap-4 p-4 md:p-5",
+    category: "text-[11px]",
+  },
+  default: {
+    headline: "text-base font-semibold leading-snug md:text-lg",
+    excerpt: "text-sm text-muted-foreground/90",
+    content: "gap-3 p-4",
+    category: "text-[10px]",
+  },
+  compact: {
+    headline: "text-sm font-semibold leading-snug md:text-base",
+    excerpt: "text-xs text-muted-foreground/80",
+    content: "gap-2.5 p-3 md:p-4",
+    category: "text-[10px]",
+  },
 }
 
-function extractCountrySlug(value: unknown): string | undefined {
-  if (!value) return undefined
+function getTimestampParts(timestamp?: string | Date) {
+  if (!timestamp) return { display: undefined as string | undefined, iso: undefined as string | undefined }
 
-  if (typeof value === "string") {
-    return value
+  const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp
+  if (Number.isNaN(date.getTime())) {
+    return { display: undefined, iso: undefined }
   }
 
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const slug = extractCountrySlug(item)
-      if (slug) return slug
-    }
-    return undefined
-  }
-
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>
-
-    if (typeof record.slug === "string") {
-      return record.slug
-    }
-
-    if (typeof record.code === "string") {
-      return record.code
-    }
-
-    if (typeof record.value === "string") {
-      return record.value
-    }
-
-    if (record.node) {
-      const slug = extractCountrySlug(record.node)
-      if (slug) return slug
-    }
-
-    if (record.country) {
-      const slug = extractCountrySlug(record.country)
-      if (slug) return slug
-    }
-
-    if (record.countries) {
-      const slug = extractCountrySlug(record.countries)
-      if (slug) return slug
-    }
-
-    if (Array.isArray(record.nodes)) {
-      const slug = extractCountrySlug(record.nodes)
-      if (slug) return slug
-    }
-
-    if (Array.isArray(record.edges)) {
-      const slug = extractCountrySlug(record.edges)
-      if (slug) return slug
-    }
-  }
-
-  return undefined
-}
-
-function inferArticleCountry(article: Article | WordPressPost) {
-  const source = article as any
-  const potentialSources: unknown[] = [
-    source?.country,
-    source?.countryCode,
-    source?.country_code,
-    source?.edition?.country,
-    source?.edition?.code,
-    source?.edition?.slug,
-    source?.countries,
-    source?.countries?.nodes,
-    source?.countries?.edges,
-  ]
-
-  for (const candidate of potentialSources) {
-    const slug = extractCountrySlug(candidate)
-    const normalized = normalizeCountry(slug)
-    if (normalized) {
-      return normalized
-    }
-  }
-
-  return undefined
-}
-
-function extractImageUrl(article: Article | WordPressPost): string | null {
-  const source = article as any
-
-  // Try multiple possible image sources
-  const imageSources = [
-    source?.featuredImage?.node?.sourceUrl,
-    source?.featured_image_url,
-    source?.featuredImage?.sourceUrl,
-    source?.featured_image?.url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.full?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.large?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.medium?.source_url,
-  ]
-
-  for (const imageUrl of imageSources) {
-    if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
-      // Validate it's a proper URL
-      try {
-        new URL(imageUrl)
-        return imageUrl
-      } catch {
-        // If it's a relative path, it might still be valid
-        if (imageUrl.startsWith("/")) {
-          return imageUrl
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-function normalizeArticleData(article: Article | WordPressPost) {
-  const country = inferArticleCountry(article)
-  const featuredImage = extractImageUrl(article)
-
-  if ("categories" in article && Array.isArray((article as any).categories?.nodes)) {
-    const post = article as WordPressPost
-    const categories =
-      post.categories?.nodes
-        ?.filter((node): node is NonNullable<typeof node> => Boolean(node))
-        .map((node) => ({
-          name: node.name ?? "",
-          slug: node.slug ?? "",
-        })) ?? []
-
-    return {
-      id: String(post.id ?? post.databaseId ?? post.slug ?? ""),
-      title: post.title || "Untitled Article",
-      excerpt: (post.excerpt || "").replace(/<[^>]*>/g, ""),
-      slug: post.slug ?? "",
-      date: post.date ?? "",
-      featuredImage,
-      author: post.author?.node?.name,
-      categories,
-      link: getArticleUrl(post.slug ?? "", country),
-    }
-  }
-
-  const art = article as Article
   return {
-    id: art.id,
-    title: art.title || "Untitled Article",
-    excerpt: art.excerpt || "",
-    slug: art.slug,
-    date: art.date,
-    featuredImage,
-    author: art.author?.node?.name,
-    categories:
-      art.categories?.edges?.map((edge) => ({
-        name: edge.node.name,
-        slug: edge.node.slug,
-      })) || [],
-    link: getArticleUrl(art.slug, country),
+    display: formatDate(date),
+    iso: date.toISOString(),
+  }
+}
+
+function createActionHandler(action?: () => void) {
+  return (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    action?.()
   }
 }
 
 export function ArticleCard({
-  article,
-  layout = "standard",
+  href,
+  headline,
+  excerpt,
+  category,
+  timestamp,
+  image,
+  layout = "vertical",
+  variant = "default",
   className,
-  priority = false,
-  showExcerpt,
-  eyebrow,
+  articleClassName,
+  mediaClassName,
+  contentClassName,
+  headlineClassName,
+  excerptClassName,
+  categoryClassName,
+  metadata,
+  showExcerpt = true,
+  onShare,
+  onSave,
+  onLike,
+  isSaved,
+  isLiked,
 }: ArticleCardProps) {
-  let data
-  try {
-    data = normalizeArticleData(article)
-  } catch (error) {
-    console.error("[v0] Error normalizing article data:", error, article)
-    // Return a minimal error card
-    return (
-      <Card className={cn("group", className)}>
-        <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground">Unable to display article</p>
-        </CardContent>
-      </Card>
-    )
-  }
+  const { display: displayTimestamp, iso } = getTimestampParts(timestamp)
+  const { headline: headlineStyles, excerpt: excerptStyles, content: contentStyles, category: categoryStyles } =
+    VARIANT_STYLES[variant]
 
-  const primaryCategory = data.categories[0]
+  const isHorizontal = layout === "horizontal"
+  const hasActions = Boolean(onShare || onSave || onLike)
+  const imageSrc = image?.src ?? FALLBACK_IMAGE
 
-  const fallbackImage = "/placeholder.svg?height=400&width=600&text=News+Article"
-  const imageUrl = data.featuredImage || fallbackImage
-  const hasImage = Boolean(data.featuredImage)
-
-  const dateValue = data.date ? new Date(data.date) : undefined
-  const hasValidDate = dateValue && !Number.isNaN(dateValue.getTime())
-  const relativeDate = hasValidDate
-    ? formatDistanceToNow(dateValue as Date, {
-        addSuffix: true,
-      })
-    : undefined
-  const shortDate = hasValidDate
-    ? (dateValue as Date).toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-      })
-    : undefined
-  const sanitizedExcerpt = data.excerpt ? sanitizeExcerpt(data.excerpt) : ""
-  const resolvedShowExcerpt = showExcerpt ?? layout === "horizontal"
-
-  if (layout === "minimal") {
-    return (
-      <Link href={data.link} className={cn("block", className)}>
-        <article className="py-2 border-b border-gray-100 last:border-b-0">
-          <div className="flex gap-2">
-            <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
-              <Image
-                src={imageUrl || "/placeholder.svg"}
-                alt={data.title}
-                fill
-                className="object-cover"
-                sizes="64px"
-                loading={priority ? "eager" : "lazy"}
-                quality={75}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1">{data.title}</h3>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>{relativeDate ?? formatDate(data.date)}</span>
-                {primaryCategory && (
-                  <>
-                    <span>•</span>
-                    <span className="text-blue-600">{primaryCategory.name}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </article>
-      </Link>
-    )
-  }
-
-  if (layout === "horizontal") {
-    return (
-      <Link href={data.link} className={cn("block", className)}>
-        <article className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-          <div className="sm:w-1/3 h-40 sm:h-auto relative">
-            {hasImage ? (
-              <Image
-                src={imageUrl || "/placeholder.svg"}
-                alt={data.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
-                loading={priority ? "eager" : "lazy"}
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                <span className="text-gray-600 dark:text-gray-300 text-sm">No image</span>
-              </div>
-            )}
-          </div>
-          <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{data.title}</h3>
-              {resolvedShowExcerpt && sanitizedExcerpt ? (
-                <p className="text-gray-600 dark:text-gray-400 line-clamp-3">{sanitizedExcerpt}</p>
-              ) : null}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-300">{relativeDate ?? formatDate(data.date)}</span>
-              {data.author && (
-                <span className="text-sm text-gray-500 dark:text-gray-300">by {data.author}</span>
-              )}
-            </div>
-          </div>
-        </article>
-      </Link>
-    )
-  }
-
-  if (layout === "vertical") {
-    return (
-      <Link href={data.link} className={cn("group block h-full", className)}>
-        <article
+  return (
+    <Link href={href} className={cn("group block h-full", className)}>
+      <article
+        className={cn(
+          "flex h-full overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+          isHorizontal ? "flex-col sm:flex-row" : "flex-col",
+          articleClassName
+        )}
+      >
+        <div
           className={cn(
-            "flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200",
-            motionSafe.transition,
+            "relative overflow-hidden bg-muted",
+            isHorizontal ? "w-full aspect-video sm:aspect-[4/3] sm:w-40 sm:flex-shrink-0" : "w-full aspect-video",
+            mediaClassName
           )}
         >
-          {hasImage && (
-            <div className="relative h-32 overflow-hidden">
-              <Image
-                src={imageUrl || "/placeholder.svg"}
-                alt={data.title}
-                fill
-                className={cn(
-                  "transition-transform duration-300 group-hover:scale-105 object-cover",
-                  motionSafe.transform,
-                )}
-                sizes="(max-width: 640px) 100vw, 240px"
-                placeholder="blur"
-                blurDataURL={generateBlurDataURL(300, 200)}
-                loading={priority ? "eager" : "lazy"}
-              />
-            </div>
-          )}
-          <div className="p-3 flex-1 flex flex-col">
-            {eyebrow && <div className="text-sm font-bold text-red-600 mb-1">{eyebrow}</div>}
-            <h3
-              className={cn(
-                "font-bold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-200",
-                motionSafe.transition,
-              )}
-            >
-              {data.title}
-            </h3>
-            {resolvedShowExcerpt && sanitizedExcerpt && (
-              <p className="text-xs text-gray-600 line-clamp-2 mt-1">{sanitizedExcerpt}</p>
-            )}
-            <div className="flex items-center gap-1 text-gray-500 text-xs mt-auto pt-2">
-              <Clock className="h-3 w-3" />
-              <time>{shortDate ?? formatDate(data.date)}</time>
-            </div>
-          </div>
-        </article>
-      </Link>
-    )
-  }
-
-  if (layout === "compact") {
-    return (
-      <Card className={cn("group hover:shadow-md transition-shadow", motionSafe.transition, className)}>
-        <CardContent className="p-3">
-          <div className="flex gap-3 items-center">
-            <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
-              <Image
-                src={imageUrl || "/placeholder.svg"}
-                alt={data.title}
-                fill
-                className={cn(
-                  "object-cover group-hover:scale-105 transition-transform duration-200",
-                  motionSafe.transform,
-                )}
-                placeholder="blur"
-                blurDataURL={generateBlurDataURL(80, 80)}
-                priority={priority}
-                loading={priority ? "eager" : "lazy"}
-                sizes="80px"
-                quality={75}
-                onError={(e) => {
-                  console.error("[v0] Image load error:", imageUrl)
-                  e.currentTarget.src = fallbackImage
-                }}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              {primaryCategory && (
-                <Badge variant="secondary" className="mb-1 text-xs">
-                  {primaryCategory.name}
-                </Badge>
-              )}
-              <Link href={data.link} className="block">
-                <h3
-                  className={cn(
-                    "font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors",
-                    motionSafe.transition,
-                  )}
-                >
-                  {data.title}
-                </h3>
-              </Link>
-              <p className="text-xs text-muted-foreground mt-1">{formatDate(data.date)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (layout === "featured") {
-    return (
-      <Card
-        className={cn("group hover:shadow-lg transition-all duration-300 max-w-md", motionSafe.transition, className)}
-      >
-        <div className="relative aspect-[16/9] overflow-hidden rounded-t-lg">
-          <Image
-            src={imageUrl || "/placeholder.svg"}
-            alt={data.title}
-            fill
-            className={cn("object-cover group-hover:scale-105 transition-transform duration-300", motionSafe.transform)}
-            placeholder="blur"
-            blurDataURL={generateBlurDataURL(600, 400)}
-            priority={priority}
-            loading={priority ? "eager" : "lazy"}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 448px"
-            quality={85}
-            onError={(e) => {
-              console.error("[v0] Image load error:", imageUrl)
-              e.currentTarget.src = fallbackImage
-            }}
-          />
-          {primaryCategory && (
-            <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-xs">
-              {primaryCategory.name}
-            </Badge>
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt={image?.alt || headline}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes={image?.sizes}
+              priority={image?.priority}
+              placeholder={image?.blurDataURL ? "blur" : undefined}
+              blurDataURL={image?.blurDataURL}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
           )}
         </div>
-        <CardContent className="p-4">
-          <Link href={data.link} className="block">
-            <h2
-              className={cn(
-                "text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors",
-                motionSafe.transition,
-              )}
-            >
-              {data.title}
-            </h2>
-          </Link>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{formatDate(data.date)}</span>
-            {data.author && <span>By {data.author}</span>}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
 
-  // Standard layout
-  return (
-    <Card className={cn("group hover:shadow-md transition-shadow max-w-xs", motionSafe.transition, className)}>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
-        <Image
-          src={imageUrl || "/placeholder.svg"}
-          alt={data.title}
-          fill
-          className={cn("object-cover group-hover:scale-105 transition-transform duration-200", motionSafe.transform)}
-          placeholder="blur"
-          blurDataURL={generateBlurDataURL(400, 300)}
-          priority={priority}
-          loading={priority ? "eager" : "lazy"}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
-          quality={80}
-          onError={(e) => {
-            console.error("[v0] Image load error:", imageUrl)
-            e.currentTarget.src = fallbackImage
-          }}
-        />
-      </div>
-      <CardContent className="p-3">
-        <Link href={data.link} className="block">
-          <h3
-            className={cn(
-              "font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors text-sm",
-              motionSafe.transition,
-            )}
-          >
-            {data.title}
-          </h3>
-        </Link>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatDate(data.date)}</span>
-          {data.author && <span>By {data.author}</span>}
+        <div
+          className={cn(
+            "flex flex-1 flex-col",
+            contentStyles,
+            contentClassName
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-1 space-y-2">
+              {category ? (
+                <Badge className={cn("w-fit uppercase tracking-wide", categoryStyles, categoryClassName)}>{category}</Badge>
+              ) : null}
+
+              <h3
+                className={cn(
+                  "text-foreground transition-colors duration-200 group-hover:text-primary",
+                  headlineStyles,
+                  headlineClassName
+                )}
+              >
+                {headline}
+              </h3>
+
+              {showExcerpt && excerpt ? (
+                <p className={cn("line-clamp-3", excerptStyles, excerptClassName)}>{excerpt}</p>
+              ) : null}
+            </div>
+
+            {hasActions ? (
+              <div className="ml-auto flex flex-shrink-0 items-center gap-1 self-start">
+                {onShare ? (
+                  <button
+                    type="button"
+                    onClick={createActionHandler(onShare)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label="Share article"
+                  >
+                    <Share2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+
+                {onSave ? (
+                  <button
+                    type="button"
+                    onClick={createActionHandler(onSave)}
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                      isSaved && "text-primary"
+                    )}
+                    aria-pressed={Boolean(isSaved)}
+                    aria-label={isSaved ? "Remove bookmark" : "Save article"}
+                  >
+                    {isSaved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
+                  </button>
+                ) : null}
+
+                {onLike ? (
+                  <button
+                    type="button"
+                    onClick={createActionHandler(onLike)}
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                      isLiked && "text-destructive"
+                    )}
+                    aria-pressed={Boolean(isLiked)}
+                    aria-label={isLiked ? "Unlike article" : "Like article"}
+                  >
+                    <Heart className={cn("h-4 w-4", isLiked && "fill-current")} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {(metadata || displayTimestamp) && (
+            <div className="mt-auto flex items-center gap-2 text-xs text-muted-foreground">
+              {metadata ? <div className="flex items-center gap-1">{metadata}</div> : null}
+              {metadata && displayTimestamp ? <span className="text-muted-foreground/60">•</span> : null}
+              {displayTimestamp ? (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  <time dateTime={iso}>{displayTimestamp}</time>
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </article>
+    </Link>
   )
 }

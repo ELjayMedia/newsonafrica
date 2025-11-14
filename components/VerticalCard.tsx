@@ -1,7 +1,7 @@
 import { memo } from "react"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/types/wp"
-import { ArticleCard } from "@/components/ArticleCard"
+import { ArticleListCard } from "@/components/ArticleListCard"
 
 type VerticalCardPost =
   | Article
@@ -34,7 +34,7 @@ export const VerticalCard = memo(function VerticalCard({
   const adaptedArticle = { id: (post as any).id ?? post.slug, ...post }
 
   return (
-    <ArticleCard
+    <ArticleListCard
       article={adaptedArticle as Article | WordPressPost}
       layout="vertical"
       className={className}
