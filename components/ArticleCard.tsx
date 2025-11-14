@@ -3,27 +3,35 @@
 import { type MouseEvent, type ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Bookmark, BookmarkCheck, Heart, Share2, Clock } from "lucide-react"
+import { Bookmark, BookmarkCheck, Clock, Heart, Share2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from "@/lib/utils"
 
-interface ArticleCardProps {
+export type ArticleCardLayout = "vertical" | "horizontal"
+export type ArticleCardVariant = "default" | "featured" | "compact"
+
+interface ArticleCardImageProps {
+  src?: string | null
+  alt?: string
+  blurDataURL?: string
+  sizes?: string
+  priority?: boolean
+}
+
+export interface ArticleCardProps {
   href: string
   headline: string
   excerpt?: string
-  categoryTag?: string
+  category?: string
   timestamp?: string | Date
-  imageUrl?: string | null
-  imageAlt?: string
-  imageBlurDataURL?: string
-  imagePriority?: boolean
-  imageSizes?: string
-  layout?: "vertical" | "horizontal"
+  image?: ArticleCardImageProps
+  layout?: ArticleCardLayout
+  variant?: ArticleCardVariant
   className?: string
   articleClassName?: string
-  contentClassName?: string
   mediaClassName?: string
+  contentClassName?: string
   headlineClassName?: string
   excerptClassName?: string
   categoryClassName?: string
@@ -37,23 +45,38 @@ interface ArticleCardProps {
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg?height=360&width=640&text=News+Article"
-
-type TimestampParts = {
-  display?: string
-  iso?: string
+const VARIANT_STYLES: Record<ArticleCardVariant, { headline: string; excerpt: string; content: string; category: string }> = {
+  featured: {
+    headline: "text-lg font-semibold leading-tight md:text-xl",
+    excerpt: "text-sm text-muted-foreground/90 md:text-base",
+    content: "gap-4 p-4 md:p-5",
+    category: "text-[11px]",
+  },
+  default: {
+    headline: "text-base font-semibold leading-snug md:text-lg",
+    excerpt: "text-sm text-muted-foreground/90",
+    content: "gap-3 p-4",
+    category: "text-[10px]",
+  },
+  compact: {
+    headline: "text-sm font-semibold leading-snug md:text-base",
+    excerpt: "text-xs text-muted-foreground/80",
+    content: "gap-2.5 p-3 md:p-4",
+    category: "text-[10px]",
+  },
 }
 
-function getTimestampParts(timestamp?: string | Date): TimestampParts {
-  if (!timestamp) return {}
+function getTimestampParts(timestamp?: string | Date) {
+  if (!timestamp) return { display: undefined as string | undefined, iso: undefined as string | undefined }
 
-  const value = typeof timestamp === "string" ? new Date(timestamp) : timestamp
-  if (Number.isNaN(value.getTime())) {
-    return {}
+  const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp
+  if (Number.isNaN(date.getTime())) {
+    return { display: undefined, iso: undefined }
   }
 
   return {
-    display: formatDate(value),
-    iso: value.toISOString(),
+    display: formatDate(date),
+    iso: date.toISOString(),
   }
 }
 
@@ -69,18 +92,15 @@ export function ArticleCard({
   href,
   headline,
   excerpt,
-  categoryTag,
+  category,
   timestamp,
-  imageUrl,
-  imageAlt,
-  imageBlurDataURL,
-  imagePriority,
-  imageSizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+  image,
   layout = "vertical",
+  variant = "default",
   className,
   articleClassName,
-  contentClassName,
   mediaClassName,
+  contentClassName,
   headlineClassName,
   excerptClassName,
   categoryClassName,
@@ -92,16 +112,19 @@ export function ArticleCard({
   isSaved,
   isLiked,
 }: ArticleCardProps) {
+  const { display: displayTimestamp, iso } = getTimestampParts(timestamp)
+  const { headline: headlineStyles, excerpt: excerptStyles, content: contentStyles, category: categoryStyles } =
+    VARIANT_STYLES[variant]
+
   const isHorizontal = layout === "horizontal"
   const hasActions = Boolean(onShare || onSave || onLike)
-  const { display: displayTimestamp, iso } = getTimestampParts(timestamp)
-  const resolvedImage = imageUrl || FALLBACK_IMAGE
+  const imageSrc = image?.src ?? FALLBACK_IMAGE
 
   return (
     <Link href={href} className={cn("group block h-full", className)}>
       <article
         className={cn(
-          "flex h-full overflow-hidden rounded-2xl border border-border/60 bg-card/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+          "flex h-full overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
           isHorizontal ? "flex-col sm:flex-row" : "flex-col",
           articleClassName
         )}
@@ -109,22 +132,20 @@ export function ArticleCard({
         <div
           className={cn(
             "relative overflow-hidden bg-muted",
-            isHorizontal
-              ? "w-full aspect-[4/3] sm:aspect-[4/3] sm:w-48 sm:flex-shrink-0"
-              : "w-full aspect-[16/9]",
+            isHorizontal ? "w-full aspect-video sm:aspect-[4/3] sm:w-40 sm:flex-shrink-0" : "w-full aspect-video",
             mediaClassName
           )}
         >
-          {resolvedImage ? (
+          {imageSrc ? (
             <Image
-              src={resolvedImage}
-              alt={imageAlt || headline}
+              src={imageSrc}
+              alt={image?.alt || headline}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes={imageSizes}
-              priority={imagePriority}
-              placeholder={imageBlurDataURL ? "blur" : undefined}
-              blurDataURL={imageBlurDataURL}
+              sizes={image?.sizes}
+              priority={image?.priority}
+              placeholder={image?.blurDataURL ? "blur" : undefined}
+              blurDataURL={image?.blurDataURL}
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
@@ -133,28 +154,21 @@ export function ArticleCard({
 
         <div
           className={cn(
-            "flex flex-1 flex-col gap-3 p-4",
-            isHorizontal ? "sm:p-5" : "",
+            "flex flex-1 flex-col",
+            contentStyles,
             contentClassName
           )}
         >
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-2">
-              {categoryTag ? (
-                <Badge
-                  className={cn(
-                    "w-fit text-[10px] uppercase tracking-wide",
-                    categoryClassName
-                  )}
-                >
-                  {categoryTag}
-                </Badge>
+              {category ? (
+                <Badge className={cn("w-fit uppercase tracking-wide", categoryStyles, categoryClassName)}>{category}</Badge>
               ) : null}
 
               <h3
                 className={cn(
-                  "text-base font-semibold leading-tight text-foreground transition-colors duration-200 group-hover:text-primary",
-                  isHorizontal ? "sm:text-lg" : "text-lg",
+                  "text-foreground transition-colors duration-200 group-hover:text-primary",
+                  headlineStyles,
                   headlineClassName
                 )}
               >
@@ -162,15 +176,7 @@ export function ArticleCard({
               </h3>
 
               {showExcerpt && excerpt ? (
-                <p
-                  className={cn(
-                    "text-sm text-muted-foreground/90 line-clamp-3",
-                    isHorizontal ? "sm:line-clamp-3" : "line-clamp-4",
-                    excerptClassName
-                  )}
-                >
-                  {excerpt}
-                </p>
+                <p className={cn("line-clamp-3", excerptStyles, excerptClassName)}>{excerpt}</p>
               ) : null}
             </div>
 
@@ -186,6 +192,7 @@ export function ArticleCard({
                     <Share2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 ) : null}
+
                 {onSave ? (
                   <button
                     type="button"
@@ -194,16 +201,13 @@ export function ArticleCard({
                       "inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                       isSaved && "text-primary"
                     )}
-                    aria-label={isSaved ? "Remove bookmark" : "Save article"}
                     aria-pressed={Boolean(isSaved)}
+                    aria-label={isSaved ? "Remove bookmark" : "Save article"}
                   >
-                    {isSaved ? (
-                      <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" aria-hidden="true" />
-                    )}
+                    {isSaved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
                   </button>
                 ) : null}
+
                 {onLike ? (
                   <button
                     type="button"
@@ -212,8 +216,8 @@ export function ArticleCard({
                       "inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                       isLiked && "text-destructive"
                     )}
-                    aria-label={isLiked ? "Unlike article" : "Like article"}
                     aria-pressed={Boolean(isLiked)}
+                    aria-label={isLiked ? "Unlike article" : "Like article"}
                   >
                     <Heart className={cn("h-4 w-4", isLiked && "fill-current")} aria-hidden="true" />
                   </button>

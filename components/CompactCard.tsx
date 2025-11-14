@@ -1,7 +1,7 @@
 import { memo } from "react"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/types/wp"
-import { LegacyArticleCard } from "@/components/LegacyArticleCard"
+import { ArticleListCard } from "@/components/ArticleListCard"
 
 type CompactCardLayout = "horizontal" | "vertical" | "minimal"
 
@@ -23,7 +23,7 @@ export const CompactCard = memo(function CompactCard({
   const mappedLayout = layout === "vertical" ? "vertical" : layout === "minimal" ? "minimal" : "horizontal"
 
   return (
-    <LegacyArticleCard
+    <ArticleListCard
       article={post}
       layout={mappedLayout}
       className={className}

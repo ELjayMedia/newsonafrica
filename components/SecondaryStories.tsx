@@ -40,23 +40,29 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
           href={getArticleUrl(post.slug, post.country)}
           headline={post.title}
           timestamp={post.date}
-          imageUrl={post.featuredImage?.node?.sourceUrl}
-          imageAlt={post.title}
-          imageBlurDataURL={generateBlurDataURL(400, 225)}
           layout={isHorizontal ? "horizontal" : "vertical"}
+          variant="compact"
           showExcerpt={false}
           className="h-full"
           articleClassName={cn(
             "rounded-xl bg-gray-50 transition-colors hover:bg-gray-100 dark:bg-slate-900/70 dark:hover:bg-slate-900",
             isHorizontal ? "md:flex-row" : ""
           )}
-          contentClassName={cn("p-2 md:p-3", isHorizontal && "md:p-4")}
+          contentClassName={cn("p-3", isHorizontal && "md:p-4")}
           mediaClassName={
             isHorizontal
-              ? "h-24 w-24 flex-shrink-0 md:h-auto md:w-full md:aspect-video"
-              : "aspect-video"
+              ? "h-24 w-24 flex-shrink-0 rounded-lg md:h-auto md:w-full md:rounded-none md:aspect-video"
+              : "aspect-video rounded-t-xl"
           }
           headlineClassName="text-xs font-semibold md:text-sm"
+          image={{
+            src: post.featuredImage?.node?.sourceUrl,
+            alt: post.title,
+            blurDataURL: generateBlurDataURL(400, 225),
+            sizes: isHorizontal
+              ? "(max-width: 640px) 96px, (max-width: 1024px) 33vw, 240px"
+              : "(max-width: 640px) 50vw, 320px",
+          }}
         />
       ))}
     </div>
