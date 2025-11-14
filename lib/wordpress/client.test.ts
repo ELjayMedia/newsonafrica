@@ -83,6 +83,34 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(mockJson).toHaveBeenCalledTimes(1)
   })
 
+  it("clears failed memoized promises so subsequent calls retry", async () => {
+    const {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      mockJson,
+      getMemoStoreForTests,
+    } = await setup()
+
+    const networkError = new Error("boom")
+    fetchWithRetryMock.mockRejectedValueOnce(networkError)
+
+    const firstPromise = fetchWordPressGraphQL("sz", "query")
+
+    await expect(firstPromise).rejects.toThrow(networkError)
+    expect(getMemoStoreForTests().size).toBe(0)
+
+    const secondPromise = fetchWordPressGraphQL("sz", "query")
+
+    await expect(secondPromise).resolves.toMatchObject({
+      ok: true,
+      data: { posts: [] },
+      posts: [],
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+    expect(mockJson).toHaveBeenCalledTimes(1)
+  })
+
   it("dedupes requests regardless of tag ordering", async () => {
     const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
 
