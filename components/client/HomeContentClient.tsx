@@ -9,6 +9,7 @@ import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
+import { SectionHeader } from "@/components/SectionHeader"
 import { siteConfig } from "@/config/site"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import { getWebPageSchema } from "@/lib/schema"
@@ -166,7 +167,7 @@ export function HomeContentClient({
     if (posts.length === 0) return null
 
     return (
-      <section key={normalizedSlug} className="bg-white rounded-lg">
+      <article key={normalizedSlug} className="rounded-lg bg-white">
         <h2 className="text-lg md:text-xl font-bold capitalize mb-3">
           <Link
             href={getCategoryUrl(normalizedSlug)}
@@ -183,12 +184,16 @@ export function HomeContentClient({
           layout={layout}
           className="compact-grid"
         />
-      </section>
+      </article>
     )
   }
 
   const offlineNotification = isOffline ? (
-    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3" role="status" aria-live="polite">
+    <div
+      className="rounded-lg border border-yellow-200 bg-yellow-50/90 p-3 md:p-4"
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex">
         <div className="flex-shrink-0">
           <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -205,6 +210,17 @@ export function HomeContentClient({
       </div>
     </div>
   ) : null
+
+  const sectionSpacing = "py-8 md:py-12"
+
+  const hasSpotlight = useMemo(
+    () =>
+      Object.entries(countryPosts).some(
+        ([countryCode, posts]) =>
+          countryCode !== currentCountry && Array.isArray(posts) && posts.length > 0,
+      ),
+    [countryPosts, currentCountry],
+  )
 
   let content: ReactNode
 
@@ -236,31 +252,61 @@ export function HomeContentClient({
     )
   } else {
     content = (
-      <div className="space-y-3 md:space-y-4 pb-16 md:pb-4">
-        {offlineNotification}
+      <div className="pb-16 md:pb-20">
+        {offlineNotification ? (
+          <div className="pt-4 md:pt-6">{offlineNotification}</div>
+        ) : null}
 
-        <CountryNavigation />
+        <section className={sectionSpacing}>
+          <SectionHeader
+            title="Top Stories"
+            subtitle="Catch up on the biggest stories shaping Africa right now."
+          />
+          {mainStory ? (
+            <div className="rounded-xl bg-gray-50 p-3 shadow-sm md:p-6">
+              <FeaturedHero post={mainStory} />
+            </div>
+          ) : null}
+        </section>
 
-        {mainStory && (
-          <section className="bg-gray-50 px-2 py-2 rounded-lg">
-            <FeaturedHero post={mainStory} />
+        <section className={sectionSpacing}>
+          <SectionHeader
+            title="Discover by Country"
+            subtitle="Jump into coverage tailored to every nation across the continent."
+          />
+          <CountryNavigation />
+        </section>
+
+        {hasSpotlight ? (
+          <section className={sectionSpacing}>
+            <CountrySpotlight countryPosts={countryPosts} />
           </section>
-        )}
+        ) : null}
 
-        <CountrySpotlight countryPosts={countryPosts} />
-
-        {secondaryStories.length > 0 && (
-          <section className="bg-white p-2 md:p-3 rounded-lg md:flex md:flex-col">
-            <SecondaryStories posts={secondaryStories} layout="horizontal" />
+        {secondaryStories.length > 0 ? (
+          <section className={sectionSpacing}>
+            <SectionHeader
+              title="Latest Updates"
+              subtitle="More breaking news and in-depth reporting from our editors."
+            />
+            <div className="rounded-xl bg-white p-3 shadow-sm md:p-6">
+              <SecondaryStories posts={secondaryStories} layout="horizontal" />
+            </div>
           </section>
-        )}
+        ) : null}
 
-        <div className="grid grid-cols-1 gap-3 md:gap-4">
-          {categoryConfigs.map((config) => {
-            const normalizedSlug = resolveCategorySlug(config).toLowerCase()
-            return <CategorySection key={normalizedSlug} {...config} />
-          })}
-        </div>
+        <section className={sectionSpacing}>
+          <SectionHeader
+            title="Explore by Category"
+            subtitle="Browse stories organised by the topics that matter to you."
+          />
+          <div className="grid grid-cols-1 gap-6 md:gap-8">
+            {categoryConfigs.map((config) => {
+              const normalizedSlug = resolveCategorySlug(config).toLowerCase()
+              return <CategorySection key={normalizedSlug} {...config} />
+            })}
+          </div>
+        </section>
       </div>
     )
   }
