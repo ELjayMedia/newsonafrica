@@ -1,16 +1,7 @@
-import { Suspense, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import { headers } from "next/headers"
 
-import { Providers } from "@/app/providers"
-import { ClientUserPreferencesProvider } from "@/app/ClientUserPreferencesProvider"
-import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
-import { PreferredCountrySync } from "@/components/PreferredCountrySync"
-import { TopBar } from "@/components/TopBar"
-import { Header } from "@/components/Header"
-import { HeaderSkeleton } from "@/components/HeaderSkeleton"
-import { ScrollToTop } from "@/components/ScrollToTop"
-import { BottomNavigation } from "@/components/BottomNavigation"
-import { Toaster } from "@/components/ui/toaster"
+import { AppLayoutInner } from "./AppLayoutInner"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { DEFAULT_COUNTRY, getServerCountry } from "@/lib/utils/routing"
 
@@ -100,30 +91,7 @@ const resolveEdition = (explicit?: string) => {
 export function AppLayout({ children }: AppLayoutProps) {
   const resolvedCountry = resolveEdition()
 
-  return (
-    <Providers initialAuthState={null}>
-      <ClientUserPreferencesProvider>
-        <PreferredCountrySync />
-        <Suspense fallback={null}>
-          <ScrollToTop />
-        </Suspense>
-        <ClientDynamicComponents />
-        <div className="flex min-h-screen flex-col bg-background">
-          <TopBar />
-          <header className="border-b border-border/60 bg-background">
-            <div className="mx-auto w-full max-w-[980px] px-4 py-4 md:px-6 md:py-6">
-              <Suspense fallback={<HeaderSkeleton />}>
-                <Header countryCode={resolvedCountry} />
-              </Suspense>
-            </div>
-          </header>
-          <main className="flex-1 bg-background">
-            <div className="mx-auto w-full max-w-[980px] px-4 py-6 md:px-6 md:py-10">{children}</div>
-          </main>
-        </div>
-        <BottomNavigation />
-        <Toaster />
-      </ClientUserPreferencesProvider>
-    </Providers>
-  )
+  return <AppLayoutInner initialCountry={resolvedCountry}>{children}</AppLayoutInner>
 }
+
+export type { AppLayoutProps }
