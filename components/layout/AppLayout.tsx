@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { headers } from "next/headers"
 
 import { AppLayoutInner } from "./AppLayoutInner"
+import { Sidebar } from "@/components/Sidebar"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { DEFAULT_COUNTRY, getServerCountry } from "@/lib/utils/routing"
 
@@ -91,7 +92,11 @@ const resolveEdition = (explicit?: string) => {
 export function AppLayout({ children }: AppLayoutProps) {
   const resolvedCountry = resolveEdition()
 
-  return <AppLayoutInner initialCountry={resolvedCountry}>{children}</AppLayoutInner>
+  return (
+    <AppLayoutInner initialCountry={resolvedCountry} sidebar={<Sidebar country={resolvedCountry} />}>
+      {children}
+    </AppLayoutInner>
+  )
 }
 
 export type { AppLayoutProps }
