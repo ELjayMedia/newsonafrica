@@ -42,7 +42,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
 
   return (
     <>
-      <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
+      <div className="md:col-span-2 lg:col-span-3 xl:col-span-4 flex items-center mb-2 md:mb-3">
         <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
         <Link href={getCategoryUrl("sport")} className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
           View all
@@ -52,7 +52,8 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
       <Link
         href={getArticleUrl(mainPost?.slug ?? "", mainPost?.country)}
         className={cn(
-          "md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200",
+          "group block h-full bg-white rounded-lg overflow-hidden transition-all duration-200",
+          "md:col-span-1 lg:col-span-2 xl:col-span-2",
           motionSafe.transition,
         )}
       >
@@ -93,13 +94,19 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
         </div>
       </Link>
 
-      <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
+      <div
+        className={cn(
+          "flex flex-col gap-2",
+          "md:gap-3 md:grid md:auto-rows-fr md:grid-cols-1",
+          "md:col-span-1 lg:col-span-1 xl:col-span-2 xl:grid-cols-2 xl:gap-4",
+        )}
+      >
         {secondaryPosts.slice(0, 3).map((post, index) => (
           <Link
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
             className={cn(
-              "flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group",
+              "flex h-full gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group",
               motionSafe.transition,
             )}
           >
@@ -158,7 +165,8 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
       <Link
         href={getArticleUrl(mainPost.slug ?? "", mainPost.country)}
         className={cn(
-          "p-2 md:p-3 md:px-2.5 shadow-sm rounded-sm",
+          "p-2 md:p-3 md:px-2.5 shadow-sm rounded-sm h-full",
+          "md:col-span-1 lg:col-span-2 xl:col-span-2",
           motionSafe.transition,
         )}
       >
@@ -199,13 +207,19 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         </div>
       </Link>
 
-      <div className="md:grid md:grid-cols-1 md:gap-3 md:space-y-[9px]">
+      <div
+        className={cn(
+          "flex flex-col gap-2",
+          "md:gap-3 md:grid md:auto-rows-fr md:grid-cols-1",
+          "md:col-span-1 lg:col-span-1 xl:col-span-2 xl:grid-cols-2 xl:gap-4",
+        )}
+      >
         {secondaryPosts.map((post, index) => (
           <Link
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
             className={cn(
-              "flex bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
+              "flex h-full bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
               motionSafe.transition,
             )}
           >
