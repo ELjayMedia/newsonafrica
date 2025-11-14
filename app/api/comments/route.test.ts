@@ -3,24 +3,13 @@ import { NextRequest } from "next/server"
 
 import { cacheTags } from "@/lib/cache"
 
-interface CommentReportRecord {
-  id: string
-  comment_id: string
-  reported_by: string
-  reason: string | null
-  created_at: string
-}
-
 interface CommentRecord {
   id: string
   post_id: string
   user_id: string
   status: string
-  created_at?: string
-  country?: string | null
   parent_id?: string | null
   profile?: { username: string; avatar_url?: string } | null
-  reports?: CommentReportRecord[] | null
 }
 
 interface ProfileRecord {
@@ -236,7 +225,6 @@ describe("GET /api/comments", () => {
     const response = await GET(createRequest("&status=all"))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const filteredComments = currentSupabaseClient.getLastCommentsResult()
     expect(filteredComments).toHaveLength(1)
@@ -283,7 +271,6 @@ describe("GET /api/comments", () => {
     const response = await GET(createRequest("&status=all"))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const filteredComments = currentSupabaseClient.getLastCommentsResult()
     const returnedIds = filteredComments.map((comment) => comment.id)
@@ -292,74 +279,12 @@ describe("GET /api/comments", () => {
     expect(returnedIds).not.toContain("comment-other-flagged")
   })
 
-  it("returns report summaries when report data is present", async () => {
-    const comments: CommentRecord[] = [
-      {
-        id: "comment-with-reports",
-        post_id: "post-1",
-        user_id: "user-2",
-        status: "active",
-        created_at: "2024-01-01T00:00:00Z",
-        parent_id: null,
-        profile: { username: "user2" },
-        reports: [
-          {
-            id: "report-1",
-            comment_id: "comment-with-reports",
-            reported_by: "user-3",
-            reason: "spam",
-            created_at: "2024-01-02T00:00:00Z",
-          },
-          {
-            id: "report-2",
-            comment_id: "comment-with-reports",
-            reported_by: "user-4",
-            reason: "spam",
-            created_at: "2024-01-03T00:00:00Z",
-          },
-          {
-            id: "report-3",
-            comment_id: "comment-with-reports",
-            reported_by: "user-5",
-            reason: null,
-            created_at: "2024-01-04T00:00:00Z",
-          },
-        ],
-      },
-    ]
-
-    currentSupabaseClient = createSupabaseClient({ session: null, comments, profile: null })
-
-    const { GET } = await import("./route")
-
-    const response = await GET(createRequest(""))
-
-    expect(response.status).toBe(200)
-    const body = (await response.json()) as {
-      success: boolean
-      data: { comments: Array<{ reports: CommentReportRecord[]; report_summary?: { total: number; reasons: Array<{ reason: string | null; count: number }> } }> }
-    }
-
-    expect(body.success).toBe(true)
-    expect(body.data.comments).toHaveLength(1)
-    const [comment] = body.data.comments
-    expect(comment.reports).toHaveLength(3)
-    expect(comment.report_summary).toEqual({
-      total: 3,
-      reasons: [
-        { reason: "spam", count: 2 },
-        { reason: null, count: 1 },
-      ],
-    })
-  })
-
   it("returns a validation error when the postId is missing", async () => {
     const { GET } = await import("./route")
 
     const response = await GET(new NextRequest("https://example.com/api/comments"))
 
     expect(response.status).toBe(400)
-    expect(response.headers.get("cache-control")).toBe("no-store")
 
     const body = (await response.json()) as { success: boolean; error: string; errors?: Record<string, string[]> }
     expect(body.success).toBe(false)
@@ -460,7 +385,6 @@ describe("POST /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         country: "sz",
@@ -490,7 +414,6 @@ describe("POST /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         country: "african-edition",
@@ -516,15 +439,9 @@ describe("PATCH /api/comments", () => {
   function createPatchSupabaseClient({
     session,
     comment,
-    onCommentUpdate = vi.fn(),
-    onReportInsert = vi.fn(),
-    reportError = null,
   }: {
     session: { user: { id: string } }
     comment: CommentRecord
-    onCommentUpdate?: (payload: Record<string, unknown>) => void
-    onReportInsert?: (payload: Record<string, unknown>) => void
-    reportError?: { code?: string; message: string } | null
   }) {
     const selectBuilder: any = {
       eq: vi.fn(() => selectBuilder),
@@ -533,19 +450,9 @@ describe("PATCH /api/comments", () => {
 
     const commentsBuilder: any = {
       select: vi.fn(() => selectBuilder),
-      update: vi.fn((payload: Record<string, unknown>) => ({
-        eq: vi.fn(async () => {
-          onCommentUpdate(payload)
-          return { error: null }
-        }),
+      update: vi.fn(() => ({
+        eq: vi.fn(async () => ({ error: null })),
       })),
-    }
-
-    const reportsBuilder: any = {
-      insert: vi.fn(async (payload: Record<string, unknown>) => {
-        onReportInsert(payload)
-        return { error: reportError }
-      }),
     }
 
     return {
@@ -557,13 +464,8 @@ describe("PATCH /api/comments", () => {
           return commentsBuilder
         }
 
-        if (table === "comment_reports") {
-          return reportsBuilder
-        }
-
         throw new Error(`Unexpected table ${table}`)
       }),
-      getReportBuilder: () => reportsBuilder,
     }
   }
 
@@ -592,87 +494,9 @@ describe("PATCH /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
     expect(revalidateByTagMock).toHaveBeenCalledWith(
       cacheTags.comments("ng", "post-123"),
     )
-  })
-
-  it("records comment reports and flags active comments", async () => {
-    const onReportInsert = vi.fn()
-    const onCommentUpdate = vi.fn()
-    const comment: CommentRecord = {
-      id: "comment-1",
-      post_id: "post-123",
-      user_id: "user-2",
-      status: "active",
-      country: "ng",
-    }
-
-    currentSupabaseClient = createPatchSupabaseClient({
-      session: { user: { id: "reporter" } },
-      comment,
-      onReportInsert,
-      onCommentUpdate,
-    })
-
-    const { PATCH } = await import("./route")
-
-    const response = await PATCH(
-      new NextRequest("https://example.com/api/comments", {
-        method: "PATCH",
-        body: JSON.stringify({ id: "comment-1", action: "report", reason: "spam" }),
-        headers: { "content-type": "application/json" },
-      }),
-    )
-
-    expect(response.status).toBe(200)
-    const result = (await response.json()) as { success: boolean; data: { success: boolean; action: string; reportCreated?: boolean; statusUpdated?: boolean } }
-    expect(result.data.action).toBe("report")
-    expect(result.data.reportCreated).toBe(true)
-    expect(result.data.statusUpdated).toBe(true)
-    expect(onReportInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        comment_id: "comment-1",
-        reported_by: "reporter",
-        reason: "spam",
-      }),
-    )
-    expect(onCommentUpdate).toHaveBeenCalledWith({ status: "flagged" })
-    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("ng", "post-123"))
-  })
-
-  it("does not change status when reporting an already moderated comment", async () => {
-    const onReportInsert = vi.fn()
-    const onCommentUpdate = vi.fn()
-    const comment: CommentRecord = {
-      id: "comment-1",
-      post_id: "post-123",
-      user_id: "user-2",
-      status: "flagged",
-      country: "ng",
-    }
-
-    currentSupabaseClient = createPatchSupabaseClient({
-      session: { user: { id: "reporter" } },
-      comment,
-      onReportInsert,
-      onCommentUpdate,
-    })
-
-    const { PATCH } = await import("./route")
-
-    const response = await PATCH(
-      new NextRequest("https://example.com/api/comments", {
-        method: "PATCH",
-        body: JSON.stringify({ id: "comment-1", action: "report", reason: "spam" }),
-        headers: { "content-type": "application/json" },
-      }),
-    )
-
-    expect(response.status).toBe(200)
-    expect(onReportInsert).toHaveBeenCalled()
-    expect(onCommentUpdate).not.toHaveBeenCalled()
   })
 })

@@ -1,15 +1,21 @@
-import { HomeContent } from "@/components/HomeContent"
-import { getServerCountry } from "@/lib/utils/routing"
-import { getSiteBaseUrl } from "@/lib/site-url"
-import { getHomeContentSnapshot } from "./(home)/home-data"
+import { HomeContent } from "@/components/HomeContent";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import { buildHomeContentProps } from "./(home)/home-data";
 
-export const dynamic = "force-static"
-export const revalidate = false
+// Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
+export const revalidate = 300;
 
 export default async function Page() {
-  const baseUrl = getSiteBaseUrl()
-  const homeContent = await getHomeContentSnapshot(baseUrl)
-  const currentCountry = getServerCountry()
+  const baseUrl = getSiteBaseUrl();
+  const { initialPosts, featuredPosts, countryPosts, initialData } =
+    await buildHomeContentProps(baseUrl);
 
-  return <HomeContent {...homeContent} currentCountry={currentCountry} />
+  return (
+    <HomeContent
+      initialPosts={initialPosts}
+      featuredPosts={featuredPosts}
+      countryPosts={countryPosts}
+      initialData={initialData}
+    />
+  );
 }

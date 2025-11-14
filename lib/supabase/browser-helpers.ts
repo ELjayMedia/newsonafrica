@@ -822,4 +822,3 @@ export function clearProfileCache(userId?: string): void {
     profileCache.clear()
   }
 }
-

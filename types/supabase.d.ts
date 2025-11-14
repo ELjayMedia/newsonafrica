@@ -132,30 +132,6 @@ export interface Database {
         }
         Relationships: []
       }
-      comment_reports: {
-        Row: {
-          id: string
-          comment_id: string
-          reported_by: string
-          reason: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          comment_id: string
-          reported_by: string
-          reason?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          comment_id?: string
-          reported_by?: string
-          reason?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           id: string
@@ -404,15 +380,7 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      column_exists: {
-        Args: {
-          table_name: string
-          column_name: string
-        }
-        Returns: {
-          exists: boolean
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

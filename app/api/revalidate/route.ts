@@ -18,14 +18,14 @@ export const runtime = "nodejs"
 export const revalidate = 0
 
 type RevalidatePayload = {
-  secret?: string
+  secret: string
   slug?: string
-  postId?: string | number
-  country?: string
-  categories?: Array<string | number>
-  tags?: Array<string | number>
+  postId?: string
+  country: string
+  categories: string[]
+  tags: string[]
   path?: string
-  sections?: string[]
+  sections: string[]
 }
 
 const normalizeString = (value: unknown, { lowercase = false } = {}): string | undefined => {
@@ -70,7 +70,9 @@ function parseRevalidatePayload(body: unknown): RevalidatePayload {
 
   const slug = normalizeString(payload.slug, { lowercase: true })
   const postId = normalizeString(payload.postId)
-  const country = normalizeString(payload.country, { lowercase: true })
+  const country =
+    normalizeString(payload.country, { lowercase: true }) ??
+    (process.env.NEXT_PUBLIC_DEFAULT_SITE?.toLowerCase() ?? DEFAULT_COUNTRY)
   const categories = normalizeArray(payload.categories, { lowercase: true })
   const tags = normalizeArray(payload.tags, { lowercase: true })
   const sections = normalizeArray(payload.sections, { lowercase: true })
@@ -90,55 +92,52 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await applyRateLimit(request, 10, "REVALIDATE_API_CACHE_TOKEN")
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
-    const rawPayload = (await request.json()) as RevalidatePayload
-    const payload = parseRevalidatePayload(rawPayload)
+    const payload = parseRevalidatePayload(await request.json())
     const { secret, slug, postId, country, categories, tags, path, sections } = payload
 
     if (secret !== process.env.REVALIDATION_SECRET) {
       throw new Error("Invalid revalidation secret")
     }
 
-    const fallbackCountry = process.env.NEXT_PUBLIC_DEFAULT_SITE?.toLowerCase() ?? DEFAULT_COUNTRY
-    const normalizedCountry = country ?? fallbackCountry
-    const normalizedSlug = slug ?? undefined
-    const normalizedPostId = postId ? normalizeString(postId) : undefined
-    const normalizedPath = path ?? undefined
-
     const tagsToRevalidate = new Set<string>()
     const pathsToRevalidate = new Set<string>()
 
-    tagsToRevalidate.add(cacheTags.posts(normalizedCountry))
+    tagsToRevalidate.add(cacheTags.posts(country))
+    tagsToRevalidate.add(cacheTags.categories(country))
+    tagsToRevalidate.add(cacheTags.tags(country))
 
-    if (normalizedSlug) {
-      tagsToRevalidate.add(cacheTags.postSlug(normalizedCountry, normalizedSlug))
-      pathsToRevalidate.add(getArticleUrl(normalizedSlug, normalizedCountry))
+    if (slug) {
+      tagsToRevalidate.add(cacheTags.postSlug(country, slug))
+      pathsToRevalidate.add(getArticleUrl(slug, country))
     }
 
-    if (normalizedPostId) {
-      tagsToRevalidate.add(cacheTags.post(normalizedCountry, normalizedPostId))
+    if (postId) {
+      tagsToRevalidate.add(cacheTags.post(country, postId))
     }
 
-    for (const category of categories) {
-      tagsToRevalidate.add(cacheTags.category(normalizedCountry, category))
+    categories.forEach((category) => {
+      tagsToRevalidate.add(cacheTags.category(country, category))
+    })
+
+    tags.forEach((tag) => {
+      tagsToRevalidate.add(cacheTags.tag(country, tag))
+    })
+
+    sections.forEach((section) => {
+      buildCacheTags({ country, section }).forEach((cacheTag) => tagsToRevalidate.add(cacheTag))
+    })
+
+    if (path) {
+      pathsToRevalidate.add(path)
     }
 
-    for (const tag of tags) {
-      tagsToRevalidate.add(cacheTags.tag(normalizedCountry, tag))
-    }
+    pathsToRevalidate.forEach((targetPath) => {
+      revalidatePath(targetPath)
+    })
 
-    for (const section of sections) {
-      const sectionTags = buildCacheTags({ country: normalizedCountry, section })
-      for (const cacheTag of sectionTags) {
-        tagsToRevalidate.add(cacheTag)
-      }
-    }
-
-    if (normalizedPath) {
-      pathsToRevalidate.add(normalizedPath)
-    }
-
-    await Promise.all(Array.from(pathsToRevalidate, (targetPath) => revalidatePath(targetPath)))
-    await Promise.all(Array.from(tagsToRevalidate, (cacheTag) => revalidateByTag(cacheTag)))
+    tagsToRevalidate.forEach((cacheTag) => {
+      revalidateByTag(cacheTag)
+    })
 
     const responsePayload = {
       revalidated: true,

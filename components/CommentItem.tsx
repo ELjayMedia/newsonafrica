@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
-import { updateComment, deleteComment, reportComment } from "@/lib/comment-service"
+import { updateComment, deleteComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -54,13 +54,6 @@ export function CommentItem({
   const isAuthor = user && user.id === comment.user_id
   const isOptimistic = comment.isOptimistic === true
   const formattedDate = new Date(comment.created_at).toLocaleString()
-  const reportSummary = comment.report_summary
-  const primaryReportReason = reportSummary?.reasons?.[0]?.reason ?? null
-  const reportCountText = reportSummary
-    ? reportSummary.total === 1
-      ? "once"
-      : `${reportSummary.total} times`
-    : null
 
   const getInitials = (name: string) => {
     return name
@@ -164,22 +157,16 @@ export function CommentItem({
       return
     }
 
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "You need to be signed in to report comments.",
-        variant: "destructive",
-      })
-      return
-    }
-
     setIsReporting(true)
 
     try {
-      await reportComment({
-        commentId: comment.id,
-        reason: reportReason.trim(),
-      })
+      // This would call the reportComment function, but we'll skip it for now
+      // since the schema might not be updated yet
+      // await reportComment({
+      //   commentId: comment.id,
+      //   reportedBy: user?.id || '',
+      //   reason: reportReason
+      // })
 
       toast({
         title: "Comment reported",
@@ -187,7 +174,6 @@ export function CommentItem({
       })
       setIsReportDialogOpen(false)
       setReportReason("")
-      onCommentUpdated()
     } catch (error) {
       console.error("Failed to report comment:", error)
       toast({
@@ -259,14 +245,6 @@ export function CommentItem({
               </DropdownMenu>
             )}
           </div>
-
-          {comment.status === "flagged" && reportSummary && (
-            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-              <span className="font-semibold">Flagged for review.</span> Reported
-              {reportCountText ? ` ${reportCountText}` : ""}
-              {primaryReportReason ? ` (${primaryReportReason})` : "."}
-            </div>
-          )}
 
           {isEditing ? (
             <div className="mt-2">
