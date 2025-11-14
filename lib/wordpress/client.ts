@@ -200,6 +200,23 @@ export function fetchWordPressGraphQL<T>(
   const cacheKey = `${base}::${bodyHash}::${tagsKey}`
   const metadataKey = String(resolvedRevalidate)
   const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
+  let memoizedEntry: MemoizedRequestEntry | undefined
+
+  const removeMemoizedEntry = () => {
+    if (!shouldMemoize || !memoizedRequests) {
+      return
+    }
+
+    const currentEntry = memoizedRequests.get(cacheKey)
+
+    if (!currentEntry) {
+      return
+    }
+
+    if (!memoizedEntry || currentEntry === memoizedEntry) {
+      memoizedRequests.delete(cacheKey)
+    }
+  }
 
   if (shouldMemoize && memoizedRequests) {
     const cachedEntry = memoizedRequests.get(cacheKey) as
@@ -272,6 +289,7 @@ export function fetchWordPressGraphQL<T>(
     })
     .catch((error) => {
       console.error("[v0] GraphQL request exception:", error)
+      removeMemoizedEntry()
       throw error
     })
 
@@ -286,6 +304,7 @@ export function fetchWordPressGraphQL<T>(
       metadataKey,
       expiresAt,
     }
+    memoizedEntry = entry
     memoizedRequests.set(cacheKey, entry)
 
     if (resolvedRevalidate > 0) {
