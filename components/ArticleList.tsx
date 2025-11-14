@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
-import { ArticleCard } from "./ArticleCard"
+import { LegacyArticleCard } from "./LegacyArticleCard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -244,7 +244,7 @@ function InfiniteArticleList({
     <div className="space-y-8">
       <div className={cn("grid gap-6", className)}>
         {articles.map((article, index) => (
-          <ArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
+          <LegacyArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
         ))}
       </div>
 
@@ -302,7 +302,7 @@ function StaticArticleList({
     <div className="space-y-8">
       <div className={cn("grid gap-6 border-transparent shadow-xs", className)}>
         {articles.map((article, index) => (
-          <ArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
+          <LegacyArticleCard key={`${article.id}-${index}`} article={article} layout={layout} priority={index < 3} />
         ))}
       </div>
 

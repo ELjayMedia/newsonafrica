@@ -1,8 +1,7 @@
-import Image from "next/image"
 import Link from "next/link"
-import { Clock } from "lucide-react"
 
-import { cn, formatDate, motionSafe } from "@/lib/utils"
+import { ArticleCard } from "@/components/ArticleCard"
+import { cn } from "@/lib/utils"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
@@ -42,100 +41,47 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
 
   return (
     <>
-      <div className="md:col-span-2 flex items-center mb-2 md:mb-3">
-        <h2 className="text-base md:text-lg font-bold text-blue-600">Sports News</h2>
-        <Link href={getCategoryUrl("sport")} className="ml-auto text-xs md:text-sm text-blue-500 hover:underline">
+      <div className="mb-2 flex items-center md:col-span-2 md:mb-3">
+        <h2 className="text-base font-bold text-blue-600 md:text-lg">Sports News</h2>
+        <Link href={getCategoryUrl("sport")} className="ml-auto text-xs text-blue-500 hover:underline md:text-sm">
           View all
         </Link>
       </div>
 
-      <Link
+      <ArticleCard
         href={getArticleUrl(mainPost?.slug ?? "", mainPost?.country)}
-        className={cn(
-          "md:col-span-1 group block bg-white rounded-lg overflow-hidden transition-all duration-200",
-          motionSafe.transition,
-        )}
-      >
-        {mainPost?.featuredImage && (
-          <div className="relative aspect-[4/3] w-full overflow-hidden">
-            <Image
-              src={mainPost.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-              alt={mainPost.title}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
-              className={cn(
-                "object-cover rounded-md transition-transform duration-300 group-hover:scale-105",
-                motionSafe.transform,
-              )}
-              placeholder="blur"
-              blurDataURL={blurURLs.main}
-            />
-          </div>
-        )}
-        <div className="p-2 md:p-3">
-          <h2
-            className={cn(
-              "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-              motionSafe.transition,
-            )}
-          >
-            {mainPost?.title}
-          </h2>
-          {sanitizedMainExcerpt && (
-            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
-              {sanitizedMainExcerpt}
-            </div>
-          )}
-          <div className="flex items-center text-gray-500 text-xs">
-            <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-            <time dateTime={mainPost?.date}>{formatDate(mainPost?.date)}</time>
-          </div>
-        </div>
-      </Link>
+        headline={mainPost?.title ?? ""}
+        excerpt={sanitizedMainExcerpt}
+        timestamp={mainPost?.date}
+        categoryTag={mainPost?.type ?? "Sports"}
+        imageUrl={mainPost?.featuredImage?.node?.sourceUrl}
+        imageAlt={mainPost?.featuredImage?.node?.altText || mainPost?.title}
+        imageBlurDataURL={blurURLs.main}
+        layout="vertical"
+        className="md:col-span-1"
+        articleClassName="bg-white dark:bg-slate-900"
+        contentClassName="gap-3 p-3 md:p-4"
+        headlineClassName="text-base font-bold md:text-lg"
+        excerptClassName="text-xs font-light md:text-sm"
+      />
 
-      <div className="space-y-2 md:space-y-3 md:grid md:grid-cols-1 md:gap-3">
+      <div className="space-y-2 md:grid md:grid-cols-1 md:gap-3 md:space-y-0">
         {secondaryPosts.slice(0, 3).map((post, index) => (
-          <Link
+          <ArticleCard
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
-            className={cn(
-              "flex gap-2 md:gap-3 items-start bg-white p-2 md:p-3 rounded-lg transition-all duration-200 group",
-              motionSafe.transition,
-            )}
-          >
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <h3
-                className={cn(
-                  "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-                  motionSafe.transition,
-                )}
-              >
-                {post.title}
-              </h3>
-              <div className="flex items-center text-gray-500 text-xs">
-                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
-                </time>
-              </div>
-            </div>
-            {post.featuredImage && (
-              <div className="relative w-[70px] h-[70px] sm:w-[84px] sm:h-[84px] flex-shrink-0 overflow-hidden rounded-md">
-                <Image
-                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-                  alt={post.title}
-                  fill
-                  sizes="(max-width: 640px) 70px, 84px"
-                  className={cn(
-                    "object-cover transition-transform duration-300 group-hover:scale-105",
-                    motionSafe.transform,
-                  )}
-                  placeholder="blur"
-                  blurDataURL={blurURLs.secondary[index]}
-                />
-              </div>
-            )}
-          </Link>
+            headline={post.title}
+            timestamp={post.date}
+            imageUrl={post.featuredImage?.node?.sourceUrl}
+            imageAlt={post.featuredImage?.node?.altText || post.title}
+            imageBlurDataURL={blurURLs.secondary[index]}
+            layout="horizontal"
+            showExcerpt={false}
+            articleClassName="rounded-xl bg-white dark:bg-slate-900"
+            contentClassName="p-2 md:p-3"
+            mediaClassName="h-[70px] w-[70px] flex-shrink-0 sm:h-[84px] sm:w-[84px]"
+            headlineClassName="text-sm font-semibold md:text-base"
+          />
         ))}
       </div>
     </>
@@ -155,95 +101,39 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
 
   return (
     <>
-      <Link
+      <ArticleCard
         href={getArticleUrl(mainPost.slug ?? "", mainPost.country)}
-        className={cn(
-          "p-2 md:p-3 md:px-2.5 shadow-sm rounded-sm",
-          motionSafe.transition,
-        )}
-      >
-        {mainPost.featuredImage && (
-          <div className="relative aspect-[4/3] w-full overflow-hidden">
-            <Image
-              src={mainPost.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-              alt={mainPost.title}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 480px"
-              className={cn(
-                "object-cover transition-transform duration-300 group-hover:scale-105 shadow-none rounded-xs",
-                motionSafe.transform,
-              )}
-              placeholder="blur"
-              blurDataURL={blurURLs.main}
-            />
-          </div>
-        )}
-        <div className="p-2 md:p-3 md:px-2.5 shadow-none">
-          <h2
-            className={cn(
-              "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-              motionSafe.transition,
-            )}
-          >
-            {mainPost.title}
-          </h2>
-          {sanitizedMainExcerpt && (
-            <div className="text-gray-600 text-xs md:text-sm font-light mb-1 md:mb-2 line-clamp-2">
-              {sanitizedMainExcerpt}
-            </div>
-          )}
-          <div className="flex items-center text-gray-500 text-xs">
-            <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-            <time dateTime={mainPost.date}>{formatDate(mainPost.date)}</time>
-          </div>
-        </div>
-      </Link>
+        headline={mainPost.title}
+        excerpt={sanitizedMainExcerpt}
+        timestamp={mainPost.date}
+        categoryTag={mainPost.type}
+        imageUrl={mainPost.featuredImage?.node?.sourceUrl}
+        imageAlt={mainPost.featuredImage?.node?.altText || mainPost.title}
+        imageBlurDataURL={blurURLs.main}
+        layout="vertical"
+        articleClassName="rounded-xl bg-white shadow-sm dark:bg-slate-900"
+        contentClassName="gap-3 p-3 md:p-4"
+        headlineClassName="text-base font-bold md:text-lg"
+        excerptClassName="text-xs font-light md:text-sm"
+      />
 
-      <div className="md:grid md:grid-cols-1 md:gap-3 md:space-y-[9px]">
+      <div className="md:grid md:grid-cols-1 md:gap-3 md:space-y-[9px] md:space-y-0">
         {secondaryPosts.map((post, index) => (
-          <Link
+          <ArticleCard
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
-            className={cn(
-              "flex bg-white p-2 md:p-3 transition-all duration-200 group min-h-[90px] md:min-h-[100px] gap-[5px] items-center md:py-1.5 flex-row rounded-sm border-card border-0 shadow-sm md:px-3",
-              motionSafe.transition,
-            )}
-          >
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div>
-                <h3
-                  className={cn(
-                    "text-xs md:text-sm font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200 leading-[1.15rem]",
-                    motionSafe.transition,
-                  )}
-                >
-                  {post.title}
-                </h3>
-              </div>
-              <div className="flex items-center text-gray-500 text-xs">
-                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date} title={formatDate(post.date)}>
-                  {formatDate(post.date)}
-                </time>
-              </div>
-            </div>
-            {post.featuredImage && (
-              <div className="relative w-20 h-16 md:w-[85px] md:h-[85px] flex-shrink-0 overflow-hidden rounded-md">
-                <Image
-                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-                  alt={post.title}
-                  fill
-                  sizes="(max-width: 640px) 80px, 85px"
-                  className={cn(
-                    "object-cover transition-transform duration-300 group-hover:scale-105",
-                    motionSafe.transform,
-                  )}
-                  placeholder="blur"
-                  blurDataURL={blurURLs.secondary[index]}
-                />
-              </div>
-            )}
-          </Link>
+            headline={post.title}
+            timestamp={post.date}
+            imageUrl={post.featuredImage?.node?.sourceUrl}
+            imageAlt={post.featuredImage?.node?.altText || post.title}
+            imageBlurDataURL={blurURLs.secondary[index]}
+            layout="horizontal"
+            showExcerpt={false}
+            articleClassName="min-h-[90px] rounded-xl border border-border/60 bg-white shadow-sm dark:bg-slate-900 md:min-h-[100px]"
+            contentClassName="p-2 md:p-3"
+            mediaClassName="h-20 w-20 flex-shrink-0 rounded-lg md:h-[85px] md:w-[85px]"
+            headlineClassName="text-xs font-bold leading-[1.15rem] md:text-sm"
+          />
         ))}
       </div>
     </>
@@ -267,50 +157,22 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
         const sanitizedExcerpt = sanitizeExcerpt(post.excerpt)
 
         return (
-          <Link
+          <ArticleCard
             key={post.id}
             href={getArticleUrl(post.slug, post.country)}
-            className={cn(
-              "flex flex-col sm:flex-row gap-3 bg-white rounded-lg transition-all duration-200 overflow-hidden group",
-              motionSafe.transition,
-            )}
-          >
-            {post.featuredImage && (
-              <div className="relative h-48 sm:h-auto sm:w-1/3 overflow-hidden">
-                <Image
-                  src={post.featuredImage?.node?.sourceUrl || "/placeholder.svg"}
-                  alt={post.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
-                  className={cn(
-                    "object-cover transition-transform duration-300 group-hover:scale-105",
-                    motionSafe.transform,
-                  )}
-                  placeholder="blur"
-                  blurDataURL={blurPlaceholder}
-                />
-              </div>
-            )}
-            <div className="p-2 md:p-3 sm:w-2/3 flex flex-col justify-between">
-              <div>
-                <h2
-                  className={cn(
-                    "text-sm md:text-base font-bold mb-1 md:mb-2 group-hover:text-blue-600 transition-colors duration-200",
-                    motionSafe.transition,
-                  )}
-                >
-                  {post.title}
-                </h2>
-                {sanitizedExcerpt && (
-                  <div className="text-gray-600 text-sm mb-3 line-clamp-3">{sanitizedExcerpt}</div>
-                )}
-              </div>
-              <div className="flex items-center text-gray-500 text-xs">
-                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-                <time dateTime={post.date}>{formatDate(post.date)}</time>
-              </div>
-            </div>
-          </Link>
+            headline={post.title}
+            excerpt={sanitizedExcerpt}
+            timestamp={post.date}
+            imageUrl={post.featuredImage?.node?.sourceUrl}
+            imageAlt={post.featuredImage?.node?.altText || post.title}
+            imageBlurDataURL={blurPlaceholder}
+            layout="horizontal"
+            articleClassName="rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-slate-900"
+            contentClassName="p-3 sm:p-4"
+            mediaClassName="h-48 w-full flex-shrink-0 sm:h-auto sm:w-1/3"
+            headlineClassName="text-base font-semibold md:text-lg"
+            excerptClassName="text-sm md:text-base"
+          />
         )
       })}
     </div>
