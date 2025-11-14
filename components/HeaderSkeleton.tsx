@@ -2,40 +2,26 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function HeaderSkeleton() {
   return (
-    <header className="bg-white mx-auto max-w-[980px]">
-      <div className="w-full md:mx-auto -mb-4">
-        {/* Top Bar */}
-        <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
-          <Skeleton className="h-8 md:h-12 w-[200px]" />
-
-          <div className="flex items-center gap-4 ml-auto">
-            <Skeleton className="hidden sm:block w-[200px] h-10" />
-
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2">
-                <Skeleton className="h-5 w-5" />
-                <Skeleton className="h-5 w-5" />
-                <Skeleton className="h-5 w-5" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm ml-4">
-              <Skeleton className="hidden md:flex h-4 w-24" />
-            </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Skeleton className="h-8 w-48 md:h-12" />
+        <div className="flex flex-1 items-center justify-end gap-4">
+          <Skeleton className="hidden sm:block h-10 w-48" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-5 w-5" />
           </div>
+          <Skeleton className="hidden md:block h-4 w-24" />
         </div>
-
-        {/* Navigation */}
-        <nav className="mt-4 md:mt-0 bg-white">
-          <div className="overflow-x-auto">
-            <div className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
-              {[...Array(9)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-24 mx-1" />
-              ))}
-            </div>
-          </div>
-        </nav>
       </div>
-    </header>
+      <div className="overflow-x-auto">
+        <div className="flex gap-2 border-t border-border/50 pt-2">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <Skeleton key={index} className="h-10 w-24" />
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }

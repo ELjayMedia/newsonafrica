@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/AppShell"
+import { AppLayout } from "@/components/layout/AppLayout"
 import { GlobalErrorContent } from "@/components/GlobalErrorContent"
 
 export default function GlobalError({
@@ -9,10 +9,10 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en" className="font-sans">
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <AppShell>
+      <body className="bg-background font-sans antialiased">
+        <AppLayout>
           <GlobalErrorContent reset={reset} />
-        </AppShell>
+        </AppLayout>
       </body>
     </html>
   )

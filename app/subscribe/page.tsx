@@ -17,33 +17,30 @@ export default function SubscribePage() {
 
 function SubscriptionSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="h-8 bg-gray-200 rounded w-1/2 mx-auto mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-        </div>
-
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center">
-            <div className="rounded-full h-8 w-8 bg-gray-200 flex items-center justify-center"></div>
-            <div className="w-24 h-1 mx-2 bg-gray-200"></div>
-            <div className="rounded-full h-8 w-8 bg-gray-200 flex items-center justify-center"></div>
-            <div className="w-24 h-1 mx-2 bg-gray-200"></div>
-            <div className="rounded-full h-8 w-8 bg-gray-200 flex items-center justify-center"></div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-10 bg-gray-200 rounded w-full"></div>
+    <div className="space-y-10">
+      <div className="space-y-4 text-center">
+        <div className="mx-auto h-8 w-1/2 rounded bg-gray-200" />
+        <div className="mx-auto h-4 w-3/4 rounded bg-gray-200" />
+      </div>
+      <div className="flex justify-center">
+        <div className="flex items-center gap-4">
+          {[0, 1, 2].map((step) => (
+            <div key={step} className="flex items-center gap-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200" />
+              {step < 2 && <div className="h-1 w-20 bg-gray-200" />}
             </div>
           ))}
         </div>
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="rounded-lg bg-white p-6 shadow-sm">
+            <div className="mb-4 h-6 w-1/2 rounded bg-gray-200" />
+            <div className="mb-2 h-4 w-full rounded bg-gray-200" />
+            <div className="mb-4 h-4 w-3/4 rounded bg-gray-200" />
+            <div className="h-10 w-full rounded bg-gray-200" />
+          </div>
+        ))}
       </div>
     </div>
   )

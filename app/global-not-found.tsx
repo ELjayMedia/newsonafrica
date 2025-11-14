@@ -1,5 +1,5 @@
 import NotFoundContent from "@/components/NotFoundContent"
-import { AppShell } from "@/components/AppShell"
+import { AppLayout } from "@/components/layout/AppLayout"
 
 export default function GlobalNotFound() {
   return (
@@ -8,10 +8,10 @@ export default function GlobalNotFound() {
         <title>404 - Page Not Found | News On Africa</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <AppShell>
+      <body className="bg-background font-sans antialiased">
+        <AppLayout>
           <NotFoundContent />
-        </AppShell>
+        </AppLayout>
       </body>
     </html>
   )

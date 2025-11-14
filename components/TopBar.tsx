@@ -7,7 +7,7 @@ import { BookmarkIcon, LogIn } from "lucide-react"
 
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { Button } from "@/components/ui/button"
-import { Container, Flex } from "@/components/ui/grid"
+import { Flex } from "@/components/ui/grid"
 import { TypographySmall } from "@/components/ui/typography"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -39,7 +39,7 @@ export function TopBar() {
 
   return (
     <div className="hidden bg-foreground text-background md:block">
-      <Container size="2xl" className="max-w-[980px] py-2">
+      <div className="mx-auto w-full max-w-[980px] px-4 py-2 md:px-6">
         <Flex justify="between" align="center" className="gap-4" wrap>
           <TypographySmall className="font-medium text-background/80">
             {showWelcome && user ? (
@@ -88,7 +88,7 @@ export function TopBar() {
             )}
           </Flex>
         </Flex>
-      </Container>
+      </div>
     </div>
   )
 }

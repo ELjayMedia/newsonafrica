@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { ENV } from "@/config/env"
-import { AppShell } from "@/components/AppShell"
+import { AppLayout } from "@/components/layout/AppLayout"
 
 import "./globals.css"
 
@@ -39,8 +39,8 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <AppShell>{children}</AppShell>
+      <body className="bg-background font-sans antialiased">
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   )

@@ -49,26 +49,24 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const sort = normalizeSortParam(resolvedParams.sort)
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Search News On Africa</h1>
-
+    <div className="space-y-8">
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Search News On Africa</h1>
         {/* Temporary debugger - remove after fixing */}
         {process.env.NODE_ENV === "development" && (
-          <div className="mb-8">
+          <div>
             <SearchDebugger />
           </div>
         )}
-
-        <Suspense fallback={<SearchPageSkeleton />}>
-          <SearchContent
-            initialQuery={query}
-            initialPage={page}
-            initialCountry={country}
-            initialSort={sort}
-          />
-        </Suspense>
       </div>
+      <Suspense fallback={<SearchPageSkeleton />}>
+        <SearchContent
+          initialQuery={query}
+          initialPage={page}
+          initialCountry={country}
+          initialSort={sort}
+        />
+      </Suspense>
     </div>
   )
 }

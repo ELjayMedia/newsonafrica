@@ -9,21 +9,21 @@ export const metadata = {
 
 export default function WelcomePage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="flex justify-center mb-4">
+    <div className="flex justify-center">
+      <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-md">
+        <div className="mb-4 flex justify-center">
           <CheckCircle className="h-16 w-16 text-green-500" />
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to News On Africa!</h1>
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">Welcome to News On Africa!</h1>
 
-        <p className="text-gray-600 mb-6">
+        <p className="mb-6 text-gray-600">
           Your subscription has been successfully activated. Thank you for supporting quality journalism across Africa.
         </p>
 
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <h2 className="font-semibold text-blue-800 mb-2">What's Next?</h2>
-          <ul className="text-sm text-blue-700 text-left space-y-2">
+        <div className="mb-6 rounded-lg bg-blue-50 p-4">
+          <h2 className="mb-2 font-semibold text-blue-800">What's Next?</h2>
+          <ul className="space-y-2 text-left text-sm text-blue-700">
             <li>• Enjoy unlimited access to all articles</li>
             <li>• Bookmark articles to read later</li>
             <li>• Receive our weekly newsletter</li>

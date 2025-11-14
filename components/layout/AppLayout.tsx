@@ -1,12 +1,22 @@
 import { Suspense, type ReactNode } from "react"
 import { headers } from "next/headers"
 
+import { Providers } from "@/app/providers"
+import { ClientUserPreferencesProvider } from "@/app/ClientUserPreferencesProvider"
+import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
+import { PreferredCountrySync } from "@/components/PreferredCountrySync"
+import { TopBar } from "@/components/TopBar"
 import { Header } from "@/components/Header"
-import { Sidebar } from "@/components/Sidebar"
-import { Card } from "@/components/ui/card"
-import { NewsSidebarLayout, Stack } from "@/components/ui/grid"
+import { HeaderSkeleton } from "@/components/HeaderSkeleton"
+import { ScrollToTop } from "@/components/ScrollToTop"
+import { BottomNavigation } from "@/components/BottomNavigation"
+import { Toaster } from "@/components/ui/toaster"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { DEFAULT_COUNTRY, getServerCountry } from "@/lib/utils/routing"
+
+interface AppLayoutProps {
+  children: ReactNode
+}
 
 const SUPPORTED_EDITION_CODE_LOOKUP = new Map(
   SUPPORTED_EDITIONS.map((edition) => {
@@ -87,35 +97,33 @@ const resolveEdition = (explicit?: string) => {
   return canonicalFallback ?? DEFAULT_COUNTRY
 }
 
-interface LayoutStructureProps {
-  children: ReactNode
-  countryCode?: string
-}
-
-export function LayoutStructure({ children, countryCode }: LayoutStructureProps) {
-  const resolvedCountry = resolveEdition(countryCode)
+export function AppLayout({ children }: AppLayoutProps) {
+  const resolvedCountry = resolveEdition()
 
   return (
-    <Stack space={6} className="mx-auto w-full max-w-[980px] space-y-6">
-      <Suspense fallback={<div className="h-20 w-full rounded-xl border border-border/60 bg-card shadow-sm" />}>
-        <Header countryCode={resolvedCountry} />
-      </Suspense>
-      <NewsSidebarLayout className="items-start gap-6">
-        <Suspense
-          fallback={
-            <Card className="h-[560px] w-full border border-border/60 shadow-sm" aria-hidden="true" />
-          }
-        >
-          <Card className="w-full overflow-hidden border border-border/60 shadow-sm">
-            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-          </Card>
+    <Providers initialAuthState={null}>
+      <ClientUserPreferencesProvider>
+        <PreferredCountrySync />
+        <Suspense fallback={null}>
+          <ScrollToTop />
         </Suspense>
-        <aside>
-          <Suspense fallback={<Card className="h-[480px] w-full border border-border/60 shadow-sm" aria-hidden="true" />}>
-            <Sidebar country={resolvedCountry} />
-          </Suspense>
-        </aside>
-      </NewsSidebarLayout>
-    </Stack>
+        <ClientDynamicComponents />
+        <div className="flex min-h-screen flex-col bg-background">
+          <TopBar />
+          <header className="border-b border-border/60 bg-background">
+            <div className="mx-auto w-full max-w-[980px] px-4 py-4 md:px-6 md:py-6">
+              <Suspense fallback={<HeaderSkeleton />}>
+                <Header countryCode={resolvedCountry} />
+              </Suspense>
+            </div>
+          </header>
+          <main className="flex-1 bg-background">
+            <div className="mx-auto w-full max-w-[980px] px-4 py-6 md:px-6 md:py-10">{children}</div>
+          </main>
+        </div>
+        <BottomNavigation />
+        <Toaster />
+      </ClientUserPreferencesProvider>
+    </Providers>
   )
 }
