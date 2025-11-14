@@ -41,18 +41,12 @@ export function TopBar() {
     <div className="hidden bg-foreground text-background md:block">
       <Container size="2xl" className="max-w-[980px] py-2">
         <Flex justify="between" align="center" className="gap-4" wrap>
-          <TypographySmall className="font-medium text-background/80">
-            {showWelcome && user ? (
-              <span>
-                Welcome back, {profile?.full_name || profile?.username || user.email?.split("@")[0]}!
-              </span>
-            ) : (
-              <span>
-                <span className="hidden sm:inline">Stay informed. </span>
-                Subscribe for full access.
-              </span>
-            )}
-          </TypographySmall>
+      <nav className="flex gap-4">
+  <Link href="/publications">Publications</Link>
+  <Link href="/partners">Partners</Link>
+  <Link href="/public-notices">Public Notices</Link>
+  <Link href="/jobs">Jobs</Link>
+</nav>>
           <Flex align="center" className="gap-3" wrap>
             {loading ? (
               <div className="h-9 w-28 rounded-full bg-background/20" />
