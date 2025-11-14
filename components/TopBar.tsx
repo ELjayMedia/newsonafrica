@@ -16,30 +16,14 @@ export function TopBar() {
       <Container size="2xl" className="max-w-[980px] py-2">
         <Flex justify="between" align="center" className="gap-4" wrap>
           <nav className="flex gap-4">
-            <Link
-              href="/publications"
-              className="text-sm font-medium text-background/80 transition hover:text-background"
-            >
-              Publications
-            </Link>
+           
             <Link
               href="/partners"
               className="text-sm font-medium text-background/80 transition hover:text-background"
             >
               Partners
             </Link>
-            <Link
-              href="/public-notices"
-              className="text-sm font-medium text-background/80 transition hover:text-background"
-            >
-              Public Notices
-            </Link>
-            <Link
-              href="/jobs"
-              className="text-sm font-medium text-background/80 transition hover:text-background"
-            >
-              Jobs
-            </Link>
+                 
           </nav>
           <Flex align="center" className="gap-3" wrap>
             {loading ? (
