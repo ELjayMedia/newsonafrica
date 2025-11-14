@@ -71,7 +71,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
               <div className="hidden sm:block">
                 <SearchBox
                   placeholder="Search"
-                  className="w-[200px]"
+                  className="w-[300px] max-w-full"
                   onSearch={(query) => router.push(`/search?q=${encodeURIComponent(query)}&source=wp`)}
                   showSuggestions={false}
                   size="compact"
