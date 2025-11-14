@@ -45,7 +45,6 @@ export interface ArticleCardProps {
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg?height=360&width=640&text=News+Article"
-
 const VARIANT_STYLES: Record<ArticleCardVariant, { headline: string; excerpt: string; content: string; category: string }> = {
   featured: {
     headline: "text-lg font-semibold leading-tight md:text-xl",

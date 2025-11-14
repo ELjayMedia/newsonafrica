@@ -73,7 +73,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockResolvedValue(aggregatedWithContent)
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
     const result = await homeDataModule.fetchAggregatedHome(CACHE_TAGS)
 
     expect(result).toBe(aggregatedWithContent)
@@ -89,7 +89,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
     const result = await homeDataModule.fetchAggregatedHome(CACHE_TAGS)
 
     expect(result).toEqual({
@@ -109,7 +109,7 @@ describe("fetchAggregatedHome", () => {
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
 
     const [first, second] = await Promise.all([
       homeDataModule.fetchAggregatedHome(CACHE_TAGS),
@@ -188,7 +188,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue([])
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 4)
 
     expect(frontPageSpy).toHaveBeenCalledWith(
@@ -264,7 +264,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue(fallbackPosts)
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 2)
 
     expect(frontPageSpy).toHaveBeenCalled()
@@ -384,7 +384,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       return []
     })
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
 
     const [first, second] = await Promise.all([
       homeDataModule.fetchAggregatedHomeForCountry("za", 4),
@@ -444,7 +444,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockResolvedValue(fallbackPosts)
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
 
     const result = await homeDataModule.fetchAggregatedHomeForCountry("za", 3)
 
@@ -459,7 +459,7 @@ describe("buildCountryPosts", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
 
     const aggregatedFor = (countryCode: string): AggregatedHomeData => ({
       heroPost: {
@@ -617,7 +617,7 @@ describe("buildHomeContentProps", () => {
       .mockResolvedValue({ posts: [], hasNextPage: false, endCursor: null })
     const fpSpy = vi.spyOn(wordpressApi, "getFpTaggedPostsForCountry").mockResolvedValue([])
 
-    const homeDataModule = await import("@/lib/home-builder")
+    const homeDataModule = await import("./home-data")
 
     const result = await homeDataModule.buildHomeContentProps(BASE_URL)
 
@@ -646,55 +646,5 @@ describe("buildHomeContentProps", () => {
       ).toBe(1)
     })
     expect(Object.keys(result.countryPosts).sort()).toEqual([...SUPPORTED_COUNTRIES].sort())
-  })
-})
-
-describe("selectHeroAndSecondary", () => {
-  const makePost = (slug: string): HomePost => ({
-    id: slug,
-    slug,
-    title: slug,
-    excerpt: slug,
-    date: "2024-01-01T00:00:00.000Z",
-  })
-
-  it("prefers tagged posts when they are available", async () => {
-    vi.resetModules()
-    const homeDataModule = await import("./home-data")
-    const tagged = [makePost("tagged-hero"), makePost("tagged-secondary"), makePost("tagged-extra")]
-    const featured = [makePost("featured-hero"), makePost("featured-secondary")]
-    const fallbackFeatured = [makePost("fallback-hero"), makePost("fallback-secondary")]
-    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
-
-    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, fallbackFeatured, recent)
-
-    expect(result.hero?.slug).toBe("tagged-hero")
-    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["tagged-secondary", "tagged-extra"])
-  })
-
-  it("falls back to featured posts when no tagged posts exist", async () => {
-    vi.resetModules()
-    const homeDataModule = await import("./home-data")
-    const tagged: HomePost[] = []
-    const featured = [makePost("featured-hero"), makePost("featured-secondary"), makePost("featured-third")]
-    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
-
-    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, featured, recent)
-
-    expect(result.hero?.slug).toBe("featured-hero")
-    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["featured-secondary", "featured-third"])
-  })
-
-  it("uses recent posts when neither tagged nor featured posts are available", async () => {
-    vi.resetModules()
-    const homeDataModule = await import("./home-data")
-    const tagged: HomePost[] = []
-    const featured: HomePost[] = []
-    const recent = [makePost("recent-hero"), makePost("recent-secondary")]
-
-    const result = homeDataModule.selectHeroAndSecondary(tagged, featured, featured, recent)
-
-    expect(result.hero?.slug).toBe("recent-hero")
-    expect(result.secondaryStories.map((post) => post.slug)).toEqual(["recent-secondary"])
   })
 })

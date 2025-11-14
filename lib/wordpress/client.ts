@@ -263,24 +263,7 @@ export function fetchWordPressGraphQL<T>(
         errors?: Array<{ message: string; [key: string]: unknown }>
       }
 
-      const hasData = "data" in json && json.data !== undefined
-      const hasErrors = Array.isArray(json.errors) && json.errors.length > 0
-
-      if (hasErrors && hasData) {
-        console.warn("[v0] GraphQL errors with data payload:", json.errors)
-
-        const result = buildSuccessResult<T>(json.data ?? null)
-
-        if (process.env.NODE_ENV !== "production") {
-          ;(result as WordPressGraphQLSuccess<T> & {
-            __errors?: Array<{ message: string; [key: string]: unknown }>
-          }).__errors = json.errors
-        }
-
-        return result
-      }
-
-      if (hasErrors) {
+      if (json.errors && json.errors.length > 0) {
         console.error("[v0] GraphQL errors:", json.errors)
         return buildGraphQLFailureResult(json.errors)
       }

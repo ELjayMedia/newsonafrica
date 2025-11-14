@@ -6,7 +6,7 @@ import type { CacheMetricPayload, MetricsEventPayload, MetricsEnvelope } from "@
 
 export const runtime = "edge"
 
-const ACCEPTED_EVENTS = new Set(["web-vitals", "cache", "home-rebuild"])
+const ACCEPTED_EVENTS = new Set(["web-vitals", "cache"])
 
 type NormalizedPayload = MetricsEventPayload & {
   forwardedFor?: string
@@ -74,44 +74,16 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
     }
   }
 
-  if (event === "cache") {
-    const cachePayload = normalizeCachePayload(record)
-    if (!cachePayload) {
-      return null
-    }
-
-    return {
-      ...cachePayload,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
-    }
+  const cachePayload = normalizeCachePayload(record)
+  if (!cachePayload) {
+    return null
   }
 
-  if (event === "home-rebuild") {
-    const edition = typeof record.edition === "string" ? record.edition : undefined
-    const durationMs = typeof record.durationMs === "number" ? record.durationMs : undefined
-    const status = record.status === "success" || record.status === "error" ? record.status : undefined
-
-    if (!edition || typeof durationMs !== "number" || !status) {
-      return null
-    }
-
-    const ttfbDelta = typeof record.ttfbDeltaMs === "number" ? record.ttfbDeltaMs : undefined
-    const errorMessage = typeof record.errorMessage === "string" ? record.errorMessage : undefined
-
-    return {
-      event: "home-rebuild",
-      edition,
-      durationMs,
-      status,
-      ...(typeof ttfbDelta === "number" ? { ttfbDeltaMs: ttfbDelta } : {}),
-      ...(errorMessage ? { errorMessage } : {}),
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
-    }
+  return {
+    ...cachePayload,
+    userAgent: request.headers.get("user-agent") ?? undefined,
+    forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
   }
-
-  return null
 }
 
 export async function POST(request: NextRequest) {
