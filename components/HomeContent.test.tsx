@@ -1,97 +1,186 @@
-import { render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { render, screen, waitFor, cleanup } from "@testing-library/react"
+import { SWRConfig } from "swr"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import type { ReactNode } from "react"
+import { categoryConfigs } from "@/config/homeConfig"
 
-import type { HomeCategorySection } from "@/app/(home)/home-data"
-import { HomeContent } from "./HomeContent"
-
-vi.mock("next/dynamic", () => ({
-  default: () => (props: any) => <div data-testid="dynamic" {...props} />,
+vi.mock("next/link", () => ({
+  default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
 }))
 
-vi.mock("@/components/client/CountryNavigation", () => ({
-  CountryNavigation: () => <nav data-testid="country-navigation" />,
-  default: () => <nav data-testid="country-navigation" />,
+vi.mock("@/hooks/useMediaQuery", () => ({
+  useMediaQuery: () => false,
 }))
 
-vi.mock("@/components/client/OfflineBanner", () => ({
-  OfflineBanner: () => <div data-testid="offline-banner">offline</div>,
-  default: () => <div data-testid="offline-banner">offline</div>,
+vi.mock("@/components/client/FeaturedHeroClient", () => ({
+  FeaturedHeroClient: ({ post }: any) => <div data-testid="featured-hero">{post.title}</div>,
 }))
 
-vi.mock("@/components/CountrySpotlight", () => ({
-  __esModule: true,
-  default: ({ countryPosts }: { countryPosts: Record<string, any[]> }) => (
-    <div data-testid="spotlight">{Object.keys(countryPosts).join(",")}</div>
+vi.mock("@/components/client/SecondaryStoriesClient", () => ({
+  SecondaryStoriesClient: ({ posts }: any) => (
+    <div data-testid="secondary-stories">
+      {posts.map((post: any) => (
+        <span key={post.slug}>{post.title}</span>
+      ))}
+    </div>
   ),
 }))
 
-const createPost = (slug: string) => ({
-  id: slug,
-  slug,
-  date: new Date().toISOString(),
-  title: slug,
-  excerpt: slug,
+vi.mock("@/components/client/NewsGridClient", () => ({
+  NewsGridClient: ({ posts }: any) => (
+    <div data-testid="news-grid">
+      {posts.map((post: any) => (
+        <div key={post.slug}>{post.title}</div>
+      ))}
+    </div>
+  ),
+}))
+
+vi.mock("@/components/CountryNavigation", () => ({
+  CountryNavigation: () => <nav data-testid="country-navigation" />,
+  CountrySpotlight: ({ children }: any) => <section>{children}</section>,
+}))
+
+vi.mock("@/components/SchemaOrg", () => ({
+  SchemaOrg: () => null,
+}))
+
+vi.mock("@/components/ErrorBoundary", () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}))
+
+vi.mock("@/lib/utils/routing", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/utils/routing")>(
+    "@/lib/utils/routing",
+  )
+
+  return {
+    ...actual,
+    getCurrentCountry: vi.fn(actual.getCurrentCountry),
+    getArticleUrl: vi.fn(actual.getArticleUrl),
+    getCategoryUrl: vi.fn(actual.getCategoryUrl),
+  }
 })
 
-const baseProps = {
-  hero: createPost("hero"),
-  secondaryStories: [createPost("secondary-1"), createPost("secondary-2")],
-  featuredPosts: [createPost("featured-1")],
-  countryPosts: { sz: [createPost("sz-1")] },
-} as const
+import { HomeContent } from "./HomeContent"
 
-const makeCategorySection = (key: string, posts = [createPost(`${key}-post`)]) => ({
-  key,
-  posts,
-  config: { name: key, layout: "grid" as const },
-}) satisfies HomeCategorySection
+type HomePost = {
+  id: string
+  slug: string
+  date: string
+  title: string
+  excerpt: string
+}
+
+const createPost = (slug: string, title: string): HomePost => ({
+  id: Math.floor(Math.random() * 100000).toString(),
+  slug,
+  date: new Date().toISOString(),
+  title,
+  excerpt: `${title} excerpt`,
+})
+
+const createFetchResponse = (data: unknown) =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(data),
+  } as Response)
 
 describe("HomeContent", () => {
-  it("renders empty state when no content is available", () => {
-    render(
-      <HomeContent
-        {...baseProps}
-        hero={null}
-        secondaryStories={[]}
-        featuredPosts={[]}
-        categorySections={[]}
-        contentState="empty"
-        currentCountry="sz"
-      />,
-    )
+  const fetchMock = vi.fn()
+  const originalFetch = global.fetch
 
-    expect(screen.getByText("No Content Available")).toBeInTheDocument()
-    expect(screen.queryByTestId("country-navigation")).not.toBeInTheDocument()
+  beforeEach(() => {
+    window.history.pushState({}, "", "/sz")
+    window.localStorage.clear()
+    document.cookie = "country=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    document.cookie = "preferredCountry=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    fetchMock.mockReset()
+    global.fetch = fetchMock as unknown as typeof fetch
   })
 
-  it("renders awaiting hero state when posts exist but hero is missing", () => {
-    render(
-      <HomeContent
-        {...baseProps}
-        hero={null}
-        categorySections={[makeCategorySection("news")]}
-        contentState="awaiting-hero"
-        currentCountry="sz"
-      />,
-    )
-
-    expect(screen.getByText("Featured Content Coming Soon")).toBeInTheDocument()
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+    global.fetch = originalFetch
   })
 
-  it("renders hero, secondary stories, and categories when content is ready", () => {
+  const createApiPayload = (
+    overrides: Partial<{
+      taggedPosts: HomePost[]
+      featuredPosts: HomePost[]
+      categories: any[]
+      recentPosts: HomePost[]
+      categoryPosts: Record<string, HomePost[]>
+    }> = {},
+  ) => ({
+    taggedPosts: [createPost("fp-post", "Featured Story")],
+    featuredPosts: [createPost("feat-post", "Featured Story")],
+    categories: [],
+    recentPosts: [createPost("recent-post", "Recent Story")],
+    categoryPosts: overrides.categoryPosts ?? {},
+    ...overrides,
+  })
+
+  const renderHomeContent = async (overrides: Partial<ReturnType<typeof createApiPayload>> = {}) => {
+    const apiPayload = createApiPayload(overrides)
+    fetchMock.mockResolvedValueOnce(createFetchResponse(apiPayload))
+
     render(
-      <HomeContent
-        {...baseProps}
-        categorySections={[makeCategorySection("news"), makeCategorySection("business")]}
-        contentState="ready"
-        currentCountry="sz"
-      />,
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
+        <HomeContent
+          initialPosts={[createPost("initial-post", "Initial Story")]}
+          initialData={{
+            taggedPosts: [createPost("fp-post", "Featured Story")],
+            featuredPosts: [createPost("feat-post", "Featured Story")],
+            categories: [],
+            recentPosts: [createPost("recent-post", "Recent Story")],
+          }}
+        />
+      </SWRConfig>,
     )
 
-    expect(screen.getByText("hero")).toBeInTheDocument()
-    expect(screen.getAllByText(/secondary/)).toHaveLength(2)
-    expect(screen.getByText("news")).toBeInTheDocument()
-    expect(screen.getByText("business")).toBeInTheDocument()
-    expect(screen.getByTestId("spotlight")).toHaveTextContent("sz")
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    return apiPayload
+  }
+
+  it("renders posts for every configured category when data is available", async () => {
+    const categoryPosts: Record<string, HomePost[]> = {}
+
+    categoryConfigs.forEach((config) => {
+      const slug = config.name.toLowerCase()
+      categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
+    })
+
+    await renderHomeContent({ categoryPosts })
+
+    await waitFor(() => expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0))
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("country=sz")
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("categories=")
+    expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
+
+    categoryConfigs.forEach((config) => {
+      expect(screen.getByText(`${config.name} Story`)).toBeInTheDocument()
+    })
+  })
+
+  it("continues rendering available categories when some responses are empty", async () => {
+    const categoryPosts: Record<string, HomePost[]> = {}
+
+    categoryConfigs.forEach((config) => {
+      if (config.name === "Business") {
+        return
+      }
+
+      const slug = config.name.toLowerCase()
+      categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
+    })
+
+    await renderHomeContent({ categoryPosts })
+
+    await waitFor(() => expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0))
+    expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
+    expect(screen.queryByText("Business Story")).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
+
 vi.mock("server-only", () => ({}))
 
 const homeContentMock = vi.fn(() => <div data-testid="home-content" />)
@@ -14,17 +16,16 @@ vi.mock("@/components/HomeContent", () => ({
   HomeContent: homeContentMock,
 }))
 
-const getHomeContentSnapshotForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
-  hero: { id: `hero-${edition.code}` },
-  secondaryStories: [{ id: `secondary-${edition.code}` }],
+const buildHomeContentPropsForEditionMock = vi.fn(async (_baseUrl: string, edition: { code: string }) => ({
+  initialPosts: [{ id: `initial-${edition.code}` }],
   featuredPosts: [{ id: `featured-${edition.code}` }],
-  categorySections: [],
   countryPosts: { [edition.code]: [{ id: `country-${edition.code}` }] },
-  contentState: "ready",
+  initialData: { edition: edition.code },
 }))
 
 vi.mock("../(home)/home-data", () => ({
-  getHomeContentSnapshotForEdition: getHomeContentSnapshotForEditionMock,
+  HOME_FEED_REVALIDATE: CACHE_DURATIONS.MEDIUM,
+  buildHomeContentPropsForEdition: buildHomeContentPropsForEditionMock,
 }))
 
 beforeAll(() => {
@@ -47,8 +48,8 @@ describe("CountryPage", () => {
   it("configures incremental static regeneration", async () => {
     const pageModule = await import("./page")
 
-    expect(pageModule.dynamic).toBe("force-static")
-    expect(pageModule.revalidate).toBe(false)
+    expect(pageModule.dynamic).toBeUndefined()
+    expect(pageModule.revalidate).toBe(CACHE_DURATIONS.MEDIUM)
   })
 
   it.each([
@@ -62,15 +63,18 @@ describe("CountryPage", () => {
   ])("provides HomeContent props for the %s edition", async (countryCode, expectedCode) => {
     const homeData = await import("../(home)/home-data")
     const fakeProps = {
-      hero: { id: `${expectedCode}-hero` },
-      secondaryStories: [{ id: `${expectedCode}-secondary` }],
-      featuredPosts: [{ id: `${expectedCode}-featured` }],
-      categorySections: [],
-      countryPosts: { [expectedCode]: [{ id: `${expectedCode}-post` }] },
-      contentState: "ready",
+      initialPosts: [{ id: `${expectedCode}-initial` }] as any,
+      featuredPosts: [{ id: `${expectedCode}-featured` }] as any,
+      countryPosts: { [expectedCode]: [{ id: `${expectedCode}-post` }] } as any,
+      initialData: {
+        taggedPosts: [],
+        recentPosts: [],
+        categories: [],
+        featuredPosts: [],
+      },
     }
     const propsSpy = vi
-      .spyOn(homeData, "getHomeContentSnapshotForEdition")
+      .spyOn(homeData, "buildHomeContentPropsForEdition")
       .mockResolvedValue(fakeProps)
 
     const { default: CountryPage } = await import("./page")
@@ -81,7 +85,7 @@ describe("CountryPage", () => {
     expect(homeContentMock).toHaveBeenCalledTimes(1)
     const [props] = homeContentMock.mock.calls[0]
 
-    expect(props).toEqual({ ...fakeProps, currentCountry: expectedCode })
+    expect(props).toEqual(fakeProps)
     expect(props.countryPosts).toHaveProperty(expectedCode)
     expect(notFoundMock).not.toHaveBeenCalled()
     expect(propsSpy).toHaveBeenCalledTimes(1)
@@ -90,7 +94,7 @@ describe("CountryPage", () => {
 
   it("uses the aggregated home feed for the African edition fallback", async () => {
     const homeData = await import("../(home)/home-data")
-    const propsSpy = vi.spyOn(homeData, "getHomeContentSnapshotForEdition")
+    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
 
     const { default: CountryPage } = await import("./page")
 
@@ -102,7 +106,7 @@ describe("CountryPage", () => {
 
     const expectedProps = await propsSpy.mock.results[0]?.value
     expect(expectedProps).toBeDefined()
-    expect(props).toEqual({ ...(expectedProps as any), currentCountry: "african-edition" })
+    expect(props).toEqual(expectedProps)
     expect(props.countryPosts).toHaveProperty("african-edition")
     expect(notFoundMock).not.toHaveBeenCalled()
     propsSpy.mockRestore()
@@ -110,7 +114,7 @@ describe("CountryPage", () => {
 
   it("resolves the African alias to the aggregated home feed", async () => {
     const homeData = await import("../(home)/home-data")
-    const propsSpy = vi.spyOn(homeData, "getHomeContentSnapshotForEdition")
+    const propsSpy = vi.spyOn(homeData, "buildHomeContentPropsForEdition")
 
     const { default: CountryPage } = await import("./page")
 
@@ -122,7 +126,7 @@ describe("CountryPage", () => {
 
     const expectedProps = await propsSpy.mock.results[0]?.value
     expect(expectedProps).toBeDefined()
-    expect(props).toEqual({ ...(expectedProps as any), currentCountry: "african-edition" })
+    expect(props).toEqual(expectedProps)
     expect(props.countryPosts).toHaveProperty("african-edition")
     expect(notFoundMock).not.toHaveBeenCalled()
     propsSpy.mockRestore()

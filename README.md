@@ -28,41 +28,25 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
 The application follows a feature-based architecture with the following structure:
 
-```
+\`\`\`
 news-on-africa/
-├── app/                         # Next.js App Router pages, layouts, and route groups
-│   ├── api/                     # API routes
-│   ├── auth/                    # Sign-in experience and supporting flows
-│   ├── register/                # Dedicated registration route
-│   ├── reset-password/          # Password reset route
-│   ├── [countryCode]/           # Country-specific edition routing
-│   │   ├── article/[slug]/      # Article pages and supporting components
-│   │   └── category/[slug]/     # Category landing pages
-│   ├── author/                  # Author profile pages
-│   ├── bookmarks/               # Saved article dashboard
-│   ├── onboarding/              # New-user onboarding wizard
-│   ├── profile/                 # Account settings and preferences
-│   ├── search/                  # Search experience
-│   ├── subscribe/               # Subscription landing page
-│   ├── tag/                     # Tag landing pages
-│   └── ...                      # Additional static pages (privacy, terms, etc.)
-├── components/                  # Shared React components
-│   ├── navigation/              # Site navigation systems (header, menus, bottom nav)
-│   ├── news-grid/               # Grid layouts and cards for feed views
-│   ├── featured/                # Hero and featured story presentations
-│   ├── category/                # Category-specific UI building blocks
-│   ├── article/                 # Article rendering components and shells
-│   ├── design-system/           # Tokens and primitives shared across the app
-│   ├── client/                  # Client-only wrappers and providers
-│   ├── ui/                      # Generic UI primitives (buttons, skeletons, etc.)
-│   └── ...                      # Additional groupings (posts, secondary-stories, tests)
-├── contexts/                    # React context providers
-├── hooks/                       # Custom React hooks
-├── lib/                         # Domain libraries, WordPress/Supabase helpers, and utilities
-├── services/                    # API service modules
-├── types/                       # TypeScript type definitions
-└── lib/utils/ & lib/utils.ts    # Consolidated utility helpers (no root-level utils/ directory)
-```
+├── app/                  # Next.js App Router pages and layouts
+│   ├── api/              # API routes
+│   ├── auth/             # Authentication pages
+│   ├── category/         # Category pages
+│   ├── post/             # Post pages
+│   └── ...               # Other page routes
+├── components/           # Shared React components
+│   ├── ui/               # UI components (buttons, inputs, etc.)
+│   ├── layout/           # Layout components
+│   └── features/         # Feature-specific components
+├── contexts/             # React context providers
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility libraries
+├── services/             # API service modules
+├── types/                # TypeScript type definitions
+└── utils/                # Utility functions
+\`\`\`
 
 ### Data Flow
 
@@ -152,13 +136,13 @@ pnpm dev
 
 Supabase schema changes are managed exclusively through the Supabase CLI migrations in [`supabase/migrations`](./supabase/migrations).
 
-```bash
+\`\`\`bash
 # Apply the latest migrations to your local database
 supabase db reset --no-backup
 
 # Or push migrations to a linked remote project
 supabase db push
-```
+\`\`\`
 
 > [!IMPORTANT]
 > Legacy helper scripts that lived in `lib/supabase/sql` have been removed. Always edit or add new SQL through the CLI migration files so the schema stays in sync across every environment.

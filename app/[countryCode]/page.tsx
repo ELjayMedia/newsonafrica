@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation"
 
 import { HomeContent } from "@/components/HomeContent"
-import { getHomeContentSnapshotForEdition } from "../(home)/home-data"
+import { buildHomeContentPropsForEdition } from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 
-export const dynamic = "force-static"
-export const revalidate = false
+// Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
+export const revalidate = 300
 
 type Props = { params: { countryCode: string } }
 
@@ -19,7 +19,15 @@ export default async function CountryPage({ params }: Props) {
   }
 
   const baseUrl = getSiteBaseUrl()
-  const homeContent = await getHomeContentSnapshotForEdition(baseUrl, edition)
+  const { initialPosts, featuredPosts, countryPosts, initialData } =
+    await buildHomeContentPropsForEdition(baseUrl, edition)
 
-  return <HomeContent {...homeContent} currentCountry={edition.code} />
+  return (
+    <HomeContent
+      initialPosts={initialPosts}
+      featuredPosts={featuredPosts}
+      countryPosts={countryPosts}
+      initialData={initialData}
+    />
+  )
 }
