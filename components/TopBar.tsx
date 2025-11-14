@@ -1,52 +1,30 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { BookmarkIcon, LogIn } from "lucide-react"
 
 import { ProfileDropdown } from "@/components/ProfileDropdown"
 import { Button } from "@/components/ui/button"
 import { Container, Flex } from "@/components/ui/grid"
-import { TypographySmall } from "@/components/ui/typography"
 import { useAuth } from "@/hooks/useAuth"
 
 export function TopBar() {
-  const { user, profile, loading } = useAuth()
-  const [showWelcome, setShowWelcome] = useState(false)
-  const pathname = usePathname()
-
-  // Show welcome message for 5 seconds after login
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const justLoggedIn = params.get("loggedIn") === "true"
-
-    if (justLoggedIn && user) {
-      setShowWelcome(true)
-
-      const newUrl =
-        window.location.pathname +
-        (window.location.search ? window.location.search.replace("loggedIn=true", "").replace(/(\?|&)$/, "") : "")
-      window.history.replaceState({}, "", newUrl)
-
-      const timer = setTimeout(() => {
-        setShowWelcome(false)
-      }, 5000)
-
-      return () => clearTimeout(timer)
-    }
-  }, [user, pathname])
+  const { user, loading } = useAuth()
 
   return (
     <div className="hidden bg-foreground text-background md:block">
       <Container size="2xl" className="max-w-[980px] py-2">
         <Flex justify="between" align="center" className="gap-4" wrap>
-      <nav className="flex gap-4">
-  <Link href="/publications">Publications</Link>
-  <Link href="/partners">Partners</Link>
-  <Link href="/public-notices">Public Notices</Link>
-  <Link href="/jobs">Jobs</Link>
-</nav>>
+          <nav className="flex gap-4">
+           
+            <Link
+              href="/partners"
+              className="text-sm font-medium text-background/80 transition hover:text-background"
+            >
+              Partners
+            </Link>
+                 
+          </nav>
           <Flex align="center" className="gap-3" wrap>
             {loading ? (
               <div className="h-9 w-28 rounded-full bg-background/20" />
