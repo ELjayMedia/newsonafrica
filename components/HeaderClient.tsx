@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useMemo } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import { Search } from "lucide-react"
 
 import CountrySwitcherClient from "@/components/nav/CountrySwitcherClient"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -22,9 +23,10 @@ export interface HeaderCategory {
 interface HeaderClientProps {
   categories: HeaderCategory[]
   countryCode: string
+  variant?: "desktop" | "mobile"
 }
 
-export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
+export function HeaderClient({ categories, countryCode, variant = "desktop" }: HeaderClientProps) {
   const router = useRouter()
   const pathname = usePathname()
   const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
@@ -43,16 +45,74 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
 
   const homeHref = useMemo(() => getHomeHref(pathname), [pathname])
 
+  if (variant === "mobile") {
+    if (hideOnMobile || pathname === "/search") {
+      return null
+    }
+
+    return (
+      <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
+        <header className="md:hidden">
+          <div className="bg-background shadow-sm">
+            <div className="flex items-center justify-between px-4 py-3">
+              <Link href={homeHref} className="flex items-center">
+                <Image
+                  src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
+                  alt="News On Africa"
+                  width={160}
+                  height={40}
+                  className="h-7 w-auto"
+                  priority
+                />
+              </Link>
+              <div className="flex items-center gap-3">
+                <div className="origin-right scale-90">
+                  <CountrySwitcherClient />
+                </div>
+                <Link
+                  href="/search"
+                  aria-label="Search"
+                  className="rounded-full p-2 text-muted-foreground transition-colors duration-200 hover:bg-muted"
+                >
+                  <Search className="h-5 w-5" />
+                </Link>
+              </div>
+            </div>
+            <nav className="border-t border-border/60">
+              <div className="overflow-x-auto">
+                <ul className="flex gap-2 whitespace-nowrap px-4 py-2 text-xs font-semibold">
+                  {sortedCategories.map((category) => {
+                    const url = getCategoryUrl(category.slug, countryCode)
+                    const isActive = pathname === url
+                    return (
+                      <li key={category.slug}>
+                        <Link
+                          href={url}
+                          className={`rounded-full px-3 py-2 transition-colors duration-200 ${
+                            isActive
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-foreground hover:bg-muted/80"
+                          }`}
+                        >
+                          {category.name}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            </nav>
+          </div>
+        </header>
+      </ErrorBoundary>
+    )
+  }
+
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
-      <header
-        className={`bg-white mx-auto max-w-[980px] shadow-md z-10 ${
-          hideOnMobile ? "hidden md:block" : pathname === "/search" ? "hidden sm:block" : ""
-        }`}
-      >
-        <div className="w-full md:mx-auto -mb-4">
-          {/* Top Bar */}
-          <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
+      <header className="mx-auto max-w-[980px] bg-white shadow-md">
+        <div className="-mb-4 w-full">
+          <div className="flex flex-wrap items-center justify-between px-4 pb-2 pt-3">
             <div className="flex items-center gap-2">
               <Link href={homeHref} className="flex items-center">
                 <Image
@@ -60,7 +120,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                   alt="News On Africa"
                   width={200}
                   height={50}
-                  className="w-auto h-8 md:h-12"
+                  className="h-10 w-auto md:h-12"
                   priority
                 />
               </Link>
@@ -84,7 +144,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://twitter.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    className="text-gray-600 transition-colors duration-200 hover:text-gray-900"
                     aria-label="Twitter"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -95,7 +155,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://facebook.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    className="text-gray-600 transition-colors duration-200 hover:text-gray-900"
                     aria-label="Facebook"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -105,29 +165,29 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm ml-4">
+              <div className="ml-4 flex items-center gap-2 text-sm">
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
-                <div className="hidden md:flex flex-col items-start text-gray-600 text-sm">
+                <div className="hidden flex-col items-start text-sm text-gray-600 md:flex">
                   <span>{currentDate}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="mt-4 md:mt-0 bg-white">
+          <nav className="bg-white">
             <div className="overflow-x-auto">
-              <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
+              <ul className="flex whitespace-nowrap border-t border-gray-200 px-4 font-light">
                 {sortedCategories.map((category) => {
                   const url = getCategoryUrl(category.slug, countryCode)
+                  const isActive = pathname === url
                   return (
                     <li key={category.slug}>
                       <Link
                         href={url}
                         className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
-                          pathname === url
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                          isActive
+                            ? "border-b-2 border-blue-600 text-blue-600"
+                            : "text-gray-700 hover:border-b-2 hover:border-blue-600 hover:text-blue-600"
                         }`}
                       >
                         {category.name.toUpperCase()}

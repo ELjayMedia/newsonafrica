@@ -23,16 +23,23 @@ function mapCategoryToHeaderCategory(category: WordPressCategory): HeaderCategor
 
 interface HeaderProps {
   countryCode?: string
+  variant?: "desktop" | "mobile"
 }
 
-export async function Header({ countryCode }: HeaderProps = {}) {
+export async function Header({ countryCode, variant = "desktop" }: HeaderProps = {}) {
   const resolvedCountry = (countryCode ?? DEFAULT_COUNTRY).toLowerCase()
   const categories = await getCategoriesForCountry(resolvedCountry)
   const normalizedCategories = categories
     .map((category) => mapCategoryToHeaderCategory(category))
     .filter((category): category is HeaderCategory => Boolean(category))
 
-  return <HeaderInteractive categories={normalizedCategories} countryCode={resolvedCountry} />
+  return (
+    <HeaderInteractive
+      categories={normalizedCategories}
+      countryCode={resolvedCountry}
+      variant={variant}
+    />
+  )
 }
 
 export { sortCategoriesByPreference } from "./header-utils"

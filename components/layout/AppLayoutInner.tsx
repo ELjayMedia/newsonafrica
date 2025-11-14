@@ -28,19 +28,34 @@ export function AppLayoutInner({ children, initialCountry }: AppLayoutInnerProps
         </Suspense>
         <ClientDynamicComponents />
         <div className="flex min-h-screen flex-col bg-background">
-          <TopBar />
-          <header className="border-b border-border/60 bg-background">
-            <div className="mx-auto w-full max-w-[980px] px-4 py-4 md:px-6 md:py-6">
-              <Suspense fallback={<HeaderSkeleton />}>
-                <Header countryCode={initialCountry} />
-              </Suspense>
+          <div className="hidden md:block">
+            <TopBar />
+          </div>
+          <div className="bg-background">
+            <div className="hidden border-b border-border/60 md:block">
+              <div className="mx-auto w-full max-w-[980px] px-6 py-6">
+                <Suspense fallback={<HeaderSkeleton variant="desktop" />}>
+                  <Header countryCode={initialCountry} variant="desktop" />
+                </Suspense>
+              </div>
             </div>
-          </header>
+            <div className="border-b border-border/60 md:hidden">
+              <div className="px-4 py-4">
+                <Suspense fallback={<HeaderSkeleton variant="mobile" />}>
+                  <Header countryCode={initialCountry} variant="mobile" />
+                </Suspense>
+              </div>
+            </div>
+          </div>
           <main className="flex-1 bg-background">
-            <div className="mx-auto w-full max-w-[980px] px-4 py-6 md:px-6 md:py-10">{children}</div>
+            <div className="mx-auto w-full max-w-[980px] px-4 pb-24 pt-6 md:px-6 md:pb-12 md:pt-10">
+              {children}
+            </div>
           </main>
         </div>
-        <BottomNavigation />
+        <div className="md:hidden">
+          <BottomNavigation />
+        </div>
         <Toaster />
       </ClientUserPreferencesProvider>
     </Providers>

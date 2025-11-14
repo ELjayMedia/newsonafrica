@@ -10,9 +10,10 @@ import { sortCategoriesByPreference } from "./header-utils"
 interface HeaderInteractiveProps {
   categories: HeaderCategory[]
   countryCode: string
+  variant?: "desktop" | "mobile"
 }
 
-export function HeaderInteractive({ categories, countryCode }: HeaderInteractiveProps) {
+export function HeaderInteractive({ categories, countryCode, variant }: HeaderInteractiveProps) {
   const { preferences } = useUserPreferences()
 
   const sortedCategories = useMemo(
@@ -20,5 +21,5 @@ export function HeaderInteractive({ categories, countryCode }: HeaderInteractive
     [categories, preferences?.sections],
   )
 
-  return <HeaderClient categories={sortedCategories} countryCode={countryCode} />
+  return <HeaderClient categories={sortedCategories} countryCode={countryCode} variant={variant} />
 }
