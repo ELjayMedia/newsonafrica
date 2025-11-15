@@ -75,12 +75,12 @@ export const BookmarkButton = ({
           })
         } else {
           await addBookmark({
-            post_id: postId,
+            postId,
             country,
             title,
             slug,
             excerpt,
-            featured_image: featuredImage,
+            featuredImage,
           })
           toast({
             title: "Bookmarked!",

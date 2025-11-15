@@ -45,7 +45,7 @@ export interface AddBookmarkInput {
   title?: string
   slug?: string
   excerpt?: string
-  featuredImage?: BookmarkRow["featured_image"] | null
+  featuredImage?: BookmarkRow["featuredImage"] | null
   category?: string | null
   tags?: string[] | null
   notes?: string | null
@@ -357,11 +357,33 @@ export async function updateBookmark(
       read_status?: BookmarkRow["read_state"] | null
     } = { ...payload.updates }
 
-    if ("featured_image" in sanitizedUpdates) {
-      sanitizedUpdates.featured_image =
-        sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
-          ? sanitizedUpdates.featured_image
-          : null
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "country")) {
+      dbUpdates.country = payload.updates.country ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "title")) {
+      dbUpdates.title = payload.updates.title ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "slug")) {
+      dbUpdates.slug = payload.updates.slug ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "excerpt")) {
+      dbUpdates.excerpt = payload.updates.excerpt ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "category")) {
+      dbUpdates.category = payload.updates.category ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "tags")) {
+      dbUpdates.tags = payload.updates.tags ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "readState")) {
+      dbUpdates.read_state = payload.updates.readState ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "notes")) {
+      dbUpdates.notes = payload.updates.notes ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "featuredImage")) {
+      const value = payload.updates.featuredImage
+      dbUpdates.featured_image = value && typeof value === "object" ? value : null
     }
 
     if ("country" in sanitizedUpdates) {
@@ -397,7 +419,7 @@ export async function updateBookmark(
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(sanitizedUpdates)
+      .update(dbUpdates)
       .eq("user_id", userId)
       .eq("wp_post_id", wpPostId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
@@ -470,7 +492,7 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
         title: bookmark.title,
         slug: bookmark.slug,
         excerpt: bookmark.excerpt,
-        created_at: bookmark.created_at,
+        created_at: bookmark.createdAt,
         category: bookmark.category,
         tags: bookmark.tags,
         read_state: bookmark.read_state,

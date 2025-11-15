@@ -37,18 +37,18 @@ import { ensureActionError } from "@/lib/supabase/action-result"
 
 interface Bookmark {
   id: string
-  user_id: string
-  post_id: string
-  country?: string
+  userId: string
+  postId: string
+  country?: string | null
   title: string
-  slug?: string
-  excerpt?: string
-  created_at: string
-  featured_image?: any
-  category?: string
-  tags?: string[]
-  read_status?: "unread" | "read"
-  notes?: string
+  slug?: string | null
+  excerpt?: string | null
+  createdAt: string
+  featuredImage?: any
+  category?: string | null
+  tags?: string[] | null
+  readState?: "unread" | "read"
+  notes?: string | null
 }
 
 interface BookmarksContextType {
@@ -56,9 +56,9 @@ interface BookmarksContextType {
   loading: boolean
   stats: BookmarkStats
   pagination: BookmarkPagination
-  addBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
+  addBookmark: (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
-  toggleBookmark: (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => Promise<void>
+  toggleBookmark: (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => Promise<void>
   updateBookmark: (postId: string, updates: Partial<Bookmark>) => Promise<void>
   bulkRemoveBookmarks: (postIds: string[]) => Promise<void>
   markAsRead: (postId: string) => Promise<void>
@@ -83,7 +83,7 @@ type BookmarkHydrationMap = Record<
     slug?: string
     title?: string
     excerpt?: string
-    featured_image?: Bookmark["featured_image"]
+    featuredImage?: Bookmark["featuredImage"]
   }
 >
 
@@ -127,7 +127,7 @@ const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
       categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
     }
 
-    if (bookmark.read_status !== "read") {
+    if (bookmark.readState !== "read") {
       unread += 1
     }
   }
@@ -158,7 +158,7 @@ const extractText = (value: unknown): string => {
   return ""
 }
 
-const extractFeaturedImage = (value: unknown): Bookmark["featured_image"] => {
+const extractFeaturedImage = (value: unknown): Bookmark["featuredImage"] => {
   if (!value) return null
   if (typeof value === "string") {
     try {
@@ -203,24 +203,24 @@ const formatBookmarkRow = (
   const title = extractText(row.title) || metaTitle || "Untitled Post"
   const slug = row.slug || metadata?.slug || ""
   const excerpt = extractText(row.excerpt) || metaExcerpt || ""
-  const featured_image =
-    extractFeaturedImage(row.featured_image) || extractFeaturedImage(metadata?.featured_image) || null
+  const featuredImage =
+    extractFeaturedImage(row.featuredImage) || extractFeaturedImage(metadata?.featuredImage) || null
 
-  const readStatus = row.read_status === "read" || row.read_status === "unread" ? row.read_status : undefined
+  const readState = row.readState === "read" || row.readState === "unread" ? row.readState : undefined
 
   return {
     id: row.id,
-    user_id: row.user_id,
-    post_id: row.post_id,
+    userId: row.userId,
+    postId: row.postId,
     country: row.country || metadata?.country || undefined,
     title,
     slug: slug || undefined,
     excerpt: excerpt || undefined,
-    created_at: row.created_at,
-    featured_image,
+    createdAt: row.createdAt,
+    featuredImage,
     category: row.category || undefined,
     tags: row.tags || undefined,
-    read_status: readStatus,
+    readState,
     notes: row.notes || undefined,
   }
 }
@@ -233,7 +233,7 @@ const buildHydrationPayload = (bookmarks: BookmarkListRow[]) => {
     if (!grouped.has(country)) {
       grouped.set(country, new Set())
     }
-    grouped.get(country)!.add(bookmark.post_id)
+    grouped.get(country)!.add(bookmark.postId)
   })
 
   return Array.from(grouped.entries()).map(([country, ids]) => ({
@@ -285,7 +285,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   useEffect(() => {
     cacheRef.current.clear()
     bookmarks.forEach((bookmark) => {
-      cacheRef.current.set(bookmark.post_id, bookmark)
+      cacheRef.current.set(bookmark.postId, bookmark)
     })
   }, [bookmarks])
 
@@ -347,7 +347,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
     async (payload: BookmarkListPayload) => {
       const hydrationMap = await hydrateBookmarks(payload.bookmarks)
       const hydrated = payload.bookmarks.map((row) =>
-        formatBookmarkRow(row, hydrationMap[row.post_id]),
+        formatBookmarkRow(row, hydrationMap[row.postId]),
       )
 
       setBookmarks(hydrated)
@@ -372,11 +372,11 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         : {}
 
       const formatRow = (row: BookmarkListRow) =>
-        formatBookmarkRow(row, hydrationMap[row.post_id])
+        formatBookmarkRow(row, hydrationMap[row.postId])
 
-      const removalSet = new Set(removals.map((row) => row.post_id))
+      const removalSet = new Set(removals.map((row) => row.postId))
       let nextBookmarks = bookmarksRef.current.filter(
-        (bookmark) => !removalSet.has(bookmark.post_id),
+        (bookmark) => !removalSet.has(bookmark.postId),
       )
 
       const changeMap = new Map<string, Bookmark>()
@@ -384,21 +384,21 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       additions.forEach((row) => {
         const formatted = formatRow(row)
-        changeMap.set(row.post_id, formatted)
-        additionSet.add(row.post_id)
+        changeMap.set(row.postId, formatted)
+        additionSet.add(row.postId)
       })
 
       updates.forEach((row) => {
         const formatted = formatRow(row)
-        changeMap.set(row.post_id, formatted)
+        changeMap.set(row.postId, formatted)
       })
 
       if (changeMap.size > 0) {
         nextBookmarks = nextBookmarks.map((bookmark) =>
-          changeMap.get(bookmark.post_id) ?? bookmark,
+          changeMap.get(bookmark.postId) ?? bookmark,
         )
 
-        const existingPostIds = new Set(nextBookmarks.map((bookmark) => bookmark.post_id))
+        const existingPostIds = new Set(nextBookmarks.map((bookmark) => bookmark.postId))
         const newEntries: Bookmark[] = []
         for (const postId of additionSet) {
           if (!existingPostIds.has(postId)) {
@@ -637,18 +637,18 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   }, [applyListPayload, fetchBookmarks, initialData, startTransition, user])
 
   const addBookmark = useCallback(
-    async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
+    async (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => {
       if (!user) {
         throw new Error("User not authenticated")
       }
 
-      if (isBookmarked(post.post_id)) {
+      if (isBookmarked(post.postId)) {
         return
       }
 
       const postData = post as any
       const payload: AddBookmarkInput = {
-        postId: post.post_id,
+        postId: post.postId,
         country: post.country || null,
         title: extractText(postData.title) || "Untitled Post",
         slug: typeof postData.slug === "string" ? postData.slug : "",
@@ -662,17 +662,17 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const optimisticBookmark: Bookmark = {
         id: `temp-${Date.now()}`,
-        user_id: user.id,
-        post_id: post.post_id,
+        userId: user.id,
+        postId: post.postId,
         country: post.country || undefined,
         title: payload.title || "Untitled Post",
         slug: payload.slug || undefined,
         excerpt: payload.excerpt || undefined,
-        created_at: new Date().toISOString(),
-        featured_image: payload.featuredImage || null,
+        createdAt: new Date().toISOString(),
+        featuredImage: payload.featuredImage || null,
         category: post.category || undefined,
         tags: post.tags || undefined,
-        read_status: "unread",
+        readState: "unread",
         notes: post.notes || undefined,
       }
 
@@ -706,7 +706,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         const previousBookmarks = bookmarksRef.current
         const previousStats = statsRef.current
 
-        const nextBookmarks = previousBookmarks.filter((b) => b.post_id !== postId)
+        const nextBookmarks = previousBookmarks.filter((b) => b.postId !== postId)
         setBookmarks(nextBookmarks)
         setStats(deriveStatsFromBookmarks(nextBookmarks))
 
@@ -750,15 +750,15 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       if (Object.prototype.hasOwnProperty.call(updates, "tags")) {
         sanitized.tags = updates.tags ?? null
       }
-      if (Object.prototype.hasOwnProperty.call(updates, "read_status")) {
-        sanitized.read_status = updates.read_status ?? null
+      if (Object.prototype.hasOwnProperty.call(updates, "readState")) {
+        sanitized.readState = updates.readState ?? null
       }
       if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
         sanitized.notes = updates.notes ?? null
       }
-      if (Object.prototype.hasOwnProperty.call(updates, "featured_image")) {
-        const value = updates.featured_image
-        sanitized.featured_image = value && typeof value === "object" ? value : null
+      if (Object.prototype.hasOwnProperty.call(updates, "featuredImage")) {
+        const value = updates.featuredImage
+        sanitized.featuredImage = value && typeof value === "object" ? value : null
       }
 
       return executeMutation(
@@ -772,7 +772,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
             const previousStats = statsRef.current
 
             const nextBookmarks = previousBookmarks.map((bookmark) =>
-              bookmark.post_id === postId ? { ...bookmark, ...updates } : bookmark,
+              bookmark.postId === postId ? { ...bookmark, ...updates } : bookmark,
             )
 
             setBookmarks(nextBookmarks)
@@ -809,7 +809,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
             const previousBookmarks = bookmarksRef.current
             const previousStats = statsRef.current
 
-            const nextBookmarks = previousBookmarks.filter((bookmark) => !postIds.includes(bookmark.post_id))
+            const nextBookmarks = previousBookmarks.filter((bookmark) => !postIds.includes(bookmark.postId))
             setBookmarks(nextBookmarks)
             setStats(deriveStatsFromBookmarks(nextBookmarks))
 
@@ -876,7 +876,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            bookmark.post_id === postId ? { ...bookmark, read_status: "read" as const } : bookmark,
+            bookmark.postId === postId ? { ...bookmark, readState: "read" as const } : bookmark,
           )
 
           setBookmarks(nextBookmarks)
@@ -905,7 +905,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            bookmark.post_id === postId ? { ...bookmark, read_status: "unread" as const } : bookmark,
+            bookmark.postId === postId ? { ...bookmark, readState: "unread" as const } : bookmark,
           )
 
           setBookmarks(nextBookmarks)
@@ -929,9 +929,9 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   )
 
   const toggleBookmark = useCallback(
-    async (post: Omit<Bookmark, "id" | "user_id" | "created_at">) => {
-      if (isBookmarked(post.post_id)) {
-        await removeBookmark(post.post_id)
+    async (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => {
+      if (isBookmarked(post.postId)) {
+        await removeBookmark(post.postId)
       } else {
         await addBookmark(post)
       }

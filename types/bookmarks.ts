@@ -1,10 +1,40 @@
 import type { Database } from "@/types/supabase"
 
-export type BookmarkRow = Database["public"]["Tables"]["bookmarks"]["Row"]
-export type BookmarkReadState = Database["public"]["Enums"]["bookmark_read_state"]
+type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
 
-export const BOOKMARK_LIST_SELECT_COLUMNS =
-  "id, user_id, wp_post_id, slug, edition_code, collection_id, title, excerpt, featured_image, category, tags, read_state, note, created_at"
+export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
+
+export interface BookmarkRow {
+  id: BookmarkTableRow["id"]
+  userId: BookmarkTableRow["user_id"]
+  postId: BookmarkTableRow["post_id"]
+  country: BookmarkTableRow["country"]
+  title: BookmarkTableRow["title"]
+  slug: BookmarkTableRow["slug"]
+  excerpt: BookmarkTableRow["excerpt"]
+  featuredImage: BookmarkTableRow["featured_image"]
+  category: BookmarkTableRow["category"]
+  tags: BookmarkTableRow["tags"]
+  readState: BookmarkTableRow["read_state"]
+  notes: BookmarkTableRow["notes"]
+  createdAt: BookmarkTableRow["created_at"]
+}
+
+export const BOOKMARK_LIST_SELECT_COLUMNS = [
+  "id",
+  "user_id:userId",
+  "post_id:postId",
+  "slug",
+  "country",
+  "title",
+  "excerpt",
+  "featured_image:featuredImage",
+  "category",
+  "tags",
+  "read_state:readState",
+  "notes",
+  "created_at:createdAt",
+].join(", ")
 
 export type BookmarkListRow = Pick<
   BookmarkRow,
@@ -16,12 +46,12 @@ export type BookmarkListRow = Pick<
   | "collection_id"
   | "title"
   | "excerpt"
-  | "featured_image"
+  | "featuredImage"
   | "category"
   | "tags"
-  | "read_state"
-  | "note"
-  | "created_at"
+  | "readState"
+  | "notes"
+  | "createdAt"
 >
 
 export interface BookmarkStats {

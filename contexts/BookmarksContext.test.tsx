@@ -77,18 +77,18 @@ describe("BookmarksProvider optimistic updates", () => {
   it("merges server additions into optimistic state", async () => {
     const serverRow = {
       id: "bookmark-1",
-      user_id: "user-1",
-      post_id: "post-1",
+      userId: "user-1",
+      postId: "post-1",
       slug: "server-slug",
       country: "sz",
       title: "Server Title",
       excerpt: "Server excerpt",
-      featured_image: null,
+      featuredImage: null,
       category: "News",
       tags: ["tag"],
-      read_status: "unread" as const,
+      readState: "unread" as const,
       notes: null,
-      created_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     }
 
     addBookmark.mockResolvedValue({
@@ -125,14 +125,14 @@ describe("BookmarksProvider optimistic updates", () => {
 
     await act(async () => {
       await ctx!.addBookmark({
-        post_id: "post-1",
+        postId: "post-1",
         title: "Client Title",
         slug: "client-slug",
         excerpt: "Client excerpt",
-        featured_image: null,
+        featuredImage: null,
         category: "News",
         tags: ["tag"],
-        read_status: "unread",
+        readState: "unread",
         notes: null,
         country: "sz",
       })
@@ -153,18 +153,18 @@ describe("BookmarksProvider optimistic updates", () => {
         bookmarks: [
           {
             id: "bookmark-2",
-            user_id: "user-1",
-            post_id: "post-2",
+            userId: "user-1",
+            postId: "post-2",
             slug: "existing",
             country: "sz",
             title: "Existing",
             excerpt: "Initial",
-            featured_image: null,
+            featuredImage: null,
             category: "Tech",
             tags: null,
-            read_status: "unread",
+            readState: "unread",
             notes: null,
-            created_at: createdAt,
+            createdAt: createdAt,
           },
         ],
         stats: { total: 1, unread: 1, categories: { Tech: 1 } },
@@ -178,18 +178,18 @@ describe("BookmarksProvider optimistic updates", () => {
         updated: [
           {
             id: "bookmark-2",
-            user_id: "user-1",
-            post_id: "post-2",
+            userId: "user-1",
+            postId: "post-2",
             slug: "existing",
             country: "sz",
             title: "Existing",
             excerpt: "Initial",
-            featured_image: null,
+            featuredImage: null,
             category: "Tech",
             tags: null,
-            read_status: "read" as const,
+            readState: "read" as const,
             notes: null,
-            created_at: createdAt,
+            createdAt: createdAt,
           },
         ],
         statsDelta: { total: 0, unread: -1, categories: {} },
@@ -226,6 +226,6 @@ describe("BookmarksProvider optimistic updates", () => {
     })
 
     await waitFor(() => expect(ctx!.stats.unread).toBe(0))
-    expect(ctx!.bookmarks[0].read_status).toBe("read")
+    expect(ctx!.bookmarks[0].readState).toBe("read")
   })
 })

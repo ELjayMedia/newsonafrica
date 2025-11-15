@@ -64,7 +64,7 @@ describe("hydrateBookmarkRequests", () => {
       country: "sz",
       slug: "slug-1",
       title: "Title 1",
-      featured_image: null,
+      featuredImage: null,
     })
     expect(posts["3"]).toMatchObject({
       id: "3",

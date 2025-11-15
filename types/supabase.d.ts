@@ -22,7 +22,7 @@ export interface Database {
           featured_image: Json | null
           category: string | null
           tags: string[] | null
-          read_status: string | null
+          read_state: string | null
           notes: string | null
           wp_post_id: number | null
           edition_code: string | null
@@ -43,7 +43,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_status?: string | null
+          read_state?: string | null
           notes?: string | null
           wp_post_id?: number | null
           edition_code?: string | null
@@ -64,7 +64,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_status?: string | null
+          read_state?: string | null
           notes?: string | null
           wp_post_id?: number | null
           edition_code?: string | null

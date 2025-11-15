@@ -20,7 +20,7 @@ interface BookmarkHydrationPost {
   slug?: string
   title?: string
   excerpt?: string
-  featured_image?: {
+  featuredImage?: {
     url?: string
     width?: number
     height?: number
@@ -41,7 +41,7 @@ const extractText = (value: unknown): string | undefined => {
   return undefined
 }
 
-const extractFeaturedImage = (value: any): BookmarkHydrationPost["featured_image"] => {
+const extractFeaturedImage = (value: any): BookmarkHydrationPost["featuredImage"] => {
   if (!value) return null
   if (typeof value === "string") {
     try {
@@ -185,7 +185,7 @@ export async function hydrateBookmarkRequests(
               slug: typeof post.slug === "string" ? post.slug : undefined,
               title: extractText(post.title),
               excerpt: extractText(post.excerpt),
-              featured_image:
+              featuredImage:
                 extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) || null,
             }
           })

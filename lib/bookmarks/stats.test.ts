@@ -6,8 +6,8 @@ describe("buildBookmarkStats", () => {
   it("summarises totals, unread counts and categories", () => {
     const stats = buildBookmarkStats({
       statusRows: [
-        { read_status: "read", count: 2 },
-        { read_status: "unread", count: 3 },
+        { readState: "read", count: 2 },
+        { readState: "unread", count: 3 },
       ],
       categoryRows: [
         { category: "news", count: 4 },
@@ -22,14 +22,14 @@ describe("buildBookmarkStats", () => {
 
   it("does not leak previous category counts when a filter removes them", () => {
     const first = buildBookmarkStats({
-      statusRows: [{ read_status: "read", count: 1 }],
+      statusRows: [{ readState: "read", count: 1 }],
       categoryRows: [{ category: "news", count: 1 }],
     })
 
     expect(first.categories).toEqual({ news: 1 })
 
     const filtered = buildBookmarkStats({
-      statusRows: [{ read_status: "read", count: 1 }],
+      statusRows: [{ readState: "read", count: 1 }],
       categoryRows: [],
     })
 
