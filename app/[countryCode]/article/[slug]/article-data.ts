@@ -566,15 +566,42 @@ export async function loadArticleWithFallback(
 
   const fallbackLoadCandidates: Array<{ country: string; index: number }> = []
 
-  for (const [index, country] of fallbackCountries.entries()) {
-    if (shouldUseCache) {
-      const cached = await readArticleCache(country, normalizedSlug)
-      if (cached?.payload && !cached.isStale) {
+  if (shouldUseCache && fallbackCountries.length > 0) {
+    const fallbackCacheEntries = fallbackCountries.map((country, index) => ({
+      country,
+      index,
+      ready: readArticleCache(country, normalizedSlug).then((result) => ({
+        country,
+        index,
+        result,
+      })),
+    }))
+
+    const cacheResolutions = fallbackCacheEntries.map((entry) => entry.ready)
+    const pendingPositions = new Set(
+      cacheResolutions.map((_, position) => position),
+    )
+
+    while (pendingPositions.size > 0) {
+      const resolution = await Promise.race(
+        Array.from(pendingPositions, (position) =>
+          cacheResolutions[position]!.then((value) => ({
+            ...value,
+            position,
+          })),
+        ),
+      )
+
+      pendingPositions.delete(resolution.position)
+
+      const { result, country, index } = resolution
+
+      if (result?.payload && !result.isStale) {
         const cachedPayload = buildCachedArticlePayload(
           country,
           normalizedSlug,
-          cached.payload,
-          cached.payload.sourceCountry ?? country,
+          result.payload,
+          result.payload.sourceCountry ?? country,
         )
         return {
           status: "found",
@@ -585,9 +612,15 @@ export async function loadArticleWithFallback(
           sourceCountry: cachedPayload.sourceCountry ?? country,
         }
       }
+
+      fallbackLoadCandidates.push({ country, index })
     }
 
-    fallbackLoadCandidates.push({ country, index })
+    fallbackLoadCandidates.sort((a, b) => a.index - b.index)
+  } else {
+    for (const [index, country] of fallbackCountries.entries()) {
+      fallbackLoadCandidates.push({ country, index })
+    }
   }
 
   const fallbackEntries = fallbackLoadCandidates.map(({ country, index }) => ({

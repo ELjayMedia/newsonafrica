@@ -25,6 +25,7 @@ import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
 import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
 import { cacheTags } from '@/lib/cache'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
+import { createCacheEntry, kvCache } from '@/lib/cache/kv'
 import { CACHE_DURATIONS } from '@/lib/cache/constants'
 
 describe('article-data', () => {
@@ -414,6 +415,88 @@ describe('article-data', () => {
         cacheTags.post('za', 333),
       ]),
     )
+  })
+
+  it('returns warm fallback cache entries without waiting for slower probes', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-05-01T00:00:00Z'))
+
+    const kvSetSpy = vi.spyOn(kvCache, 'set').mockResolvedValue()
+    const kvGetSpy = vi.spyOn(kvCache, 'get').mockImplementation(async (key) => {
+      if (key.includes(':ng:')) {
+        return null
+      }
+
+      if (key.includes(':za:')) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return null
+      }
+
+      if (key.includes(':ke:')) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return createCacheEntry({
+          article: {
+            slug: 'parallel-slug',
+            id: 'gid://wordpress/Post:888',
+            databaseId: 888,
+            date: '2024-05-01T00:00:00Z',
+            title: 'Parallel title',
+            excerpt: 'Parallel excerpt',
+            content: '<p>Parallel</p>',
+            categories: { nodes: [] },
+            tags: { nodes: [] },
+            author: { node: { databaseId: 21, name: 'Reporter', slug: 'reporter' } },
+          } as any,
+          sourceCountry: 'ke',
+          canonicalCountry: 'ke',
+          version: 'cached-version',
+          tags: [cacheTags.postSlug('ke', 'parallel-slug')],
+        })
+      }
+
+      return null
+    })
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation((countryCode, _query, _variables) => {
+      if (countryCode === 'ng') {
+        return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any
+      }
+
+      throw new Error(`Unexpected WordPress lookup for ${countryCode}`)
+    })
+
+    try {
+      const resultPromise = loadArticleWithFallback('parallel-slug', ['ng', 'za', 'ke'])
+
+      await vi.advanceTimersByTimeAsync(15)
+      await Promise.resolve()
+      const result = await resultPromise
+
+      expect(fetchWordPressGraphQL).toHaveBeenCalledTimes(1)
+      expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+        'ng',
+        POST_BY_SLUG_QUERY,
+        expect.objectContaining({ slug: 'parallel-slug', asPreview: false }),
+        expect.objectContaining({
+          tags: expect.arrayContaining([cacheTags.postSlug('ng', 'parallel-slug')]),
+        }),
+      )
+      expect(result.status).toBe('found')
+      expect(result.article.slug).toBe('parallel-slug')
+      expect(result.sourceCountry).toBe('ke')
+      expect(result.canonicalCountry).toBe('ke')
+      expect(result.version).toBe('cached-version')
+      expect(result.tags).toEqual(
+        expect.arrayContaining([cacheTags.postSlug('ke', 'parallel-slug')]),
+      )
+      expect(kvGetSpy.mock.calls.some(([lookupKey]) => lookupKey.includes(':za:'))).toBe(true)
+      expect(kvGetSpy.mock.calls.some(([lookupKey]) => lookupKey.includes(':ke:'))).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(100)
+    } finally {
+      kvGetSpy.mockRestore()
+      kvSetSpy.mockRestore()
+    }
   })
 
   it('runs fallback lookups concurrently while preserving priority order', async () => {
