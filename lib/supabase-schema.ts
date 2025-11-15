@@ -1,26 +1,32 @@
+export type CommentReactionType = "like" | "love" | "laugh" | "sad" | "angry"
+
 export type CommentReaction = {
-  type: string
+  type: CommentReactionType
   count: number
   reactedByCurrentUser: boolean
 }
 
+export type CommentStatus = "active" | "flagged" | "deleted" | "pending"
+
 export type Comment = {
   id: string
-  post_id: string
+  wp_post_id: string
+  edition_code: string
   user_id: string
-  content: string
+  body: string
   parent_id: string | null
   created_at: string
   // Moderation fields
-  status: "active" | "flagged" | "deleted"
+  status: CommentStatus
   reported_by?: string
   report_reason?: string
   reviewed_at?: string
   reviewed_by?: string
   // New fields
   is_rich_text: boolean
-  reaction_count: number
-  user_reaction?: string | null
+  reactions_count: number
+  replies_count: number
+  user_reaction?: CommentReactionType | null
   // For UI state
   isReplying?: boolean
   isEditing?: boolean
@@ -36,11 +42,12 @@ export type Comment = {
 }
 
 export type NewComment = {
-  post_id: string
+  wp_post_id: string
+  edition_code: string
   user_id: string
-  content: string
+  body: string
   parent_id?: string | null
-  status?: "active" | "flagged" | "deleted"
+  status?: CommentStatus
   is_rich_text?: boolean
 }
 

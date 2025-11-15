@@ -49,11 +49,20 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
       return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
-    const { content }: { content?: string } = await request.json()
-    const sanitizedContent = content?.trim()
+    const updatePayloadInput = (await request.json()) as {
+      body?: string
+      content?: string
+    }
+    const rawBody =
+      typeof updatePayloadInput.body === "string"
+        ? updatePayloadInput.body
+        : typeof updatePayloadInput.content === "string"
+          ? updatePayloadInput.content
+          : undefined
+    const sanitizedBody = rawBody?.trim()
 
-    if (!sanitizedContent) {
-      return applyCookies(jsonWithCors(request, { error: "Content is required" }, { status: 400 }))
+    if (!sanitizedBody) {
+      return applyCookies(jsonWithCors(request, { error: "Body is required" }, { status: 400 }))
     }
 
     // First check if the user owns this comment
@@ -92,7 +101,7 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
 
     // Update the comment
     const updatePayload = {
-      content: sanitizedContent,
+      body: sanitizedBody,
     } satisfies Database["public"]["Tables"]["comments"]["Update"]
 
     type CommentRow = Database["public"]["Tables"]["comments"]["Row"]
@@ -129,8 +138,8 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
     }
 
     // Return the updated comment with profile data
-    const commentEdition = (data as CommentRow).country ?? null
-    const commentPostId = (data as CommentRow).post_id ?? null
+    const commentEdition = (data as CommentRow).edition_code ?? null
+    const commentPostId = (data as CommentRow).wp_post_id ?? null
 
     if (commentPostId !== null) {
       revalidateByTag(cacheTags.comments(commentEdition, commentPostId))
@@ -181,11 +190,15 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
     }
 
     // First check if the user owns this comment
-    type CommentOwner = { user_id: string; post_id: number | string | null; country: string | null }
+    type CommentOwner = {
+      user_id: string
+      wp_post_id: number | string | null
+      edition_code: string | null
+    }
 
     const { data: comment, error: fetchError } = await supabase
       .from("comments")
-      .select("user_id, post_id, country")
+      .select("user_id, wp_post_id, edition_code")
       .eq("id", commentId)
       .single<CommentOwner>()
 
@@ -218,8 +231,8 @@ export async function DELETE(request: NextRequest, context: CommentRouteContext)
       return applyCookies(jsonWithCors(request, { error: "Failed to delete comment" }, { status: 500 }))
     }
 
-    if (comment.post_id !== null) {
-      revalidateByTag(cacheTags.comments(comment.country ?? null, comment.post_id))
+    if (comment.wp_post_id !== null) {
+      revalidateByTag(cacheTags.comments(comment.edition_code ?? null, comment.wp_post_id))
     }
     return applyCookies(NextResponse.json({ success: true }))
   } catch (error) {
