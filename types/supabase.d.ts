@@ -23,11 +23,6 @@ export interface Database {
           category: string | null
           tags: string[] | null
           read_state: string | null
-          notes: string | null
-          wp_post_id: number | null
-          edition_code: string | null
-          collection_id: string | null
-          read_state: string | null
           note: string | null
           created_at: string
         }
@@ -44,11 +39,6 @@ export interface Database {
           category?: string | null
           tags?: string[] | null
           read_state?: string | null
-          notes?: string | null
-          wp_post_id?: number | null
-          edition_code?: string | null
-          collection_id?: string | null
-          read_state?: string | null
           note?: string | null
           created_at?: string
         }
@@ -64,11 +54,6 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: string | null
-          notes?: string | null
-          wp_post_id?: number | null
-          edition_code?: string | null
-          collection_id?: string | null
           read_state?: string | null
           note?: string | null
           created_at?: string
@@ -135,6 +120,7 @@ export interface Database {
           unread_count: number
           read_count: number
           collections_count: number
+          collection_unread_counts: Json | null
           updated_at: string
         }
         Insert: {
@@ -143,6 +129,7 @@ export interface Database {
           unread_count?: number
           read_count?: number
           collections_count?: number
+          collection_unread_counts?: Json | null
           updated_at?: string
         }
         Update: {
@@ -151,6 +138,7 @@ export interface Database {
           unread_count?: number
           read_count?: number
           collections_count?: number
+          collection_unread_counts?: Json | null
           updated_at?: string
         }
         Relationships: [
