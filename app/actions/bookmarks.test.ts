@@ -83,17 +83,18 @@ describe("bookmark actions cache invalidation", () => {
     const insertedRow = {
       id: "bookmark-1",
       user_id: "user-1",
-      post_id: "post-1",
+      wp_post_id: "post-1",
       created_at: new Date().toISOString(),
-      read_status: "unread" as const,
+      read_state: "unread" as const,
       category: "news",
       tags: null,
       title: "Sample",
       slug: "sample",
       excerpt: "",
       featured_image: null,
-      notes: null,
-      country: "ng",
+      note: null,
+      edition_code: "ng",
+      collection_id: null,
     }
 
     const insertChain = {
@@ -125,17 +126,18 @@ describe("bookmark actions cache invalidation", () => {
     const removedRow = {
       id: "bookmark-2",
       user_id: "user-1",
-      post_id: "post-2",
+      wp_post_id: "post-2",
       created_at: new Date().toISOString(),
-      read_status: "unread" as const,
+      read_state: "unread" as const,
       category: "tech",
       tags: null,
       title: "Sample",
       slug: "sample",
       excerpt: "",
       featured_image: null,
-      notes: null,
-      country: "za",
+      note: null,
+      edition_code: "za",
+      collection_id: null,
     }
 
     const deleteChain = {
