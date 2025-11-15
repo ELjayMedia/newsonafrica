@@ -7,8 +7,9 @@ export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkTableRow["post_id"]
-  country: BookmarkTableRow["country"]
+  postId: BookmarkTableRow["wp_post_id"]
+  country: BookmarkTableRow["edition_code"]
+  collectionId: BookmarkTableRow["collection_id"]
   title: BookmarkTableRow["title"]
   slug: BookmarkTableRow["slug"]
   excerpt: BookmarkTableRow["excerpt"]
@@ -16,34 +17,35 @@ export interface BookmarkRow {
   category: BookmarkTableRow["category"]
   tags: BookmarkTableRow["tags"]
   readState: BookmarkTableRow["read_state"]
-  notes: BookmarkTableRow["notes"]
+  notes: BookmarkTableRow["note"]
   createdAt: BookmarkTableRow["created_at"]
 }
 
 export const BOOKMARK_LIST_SELECT_COLUMNS = [
   "id",
   "user_id:userId",
-  "post_id:postId",
+  "wp_post_id:postId",
   "slug",
-  "country",
+  "edition_code:country",
+  "collection_id:collectionId",
   "title",
   "excerpt",
   "featured_image:featuredImage",
   "category",
   "tags",
   "read_state:readState",
-  "notes",
+  "note:notes",
   "created_at:createdAt",
 ].join(", ")
 
 export type BookmarkListRow = Pick<
   BookmarkRow,
   | "id"
-  | "user_id"
-  | "wp_post_id"
+  | "userId"
+  | "postId"
   | "slug"
-  | "edition_code"
-  | "collection_id"
+  | "country"
+  | "collectionId"
   | "title"
   | "excerpt"
   | "featuredImage"

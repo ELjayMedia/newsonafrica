@@ -5,6 +5,15 @@ import { revalidateTag } from "next/cache"
 import { cacheTags } from "@/lib/cache"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
+import { ensureBookmarkCollectionAssignment } from "@/lib/bookmarks/collections"
+import { applyBookmarkCounterDelta } from "@/lib/bookmarks/counters"
+import {
+  buildAdditionCounterDelta,
+  buildRemovalCounterDelta,
+  buildUpdateCounterDelta,
+  prepareBookmarkUpdatePayload,
+  type BookmarkUpdateInput,
+} from "@/lib/bookmarks/mutations"
 import type { Database } from "@/types/supabase"
 import {
   fetchBookmarkStats,
@@ -50,12 +59,12 @@ export interface AddBookmarkInput {
   tags?: string[] | null
   notes?: string | null
   country?: string | null
-  collectionId?: BookmarkRow["collection_id"] | null
+  collectionId?: BookmarkRow["collectionId"] | null
 }
 
 export interface UpdateBookmarkInput {
   postId: string
-  updates: Partial<Omit<BookmarkRow, "id" | "user_id" | "wp_post_id" | "created_at">>
+  updates: BookmarkUpdateInput
 }
 
 export interface BulkRemoveInput {
@@ -207,7 +216,7 @@ export async function addBookmark(
     const userId = ensureUserId(session)
     const wpPostId = payload.postId
     const editionCodeInput = payload.country ?? null
-    const collectionId = payload.collectionId ?? null
+    const requestedCollectionId = payload.collectionId ?? null
 
     if (!wpPostId) {
       throw new ActionError("Post ID is required", { status: 400 })
@@ -224,11 +233,22 @@ export async function addBookmark(
       throw new ActionError("Bookmark already exists", { status: 409 })
     }
 
+    let resolvedCollectionId: string | null = null
+    try {
+      resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
+        userId,
+        collectionId: requestedCollectionId,
+        editionCode: editionCodeInput,
+      })
+    } catch (collectionError) {
+      throw new ActionError("Failed to resolve bookmark collection", { cause: collectionError })
+    }
+
     const newBookmark: BookmarkInsert = {
       user_id: userId,
       wp_post_id: wpPostId,
       edition_code: editionCodeInput,
-      collection_id: collectionId,
+      collection_id: resolvedCollectionId,
       title: payload.title || "Untitled Post",
       slug: payload.slug || "",
       excerpt: payload.excerpt || "",
@@ -253,10 +273,16 @@ export async function addBookmark(
     }
 
     const inserted = data as BookmarkListRow
-    const editionCode =
-      typeof inserted.edition_code === "string"
-        ? inserted.edition_code
-        : editionCodeInput
+    const editionCode = typeof inserted.country === "string" ? inserted.country : editionCodeInput
+
+    const additionDelta = buildAdditionCounterDelta(inserted)
+    if (additionDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId, delta: additionDelta })
+      } catch (counterError) {
+        throw new ActionError("Failed to update bookmark counters", { cause: counterError })
+      }
+    }
 
     await revalidateBookmarkCache(userId, [editionCode])
 
@@ -289,10 +315,16 @@ export async function removeBookmark(
     }
 
     const removedRows = (data ?? []) as BookmarkListRow[]
-    await revalidateBookmarkCache(
-      userId,
-      removedRows.map((row) => (typeof row.edition_code === "string" ? row.edition_code : null)),
-    )
+    const removalDelta = buildRemovalCounterDelta(removedRows)
+    if (removalDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId, delta: removalDelta })
+      } catch (counterError) {
+        throw new ActionError("Failed to update bookmark counters", { cause: counterError })
+      }
+    }
+
+    await revalidateBookmarkCache(userId, removedRows.map((row) => row.country ?? null))
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -326,10 +358,16 @@ export async function bulkRemoveBookmarks(
     }
 
     const removedRows = (data ?? []) as BookmarkListRow[]
-    await revalidateBookmarkCache(
-      userId,
-      removedRows.map((row) => (typeof row.edition_code === "string" ? row.edition_code : null)),
-    )
+    const removalDelta = buildRemovalCounterDelta(removedRows)
+    if (removalDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId, delta: removalDelta })
+      } catch (counterError) {
+        throw new ActionError("Failed to update bookmark counters", { cause: counterError })
+      }
+    }
+
+    await revalidateBookmarkCache(userId, removedRows.map((row) => row.country ?? null))
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -351,57 +389,6 @@ export async function updateBookmark(
       throw new ActionError("Post ID is required", { status: 400 })
     }
     const wpPostId = payload.postId
-    const sanitizedUpdates: Partial<BookmarkRow> & {
-      country?: string | null
-      notes?: string | null
-      read_status?: BookmarkRow["read_state"] | null
-    } = { ...payload.updates }
-
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "country")) {
-      dbUpdates.country = payload.updates.country ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "title")) {
-      dbUpdates.title = payload.updates.title ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "slug")) {
-      dbUpdates.slug = payload.updates.slug ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "excerpt")) {
-      dbUpdates.excerpt = payload.updates.excerpt ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "category")) {
-      dbUpdates.category = payload.updates.category ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "tags")) {
-      dbUpdates.tags = payload.updates.tags ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "readState")) {
-      dbUpdates.read_state = payload.updates.readState ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "notes")) {
-      dbUpdates.notes = payload.updates.notes ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(payload.updates, "featuredImage")) {
-      const value = payload.updates.featuredImage
-      dbUpdates.featured_image = value && typeof value === "object" ? value : null
-    }
-
-    if ("country" in sanitizedUpdates) {
-      sanitizedUpdates.edition_code =
-        typeof sanitizedUpdates.country === "string" ? sanitizedUpdates.country : null
-      delete sanitizedUpdates.country
-    }
-
-    if ("notes" in sanitizedUpdates) {
-      sanitizedUpdates.note = sanitizedUpdates.notes ?? null
-      delete sanitizedUpdates.notes
-    }
-
-    if ("read_status" in sanitizedUpdates) {
-      sanitizedUpdates.read_state = sanitizedUpdates.read_status ?? null
-      delete sanitizedUpdates.read_status
-    }
-
     const { data: existing, error: existingError } = await supabase
       .from("bookmarks")
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
@@ -415,6 +402,28 @@ export async function updateBookmark(
 
     if (!existing) {
       throw new ActionError("Bookmark not found", { status: 404 })
+    }
+
+    const existingRow = existing as BookmarkListRow
+    const preparation = prepareBookmarkUpdatePayload(existingRow, payload.updates ?? {})
+
+    if (!preparation.hasWritableUpdate) {
+      throw new ActionError("No bookmark updates provided", { status: 400 })
+    }
+
+    const { dbUpdates, targetEditionCode, targetCollectionId, shouldResolveCollection } = preparation
+
+    if (shouldResolveCollection) {
+      try {
+        const resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
+          userId,
+          collectionId: targetCollectionId,
+          editionCode: targetEditionCode,
+        })
+        dbUpdates.collection_id = resolvedCollectionId
+      } catch (collectionError) {
+        throw new ActionError("Failed to resolve bookmark collection", { cause: collectionError })
+      }
     }
 
     const { data, error } = await supabase
@@ -431,18 +440,22 @@ export async function updateBookmark(
 
     const updated = data as BookmarkListRow
     const editionCode =
-      typeof updated.edition_code === "string"
-        ? updated.edition_code
-        : typeof sanitizedUpdates.edition_code === "string"
-          ? sanitizedUpdates.edition_code
-          : (existing as BookmarkListRow).edition_code ?? null
+      updated.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
+    const counterDelta = buildUpdateCounterDelta(existingRow, updated)
+    if (counterDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId, delta: counterDelta })
+      } catch (counterError) {
+        throw new ActionError("Failed to update bookmark counters", { cause: counterError })
+      }
+    }
 
     await revalidateBookmarkCache(userId, [editionCode])
 
     return {
       updated: [updated],
       statsDelta: computeStatsDelta({
-        previous: existing as BookmarkListRow,
+        previous: existingRow,
         next: updated,
       }),
     }
@@ -450,11 +463,11 @@ export async function updateBookmark(
 }
 
 export async function markRead(wpPostId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId: wpPostId, updates: { read_state: "read" } })
+  return updateBookmark({ postId: wpPostId, updates: { readState: "read" } })
 }
 
 export async function markUnread(wpPostId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId: wpPostId, updates: { read_state: "unread" } })
+  return updateBookmark({ postId: wpPostId, updates: { readState: "unread" } })
 }
 
 export async function exportBookmarks(): Promise<ActionResult<string>> {
@@ -476,13 +489,13 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
       | "title"
       | "slug"
       | "excerpt"
-      | "created_at"
+      | "createdAt"
       | "category"
       | "tags"
-      | "read_state"
-      | "note"
-      | "edition_code"
-      | "collection_id"
+      | "readState"
+      | "notes"
+      | "country"
+      | "collectionId"
     >[]
 
     const exportData = {
@@ -495,10 +508,10 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
         created_at: bookmark.createdAt,
         category: bookmark.category,
         tags: bookmark.tags,
-        read_state: bookmark.read_state,
-        note: bookmark.note,
-        edition_code: bookmark.edition_code,
-        collection_id: bookmark.collection_id,
+        read_state: bookmark.readState,
+        note: bookmark.notes,
+        edition_code: bookmark.country,
+        collection_id: bookmark.collectionId,
       })),
     }
 

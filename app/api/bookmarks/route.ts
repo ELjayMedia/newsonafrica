@@ -13,7 +13,15 @@ import {
   type BookmarkListRow,
   type BookmarkStats,
 } from "@/types/bookmarks"
-import type { Database } from "@/types/supabase"
+import { ensureBookmarkCollectionAssignment } from "@/lib/bookmarks/collections"
+import { applyBookmarkCounterDelta } from "@/lib/bookmarks/counters"
+import {
+  buildAdditionCounterDelta,
+  buildRemovalCounterDelta,
+  buildUpdateCounterDelta,
+  prepareBookmarkUpdatePayload,
+  type BookmarkUpdateInput,
+} from "@/lib/bookmarks/mutations"
 
 export const runtime = "nodejs"
 
@@ -109,7 +117,7 @@ export async function GET(request: NextRequest) {
       let builder = query.select(BOOKMARK_LIST_SELECT_COLUMNS).eq("user_id", user.id)
 
       if (search) {
-        builder = builder.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,notes.ilike.%${search}%`)
+        builder = builder.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,note.ilike.%${search}%`)
       }
 
       if (category && category !== "all") {
@@ -238,7 +246,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId, title, slug, excerpt, featuredImage, category, tags, notes, country } = body
+    const {
+      postId,
+      title,
+      slug,
+      excerpt,
+      featuredImage,
+      category,
+      tags,
+      notes,
+      country,
+      collectionId,
+    } = body
 
     if (!postId) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
@@ -249,17 +268,31 @@ export async function POST(request: NextRequest) {
       .from("bookmarks")
       .select("id")
       .eq("user_id", user.id)
-      .eq("post_id", postId)
+      .eq("wp_post_id", postId)
       .single()
 
     if (existingBookmark) {
       return respond(jsonWithCors(request, { error: "Bookmark already exists" }, { status: 409 }))
     }
 
+    const editionCodeInput = country ?? null
+    let resolvedCollectionId: string | null = null
+    try {
+      resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
+        userId: user.id,
+        collectionId: collectionId ?? null,
+        editionCode: editionCodeInput,
+      })
+    } catch (collectionError) {
+      console.error("Failed to resolve bookmark collection", collectionError)
+      return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
+    }
+
     const bookmarkData = {
       user_id: user.id,
-      post_id: postId,
-      country: country || null,
+      wp_post_id: postId,
+      edition_code: editionCodeInput,
+      collection_id: resolvedCollectionId,
       title: title || "Untitled Post",
       slug: slug || "",
       excerpt: excerpt || "",
@@ -267,7 +300,7 @@ export async function POST(request: NextRequest) {
       category: category || null,
       tags: tags || null,
       read_state: "unread" as const,
-      notes: notes || null,
+      note: notes || null,
     }
 
     const { data, error } = await supabase
@@ -281,12 +314,17 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
     }
 
-    const insertedBookmark = (data ?? null) as { country?: string | null } | null
-    const primaryEdition =
-      typeof insertedBookmark?.country === "string"
-        ? insertedBookmark.country
-        : bookmarkData.country ?? null
+    const insertedBookmark = data as BookmarkListRow
+    const primaryEdition = insertedBookmark.country ?? editionCodeInput
     const editionSources = [primaryEdition, ...getRequestEditionPreferences(request)]
+
+    const additionDelta = buildAdditionCounterDelta(insertedBookmark)
+    try {
+      await applyBookmarkCounterDelta(supabase, { userId: user.id, delta: additionDelta })
+    } catch (counterError) {
+      console.error("Failed to update bookmark counters", counterError)
+      return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
+    }
 
     invalidateBookmarksCache(user.id, editionSources)
     return respond(NextResponse.json({ bookmark: data }))
@@ -318,49 +356,62 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId, updates } = body
+    const { postId } = body
+    const updates = body.updates as BookmarkUpdateInput | undefined
 
     if (!postId) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
     }
 
-    const dbUpdates: Database["public"]["Tables"]["bookmarks"]["Update"] = {}
+    if (!updates || typeof updates !== "object") {
+      return respond(jsonWithCors(request, { error: "Updates payload is required" }, { status: 400 }))
+    }
 
-    if (Object.prototype.hasOwnProperty.call(updates, "country")) {
-      dbUpdates.country = updates.country ?? null
+    const { data: existing, error: existingError } = await supabase
+      .from("bookmarks")
+      .select(BOOKMARK_LIST_SELECT_COLUMNS)
+      .eq("user_id", user.id)
+      .eq("wp_post_id", postId)
+      .maybeSingle()
+
+    if (existingError) {
+      console.error("Failed to load bookmark", existingError)
+      return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
     }
-    if (Object.prototype.hasOwnProperty.call(updates, "title")) {
-      dbUpdates.title = updates.title ?? null
+
+    if (!existing) {
+      return respond(jsonWithCors(request, { error: "Bookmark not found" }, { status: 404 }))
     }
-    if (Object.prototype.hasOwnProperty.call(updates, "slug")) {
-      dbUpdates.slug = updates.slug ?? null
+
+    const existingRow = existing as BookmarkListRow
+    const preparation = prepareBookmarkUpdatePayload(existingRow, updates)
+
+    if (!preparation.hasWritableUpdate) {
+      return respond(jsonWithCors(request, { error: "No bookmark updates provided" }, { status: 400 }))
     }
-    if (Object.prototype.hasOwnProperty.call(updates, "excerpt")) {
-      dbUpdates.excerpt = updates.excerpt ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, "category")) {
-      dbUpdates.category = updates.category ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, "tags")) {
-      dbUpdates.tags = updates.tags ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, "readState")) {
-      dbUpdates.read_state = updates.readState ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
-      dbUpdates.notes = updates.notes ?? null
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, "featuredImage")) {
-      const value = updates.featuredImage
-      dbUpdates.featured_image = value && typeof value === "object" ? value : null
+
+    const { dbUpdates, targetEditionCode, targetCollectionId, shouldResolveCollection } = preparation
+
+    if (shouldResolveCollection) {
+      try {
+        const resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
+          userId: user.id,
+          collectionId: targetCollectionId,
+          editionCode: targetEditionCode,
+        })
+        dbUpdates.collection_id = resolvedCollectionId
+      } catch (collectionError) {
+        console.error("Failed to resolve bookmark collection", collectionError)
+        return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
+      }
     }
 
     const { data, error } = await supabase
       .from("bookmarks")
       .update(dbUpdates)
       .eq("user_id", user.id)
-      .eq("post_id", postId)
-      .select()
+      .eq("wp_post_id", postId)
+      .select(BOOKMARK_LIST_SELECT_COLUMNS)
       .single()
 
     if (error) {
@@ -368,14 +419,20 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
     }
 
-    const updatedBookmark = (data ?? null) as { country?: string | null } | null
+    const updatedBookmark = data as BookmarkListRow
     const updatedCountry =
-      typeof updatedBookmark?.country === "string"
-        ? updatedBookmark.country
-        : typeof updates.country === "string"
-          ? updates.country
-          : null
+      updatedBookmark.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
     const editionSources = [updatedCountry, ...getRequestEditionPreferences(request)]
+
+    const counterDelta = buildUpdateCounterDelta(existingRow, updatedBookmark)
+    if (counterDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId: user.id, delta: counterDelta })
+      } catch (counterError) {
+        console.error("Failed to update bookmark counters", counterError)
+        return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
+      }
+    }
 
     invalidateBookmarksCache(user.id, editionSources)
     return respond(NextResponse.json({ bookmark: data }))
@@ -417,21 +474,30 @@ export async function DELETE(request: NextRequest) {
     let query = supabase.from("bookmarks").delete().eq("user_id", user.id)
 
     if (postIds && postIds.length > 0) {
-      query = query.in("post_id", postIds)
+      query = query.in("wp_post_id", postIds)
     } else if (postId) {
-      query = query.eq("post_id", postId)
+      query = query.eq("wp_post_id", postId)
     }
 
-    const { data: removedRows, error } = await query.select("post_id, country")
+    const { data: removedRows, error } = await query.select(BOOKMARK_LIST_SELECT_COLUMNS)
 
     if (error) {
       console.error("Error removing bookmark(s):", error)
       return respond(jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 }))
     }
 
-    const removedCountries = Array.isArray(removedRows)
-      ? removedRows.map((row) => (row as { country?: string | null }).country ?? null)
-      : []
+    const removedBookmarks = (removedRows ?? []) as BookmarkListRow[]
+    const removalDelta = buildRemovalCounterDelta(removedBookmarks)
+    if (removalDelta) {
+      try {
+        await applyBookmarkCounterDelta(supabase, { userId: user.id, delta: removalDelta })
+      } catch (counterError) {
+        console.error("Failed to update bookmark counters", counterError)
+        return respond(jsonWithCors(request, { error: "Failed to remove bookmark(s)" }, { status: 500 }))
+      }
+    }
+
+    const removedCountries = removedBookmarks.map((row) => row.country ?? null)
     const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
 
     invalidateBookmarksCache(user.id, editionSources)
