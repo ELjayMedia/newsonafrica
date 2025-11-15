@@ -1,5 +1,4 @@
 import { cache } from "react"
-import { createHash } from "node:crypto"
 
 import { WP_AUTH_HEADERS } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
@@ -203,8 +202,7 @@ export function fetchWordPressGraphQL<T>(
         : CACHE_DURATIONS.NONE
   const shouldMemoize = memoizationTtlSeconds > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
-  const bodyHash = createHash("sha1").update(body).digest("hex")
-  const cacheKey = `${base}::${bodyHash}::${tagsKey}`
+  const cacheKey = `${base}::${body}::${tagsKey}`
   const metadataKey = shouldMemoize
     ? `ttl:${memoizationTtlSeconds}`
     : "ttl:0"
