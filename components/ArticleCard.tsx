@@ -125,14 +125,16 @@ export function ArticleCard({
       <article
         className={cn(
           "flex h-full overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-          isHorizontal ? "flex-col sm:flex-row" : "flex-col",
+          isHorizontal ? "flex-row" : "flex-col",
           articleClassName
         )}
       >
         <div
           className={cn(
             "relative overflow-hidden bg-muted",
-            isHorizontal ? "w-full aspect-video sm:aspect-[4/3] sm:w-40 sm:flex-shrink-0" : "w-full aspect-video",
+            isHorizontal
+              ? "aspect-[4/3] w-28 flex-shrink-0 sm:w-36 md:w-44 lg:w-52"
+              : "w-full aspect-video",
             mediaClassName
           )}
         >
