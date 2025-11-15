@@ -83,19 +83,26 @@ function ensureUserId(session: { user: { id: string } } | null | undefined): str
 async function revalidateBookmarkCache(
   userId: string,
   editions: Iterable<string | null | undefined> = [],
+  collections: Iterable<string | null | undefined> = [],
 ) {
-  const tags = new Set<string>()
+  const editionTags = new Set<string>()
+  const collectionTags = new Set<string>()
 
   for (const edition of editions) {
-    tags.add(cacheTags.bookmarks(edition))
+    editionTags.add(cacheTags.bookmarks(edition))
   }
 
-  if (tags.size === 0) {
-    tags.add(cacheTags.bookmarks(undefined))
+  if (editionTags.size === 0) {
+    editionTags.add(cacheTags.bookmarks(undefined))
+  }
+
+  for (const collection of collections) {
+    collectionTags.add(cacheTags.bmCollection(collection))
   }
 
   revalidateTag(cacheTags.bmUser(userId))
-  tags.forEach((tag) => revalidateTag(tag))
+  editionTags.forEach((tag) => revalidateTag(tag))
+  collectionTags.forEach((tag) => revalidateTag(tag))
 }
 
 async function fetchBookmarkList(
@@ -222,7 +229,8 @@ export async function addBookmark(
       }
     }
 
-    await revalidateBookmarkCache(userId, [editionCode])
+    const collectionScope = inserted.collectionId ?? resolvedCollectionId ?? null
+    await revalidateBookmarkCache(userId, [editionCode], [collectionScope])
 
     return {
       added: [inserted],
@@ -262,7 +270,11 @@ export async function removeBookmark(
       }
     }
 
-    await revalidateBookmarkCache(userId, removedRows.map((row) => row.country ?? null))
+    await revalidateBookmarkCache(
+      userId,
+      removedRows.map((row) => row.country ?? null),
+      removedRows.map((row) => row.collectionId ?? null),
+    )
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -305,7 +317,11 @@ export async function bulkRemoveBookmarks(
       }
     }
 
-    await revalidateBookmarkCache(userId, removedRows.map((row) => row.country ?? null))
+    await revalidateBookmarkCache(
+      userId,
+      removedRows.map((row) => row.country ?? null),
+      removedRows.map((row) => row.collectionId ?? null),
+    )
     const statsDelta = combineStatsDeltas(
       removedRows.map((row) => computeStatsDelta({ previous: row })),
     )
@@ -384,6 +400,11 @@ export async function updateBookmark(
     const updated = data as BookmarkListRow
     const editionCode =
       updated.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
+    const editionScopes = [existingRow.country ?? null, editionCode]
+    const collectionScopes = [
+      existingRow.collectionId ?? null,
+      updated.collectionId ?? targetCollectionId ?? existingRow.collectionId ?? null,
+    ]
     const counterDelta = buildUpdateCounterDelta(existingRow, updated)
     if (counterDelta) {
       try {
@@ -393,7 +414,7 @@ export async function updateBookmark(
       }
     }
 
-    await revalidateBookmarkCache(userId, [editionCode])
+    await revalidateBookmarkCache(userId, editionScopes, collectionScopes)
 
     return {
       updated: [updated],

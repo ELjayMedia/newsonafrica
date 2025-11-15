@@ -72,6 +72,9 @@ export const cacheTags = {
   bmUser(userId: IdentifierInput): string {
     return `bm:user:${normalizeIdentifier(userId)}`
   },
+  bmCollection(collectionId: IdentifierInput): string {
+    return `bm:collection:${normalizeIdentifier(collectionId)}`
+  },
 }
 
 type CacheTags = typeof cacheTags

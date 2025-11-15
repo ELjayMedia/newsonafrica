@@ -51,10 +51,15 @@ import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-uti
 import { cacheTags } from "@/lib/cache"
 import { DELETE, GET, POST, PUT } from "./route"
 
-function expectBookmarkTagInvalidation(userId: string, editions: Array<string | null | undefined>) {
+function expectBookmarkTagInvalidation(
+  userId: string,
+  editions: Array<string | null | undefined>,
+  collections: Array<string | null | undefined> = [],
+) {
   const expectedTags = new Set([
     cacheTags.bmUser(userId),
     ...editions.map((edition) => cacheTags.bookmarks(edition)),
+    ...collections.map((collection) => cacheTags.bmCollection(collection)),
   ])
 
   const calls = vi.mocked(revalidateByTag).mock.calls.map(([tag]) => tag)
@@ -101,6 +106,7 @@ describe("/api/bookmarks cache revalidation", () => {
       postId: "post-1",
       slug: "",
       country: "ng",
+      collectionId: "collection-1",
       title: "Saved post",
       excerpt: "",
       featuredImage: null,
@@ -150,7 +156,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const json = await response.json()
     expect(json.data.added[0]).toMatchObject({ id: "bookmark-1", country: "ng" })
     expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: { news: 1 } })
-    expectBookmarkTagInvalidation(user.id, ["ng"])
+    expectBookmarkTagInvalidation(user.id, ["ng"], ["collection-1"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -163,6 +169,7 @@ describe("/api/bookmarks cache revalidation", () => {
       postId: "post-4",
       slug: "",
       country: null,
+      collectionId: null,
       title: "Untitled",
       excerpt: "",
       featuredImage: null,
@@ -212,7 +219,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const json = await response.json()
     expect(json.data.added[0]).toMatchObject({ id: "bookmark-4" })
     expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: {} })
-    expectBookmarkTagInvalidation(user.id, [null])
+    expectBookmarkTagInvalidation(user.id, [null], [null])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -223,7 +230,7 @@ describe("/api/bookmarks cache revalidation", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: "bookmark-2", country: "ke", collectionId: null, readState: "unread" },
+        data: { id: "bookmark-2", country: "ke", collectionId: "collection-2", readState: "unread" },
         error: null,
       }),
     }
@@ -233,7 +240,13 @@ describe("/api/bookmarks cache revalidation", () => {
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
-        data: { id: "bookmark-2", country: "ke", collectionId: null, readState: "unread" },
+        data: {
+          id: "bookmark-2",
+          country: "ke",
+          collectionId: "collection-3",
+          readState: "unread" as const,
+          notes: "updated",
+        },
         error: null,
       }),
     }
@@ -264,7 +277,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const json = await response.json()
     expect(json.data.updated[0]).toMatchObject({ id: "bookmark-2", notes: "updated" })
     expect(json.data.statsDelta).toEqual({ total: 0, unread: 0, categories: {} })
-    expectBookmarkTagInvalidation(user.id, ["ke"])
+    expectBookmarkTagInvalidation(user.id, ["ke"], ["collection-2", "collection-3"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
@@ -356,7 +369,8 @@ describe("/api/bookmarks cache revalidation", () => {
             postId: "post-3",
             slug: "post-3",
             country: "za",
-            collectionId: null,
+            collectionId: "collection-9",
+            category: "tech",
             readState: "unread" as const,
           },
         ],
@@ -386,7 +400,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const json = await response.json()
     expect(json.data.removed[0]).toMatchObject({ postId: "post-3" })
     expect(json.data.statsDelta).toEqual({ total: -1, unread: -1, categories: { tech: -1 } })
-    expectBookmarkTagInvalidation(user.id, ["za"])
+    expectBookmarkTagInvalidation(user.id, ["za"], ["collection-9"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
