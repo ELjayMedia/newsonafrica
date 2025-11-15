@@ -111,6 +111,53 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(mockJson).toHaveBeenCalledTimes(1)
   })
 
+  it("does not cache HTTP failures so subsequent calls refetch", async () => {
+    const {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      mockJson,
+      getMemoStoreForTests,
+    } = await setup()
+
+    const failureJson = vi.fn()
+    const failureResponse = {
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      json: failureJson,
+    }
+
+    fetchWithRetryMock.mockResolvedValueOnce(
+      failureResponse as unknown as Response,
+    )
+
+    const firstPromise = fetchWordPressGraphQL("sz", "query")
+
+    const firstResult = await firstPromise
+
+    expect(firstResult).toMatchObject({
+      ok: false,
+      kind: "http_error",
+      status: 503,
+      statusText: "Service Unavailable",
+    })
+    expect(failureJson).not.toHaveBeenCalled()
+    expect(getMemoStoreForTests().size).toBe(0)
+
+    const secondPromise = fetchWordPressGraphQL("sz", "query")
+
+    expect(secondPromise).not.toBe(firstPromise)
+
+    await expect(secondPromise).resolves.toMatchObject({
+      ok: true,
+      data: { posts: [] },
+      posts: [],
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+    expect(mockJson).toHaveBeenCalledTimes(1)
+  })
+
   it("dedupes requests regardless of tag ordering", async () => {
     const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
 
