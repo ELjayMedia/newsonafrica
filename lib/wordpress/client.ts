@@ -272,6 +272,7 @@ export function fetchWordPressGraphQL<T>(
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", res.status, res.statusText)
+        removeMemoizedEntry()
         return buildHTTPFailureResult(res)
       }
 
@@ -282,6 +283,7 @@ export function fetchWordPressGraphQL<T>(
 
       if (json.errors && json.errors.length > 0) {
         console.error("[v0] GraphQL errors:", json.errors)
+        removeMemoizedEntry()
         return buildGraphQLFailureResult(json.errors)
       }
 
