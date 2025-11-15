@@ -19,7 +19,6 @@ import {
   type BookmarkListRow,
   type BookmarkMutationPayload,
   type BookmarkRow,
-  type BookmarkStatsDelta,
 } from "@/types/bookmarks"
 
 type BookmarkInsert = Database["public"]["Tables"]["bookmarks"]["Insert"]
