@@ -51,7 +51,7 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
           contentClassName={cn("p-3", isHorizontal && "md:p-4")}
           mediaClassName={
             isHorizontal
-              ? "h-24 w-24 flex-shrink-0 rounded-lg md:h-auto md:w-full md:rounded-none md:aspect-video"
+              ? "h-24 w-24 flex-shrink-0 rounded-lg sm:h-28 sm:w-28 md:h-[84px] md:w-[84px]"
               : "aspect-video rounded-t-xl"
           }
           headlineClassName="text-xs font-semibold md:text-sm"

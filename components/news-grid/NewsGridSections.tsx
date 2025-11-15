@@ -177,7 +177,7 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
             variant="default"
             articleClassName="rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-slate-900"
             contentClassName="p-4"
-            mediaClassName="h-48 w-full flex-shrink-0 rounded-none sm:h-auto sm:w-1/3 sm:rounded-l-xl"
+            mediaClassName="aspect-[4/3] w-32 flex-shrink-0 rounded-none sm:w-1/3 sm:rounded-l-xl"
             headlineClassName="md:text-lg"
             excerptClassName="md:text-base"
             image={{

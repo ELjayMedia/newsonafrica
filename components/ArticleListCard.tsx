@@ -281,8 +281,8 @@ export function ArticleListCard({
   if (layout === "horizontal") {
     return (
       <Link href={data.link} className={cn("block", className)}>
-        <article className="flex flex-col sm:flex-row h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-          <div className="sm:w-1/3 h-40 sm:h-auto relative">
+        <article className="flex h-full flex-row overflow-hidden rounded-lg bg-white transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/50">
+          <div className="relative aspect-[4/3] w-28 flex-shrink-0 sm:w-36 md:w-48 lg:w-56">
             {hasImage ? (
               <Image
                 src={imageUrl || "/placeholder.svg"}
@@ -298,7 +298,7 @@ export function ArticleListCard({
               </div>
             )}
           </div>
-          <div className="sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between">
+          <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
             <div>
               <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{data.title}</h3>
               {resolvedShowExcerpt && sanitizedExcerpt ? (
