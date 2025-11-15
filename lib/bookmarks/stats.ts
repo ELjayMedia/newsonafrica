@@ -3,7 +3,7 @@ import type { BookmarkStats } from "@/types/bookmarks"
 import { executeListQuery } from "@/lib/supabase/list-query"
 
 export interface StatusAggregateRow {
-  read_status: string | null
+  readState: string | null
   count: number | null
 }
 
@@ -30,7 +30,7 @@ export function buildBookmarkStats({
   for (const row of statusRows) {
     const count = Number(row.count ?? 0)
     total += count
-    if (!row.read_status || row.read_status !== "read") {
+    if (!row.readState || row.readState !== "read") {
       unread += count
     }
   }
@@ -54,7 +54,10 @@ export async function fetchBookmarkStats(
 ): Promise<BookmarkStats> {
   const [statusResult, categoryResult] = await Promise.all([
     executeListQuery(supabase, "bookmarks", (query) =>
-      query.select("read_status, count:count(*)", { head: false }).eq("user_id", userId).group("read_status"),
+      query
+        .select("read_state:readState, count:count(*)", { head: false })
+        .eq("user_id", userId)
+        .group("read_state"),
     ),
     executeListQuery(supabase, "bookmarks", (query) =>
       query

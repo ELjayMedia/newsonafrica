@@ -122,8 +122,11 @@ function classifyUpdateAction(postId, updates) {
     return { action: "update", postId, note: null, updates: {} }
   }
 
-  if (Object.prototype.hasOwnProperty.call(updates, "read_status")) {
-    const status = updates.read_status
+  const readState = Object.prototype.hasOwnProperty.call(updates, "readState")
+    ? updates.readState
+    : updates.read_state
+  if (typeof readState === "string") {
+    const status = readState
     if (status === "read") {
       return { action: "mark-read", postId, note: null, updates: null }
     }
@@ -431,13 +434,13 @@ function buildReplayRequest(entry) {
     }
     case "mark-read": {
       init.method = "PUT"
-      init.body = JSON.stringify({ postId: entry.postId, updates: { read_status: "read" } })
+      init.body = JSON.stringify({ postId: entry.postId, updates: { readState: "read" } })
       headers.set("content-type", "application/json")
       break
     }
     case "mark-unread": {
       init.method = "PUT"
-      init.body = JSON.stringify({ postId: entry.postId, updates: { read_status: "unread" } })
+      init.body = JSON.stringify({ postId: entry.postId, updates: { readState: "unread" } })
       headers.set("content-type", "application/json")
       break
     }

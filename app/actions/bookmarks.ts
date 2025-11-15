@@ -32,7 +32,7 @@ export type {
 } from "@/types/bookmarks"
 
 const BOOKMARK_EXPORT_COLUMNS =
-  "title, slug, excerpt, created_at, category, tags, read_status, notes"
+  "title, slug, excerpt, created_at:createdAt, category, tags, read_state:readState, notes"
 
 export interface ListBookmarksOptions {
   revalidate?: boolean
@@ -43,7 +43,7 @@ export interface AddBookmarkInput {
   title?: string
   slug?: string
   excerpt?: string
-  featuredImage?: BookmarkRow["featured_image"] | null
+  featuredImage?: BookmarkRow["featuredImage"] | null
   category?: string | null
   tags?: string[] | null
   notes?: string | null
@@ -52,7 +52,7 @@ export interface AddBookmarkInput {
 
 export interface UpdateBookmarkInput {
   postId: string
-  updates: Partial<Omit<BookmarkRow, "id" | "user_id" | "post_id" | "created_at">>
+  updates: Partial<Omit<BookmarkRow, "id" | "userId" | "postId" | "createdAt">>
 }
 
 export interface BulkRemoveInput {
@@ -153,7 +153,7 @@ function computeStatsDelta({
 
   if (previous) {
     delta.total -= 1
-    if (previous.read_status !== "read") {
+    if (previous.readState !== "read") {
       delta.unread -= 1
     }
     mergeCategoryDelta(delta.categories, previous.category, -1)
@@ -161,7 +161,7 @@ function computeStatsDelta({
 
   if (next) {
     delta.total += 1
-    if (next.read_status !== "read") {
+    if (next.readState !== "read") {
       delta.unread += 1
     }
     mergeCategoryDelta(delta.categories, next.category, 1)
@@ -232,7 +232,7 @@ export async function addBookmark(
           : null,
       category: payload.category ?? null,
       tags: payload.tags ?? null,
-      read_status: "unread",
+      read_state: "unread",
       notes: payload.notes ?? null,
     }
 
@@ -343,13 +343,35 @@ export async function updateBookmark(
       throw new ActionError("Post ID is required", { status: 400 })
     }
 
-    const sanitizedUpdates: Partial<BookmarkRow> = { ...payload.updates }
+    const dbUpdates: Database["public"]["Tables"]["bookmarks"]["Update"] = {}
 
-    if ("featured_image" in sanitizedUpdates) {
-      sanitizedUpdates.featured_image =
-        sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
-          ? sanitizedUpdates.featured_image
-          : null
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "country")) {
+      dbUpdates.country = payload.updates.country ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "title")) {
+      dbUpdates.title = payload.updates.title ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "slug")) {
+      dbUpdates.slug = payload.updates.slug ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "excerpt")) {
+      dbUpdates.excerpt = payload.updates.excerpt ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "category")) {
+      dbUpdates.category = payload.updates.category ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "tags")) {
+      dbUpdates.tags = payload.updates.tags ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "readState")) {
+      dbUpdates.read_state = payload.updates.readState ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "notes")) {
+      dbUpdates.notes = payload.updates.notes ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(payload.updates, "featuredImage")) {
+      const value = payload.updates.featuredImage
+      dbUpdates.featured_image = value && typeof value === "object" ? value : null
     }
 
     const { data: existing, error: existingError } = await supabase
@@ -369,7 +391,7 @@ export async function updateBookmark(
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(sanitizedUpdates)
+      .update(dbUpdates)
       .eq("user_id", userId)
       .eq("post_id", payload.postId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
@@ -383,8 +405,8 @@ export async function updateBookmark(
     const edition =
       typeof updated.country === "string"
         ? updated.country
-        : typeof sanitizedUpdates.country === "string"
-          ? sanitizedUpdates.country
+        : typeof payload.updates.country === "string"
+          ? payload.updates.country
           : (existing as BookmarkListRow).country ?? null
 
     await revalidateBookmarkCache(userId, [edition])
@@ -400,11 +422,11 @@ export async function updateBookmark(
 }
 
 export async function markRead(postId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId, updates: { read_status: "read" } })
+  return updateBookmark({ postId, updates: { readState: "read" } })
 }
 
 export async function markUnread(postId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId, updates: { read_status: "unread" } })
+  return updateBookmark({ postId, updates: { readState: "unread" } })
 }
 
 export async function exportBookmarks(): Promise<ActionResult<string>> {
@@ -423,7 +445,7 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
 
     const bookmarks = (data ?? []) as Pick<
       BookmarkRow,
-      "title" | "slug" | "excerpt" | "created_at" | "category" | "tags" | "read_status" | "notes"
+      "title" | "slug" | "excerpt" | "createdAt" | "category" | "tags" | "readState" | "notes"
     >[]
 
     const exportData = {
@@ -433,10 +455,10 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
         title: bookmark.title,
         slug: bookmark.slug,
         excerpt: bookmark.excerpt,
-        created_at: bookmark.created_at,
+        created_at: bookmark.createdAt,
         category: bookmark.category,
         tags: bookmark.tags,
-        read_status: bookmark.read_status,
+        read_state: bookmark.readState,
         notes: bookmark.notes,
       })),
     }
