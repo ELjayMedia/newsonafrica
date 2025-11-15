@@ -445,7 +445,9 @@ export const fetchMostReadPosts = async (
 ): Promise<HomePost[]> => {
   const requestUrl = buildMostReadRequestUrl(countryCode, limit, options.requestUrl)
 
-  const response = await fetch(requestUrl)
+  const response = await fetch(requestUrl, {
+    next: { revalidate: CACHE_DURATIONS.MEDIUM },
+  })
   if (!response.ok) {
     const message = await response.text().catch(() => "")
     throw new Error(message || "Failed to load most-read posts")
