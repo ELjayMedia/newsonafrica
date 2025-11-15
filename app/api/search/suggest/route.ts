@@ -40,7 +40,7 @@ const fetchWordPressSuggestions = async (
 
     return {
       suggestions: fallback.suggestions.slice(0, SUGGESTION_LIMIT),
-      source: "wordpress",
+      source: "graphql",
       elapsedMs: fallback.performance.elapsedMs,
     }
   }
@@ -54,7 +54,7 @@ const fetchWordPressSuggestions = async (
 
   return {
     suggestions,
-    source: "wordpress",
+    source: "graphql",
     elapsedMs: Date.now() - start,
   }
 }
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("WordPress suggestion fetch failed", error)
+    console.error("GraphQL suggestion fetch failed", error)
   }
 
   return respondWithSuggestions(request, { suggestions: [] })

@@ -32,7 +32,7 @@ const FALLBACK_RECORDS: SearchRecord[] = [
   {
     objectID: "sz:search-service-info",
     title: "Search Service Information",
-    excerpt: "Our search is powered by WordPress and provides comprehensive coverage of African news.",
+    excerpt: "Our search is powered by our GraphQL API and provides comprehensive coverage of African news.",
     categories: [],
     country: "sz",
     published_at: new Date().toISOString(),
@@ -151,7 +151,7 @@ const buildFallbackResponse = (
   }
 }
 
-const buildWordPressResponse = (
+const buildGraphQLResponse = (
   request: NextRequest,
   params: NormalizedSearchParams,
   startTime: number,
@@ -167,11 +167,11 @@ const buildWordPressResponse = (
     suggestions: result.suggestions,
     performance: {
       responseTime: Date.now() - startTime,
-      source: "wordpress",
-      wordpressRequestCount: result.performance.totalRequests,
-      wordpressRequestBudget: result.performance.requestBudget,
-      wordpressBudgetExhausted: result.performance.budgetExhausted,
-      wordpressSearchElapsed: result.performance.elapsedMs,
+      source: "graphql",
+      graphqlRequestCount: result.performance.totalRequests,
+      graphqlRequestBudget: result.performance.requestBudget,
+      graphqlBudgetExhausted: result.performance.budgetExhausted,
+      graphqlSearchElapsed: result.performance.elapsedMs,
     },
   })
 
@@ -211,9 +211,9 @@ export async function GET(request: NextRequest) {
       normalizedParams.perPage,
     )
 
-    return buildWordPressResponse(request, normalizedParams, startTime, result)
+    return buildGraphQLResponse(request, normalizedParams, startTime, result)
   } catch (error) {
-    console.error("WordPress search failed", error)
+    console.error("GraphQL search failed", error)
   }
 
   return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))

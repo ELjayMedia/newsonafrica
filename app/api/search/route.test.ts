@@ -22,17 +22,12 @@ describe("GET /api/search", () => {
     mockSearchWordPressPosts.mockResolvedValue({
       results: [
         {
-          id: 1,
           slug: "cache-test",
-          title: { rendered: "Cache Test" },
-          excerpt: { rendered: "Cache Excerpt" },
-          content: { rendered: "Cache Content" },
+          title: "Cache Test",
+          excerpt: "Cache Excerpt",
           date: now,
-          link: "https://example.com/cache-test",
-          featured_media: 0,
-          categories: [],
-          tags: [],
-          author: 1,
+          categories: { nodes: [] },
+          tags: { nodes: [] },
         },
       ],
       total: 1,
@@ -71,17 +66,12 @@ describe("GET /api/search", () => {
 
     const buildResponse = (country: string, dates: string[], titles: string[]): SearchResponse => ({
       results: dates.map((date, index) => ({
-        id: index + 1,
         slug: `${country}-post-${index + 1}`,
-        title: { rendered: titles[index] },
-        excerpt: { rendered: `${titles[index]} excerpt` },
-        content: { rendered: `${titles[index]} content` },
+        title: titles[index],
+        excerpt: `${titles[index]} excerpt`,
         date,
-        link: `https://example.com/${country}/${index + 1}`,
-        featured_media: 0,
-        categories: [],
-        tags: [],
-        author: 1,
+        categories: { nodes: [] },
+        tags: { nodes: [] },
       })),
       total: dates.length,
       totalPages: 1,
@@ -161,7 +151,7 @@ describe("GET /api/search", () => {
     expect(payload.totalPages).toBe(Math.max(1, Math.ceil(total / perPage)))
     expect(payload.currentPage).toBe(page)
     expect(payload.hasMore).toBe(page < payload.totalPages)
-    expect(payload.performance.source).toBe("wordpress")
+    expect(payload.performance.source).toBe("graphql")
     expect(payload.suggestions.length).toBeLessThanOrEqual(10)
     payload.suggestions.forEach((title: string) => {
       expect(allTitles).toContain(title)
@@ -223,17 +213,12 @@ describe("GET /api/search", () => {
       const slice = allPosts.slice(start, end)
 
       const results = slice.map((post) => ({
-        id: Number(post.slug.replace(/\D+/g, "")) || 0,
         slug: post.slug,
-        title: { rendered: post.title },
-        excerpt: { rendered: `${post.title} excerpt` },
-        content: { rendered: `${post.title} content` },
+        title: post.title,
+        excerpt: `${post.title} excerpt`,
         date: post.date,
-        link: `https://example.com/${country}/${post.slug}`,
-        featured_media: 0,
-        categories: [],
-        tags: [],
-        author: 1,
+        categories: { nodes: [] },
+        tags: { nodes: [] },
       }))
 
       return {
@@ -295,10 +280,10 @@ describe("GET /api/search", () => {
     expect(payload.totalPages).toBe(Math.max(1, Math.ceil(payload.total / perPage)))
     expect(payload.currentPage).toBe(page)
     expect(payload.hasMore).toBe(page < payload.totalPages)
-    expect(payload.performance.source).toBe("wordpress")
-    expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
-    expect(payload.performance.wordpressRequestBudget).toBeGreaterThanOrEqual(totalCalls)
-    expect(typeof payload.performance.wordpressBudgetExhausted).toBe("boolean")
+    expect(payload.performance.source).toBe("graphql")
+    expect(payload.performance.graphqlRequestCount).toBe(totalCalls)
+    expect(payload.performance.graphqlRequestBudget).toBeGreaterThanOrEqual(totalCalls)
+    expect(typeof payload.performance.graphqlBudgetExhausted).toBe("boolean")
   })
 
   it("stops fetching when WordPress keeps reporting more pages but limits are reached", async () => {
@@ -360,17 +345,12 @@ describe("GET /api/search", () => {
       const slice = allPosts.slice(start, end)
 
       const results = slice.map((post) => ({
-        id: Number(post.slug.replace(/\D+/g, "")) || 0,
         slug: post.slug,
-        title: { rendered: post.title },
-        excerpt: { rendered: `${post.title} excerpt` },
-        content: { rendered: `${post.title} content` },
+        title: post.title,
+        excerpt: `${post.title} excerpt`,
         date: post.date,
-        link: `https://example.com/${country}/${post.slug}`,
-        featured_media: 0,
-        categories: [],
-        tags: [],
-        author: 1,
+        categories: { nodes: [] },
+        tags: { nodes: [] },
       }))
 
       return {
@@ -414,11 +394,11 @@ describe("GET /api/search", () => {
 
     const totalCalls = mockSearchWordPressPosts.mock.calls.length
 
-    expect(payload.performance.source).toBe("wordpress")
-    expect(payload.performance.wordpressBudgetExhausted).toBe(true)
-    expect(payload.performance.wordpressRequestCount).toBe(totalCalls)
+    expect(payload.performance.source).toBe("graphql")
+    expect(payload.performance.graphqlBudgetExhausted).toBe(true)
+    expect(payload.performance.graphqlRequestCount).toBe(totalCalls)
     expect(totalCalls).toBeLessThanOrEqual(SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY)
-    expect(payload.performance.wordpressRequestBudget).toBe(
+    expect(payload.performance.graphqlRequestBudget).toBe(
       SUPPORTED_COUNTRIES.length * MAX_PAGES_PER_COUNTRY,
     )
   })

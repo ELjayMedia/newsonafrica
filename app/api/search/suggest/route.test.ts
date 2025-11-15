@@ -21,7 +21,7 @@ describe("GET /api/search/suggest", () => {
     vi.clearAllMocks()
   })
 
-  it("uses the edge runtime, caches responses, and returns WordPress suggestions", async () => {
+  it("uses the edge runtime, caches responses, and returns GraphQL suggestions", async () => {
     mockGetSearchSuggestions.mockResolvedValue(["Africa", "Africa", "Economy"])
 
     const response = await GET(new Request("https://example.com/api/search/suggest?q=economy"))
@@ -33,7 +33,7 @@ describe("GET /api/search/suggest", () => {
     expect(payload.suggestions).toEqual(["Africa", "Africa", "Economy"])
   })
 
-  it("returns pan-African suggestions from the aggregated WordPress fallback", async () => {
+  it("returns pan-African suggestions from the aggregated GraphQL fallback", async () => {
     mockExecuteWordPressSearchForScope.mockResolvedValue({
       suggestions: ["Climate Action", "Sustainable Development"],
       performance: { elapsedMs: 42 },
@@ -53,7 +53,7 @@ describe("GET /api/search/suggest", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=30, stale-while-revalidate=60")
   })
 
-  it("passes the country scope to the WordPress suggestion helper", async () => {
+  it("passes the country scope to the GraphQL suggestion helper", async () => {
     mockGetSearchSuggestions.mockResolvedValue(["Election Update", "Election Tracker"])
 
     const response = await GET(
@@ -65,8 +65,8 @@ describe("GET /api/search/suggest", () => {
     expect(payload.suggestions).toEqual(["Election Update", "Election Tracker"])
   })
 
-  it("returns an empty suggestion list when WordPress suggestion lookup fails", async () => {
-    mockGetSearchSuggestions.mockRejectedValue(new Error("WordPress down"))
+  it("returns an empty suggestion list when the GraphQL suggestion lookup fails", async () => {
+    mockGetSearchSuggestions.mockRejectedValue(new Error("GraphQL down"))
 
     const response = await GET(new Request("https://example.com/api/search/suggest?q=inflation"))
     const payload = await response.json()

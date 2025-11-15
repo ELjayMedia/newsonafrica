@@ -17,15 +17,34 @@ export const fromWordPressResults = (
   results: Awaited<ReturnType<typeof wpSearchPosts>>,
   country: string,
 ): SearchRecord[] =>
-  results.results.map((post) => ({
-    objectID: `${country}:${post.slug || post.id}`,
-    title: stripHtml(post.title?.rendered || "").trim() || post.title?.rendered || "Untitled",
-    excerpt: stripHtml(post.excerpt?.rendered || "").trim(),
-    categories:
-      post._embedded?.["wp:term"]?.[0]?.map((term) => term.name)?.filter((name): name is string => Boolean(name)) || [],
-    country,
-    published_at: new Date(post.date || new Date().toISOString()).toISOString(),
-  }))
+  results.results.map((post, index) => {
+    const resolvedId =
+      post.slug ||
+      post.globalRelayId ||
+      (typeof post.id === "string" && post.id.length > 0 ? post.id : undefined) ||
+      (typeof post.databaseId === "number" ? String(post.databaseId) : undefined) ||
+      `post-${index}`
+
+    const title = stripHtml(post.title ?? "").trim() || post.title || "Untitled"
+    const excerpt = stripHtml(post.excerpt ?? "").trim()
+    const categories =
+      post.categories?.nodes
+        ?.map((term) => term?.name)
+        ?.filter((name): name is string => Boolean(name)) ?? []
+    const publishedAt =
+      typeof post.date === "string" && post.date.trim().length > 0
+        ? new Date(post.date).toISOString()
+        : new Date().toISOString()
+
+    return {
+      objectID: `${country}:${resolvedId}`,
+      title,
+      excerpt,
+      categories,
+      country,
+      published_at: publishedAt,
+    }
+  })
 
 type HeapNode = { record: SearchRecord; timestamp: number }
 
