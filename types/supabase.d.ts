@@ -62,21 +62,21 @@ export interface Database {
           id: string
           comment_id: string
           user_id: string
-          reaction_type: string
+          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
           created_at: string
         }
         Insert: {
           id?: string
           comment_id: string
           user_id: string
-          reaction_type: string
+          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
           created_at?: string
         }
         Update: {
           id?: string
           comment_id?: string
           user_id?: string
-          reaction_type?: string
+          reaction_type?: "like" | "love" | "laugh" | "sad" | "angry"
           created_at?: string
         }
         Relationships: []
@@ -84,49 +84,52 @@ export interface Database {
       comments: {
         Row: {
           id: string
-          post_id: string
+          wp_post_id: string
+          edition_code: string
           user_id: string
-          content: string
+          body: string
           parent_id: string | null
-          country: string | null
-          status: string
+          status: "active" | "flagged" | "deleted" | "pending"
           reported_by: string | null
           report_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          reaction_count: number
+          reactions_count: number
+          replies_count: number
           is_rich_text: boolean
           created_at: string
         }
         Insert: {
           id?: string
-          post_id: string
+          wp_post_id: string
+          edition_code: string
           user_id: string
-          content: string
+          body: string
           parent_id?: string | null
-          country?: string | null
-          status?: string
+          status?: "active" | "flagged" | "deleted" | "pending"
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          reaction_count?: number
+          reactions_count?: number
+          replies_count?: number
           is_rich_text?: boolean
           created_at?: string
         }
         Update: {
           id?: string
-          post_id?: string
+          wp_post_id?: string
+          edition_code?: string
           user_id?: string
-          content?: string
+          body?: string
           parent_id?: string | null
-          country?: string | null
-          status?: string
+          status?: "active" | "flagged" | "deleted" | "pending"
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          reaction_count?: number
+          reactions_count?: number
+          replies_count?: number
           is_rich_text?: boolean
           created_at?: string
         }

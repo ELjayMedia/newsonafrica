@@ -97,15 +97,15 @@ export function buildCursorConditions(
     case "popular": {
       if (cursor.reactionCount == null) {
         return [
-          `and(reaction_count.is.null,created_at.lt.${cursor.createdAt})`,
-          `and(reaction_count.is.null,created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+          `and(reactions_count.is.null,created_at.lt.${cursor.createdAt})`,
+          `and(reactions_count.is.null,created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
         ]
       }
 
       return [
-        `reaction_count.lt.${cursor.reactionCount}`,
-        `and(reaction_count.eq.${cursor.reactionCount},created_at.lt.${cursor.createdAt})`,
-        `and(reaction_count.eq.${cursor.reactionCount},created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+        `reactions_count.lt.${cursor.reactionCount}`,
+        `and(reactions_count.eq.${cursor.reactionCount},created_at.lt.${cursor.createdAt})`,
+        `and(reactions_count.eq.${cursor.reactionCount},created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
       ]
     }
     default:

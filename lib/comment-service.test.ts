@@ -50,14 +50,18 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-1",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-1",
-            content: "Root comment",
+            body: "Root comment",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
         ],
         error: null,
@@ -66,14 +70,18 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-2",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-2",
-            content: "Reply comment",
+            body: "Reply comment",
             parent_id: "comment-1",
+
+            replies_count: 0,
             created_at: "2024-01-01T01:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
         ],
         error: null,
@@ -140,7 +148,7 @@ describe("fetchComments", () => {
 
     const { fetchComments } = await import("@/lib/comment-service")
 
-    const { comments, total, hasMore, nextCursor } = await fetchComments("post-1")
+    const { comments, total, hasMore, nextCursor } = await fetchComments("post-1", "ng")
 
     expect(total).toBe(1)
     expect(hasMore).toBe(false)
@@ -152,13 +160,13 @@ describe("fetchComments", () => {
       { type: "like", count: 2, reactedByCurrentUser: true },
       { type: "love", count: 1, reactedByCurrentUser: false },
     ])
-    expect(rootComment.reaction_count).toBe(3)
+    expect(rootComment.reactions_count).toBe(3)
     expect(rootComment.user_reaction).toBe("like")
 
     expect(rootComment.replies).toHaveLength(1)
     const [reply] = rootComment.replies ?? []
     expect(reply.reactions).toEqual([{ type: "laugh", count: 1, reactedByCurrentUser: true }])
-    expect(reply.reaction_count).toBe(1)
+    expect(reply.reactions_count).toBe(1)
     expect(reply.user_reaction).toBe("laugh")
   })
 
@@ -172,36 +180,48 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-3",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-3",
-            content: "Newest",
+            body: "Newest",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
           {
             id: "comment-2",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-2",
-            content: "Second",
+            body: "Second",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
           {
             id: "comment-1",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-1",
-            content: "Oldest",
+            body: "Oldest",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
         ],
         error: null,
@@ -211,14 +231,18 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-1",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-1",
-            content: "Oldest",
+            body: "Oldest",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
         ],
         error: null,
@@ -260,7 +284,7 @@ describe("fetchComments", () => {
 
     const { fetchComments } = await import("@/lib/comment-service")
 
-    const firstPage = await fetchComments("post-1", 0, 2)
+    const firstPage = await fetchComments("post-1", "ng", 0, 2)
 
     expect(firstPage.hasMore).toBe(true)
     expect(firstPage.comments).toHaveLength(2)
@@ -270,7 +294,7 @@ describe("fetchComments", () => {
     const decodedFirstCursor = decodeCommentCursor(firstCursor ?? "")
     expect(decodedFirstCursor).toEqual({ sort: "newest", createdAt: "2024-01-02T00:00:00Z", id: "comment-2" })
 
-    const secondPage = await fetchComments("post-1", 1, 2, "newest", undefined, firstCursor ?? undefined)
+    const secondPage = await fetchComments("post-1", "ng", 1, 2, "newest", undefined, firstCursor ?? undefined)
 
     expect(secondPage.hasMore).toBe(false)
     expect(secondPage.nextCursor).toBeNull()
@@ -288,36 +312,48 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-1",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-1",
-            content: "Oldest",
+            body: "Oldest",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
           {
             id: "comment-2",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-2",
-            content: "Middle",
+            body: "Middle",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
           {
             id: "comment-3",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-3",
-            content: "Newest",
+            body: "Newest",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 0,
+            reactions_count: 0,
           },
         ],
         error: null,
@@ -359,7 +395,7 @@ describe("fetchComments", () => {
 
     const { fetchComments } = await import("@/lib/comment-service")
 
-    const firstPage = await fetchComments("post-1", 0, 2, "oldest")
+    const firstPage = await fetchComments("post-1", "ng", 0, 2, "oldest")
 
     expect(firstPage.hasMore).toBe(true)
     const decodedCursor = decodeCommentCursor(firstPage.nextCursor ?? "")
@@ -376,36 +412,48 @@ describe("fetchComments", () => {
         data: [
           {
             id: "comment-1",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-1",
-            content: "Popular",
+            body: "Popular",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 5,
+            reactions_count: 5,
           },
           {
             id: "comment-2",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-2",
-            content: "Also popular",
+            body: "Also popular",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 3,
+            reactions_count: 3,
           },
           {
             id: "comment-3",
-            post_id: "post-1",
+            wp_post_id: "post-1",
+
+            edition_code: "ng",
             user_id: "author-3",
-            content: "Less popular",
+            body: "Less popular",
             parent_id: null,
+
+            replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
             is_rich_text: false,
-            reaction_count: 1,
+            reactions_count: 1,
           },
         ],
         error: null,
@@ -447,7 +495,7 @@ describe("fetchComments", () => {
 
     const { fetchComments } = await import("@/lib/comment-service")
 
-    const firstPage = await fetchComments("post-1", 0, 2, "popular")
+    const firstPage = await fetchComments("post-1", "ng", 0, 2, "popular")
 
     expect(firstPage.hasMore).toBe(true)
     const decodedCursor = decodeCommentCursor(firstPage.nextCursor ?? "")

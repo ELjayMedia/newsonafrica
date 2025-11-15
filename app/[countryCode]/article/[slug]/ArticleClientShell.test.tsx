@@ -48,7 +48,11 @@ vi.mock("next/navigation", () => ({
 }))
 
 vi.mock("@/components/CommentList", () => ({
-  CommentList: ({ postId }: { postId: string }) => <h2>Comments for {postId}</h2>,
+  CommentList: ({ postId, editionCode }: { postId: string; editionCode: string }) => (
+    <h2>
+      Comments for {editionCode}:{postId}
+    </h2>
+  ),
 }))
 
 import { ArticleClientShell } from "./ArticleClientShell"

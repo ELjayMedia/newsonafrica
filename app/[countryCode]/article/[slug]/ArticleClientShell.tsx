@@ -396,6 +396,7 @@ export function ArticleClientShell({
           <section id="comments" className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
             <CommentList
               postId={postId}
+              editionCode={(currentSourceCountry ?? countryCode).toLowerCase()}
               initialComments={initialComments}
               initialCursor={initialCommentCursor}
               initialHasMore={initialCommentHasMore}

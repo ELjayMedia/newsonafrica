@@ -5,7 +5,8 @@ import { cacheTags } from "@/lib/cache"
 
 interface CommentRecord {
   id: string
-  post_id: string
+  wp_post_id: string
+  edition_code: string
   user_id: string
   status: string
   parent_id?: string | null
@@ -173,7 +174,7 @@ function createSupabaseClient({
 }
 
 const createRequest = (search: string) =>
-  new NextRequest(`https://example.com/api/comments?postId=post-1${search}`)
+  new NextRequest(`https://example.com/api/comments?wp_post_id=post-1${search}`)
 
 describe("GET /api/comments", () => {
   beforeEach(() => {
@@ -202,7 +203,8 @@ describe("GET /api/comments", () => {
     const comments: CommentRecord[] = [
       {
         id: "comment-active",
-        post_id: "post-1",
+        wp_post_id: "post-1",
+        edition_code: "african-edition",
         user_id: "user-2",
         status: "active",
         parent_id: null,
@@ -210,7 +212,8 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-flagged",
-        post_id: "post-1",
+        wp_post_id: "post-1",
+        edition_code: "african-edition",
         user_id: "user-3",
         status: "flagged",
         parent_id: null,
@@ -236,7 +239,8 @@ describe("GET /api/comments", () => {
     const comments: CommentRecord[] = [
       {
         id: "comment-user-flagged",
-        post_id: "post-1",
+        wp_post_id: "post-1",
+        edition_code: "african-edition",
         user_id: "user-1",
         status: "flagged",
         parent_id: null,
@@ -244,7 +248,8 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-other-flagged",
-        post_id: "post-1",
+        wp_post_id: "post-1",
+        edition_code: "african-edition",
         user_id: "user-2",
         status: "flagged",
         parent_id: null,
@@ -252,7 +257,8 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-active",
-        post_id: "post-1",
+        wp_post_id: "post-1",
+        edition_code: "african-edition",
         user_id: "user-3",
         status: "active",
         parent_id: null,
@@ -279,7 +285,7 @@ describe("GET /api/comments", () => {
     expect(returnedIds).not.toContain("comment-other-flagged")
   })
 
-  it("returns a validation error when the postId is missing", async () => {
+  it("returns a validation error when the wp_post_id is missing", async () => {
     const { GET } = await import("./route")
 
     const response = await GET(new NextRequest("https://example.com/api/comments"))
@@ -289,7 +295,7 @@ describe("GET /api/comments", () => {
     const body = (await response.json()) as { success: boolean; error: string; errors?: Record<string, string[]> }
     expect(body.success).toBe(false)
     expect(body.error).toBe("Invalid query parameters")
-    expect(body.errors).toEqual({ postId: ["Post ID is required"] })
+    expect(body.errors).toEqual({ wp_post_id: ["WordPress post ID is required"] })
   })
 })
 
@@ -379,7 +385,7 @@ describe("POST /api/comments", () => {
     const response = await POST(
       new NextRequest("https://example.com/api/comments", {
         method: "POST",
-        body: JSON.stringify({ postId: "post-1", content: "Hello world" }),
+        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
         headers: { "content-type": "application/json" },
       }),
     )
@@ -387,7 +393,9 @@ describe("POST /api/comments", () => {
     expect(response.status).toBe(200)
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        country: "sz",
+        edition_code: "sz",
+        wp_post_id: "post-1",
+        body: "Hello world",
       }),
     )
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
@@ -408,7 +416,7 @@ describe("POST /api/comments", () => {
     const response = await POST(
       new NextRequest("https://example.com/api/comments", {
         method: "POST",
-        body: JSON.stringify({ postId: "post-1", content: "Hello world" }),
+        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
         headers: { "content-type": "application/json" },
       }),
     )
@@ -416,7 +424,9 @@ describe("POST /api/comments", () => {
     expect(response.status).toBe(200)
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        country: "african-edition",
+        edition_code: "african-edition",
+        wp_post_id: "post-1",
+        body: "Hello world",
       }),
     )
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
@@ -472,10 +482,10 @@ describe("PATCH /api/comments", () => {
   it("revalidates the edition scoped comment tag", async () => {
     const comment: CommentRecord = {
       id: "comment-1",
-      post_id: "post-123",
+      wp_post_id: "post-123",
+      edition_code: "ng",
       user_id: "user-1",
       status: "active",
-      country: "ng",
     }
 
     currentSupabaseClient = createPatchSupabaseClient({
