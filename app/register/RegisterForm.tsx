@@ -4,7 +4,7 @@ import type React from "react"
 import { useMemo } from "react"
 import { useFormState, useFormStatus } from "react-dom"
 
-import { initialAuthFormState, registerWithPasswordAction } from "@/app/auth/actions"
+import { initialAuthFormState, signUpWithPasswordAction } from "@/app/auth/actions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ redirectTo }: RegisterFormProps) {
-  const [state, action] = useFormState(registerWithPasswordAction, initialAuthFormState)
+  const [state, action] = useFormState(signUpWithPasswordAction, initialAuthFormState)
 
   const sanitizedRedirect = useMemo(() => {
     if (!redirectTo) return "/"
