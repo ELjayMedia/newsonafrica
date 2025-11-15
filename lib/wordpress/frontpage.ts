@@ -137,7 +137,7 @@ export async function getFrontPageSlicesForCountry(
       },
       {
         tags,
-        revalidate: CACHE_DURATIONS.NONE,
+        revalidate: CACHE_DURATIONS.SHORT,
         timeout: request?.timeout,
         signal: request?.signal,
       },
@@ -196,7 +196,7 @@ export async function getFpTaggedPostsForCountry(
       },
       {
         tags,
-        revalidate: CACHE_DURATIONS.NONE,
+        revalidate: CACHE_DURATIONS.SHORT,
         timeout: request?.timeout,
         signal: request?.signal,
       },

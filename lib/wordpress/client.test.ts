@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { CACHE_DURATIONS } from "../cache/constants"
+
 describe("fetchWordPressGraphQL in-flight deduplication", () => {
   afterEach(() => {
     vi.resetModules()
@@ -272,5 +274,21 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
       expect.any(String),
       expect.objectContaining({ timeout: 1234 }),
     )
+  })
+
+  it("memoizes tagged requests with a finite TTL when revalidate is NONE", async () => {
+    const { fetchWordPressGraphQL, getMemoStoreForTests } = await setup()
+
+    await fetchWordPressGraphQL("sz", "query", undefined, {
+      tags: ["news"],
+      revalidate: CACHE_DURATIONS.NONE,
+    })
+
+    const memoStore = getMemoStoreForTests()
+    expect(memoStore.size).toBe(1)
+    const [entry] = Array.from(memoStore.values())
+    expect(entry?.metadataKey).toBe(`ttl:${CACHE_DURATIONS.SHORT}`)
+    expect(Number.isFinite(entry?.expiresAt)).toBe(true)
+    expect((entry?.expiresAt ?? 0) - Date.now()).toBeGreaterThan(0)
   })
 })
