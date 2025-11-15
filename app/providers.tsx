@@ -1,20 +1,23 @@
-"use client"
-
 import type { ReactNode } from "react"
 
-import { ThemeProvider } from "@/components/theme-provider"
-import { UserProvider } from "@/contexts/UserContext"
 import type { AuthStatePayload } from "@/app/actions/auth"
+import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
+import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
+import { UserProvider } from "@/contexts/UserContext"
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 
 interface ProvidersProps {
   children: ReactNode
   initialAuthState: AuthStatePayload | null
+  initialPreferences: UserPreferencesSnapshot
 }
 
-export function Providers({ children, initialAuthState }: ProvidersProps) {
+export function Providers({ children, initialAuthState, initialPreferences }: ProvidersProps) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light">
-      <UserProvider initialState={initialAuthState}>{children}</UserProvider>
-    </ThemeProvider>
+    <UserProvider initialState={initialAuthState}>
+      <UserPreferencesProvider snapshot={initialPreferences}>
+        <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+      </UserPreferencesProvider>
+    </UserProvider>
   )
 }
