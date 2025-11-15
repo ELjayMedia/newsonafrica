@@ -111,6 +111,42 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(mockJson).toHaveBeenCalledTimes(1)
   })
 
+  it("removes cached entries for non-OK responses so retries re-fetch", async () => {
+    const {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      mockJson,
+      getMemoStoreForTests,
+    } = await setup()
+
+    fetchWithRetryMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+    } as unknown as Response)
+
+    const firstResult = await fetchWordPressGraphQL("sz", "query")
+
+    expect(firstResult).toMatchObject({
+      ok: false,
+      kind: "http_error",
+      status: 503,
+      statusText: "Service Unavailable",
+    })
+    expect(getMemoStoreForTests().size).toBe(0)
+
+    const secondResult = await fetchWordPressGraphQL("sz", "query")
+
+    expect(secondResult).toMatchObject({
+      ok: true,
+      data: { posts: [] },
+      posts: [],
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+    expect(mockJson).toHaveBeenCalledTimes(1)
+  })
+
   it("dedupes requests regardless of tag ordering", async () => {
     const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
 
