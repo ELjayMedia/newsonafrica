@@ -259,19 +259,26 @@ export async function GET(request: NextRequest) {
 function invalidateBookmarksCache(
   userId: string,
   editions: Iterable<string | null | undefined> = [],
+  collections: Iterable<string | null | undefined> = [],
 ) {
-  const tags = new Set<string>()
+  const editionTags = new Set<string>()
+  const collectionTags = new Set<string>()
 
   for (const edition of editions) {
-    tags.add(cacheTags.bookmarks(edition))
+    editionTags.add(cacheTags.bookmarks(edition))
   }
 
-  if (tags.size === 0) {
-    tags.add(cacheTags.bookmarks(undefined))
+  if (editionTags.size === 0) {
+    editionTags.add(cacheTags.bookmarks(undefined))
+  }
+
+  for (const collection of collections) {
+    collectionTags.add(cacheTags.bmCollection(collection))
   }
 
   revalidateByTag(cacheTags.bmUser(userId))
-  tags.forEach((tag) => revalidateByTag(tag))
+  editionTags.forEach((tag) => revalidateByTag(tag))
+  collectionTags.forEach((tag) => revalidateByTag(tag))
 }
 
 export async function POST(request: NextRequest) {
@@ -296,6 +303,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const payload = extractMutationPayload(body)
+
+    if (!payload) {
+      return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
+    }
+
     const {
       postId,
       title,
@@ -307,7 +320,7 @@ export async function POST(request: NextRequest) {
       notes,
       country,
       collectionId,
-    } = body
+    } = payload
 
     if (!postId) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
@@ -384,6 +397,7 @@ export async function POST(request: NextRequest) {
     const insertedBookmark = data as BookmarkListRow
     const primaryEdition = insertedBookmark.country ?? editionCodeInput
     const editionSources = [primaryEdition, ...getRequestEditionPreferences(request)]
+    const collectionSources = [insertedBookmark.collectionId ?? resolvedCollectionId ?? null]
 
     const additionDelta = buildAdditionCounterDelta(insertedBookmark)
     try {
@@ -393,7 +407,7 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Failed to add bookmark" }, { status: 500 }))
     }
 
-    invalidateBookmarksCache(user.id, editionSources)
+    invalidateBookmarksCache(user.id, editionSources, collectionSources)
     const mutationPayload: BookmarkMutationPayload = {
       added: [insertedBookmark],
       statsDelta: computeStatsDelta({ next: insertedBookmark }),
@@ -427,13 +441,13 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId } = body
-    const updates = body.updates as BookmarkUpdateInput | undefined
-
     const payload = extractMutationPayload(body)
     if (!payload) {
       return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
     }
+
+    const { postId } = payload
+    const updates = payload.updates as BookmarkUpdateInput | undefined
 
     if (!updates || typeof updates !== "object") {
       return respond(jsonWithCors(request, { error: "Updates payload is required" }, { status: 400 }))
@@ -500,6 +514,10 @@ export async function PUT(request: NextRequest) {
     const updatedCountry =
       updatedBookmark.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
     const editionSources = [updatedCountry, ...getRequestEditionPreferences(request)]
+    const collectionSources = [
+      existingRow.collectionId ?? null,
+      updatedBookmark.collectionId ?? targetCollectionId ?? existingRow.collectionId ?? null,
+    ]
 
     const counterDelta = buildUpdateCounterDelta(existingRow, updatedBookmark)
     if (counterDelta) {
@@ -511,7 +529,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    invalidateBookmarksCache(user.id, editionSources)
+    invalidateBookmarksCache(user.id, editionSources, collectionSources)
     const mutationPayload: BookmarkMutationPayload = {
       updated: updatedBookmark ? [updatedBookmark] : [],
       statsDelta: computeStatsDelta({ previous: existing as BookmarkListRow, next: updatedBookmark ?? null }),
@@ -580,12 +598,13 @@ export async function DELETE(request: NextRequest) {
 
     const removedCountries = removedBookmarks.map((row) => row.country ?? null)
     const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
+    const collectionSources = removedBookmarks.map((row) => row.collectionId ?? null)
 
-    invalidateBookmarksCache(user.id, editionSources)
+    invalidateBookmarksCache(user.id, editionSources, collectionSources)
     const mutationPayload: BookmarkMutationPayload = {
-      removed: removedList,
+      removed: removedBookmarks,
       statsDelta: combineStatsDeltas(
-        removedList.map((row) => computeStatsDelta({ previous: row })),
+        removedBookmarks.map((row) => computeStatsDelta({ previous: row })),
       ),
     }
     return successResponse(request, respond, mutationPayload)

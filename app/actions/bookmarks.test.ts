@@ -110,7 +110,7 @@ describe("bookmark actions cache invalidation", () => {
       featured_image: null,
       note: null,
       country: "ng",
-      collectionId: null,
+      collectionId: "collection-1",
     }
 
     const insertChain = {
@@ -131,9 +131,13 @@ describe("bookmark actions cache invalidation", () => {
     const result = await addBookmark({ postId: "post-1" })
 
     expect(result.error).toBeNull()
-    expect(revalidateTagMock).toHaveBeenCalledTimes(2)
+    expect(revalidateTagMock).toHaveBeenCalledTimes(3)
     expect(new Set(revalidateTagMock.mock.calls.map(([tag]) => tag))).toEqual(
-      new Set([cacheTags.bmUser("user-1"), cacheTags.bookmarks("ng")]),
+      new Set([
+        cacheTags.bmUser("user-1"),
+        cacheTags.bookmarks("ng"),
+        cacheTags.bmCollection("collection-1"),
+      ]),
     )
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
@@ -153,7 +157,7 @@ describe("bookmark actions cache invalidation", () => {
       featured_image: null,
       note: null,
       country: "za",
-      collectionId: null,
+      collectionId: "collection-2",
     }
 
     const deleteChain = {
@@ -171,9 +175,13 @@ describe("bookmark actions cache invalidation", () => {
     const result = await removeBookmark("post-2")
 
     expect(result.error).toBeNull()
-    expect(revalidateTagMock).toHaveBeenCalledTimes(2)
+    expect(revalidateTagMock).toHaveBeenCalledTimes(3)
     expect(new Set(revalidateTagMock.mock.calls.map(([tag]) => tag))).toEqual(
-      new Set([cacheTags.bmUser("user-1"), cacheTags.bookmarks("za")]),
+      new Set([
+        cacheTags.bmUser("user-1"),
+        cacheTags.bookmarks("za"),
+        cacheTags.bmCollection("collection-2"),
+      ]),
     )
     expect(revalidatePathMock).not.toHaveBeenCalled()
   })
