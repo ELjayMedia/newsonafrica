@@ -390,7 +390,12 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "No bookmark updates provided" }, { status: 400 }))
     }
 
-    const { dbUpdates, targetEditionCode, targetCollectionId, shouldResolveCollection } = preparation
+    const {
+      dbUpdates: updatePayload,
+      targetEditionCode,
+      targetCollectionId,
+      shouldResolveCollection,
+    } = preparation
 
     if (shouldResolveCollection) {
       try {
@@ -399,7 +404,7 @@ export async function PUT(request: NextRequest) {
           collectionId: targetCollectionId,
           editionCode: targetEditionCode,
         })
-        dbUpdates.collection_id = resolvedCollectionId
+        updatePayload.collection_id = resolvedCollectionId
       } catch (collectionError) {
         console.error("Failed to resolve bookmark collection", collectionError)
         return respond(jsonWithCors(request, { error: "Failed to update bookmark" }, { status: 500 }))
@@ -408,7 +413,7 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(dbUpdates)
+      .update(updatePayload)
       .eq("user_id", user.id)
       .eq("wp_post_id", postId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)

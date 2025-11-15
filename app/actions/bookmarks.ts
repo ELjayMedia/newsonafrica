@@ -411,7 +411,12 @@ export async function updateBookmark(
       throw new ActionError("No bookmark updates provided", { status: 400 })
     }
 
-    const { dbUpdates, targetEditionCode, targetCollectionId, shouldResolveCollection } = preparation
+    const {
+      dbUpdates: updatePayload,
+      targetEditionCode,
+      targetCollectionId,
+      shouldResolveCollection,
+    } = preparation
 
     if (shouldResolveCollection) {
       try {
@@ -420,7 +425,7 @@ export async function updateBookmark(
           collectionId: targetCollectionId,
           editionCode: targetEditionCode,
         })
-        dbUpdates.collection_id = resolvedCollectionId
+        updatePayload.collection_id = resolvedCollectionId
       } catch (collectionError) {
         throw new ActionError("Failed to resolve bookmark collection", { cause: collectionError })
       }
@@ -428,7 +433,7 @@ export async function updateBookmark(
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(dbUpdates)
+      .update(updatePayload)
       .eq("user_id", userId)
       .eq("wp_post_id", wpPostId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
