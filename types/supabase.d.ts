@@ -13,49 +13,139 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          post_id: string
-          country: string | null
+          wp_post_id: string
+          edition_code: string | null
+          collection_id: string | null
           title: string | null
           slug: string | null
           excerpt: string | null
           featured_image: Json | null
           category: string | null
           tags: string[] | null
-          read_status: string | null
-          notes: string | null
+          read_state: Database["public"]["Enums"]["bookmark_read_state"] | null
+          note: string | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          post_id: string
-          country?: string | null
+          wp_post_id: string
+          edition_code?: string | null
+          collection_id?: string | null
           title?: string | null
           slug?: string | null
           excerpt?: string | null
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_status?: string | null
-          notes?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
+          note?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          post_id?: string
-          country?: string | null
+          wp_post_id?: string
+          edition_code?: string | null
+          collection_id?: string | null
           title?: string | null
           slug?: string | null
           excerpt?: string | null
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_status?: string | null
-          notes?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
+          note?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_collection_id_fkey"
+            columns: ["collection_id"]
+            referencedRelation: "bookmark_collections"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      bookmark_collections: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          slug: string | null
+          description: string | null
+          is_default: boolean
+          sort_index: number | null
+          created_at: string
+          updated_at: string
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          slug?: string | null
+          description?: string | null
+          is_default?: boolean
+          sort_index?: number | null
+          created_at?: string
+          updated_at?: string
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          slug?: string | null
+          description?: string | null
+          is_default?: boolean
+          sort_index?: number | null
+          created_at?: string
+          updated_at?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmark_collections_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      bookmark_user_counters: {
+        Row: {
+          user_id: string
+          total_count: number
+          unread_count: number
+          read_count: number
+          collections_count: number
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          total_count?: number
+          unread_count?: number
+          read_count?: number
+          collections_count?: number
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          total_count?: number
+          unread_count?: number
+          read_count?: number
+          collections_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmark_user_counters_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       comment_reactions: {
         Row: {
@@ -386,7 +476,10 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bookmark_read_state:
+        | "unread"
+        | "in_progress"
+        | "read"
     }
   }
 }
