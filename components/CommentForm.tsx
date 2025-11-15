@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface CommentFormProps {
   postId: string
+  editionCode: string
   parentId?: string | null
   onCommentAdded: (optimisticComment?: any) => void
   onCancel?: () => void
@@ -24,6 +25,7 @@ interface CommentFormProps {
 
 export function CommentForm({
   postId,
+  editionCode,
   parentId = null,
   onCommentAdded,
   onCancel,
@@ -105,9 +107,10 @@ export function CommentForm({
     try {
       // Create the comment object
       const commentData = {
-        post_id: postId,
+        wp_post_id: postId,
+        edition_code: editionCode,
         user_id: user.id,
-        content: content.trim(),
+        body: content.trim(),
         parent_id: parentId,
         is_rich_text: isRichText,
       }

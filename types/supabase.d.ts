@@ -13,8 +13,9 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          post_id: string
-          country: string | null
+          wp_post_id: string
+          edition_code: string | null
+          collection_id: string | null
           title: string | null
           slug: string | null
           excerpt: string | null
@@ -33,8 +34,9 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
-          post_id: string
-          country?: string | null
+          wp_post_id: string
+          edition_code?: string | null
+          collection_id?: string | null
           title?: string | null
           slug?: string | null
           excerpt?: string | null
@@ -53,8 +55,9 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
-          post_id?: string
-          country?: string | null
+          wp_post_id?: string
+          edition_code?: string | null
+          collection_id?: string | null
           title?: string | null
           slug?: string | null
           excerpt?: string | null
@@ -70,28 +73,115 @@ export interface Database {
           note?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_collection_id_fkey"
+            columns: ["collection_id"]
+            referencedRelation: "bookmark_collections"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      bookmark_collections: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          slug: string | null
+          description: string | null
+          is_default: boolean
+          sort_index: number | null
+          created_at: string
+          updated_at: string
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          slug?: string | null
+          description?: string | null
+          is_default?: boolean
+          sort_index?: number | null
+          created_at?: string
+          updated_at?: string
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          slug?: string | null
+          description?: string | null
+          is_default?: boolean
+          sort_index?: number | null
+          created_at?: string
+          updated_at?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmark_collections_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      bookmark_user_counters: {
+        Row: {
+          user_id: string
+          total_count: number
+          unread_count: number
+          read_count: number
+          collections_count: number
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          total_count?: number
+          unread_count?: number
+          read_count?: number
+          collections_count?: number
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          total_count?: number
+          unread_count?: number
+          read_count?: number
+          collections_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmark_user_counters_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       comment_reactions: {
         Row: {
           id: string
           comment_id: string
           user_id: string
-          reaction_type: string
+          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
           created_at: string
         }
         Insert: {
           id?: string
           comment_id: string
           user_id: string
-          reaction_type: string
+          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
           created_at?: string
         }
         Update: {
           id?: string
           comment_id?: string
           user_id?: string
-          reaction_type?: string
+          reaction_type?: "like" | "love" | "laugh" | "sad" | "angry"
           created_at?: string
         }
         Relationships: []
@@ -99,49 +189,52 @@ export interface Database {
       comments: {
         Row: {
           id: string
-          post_id: string
+          wp_post_id: string
+          edition_code: string
           user_id: string
-          content: string
+          body: string
           parent_id: string | null
-          country: string | null
-          status: string
+          status: "active" | "flagged" | "deleted" | "pending"
           reported_by: string | null
           report_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          reaction_count: number
+          reactions_count: number
+          replies_count: number
           is_rich_text: boolean
           created_at: string
         }
         Insert: {
           id?: string
-          post_id: string
+          wp_post_id: string
+          edition_code: string
           user_id: string
-          content: string
+          body: string
           parent_id?: string | null
-          country?: string | null
-          status?: string
+          status?: "active" | "flagged" | "deleted" | "pending"
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          reaction_count?: number
+          reactions_count?: number
+          replies_count?: number
           is_rich_text?: boolean
           created_at?: string
         }
         Update: {
           id?: string
-          post_id?: string
+          wp_post_id?: string
+          edition_code?: string
           user_id?: string
-          content?: string
+          body?: string
           parent_id?: string | null
-          country?: string | null
-          status?: string
+          status?: "active" | "flagged" | "deleted" | "pending"
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          reaction_count?: number
+          reactions_count?: number
+          replies_count?: number
           is_rich_text?: boolean
           created_at?: string
         }
@@ -398,7 +491,10 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bookmark_read_state:
+        | "unread"
+        | "in_progress"
+        | "read"
     }
   }
 }

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils/date"
 import { getArticleUrl, getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
 import { ENV } from "@/config/env"
+import { AFRICAN_EDITION } from "@/lib/editions"
 
 interface PostContentProps {
   post: Post
@@ -23,6 +24,11 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
   if (!post) {
     return <div>Loading...</div>
   }
+
+  const rawEdition = (post as { country?: string | null }).country
+  const editionCode = typeof rawEdition === "string" && rawEdition.trim().length > 0
+    ? rawEdition.trim().toLowerCase()
+    : AFRICAN_EDITION.code
 
   return (
     <div className="container mx-auto px-4 pb-6 bg-white">
@@ -146,7 +152,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
         {/* Comments Section */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
-          <CommentList postId={post.id} />
+          <CommentList postId={post.id} editionCode={editionCode} />
         </div>
 
         {/* Related Posts */}

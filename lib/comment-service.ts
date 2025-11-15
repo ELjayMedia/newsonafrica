@@ -210,7 +210,8 @@ async function checkColumns(
 
 // Fetch comments for a specific post with pagination
 export async function fetchComments(
-  postId: string,
+  wpPostId: string,
+  editionCode: string,
   page = 0,
   pageSize = 10,
   sortOption: CommentSortOption = "newest",
@@ -231,7 +232,8 @@ export async function fetchComments(
           (query) => {
             let builder = query
               .select("id", { count: "exact", head: true })
-              .eq("post_id", postId)
+              .eq("wp_post_id", wpPostId)
+              .eq("edition_code", editionCode)
               .is("parent_id", null)
 
             if (hasStatus) {
@@ -262,7 +264,8 @@ export async function fetchComments(
     const { data: commentsData, error } = await executeListQuery(client, "comments", (query) => {
       let commentsQuery = query
         .select("*, profile:profiles(username, avatar_url)")
-        .eq("post_id", postId)
+        .eq("wp_post_id", wpPostId)
+        .eq("edition_code", editionCode)
         .is("parent_id", null)
 
       if (hasStatus) {
@@ -286,7 +289,7 @@ export async function fetchComments(
           break
         case "popular":
           commentsQuery = commentsQuery
-            .order("reaction_count", { ascending: false, nullsFirst: false })
+            .order("reactions_count", { ascending: false, nullsFirst: false })
             .order("created_at", { ascending: false })
             .order("id", { ascending: false })
           break
@@ -316,7 +319,7 @@ export async function fetchComments(
       if (sortOption === "popular") {
         nextCursor = encodeCommentCursor({
           sort: "popular",
-          reactionCount: lastComment.reaction_count ?? null,
+          reactionCount: lastComment.reactions_count ?? null,
           createdAt: lastComment.created_at,
           id: lastComment.id,
         })
@@ -358,7 +361,8 @@ export async function fetchComments(
         (query) => {
           let repliesQuery = query
             .select("*, profile:profiles(username, avatar_url)")
-            .eq("post_id", postId)
+            .eq("wp_post_id", wpPostId)
+            .eq("edition_code", editionCode)
             .in("parent_id", rootCommentIds)
 
           if (hasStatus) {
@@ -448,6 +452,9 @@ export async function fetchComments(
         : comment.reactions ?? []
       const reactionCount = reactionList.reduce((total, reaction) => total + reaction.count, 0)
       const userReaction = reactionList.find((reaction) => reaction.reactedByCurrentUser)?.type ?? null
+      const repliesCount = Array.isArray(comment.replies)
+        ? comment.replies.length
+        : comment.replies_count ?? 0
 
       return {
         ...comment,
@@ -455,8 +462,9 @@ export async function fetchComments(
         is_rich_text: hasRichText ? comment.is_rich_text ?? false : false,
         profile: comment.profile ?? undefined,
         reactions: reactionList,
-        reaction_count: reactionCount,
+        reactions_count: reactionCount,
         user_reaction: userReaction,
+        replies_count: repliesCount,
       }
     })
 
@@ -475,8 +483,9 @@ export async function fetchComments(
         is_rich_text: hasRichText ? reply.is_rich_text ?? false : false,
         profile: reply.profile ?? undefined,
         reactions: reactionList,
-        reaction_count: reactionCount,
+        reactions_count: reactionCount,
         user_reaction: userReaction,
+        replies_count: reply.replies_count ?? 0,
       }
     })
 
@@ -511,13 +520,14 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
 
   try {
     const payload: Record<string, any> = {
-      postId: comment.post_id,
-      content: comment.content,
-      parentId: comment.parent_id ?? null,
+      wp_post_id: comment.wp_post_id,
+      edition_code: comment.edition_code,
+      body: comment.body,
+      parent_id: comment.parent_id ?? null,
     }
 
     if (hasRichText && comment.is_rich_text !== undefined) {
-      payload.isRichText = comment.is_rich_text
+      payload.is_rich_text = comment.is_rich_text
     }
 
     let response: Response
@@ -546,13 +556,13 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
     const createdComment = result.data
 
     recordSubmission(comment.user_id)
-    clearCommentCache(comment.post_id)
+    clearCommentCache(comment.wp_post_id, comment.edition_code)
 
     return {
       ...createdComment,
       status: createdComment.status || "active",
       is_rich_text: hasRichText ? createdComment.is_rich_text ?? Boolean(comment.is_rich_text) : false,
-      reaction_count: createdComment.reaction_count ?? 0,
+      reactions_count: createdComment.reactions_count ?? 0,
       reactions: createdComment.reactions ?? [],
       user_reaction: createdComment.user_reaction ?? null,
     }
@@ -569,12 +579,12 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
 // Update an existing comment
 export async function updateComment(
   id: string,
-  content: string,
+  body: string,
   isRichText?: boolean,
 ): Promise<Comment | undefined> {
   const { hasRichText } = await checkColumns()
 
-  const payload: Record<string, any> = { content }
+  const payload: Record<string, any> = { body }
   if (hasRichText && isRichText !== undefined) {
     payload.isRichText = isRichText
   }
@@ -607,13 +617,13 @@ export async function updateComment(
     }
 
     const updatedComment = result as Comment
-    clearCommentCache(updatedComment.post_id)
+    clearCommentCache(updatedComment.wp_post_id, updatedComment.edition_code)
 
     return {
       ...updatedComment,
       status: updatedComment.status || "active",
       is_rich_text: hasRichText ? updatedComment.is_rich_text ?? Boolean(isRichText) : false,
-      reaction_count: updatedComment.reaction_count ?? 0,
+      reactions_count: updatedComment.reactions_count ?? 0,
       reactions: updatedComment.reactions ?? [],
       user_reaction: updatedComment.user_reaction ?? null,
     }
@@ -732,6 +742,10 @@ export function organizeComments(comments: Comment[]): Comment[] {
     }
   })
 
+  commentMap.forEach((value) => {
+    value.replies_count = value.replies?.length ?? 0
+  })
+
   return rootComments
 }
 
@@ -739,14 +753,16 @@ export function organizeComments(comments: Comment[]): Comment[] {
 export function createOptimisticComment(comment: NewComment, username: string, avatarUrl?: string | null): Comment {
   return {
     id: `optimistic-${uuidv4()}`, // Temporary ID
-    post_id: comment.post_id,
+    wp_post_id: comment.wp_post_id,
+    edition_code: comment.edition_code,
     user_id: comment.user_id,
-    content: comment.content,
+    body: comment.body,
     parent_id: comment.parent_id || null,
     created_at: new Date().toISOString(),
     status: "active",
     is_rich_text: comment.is_rich_text || false,
-    reaction_count: 0,
+    reactions_count: 0,
+    replies_count: 0,
     isOptimistic: true, // Flag to identify optimistic comments
     profile: {
       username,
@@ -759,10 +775,23 @@ export function createOptimisticComment(comment: NewComment, username: string, a
 }
 
 // Clear comment cache for a specific post
-export function clearCommentCache(postId?: string): void {
-  if (postId) {
-    clearQueryCache(undefined, new RegExp(`^comments:.*${postId}`))
-  } else {
-    clearQueryCache(undefined, /^comments:/)
+export function clearCommentCache(wpPostId?: string, editionCode?: string | null): void {
+  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+  if (wpPostId && editionCode) {
+    clearQueryCache(undefined, new RegExp(`^comments:${escape(editionCode)}:${escape(wpPostId)}`))
+    return
   }
+
+  if (wpPostId) {
+    clearQueryCache(undefined, new RegExp(`^comments:[^:]+:${escape(wpPostId)}`))
+    return
+  }
+
+  if (editionCode) {
+    clearQueryCache(undefined, new RegExp(`^comments:${escape(editionCode)}:`))
+    return
+  }
+
+  clearQueryCache(undefined, /^comments:/)
 }
