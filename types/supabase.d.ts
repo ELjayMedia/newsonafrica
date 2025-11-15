@@ -23,6 +23,11 @@ export interface Database {
           tags: string[] | null
           read_status: string | null
           notes: string | null
+          wp_post_id: number | null
+          edition_code: string | null
+          collection_id: string | null
+          read_state: string | null
+          note: string | null
           created_at: string
         }
         Insert: {
@@ -38,6 +43,11 @@ export interface Database {
           tags?: string[] | null
           read_status?: string | null
           notes?: string | null
+          wp_post_id?: number | null
+          edition_code?: string | null
+          collection_id?: string | null
+          read_state?: string | null
+          note?: string | null
           created_at?: string
         }
         Update: {
@@ -53,6 +63,11 @@ export interface Database {
           tags?: string[] | null
           read_status?: string | null
           notes?: string | null
+          wp_post_id?: number | null
+          edition_code?: string | null
+          collection_id?: string | null
+          read_state?: string | null
+          note?: string | null
           created_at?: string
         }
         Relationships: []
