@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import type { AuthStatePayload } from "@/app/actions/auth"
 import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 
@@ -19,15 +19,5 @@ export function Providers({ children, initialAuthState, initialPreferences }: Pr
         <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
       </UserPreferencesProvider>
     </UserProvider>
-  )
-}
-
-function ThemeProviderWrapper({ children }: { children: ReactNode }) {
-  "use client"
-
-  return (
-    <ThemeProvider attribute="class" defaultTheme="light">
-      {children}
-    </ThemeProvider>
   )
 }

@@ -78,7 +78,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-    generator: 'v0.app'
+    generator: "v0.app",
 }
 
 export default async function RootLayout({
