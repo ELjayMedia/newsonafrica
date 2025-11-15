@@ -40,6 +40,8 @@ interface Bookmark {
   userId: string
   postId: string
   country?: string | null
+  editionCode?: string | null
+  collectionId?: string | null
   title: string
   slug?: string | null
   excerpt?: string | null
@@ -213,6 +215,8 @@ const formatBookmarkRow = (
     userId: row.userId,
     postId: row.postId,
     country: row.country || metadata?.country || undefined,
+    editionCode: row.editionCode || row.country || metadata?.country || undefined,
+    collectionId: row.collectionId || undefined,
     title,
     slug: slug || undefined,
     excerpt: excerpt || undefined,
@@ -650,6 +654,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       const payload: AddBookmarkInput = {
         postId: post.postId,
         country: post.country || null,
+        collectionId: post.collectionId || null,
         title: extractText(postData.title) || "Untitled Post",
         slug: typeof postData.slug === "string" ? postData.slug : "",
         excerpt: extractText(postData.excerpt),
@@ -665,6 +670,8 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         userId: user.id,
         postId: post.postId,
         country: post.country || undefined,
+        editionCode: post.editionCode || post.country || undefined,
+        collectionId: post.collectionId || undefined,
         title: payload.title || "Untitled Post",
         slug: payload.slug || undefined,
         excerpt: payload.excerpt || undefined,

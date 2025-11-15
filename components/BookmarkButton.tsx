@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 
 interface BookmarkButtonProps {
   country?: string
+  collectionId?: string | null
   postId: string
   title?: string
   slug?: string
@@ -27,6 +28,7 @@ interface BookmarkButtonProps {
 export const BookmarkButton = ({
   postId,
   country,
+  collectionId,
   title = "Untitled Post",
   slug = "",
   excerpt = "",
@@ -77,6 +79,7 @@ export const BookmarkButton = ({
           await addBookmark({
             postId,
             country,
+            collectionId,
             title,
             slug,
             excerpt,
