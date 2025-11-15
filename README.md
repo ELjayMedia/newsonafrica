@@ -203,5 +203,5 @@ pnpm lint
 
 Additional documentation:
 
-- [Troubleshooting Guide](./docs/troubleshooting.md) ⭐ **Start here for common issues**
-- [Component Documentation](./docs/components.md)
+- [Troubleshooting Guide](./docs/troubleshooting.md) ⭐ **Start here for common issues**, including GraphQL configuration, Supabase tips, and cache revalidation workflows.
+- [Component Documentation](./docs/components.md) explains how UI, layout, and feature components are organized and how to extend them safely.
