@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/browser-helpers"
 
 import {
-  getCurrentSession,
   refreshSession as refreshSessionAction,
   resetPassword as resetPasswordAction,
   signIn as signInAction,
@@ -92,19 +91,15 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
   const initialSession = initialState?.session ?? null
   const initialUser = initialState?.user ?? null
   const initialProfile = initialState?.profile ?? null
-  const hasInitialState = initialState !== null
-
   const [user, setUser] = useState<User | null>(initialUser)
   const [profile, setProfile] = useState<Profile | null>(initialProfile)
   const [session, setSession] = useState<Session | null>(initialSession)
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser))
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
-  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(hasInitialState)
-  const [loadingState, setLoadingState] = useState(!hasInitialState)
+  const [loadingState, setLoadingState] = useState(false)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
-  const pendingInitialStateRef = useRef<AuthStatePayload | null>(initialState)
   const supabaseAvailable = useMemo(() => isSupabaseConfigured(), [])
   const supabase = useMemo(() => (supabaseAvailable ? createClient() : null), [supabaseAvailable])
 
@@ -158,6 +153,10 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
     [supabase, supabaseAvailable],
   )
 
+  useEffect(() => {
+    void applyAuthState(initialState ?? null)
+  }, [applyAuthState, initialState])
+
   const handleAuthResult = useCallback(
     async (result: AuthActionResult): Promise<AuthStatePayload | null> => {
       if (result.error) {
@@ -170,74 +169,6 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
     },
     [applyAuthState],
   )
-
-  useEffect(() => {
-    let isMounted = true
-    const hydrateFromInitialState = async () => {
-      const initial = pendingInitialStateRef.current
-      if (!initial) {
-        return false
-      }
-
-      pendingInitialStateRef.current = null
-
-      try {
-        await applyAuthState(initial)
-      } catch (error) {
-        console.error("Failed to apply initial auth state:", error)
-        await applyAuthState(null)
-      }
-
-      if (isMounted) {
-        setLoadingState(false)
-        setInitialAuthCheckComplete(true)
-      }
-
-      return true
-    }
-
-    const fetchSession = () => {
-      setLoadingState(true)
-
-      startTransition(() => {
-        getCurrentSession()
-          .then(async (result) => {
-            if (!isMounted) return
-            try {
-              await handleAuthResult(result)
-            } catch (error) {
-              console.error("Error getting current session:", error)
-              await applyAuthState(null)
-            }
-          })
-          .catch(async (error) => {
-            if (!isMounted) return
-            console.error("Unexpected error loading session:", error)
-            await applyAuthState(null)
-          })
-          .finally(() => {
-            if (!isMounted) return
-            setLoadingState(false)
-            setInitialAuthCheckComplete(true)
-          })
-      })
-    }
-
-    hydrateFromInitialState()
-      .then((hydrated) => {
-        if (!hydrated) {
-          fetchSession()
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to hydrate initial auth state:", error)
-        fetchSession()
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [applyAuthState, handleAuthResult, startTransition])
 
   const sessionExpiresSoon = useCallback(() => {
     if (!session?.expires_at) return false
@@ -495,7 +426,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
    */
   const requireAuth = useCallback(
     (fallbackUrl = "/auth"): boolean => {
-      const isLoading = loadingState || isRefreshingSession || !initialAuthCheckComplete
+      const isLoading = loadingState || isRefreshingSession
 
       // Don't check during initial loading
       if (isLoading) return true
@@ -514,7 +445,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
       }
       return false
     },
-    [initialAuthCheckComplete, isAuthenticated, isRefreshingSession, loadingState, router],
+    [isAuthenticated, isRefreshingSession, loadingState, router],
   )
 
   const loading = useMemo(

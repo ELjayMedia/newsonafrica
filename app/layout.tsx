@@ -14,9 +14,55 @@ import { Toaster } from "@/components/ui/toaster"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { ENV } from "@/config/env"
 import { Providers } from "./providers"
-import { ClientUserPreferencesProvider } from "./ClientUserPreferencesProvider"
+import { getCurrentSession } from "@/app/actions/auth"
+import { getUserPreferences, type UserPreferencesSnapshot } from "@/app/actions/preferences"
+import type { AuthStatePayload } from "@/app/actions/auth"
+import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
 import "./globals.css"
+
+function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
+  return {
+    userId: null,
+    preferences: {
+      ...DEFAULT_USER_PREFERENCES,
+      sections: [...DEFAULT_USER_PREFERENCES.sections],
+      blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
+      countries: [...DEFAULT_USER_PREFERENCES.countries],
+    },
+    profilePreferences: {},
+  }
+}
+
+async function resolveInitialAuthState(): Promise<AuthStatePayload | null> {
+  try {
+    const result = await getCurrentSession()
+    if (result.error) {
+      console.error("Failed to resolve initial auth state:", result.error)
+      return null
+    }
+    return result.data
+  } catch (error) {
+    console.error("Unexpected error resolving initial auth state:", error)
+    return null
+  }
+}
+
+async function resolveInitialPreferences(): Promise<UserPreferencesSnapshot> {
+  try {
+    const result = await getUserPreferences()
+    if (result.error || !result.data) {
+      if (result.error) {
+        console.error("Failed to resolve initial preferences:", result.error)
+      }
+      return createDefaultPreferencesSnapshot()
+    }
+    return result.data
+  } catch (error) {
+    console.error("Unexpected error resolving initial preferences:", error)
+    return createDefaultPreferencesSnapshot()
+  }
+}
 
 export const metadata: Metadata = {
   title: "News On Africa",
@@ -35,13 +81,17 @@ export const metadata: Metadata = {
     generator: 'v0.app'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   // Base schemas for the entire site
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
+  const [initialAuthState, initialPreferences] = await Promise.all([
+    resolveInitialAuthState(),
+    resolveInitialPreferences(),
+  ])
 
   return (
     <html lang="en" className="font-sans">
@@ -51,39 +101,37 @@ export default function RootLayout({
         <SchemaOrg schemas={baseSchemas} />
       </head>
       <body className="font-sans">
-        <Providers initialAuthState={null}>
-          <ClientUserPreferencesProvider>
-            <PreferredCountrySync />
-            <Suspense fallback={null}>
-              <ScrollToTop />
-            </Suspense>
-            <ClientDynamicComponents />
-            <TopBar />
-            <div className="flex-grow rounded-xs shadow-none bg-transparent">
-              <div className="mx-auto max-w-full md:max-w-[980px]">
-                <LayoutStructure>
-                  <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                    <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                  </main>
-                </LayoutStructure>
-              </div>
+        <Providers initialAuthState={initialAuthState} initialPreferences={initialPreferences}>
+          <PreferredCountrySync />
+          <Suspense fallback={null}>
+            <ScrollToTop />
+          </Suspense>
+          <ClientDynamicComponents />
+          <TopBar />
+          <div className="flex-grow rounded-xs shadow-none bg-transparent">
+            <div className="mx-auto max-w-full md:max-w-[980px]">
+              <LayoutStructure>
+                <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
+                  <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
+                </main>
+              </LayoutStructure>
             </div>
-            <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
-              <Link href="/privacy-policy" className="hover:underline">
-                Privacy Policy
-              </Link>
-              {" | "}
-              <Link href="/terms-of-service" className="hover:underline">
-                Terms of Service
-              </Link>
-              {" | "}
-              <Link href="/sitemap.xml" className="hover:underline">
-                Sitemap
-              </Link>
-            </footer>
-            <BottomNavigation />
-            <Toaster />
-          </ClientUserPreferencesProvider>
+          </div>
+          <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
+            <Link href="/privacy-policy" className="hover:underline">
+              Privacy Policy
+            </Link>
+            {" | "}
+            <Link href="/terms-of-service" className="hover:underline">
+              Terms of Service
+            </Link>
+            {" | "}
+            <Link href="/sitemap.xml" className="hover:underline">
+              Sitemap
+            </Link>
+          </footer>
+          <BottomNavigation />
+          <Toaster />
         </Providers>
       </body>
     </html>
