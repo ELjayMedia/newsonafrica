@@ -95,6 +95,22 @@ describe("/api/bookmarks cache revalidation", () => {
   it("revalidates the user and edition tags after creating a bookmark", async () => {
     const user = { id: "user-1" }
 
+    const insertedRow = {
+      id: "bookmark-1",
+      userId: user.id,
+      postId: "post-1",
+      slug: "",
+      country: "ng",
+      title: "Saved post",
+      excerpt: "",
+      featuredImage: null,
+      category: "news",
+      tags: null,
+      readState: "unread" as const,
+      notes: null,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    }
+
     const existingCheck = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -104,7 +120,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const insertChain = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-1", country: "ng" } }),
+      single: vi.fn().mockResolvedValue({ data: insertedRow }),
     }
 
     const supabase = {
@@ -124,13 +140,16 @@ describe("/api/bookmarks cache revalidation", () => {
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ postId: "post-1", country: "ng" }),
+      body: JSON.stringify({ payload: { postId: "post-1", country: "ng", category: "news" } }),
       headers: { "content-type": "application/json" },
     })
 
     const response = await POST(request)
 
     expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json.data.added[0]).toMatchObject({ id: "bookmark-1", country: "ng" })
+    expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: { news: 1 } })
     expectBookmarkTagInvalidation(user.id, ["ng"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -138,6 +157,22 @@ describe("/api/bookmarks cache revalidation", () => {
   it("falls back to the default edition tag when no bookmark country is provided", async () => {
     const user = { id: "user-4" }
 
+    const insertedRow = {
+      id: "bookmark-4",
+      userId: user.id,
+      postId: "post-4",
+      slug: "",
+      country: null,
+      title: "Untitled",
+      excerpt: "",
+      featuredImage: null,
+      category: null,
+      tags: null,
+      readState: "unread" as const,
+      notes: null,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    }
+
     const existingCheck = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -147,7 +182,7 @@ describe("/api/bookmarks cache revalidation", () => {
     const insertChain = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: "bookmark-4", country: null } }),
+      single: vi.fn().mockResolvedValue({ data: insertedRow }),
     }
 
     const supabase = {
@@ -167,13 +202,16 @@ describe("/api/bookmarks cache revalidation", () => {
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ postId: "post-4" }),
+      body: JSON.stringify({ payload: { postId: "post-4" } }),
       headers: { "content-type": "application/json" },
     })
 
     const response = await POST(request)
 
     expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json.data.added[0]).toMatchObject({ id: "bookmark-4" })
+    expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: {} })
     expectBookmarkTagInvalidation(user.id, [null])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -216,13 +254,16 @@ describe("/api/bookmarks cache revalidation", () => {
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "PUT",
-      body: JSON.stringify({ postId: "post-2", updates: { notes: "updated" } }),
+      body: JSON.stringify({ payload: { postId: "post-2", updates: { notes: "updated" } } }),
       headers: { "content-type": "application/json" },
     })
 
     const response = await PUT(request)
 
     expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json.data.updated[0]).toMatchObject({ id: "bookmark-2", notes: "updated" })
+    expect(json.data.statsDelta).toEqual({ total: 0, unread: 0, categories: {} })
     expectBookmarkTagInvalidation(user.id, ["ke"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -313,6 +354,7 @@ describe("/api/bookmarks cache revalidation", () => {
             id: "bookmark-3",
             userId: "user-3",
             postId: "post-3",
+            slug: "post-3",
             country: "za",
             collectionId: null,
             readState: "unread" as const,
@@ -341,6 +383,9 @@ describe("/api/bookmarks cache revalidation", () => {
     const response = await DELETE(request)
 
     expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json.data.removed[0]).toMatchObject({ postId: "post-3" })
+    expect(json.data.statsDelta).toEqual({ total: -1, unread: -1, categories: { tech: -1 } })
     expectBookmarkTagInvalidation(user.id, ["za"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })

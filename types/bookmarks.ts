@@ -1,6 +1,16 @@
 import type { Database } from "@/types/supabase"
 
-type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
+export type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
+
+type BookmarkPostId = BookmarkTableRow extends { post_id: infer PostId }
+  ? PostId
+  : BookmarkTableRow extends { wp_post_id: infer LegacyPostId }
+    ? LegacyPostId
+    : string
+
+type BookmarkCountry = BookmarkTableRow extends { country: infer Country }
+  ? Country
+  : string | null
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 

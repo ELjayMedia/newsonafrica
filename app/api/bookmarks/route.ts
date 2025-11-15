@@ -7,10 +7,12 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { derivePagination } from "@/lib/bookmarks/pagination"
 import { fetchBookmarkStats, getDefaultBookmarkStats } from "@/lib/bookmarks/stats"
+import { combineStatsDeltas, computeStatsDelta } from "@/lib/bookmarks/mutation-delta"
 import { executeListQuery } from "@/lib/supabase/list-query"
 import {
   BOOKMARK_LIST_SELECT_COLUMNS,
   type BookmarkListRow,
+  type BookmarkMutationPayload,
   type BookmarkStats,
 } from "@/types/bookmarks"
 import { ensureBookmarkCollectionAssignment } from "@/lib/bookmarks/collections"
@@ -29,9 +31,57 @@ export const runtime = "nodejs"
 export const revalidate = 60
 
 const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
+const NESTED_PAYLOAD_KEYS = ["payload", "bookmark", "input", "data"] as const
 
 function serviceUnavailable(request: NextRequest) {
   return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function extractMutationPayload(body: unknown): Record<string, unknown> | null {
+  if (!isPlainRecord(body)) {
+    return null
+  }
+
+  for (const key of NESTED_PAYLOAD_KEYS) {
+    const nested = body[key]
+    if (isPlainRecord(nested)) {
+      return nested
+    }
+  }
+
+  return body
+}
+
+function sanitizeStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null
+  }
+
+  const filtered = value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0)
+
+  return filtered.length ? filtered : null
+}
+
+function sanitizeFeaturedImage(value: unknown): Record<string, unknown> | null {
+  if (!isPlainRecord(value)) {
+    return null
+  }
+
+  return value
+}
+
+function successResponse(
+  request: NextRequest,
+  respond: <T extends NextResponse>(response: T) => T,
+  payload: BookmarkMutationPayload,
+) {
+  return respond(jsonWithCors(request, { data: payload }))
 }
 
 function getRequestEditionPreferences(request: NextRequest): string[] {
@@ -263,6 +313,23 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
     }
 
+    const titleValue = typeof payload.title === "string" ? payload.title : undefined
+    const slugValue = typeof payload.slug === "string" ? payload.slug : undefined
+    const excerptValue = typeof payload.excerpt === "string" ? payload.excerpt : undefined
+    const categoryValue =
+      typeof payload.category === "string" && payload.category.trim().length > 0
+        ? payload.category
+        : null
+    const tagsValue = sanitizeStringArray(payload.tags)
+    const notesRaw = payload.notes ?? payload.note
+    const notesValue =
+      typeof notesRaw === "string" ? notesRaw : notesRaw === null ? null : undefined
+    const countryValue =
+      typeof payload.country === "string" && payload.country.trim().length > 0
+        ? payload.country
+        : null
+    const featuredImageValue = sanitizeFeaturedImage(payload.featuredImage)
+
     // Check if bookmark already exists
     const { data: existingBookmark } = await supabase
       .from("bookmarks")
@@ -327,7 +394,11 @@ export async function POST(request: NextRequest) {
     }
 
     invalidateBookmarksCache(user.id, editionSources)
-    return respond(NextResponse.json({ bookmark: data }))
+    const mutationPayload: BookmarkMutationPayload = {
+      added: [insertedBookmark],
+      statsDelta: computeStatsDelta({ next: insertedBookmark }),
+    }
+    return successResponse(request, respond, mutationPayload)
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
@@ -359,8 +430,9 @@ export async function PUT(request: NextRequest) {
     const { postId } = body
     const updates = body.updates as BookmarkUpdateInput | undefined
 
-    if (!postId) {
-      return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
+    const payload = extractMutationPayload(body)
+    if (!payload) {
+      return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
     }
 
     if (!updates || typeof updates !== "object") {
@@ -440,7 +512,11 @@ export async function PUT(request: NextRequest) {
     }
 
     invalidateBookmarksCache(user.id, editionSources)
-    return respond(NextResponse.json({ bookmark: data }))
+    const mutationPayload: BookmarkMutationPayload = {
+      updated: updatedBookmark ? [updatedBookmark] : [],
+      statsDelta: computeStatsDelta({ previous: existing as BookmarkListRow, next: updatedBookmark ?? null }),
+    }
+    return successResponse(request, respond, mutationPayload)
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
@@ -506,7 +582,13 @@ export async function DELETE(request: NextRequest) {
     const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
 
     invalidateBookmarksCache(user.id, editionSources)
-    return respond(NextResponse.json({ success: true }))
+    const mutationPayload: BookmarkMutationPayload = {
+      removed: removedList,
+      statsDelta: combineStatsDeltas(
+        removedList.map((row) => computeStatsDelta({ previous: row })),
+      ),
+    }
+    return successResponse(request, respond, mutationPayload)
   } catch (error) {
     console.error("Error in bookmarks API:", error)
     return respond(jsonWithCors(request, { error: "Internal server error" }, { status: 500 }))
