@@ -1,5 +1,3 @@
-"use client"
-
 import { OptimizedImage } from "@/components/OptimizedImage"
 import { PostList } from "@/components/posts/PostList"
 import type { WordPressAuthor } from "@/types/wp"
