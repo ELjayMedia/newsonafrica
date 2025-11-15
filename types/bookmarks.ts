@@ -1,14 +1,26 @@
 import type { Database } from "@/types/supabase"
 
-type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
+export type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
+
+type BookmarkPostId = BookmarkTableRow extends { post_id: infer PostId }
+  ? PostId
+  : BookmarkTableRow extends { wp_post_id: infer LegacyPostId }
+    ? LegacyPostId
+    : string
+
+type BookmarkCountry = BookmarkTableRow extends { country: infer Country }
+  ? Country
+  : string | null
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkTableRow["post_id"]
-  country: BookmarkTableRow["country"]
+  postId: BookmarkPostId
+  editionCode: BookmarkTableRow["edition_code"]
+  collectionId: BookmarkTableRow["collection_id"]
+  country: BookmarkCountry
   title: BookmarkTableRow["title"]
   slug: BookmarkTableRow["slug"]
   excerpt: BookmarkTableRow["excerpt"]
@@ -24,6 +36,8 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
   "id",
   "user_id:userId",
   "post_id:postId",
+  "edition_code:editionCode",
+  "collection_id:collectionId",
   "slug",
   "country",
   "title",
@@ -39,11 +53,12 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
 export type BookmarkListRow = Pick<
   BookmarkRow,
   | "id"
-  | "user_id"
-  | "wp_post_id"
+  | "userId"
+  | "postId"
+  | "editionCode"
+  | "collectionId"
   | "slug"
-  | "edition_code"
-  | "collection_id"
+  | "country"
   | "title"
   | "excerpt"
   | "featuredImage"
