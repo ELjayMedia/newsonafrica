@@ -71,7 +71,7 @@ const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
 const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
 
 const COMMENT_LIST_SELECT_COLUMNS =
-  "id, post_id, user_id, content, parent_id, country, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, profile:profiles(username, avatar_url)"
+  "id, wp_post_id, edition_code, user_id, body, parent_id, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, replies_count, reactions_count, profile:profiles(username, avatar_url)"
 
 function normalizeEditionCode(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -91,7 +91,7 @@ function normalizeEditionCode(value: unknown): string | null {
   return null
 }
 
-function resolveRequestCountry(
+function resolveRequestEdition(
   request: NextRequest,
   session: Session | null,
   profileCountry?: string | null,
@@ -138,13 +138,39 @@ function parseParentId(value: string | null): string | null | undefined {
   return trimmed
 }
 
+function normalizeEditionParam(value: string | null): string | null {
+  if (value == null) {
+    return null
+  }
+
+  const normalized = normalizeEditionCode(value)
+
+  if (!normalized) {
+    return null
+  }
+
+  return normalized
+}
+
 function validateGetCommentsParams(searchParams: URLSearchParams) {
   const errors: FieldErrors = {}
 
-  const postId = searchParams.get("postId")
-  if (!postId) {
-    addValidationError(errors, "postId", "Post ID is required")
+  const rawPostId =
+    searchParams.get("wp_post_id") ?? searchParams.get("wpPostId") ?? searchParams.get("postId")
+  const wpPostId = typeof rawPostId === "string" && rawPostId.trim().length > 0 ? rawPostId.trim() : null
+  if (!wpPostId) {
+    addValidationError(errors, "wp_post_id", "WordPress post ID is required")
   }
+
+  const rawEdition =
+    searchParams.get("edition_code") ?? searchParams.get("editionCode") ?? searchParams.get("country")
+  const normalizedEdition = normalizeEditionParam(rawEdition)
+
+  if (rawEdition && !normalizedEdition) {
+    addValidationError(errors, "edition_code", "Edition code is invalid")
+  }
+
+  const editionCode = normalizedEdition ?? AFRICAN_EDITION.code
 
   const rawPage = searchParams.get("page")
   let page = 0
@@ -170,7 +196,7 @@ function validateGetCommentsParams(searchParams: URLSearchParams) {
     }
   }
 
-  const parentId = parseParentId(searchParams.get("parentId"))
+  const parentId = parseParentId(searchParams.get("parent_id") ?? searchParams.get("parentId"))
 
   const rawCursor = searchParams.get("cursor")
   const cursor = rawCursor && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined
@@ -182,12 +208,13 @@ function validateGetCommentsParams(searchParams: URLSearchParams) {
     addValidationError(errors, "status", "Invalid status value")
   }
 
-  if (hasValidationErrors(errors) || !postId) {
+  if (hasValidationErrors(errors) || !wpPostId) {
     throw new ValidationError("Invalid query parameters", errors)
   }
 
   return {
-    postId,
+    wpPostId,
+    editionCode,
     page,
     limit,
     parentId,
@@ -204,32 +231,54 @@ function validateCreateCommentPayload(payload: unknown) {
   const record = payload as Record<string, unknown>
   const errors: FieldErrors = {}
 
-  const postId = typeof record.postId === "string" && record.postId.length > 0 ? record.postId : null
-  if (!postId) {
-    addValidationError(errors, "postId", "Post ID is required")
+  const rawPostId =
+    (typeof record.wp_post_id === "string" && record.wp_post_id.trim().length > 0
+      ? record.wp_post_id
+      : null) ??
+    (typeof record.wpPostId === "string" && record.wpPostId.trim().length > 0
+      ? record.wpPostId
+      : null) ??
+    (typeof record.postId === "string" && record.postId.trim().length > 0 ? record.postId : null)
+
+  if (!rawPostId) {
+    addValidationError(errors, "wp_post_id", "WordPress post ID is required")
   }
 
-  const content = typeof record.content === "string" ? record.content : null
-  if (!content || content.length === 0) {
-    addValidationError(errors, "content", "Comment content is required")
-  } else if (content.length > 2000) {
-    addValidationError(errors, "content", "Comment is too long")
+  const rawEdition =
+    (typeof record.edition_code === "string" ? record.edition_code : null) ??
+    (typeof record.editionCode === "string" ? record.editionCode : null)
+  const editionCode = normalizeEditionParam(rawEdition)
+
+  if (rawEdition && !editionCode) {
+    addValidationError(errors, "edition_code", "Edition code is invalid")
+  }
+
+  const bodyValue =
+    (typeof record.body === "string" ? record.body : null) ??
+    (typeof record.content === "string" ? record.content : null)
+
+  if (!bodyValue || bodyValue.length === 0) {
+    addValidationError(errors, "body", "Comment body is required")
+  } else if (bodyValue.length > 2000) {
+    addValidationError(errors, "body", "Comment is too long")
   }
 
   let parentId: string | null | undefined
-  if (record.parentId === null) {
+  const rawParent =
+    record.parent_id !== undefined ? record.parent_id : (record.parentId as unknown | undefined)
+  if (rawParent === null) {
     parentId = null
-  } else if (typeof record.parentId === "string") {
-    parentId = record.parentId
-  } else if (record.parentId !== undefined) {
-    addValidationError(errors, "parentId", "Parent ID must be a string or null")
+  } else if (typeof rawParent === "string") {
+    parentId = rawParent
+  } else if (rawParent !== undefined) {
+    addValidationError(errors, "parent_id", "Parent ID must be a string or null")
   }
 
-  if (hasValidationErrors(errors) || !postId || !content) {
+  if (hasValidationErrors(errors) || !rawPostId || !bodyValue) {
     throw new ValidationError("Invalid comment payload", errors)
   }
 
-  return { postId, content, parentId }
+  return { wpPostId: rawPostId, editionCode: editionCode ?? null, body: bodyValue, parentId }
 }
 
 function validateUpdateCommentPayload(payload: unknown) {
@@ -292,7 +341,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url)
 
     // Validate query parameters
-    const { postId, page, limit, parentId, status, cursor: cursorParam } =
+    const { wpPostId, editionCode, page, limit, parentId, status, cursor: cursorParam } =
       validateGetCommentsParams(searchParams)
 
     const decodedCursor = cursorParam ? decodeCommentCursor(cursorParam) : null
@@ -325,7 +374,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Build query
     const buildBaseQuery = (builder: any, { includeCursor }: { includeCursor: boolean }) => {
-      let updated = builder.eq("post_id", postId)
+      let updated = builder.eq("wp_post_id", wpPostId).eq("edition_code", editionCode)
       updated = applyParentFilter(updated)
       updated = applySimpleStatusFilters(updated)
       return applyOrFilters(updated, statusOrConditions, includeCursor ? cursorConditions : [])
@@ -504,7 +553,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Validate request body
-    const { postId, content, parentId } = validateCreateCommentPayload(body)
+    const { wpPostId, editionCode, body: commentBody, parentId } = validateCreateCommentPayload(body)
 
     // Rate limiting check - get user's last comment timestamp
     const { data: lastComment, error: lastCommentError } = await supabase
@@ -543,15 +592,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .eq("id", session.user.id)
       .maybeSingle()
 
-    const requestCountry = resolveRequestCountry(request, session, profile?.country)
+    const requestEdition = resolveRequestEdition(request, session, profile?.country)
 
     const newComment = {
-      post_id: postId,
+      wp_post_id: wpPostId,
+      edition_code: editionCode ?? requestEdition,
       user_id: session.user.id,
-      content,
-      parent_id: parentId || null,
+      body: commentBody,
+      parent_id: parentId ?? null,
       status: "active",
-      country: requestCountry,
     }
 
     // Insert the comment
@@ -561,7 +610,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new Error(`Failed to create comment: ${error.message}`)
     }
 
-    const commentTag = cacheTags.comments(requestCountry, postId)
+    const commentTag = cacheTags.comments(editionCode ?? requestEdition, wpPostId)
 
     if (profileError || !profile) {
       // Still return the comment, just without profile data
@@ -640,8 +689,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
 
     const commentRecord = comment as {
       user_id?: string | null
-      post_id?: string | number | null
-      country?: string | null
+      wp_post_id?: string | number | null
+      edition_code?: string | null
     }
 
     let updateData = {}
@@ -691,8 +740,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     }
 
     const targetEdition =
-      normalizeEditionCode(commentRecord.country) ?? AFRICAN_EDITION.code
-    const targetPostId = commentRecord.post_id != null ? String(commentRecord.post_id) : null
+      normalizeEditionCode(commentRecord.edition_code ?? null) ?? AFRICAN_EDITION.code
+    const targetPostId = commentRecord.wp_post_id != null ? String(commentRecord.wp_post_id) : null
 
     if (targetPostId) {
       revalidateByTag(cacheTags.comments(targetEdition, targetPostId))

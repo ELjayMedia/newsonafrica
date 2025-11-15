@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 interface CommentItemProps {
   comment: Comment
   postId: string
+  editionCode: string
   onCommentUpdated: () => void
   onReplyAdded?: (optimisticComment?: Comment) => void
   onReplyFailed?: (commentId: string) => void
@@ -35,6 +36,7 @@ interface CommentItemProps {
 export function CommentItem({
   comment,
   postId,
+  editionCode,
   onCommentUpdated,
   onReplyAdded,
   onReplyFailed,
@@ -46,7 +48,7 @@ export function CommentItem({
   const { toast } = useToast()
   const [isReplying, setIsReplying] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState(comment.content)
+  const [editBody, setEditBody] = useState(comment.body)
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState("")
   const [isReporting, setIsReporting] = useState(false)
@@ -66,11 +68,11 @@ export function CommentItem({
 
   const renderContent = () => {
     if (!comment.is_rich_text) {
-      return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.content}</div>
+      return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.body}</div>
     }
 
     // Simple markdown rendering
-    const html = comment.content
+    const html = comment.body
       // Bold
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       // Italic
@@ -94,7 +96,7 @@ export function CommentItem({
 
   const handleEdit = () => {
     setIsEditing(!isEditing)
-    setEditContent(comment.content)
+    setEditBody(comment.body)
   }
 
   const handleDelete = async () => {
@@ -120,7 +122,7 @@ export function CommentItem({
   }
 
   const handleUpdate = async () => {
-    if (!editContent.trim()) {
+    if (!editBody.trim()) {
       toast({
         title: "Empty comment",
         description: "Comment cannot be empty",
@@ -130,7 +132,7 @@ export function CommentItem({
     }
 
     try {
-      await updateComment(comment.id, editContent, comment.is_rich_text)
+      await updateComment(comment.id, editBody, comment.is_rich_text)
       setIsEditing(false)
       toast({
         title: "Comment updated",
@@ -249,8 +251,8 @@ export function CommentItem({
           {isEditing ? (
             <div className="mt-2">
               <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md text-sm"
                 rows={3}
               />
@@ -280,6 +282,7 @@ export function CommentItem({
             <div className="mt-3">
               <CommentForm
                 postId={postId}
+                editionCode={editionCode}
                 parentId={comment.id}
                 onCommentAdded={(optimisticReply) => {
                   setIsReplying(false)
@@ -298,6 +301,7 @@ export function CommentItem({
                   key={reply.id}
                   comment={reply}
                   postId={postId}
+                  editionCode={editionCode}
                   onCommentUpdated={onCommentUpdated}
                   onReplyAdded={onReplyAdded}
                   onReplyFailed={onReplyFailed}

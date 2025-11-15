@@ -39,10 +39,11 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
 export type BookmarkListRow = Pick<
   BookmarkRow,
   | "id"
-  | "userId"
-  | "postId"
+  | "user_id"
+  | "wp_post_id"
   | "slug"
-  | "country"
+  | "edition_code"
+  | "collection_id"
   | "title"
   | "excerpt"
   | "featuredImage"
@@ -83,3 +84,11 @@ export interface BookmarkMutationPayload {
   removed?: BookmarkListRow[]
   statsDelta: BookmarkStatsDelta
 }
+
+export type BookmarkCollectionRow = Database["public"]["Tables"]["bookmark_collections"]["Row"]
+export type BookmarkCollectionInsert = Database["public"]["Tables"]["bookmark_collections"]["Insert"]
+export type BookmarkCollectionUpdate = Database["public"]["Tables"]["bookmark_collections"]["Update"]
+
+export type BookmarkUserCounterRow = Database["public"]["Tables"]["bookmark_user_counters"]["Row"]
+export type BookmarkUserCounterInsert = Database["public"]["Tables"]["bookmark_user_counters"]["Insert"]
+export type BookmarkUserCounterUpdate = Database["public"]["Tables"]["bookmark_user_counters"]["Update"]

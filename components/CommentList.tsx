@@ -16,6 +16,7 @@ import { fetchCommentsPageAction } from "@/app/[countryCode]/article/[slug]/acti
 
 interface CommentListProps {
   postId: string
+  editionCode: string
   initialComments?: Comment[]
   initialCursor?: string | null
   initialHasMore?: boolean
@@ -24,6 +25,7 @@ interface CommentListProps {
 
 export function CommentList({
   postId,
+  editionCode,
   initialComments = [],
   initialCursor = null,
   initialHasMore = false,
@@ -181,6 +183,7 @@ export function CommentList({
           total,
         } = await fetchCommentsPageAction({
           postId,
+          editionCode,
           page: nextPage,
           pageSize: 10,
           sortOption,
@@ -380,8 +383,8 @@ export function CommentList({
 
       <CommentForm
         postId={postId}
+        editionCode={editionCode}
         onCommentAdded={handleCommentAdded}
-        onCommentFailed={handleCommentFailed}
         isRateLimited={isRateLimited}
         rateLimitTimeRemaining={getRateLimitTimeRemaining}
       />
@@ -445,6 +448,7 @@ export function CommentList({
                 <CommentItem
                   comment={comment}
                   postId={postId}
+                  editionCode={editionCode}
                   onCommentUpdated={() => void loadComments({ append: false })}
                   onReplyAdded={handleCommentAdded}
                   onReplyFailed={handleCommentFailed}

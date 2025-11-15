@@ -17,6 +17,7 @@ import {
 
 interface FetchCommentsPageActionInput {
   postId: string
+  editionCode: string
   page?: number
   pageSize?: number
   sortOption?: CommentSortOption
@@ -25,6 +26,7 @@ interface FetchCommentsPageActionInput {
 
 export async function fetchCommentsPageAction({
   postId,
+  editionCode,
   page = 0,
   pageSize = 10,
   sortOption = "newest",
@@ -34,7 +36,7 @@ export async function fetchCommentsPageAction({
   if (!supabase) {
     return { comments: [], hasMore: false, nextCursor: null, total: 0 }
   }
-  return fetchComments(postId, page, pageSize, sortOption, supabase, cursor ?? undefined)
+  return fetchComments(postId, editionCode, page, pageSize, sortOption, supabase, cursor ?? undefined)
 }
 
 export interface FetchArticleWithFallbackActionInput {
