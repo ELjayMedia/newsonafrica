@@ -1,5 +1,4 @@
 import { cache } from "react"
-import { createHash } from "crypto"
 
 import { WP_AUTH_HEADERS } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
@@ -193,12 +192,20 @@ export function fetchWordPressGraphQL<T>(
   const base = getGraphQLEndpoint(countryCode)
   const body = JSON.stringify({ query, variables })
   const dedupedTags = dedupe(options.tags)
+  const hasTags = (dedupedTags?.length ?? 0) > 0
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
-  const shouldMemoize = resolvedRevalidate > CACHE_DURATIONS.NONE
+  const memoizationTtlSeconds =
+    resolvedRevalidate > CACHE_DURATIONS.NONE
+      ? resolvedRevalidate
+      : hasTags
+        ? CACHE_DURATIONS.SHORT
+        : CACHE_DURATIONS.NONE
+  const shouldMemoize = memoizationTtlSeconds > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
-  const bodyHash = createHash("sha1").update(body).digest("hex")
-  const cacheKey = `${base}::${bodyHash}::${tagsKey}`
-  const metadataKey = String(resolvedRevalidate)
+  const cacheKey = `${base}::${body}::${tagsKey}`
+  const metadataKey = shouldMemoize
+    ? `ttl:${memoizationTtlSeconds}`
+    : "ttl:0"
   const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
   let memoizedEntry: MemoizedRequestEntry | undefined
 
@@ -297,8 +304,8 @@ export function fetchWordPressGraphQL<T>(
 
   if (shouldMemoize && memoizedRequests) {
     const expiresAt =
-      resolvedRevalidate > 0
-        ? Date.now() + resolvedRevalidate * 1000
+      memoizationTtlSeconds > 0
+        ? Date.now() + memoizationTtlSeconds * 1000
         : Number.POSITIVE_INFINITY
 
     const entry: MemoizedRequestEntry = {
@@ -309,13 +316,13 @@ export function fetchWordPressGraphQL<T>(
     memoizedEntry = entry
     memoizedRequests.set(cacheKey, entry)
 
-    if (resolvedRevalidate > 0) {
+    if (memoizationTtlSeconds > 0) {
       const timeout = setTimeout(() => {
         const currentEntry = memoizedRequests.get(cacheKey)
         if (currentEntry === entry) {
           memoizedRequests.delete(cacheKey)
         }
-      }, resolvedRevalidate * 1000)
+      }, memoizationTtlSeconds * 1000)
 
       if (typeof timeout.unref === "function") {
         timeout.unref()

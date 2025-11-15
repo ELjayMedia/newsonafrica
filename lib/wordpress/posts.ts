@@ -118,7 +118,7 @@ export async function getLatestPostsForCountry(
         variables,
         {
           tags,
-          revalidate: CACHE_DURATIONS.NONE,
+          revalidate: CACHE_DURATIONS.SHORT,
           timeout: request?.timeout,
           signal: request?.signal,
         },
@@ -182,7 +182,7 @@ export async function getRelatedPostsForCountry(
     countryCode,
     POST_CATEGORIES_QUERY,
     { id: numericPostId },
-    { tags, revalidate: CACHE_DURATIONS.NONE, timeout: RELATED_POSTS_TIMEOUT_MS },
+    { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
   if (gqlPost?.post) {
     const catIds =
@@ -200,7 +200,7 @@ export async function getRelatedPostsForCountry(
         },
         {
           tags,
-          revalidate: CACHE_DURATIONS.NONE,
+          revalidate: CACHE_DURATIONS.SHORT,
           timeout: RELATED_POSTS_TIMEOUT_MS,
         },
       )
@@ -244,7 +244,7 @@ export const getRelatedPosts = async (
       },
       {
         tags: relatedTags,
-        revalidate: CACHE_DURATIONS.NONE,
+        revalidate: CACHE_DURATIONS.SHORT,
         timeout: RELATED_POSTS_TIMEOUT_MS,
       },
     )
@@ -514,7 +514,7 @@ export const fetchTaggedPosts = async ({
         first,
         ...(after ? { after } : {}),
       },
-      { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+      { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
     if (gqlData?.posts) {
@@ -647,7 +647,7 @@ export const fetchPosts = async (
     countryCode,
     POSTS_QUERY,
     variables,
-    { tags: cacheTagList, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTagList, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   const nodes =
@@ -669,7 +669,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
       countryCode,
       TAGS_QUERY,
       { first: 100, hideEmpty: true },
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      { tags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
     const nodes = gqlData?.tags?.nodes ?? []
@@ -693,7 +693,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   return mapGraphqlTagNode(gqlData?.tag) ?? null
@@ -709,7 +709,7 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
     countryCode,
     TAGS_QUERY,
     { first: 100, hideEmpty: true },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   const nodes = gqlData?.tags?.nodes ?? []
@@ -735,7 +735,7 @@ export async function fetchPost({
     countryCode,
     POST_BY_SLUG_QUERY,
     { slug },
-    { tags, revalidate: CACHE_DURATIONS.NONE },
+    { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   const node = gqlData?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
@@ -805,7 +805,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
       tag: "featured",
       first: limit,
     },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.NONE },
+    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
   )
   if (gqlData?.posts) {
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []

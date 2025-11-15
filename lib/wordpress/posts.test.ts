@@ -35,9 +35,9 @@ describe("getRelatedPostsForCountry", () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
     const [firstCallOptions, secondCallOptions] = [mockFetch.mock.calls[0]?.[3], mockFetch.mock.calls[1]?.[3]]
     expect(firstCallOptions?.timeout).toBe(1000)
-    expect(firstCallOptions?.revalidate).toBe(CACHE_DURATIONS.NONE)
+    expect(firstCallOptions?.revalidate).toBe(CACHE_DURATIONS.SHORT)
     expect(secondCallOptions?.timeout).toBe(1000)
-    expect(secondCallOptions?.revalidate).toBe(CACHE_DURATIONS.NONE)
+    expect(secondCallOptions?.revalidate).toBe(CACHE_DURATIONS.SHORT)
   })
 })
 
@@ -52,6 +52,6 @@ describe("getRelatedPosts", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     const requestOptions = mockFetch.mock.calls[0]?.[3]
     expect(requestOptions?.timeout).toBe(1000)
-    expect(requestOptions?.revalidate).toBe(CACHE_DURATIONS.NONE)
+    expect(requestOptions?.revalidate).toBe(CACHE_DURATIONS.SHORT)
   })
 })
