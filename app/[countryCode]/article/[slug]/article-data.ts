@@ -468,6 +468,31 @@ export class ArticleTemporarilyUnavailableError extends AggregateError {
 const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
   `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
 
+const isNetworkOrAbortError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  if (error.name === "AbortError") {
+    return true
+  }
+
+  if (error instanceof TypeError && /fetch failed/i.test(error.message)) {
+    return true
+  }
+
+  const cause = (error as { cause?: unknown }).cause
+  if (cause && typeof cause === "object") {
+    const code = (cause as { code?: unknown }).code
+
+    if (typeof code === "string" && code.toUpperCase().startsWith("ENET")) {
+      return true
+    }
+  }
+
+  return false
+}
+
 const shouldAttemptRestFallback = (
   failure?: WordPressGraphQLFailure,
   error?: unknown,
@@ -477,6 +502,10 @@ const shouldAttemptRestFallback = (
   }
 
   if (error instanceof WordPressGraphQLHTTPError && error.status === 503) {
+    return true
+  }
+
+  if (isNetworkOrAbortError(error)) {
     return true
   }
 
