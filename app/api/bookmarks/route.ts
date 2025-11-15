@@ -13,6 +13,7 @@ import {
   type BookmarkListRow,
   type BookmarkStats,
 } from "@/types/bookmarks"
+import type { Database } from "@/types/supabase"
 
 export const runtime = "nodejs"
 
@@ -117,9 +118,9 @@ export async function GET(request: NextRequest) {
 
       if (status && status !== "all") {
         if (status === "unread") {
-          builder = builder.neq("read_status", "read")
+          builder = builder.neq("read_state", "read")
         } else {
-          builder = builder.eq("read_status", status)
+          builder = builder.eq("read_state", status)
         }
       }
 
@@ -154,10 +155,15 @@ export async function GET(request: NextRequest) {
       rows: (rows ?? []) as BookmarkListRow[],
       cursorEncoder: (row) => {
         const record = row as BookmarkListRow
+        const camelSortKey = sortBy.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase())
+        const sortValue =
+          (record as Record<string, unknown>)[camelSortKey] ??
+          (record as Record<string, unknown>)[sortBy] ??
+          null
         const cursorPayload = {
           sortBy,
           sortOrder,
-          value: (record as Record<string, unknown>)[sortBy] ?? null,
+          value: sortValue,
           id: record.id ?? null,
         }
         try {
@@ -260,11 +266,15 @@ export async function POST(request: NextRequest) {
       featured_image: featuredImage && typeof featuredImage === "object" ? featuredImage : null,
       category: category || null,
       tags: tags || null,
-      read_status: "unread" as const,
+      read_state: "unread" as const,
       notes: notes || null,
     }
 
-    const { data, error } = await supabase.from("bookmarks").insert(bookmarkData).select().single()
+    const { data, error } = await supabase
+      .from("bookmarks")
+      .insert(bookmarkData)
+      .select(BOOKMARK_LIST_SELECT_COLUMNS)
+      .single()
 
     if (error) {
       console.error("Error adding bookmark:", error)
@@ -314,23 +324,40 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
     }
 
-    const sanitizedUpdates = { ...updates }
-    if ("featuredImage" in sanitizedUpdates) {
-      sanitizedUpdates.featured_image =
-        sanitizedUpdates.featuredImage && typeof sanitizedUpdates.featuredImage === "object"
-          ? sanitizedUpdates.featuredImage
-          : null
-      delete sanitizedUpdates.featuredImage
-    } else if ("featured_image" in sanitizedUpdates) {
-      sanitizedUpdates.featured_image =
-        sanitizedUpdates.featured_image && typeof sanitizedUpdates.featured_image === "object"
-          ? sanitizedUpdates.featured_image
-          : null
+    const dbUpdates: Database["public"]["Tables"]["bookmarks"]["Update"] = {}
+
+    if (Object.prototype.hasOwnProperty.call(updates, "country")) {
+      dbUpdates.country = updates.country ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "title")) {
+      dbUpdates.title = updates.title ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "slug")) {
+      dbUpdates.slug = updates.slug ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "excerpt")) {
+      dbUpdates.excerpt = updates.excerpt ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "category")) {
+      dbUpdates.category = updates.category ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "tags")) {
+      dbUpdates.tags = updates.tags ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "readState")) {
+      dbUpdates.read_state = updates.readState ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
+      dbUpdates.notes = updates.notes ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "featuredImage")) {
+      const value = updates.featuredImage
+      dbUpdates.featured_image = value && typeof value === "object" ? value : null
     }
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .update(sanitizedUpdates)
+      .update(dbUpdates)
       .eq("user_id", user.id)
       .eq("post_id", postId)
       .select()
@@ -345,8 +372,8 @@ export async function PUT(request: NextRequest) {
     const updatedCountry =
       typeof updatedBookmark?.country === "string"
         ? updatedBookmark.country
-        : typeof sanitizedUpdates.country === "string"
-          ? sanitizedUpdates.country
+        : typeof updates.country === "string"
+          ? updates.country
           : null
     const editionSources = [updatedCountry, ...getRequestEditionPreferences(request)]
 
