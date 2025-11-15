@@ -24,6 +24,28 @@ vi.mock("@/lib/bookmarks/stats", () => ({
   getDefaultBookmarkStats: (...args: unknown[]) => getDefaultBookmarkStatsMock(...args),
 }))
 
+const ensureCollectionAssignmentMock = vi.fn()
+vi.mock("@/lib/bookmarks/collections", () => ({
+  ensureBookmarkCollectionAssignment: (...args: unknown[]) =>
+    ensureCollectionAssignmentMock(...args),
+}))
+
+const applyBookmarkCounterDeltaMock = vi.fn()
+vi.mock("@/lib/bookmarks/counters", () => ({
+  applyBookmarkCounterDelta: (...args: unknown[]) => applyBookmarkCounterDeltaMock(...args),
+}))
+
+const buildAdditionCounterDeltaMock = vi.fn()
+const buildRemovalCounterDeltaMock = vi.fn()
+const buildUpdateCounterDeltaMock = vi.fn()
+const prepareBookmarkUpdatePayloadMock = vi.fn()
+vi.mock("@/lib/bookmarks/mutations", () => ({
+  buildAdditionCounterDelta: (...args: unknown[]) => buildAdditionCounterDeltaMock(...args),
+  buildRemovalCounterDelta: (...args: unknown[]) => buildRemovalCounterDeltaMock(...args),
+  buildUpdateCounterDelta: (...args: unknown[]) => buildUpdateCounterDeltaMock(...args),
+  prepareBookmarkUpdatePayload: (...args: unknown[]) => prepareBookmarkUpdatePayloadMock(...args),
+}))
+
 import { createSupabaseRouteClient } from "@/lib/supabase/route"
 import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
 import { cacheTags } from "@/lib/cache"
@@ -50,6 +72,24 @@ describe("/api/bookmarks cache revalidation", () => {
     fetchBookmarkStatsMock.mockReset()
     getDefaultBookmarkStatsMock.mockReset()
     applyCookiesMock.mockImplementation((response: Response) => response)
+    ensureCollectionAssignmentMock.mockReset()
+    ensureCollectionAssignmentMock.mockResolvedValue(null)
+    applyBookmarkCounterDeltaMock.mockReset()
+    applyBookmarkCounterDeltaMock.mockResolvedValue(undefined)
+    buildAdditionCounterDeltaMock.mockReset()
+    buildAdditionCounterDeltaMock.mockReturnValue({ total: 1 })
+    buildRemovalCounterDeltaMock.mockReset()
+    buildRemovalCounterDeltaMock.mockReturnValue(null)
+    buildUpdateCounterDeltaMock.mockReset()
+    buildUpdateCounterDeltaMock.mockReturnValue(null)
+    prepareBookmarkUpdatePayloadMock.mockReset()
+    prepareBookmarkUpdatePayloadMock.mockReturnValue({
+      dbUpdates: { note: "updated" },
+      targetEditionCode: null,
+      targetCollectionId: null,
+      shouldResolveCollection: false,
+      hasWritableUpdate: true,
+    })
   })
 
   it("revalidates the user and edition tags after creating a bookmark", async () => {
@@ -179,45 +219,32 @@ describe("/api/bookmarks cache revalidation", () => {
   it("revalidates the user and edition tags after updating a bookmark", async () => {
     const user = { id: "user-2" }
 
-    const existingRow = {
-      id: "bookmark-2",
-      userId: user.id,
-      postId: "post-2",
-      slug: "post-2",
-      country: "ke",
-      title: "Original",
-      excerpt: "",
-      featuredImage: null,
-      category: "politics",
-      tags: null,
-      readState: "unread" as const,
-      notes: "old",
-      createdAt: "2024-01-01T00:00:00.000Z",
-    }
-
-    const updatedRow = { ...existingRow, notes: "updated" }
-
     const existingChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: existingRow, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "bookmark-2", country: "ke", collectionId: null, readState: "unread" },
+        error: null,
+      }),
     }
 
     const updateChain = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: updatedRow }),
+      single: vi.fn().mockResolvedValue({
+        data: { id: "bookmark-2", country: "ke", collectionId: null, readState: "unread" },
+        error: null,
+      }),
     }
 
     const supabase = {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
       },
-      from: vi
-        .fn()
-        .mockImplementationOnce(() => existingChain as any)
-        .mockImplementationOnce(() => updateChain as any),
+      from: vi.fn()
+        .mockImplementationOnce(() => existingChain)
+        .mockImplementationOnce(() => updateChain),
     }
 
     vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
@@ -241,6 +268,79 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
+  it("returns 400 when no updates object is provided", async () => {
+    const user = { id: "user-6" }
+    const supabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+    }
+
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
+
+    const request = new NextRequest("https://example.com/api/bookmarks", {
+      method: "PUT",
+      body: JSON.stringify({ postId: "post-6" }),
+      headers: { "content-type": "application/json" },
+    })
+
+    const response = await PUT(request)
+
+    expect(response.status).toBe(400)
+    expect(response.headers.get("content-type")).toContain("application/json")
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
+    expect(ensureCollectionAssignmentMock).not.toHaveBeenCalled()
+    expect(prepareBookmarkUpdatePayloadMock).not.toHaveBeenCalled()
+  })
+
+  it("returns 400 when no bookmark updates are recognized", async () => {
+    const user = { id: "user-7" }
+
+    const existingChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "bookmark-7", country: null, collectionId: null },
+        error: null,
+      }),
+    }
+
+    const supabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+      from: vi.fn().mockReturnValue(existingChain),
+    }
+
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
+
+    prepareBookmarkUpdatePayloadMock.mockReturnValueOnce({
+      dbUpdates: {},
+      targetEditionCode: null,
+      targetCollectionId: null,
+      shouldResolveCollection: false,
+      hasWritableUpdate: false,
+    })
+
+    const request = new NextRequest("https://example.com/api/bookmarks", {
+      method: "PUT",
+      body: JSON.stringify({ postId: "post-7", updates: {} }),
+      headers: { "content-type": "application/json" },
+    })
+
+    const response = await PUT(request)
+
+    expect(response.status).toBe(400)
+    expect(applyCookiesMock).toHaveBeenCalledTimes(1)
+    expect(ensureCollectionAssignmentMock).not.toHaveBeenCalled()
+  })
+
   it("revalidates the user and edition tags after deleting bookmarks", async () => {
     const user = { id: "user-3" }
 
@@ -256,14 +356,8 @@ describe("/api/bookmarks cache revalidation", () => {
             postId: "post-3",
             slug: "post-3",
             country: "za",
-            title: "Third",
-            excerpt: "",
-            featuredImage: null,
-            category: "tech",
-            tags: null,
+            collectionId: null,
             readState: "unread" as const,
-            notes: null,
-            createdAt: "2024-01-01T00:00:00.000Z",
           },
         ],
         error: null,

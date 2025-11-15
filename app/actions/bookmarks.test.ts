@@ -27,6 +27,18 @@ vi.mock("@/lib/bookmarks/pagination", () => ({
   derivePagination: derivePaginationMock,
 }))
 
+const ensureCollectionAssignmentMock = vi.fn()
+vi.mock("@/lib/bookmarks/collections", () => ({
+  ensureBookmarkCollectionAssignment: (...args: unknown[]) =>
+    ensureCollectionAssignmentMock(...args),
+}))
+
+const applyBookmarkCounterDeltaMock = vi.fn()
+vi.mock("@/lib/bookmarks/counters", () => ({
+  applyBookmarkCounterDelta: (...args: unknown[]) => applyBookmarkCounterDeltaMock(...args),
+  collectionKeyForId: (id: string | null) => id ?? "__unassigned__",
+}))
+
 const supabaseRef: { current: any } = { current: null }
 
 vi.mock("@/app/actions/supabase", () => ({
@@ -53,6 +65,10 @@ describe("bookmark actions cache invalidation", () => {
     fetchBookmarkStatsMock.mockReset()
     getDefaultBookmarkStatsMock.mockReset()
     derivePaginationMock.mockReset()
+    ensureCollectionAssignmentMock.mockReset()
+    ensureCollectionAssignmentMock.mockResolvedValue(null)
+    applyBookmarkCounterDeltaMock.mockReset()
+    applyBookmarkCounterDeltaMock.mockResolvedValue(undefined)
   })
 
   it("revalidates bookmark tags when listing with revalidate=true", async () => {
@@ -93,8 +109,8 @@ describe("bookmark actions cache invalidation", () => {
       excerpt: "",
       featured_image: null,
       note: null,
-      edition_code: "ng",
-      collection_id: null,
+      country: "ng",
+      collectionId: null,
     }
 
     const insertChain = {
@@ -136,8 +152,8 @@ describe("bookmark actions cache invalidation", () => {
       excerpt: "",
       featured_image: null,
       note: null,
-      edition_code: "za",
-      collection_id: null,
+      country: "za",
+      collectionId: null,
     }
 
     const deleteChain = {
