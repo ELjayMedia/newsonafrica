@@ -22,7 +22,12 @@ export interface Database {
           featured_image: Json | null
           category: string | null
           tags: string[] | null
-          read_state: Database["public"]["Enums"]["bookmark_read_state"] | null
+          read_status: string | null
+          notes: string | null
+          wp_post_id: number | null
+          edition_code: string | null
+          collection_id: string | null
+          read_state: string | null
           note: string | null
           created_at: string
         }
@@ -38,7 +43,12 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
+          read_status?: string | null
+          notes?: string | null
+          wp_post_id?: number | null
+          edition_code?: string | null
+          collection_id?: string | null
+          read_state?: string | null
           note?: string | null
           created_at?: string
         }
@@ -54,7 +64,12 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
+          read_status?: string | null
+          notes?: string | null
+          wp_post_id?: number | null
+          edition_code?: string | null
+          collection_id?: string | null
+          read_state?: string | null
           note?: string | null
           created_at?: string
         }
