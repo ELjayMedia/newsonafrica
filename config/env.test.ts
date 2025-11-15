@@ -2,14 +2,19 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
 
 const ORIGINAL_ENV = process.env
 
+const WORDPRESS_COUNTRY_CODES = ["sz", "za", "ng", "ke", "tz", "eg", "gh"] as const
+
 const resetBaseEnv = () => {
   process.env = { ...ORIGINAL_ENV }
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
   process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   process.env.ANALYTICS_API_BASE_URL = "https://analytics.example.com"
 
-  delete process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL
-  delete process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL
+  for (const country of WORDPRESS_COUNTRY_CODES) {
+    const uppercase = country.toUpperCase()
+    delete process.env[`NEXT_PUBLIC_WP_${uppercase}_GRAPHQL`]
+    delete process.env[`NEXT_PUBLIC_WP_${uppercase}_REST_BASE`]
+  }
   delete process.env.WORDPRESS_GRAPHQL_AUTH_HEADER
   delete process.env.WORDPRESS_REQUEST_TIMEOUT_MS
 }
@@ -44,6 +49,16 @@ describe("config/env", () => {
 
     expect(ENV.NEXT_PUBLIC_WP_SZ_GRAPHQL).toBe(
       "https://override.example.com/sz/graphql/",
+    )
+  })
+
+  it("parses REST overrides when provided", async () => {
+    process.env.NEXT_PUBLIC_WP_ZA_REST_BASE = "https://override.example.com/za/wp-json/wp/v2"
+
+    const { ENV } = await import("./env")
+
+    expect(ENV.NEXT_PUBLIC_WP_ZA_REST_BASE).toBe(
+      "https://override.example.com/za/wp-json/wp/v2",
     )
   })
 

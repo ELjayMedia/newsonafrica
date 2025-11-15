@@ -61,14 +61,29 @@ const graphQlEndpointOverride = (countryCode: string) =>
       .optional(),
   )
 
-const BASE_ENV_SCHEMA = z.object({
+const restEndpointOverride = (countryCode: string) =>
+  z.preprocess(
+    trimToUndefined,
+    z.string().url({ message: "Expected an absolute REST API base URL" }).optional(),
+  )
+
+const WORDPRESS_COUNTRY_CODES = ["sz", "za", "ng", "ke", "tz", "eg", "gh"] as const
+
+const baseEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: stringWithDefault(DEFAULT_SITE_URL),
   NEXT_PUBLIC_DEFAULT_SITE: stringWithDefault("sz"),
-  NEXT_PUBLIC_WP_SZ_GRAPHQL: graphQlEndpointOverride("sz"),
-  NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
   ANALYTICS_API_BASE_URL: stringWithDefault("https://newsonafrica.com/api/analytics"),
   WORDPRESS_REQUEST_TIMEOUT_MS: positiveIntegerWithDefault(30000),
 })
+
+const BASE_ENV_SCHEMA = WORDPRESS_COUNTRY_CODES.reduce(
+  (schema, country) =>
+    schema.extend({
+      [`NEXT_PUBLIC_WP_${country.toUpperCase()}_GRAPHQL`]: graphQlEndpointOverride(country),
+      [`NEXT_PUBLIC_WP_${country.toUpperCase()}_REST_BASE`]: restEndpointOverride(country),
+    }),
+  baseEnvSchema,
+)
 
 const WORDPRESS_AUTH_HEADERS_SCHEMA = z.preprocess(
   (value) => {

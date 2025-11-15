@@ -12,9 +12,11 @@ import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
   COUNTRIES,
   fetchWordPressGraphQL,
+  WordPressGraphQLHTTPError,
   type WordPressGraphQLFailure,
   type WordPressGraphQLResult,
 } from "@/lib/wordpress/client"
+import { fetchWordPressRestPost } from "@/lib/wordpress/rest"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -466,6 +468,80 @@ export class ArticleTemporarilyUnavailableError extends AggregateError {
 const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
   `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
 
+const shouldAttemptRestFallback = (
+  failure?: WordPressGraphQLFailure,
+  error?: unknown,
+): boolean => {
+  if (failure?.kind === "http_error" && failure.status === 503) {
+    return true
+  }
+
+  if (error instanceof WordPressGraphQLHTTPError && error.status === 503) {
+    return true
+  }
+
+  return false
+}
+
+const fetchArticleFromRest = async (
+  country: string,
+  normalizedSlug: string,
+  preview: boolean,
+  shouldUseCache: boolean,
+  failure?: WordPressGraphQLFailure,
+  error?: unknown,
+): Promise<ArticleLoadResult | null> => {
+  if (!shouldAttemptRestFallback(failure, error)) {
+    return null
+  }
+
+  const restOptions = preview
+    ? { revalidate: CACHE_DURATIONS.NONE }
+    : { tags: [cacheTags.postSlug(country, normalizedSlug)] }
+
+  const restResult = await fetchWordPressRestPost(country, normalizedSlug, restOptions)
+
+  if (!restResult.ok) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("WordPress REST fallback failed", {
+        country,
+        slug: normalizedSlug,
+        error: restResult.error,
+        status: restResult.status,
+      })
+    }
+    return null
+  }
+
+  if (!restResult.post) {
+    return null
+  }
+
+  const cachedPayload = buildCachedArticlePayload(
+    country,
+    normalizedSlug,
+    {
+      article: restResult.post,
+      sourceCountry: country,
+      canonicalCountry: country,
+    },
+    country,
+  )
+
+  if (shouldUseCache) {
+    persistArticleCache(country, normalizedSlug, cachedPayload)
+  }
+
+  return {
+    status: "found" as const,
+    article: cachedPayload.article,
+    tags: cachedPayload.tags,
+    version: cachedPayload.version,
+    canonicalCountry: cachedPayload.canonicalCountry,
+    sourceCountry: cachedPayload.sourceCountry ?? country,
+  }
+}
+
 export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
@@ -506,6 +582,19 @@ export async function loadArticleWithFallback(
   const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview)
 
   if (primaryArticle.status === "temporary_error") {
+    const restFallback = await fetchArticleFromRest(
+      primaryCountry,
+      normalizedSlug,
+      preview,
+      shouldUseCache,
+      primaryArticle.failure,
+      primaryArticle.error,
+    )
+
+    if (restFallback?.status === "found") {
+      return restFallback
+    }
+
     temporaryFailures.push({
       country: primaryCountry,
       error: primaryArticle.error,
@@ -620,6 +709,19 @@ export async function loadArticleWithFallback(
     remainingPositions.delete(resolution.position)
 
     if (resolution.type === "rejected") {
+      const restFallback = await fetchArticleFromRest(
+        resolution.country,
+        normalizedSlug,
+        preview,
+        shouldUseCache,
+        undefined,
+        resolution.error,
+      )
+
+      if (restFallback?.status === "found") {
+        return restFallback
+      }
+
       temporaryFailures.push({ country: resolution.country, error: resolution.error })
       continue
     }
@@ -627,6 +729,19 @@ export async function loadArticleWithFallback(
     const { result, country } = resolution
 
     if (result.status === "temporary_error") {
+      const restFallback = await fetchArticleFromRest(
+        country,
+        normalizedSlug,
+        preview,
+        shouldUseCache,
+        result.failure,
+        result.error,
+      )
+
+      if (restFallback?.status === "found") {
+        return restFallback
+      }
+
       temporaryFailures.push({ country, error: result.error, failure: result.failure })
       continue
     }

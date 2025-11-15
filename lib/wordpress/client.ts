@@ -33,11 +33,18 @@ export const COUNTRIES: Record<string, CountryConfig> = SUPPORTED_COUNTRY_EDITIO
   {} as Record<string, CountryConfig>,
 )
 
+const DEFAULT_GQL_RETRY_ATTEMPTS = 6
+const DEFAULT_GQL_RETRY_BACKOFF_MS = 750
+const DEFAULT_GQL_RETRY_BACKOFF_FACTOR = 2.5
+
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
   revalidate?: number
   timeout?: number
   signal?: AbortSignal
+  retryAttempts?: number
+  retryBackoffMs?: number
+  retryBackoffFactor?: number
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -247,6 +254,9 @@ export function fetchWordPressGraphQL<T>(
     body,
     timeout: options.timeout,
     signal: options.signal,
+    attempts: options.retryAttempts ?? DEFAULT_GQL_RETRY_ATTEMPTS,
+    backoffMs: options.retryBackoffMs ?? DEFAULT_GQL_RETRY_BACKOFF_MS,
+    backoffFactor: options.retryBackoffFactor ?? DEFAULT_GQL_RETRY_BACKOFF_FACTOR,
   }
 
   const nextCacheConfig =
