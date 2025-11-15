@@ -336,13 +336,15 @@ export const POSTS_QUERY = gql`
     $includeIds: [ID!]
     $onlySticky: Boolean
     $offset: Int
+    $orderField: PostObjectsConnectionOrderbyEnum = DATE
+    $orderDirection: OrderEnum = DESC
   ) {
     posts(
       first: $first
       after: $after
       where: {
         status: PUBLISH
-        orderby: { field: DATE, order: DESC }
+        orderby: { field: $orderField, order: $orderDirection }
         categoryName: $category
         tagSlugIn: $tagSlugs
         search: $search

@@ -1,48 +1,20 @@
-import { getRestBase } from "@/lib/wp-endpoints"
+import { stripHtml } from "@/lib/search"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { POSTS_QUERY } from "@/lib/wordpress-queries"
+import {
+  fetchWordPressGraphQL,
+  type WordPressGraphQLFailure,
+  type WordPressGraphQLResult,
+  type WordPressGraphQLSuccess,
+} from "@/lib/wordpress/client"
+import type { WordPressPost } from "@/types/wp"
+import type { PostSummaryFieldsFragment } from "@/types/wpgraphql"
 
-const DEFAULT_WORDPRESS_REST_API_URL = getRestBase()
+const DEFAULT_SITE_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-const resolveWordPressRestApiUrl = (country?: string) =>
-  country ? getRestBase(country) : DEFAULT_WORDPRESS_REST_API_URL
-
-// Search result interface
-export interface WordPressSearchResult {
-  id: number
-  title: {
-    rendered: string
-  }
-  excerpt: {
-    rendered: string
-  }
-  content: {
-    rendered: string
-  }
-  slug: string
-  date: string
-  link: string
-  featured_media: number
-  categories: number[]
-  tags: number[]
-  author: number
-  _embedded?: {
-    "wp:featuredmedia"?: Array<{
-      source_url: string
-      alt_text: string
-    }>
-    "wp:term"?: Array<
-      Array<{
-        id: number
-        name: string
-        slug: string
-      }>
-    >
-    author?: Array<{
-      id: number
-      name: string
-      slug: string
-    }>
-  }
-}
+export type WordPressSearchResult = WordPressPost
 
 export interface SearchResponse {
   results: WordPressSearchResult[]
@@ -55,13 +27,73 @@ export interface SearchResponse {
   suggestions?: string[]
 }
 
-// Cache for search results
-const searchCache = new Map<string, { data: SearchResponse; timestamp: number }>()
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+type SearchPostsQueryResult = {
+  posts?: {
+    nodes?: (PostSummaryFieldsFragment | null)[] | null
+    pageInfo?: {
+      hasNextPage?: boolean | null
+      offsetPagination?: { total?: number | null } | null
+    } | null
+  } | null
+}
 
-/**
- * Search WordPress posts using REST API
- */
+type OrderByOption = "relevance" | "date" | "title"
+type OrderDirectionOption = "asc" | "desc"
+
+const searchCache = new Map<string, { data: SearchResponse; timestamp: number }>()
+
+const isGraphQlFailure = <T>(
+  result: WordPressGraphQLResult<T>,
+): result is WordPressGraphQLFailure =>
+  typeof result === "object" && result !== null && "ok" in result && result.ok === false
+
+const isGraphQlSuccess = <T>(
+  result: WordPressGraphQLResult<T>,
+): result is WordPressGraphQLSuccess<T> =>
+  typeof result === "object" && result !== null && "ok" in result && result.ok === true
+
+const resolveOrderField = (orderBy: OrderByOption): string => {
+  switch (orderBy) {
+    case "date":
+      return "DATE"
+    case "title":
+      return "TITLE"
+    case "relevance":
+    default:
+      return "SEARCH_RELEVANCE"
+  }
+}
+
+const resolveOrderDirection = (order: OrderDirectionOption): "ASC" | "DESC" =>
+  order === "asc" ? "ASC" : "DESC"
+
+const buildCacheKey = (
+  country: string,
+  query: string,
+  page: number,
+  perPage: number,
+  orderField: string,
+  orderDirection: "ASC" | "DESC",
+) => `search:${country}:${query}:${page}:${perPage}:${orderField}:${orderDirection}`
+
+const buildEmptyResponse = (
+  query: string,
+  page: number,
+  perPage: number,
+  startTime: number,
+): SearchResponse => ({
+  results: [],
+  total: 0,
+  totalPages: 0,
+  currentPage: page,
+  hasMore: false,
+  query,
+  searchTime: Date.now() - startTime,
+  suggestions: [],
+})
+
+const sanitizeTitle = (value?: string | null): string => stripHtml(value ?? "").trim()
+
 export async function searchWordPressPosts(
   query: string,
   options: {
@@ -70,269 +102,127 @@ export async function searchWordPressPosts(
     categories?: number[]
     tags?: number[]
     author?: number
-    orderBy?: "relevance" | "date" | "title"
-    order?: "asc" | "desc"
+    orderBy?: OrderByOption
+    order?: OrderDirectionOption
     country?: string
   } = {},
 ): Promise<SearchResponse> {
   const startTime = Date.now()
+  const trimmedQuery = query.trim()
+  const page = Math.max(1, options.page ?? 1)
+  const perPage = Math.max(1, options.perPage ?? 20)
+  const orderBy = options.orderBy ?? "relevance"
+  const orderDirection = resolveOrderDirection(options.order ?? "desc")
+  const orderField = resolveOrderField(orderBy)
+  const country = options.country?.trim().toLowerCase() || DEFAULT_SITE_COUNTRY
 
-  const {
-    page = 1,
-    perPage = 20,
-    categories = [],
-    tags = [],
-    author,
-    orderBy = "relevance",
-    order = "desc",
-    country,
-  } = options
+  if (!trimmedQuery) {
+    return buildEmptyResponse(trimmedQuery, page, perPage, startTime)
+  }
 
-  const normalizedCountry = country?.trim().toLowerCase()
-
-  // Create cache key
-  const cacheKey = `search:${query}:${JSON.stringify({
-    page,
-    perPage,
-    categories,
-    tags,
-    author,
-    orderBy,
-    order,
-    country: normalizedCountry,
-  })}`
-
-  // Check cache first
+  const cacheKey = buildCacheKey(country, trimmedQuery, page, perPage, orderField, orderDirection)
   const cached = searchCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return {
-      ...cached.data,
-      searchTime: Date.now() - startTime,
-    }
+    return { ...cached.data, searchTime: Date.now() - startTime }
+  }
+
+  const variables: Record<string, unknown> = {
+    first: perPage,
+    offset: (page - 1) * perPage,
+    search: trimmedQuery,
+    orderField,
+    orderDirection,
   }
 
   try {
-    // Build search parameters
-    const searchParams = new URLSearchParams({
-      search: query,
-      page: page.toString(),
-      per_page: perPage.toString(),
-      _embed: "1", // Include embedded data (featured media, terms, author)
-      orderby: orderBy === "relevance" ? "relevance" : orderBy,
-      order: order,
-    })
+    const gqlResult = await fetchWordPressGraphQL<SearchPostsQueryResult>(
+      country,
+      POSTS_QUERY,
+      variables,
+      { revalidate: CACHE_DURATIONS.NONE },
+    )
 
-    // Add category filter
-    if (categories.length > 0) {
-      searchParams.append("categories", categories.join(","))
+    if (!isGraphQlSuccess(gqlResult) || !gqlResult.posts) {
+      if (isGraphQlFailure(gqlResult)) {
+        console.error("WordPress GraphQL search failed", gqlResult.error)
+      }
+      const fallback = buildEmptyResponse(trimmedQuery, page, perPage, startTime)
+      searchCache.set(cacheKey, { data: fallback, timestamp: Date.now() })
+      return fallback
     }
 
-    // Add tag filter
-    if (tags.length > 0) {
-      searchParams.append("tags", tags.join(","))
-    }
+    const nodes =
+      gqlResult.posts.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
+    const mapped = nodes.map((node) => mapGraphqlPostToWordPressPost(node, country))
 
-    // Add author filter
-    if (author) {
-      searchParams.append("author", author.toString())
-    }
+    const totalFromGraphql = gqlResult.posts.pageInfo?.offsetPagination?.total
+    const total =
+      typeof totalFromGraphql === "number" && totalFromGraphql >= 0
+        ? totalFromGraphql
+        : mapped.length + (page - 1) * perPage
+    const totalPages = total > 0 ? Math.max(1, Math.ceil(total / perPage)) : 0
+    const hasMore =
+      typeof gqlResult.posts.pageInfo?.hasNextPage === "boolean"
+        ? gqlResult.posts.pageInfo.hasNextPage
+        : page < Math.max(1, totalPages)
 
-    const response = await fetch(`${resolveWordPressRestApiUrl(normalizedCountry)}/posts?${searchParams}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    })
+    const suggestions = Array.from(new Set(mapped.map((post) => sanitizeTitle(post.title)))).slice(0, 10)
 
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`)
-    }
-
-    const posts: WordPressSearchResult[] = await response.json()
-
-    // Get total count from headers
-    const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
-    const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "1", 10)
-
-    const searchResponse: SearchResponse = {
-      results: posts,
-      total: totalPosts,
+    const response: SearchResponse = {
+      results: mapped,
+      total,
       totalPages,
       currentPage: page,
-      hasMore: page < totalPages,
-      query,
+      hasMore,
+      query: trimmedQuery,
       searchTime: Date.now() - startTime,
+      suggestions,
     }
 
-    // Cache the result
-    searchCache.set(cacheKey, {
-      data: searchResponse,
-      timestamp: Date.now(),
-    })
-
-    return searchResponse
+    searchCache.set(cacheKey, { data: response, timestamp: Date.now() })
+    return response
   } catch (error) {
-    console.error("WordPress search error:", error)
-
-    // Return empty results on error
-    return {
-      results: [],
-      total: 0,
-      totalPages: 0,
-      currentPage: page,
-      hasMore: false,
-      query,
-      searchTime: Date.now() - startTime,
-    }
+    console.error("WordPress GraphQL search encountered an error", error)
+    const fallback = buildEmptyResponse(trimmedQuery, page, perPage, startTime)
+    searchCache.set(cacheKey, { data: fallback, timestamp: Date.now() })
+    return fallback
   }
 }
 
-/**
- * Get search suggestions from WordPress
- */
-export async function getSearchSuggestions(query: string, limit = 8, country?: string): Promise<string[]> {
-  if (!query || query.length < 2) return []
+export async function getSearchSuggestions(
+  query: string,
+  limit = 8,
+  country?: string,
+): Promise<string[]> {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) {
+    return []
+  }
 
   try {
-    const normalizedCountry = country?.trim().toLowerCase()
-    // Search for posts to extract suggestions
-    const response = await fetch(
-      `${resolveWordPressRestApiUrl(normalizedCountry)}/posts?search=${encodeURIComponent(query)}&per_page=20&_fields=title,categories,tags&_embed=1`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    )
-
-    if (!response.ok) return []
-
-    const posts: any[] = await response.json()
-    const suggestions = new Set<string>()
-
-    posts.forEach((post) => {
-      // Extract words from titles
-      const titleWords = post.title.rendered
-        .toLowerCase()
-        .replace(/[^\w\s]/g, " ")
-        .split(/\s+/)
-        .filter((word: string) => word.length > 2 && word.includes(query.toLowerCase()))
-
-      titleWords.forEach((word: string) => {
-        if (suggestions.size < limit) {
-          suggestions.add(word)
-        }
-      })
-
-      // Add category names if embedded
-      if (post._embedded?.["wp:term"]?.[0]) {
-        post._embedded["wp:term"][0].forEach((category: any) => {
-          if (category.name.toLowerCase().includes(query.toLowerCase()) && suggestions.size < limit) {
-            suggestions.add(category.name.toLowerCase())
-          }
-        })
-      }
+    const response = await searchWordPressPosts(trimmed, {
+      page: 1,
+      perPage: limit,
+      country,
+      orderBy: "relevance",
+      order: "desc",
     })
 
-    return Array.from(suggestions).slice(0, limit)
+    const candidates = response.suggestions && response.suggestions.length > 0
+      ? response.suggestions
+      : response.results.map((post) => sanitizeTitle(post.title))
+
+    return Array.from(new Set(candidates.filter(Boolean))).slice(0, limit)
   } catch (error) {
-    console.error("Error getting search suggestions:", error)
+    console.error("WordPress GraphQL suggestion lookup failed", error)
     return []
   }
 }
 
-/**
- * Search categories
- */
-export async function searchCategories(query: string): Promise<any[]> {
-  try {
-    const response = await fetch(
-      `${DEFAULT_WORDPRESS_REST_API_URL}/categories?search=${encodeURIComponent(query)}&per_page=10`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    )
-
-    if (!response.ok) return []
-    return await response.json()
-  } catch (error) {
-    console.error("Error searching categories:", error)
-    return []
-  }
-}
-
-/**
- * Search tags
- */
-export async function searchTags(query: string): Promise<any[]> {
-  try {
-    const response = await fetch(`${DEFAULT_WORDPRESS_REST_API_URL}/tags?search=${encodeURIComponent(query)}&per_page=10`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) return []
-    return await response.json()
-  } catch (error) {
-    console.error("Error searching tags:", error)
-    return []
-  }
-}
-
-/**
- * Get popular search terms (mock implementation - you could store this in WordPress)
- */
-export function getPopularSearchTerms(): string[] {
-  return ["politics", "business", "technology", "sports", "entertainment", "health", "education", "economy"]
-}
-
-/**
- * Clear search cache
- */
 export function clearSearchCache(): void {
   searchCache.clear()
 }
 
-/**
- * Format search result excerpt
- */
-export function formatSearchExcerpt(excerpt: string, maxLength = 150): string {
-  // Remove HTML tags
-  const cleanExcerpt = excerpt.replace(/<[^>]*>/g, "").trim()
-
-  if (cleanExcerpt.length <= maxLength) {
-    return cleanExcerpt
-  }
-
-  // Truncate at word boundary
-  const truncated = cleanExcerpt.substring(0, maxLength)
-  const lastSpace = truncated.lastIndexOf(" ")
-
-  return lastSpace > 0 ? truncated.substring(0, lastSpace) + "..." : truncated + "..."
-}
-
-/**
- * Highlight search terms in text
- */
-export function highlightSearchTerms(text: string, searchQuery: string): string {
-  if (!searchQuery) return text
-
-  const terms = searchQuery.split(/\s+/).filter((term) => term.length > 1)
-  let highlightedText = text
-
-  terms.forEach((term) => {
-    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
-    highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>')
-  })
-
-  return highlightedText
-}
-
-// Server action wrappers for Next.js
 export async function searchWordPressPostsAction(
   query: string,
   options: {
@@ -341,8 +231,9 @@ export async function searchWordPressPostsAction(
     categories?: number[]
     tags?: number[]
     author?: number
-    orderBy?: "relevance" | "date" | "title"
-    order?: "asc" | "desc"
+    orderBy?: OrderByOption
+    order?: OrderDirectionOption
+    country?: string
   } = {},
 ): Promise<SearchResponse> {
   "use server"
