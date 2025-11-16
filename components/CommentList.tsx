@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { fetchCommentsPageAction } from "@/app/[countryCode]/article/[slug]/actions"
+import { fetchCommentsPageAction } from "@/app/(public)/[countryCode]/article/[slug]/actions"
 
 interface CommentListProps {
   postId: string
