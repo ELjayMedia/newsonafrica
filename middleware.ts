@@ -19,6 +19,38 @@ const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
   "/entertainment": "entertainment",
 }
 
+const LEGACY_HOME_QUERY_FLAG = "legacyRedirect"
+const LEGACY_HOME_COOKIE_FLAG = "forceLegacyHomeRedirect"
+const LEGACY_HOME_HEADER_FLAG = "x-force-legacy-home-redirect"
+
+function isTruthyFlag(value: string | undefined): boolean {
+  if (!value) return false
+  return ["1", "true", "TRUE", "True"].includes(value)
+}
+
+function shouldForceLegacyHomeRedirect(request: NextRequest): boolean {
+  if (isTruthyFlag(process.env.FORCE_LEGACY_HOME_REDIRECT)) {
+    return true
+  }
+
+  const urlFlag = request.nextUrl.searchParams.get(LEGACY_HOME_QUERY_FLAG)
+  if (isTruthyFlag(urlFlag ?? undefined)) {
+    return true
+  }
+
+  const cookieFlag = request.cookies.get(LEGACY_HOME_COOKIE_FLAG)?.value
+  if (isTruthyFlag(cookieFlag)) {
+    return true
+  }
+
+  const headerFlag = request.headers.get(LEGACY_HOME_HEADER_FLAG) ?? undefined
+  if (isTruthyFlag(headerFlag)) {
+    return true
+  }
+
+  return false
+}
+
 function getCountryFromRequest(request: NextRequest): string {
   const rawCookieValue =
     request.cookies.get("country")?.value ??
@@ -76,7 +108,7 @@ export async function middleware(request: NextRequest) {
   const legacyRedirect = await handleLegacyPostRedirect(pathname, request, country)
   if (legacyRedirect) {
     response = legacyRedirect
-  } else if (pathname === "/") {
+  } else if (pathname === "/" && shouldForceLegacyHomeRedirect(request)) {
     const redirectUrl = `/${country}`
     response = NextResponse.redirect(new URL(redirectUrl, request.url))
   } else if (LEGACY_CATEGORY_SLUGS[pathname]) {
