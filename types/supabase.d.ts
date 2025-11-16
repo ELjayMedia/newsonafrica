@@ -22,7 +22,7 @@ export interface Database {
           featured_image: Json | null
           category: string | null
           tags: string[] | null
-          read_state: string | null
+          read_state: Database["public"]["Enums"]["bookmark_read_state"] | null
           note: string | null
           created_at: string
         }
@@ -38,7 +38,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
           note?: string | null
           created_at?: string
         }
@@ -54,7 +54,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
           note?: string | null
           created_at?: string
         }
@@ -63,6 +63,12 @@ export interface Database {
             foreignKeyName: "bookmarks_collection_id_fkey"
             columns: ["collection_id"]
             referencedRelation: "bookmark_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
             referencedColumns: ["id"]
           }
         ]
