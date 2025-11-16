@@ -28,6 +28,32 @@ describe("buildBookmarkStats", () => {
     expect(stats.collections).toEqual({ "collection-1": 2, __unassigned__: 1 })
   })
 
+  it("prefers counter aggregates for totals and collection unread counts", () => {
+    const stats = buildBookmarkStats({
+      statusRows: [
+        { readState: "read", count: 2 },
+        { readState: "unread", count: 3 },
+      ],
+      categoryRows: [
+        { category: "news", count: 5 },
+      ],
+      collectionRows: [
+        { collectionId: "collection-1", readState: "unread", count: 2 },
+        { collectionId: null, readState: "unread", count: 1 },
+      ],
+      counterRow: {
+        totalCount: 12,
+        unreadCount: 7,
+        readCount: 5,
+        collectionUnreadCounts: { "collection-9": 4, __unassigned__: 3 },
+      },
+    })
+
+    expect(stats.total).toBe(12)
+    expect(stats.unread).toBe(7)
+    expect(stats.collections).toEqual({ "collection-9": 4, __unassigned__: 3 })
+  })
+
   it("does not leak previous category counts when a filter removes them", () => {
     const first = buildBookmarkStats({
       statusRows: [{ readState: "read", count: 1 }],
