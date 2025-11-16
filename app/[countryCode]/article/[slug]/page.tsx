@@ -24,9 +24,11 @@ import {
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 
+const ARTICLE_PAGE_REVALIDATE_SECONDS = CACHE_DURATIONS.SHORT
+
 export const dynamic = "force-static"
 export const dynamicParams = true
-export const revalidate = CACHE_DURATIONS.SHORT
+export const revalidate = ARTICLE_PAGE_REVALIDATE_SECONDS
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }

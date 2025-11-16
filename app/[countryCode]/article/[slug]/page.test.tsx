@@ -59,11 +59,7 @@ import {
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
 } from '@/lib/wordpress-queries'
-import {
-  ArticleTemporarilyUnavailableError,
-  buildArticleCountryPriority,
-  loadArticleWithFallback,
-} from './article-data'
+import { buildArticleCountryPriority, loadArticleWithFallback } from './article-data'
 import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 
@@ -110,14 +106,6 @@ describe('ArticlePage', () => {
     ok: true as const,
     data,
     ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
-  })
-
-  const graphqlFailure = (message = 'GraphQL failure') => ({
-    ok: false as const,
-    kind: 'graphql_error' as const,
-    message,
-    errors: [{ message }],
-    error: new Error(message),
   })
 
   it('renders post content', async () => {
