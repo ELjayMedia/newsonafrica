@@ -77,9 +77,9 @@ export const BookmarkButton = ({
           })
         } else {
           await addBookmark({
-            wp_post_id: postId,
-            edition_code: editionCode,
-            collection_id: collectionId || undefined,
+            postId,
+            editionCode,
+            collectionId: collectionId || undefined,
             country: editionCode,
             title,
             slug,
