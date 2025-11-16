@@ -32,8 +32,11 @@ import type {
   BookmarkMutationPayload,
   BookmarkStats,
   BookmarkStatsDelta,
+  BookmarkReadState,
 } from "@/types/bookmarks"
 import { ensureActionError } from "@/lib/supabase/action-result"
+import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
+import { resolveReadStateKey, isUnreadReadStateKey } from "@/lib/bookmarks/read-state"
 
 interface Bookmark {
   id: string
@@ -49,7 +52,7 @@ interface Bookmark {
   featuredImage?: any
   category?: string | null
   tags?: string[] | null
-  readState?: "unread" | "read"
+  readState?: BookmarkReadState
   notes?: string | null
 }
 
@@ -91,37 +94,69 @@ type BookmarkHydrationMap = Record<
 
 const DEFAULT_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
 const BOOKMARK_SYNC_QUEUE = "bookmarks-write-queue"
-const DEFAULT_STATS: BookmarkStats = { total: 0, unread: 0, categories: {} }
+const DEFAULT_STATS: BookmarkStats = {
+  total: 0,
+  unread: 0,
+  categories: {},
+  readStates: {},
+  collections: {},
+}
 const DEFAULT_PAGINATION: BookmarkPagination = {
   limit: 0,
   hasMore: false,
   nextCursor: null,
 }
 
-const EMPTY_STATS_DELTA: BookmarkStatsDelta = { total: 0, unread: 0, categories: {} }
+const EMPTY_STATS_DELTA: BookmarkStatsDelta = {
+  total: 0,
+  unread: 0,
+  categories: {},
+  readStates: {},
+  collections: {},
+}
+
+const mergeCountMap = (
+  base: Record<string, number>,
+  delta: Record<string, number>,
+): Record<string, number> => {
+  if (!delta || !Object.keys(delta).length) {
+    return base
+  }
+
+  const next = { ...base }
+  for (const [key, change] of Object.entries(delta)) {
+    if (!change) continue
+    const updated = (next[key] ?? 0) + change
+    if (updated <= 0) {
+      delete next[key]
+    } else {
+      next[key] = updated
+    }
+  }
+
+  return next
+}
 
 const applyStatsDelta = (stats: BookmarkStats, delta: BookmarkStatsDelta): BookmarkStats => {
   if (!delta) return stats
 
-  const categories = { ...stats.categories }
-  for (const [category, change] of Object.entries(delta.categories)) {
-    const next = (categories[category] ?? 0) + change
-    if (next <= 0) {
-      delete categories[category]
-    } else {
-      categories[category] = next
-    }
-  }
+  const categories = mergeCountMap(stats.categories, delta.categories)
+  const readStates = mergeCountMap(stats.readStates, delta.readStates)
+  const collections = mergeCountMap(stats.collections, delta.collections)
 
   return {
     total: Math.max(0, stats.total + delta.total),
     unread: Math.max(0, stats.unread + delta.unread),
     categories,
+    readStates,
+    collections,
   }
 }
 
 const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
   const categories: Record<string, number> = {}
+  const readStates: Record<string, number> = {}
+  const collections: Record<string, number> = {}
   let unread = 0
 
   for (const bookmark of items) {
@@ -129,8 +164,12 @@ const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
       categories[bookmark.category] = (categories[bookmark.category] || 0) + 1
     }
 
-    if (bookmark.readState !== "read") {
+    const readStateKey = resolveReadStateKey(bookmark.readState)
+    readStates[readStateKey] = (readStates[readStateKey] || 0) + 1
+    if (isUnreadReadStateKey(readStateKey)) {
       unread += 1
+      const collectionKey = collectionKeyForId(bookmark.collectionId ?? null)
+      collections[collectionKey] = (collections[collectionKey] || 0) + 1
     }
   }
 
@@ -138,6 +177,8 @@ const deriveStatsFromBookmarks = (items: Bookmark[]): BookmarkStats => {
     total: items.length,
     unread,
     categories,
+    readStates,
+    collections,
   }
 }
 
@@ -208,7 +249,7 @@ const formatBookmarkRow = (
   const featuredImage =
     extractFeaturedImage(row.featuredImage) || extractFeaturedImage(metadata?.featuredImage) || null
 
-  const readState = row.readState === "read" || row.readState === "unread" ? row.readState : undefined
+  const readState = typeof row.readState === "string" ? (row.readState as BookmarkReadState) : undefined
 
   return {
     id: row.id,
@@ -425,7 +466,9 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       const hasStatsDelta =
         statsDelta.total !== 0 ||
         statsDelta.unread !== 0 ||
-        Object.keys(statsDelta.categories).length > 0
+        Object.keys(statsDelta.categories).length > 0 ||
+        Object.keys(statsDelta.readStates).length > 0 ||
+        Object.keys(statsDelta.collections).length > 0
 
       if (hasStatsDelta) {
         const nextStats = applyStatsDelta(statsRef.current, statsDelta)

@@ -1,7 +1,9 @@
 import type { BookmarkListRow, BookmarkStatsDelta } from "@/types/bookmarks"
+import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
+import { isUnreadReadStateKey, resolveReadStateKey } from "@/lib/bookmarks/read-state"
 
 export function createEmptyStatsDelta(): BookmarkStatsDelta {
-  return { total: 0, unread: 0, categories: {} }
+  return { total: 0, unread: 0, categories: {}, readStates: {}, collections: {} }
 }
 
 function mergeCategoryDelta(
@@ -13,13 +15,21 @@ function mergeCategoryDelta(
     return
   }
 
-  const next = (accumulator[category] ?? 0) + delta
+  mergeCountDelta(accumulator, category, delta)
+}
+
+function mergeCountDelta(
+  accumulator: Record<string, number>,
+  key: string,
+  delta: number,
+): void {
+  const next = (accumulator[key] ?? 0) + delta
   if (next === 0) {
-    delete accumulator[category]
+    delete accumulator[key]
     return
   }
 
-  accumulator[category] = next
+  accumulator[key] = next
 }
 
 export function computeStatsDelta({
@@ -33,16 +43,24 @@ export function computeStatsDelta({
 
   if (previous) {
     delta.total -= 1
-    if (previous.readState !== "read") {
+    const readStateKey = resolveReadStateKey(previous.readState)
+    mergeCountDelta(delta.readStates, readStateKey, -1)
+    if (isUnreadReadStateKey(readStateKey)) {
       delta.unread -= 1
+      const collectionKey = collectionKeyForId(previous.collectionId ?? null)
+      mergeCountDelta(delta.collections, collectionKey, -1)
     }
     mergeCategoryDelta(delta.categories, previous.category, -1)
   }
 
   if (next) {
     delta.total += 1
-    if (next.readState !== "read") {
+    const readStateKey = resolveReadStateKey(next.readState)
+    mergeCountDelta(delta.readStates, readStateKey, 1)
+    if (isUnreadReadStateKey(readStateKey)) {
       delta.unread += 1
+      const collectionKey = collectionKeyForId(next.collectionId ?? null)
+      mergeCountDelta(delta.collections, collectionKey, 1)
     }
     mergeCategoryDelta(delta.categories, next.category, 1)
   }
@@ -57,6 +75,14 @@ export function combineStatsDeltas(deltas: BookmarkStatsDelta[]): BookmarkStatsD
 
     for (const [category, value] of Object.entries(delta.categories)) {
       mergeCategoryDelta(acc.categories, category, value)
+    }
+
+    for (const [state, value] of Object.entries(delta.readStates)) {
+      mergeCountDelta(acc.readStates, state, value)
+    }
+
+    for (const [collection, value] of Object.entries(delta.collections)) {
+      mergeCountDelta(acc.collections, collection, value)
     }
 
     return acc

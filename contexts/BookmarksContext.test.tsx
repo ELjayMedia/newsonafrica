@@ -56,7 +56,13 @@ describe("BookmarksProvider optimistic updates", () => {
     listBookmarks.mockResolvedValue({
       data: {
         bookmarks: [],
-        stats: { total: 0, unread: 0, categories: {} },
+        stats: {
+          total: 0,
+          unread: 0,
+          categories: {},
+          readStates: {},
+          collections: {},
+        },
         pagination: { limit: 0, hasMore: false, nextCursor: null },
       },
       error: null,
@@ -94,7 +100,13 @@ describe("BookmarksProvider optimistic updates", () => {
     addBookmark.mockResolvedValue({
       data: {
         added: [serverRow],
-        statsDelta: { total: 1, unread: 1, categories: { News: 1 } },
+        statsDelta: {
+          total: 1,
+          unread: 1,
+          categories: { News: 1 },
+          readStates: { unread: 1 },
+          collections: { __unassigned__: 1 },
+        },
       },
       error: null,
     })
@@ -167,7 +179,13 @@ describe("BookmarksProvider optimistic updates", () => {
             createdAt: createdAt,
           },
         ],
-        stats: { total: 1, unread: 1, categories: { Tech: 1 } },
+        stats: {
+          total: 1,
+          unread: 1,
+          categories: { Tech: 1 },
+          readStates: { unread: 1 },
+          collections: { __unassigned__: 1 },
+        },
         pagination: { limit: 1, hasMore: false, nextCursor: null },
       },
       error: null,
@@ -192,7 +210,13 @@ describe("BookmarksProvider optimistic updates", () => {
             createdAt: createdAt,
           },
         ],
-        statsDelta: { total: 0, unread: -1, categories: {} },
+        statsDelta: {
+          total: 0,
+          unread: -1,
+          categories: {},
+          readStates: { unread: -1, read: 1 },
+          collections: { __unassigned__: -1 },
+        },
       },
       error: null,
     })

@@ -5,6 +5,7 @@ import type {
   BookmarkUserCounterUpdate,
 } from "@/types/bookmarks"
 import type { Database, Json } from "@/types/supabase"
+import { collectionKeyForId, UNASSIGNED_COLLECTION_KEY } from "@/lib/bookmarks/collection-keys"
 
 type BookmarkSupabaseClient = SupabaseClient<Database>
 
@@ -16,8 +17,6 @@ export interface BookmarkCounterDelta {
 }
 
 export type CollectionUnreadCounts = Record<string, number>
-
-const UNASSIGNED_COLLECTION_KEY = "__unassigned__"
 
 function parseCollectionCounts(value: Json | null): CollectionUnreadCounts {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -103,12 +102,7 @@ function buildCounterPayload(
   }
 }
 
-export function collectionKeyForId(collectionId: string | null): string {
-  if (!collectionId) {
-    return UNASSIGNED_COLLECTION_KEY
-  }
-  return collectionId
-}
+export { collectionKeyForId }
 
 export async function applyBookmarkCounterDelta(
   client: BookmarkSupabaseClient,

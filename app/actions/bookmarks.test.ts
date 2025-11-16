@@ -74,7 +74,13 @@ describe("bookmark actions cache invalidation", () => {
   it("revalidates bookmark tags when listing with revalidate=true", async () => {
     supabaseRef.current = {}
     executeListQueryMock.mockResolvedValueOnce({ data: [], error: null })
-    getDefaultBookmarkStatsMock.mockReturnValue({ total: 0, unread: 0, categories: {} })
+    getDefaultBookmarkStatsMock.mockReturnValue({
+      total: 0,
+      unread: 0,
+      categories: {},
+      readStates: {},
+      collections: {},
+    })
     derivePaginationMock.mockReturnValue({ items: [] })
 
     const { listBookmarks } = await import("./bookmarks")
