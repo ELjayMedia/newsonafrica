@@ -6,18 +6,18 @@ describe("buildBookmarkStats", () => {
   it("summarises totals, unread counts, categories, read states and collections", () => {
     const stats = buildBookmarkStats({
       statusRows: [
-        { readState: "read", count: 2 },
-        { readState: "unread", count: 3 },
-        { readState: "in_progress", count: 1 },
+        { read_state: "read", count: 2 },
+        { read_state: "unread", count: 3 },
+        { read_state: "in_progress", count: 1 },
       ],
       categoryRows: [
         { category: "news", count: 4 },
         { category: "analysis", count: 1 },
       ],
       collectionRows: [
-        { collectionId: "collection-1", readState: "unread", count: 2 },
-        { collectionId: "collection-2", readState: "read", count: 1 },
-        { collectionId: null, readState: "in_progress", count: 1 },
+        { collection_id: "collection-1", read_state: "unread", count: 2 },
+        { collection_id: "collection-2", read_state: "read", count: 1 },
+        { collection_id: null, read_state: "in_progress", count: 1 },
       ],
     })
 
@@ -31,15 +31,15 @@ describe("buildBookmarkStats", () => {
   it("prefers counter aggregates for totals and collection unread counts", () => {
     const stats = buildBookmarkStats({
       statusRows: [
-        { readState: "read", count: 2 },
-        { readState: "unread", count: 3 },
+        { read_state: "read", count: 2 },
+        { read_state: "unread", count: 3 },
       ],
       categoryRows: [
         { category: "news", count: 5 },
       ],
       collectionRows: [
-        { collectionId: "collection-1", readState: "unread", count: 2 },
-        { collectionId: null, readState: "unread", count: 1 },
+        { collection_id: "collection-1", read_state: "unread", count: 2 },
+        { collection_id: null, read_state: "unread", count: 1 },
       ],
       counterRow: {
         totalCount: 12,
@@ -56,7 +56,7 @@ describe("buildBookmarkStats", () => {
 
   it("does not leak previous category counts when a filter removes them", () => {
     const first = buildBookmarkStats({
-      statusRows: [{ readState: "read", count: 1 }],
+      statusRows: [{ read_state: "read", count: 1 }],
       categoryRows: [{ category: "news", count: 1 }],
       collectionRows: [],
     })
@@ -64,7 +64,7 @@ describe("buildBookmarkStats", () => {
     expect(first.categories).toEqual({ news: 1 })
 
     const filtered = buildBookmarkStats({
-      statusRows: [{ readState: "read", count: 1 }],
+      statusRows: [{ read_state: "read", count: 1 }],
       categoryRows: [],
       collectionRows: [],
     })
