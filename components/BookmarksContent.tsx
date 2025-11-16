@@ -84,9 +84,9 @@ export default function BookmarksContent() {
 
     // Filter by read status
     if (filterBy === "unread") {
-      filtered = filtered.filter((b) => b.read_state !== "read")
+      filtered = filtered.filter((b) => b.readState !== "read")
     } else if (filterBy === "read") {
-      filtered = filtered.filter((b) => b.read_state === "read")
+      filtered = filtered.filter((b) => b.readState === "read")
     }
 
     // Filter by category
@@ -104,8 +104,8 @@ export default function BookmarksContent() {
         case "title":
           return a.title.localeCompare(b.title)
         case "unread":
-          if (a.read_state === "unread" && b.read_state === "read") return -1
-          if (a.read_state === "read" && b.read_state === "unread") return 1
+          if (a.readState === "unread" && b.readState === "read") return -1
+          if (a.readState === "read" && b.readState === "unread") return 1
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         default:
           return 0
@@ -117,7 +117,7 @@ export default function BookmarksContent() {
     if (selectedBookmarks.length === filteredBookmarks.length) {
       setSelectedBookmarks([])
     } else {
-      setSelectedBookmarks(filteredBookmarks.map((b) => b.wp_post_id))
+      setSelectedBookmarks(filteredBookmarks.map((b) => b.postId))
     }
   }, [selectedBookmarks, filteredBookmarks])
 
@@ -327,13 +327,13 @@ export default function BookmarksContent() {
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-4">
                     <Checkbox
-                      checked={selectedBookmarks.includes(bookmark.wp_post_id)}
+                      checked={selectedBookmarks.includes(bookmark.postId)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedBookmarks((prev) => [...prev, bookmark.wp_post_id])
+                          setSelectedBookmarks((prev) => [...prev, bookmark.postId])
                         } else {
                           setSelectedBookmarks((prev) =>
-                            prev.filter((id) => id !== bookmark.wp_post_id),
+                            prev.filter((id) => id !== bookmark.postId),
                           )
                         }
                       }}
@@ -361,7 +361,7 @@ export default function BookmarksContent() {
                             {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
                           </span>
 
-                          {bookmark.read_state === "unread" && (
+                          {bookmark.readState === "unread" && (
                             <Badge variant="secondary" className="text-xs">
                               Unread
                             </Badge>
@@ -373,14 +373,14 @@ export default function BookmarksContent() {
                             </Badge>
                           )}
 
-                          {bookmark.edition_code && (
+                          {bookmark.editionCode && (
                             <Badge variant="outline" className="text-xs">
-                              Edition: {bookmark.edition_code.toUpperCase()}
+                              Edition: {bookmark.editionCode.toUpperCase()}
                             </Badge>
                           )}
 
                           <Badge variant="outline" className="text-xs">
-                            Collection: {bookmark.collection_id ?? "Unassigned"}
+                            Collection: {bookmark.collectionId ?? "Unassigned"}
                           </Badge>
 
                           {bookmark.note && (
@@ -405,20 +405,20 @@ export default function BookmarksContent() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              if (bookmark.read_state === "read") {
-                                markAsUnread(bookmark.wp_post_id)
+                              if (bookmark.readState === "read") {
+                                markAsUnread(bookmark.postId)
                               } else {
-                                markAsRead(bookmark.wp_post_id)
+                                markAsRead(bookmark.postId)
                               }
                             }}
                           >
                             <BookOpen className="h-4 w-4 mr-2" />
-                            Mark as {bookmark.read_state === "read" ? "Unread" : "Read"}
+                            Mark as {bookmark.readState === "read" ? "Unread" : "Read"}
                           </DropdownMenuItem>
 
                           <DropdownMenuItem
                             onClick={() => {
-                              setNoteBookmarkId(bookmark.wp_post_id)
+                              setNoteBookmarkId(bookmark.postId)
                               setNoteText(bookmark.note || "")
                               setNoteDialogOpen(true)
                             }}
@@ -430,7 +430,7 @@ export default function BookmarksContent() {
                           <DropdownMenuSeparator />
 
                           <DropdownMenuItem
-                            onClick={() => removeBookmark(bookmark.wp_post_id)}
+                            onClick={() => removeBookmark(bookmark.postId)}
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
