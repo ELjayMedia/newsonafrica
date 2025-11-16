@@ -137,16 +137,17 @@ describe("BookmarksProvider optimistic updates", () => {
 
     await act(async () => {
       await ctx!.addBookmark({
-        postId: "post-1",
+        wp_post_id: "post-1",
         title: "Client Title",
         slug: "client-slug",
         excerpt: "Client excerpt",
         featuredImage: null,
         category: "News",
         tags: ["tag"],
-        readState: "unread",
-        notes: null,
+        read_state: "unread",
+        note: null,
         country: "sz",
+        edition_code: "sz",
       })
     })
 
@@ -250,6 +251,6 @@ describe("BookmarksProvider optimistic updates", () => {
     })
 
     await waitFor(() => expect(ctx!.stats.unread).toBe(0))
-    expect(ctx!.bookmarks[0].readState).toBe("read")
+    expect(ctx!.bookmarks[0].read_state).toBe("read")
   })
 })

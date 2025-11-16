@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 interface BookmarkButtonProps {
-  country?: string
+  editionCode?: string
   collectionId?: string | null
   postId: string
   title?: string
@@ -27,7 +27,7 @@ interface BookmarkButtonProps {
 
 export const BookmarkButton = ({
   postId,
-  country,
+  editionCode,
   collectionId,
   title = "Untitled Post",
   slug = "",
@@ -77,9 +77,10 @@ export const BookmarkButton = ({
           })
         } else {
           await addBookmark({
-            postId,
-            country,
-            collectionId,
+            wp_post_id: postId,
+            edition_code: editionCode,
+            collection_id: collectionId || undefined,
+            country: editionCode,
             title,
             slug,
             excerpt,
@@ -109,7 +110,8 @@ export const BookmarkButton = ({
       isMarked,
       isDisabled,
       postId,
-      country,
+      editionCode,
+      collectionId,
       title,
       slug,
       excerpt,

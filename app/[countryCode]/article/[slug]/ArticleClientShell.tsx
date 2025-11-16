@@ -341,7 +341,7 @@ export function ArticleClientShell({
             {postId && (
               <BookmarkButton
                 postId={postId}
-                country={countryCode}
+                editionCode={countryCode}
                 slug={slug}
                 title={title}
                 featuredImage={heroImage}

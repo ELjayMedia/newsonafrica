@@ -62,7 +62,7 @@ export default function BookmarksContent() {
   const [filterBy, setFilterBy] = useState<FilterOption>("all")
   const [selectedCategory, _setSelectedCategory] = useState<string>("all")
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
-  const [notePostId, setNotePostId] = useState<string>("")
+  const [noteBookmarkId, setNoteBookmarkId] = useState<string>("")
   const [noteText, setNoteText] = useState("")
   const { toast } = useToast()
 
@@ -84,9 +84,9 @@ export default function BookmarksContent() {
 
     // Filter by read status
     if (filterBy === "unread") {
-      filtered = filtered.filter((b) => b.readState !== "read")
+      filtered = filtered.filter((b) => b.read_state !== "read")
     } else if (filterBy === "read") {
-      filtered = filtered.filter((b) => b.readState === "read")
+      filtered = filtered.filter((b) => b.read_state === "read")
     }
 
     // Filter by category
@@ -104,8 +104,8 @@ export default function BookmarksContent() {
         case "title":
           return a.title.localeCompare(b.title)
         case "unread":
-          if (a.readState === "unread" && b.readState === "read") return -1
-          if (a.readState === "read" && b.readState === "unread") return 1
+          if (a.read_state === "unread" && b.read_state === "read") return -1
+          if (a.read_state === "read" && b.read_state === "unread") return 1
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         default:
           return 0
@@ -117,7 +117,7 @@ export default function BookmarksContent() {
     if (selectedBookmarks.length === filteredBookmarks.length) {
       setSelectedBookmarks([])
     } else {
-      setSelectedBookmarks(filteredBookmarks.map((b) => b.postId))
+      setSelectedBookmarks(filteredBookmarks.map((b) => b.wp_post_id))
     }
   }, [selectedBookmarks, filteredBookmarks])
 
@@ -165,12 +165,12 @@ export default function BookmarksContent() {
   }, [exportBookmarks, toast])
 
   const handleAddNote = useCallback(async () => {
-    if (!notePostId || !noteText.trim()) return
+    if (!noteBookmarkId || !noteText.trim()) return
 
     try {
-      await addNote(notePostId, noteText.trim())
+      await addNote(noteBookmarkId, noteText.trim())
       setNoteDialogOpen(false)
-      setNotePostId("")
+      setNoteBookmarkId("")
       setNoteText("")
       toast({
         title: "Note added",
@@ -184,7 +184,7 @@ export default function BookmarksContent() {
         variant: "destructive",
       })
     }
-  }, [notePostId, noteText, addNote, toast])
+  }, [noteBookmarkId, noteText, addNote, toast])
 
   if (loading) {
     return (
@@ -326,23 +326,25 @@ export default function BookmarksContent() {
               <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-4">
-                  <Checkbox
-                    checked={selectedBookmarks.includes(bookmark.postId)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedBookmarks((prev) => [...prev, bookmark.postId])
-                      } else {
-                        setSelectedBookmarks((prev) => prev.filter((id) => id !== bookmark.postId))
-                      }
-                    }}
-                  />
+                    <Checkbox
+                      checked={selectedBookmarks.includes(bookmark.wp_post_id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedBookmarks((prev) => [...prev, bookmark.wp_post_id])
+                        } else {
+                          setSelectedBookmarks((prev) =>
+                            prev.filter((id) => id !== bookmark.wp_post_id),
+                          )
+                        }
+                      }}
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
 
                         <Link
-                          href={getArticleUrl(bookmark.slug, bookmark.country)}
+                          href={getArticleUrl(bookmark.slug, bookmark.edition_code || bookmark.country)}
                           className="block hover:text-blue-600 transition-colors"
                         >
 
@@ -353,13 +355,13 @@ export default function BookmarksContent() {
                           <p className="text-sm text-gray-600 mb-2 line-clamp-2">{sanitizedExcerpt}</p>
                         )}
 
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                           <span className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
                             {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
                           </span>
 
-                          {bookmark.readState === "unread" && (
+                          {bookmark.read_state === "unread" && (
                             <Badge variant="secondary" className="text-xs">
                               Unread
                             </Badge>
@@ -371,7 +373,17 @@ export default function BookmarksContent() {
                             </Badge>
                           )}
 
-                          {bookmark.notes && (
+                          {bookmark.edition_code && (
+                            <Badge variant="outline" className="text-xs">
+                              Edition: {bookmark.edition_code.toUpperCase()}
+                            </Badge>
+                          )}
+
+                          <Badge variant="outline" className="text-xs">
+                            Collection: {bookmark.collection_id ?? "Unassigned"}
+                          </Badge>
+
+                          {bookmark.note && (
                             <span className="flex items-center text-blue-600">
                               <StickyNote className="h-3 w-3 mr-1" />
                               Note
@@ -379,8 +391,8 @@ export default function BookmarksContent() {
                           )}
                         </div>
 
-                        {bookmark.notes && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">{bookmark.notes}</div>
+                        {bookmark.note && (
+                          <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">{bookmark.note}</div>
                         )}
                       </div>
 
@@ -393,31 +405,34 @@ export default function BookmarksContent() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              if (bookmark.readState === "read") {
-                                markAsUnread(bookmark.postId)
+                              if (bookmark.read_state === "read") {
+                                markAsUnread(bookmark.wp_post_id)
                               } else {
-                                markAsRead(bookmark.postId)
+                                markAsRead(bookmark.wp_post_id)
                               }
                             }}
                           >
                             <BookOpen className="h-4 w-4 mr-2" />
-                            Mark as {bookmark.readState === "read" ? "Unread" : "Read"}
+                            Mark as {bookmark.read_state === "read" ? "Unread" : "Read"}
                           </DropdownMenuItem>
 
                           <DropdownMenuItem
                             onClick={() => {
-                              setNotePostId(bookmark.postId)
-                              setNoteText(bookmark.notes || "")
+                              setNoteBookmarkId(bookmark.wp_post_id)
+                              setNoteText(bookmark.note || "")
                               setNoteDialogOpen(true)
                             }}
                           >
                             <StickyNote className="h-4 w-4 mr-2" />
-                            {bookmark.notes ? "Edit Note" : "Add Note"}
+                            {bookmark.note ? "Edit Note" : "Add Note"}
                           </DropdownMenuItem>
 
                           <DropdownMenuSeparator />
 
-                          <DropdownMenuItem onClick={() => removeBookmark(bookmark.postId)} className="text-red-600">
+                          <DropdownMenuItem
+                            onClick={() => removeBookmark(bookmark.wp_post_id)}
+                            className="text-red-600"
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Remove
                           </DropdownMenuItem>
@@ -426,7 +441,7 @@ export default function BookmarksContent() {
                     </div>
                   </div>
                 </div>
-                </CardContent>
+              </CardContent>
               </Card>
             )
           })
