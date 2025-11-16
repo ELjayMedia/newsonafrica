@@ -18,9 +18,9 @@ export type BookmarkReadStateKey = BookmarkReadState | "unknown"
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkTableRow["wp_post_id"]
+  postId: BookmarkPostId
   wpPostId?: BookmarkTableRow["wp_post_id"]
-  country: BookmarkTableRow["edition_code"]
+  country: BookmarkCountry
   editionCode: BookmarkTableRow["edition_code"]
   collectionId: BookmarkTableRow["collection_id"]
   title: BookmarkTableRow["title"]
@@ -30,7 +30,7 @@ export interface BookmarkRow {
   category: BookmarkTableRow["category"]
   tags: BookmarkTableRow["tags"]
   readState: BookmarkTableRow["read_state"]
-  notes: BookmarkTableRow["note"]
+  note: BookmarkTableRow["note"]
   createdAt: BookmarkTableRow["created_at"]
 }
 
@@ -49,7 +49,7 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
   "category",
   "tags",
   "read_state:readState",
-  "note:notes",
+  "note:note",
   "created_at:createdAt",
 ].join(", ")
 
@@ -69,7 +69,7 @@ export type BookmarkListRow = Pick<
   | "category"
   | "tags"
   | "readState"
-  | "notes"
+  | "note"
   | "createdAt"
 >
 

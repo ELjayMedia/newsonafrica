@@ -113,7 +113,7 @@ describe("/api/bookmarks cache revalidation", () => {
       category: "news",
       tags: null,
       readState: "unread" as const,
-      notes: null,
+      note: null,
       createdAt: "2024-01-01T00:00:00.000Z",
     }
 
@@ -182,7 +182,7 @@ describe("/api/bookmarks cache revalidation", () => {
       category: null,
       tags: null,
       readState: "unread" as const,
-      notes: null,
+      note: null,
       createdAt: "2024-01-01T00:00:00.000Z",
     }
 
@@ -257,7 +257,7 @@ describe("/api/bookmarks cache revalidation", () => {
           country: "ke",
           collectionId: "collection-3",
           readState: "unread" as const,
-          notes: "updated",
+          note: "updated",
         },
         error: null,
       }),
@@ -279,7 +279,7 @@ describe("/api/bookmarks cache revalidation", () => {
 
     const request = new NextRequest("https://example.com/api/bookmarks", {
       method: "PUT",
-      body: JSON.stringify({ payload: { postId: "post-2", updates: { notes: "updated" } } }),
+      body: JSON.stringify({ payload: { postId: "post-2", updates: { note: "updated" } } }),
       headers: { "content-type": "application/json" },
     })
 
@@ -287,7 +287,7 @@ describe("/api/bookmarks cache revalidation", () => {
 
     expect(response.status).toBe(200)
     const json = await response.json()
-    expect(json.data.updated[0]).toMatchObject({ id: "bookmark-2", notes: "updated" })
+    expect(json.data.updated[0]).toMatchObject({ id: "bookmark-2", note: "updated" })
     expect(json.data.statsDelta).toEqual({
       total: 0,
       unread: 0,
@@ -492,7 +492,7 @@ describe("/api/bookmarks cursor pagination", () => {
         category: null,
         tags: null,
         readState: "unread" as const,
-        notes: null,
+        note: null,
         createdAt: "2024-01-03T00:00:00.000Z",
       },
       {
@@ -507,7 +507,7 @@ describe("/api/bookmarks cursor pagination", () => {
         category: null,
         tags: null,
         readState: "unread" as const,
-        notes: null,
+        note: null,
         createdAt: "2024-01-02T00:00:00.000Z",
       },
       {
@@ -522,7 +522,7 @@ describe("/api/bookmarks cursor pagination", () => {
         category: null,
         tags: null,
         readState: "unread" as const,
-        notes: null,
+        note: null,
         createdAt: "2024-01-01T00:00:00.000Z",
       },
     ]

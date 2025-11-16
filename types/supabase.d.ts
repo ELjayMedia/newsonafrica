@@ -22,7 +22,7 @@ export interface Database {
           featured_image: Json | null
           category: string | null
           tags: string[] | null
-          read_state: string | null
+          read_state: Database["public"]["Enums"]["bookmark_read_state"] | null
           note: string | null
           created_at: string
         }
@@ -38,7 +38,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
           note?: string | null
           created_at?: string
         }
@@ -54,7 +54,7 @@ export interface Database {
           featured_image?: Json | null
           category?: string | null
           tags?: string[] | null
-          read_state?: string | null
+          read_state?: Database["public"]["Enums"]["bookmark_read_state"] | null
           note?: string | null
           created_at?: string
         }

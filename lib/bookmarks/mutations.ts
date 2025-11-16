@@ -11,7 +11,7 @@ export interface BookmarkUpdateInput {
   category?: BookmarkListRow["category"] | null
   tags?: BookmarkListRow["tags"] | null
   readState?: BookmarkListRow["readState"] | null
-  notes?: BookmarkListRow["notes"] | null
+  note?: BookmarkListRow["note"] | null
   featuredImage?: BookmarkListRow["featuredImage"] | null
   country?: BookmarkListRow["country"] | null
   editionCode?: BookmarkListRow["editionCode"] | null
@@ -171,7 +171,7 @@ export function prepareBookmarkUpdatePayload(
     dbUpdates.read_state = value ?? null
   })
 
-  assignField("notes", (value) => {
+  assignField("note", (value) => {
     dbUpdates.note = value ?? null
   })
 

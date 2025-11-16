@@ -212,7 +212,7 @@ function buildBookmarkUpdateInput(raw: unknown): BookmarkUpdateInput | null {
   assign("readState", readStateValue)
 
   const noteValue = sanitizeNoteValue((raw as Record<string, unknown>).note ?? (raw as Record<string, unknown>).notes)
-  assign("notes", noteValue)
+  assign("note", noteValue)
 
   if (Object.prototype.hasOwnProperty.call(raw, "featuredImage")) {
     assign("featuredImage", sanitizeFeaturedImage((raw as Record<string, unknown>).featuredImage))
