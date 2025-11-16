@@ -111,7 +111,10 @@ export class WordPressGraphQLResponseError extends Error {
 export type WordPressGraphQLSuccess<T> =
   { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
 
-export type WordPressGraphQLFailureKind = "http_error" | "graphql_error"
+export type WordPressGraphQLFailureKind =
+  | "http_error"
+  | "graphql_error"
+  | "invalid_payload"
 
 export interface WordPressGraphQLFailureBase {
   ok: false
@@ -135,9 +138,34 @@ export interface WordPressGraphQLResponseFailure
   error: WordPressGraphQLResponseError
 }
 
+export class WordPressGraphQLInvalidPayloadError extends Error {
+  public readonly response: Response
+  public readonly bodySnippet: string
+  public readonly cause: unknown
+
+  constructor(response: Response, bodySnippet: string, cause?: unknown) {
+    super("WordPress GraphQL response was not valid JSON")
+    this.name = "WordPressGraphQLInvalidPayloadError"
+    this.response = response
+    this.bodySnippet = bodySnippet
+    this.cause = cause
+  }
+}
+
+export interface WordPressGraphQLInvalidPayloadFailure
+  extends WordPressGraphQLFailureBase {
+  kind: "invalid_payload"
+  status: number
+  statusText: string
+  bodySnippet: string
+  response: Response
+  error: WordPressGraphQLInvalidPayloadError
+}
+
 export type WordPressGraphQLFailure =
   | WordPressGraphQLHTTPFailure
   | WordPressGraphQLResponseFailure
+  | WordPressGraphQLInvalidPayloadFailure
 
 export type WordPressGraphQLResult<T> =
   | WordPressGraphQLSuccess<T>
@@ -179,6 +207,34 @@ const buildGraphQLFailureResult = (
     kind: "graphql_error",
     message: error.message,
     errors,
+    error,
+  }
+}
+
+const truncateBodySnippet = (body: string, maxLength = 512): string => {
+  if (body.length <= maxLength) {
+    return body
+  }
+
+  return `${body.slice(0, maxLength)}…`
+}
+
+const buildInvalidPayloadFailureResult = (
+  response: Response,
+  body: string,
+  cause?: unknown,
+): WordPressGraphQLInvalidPayloadFailure => {
+  const snippet = truncateBodySnippet(body)
+  const error = new WordPressGraphQLInvalidPayloadError(response, snippet, cause)
+
+  return {
+    ok: false,
+    kind: "invalid_payload",
+    message: error.message,
+    status: response.status,
+    statusText: response.statusText,
+    bodySnippet: snippet,
+    response,
     error,
   }
 }
@@ -283,7 +339,31 @@ export function fetchWordPressGraphQL<T>(
         return buildHTTPFailureResult(res)
       }
 
-      const json = (await res.json()) as {
+      let rawBody: string
+      try {
+        rawBody = await res.text()
+      } catch (bodyError) {
+        console.error("[v0] GraphQL response body read failed:", bodyError)
+        removeMemoizedEntry()
+        throw bodyError
+      }
+
+      let parsedPayload: unknown
+      try {
+        parsedPayload = rawBody ? JSON.parse(rawBody) : {}
+      } catch (parseError) {
+        console.error("[v0] GraphQL response JSON parse failed")
+        removeMemoizedEntry()
+        return buildInvalidPayloadFailureResult(res, rawBody, parseError)
+      }
+
+      if (!parsedPayload || typeof parsedPayload !== "object" || Array.isArray(parsedPayload)) {
+        console.error("[v0] GraphQL response payload was not an object")
+        removeMemoizedEntry()
+        return buildInvalidPayloadFailureResult(res, rawBody)
+      }
+
+      const json = parsedPayload as {
         data?: T
         errors?: Array<{ message: string; [key: string]: unknown }>
       }
