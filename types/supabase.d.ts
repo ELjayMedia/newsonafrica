@@ -155,21 +155,21 @@ export interface Database {
           id: string
           comment_id: string
           user_id: string
-          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
+          reaction_type: Database["public"]["Enums"]["comment_reaction_type"]
           created_at: string
         }
         Insert: {
           id?: string
           comment_id: string
           user_id: string
-          reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
+          reaction_type: Database["public"]["Enums"]["comment_reaction_type"]
           created_at?: string
         }
         Update: {
           id?: string
           comment_id?: string
           user_id?: string
-          reaction_type?: "like" | "love" | "laugh" | "sad" | "angry"
+          reaction_type?: Database["public"]["Enums"]["comment_reaction_type"]
           created_at?: string
         }
         Relationships: []
@@ -182,7 +182,7 @@ export interface Database {
           user_id: string
           body: string
           parent_id: string | null
-          status: "active" | "flagged" | "deleted" | "pending"
+          status: Database["public"]["Enums"]["comment_status"]
           reported_by: string | null
           report_reason: string | null
           reviewed_at: string | null
@@ -199,7 +199,7 @@ export interface Database {
           user_id: string
           body: string
           parent_id?: string | null
-          status?: "active" | "flagged" | "deleted" | "pending"
+          status?: Database["public"]["Enums"]["comment_status"]
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
@@ -216,7 +216,7 @@ export interface Database {
           user_id?: string
           body?: string
           parent_id?: string | null
-          status?: "active" | "flagged" | "deleted" | "pending"
+          status?: Database["public"]["Enums"]["comment_status"]
           reported_by?: string | null
           report_reason?: string | null
           reviewed_at?: string | null
@@ -483,6 +483,8 @@ export interface Database {
         | "unread"
         | "in_progress"
         | "read"
+      comment_reaction_type: "like" | "love" | "laugh" | "sad" | "angry"
+      comment_status: "active" | "flagged" | "deleted" | "pending"
     }
   }
 }

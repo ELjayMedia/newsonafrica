@@ -1,12 +1,12 @@
-export type CommentReactionType = "like" | "love" | "laugh" | "sad" | "angry"
+import type { CommentReactionType, CommentStatus } from "@/types/comments"
+
+export type { CommentReactionType, CommentStatus }
 
 export type CommentReaction = {
   type: CommentReactionType
   count: number
   reactedByCurrentUser: boolean
 }
-
-export type CommentStatus = "active" | "flagged" | "deleted" | "pending"
 
 export type Comment = {
   id: string

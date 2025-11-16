@@ -638,7 +638,10 @@ export async function updateComment(
 }
 
 // Delete a comment (soft delete by updating status if the column exists, otherwise hard delete)
-export async function deleteComment(id: string): Promise<void> {
+export async function deleteComment(
+  id: string,
+  options?: { wpPostId?: string; editionCode?: string | null },
+): Promise<void> {
   await checkColumns() // Ensure schema cache warmed, though deletion handled via API
 
   try {
@@ -663,7 +666,7 @@ export async function deleteComment(id: string): Promise<void> {
       throw new Error(message)
     }
 
-    clearCommentCache()
+    clearCommentCache(options?.wpPostId, options?.editionCode ?? null)
   } catch (error) {
     if (isOfflineError(error)) {
       console.warn("Comment delete will retry when online", error)

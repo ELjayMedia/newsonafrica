@@ -262,7 +262,7 @@ export function CommentList({
       .channel(`comments-${postId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` },
+        { event: '*', schema: 'public', table: 'comments', filter: `wp_post_id=eq.${postId}` },
         () => {
           void loadCommentsRef.current({ append: false })
         },
