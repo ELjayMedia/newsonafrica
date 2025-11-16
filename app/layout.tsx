@@ -4,7 +4,6 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 import { SchemaOrg } from "@/components/SchemaOrg"
-import { LayoutStructure } from "@/components/LayoutStructure"
 import { TopBar } from "@/components/TopBar"
 import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
 import { PreferredCountrySync } from "@/components/PreferredCountrySync"
@@ -109,13 +108,7 @@ export default async function RootLayout({
           <ClientDynamicComponents />
           <TopBar />
           <div className="flex-grow rounded-xs shadow-none bg-transparent">
-            <div className="mx-auto max-w-full md:max-w-[980px]">
-              <LayoutStructure>
-                <main className="flex-1 bg-white shadow-md md:rounded-lg overflow-hidden lg:max-w-[calc(100%-320px)]">
-                  <div className="p-2 md:p-4 w-full md:w-auto">{children}</div>
-                </main>
-              </LayoutStructure>
-            </div>
+            <div className="mx-auto max-w-full md:max-w-[980px]">{children}</div>
           </div>
           <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
             <Link href="/privacy-policy" className="hover:underline">

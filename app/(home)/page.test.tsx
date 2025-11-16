@@ -44,7 +44,7 @@ describe("HomePage", () => {
   })
 
   it("passes the server-generated fallback into HomeContent", async () => {
-    const homeDataModule = await import("./(home)/home-data")
+    const homeDataModule = await import("./home-data")
     const { SUPPORTED_COUNTRIES } = await import("@/lib/utils/routing")
 
     const aggregatedHome: AggregatedHomeData = {
