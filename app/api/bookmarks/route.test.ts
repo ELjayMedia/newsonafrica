@@ -166,6 +166,71 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
 
+  it("accepts action-style envelope payloads for bookmark mutations", async () => {
+    const user = { id: "user-action" }
+
+    const insertedRow = {
+      id: "bookmark-action",
+      userId: user.id,
+      postId: "post-action",
+      slug: "",
+      country: "gh",
+      collectionId: null,
+      title: "Action payload",
+      excerpt: "",
+      featuredImage: null,
+      category: "news",
+      tags: null,
+      readState: "unread" as const,
+      note: null,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    }
+
+    const existingCheck = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+    }
+
+    const insertChain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: insertedRow }),
+    }
+
+    const supabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+      from: vi
+        .fn()
+        .mockImplementationOnce(() => existingCheck)
+        .mockImplementationOnce(() => insertChain),
+    }
+
+    vi.mocked(createSupabaseRouteClient).mockReturnValueOnce({
+      supabase: supabase as any,
+      applyCookies: applyCookiesMock,
+    })
+
+    const request = new NextRequest("https://example.com/api/bookmarks", {
+      method: "POST",
+      body: JSON.stringify({
+        action: {
+          payload: { postId: "post-action", country: "gh", category: "news" },
+        },
+      }),
+      headers: { "content-type": "application/json" },
+    })
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json.data.added[0]).toMatchObject({ id: "bookmark-action", country: "gh" })
+    expect(json.error).toBeNull()
+  })
+
   it("falls back to the default edition tag when no bookmark country is provided", async () => {
     const user = { id: "user-4" }
 
