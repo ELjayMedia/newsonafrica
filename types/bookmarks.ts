@@ -19,7 +19,9 @@ export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
   postId: BookmarkTableRow["wp_post_id"]
+  wpPostId?: BookmarkTableRow["wp_post_id"]
   country: BookmarkTableRow["edition_code"]
+  editionCode: BookmarkTableRow["edition_code"]
   collectionId: BookmarkTableRow["collection_id"]
   title: BookmarkTableRow["title"]
   slug: BookmarkTableRow["slug"]
@@ -36,8 +38,10 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
   "id",
   "user_id:userId",
   "wp_post_id:postId",
+  "wp_post_id:wpPostId",
   "slug",
   "edition_code:country",
+  "edition_code:editionCode",
   "collection_id:collectionId",
   "title",
   "excerpt",
@@ -54,8 +58,10 @@ export type BookmarkListRow = Pick<
   | "id"
   | "userId"
   | "postId"
+  | "wpPostId"
   | "slug"
   | "country"
+  | "editionCode"
   | "collectionId"
   | "title"
   | "excerpt"

@@ -13,6 +13,7 @@ import {
   BOOKMARK_LIST_SELECT_COLUMNS,
   type BookmarkListRow,
   type BookmarkMutationPayload,
+  type BookmarkReadState,
   type BookmarkStats,
 } from "@/types/bookmarks"
 import { ensureBookmarkCollectionAssignment } from "@/lib/bookmarks/collections"
@@ -76,6 +77,158 @@ function sanitizeFeaturedImage(value: unknown): Record<string, unknown> | null {
   return value
 }
 
+const READ_STATE_VALUES: readonly BookmarkReadState[] = [
+  "unread",
+  "in_progress",
+  "read",
+]
+const READ_STATE_SET = new Set<BookmarkReadState>(READ_STATE_VALUES)
+
+const SORTABLE_COLUMNS = {
+  created_at: { alias: "createdAt" },
+  title: { alias: "title" },
+  read_state: { alias: "readState" },
+  wp_post_id: { alias: "postId" },
+  edition_code: { alias: "editionCode" },
+  collection_id: { alias: "collectionId" },
+} as const
+
+type SortColumn = keyof typeof SORTABLE_COLUMNS
+
+function sanitizeEditionCode(value: unknown): string | null | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed.length) {
+      return null
+    }
+    const normalized = trimmed.toLowerCase()
+    if (normalized === "null") {
+      return null
+    }
+    return normalized
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function sanitizeCollectionId(value: unknown): string | null | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed.length || trimmed.toLowerCase() === "null") {
+      return null
+    }
+    return trimmed
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function sanitizeNoteValue(value: unknown): string | null | undefined {
+  if (typeof value === "string") {
+    return value
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function sanitizeReadState(value: unknown): BookmarkReadState | null | undefined {
+  if (typeof value === "string") {
+    const normalizedRaw = value
+      .trim()
+      .toLowerCase()
+      .replace(/-/g, "_")
+    if (normalizedRaw === "null") {
+      return null
+    }
+    const normalized = normalizedRaw as BookmarkReadState
+    if (READ_STATE_SET.has(normalized)) {
+      return normalized
+    }
+    return undefined
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function sanitizeNullableString(value: unknown): string | null | undefined {
+  if (typeof value === "string") {
+    return value
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function sanitizeNullableCategory(value: unknown): string | null | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  }
+  if (value === null) {
+    return null
+  }
+  return undefined
+}
+
+function resolveSortColumn(value: string | null): SortColumn {
+  if (value && value in SORTABLE_COLUMNS) {
+    return value as SortColumn
+  }
+  return "created_at"
+}
+
+function buildBookmarkUpdateInput(raw: unknown): BookmarkUpdateInput | null {
+  if (!isPlainRecord(raw)) {
+    return null
+  }
+
+  const updates: BookmarkUpdateInput = {}
+
+  const assign = <K extends keyof BookmarkUpdateInput>(key: K, value: BookmarkUpdateInput[K] | undefined) => {
+    if (value !== undefined) {
+      updates[key] = value
+    }
+  }
+
+  assign("title", sanitizeNullableString(raw.title))
+  assign("slug", sanitizeNullableString(raw.slug))
+  assign("excerpt", sanitizeNullableString(raw.excerpt))
+  assign("category", sanitizeNullableCategory(raw.category))
+
+  if (Object.prototype.hasOwnProperty.call(raw, "tags")) {
+    assign("tags", sanitizeStringArray(raw.tags))
+  }
+
+  const readStateValue = sanitizeReadState((raw as Record<string, unknown>).readState ?? (raw as Record<string, unknown>).status)
+  assign("readState", readStateValue)
+
+  const noteValue = sanitizeNoteValue((raw as Record<string, unknown>).note ?? (raw as Record<string, unknown>).notes)
+  assign("notes", noteValue)
+
+  if (Object.prototype.hasOwnProperty.call(raw, "featuredImage")) {
+    assign("featuredImage", sanitizeFeaturedImage((raw as Record<string, unknown>).featuredImage))
+  }
+
+  const editionValue = sanitizeEditionCode(
+    (raw as Record<string, unknown>).editionCode ?? (raw as Record<string, unknown>).country,
+  )
+  assign("editionCode", editionValue)
+
+  const collectionValue = sanitizeCollectionId((raw as Record<string, unknown>).collectionId)
+  assign("collectionId", collectionValue)
+
+  return updates
+}
+
 function successResponse(
   request: NextRequest,
   respond: <T extends NextResponse>(response: T) => T,
@@ -122,14 +275,14 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(Number.parseInt(searchParams.get("limit") || "20"), 1)
     const search = searchParams.get("search")
     const category = searchParams.get("category")
-    const status = searchParams.get("status") // 'read' | 'unread'
-    const sortBy = searchParams.get("sortBy") || "created_at"
-    const sortOrder = searchParams.get("sortOrder") || "desc"
+    const readStateParam = searchParams.get("readState") ?? searchParams.get("status")
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc"
+    const sortColumn = resolveSortColumn(searchParams.get("sortBy"))
 
     const cursorParam = searchParams.get("cursor")
     let cursor: {
-      sortBy: string
-      sortOrder: string
+      sortBy: SortColumn
+      sortOrder: "asc" | "desc"
       value: string | number | null
       id: string | null
     } | null = null
@@ -139,8 +292,10 @@ export async function GET(request: NextRequest) {
         const decoded = JSON.parse(decodeURIComponent(cursorParam))
         if (decoded && typeof decoded === "object") {
           const parsed = decoded as Record<string, unknown>
-          const cursorSortBy = typeof parsed.sortBy === "string" ? parsed.sortBy : sortBy
-          const cursorSortOrder = typeof parsed.sortOrder === "string" ? parsed.sortOrder : sortOrder
+          const cursorSortBy = resolveSortColumn(
+            typeof parsed.sortBy === "string" ? parsed.sortBy : sortColumn,
+          )
+          const cursorSortOrder = parsed.sortOrder === "asc" ? "asc" : "desc"
           const cursorValue =
             typeof parsed.value === "string" || typeof parsed.value === "number"
               ? (parsed.value as string | number)
@@ -166,27 +321,70 @@ export async function GET(request: NextRequest) {
     const { data: rows, error } = await executeListQuery(supabase, "bookmarks", (query) => {
       let builder = query.select(BOOKMARK_LIST_SELECT_COLUMNS).eq("user_id", user.id)
 
-      if (search) {
-        builder = builder.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,note.ilike.%${search}%`)
+      const searchTerm = typeof search === "string" ? search.trim() : ""
+      if (searchTerm) {
+        const escapedSearch = searchTerm.replace(/,/g, "\\,")
+        builder = builder.or(
+          [
+            `title.ilike.%${escapedSearch}%`,
+            `excerpt.ilike.%${escapedSearch}%`,
+            `note.ilike.%${escapedSearch}%`,
+            `wp_post_id.ilike.%${escapedSearch}%`,
+            `edition_code.ilike.%${escapedSearch}%`,
+            `collection_id.ilike.%${escapedSearch}%`,
+          ].join(","),
+        )
       }
 
       if (category && category !== "all") {
         builder = builder.eq("category", category)
       }
 
-      if (status && status !== "all") {
-        if (status === "unread") {
-          builder = builder.neq("read_state", "read")
-        } else {
-          builder = builder.eq("read_state", status)
+      const postIdFilter =
+        searchParams.get("postId") ?? searchParams.get("wpPostId") ?? searchParams.get("wp_post_id")
+      if (postIdFilter && postIdFilter.trim().length) {
+        builder = builder.eq("wp_post_id", postIdFilter.trim())
+      }
+
+      const editionFilterRaw =
+        searchParams.get("editionCode") ??
+        searchParams.get("edition_code") ??
+        searchParams.get("country")
+      if (editionFilterRaw && editionFilterRaw !== "all") {
+        const editionFilter = sanitizeEditionCode(editionFilterRaw)
+        if (editionFilter === null) {
+          builder = builder.is("edition_code", null)
+        } else if (editionFilter) {
+          builder = builder.eq("edition_code", editionFilter)
+        }
+      }
+
+      const collectionFilterRaw = searchParams.get("collectionId") ?? searchParams.get("collection_id")
+      if (collectionFilterRaw) {
+        const collectionFilter = sanitizeCollectionId(collectionFilterRaw)
+        if (collectionFilter === null) {
+          builder = builder.is("collection_id", null)
+        } else if (collectionFilter) {
+          builder = builder.eq("collection_id", collectionFilter)
+        }
+      }
+
+      if (readStateParam && readStateParam !== "all") {
+        const normalizedReadState = sanitizeReadState(readStateParam)
+        if (normalizedReadState === null) {
+          builder = builder.is("read_state", null)
+        } else if (normalizedReadState) {
+          builder = builder.eq("read_state", normalizedReadState)
+        } else if (readStateParam === "unread") {
+          builder = builder.or("read_state.eq.unread,read_state.eq.in_progress,read_state.is.null")
         }
       }
 
       builder = builder
-        .order(sortBy, { ascending })
+        .order(sortColumn, { ascending })
         .order("id", { ascending })
 
-      if (cursor && cursor.sortBy === sortBy && cursor.sortOrder === sortOrder) {
+      if (cursor && cursor.sortBy === sortColumn && cursor.sortOrder === sortOrder) {
         const comparator = ascending ? "gt" : "lt"
         const idComparator = ascending ? "gt" : "lt"
         const cursorValue = cursor.value
@@ -213,13 +411,13 @@ export async function GET(request: NextRequest) {
       rows: (rows ?? []) as BookmarkListRow[],
       cursorEncoder: (row) => {
         const record = row as BookmarkListRow
-        const camelSortKey = sortBy.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase())
+        const sortKey = SORTABLE_COLUMNS[sortColumn]?.alias ?? sortColumn
         const sortValue =
-          (record as Record<string, unknown>)[camelSortKey] ??
-          (record as Record<string, unknown>)[sortBy] ??
+          (record as Record<string, unknown>)[sortKey] ??
+          (record as Record<string, unknown>)[sortColumn] ??
           null
         const cursorPayload = {
-          sortBy,
+          sortBy: sortColumn,
           sortOrder,
           value: sortValue,
           id: record.id ?? null,
@@ -309,18 +507,7 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
     }
 
-    const {
-      postId,
-      title,
-      slug,
-      excerpt,
-      featuredImage,
-      category,
-      tags,
-      notes,
-      country,
-      collectionId,
-    } = payload
+    const postId = typeof payload.postId === "string" ? payload.postId.trim() : ""
 
     if (!postId) {
       return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
@@ -329,19 +516,13 @@ export async function POST(request: NextRequest) {
     const titleValue = typeof payload.title === "string" ? payload.title : undefined
     const slugValue = typeof payload.slug === "string" ? payload.slug : undefined
     const excerptValue = typeof payload.excerpt === "string" ? payload.excerpt : undefined
-    const categoryValue =
-      typeof payload.category === "string" && payload.category.trim().length > 0
-        ? payload.category
-        : null
+    const categoryValue = sanitizeNullableCategory(payload.category) ?? null
     const tagsValue = sanitizeStringArray(payload.tags)
-    const notesRaw = payload.notes ?? payload.note
-    const notesValue =
-      typeof notesRaw === "string" ? notesRaw : notesRaw === null ? null : undefined
-    const countryValue =
-      typeof payload.country === "string" && payload.country.trim().length > 0
-        ? payload.country
-        : null
+    const noteValue = sanitizeNoteValue(payload.note ?? payload.notes)
+    const readStateValue = sanitizeReadState(payload.readState ?? payload.status)
     const featuredImageValue = sanitizeFeaturedImage(payload.featuredImage)
+    const editionCodeInput = sanitizeEditionCode(payload.editionCode ?? payload.country) ?? null
+    const collectionInput = sanitizeCollectionId(payload.collectionId)
 
     // Check if bookmark already exists
     const { data: existingBookmark } = await supabase
@@ -355,12 +536,11 @@ export async function POST(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Bookmark already exists" }, { status: 409 }))
     }
 
-    const editionCodeInput = country ?? null
     let resolvedCollectionId: string | null = null
     try {
       resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
         userId: user.id,
-        collectionId: collectionId ?? null,
+        collectionId: collectionInput ?? null,
         editionCode: editionCodeInput,
       })
     } catch (collectionError) {
@@ -373,14 +553,14 @@ export async function POST(request: NextRequest) {
       wp_post_id: postId,
       edition_code: editionCodeInput,
       collection_id: resolvedCollectionId,
-      title: title || "Untitled Post",
-      slug: slug || "",
-      excerpt: excerpt || "",
-      featured_image: featuredImage && typeof featuredImage === "object" ? featuredImage : null,
-      category: category || null,
-      tags: tags || null,
-      read_state: "unread" as const,
-      note: notes || null,
+      title: titleValue ?? "Untitled Post",
+      slug: slugValue ?? "",
+      excerpt: excerptValue ?? "",
+      featured_image: featuredImageValue,
+      category: categoryValue,
+      tags: tagsValue,
+      read_state: readStateValue ?? "unread",
+      note: noteValue ?? null,
     }
 
     const { data, error } = await supabase
@@ -395,7 +575,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertedBookmark = data as BookmarkListRow
-    const primaryEdition = insertedBookmark.country ?? editionCodeInput
+    const primaryEdition = insertedBookmark.editionCode ?? insertedBookmark.country ?? editionCodeInput
     const editionSources = [primaryEdition, ...getRequestEditionPreferences(request)]
     const collectionSources = [insertedBookmark.collectionId ?? resolvedCollectionId ?? null]
 
@@ -446,10 +626,13 @@ export async function PUT(request: NextRequest) {
       return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
     }
 
-    const { postId } = payload
-    const updates = payload.updates as BookmarkUpdateInput | undefined
+    const postId = typeof payload.postId === "string" ? payload.postId.trim() : ""
+    if (!postId) {
+      return respond(jsonWithCors(request, { error: "Post ID is required" }, { status: 400 }))
+    }
 
-    if (!updates || typeof updates !== "object") {
+    const updates = buildBookmarkUpdateInput(payload.updates)
+    if (!updates) {
       return respond(jsonWithCors(request, { error: "Updates payload is required" }, { status: 400 }))
     }
 
@@ -511,9 +694,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const updatedBookmark = data as BookmarkListRow
-    const updatedCountry =
-      updatedBookmark.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
-    const editionSources = [updatedCountry, ...getRequestEditionPreferences(request)]
+    const updatedEdition =
+      updatedBookmark.editionCode ??
+      updatedBookmark.country ??
+      targetEditionCode ??
+      existingRow.editionCode ??
+      existingRow.country ??
+      preparation.targetEditionCode ??
+      null
+    const editionSources = [updatedEdition, ...getRequestEditionPreferences(request)]
     const collectionSources = [
       existingRow.collectionId ?? null,
       updatedBookmark.collectionId ?? targetCollectionId ?? existingRow.collectionId ?? null,
@@ -596,7 +785,9 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const removedCountries = removedBookmarks.map((row) => row.country ?? null)
+    const removedCountries = removedBookmarks.map(
+      (row) => row.editionCode ?? row.country ?? null,
+    )
     const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
     const collectionSources = removedBookmarks.map((row) => row.collectionId ?? null)
 
