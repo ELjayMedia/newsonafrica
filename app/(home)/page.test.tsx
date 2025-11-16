@@ -5,6 +5,17 @@ import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import type { AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
+vi.mock("@/config/env", () => ({
+  ENV: {
+    NEXT_PUBLIC_SITE_URL: "https://example.com",
+    NEXT_PUBLIC_DEFAULT_SITE: "sz",
+    NEXT_PUBLIC_WP_SZ_GRAPHQL: undefined,
+    NEXT_PUBLIC_WP_ZA_GRAPHQL: undefined,
+    ANALYTICS_API_BASE_URL: "https://example.com/api/analytics",
+    WORDPRESS_REQUEST_TIMEOUT_MS: 30_000,
+  },
+}))
+
 vi.mock("server-only", () => ({}))
 
 const homeContentMock = vi.fn(
@@ -124,5 +135,21 @@ describe("HomePage", () => {
     expect(JSON.parse(getByTestId("initial-data").getAttribute("data-value") ?? "{}")).toEqual(
       expected.initialData,
     )
+  })
+
+  it("generates metadata for the African edition with canonical alternates", async () => {
+    const { generateMetadata } = await import("./page")
+
+    const metadata = await generateMetadata()
+
+    expect(metadata.title).toContain("African Edition")
+    expect(metadata.description).toContain("African edition")
+    expect(metadata.alternates?.canonical).toBe("https://example.com")
+    expect(metadata.alternates?.languages).toMatchObject({
+      "x-default": "https://example.com",
+      "en-SZ": "https://example.com/sz",
+    })
+    expect(metadata.openGraph?.url).toBe("https://example.com")
+    expect(metadata.openGraph?.type).toBe("website")
   })
 })
