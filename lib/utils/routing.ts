@@ -150,6 +150,15 @@ export function getHomeHref(pathname?: string | null): string {
   return "/"
 }
 
+export function resolveCountryForLayout(countryCode?: string | null): string {
+  const normalized = countryCode?.toLowerCase()
+  if (normalized && SUPPORTED_COUNTRIES.includes(normalized)) {
+    return normalized
+  }
+
+  return getServerCountry()
+}
+
 /**
  * Check if a URL is using the old /post/ format
  */
