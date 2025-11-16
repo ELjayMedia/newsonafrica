@@ -105,7 +105,10 @@ export function CommentItem({
     }
 
     try {
-      await deleteComment(comment.id)
+      await deleteComment(comment.id, {
+        wpPostId: comment.wp_post_id,
+        editionCode: comment.edition_code,
+      })
       toast({
         title: "Comment deleted",
         description: "Your comment has been deleted successfully",

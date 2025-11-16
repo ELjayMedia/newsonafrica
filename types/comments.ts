@@ -1,9 +1,11 @@
 import type { Database } from "@/types/supabase"
 
 export type CommentRow = Database["public"]["Tables"]["comments"]["Row"]
-export type CommentStatus = CommentRow["status"]
+export type CommentInsert = Database["public"]["Tables"]["comments"]["Insert"]
+export type CommentUpdate = Database["public"]["Tables"]["comments"]["Update"]
+export type CommentStatus = Database["public"]["Enums"]["comment_status"]
 export type CommentReactionRow = Database["public"]["Tables"]["comment_reactions"]["Row"]
-export type CommentReactionType = CommentReactionRow["reaction_type"]
+export type CommentReactionType = Database["public"]["Enums"]["comment_reaction_type"]
 
 export type CommentListRow = Pick<
   CommentRow,
