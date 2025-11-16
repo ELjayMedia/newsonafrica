@@ -242,7 +242,7 @@ describe('ArticlePage', () => {
     expect(redirect).toHaveBeenCalledWith('/za/article/test')
   })
 
-  it('propagates fetch failures to the error boundary', async () => {
+  it('renders the fallback markup when wordpress fails without stale content', async () => {
     const failure = new Error('Network down')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
@@ -252,12 +252,13 @@ describe('ArticlePage', () => {
       return graphqlSuccess({}) as any
     })
 
-    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toMatchObject({
-      name: 'ArticleTemporarilyUnavailableError',
-      message: expect.stringContaining('Temporary WordPress failure'),
-      errors: expect.arrayContaining([failure]),
-    })
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
 
+    expect(screen.getByText('Temporarily unavailable')).toBeInTheDocument()
+    expect(
+      screen.getByText('We hit a temporary issue loading this story. Please try again in a moment.'),
+    ).toBeInTheDocument()
     expect(notFound).not.toHaveBeenCalled()
   })
 
@@ -300,14 +301,6 @@ describe('ArticlePage', () => {
     expect(loadSpy).toHaveBeenCalledWith('test', expect.any(Array), true)
 
     loadSpy.mockRestore()
-  })
-
-  it('throws the temporary error when no stale article exists', async () => {
-    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Service unavailable'))
-
-    await expect(Page({ params: { countryCode: 'sz', slug: 'missing' } })).rejects.toBeInstanceOf(
-      ArticleTemporarilyUnavailableError,
-    )
   })
 
   it('passes the preview flag to the article loader when generating metadata in draft mode', async () => {

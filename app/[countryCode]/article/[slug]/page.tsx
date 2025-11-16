@@ -8,6 +8,7 @@ import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -21,9 +22,11 @@ import {
 } from "./article-data"
 
 import { ArticleClientContent } from "./ArticleClientContent"
+import { ArticleServerFallback } from "./ArticleServerFallback"
 
 export const dynamic = "force-static"
 export const dynamicParams = true
+export const revalidate = CACHE_DURATIONS.SHORT
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
@@ -162,6 +165,22 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (usingStaleContent) {
+      if (!resolvedArticle.staleArticle) {
+        const errorDigest =
+          typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
+            ? (resolvedArticle.error as { digest?: string }).digest
+            : undefined
+        const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
+
+        return (
+          <ArticleServerFallback
+            digest={errorDigest}
+            failureCountries={failureCountries}
+            staleArticle={resolvedArticle.staleArticle}
+          />
+        )
+      }
+
       throw resolvedArticle.error
     }
 

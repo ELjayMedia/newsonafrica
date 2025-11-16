@@ -2,14 +2,15 @@
 
 import { useEffect } from 'react'
 
-import { stripHtml } from '@/lib/search'
-
 import type { WordPressPost } from '@/types/wp'
+
+import { ArticleUnavailableContent } from './ArticleUnavailableContent'
 
 type ErrorWithStaleArticle = Error & {
   digest?: string
   staleArticle?: WordPressPost | null
   staleSourceCountry?: string | null
+  failures?: Array<{ country?: string }>
 }
 
 export default function ArticleError({
@@ -24,31 +25,17 @@ export default function ArticleError({
   }, [error])
 
   const staleArticle = error?.staleArticle ?? null
-  const headline = staleArticle?.title ? stripHtml(staleArticle.title) : null
-  const summary = staleArticle?.excerpt ? stripHtml(staleArticle.excerpt) : null
+  const failureCountries = error?.failures?.map((failure) => failure?.country).filter(Boolean) as
+    | string[]
+    | undefined
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center gap-6 px-4 py-12 text-center">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Temporarily unavailable</h1>
-        <p className="text-base text-muted-foreground">
-          We hit a temporary issue loading this story. Please try again in a moment.
-        </p>
-      </div>
-
-      {staleArticle ? (
-        <div className="w-full max-w-xl rounded-lg border border-border/70 bg-muted/40 p-5 text-left shadow-sm">
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Last available headline
-            </p>
-            <h2 className="text-lg font-semibold leading-tight">{headline || 'Untitled article'}</h2>
-            {summary ? (
-              <p className="text-sm text-muted-foreground line-clamp-3">{summary}</p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      <ArticleUnavailableContent
+        staleArticle={staleArticle}
+        digest={error?.digest ?? null}
+        failureCountries={failureCountries}
+      />
 
       <button
         type="button"
