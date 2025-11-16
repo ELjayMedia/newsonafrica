@@ -32,6 +32,10 @@ Supabase authentication relies on valid environment variables and a running loca
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+4. Validate the schema matches the latest migrations:
+   - `bookmarks` and `comments` should expose `wp_post_id` + `edition_code` columns.
+   - The tables `bookmark_collections`, `bookmark_user_counters`, and `comment_reactions` must exist with RLS enabled. Inspect them via `supabase db inspect --schema public --table <table>`.
+   - Run `psql "$SUPABASE_DB_URL" -c "\dRp+ public.bookmark_collections"` to confirm owner-only policies are active.
 
 ## Cache revalidation does not refresh content
 
