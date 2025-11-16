@@ -63,7 +63,15 @@ const resolveRelatedPostId = (article: {
     return null
   }
 
-  const decodedId = Number(relayId.split(":").pop())
+  let decodedRelayId: string
+
+  try {
+    decodedRelayId = Buffer.from(relayId, "base64").toString("utf8")
+  } catch {
+    return null
+  }
+
+  const decodedId = Number(decodedRelayId.split(":").pop())
   return Number.isFinite(decodedId) ? decodedId : null
 }
 
