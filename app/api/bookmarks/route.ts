@@ -627,7 +627,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertedBookmark = data as BookmarkListRow
-    const primaryEdition = insertedBookmark.editionCode ?? insertedBookmark.country ?? editionCodeInput
+    const primaryEdition = insertedBookmark.editionCode ?? editionCodeInput
     const editionSources = [primaryEdition, ...getRequestEditionPreferences(request)]
     const collectionSources = [insertedBookmark.collectionId ?? resolvedCollectionId ?? null]
 
@@ -748,10 +748,8 @@ export async function PUT(request: NextRequest) {
     const updatedBookmark = data as BookmarkListRow
     const updatedEdition =
       updatedBookmark.editionCode ??
-      updatedBookmark.country ??
       targetEditionCode ??
       existingRow.editionCode ??
-      existingRow.country ??
       preparation.targetEditionCode ??
       null
     const editionSources = [updatedEdition, ...getRequestEditionPreferences(request)]
@@ -837,9 +835,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const removedCountries = removedBookmarks.map(
-      (row) => row.editionCode ?? row.country ?? null,
-    )
+    const removedCountries = removedBookmarks.map((row) => row.editionCode ?? null)
     const editionSources = [...removedCountries, ...getRequestEditionPreferences(request)]
     const collectionSources = removedBookmarks.map((row) => row.collectionId ?? null)
 

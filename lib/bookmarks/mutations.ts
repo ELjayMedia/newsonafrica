@@ -13,7 +13,6 @@ export interface BookmarkUpdateInput {
   readState?: BookmarkListRow["readState"] | null
   note?: BookmarkListRow["note"] | null
   featuredImage?: BookmarkListRow["featuredImage"] | null
-  country?: BookmarkListRow["country"] | null
   editionCode?: BookmarkListRow["editionCode"] | null
   collectionId?: BookmarkListRow["collectionId"] | null
 }
@@ -120,7 +119,7 @@ export function prepareBookmarkUpdatePayload(
   updates: BookmarkUpdateInput,
 ): BookmarkUpdatePreparation {
   const dbUpdates: Database["public"]["Tables"]["bookmarks"]["Update"] = {}
-  let targetEditionCode = existing.editionCode ?? existing.country ?? null
+  let targetEditionCode = existing.editionCode ?? null
   let targetCollectionId = existing.collectionId ?? null
   let shouldResolveCollection = false
   let hasWritableUpdate = false
@@ -136,12 +135,6 @@ export function prepareBookmarkUpdatePayload(
   }
 
   assignField("editionCode", (value) => {
-    targetEditionCode = value ?? null
-    dbUpdates.edition_code = targetEditionCode
-    shouldResolveCollection = true
-  })
-
-  assignField("country", (value) => {
     targetEditionCode = value ?? null
     dbUpdates.edition_code = targetEditionCode
     shouldResolveCollection = true

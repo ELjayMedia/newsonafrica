@@ -41,11 +41,9 @@ import { resolveReadStateKey, isUnreadReadStateKey } from "@/lib/bookmarks/read-
 interface Bookmark {
   id: string
   userId: string
-  postId: string
-  wpPostId?: string | null
-  country?: string | null
-  editionCode?: string | null
-  collectionId?: string | null
+  wp_post_id: string
+  edition_code?: string | null
+  collection_id?: string | null
   title: string
   slug?: string | null
   excerpt?: string | null
@@ -251,15 +249,18 @@ const formatBookmarkRow = (
     extractFeaturedImage(row.featuredImage) || extractFeaturedImage(metadata?.featuredImage) || null
 
   const readState = typeof row.readState === "string" ? (row.readState as BookmarkReadState) : undefined
+  const editionSource = row.editionCode || metadata?.country || DEFAULT_COUNTRY
+  const normalizedEditionCode =
+    typeof editionSource === "string" && editionSource.trim().length
+      ? editionSource.trim().toLowerCase()
+      : undefined
 
   return {
     id: row.id,
     userId: row.userId,
-    postId: row.wpPostId || row.postId,
-    wpPostId: row.wpPostId || undefined,
-    country: row.country || metadata?.country || undefined,
-    editionCode: row.editionCode || row.country || metadata?.country || undefined,
-    collectionId: row.collectionId || undefined,
+    wp_post_id: row.postId,
+    edition_code: normalizedEditionCode,
+    collection_id: row.collectionId || undefined,
     title,
     slug: slug || undefined,
     excerpt: excerpt || undefined,
@@ -272,17 +273,17 @@ const formatBookmarkRow = (
   }
 }
 
-const getRowPostId = (row: BookmarkListRow): string => row.wpPostId || row.postId
+const getRowPostId = (row: BookmarkListRow): string => row.postId
 
 const buildHydrationPayload = (bookmarks: BookmarkListRow[]) => {
   const grouped = new Map<string, Set<string>>()
 
   bookmarks.forEach((bookmark) => {
-    const edition = (bookmark.editionCode || bookmark.country || DEFAULT_COUNTRY).toLowerCase()
+    const edition = (bookmark.editionCode || DEFAULT_COUNTRY).toLowerCase()
     if (!grouped.has(edition)) {
       grouped.set(edition, new Set())
     }
-    grouped.get(edition)!.add(bookmark.wpPostId || bookmark.postId)
+    grouped.get(edition)!.add(bookmark.postId)
   })
 
   return Array.from(grouped.entries()).map(([country, ids]) => ({
@@ -699,12 +700,11 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       }
 
       const postData = post as any
-      const editionCode = post.editionCode || post.country || null
+      const editionCode = post.edition_code ?? null
       const payload: AddBookmarkInput = {
-        postId: post.postId,
-        country: editionCode,
+        postId: post.wp_post_id,
         editionCode,
-        collectionId: post.collectionId || null,
+        collectionId: post.collection_id || null,
         title: extractText(postData.title) || "Untitled Post",
         slug: typeof postData.slug === "string" ? postData.slug : "",
         excerpt: extractText(postData.excerpt),
@@ -718,11 +718,9 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       const optimisticBookmark: Bookmark = {
         id: `temp-${Date.now()}`,
         userId: user.id,
-        postId: post.postId,
-        wpPostId: post.wpPostId ?? post.postId,
-        country: post.country || undefined,
-        editionCode: post.editionCode || post.country || undefined,
-        collectionId: post.collectionId || undefined,
+        wp_post_id: post.wp_post_id,
+        edition_code: editionCode || undefined,
+        collection_id: post.collection_id || undefined,
         title: payload.title || "Untitled Post",
         slug: payload.slug || undefined,
         excerpt: payload.excerpt || undefined,
@@ -790,11 +788,8 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const sanitized: UpdateBookmarkInput["updates"] = {}
 
-      if (Object.prototype.hasOwnProperty.call(updates, "country")) {
-        sanitized.country = updates.country ?? null
-      }
-      if (Object.prototype.hasOwnProperty.call(updates, "editionCode")) {
-        sanitized.editionCode = updates.editionCode ?? null
+      if (Object.prototype.hasOwnProperty.call(updates, "edition_code")) {
+        sanitized.editionCode = updates.edition_code ?? null
       }
       if (Object.prototype.hasOwnProperty.call(updates, "title")) {
         sanitized.title = updates.title ?? null

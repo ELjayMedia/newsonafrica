@@ -86,7 +86,7 @@ describe("BookmarksProvider optimistic updates", () => {
       userId: "user-1",
       postId: "post-1",
       slug: "server-slug",
-      country: "sz",
+      editionCode: "sz",
       title: "Server Title",
       excerpt: "Server excerpt",
       featuredImage: null,
@@ -146,8 +146,7 @@ describe("BookmarksProvider optimistic updates", () => {
         tags: ["tag"],
         readState: "unread",
         note: null,
-        country: "sz",
-        editionCode: "sz",
+        edition_code: "sz",
       })
     })
 
@@ -169,7 +168,7 @@ describe("BookmarksProvider optimistic updates", () => {
             userId: "user-1",
             postId: "post-2",
             slug: "existing",
-            country: "sz",
+            editionCode: "sz",
             title: "Existing",
             excerpt: "Initial",
             featuredImage: null,
@@ -200,7 +199,7 @@ describe("BookmarksProvider optimistic updates", () => {
             userId: "user-1",
             postId: "post-2",
             slug: "existing",
-            country: "sz",
+            editionCode: "sz",
             title: "Existing",
             excerpt: "Initial",
             featuredImage: null,

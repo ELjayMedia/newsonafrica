@@ -63,7 +63,6 @@ export interface AddBookmarkInput {
   readState?: BookmarkRow["readState"] | null
   status?: BookmarkRow["readState"] | null
   editionCode?: BookmarkRow["editionCode"] | null
-  country?: string | null
   collectionId?: BookmarkRow["collectionId"] | null
 }
 
@@ -164,7 +163,7 @@ export async function addBookmark(
   return withSupabaseSession(async ({ supabase, session }) => {
     const userId = ensureUserId(session)
     const postId = payload.postId
-    const editionCodeInput = payload.editionCode ?? payload.country ?? null
+    const editionCodeInput = payload.editionCode ?? null
     const requestedCollectionId = payload.collectionId ?? null
     const noteInput = payload.note ?? payload.notes ?? null
     const readStateInput = payload.readState ?? payload.status ?? undefined
@@ -224,7 +223,7 @@ export async function addBookmark(
     }
 
     const inserted = data as BookmarkListRow
-    const editionCode = inserted.editionCode ?? inserted.country ?? editionCodeInput
+    const editionCode = inserted.editionCode ?? editionCodeInput
 
     const additionDelta = buildAdditionCounterDelta(inserted)
     if (additionDelta) {
@@ -278,7 +277,7 @@ export async function removeBookmark(
 
     await revalidateBookmarkCache(
       userId,
-      removedRows.map((row) => row.editionCode ?? row.country ?? null),
+      removedRows.map((row) => row.editionCode ?? null),
       removedRows.map((row) => row.collectionId ?? null),
     )
     const statsDelta = combineStatsDeltas(
@@ -325,7 +324,7 @@ export async function bulkRemoveBookmarks(
 
     await revalidateBookmarkCache(
       userId,
-      removedRows.map((row) => row.editionCode ?? row.country ?? null),
+      removedRows.map((row) => row.editionCode ?? null),
       removedRows.map((row) => row.collectionId ?? null),
     )
     const statsDelta = combineStatsDeltas(
@@ -406,13 +405,11 @@ export async function updateBookmark(
     const updated = data as BookmarkListRow
     const editionCode =
       updated.editionCode ??
-      updated.country ??
       targetEditionCode ??
       existingRow.editionCode ??
-      existingRow.country ??
       preparation.targetEditionCode ??
       null
-    const editionScopes = [existingRow.editionCode ?? existingRow.country ?? null, editionCode]
+    const editionScopes = [existingRow.editionCode ?? null, editionCode]
     const collectionScopes = [
       existingRow.collectionId ?? null,
       updated.collectionId ?? targetCollectionId ?? existingRow.collectionId ?? null,

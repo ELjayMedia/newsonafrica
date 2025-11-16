@@ -344,7 +344,7 @@ export default function BookmarksContent() {
                         <div className="flex-1">
 
                         <Link
-                          href={getArticleUrl(bookmark.slug, bookmark.editionCode || bookmark.country)}
+                          href={getArticleUrl(bookmark.slug, bookmark.edition_code || undefined)}
                           className="block hover:text-blue-600 transition-colors"
                         >
 
