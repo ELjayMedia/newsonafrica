@@ -32,7 +32,10 @@ export const runtime = "nodejs"
 export const revalidate = 60
 
 const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
-const NESTED_PAYLOAD_KEYS = ["payload", "bookmark", "input", "data"] as const
+const DIRECT_PAYLOAD_KEYS = ["payload", "bookmark", "input", "data"] as const
+const WRAPPED_PAYLOAD_KEYS = ["action", "mutation", "event"] as const
+const ARRAY_PAYLOAD_KEYS = ["args", "arguments", "values"] as const
+const MAX_PAYLOAD_DEPTH = 5
 
 function serviceUnavailable(request: NextRequest) {
   return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
@@ -42,16 +45,65 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function extractPayloadFromArray(value: unknown, depth: number): Record<string, unknown> | null {
+  if (!Array.isArray(value) || depth >= MAX_PAYLOAD_DEPTH) {
+    return null
+  }
+
+  for (const entry of value) {
+    if (isPlainRecord(entry)) {
+      const nested = extractPayloadFromRecord(entry, depth + 1)
+      return nested ?? entry
+    }
+  }
+
+  return null
+}
+
+function extractPayloadFromRecord(
+  record: Record<string, unknown>,
+  depth = 0,
+): Record<string, unknown> | null {
+  if (depth >= MAX_PAYLOAD_DEPTH) {
+    return null
+  }
+
+  for (const key of DIRECT_PAYLOAD_KEYS) {
+    const nested = record[key]
+    if (isPlainRecord(nested)) {
+      const result = extractPayloadFromRecord(nested, depth + 1)
+      return result ?? nested
+    }
+  }
+
+  for (const key of ARRAY_PAYLOAD_KEYS) {
+    const nested = extractPayloadFromArray(record[key], depth + 1)
+    if (nested) {
+      return nested
+    }
+  }
+
+  for (const wrapper of WRAPPED_PAYLOAD_KEYS) {
+    const nested = record[wrapper]
+    if (isPlainRecord(nested)) {
+      const result = extractPayloadFromRecord(nested, depth + 1)
+      if (result) {
+        return result
+      }
+    }
+  }
+
+  return null
+}
+
 function extractMutationPayload(body: unknown): Record<string, unknown> | null {
   if (!isPlainRecord(body)) {
     return null
   }
 
-  for (const key of NESTED_PAYLOAD_KEYS) {
-    const nested = body[key]
-    if (isPlainRecord(nested)) {
-      return nested
-    }
+  const nested = extractPayloadFromRecord(body)
+  if (nested) {
+    return nested
   }
 
   return body
@@ -234,7 +286,7 @@ function successResponse(
   respond: <T extends NextResponse>(response: T) => T,
   payload: BookmarkMutationPayload,
 ) {
-  return respond(jsonWithCors(request, { data: payload }))
+  return respond(jsonWithCors(request, { data: payload, error: null }))
 }
 
 function getRequestEditionPreferences(request: NextRequest): string[] {
