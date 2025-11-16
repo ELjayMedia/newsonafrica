@@ -5,7 +5,6 @@ import type {
   BookmarkUserCounterUpdate,
 } from "@/types/bookmarks"
 import type { Database, Json } from "@/types/supabase"
-import { collectionKeyForId, UNASSIGNED_COLLECTION_KEY } from "@/lib/bookmarks/collection-keys"
 
 type BookmarkSupabaseClient = SupabaseClient<Database>
 
@@ -101,8 +100,6 @@ function buildCounterPayload(
     updated_at: new Date().toISOString(),
   }
 }
-
-export { collectionKeyForId }
 
 export async function applyBookmarkCounterDelta(
   client: BookmarkSupabaseClient,
