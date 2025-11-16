@@ -156,6 +156,32 @@ describe('ArticlePage', () => {
     expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith('sz', 42, 6)
   })
 
+  it('decodes base64 relay IDs when databaseId is missing', async () => {
+    const base64Id = Buffer.from('gid://wordpress/Post:42').toString('base64')
+
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return graphqlSuccess({
+          posts: { nodes: [createArticleNode({ databaseId: undefined, id: base64Id })] },
+        }) as any
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    await Page({ params: { countryCode: 'sz', slug: 'test' } })
+
+    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith('sz', 42, 6)
+  })
+
   it('calls notFound when the article cannot be resolved via GraphQL', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
