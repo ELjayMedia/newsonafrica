@@ -67,4 +67,18 @@ describe("PreferredCountrySync", () => {
       expect(document.cookie.includes("preferredCountry=")).toBe(false)
     })
   })
+
+  it("stores the preference after navigating manually from the home page", async () => {
+    currentPathname = "/"
+
+    const { rerender } = render(<PreferredCountrySync />)
+
+    currentPathname = "/ng"
+    rerender(<PreferredCountrySync />)
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem("preferredCountry")).toBe("ng")
+      expect(document.cookie).toContain("preferredCountry=ng")
+    })
+  })
 })

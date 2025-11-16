@@ -92,8 +92,17 @@ describe("category redirects", () => {
 })
 
 describe("home redirects", () => {
-  it("redirects to the country slug when the cookie is set", async () => {
-    const req = new NextRequest("https://example.com/", {
+  it("allows the new landing page to load when no legacy flag is provided", async () => {
+    const req = new NextRequest("https://example.com/")
+
+    const res = await middleware(req)
+
+    expect(res?.headers.get("location")).toBeNull()
+    expect(res?.status).toBe(200)
+  })
+
+  it("redirects when the legacy query flag is present", async () => {
+    const req = new NextRequest("https://example.com/?legacyRedirect=1", {
       headers: { cookie: "country=za" },
     })
 
@@ -103,8 +112,8 @@ describe("home redirects", () => {
     expect(res?.headers.get("location")).toBe("https://example.com/za")
   })
 
-  it("supports the legacy preferredCountry cookie", async () => {
-    const req = new NextRequest("https://example.com/", {
+  it("respects the legacy preferredCountry cookie when forced to redirect", async () => {
+    const req = new NextRequest("https://example.com/?legacyRedirect=1", {
       headers: { cookie: "preferredCountry=sz" },
     })
 
@@ -114,14 +123,14 @@ describe("home redirects", () => {
     expect(res?.headers.get("location")).toBe("https://example.com/sz")
   })
 
-  it("falls back to the default country when the cookie is missing", async () => {
-    const req = new NextRequest("https://example.com/")
+  it("redirects when the cookie flag is present", async () => {
+    const req = new NextRequest("https://example.com/", {
+      headers: { cookie: "country=za; forceLegacyHomeRedirect=true" },
+    })
 
     const res = await middleware(req)
 
     expect(res?.status).toBe(307)
-    expect(res?.headers.get("location")).toBe(
-      `https://example.com/${DEFAULT_COUNTRY}`,
-    )
+    expect(res?.headers.get("location")).toBe("https://example.com/za")
   })
 })
