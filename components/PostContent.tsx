@@ -86,13 +86,13 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
             </Button>
 
             <BookmarkButton
-            postId={post.id}
-            country={(post as any).country}
-            title={post.title}
-            slug={post.slug}
-            excerpt={post.excerpt}
-            featuredImage={post.featuredImage?.node}
-          />
+              postId={post.id}
+              editionCode={(post as any).country}
+              title={post.title}
+              slug={post.slug}
+              excerpt={post.excerpt}
+              featuredImage={post.featuredImage?.node}
+            />
           </div>
         </div>
 
