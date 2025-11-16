@@ -156,7 +156,7 @@ export function resolveCountryForLayout(countryCode?: string | null): string {
     return normalized
   }
 
-  return getServerCountry()
+  return DEFAULT_COUNTRY
 }
 
 /**
