@@ -266,7 +266,7 @@ const formatBookmarkRow = (
     category: row.category || undefined,
     tags: row.tags || undefined,
     read_state: readState,
-    note: row.notes || undefined,
+    note: row.note || undefined,
   }
 }
 
@@ -709,7 +709,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           extractFeaturedImage(postData.featured_image || postData.featuredImage) || null,
         category: post.category || null,
         tags: post.tags || null,
-        notes: post.note || null,
+        note: post.note || null,
       }
 
       const optimisticBookmark: Bookmark = {
@@ -811,7 +811,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         sanitized.readState = updates.read_state ?? null
       }
       if (Object.prototype.hasOwnProperty.call(updates, "note")) {
-        sanitized.notes = updates.note ?? null
+        sanitized.note = updates.note ?? null
       }
       if (Object.prototype.hasOwnProperty.call(updates, "featuredImage")) {
         const value = updates.featuredImage

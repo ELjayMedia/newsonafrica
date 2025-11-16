@@ -58,7 +58,7 @@ export interface AddBookmarkInput {
   featuredImage?: BookmarkRow["featuredImage"] | null
   category?: string | null
   tags?: string[] | null
-  notes?: string | null
+  note?: string | null
   country?: string | null
   collectionId?: BookmarkRow["collectionId"] | null
 }
@@ -204,7 +204,7 @@ export async function addBookmark(
       category: payload.category ?? null,
       tags: payload.tags ?? null,
       read_state: "unread",
-      note: payload.notes ?? null,
+      note: payload.note ?? null,
     }
 
     const { data, error } = await supabase
@@ -457,7 +457,7 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
       | "category"
       | "tags"
       | "readState"
-      | "notes"
+      | "note"
       | "country"
       | "collectionId"
     >[]
@@ -473,7 +473,7 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
         category: bookmark.category,
         tags: bookmark.tags,
         read_state: bookmark.readState,
-        note: bookmark.notes,
+        note: bookmark.note,
         edition_code: bookmark.country,
         collection_id: bookmark.collectionId,
       })),

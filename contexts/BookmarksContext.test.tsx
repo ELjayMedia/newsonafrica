@@ -93,7 +93,7 @@ describe("BookmarksProvider optimistic updates", () => {
       category: "News",
       tags: ["tag"],
       readState: "unread" as const,
-      notes: null,
+      note: null,
       createdAt: new Date().toISOString(),
     }
 
@@ -176,7 +176,7 @@ describe("BookmarksProvider optimistic updates", () => {
             category: "Tech",
             tags: null,
             readState: "unread",
-            notes: null,
+            note: null,
             createdAt: createdAt,
           },
         ],
@@ -207,7 +207,7 @@ describe("BookmarksProvider optimistic updates", () => {
             category: "Tech",
             tags: null,
             readState: "read" as const,
-            notes: null,
+            note: null,
             createdAt: createdAt,
           },
         ],

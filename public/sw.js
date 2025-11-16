@@ -135,8 +135,14 @@ function classifyUpdateAction(postId, updates) {
     }
   }
 
-  if (Object.prototype.hasOwnProperty.call(updates, "notes")) {
-    const noteValue = updates.notes
+  const hasNoteUpdate =
+    Object.prototype.hasOwnProperty.call(updates, "note") ||
+    Object.prototype.hasOwnProperty.call(updates, "notes")
+
+  if (hasNoteUpdate) {
+    const noteValue = Object.prototype.hasOwnProperty.call(updates, "note")
+      ? updates.note
+      : updates.notes
     let note = null
     if (typeof noteValue === "string") {
       note = noteValue
@@ -197,7 +203,11 @@ async function extractBookmarkMutation(request) {
         if (!postId) {
           throw new Error("Missing postId for bookmark add mutation")
         }
-        const note = typeof body.notes === "string" ? body.notes : body.notes ?? null
+        const note = typeof body.note === "string"
+          ? body.note
+          : typeof body.notes === "string"
+            ? body.notes
+            : body.note ?? body.notes ?? null
         return { ...baseEntry, action: "add", postId, note }
       }
 
@@ -205,7 +215,10 @@ async function extractBookmarkMutation(request) {
         throw new Error("Missing postId for bookmark update mutation")
       }
 
-      const { action, note, updates } = classifyUpdateAction(postId, body.updates)
+      const normalizedUpdates = body.updates && typeof body.updates === "object"
+        ? body.updates
+        : {}
+      const { action, note, updates } = classifyUpdateAction(postId, normalizedUpdates)
 
       if (action === "update") {
         return { ...baseEntry, action, postId, updates }
@@ -246,7 +259,11 @@ async function extractBookmarkMutation(request) {
       if (!postId) {
         throw new Error("Missing postId for add bookmark action")
       }
-      const note = typeof firstArg?.notes === "string" ? firstArg.notes : firstArg?.notes ?? null
+      const note = typeof firstArg?.note === "string"
+        ? firstArg.note
+        : typeof firstArg?.notes === "string"
+          ? firstArg.notes
+          : firstArg?.note ?? firstArg?.notes ?? null
       return { ...baseEntry, action: "add", postId, note }
     }
     case "remove": {
@@ -268,7 +285,9 @@ async function extractBookmarkMutation(request) {
       if (!postId) {
         throw new Error("Missing postId for update bookmark action")
       }
-      const { action, note, updates } = classifyUpdateAction(postId, firstArg?.updates)
+      const normalizedUpdates =
+        firstArg?.updates && typeof firstArg.updates === "object" ? firstArg.updates : {}
+      const { action, note, updates } = classifyUpdateAction(postId, normalizedUpdates)
       if (action === "update") {
         return { ...baseEntry, action, postId, updates }
       }
@@ -410,9 +429,9 @@ function buildReplayRequest(entry) {
       init.method = "POST"
       const payload = { postId: entry.postId }
       if (typeof entry.note === "string") {
-        payload.notes = entry.note
+        payload.note = entry.note
       } else if (entry.note === null) {
-        payload.notes = null
+        payload.note = null
       }
       init.body = JSON.stringify(payload)
       headers.set("content-type", "application/json")
@@ -447,7 +466,7 @@ function buildReplayRequest(entry) {
     case "update-note": {
       init.method = "PUT"
       const note = typeof entry.note === "string" ? entry.note : entry.note ?? null
-      init.body = JSON.stringify({ postId: entry.postId, updates: { notes: note } })
+      init.body = JSON.stringify({ postId: entry.postId, updates: { note } })
       headers.set("content-type", "application/json")
       break
     }
