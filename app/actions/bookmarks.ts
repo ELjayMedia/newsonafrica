@@ -59,6 +59,10 @@ export interface AddBookmarkInput {
   category?: string | null
   tags?: string[] | null
   note?: string | null
+  notes?: string | null
+  readState?: BookmarkRow["readState"] | null
+  status?: BookmarkRow["readState"] | null
+  editionCode?: BookmarkRow["editionCode"] | null
   country?: string | null
   collectionId?: BookmarkRow["collectionId"] | null
 }
@@ -159,11 +163,13 @@ export async function addBookmark(
 ): Promise<ActionResult<BookmarkMutationPayload>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     const userId = ensureUserId(session)
-    const wpPostId = payload.postId
-    const editionCodeInput = payload.country ?? null
+    const postId = payload.postId
+    const editionCodeInput = payload.editionCode ?? payload.country ?? null
     const requestedCollectionId = payload.collectionId ?? null
+    const noteInput = payload.note ?? payload.notes ?? null
+    const readStateInput = payload.readState ?? payload.status ?? undefined
 
-    if (!wpPostId) {
+    if (!postId) {
       throw new ActionError("Post ID is required", { status: 400 })
     }
 
@@ -171,7 +177,7 @@ export async function addBookmark(
       .from("bookmarks")
       .select("id")
       .eq("user_id", userId)
-      .eq("wp_post_id", wpPostId)
+      .eq("wp_post_id", postId)
       .maybeSingle()
 
     if (existing) {
@@ -191,7 +197,7 @@ export async function addBookmark(
 
     const newBookmark: BookmarkInsert = {
       user_id: userId,
-      wp_post_id: wpPostId,
+      wp_post_id: postId,
       edition_code: editionCodeInput,
       collection_id: resolvedCollectionId,
       title: payload.title || "Untitled Post",
@@ -203,8 +209,8 @@ export async function addBookmark(
           : null,
       category: payload.category ?? null,
       tags: payload.tags ?? null,
-      read_state: "unread",
-      note: payload.note ?? null,
+      read_state: readStateInput ?? "unread",
+      note: noteInput,
     }
 
     const { data, error } = await supabase
@@ -218,7 +224,7 @@ export async function addBookmark(
     }
 
     const inserted = data as BookmarkListRow
-    const editionCode = typeof inserted.country === "string" ? inserted.country : editionCodeInput
+    const editionCode = inserted.editionCode ?? inserted.country ?? editionCodeInput
 
     const additionDelta = buildAdditionCounterDelta(inserted)
     if (additionDelta) {
@@ -240,12 +246,12 @@ export async function addBookmark(
 }
 
 export async function removeBookmark(
-  wpPostId: string,
+  postId: string,
 ): Promise<ActionResult<BookmarkMutationPayload>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     const userId = ensureUserId(session)
 
-    if (!wpPostId) {
+    if (!postId) {
       throw new ActionError("Post ID is required", { status: 400 })
     }
 
@@ -253,7 +259,7 @@ export async function removeBookmark(
       .from("bookmarks")
       .delete()
       .eq("user_id", userId)
-      .eq("wp_post_id", wpPostId)
+      .eq("wp_post_id", postId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
 
     if (error) {
@@ -272,7 +278,7 @@ export async function removeBookmark(
 
     await revalidateBookmarkCache(
       userId,
-      removedRows.map((row) => row.country ?? null),
+      removedRows.map((row) => row.editionCode ?? row.country ?? null),
       removedRows.map((row) => row.collectionId ?? null),
     )
     const statsDelta = combineStatsDeltas(
@@ -319,7 +325,7 @@ export async function bulkRemoveBookmarks(
 
     await revalidateBookmarkCache(
       userId,
-      removedRows.map((row) => row.country ?? null),
+      removedRows.map((row) => row.editionCode ?? row.country ?? null),
       removedRows.map((row) => row.collectionId ?? null),
     )
     const statsDelta = combineStatsDeltas(
@@ -342,12 +348,12 @@ export async function updateBookmark(
     if (!payload.postId) {
       throw new ActionError("Post ID is required", { status: 400 })
     }
-    const wpPostId = payload.postId
+    const postId = payload.postId
     const { data: existing, error: existingError } = await supabase
       .from("bookmarks")
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
       .eq("user_id", userId)
-      .eq("wp_post_id", wpPostId)
+      .eq("wp_post_id", postId)
       .maybeSingle()
 
     if (existingError) {
@@ -389,7 +395,7 @@ export async function updateBookmark(
       .from("bookmarks")
       .update(updatePayload)
       .eq("user_id", userId)
-      .eq("wp_post_id", wpPostId)
+      .eq("wp_post_id", postId)
       .select(BOOKMARK_LIST_SELECT_COLUMNS)
       .single()
 
@@ -399,8 +405,14 @@ export async function updateBookmark(
 
     const updated = data as BookmarkListRow
     const editionCode =
-      updated.country ?? targetEditionCode ?? existingRow.country ?? preparation.targetEditionCode ?? null
-    const editionScopes = [existingRow.country ?? null, editionCode]
+      updated.editionCode ??
+      updated.country ??
+      targetEditionCode ??
+      existingRow.editionCode ??
+      existingRow.country ??
+      preparation.targetEditionCode ??
+      null
+    const editionScopes = [existingRow.editionCode ?? existingRow.country ?? null, editionCode]
     const collectionScopes = [
       existingRow.collectionId ?? null,
       updated.collectionId ?? targetCollectionId ?? existingRow.collectionId ?? null,
@@ -426,12 +438,12 @@ export async function updateBookmark(
   })
 }
 
-export async function markRead(wpPostId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId: wpPostId, updates: { readState: "read" } })
+export async function markRead(postId: string): Promise<ActionResult<BookmarkMutationPayload>> {
+  return updateBookmark({ postId, updates: { readState: "read" } })
 }
 
-export async function markUnread(wpPostId: string): Promise<ActionResult<BookmarkMutationPayload>> {
-  return updateBookmark({ postId: wpPostId, updates: { readState: "unread" } })
+export async function markUnread(postId: string): Promise<ActionResult<BookmarkMutationPayload>> {
+  return updateBookmark({ postId, updates: { readState: "unread" } })
 }
 
 export async function exportBookmarks(): Promise<ActionResult<string>> {
@@ -453,13 +465,13 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
       | "title"
       | "slug"
       | "excerpt"
-      | "createdAt"
+      | "created_at"
       | "category"
       | "tags"
-      | "readState"
+      | "read_state"
       | "note"
-      | "country"
-      | "collectionId"
+      | "edition_code"
+      | "collection_id"
     >[]
 
     const exportData = {
@@ -469,13 +481,13 @@ export async function exportBookmarks(): Promise<ActionResult<string>> {
         title: bookmark.title,
         slug: bookmark.slug,
         excerpt: bookmark.excerpt,
-        created_at: bookmark.createdAt,
+        created_at: bookmark.created_at,
         category: bookmark.category,
         tags: bookmark.tags,
-        read_state: bookmark.readState,
+        read_state: bookmark.read_state,
         note: bookmark.note,
-        edition_code: bookmark.country,
-        collection_id: bookmark.collectionId,
+        edition_code: bookmark.edition_code,
+        collection_id: bookmark.collection_id,
       })),
     }
 
