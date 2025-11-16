@@ -8,8 +8,12 @@ import { executeListQuery } from "@/lib/supabase/list-query"
 import { resolveReadStateKey, isUnreadReadStateKey } from "@/lib/bookmarks/read-state"
 import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
 
-export interface StatusAggregateRow {
-  readState: BookmarkReadState | null
+interface ReadStateAggregateFields {
+  readState?: BookmarkReadState | null
+  read_state?: BookmarkReadState | null
+}
+
+export interface StatusAggregateRow extends ReadStateAggregateFields {
   count: number | null
 }
 
@@ -25,9 +29,9 @@ export interface BookmarkStatsAggregates {
   counterRow?: CounterAggregateRow | null
 }
 
-export interface CollectionAggregateRow {
-  collectionId: string | null
-  readState: BookmarkReadState | null
+export interface CollectionAggregateRow extends ReadStateAggregateFields {
+  collectionId?: string | null
+  collection_id?: string | null
   count: number | null
 }
 
@@ -66,6 +70,14 @@ function parseCollectionCounts(
   return result
 }
 
+function extractReadState(row: ReadStateAggregateFields): BookmarkReadState | null {
+  return (row.readState ?? row.read_state ?? null) as BookmarkReadState | null
+}
+
+function extractCollectionId(row: CollectionAggregateRow): string | null {
+  return row.collectionId ?? row.collection_id ?? null
+}
+
 export function buildBookmarkStats({
   statusRows = [],
   categoryRows = [],
@@ -83,7 +95,7 @@ export function buildBookmarkStats({
   for (const row of statusRows) {
     const count = Number(row.count ?? 0)
     totalFromStatuses += count
-    const stateKey = resolveReadStateKey(row.readState as BookmarkReadState | null)
+    const stateKey = resolveReadStateKey(extractReadState(row))
     readStates[stateKey] = (readStates[stateKey] ?? 0) + count
     if (isUnreadReadStateKey(stateKey)) unreadFromStatuses += count
   }
@@ -98,9 +110,9 @@ export function buildBookmarkStats({
     for (const row of collectionRows) {
       const count = Number(row.count ?? 0)
       if (!count) continue
-      const stateKey = resolveReadStateKey(row.readState as BookmarkReadState | null)
+      const stateKey = resolveReadStateKey(extractReadState(row))
       if (!isUnreadReadStateKey(stateKey)) continue
-      const key = collectionKeyForId(row.collectionId ?? null)
+      const key = collectionKeyForId(extractCollectionId(row))
       collections[key] = (collections[key] ?? 0) + count
     }
   }
@@ -121,10 +133,10 @@ export async function fetchBookmarkStats(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<BookmarkStats> {
-  const [statusResult, categoryResult, counterResult] = await Promise.all([
+  const [statusResult, categoryResult, collectionResult, counterResult] = await Promise.all([
     executeListQuery(supabase, "bookmarks", (query) =>
       query
-        .select("read_state:readState, count:count(*)", { head: false })
+        .select("read_state, count:count(*)", { head: false })
         .eq("user_id", userId)
         .group("read_state"),
     ),
@@ -134,6 +146,12 @@ export async function fetchBookmarkStats(
         .eq("user_id", userId)
         .not("category", "is", null)
         .group("category"),
+    ),
+    executeListQuery(supabase, "bookmarks", (query) =>
+      query
+        .select("collection_id, read_state, count:count(*)", { head: false })
+        .eq("user_id", userId)
+        .group("collection_id, read_state"),
     ),
     executeListQuery(supabase, "bookmark_user_counters", (query) =>
       query
@@ -158,15 +176,20 @@ export async function fetchBookmarkStats(
     throw categoryResult.error
   }
 
+  if (collectionResult.error) {
+    throw collectionResult.error
+  }
+
   if (counterResult.error) {
     throw counterResult.error
   }
 
   const statusRows = (statusResult.data ?? []) as StatusAggregateRow[]
   const categoryRows = (categoryResult.data ?? []) as CategoryAggregateRow[]
+  const collectionRows = (collectionResult.data ?? []) as CollectionAggregateRow[]
   const counterRow = (counterResult.data ?? null) as CounterAggregateRow | null
 
-  return buildBookmarkStats({ statusRows, categoryRows, counterRow })
+  return buildBookmarkStats({ statusRows, categoryRows, collectionRows, counterRow })
 }
 
 export function getDefaultBookmarkStats(): BookmarkStats {
