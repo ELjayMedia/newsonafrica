@@ -13,6 +13,7 @@ let rewriteLegacyLinks: typeof import('./routing').rewriteLegacyLinks
 let getArticleUrl: typeof import('./routing').getArticleUrl
 let getCategoryUrl: typeof import('./routing').getCategoryUrl
 let getCurrentCountry: typeof import('./routing').getCurrentCountry
+let resolveCountryForLayout: typeof import('./routing').resolveCountryForLayout
 let DEFAULT_COUNTRY: typeof import('./routing').DEFAULT_COUNTRY
 
 beforeAll(async () => {
@@ -24,6 +25,7 @@ beforeAll(async () => {
   getArticleUrl = routingModule.getArticleUrl
   getCategoryUrl = routingModule.getCategoryUrl
   getCurrentCountry = routingModule.getCurrentCountry
+  resolveCountryForLayout = routingModule.resolveCountryForLayout
   DEFAULT_COUNTRY = routingModule.DEFAULT_COUNTRY
   vi.unstubAllEnvs()
 })
@@ -123,5 +125,16 @@ describe('URL generators', () => {
 
   it('builds category URL for provided country', () => {
     expect(getCategoryUrl('news', country)).toBe(`/${country}/category/news`)
+  })
+})
+
+describe('resolveCountryForLayout', () => {
+  it('trusts the provided country when supported', () => {
+    expect(resolveCountryForLayout('ZA')).toBe('za')
+  })
+
+  it('falls back to the default country when not provided or unsupported', () => {
+    expect(resolveCountryForLayout()).toBe(DEFAULT_COUNTRY)
+    expect(resolveCountryForLayout('xx')).toBe(DEFAULT_COUNTRY)
   })
 })
