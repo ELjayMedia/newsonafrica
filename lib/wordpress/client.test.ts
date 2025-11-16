@@ -16,12 +16,14 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
       fetchWithRetry: fetchWithRetryMock,
     }))
 
-    const mockJson = vi.fn().mockResolvedValue({ data: { posts: [] } })
+    const mockText = vi
+      .fn()
+      .mockResolvedValue(JSON.stringify({ data: { posts: [] } }))
     const mockResponse = {
       ok: true,
       status: 200,
       statusText: "OK",
-      json: mockJson,
+      text: mockText,
     }
 
     fetchWithRetryMock.mockResolvedValue(mockResponse as unknown as Response)
@@ -41,13 +43,13 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     return {
       fetchWordPressGraphQL,
       fetchWithRetryMock,
-      mockJson,
+      mockText,
       getMemoStoreForTests: () => __getMemoizedRequestsForTests(),
     }
   }
 
   it("returns the same promise for identical in-flight requests", async () => {
-    const { fetchWordPressGraphQL, fetchWithRetryMock, mockJson } = await setup()
+    const { fetchWordPressGraphQL, fetchWithRetryMock, mockText } = await setup()
 
     const firstPromise = fetchWordPressGraphQL("sz", "query")
     const secondPromise = fetchWordPressGraphQL("sz", "query")
@@ -62,11 +64,11 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
       posts: [],
     })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
-    expect(mockJson).toHaveBeenCalledTimes(1)
+    expect(mockText).toHaveBeenCalledTimes(1)
   })
 
   it("memoizes resolved responses for sequential calls", async () => {
-    const { fetchWordPressGraphQL, fetchWithRetryMock, mockJson } = await setup()
+    const { fetchWordPressGraphQL, fetchWithRetryMock, mockText } = await setup()
 
     const firstPromise = fetchWordPressGraphQL("sz", "query")
     await firstPromise
@@ -82,14 +84,14 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
       posts: [],
     })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
-    expect(mockJson).toHaveBeenCalledTimes(1)
+    expect(mockText).toHaveBeenCalledTimes(1)
   })
 
   it("clears failed memoized promises so subsequent calls retry", async () => {
     const {
       fetchWordPressGraphQL,
       fetchWithRetryMock,
-      mockJson,
+      mockText,
       getMemoStoreForTests,
     } = await setup()
 
@@ -110,14 +112,14 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     })
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
-    expect(mockJson).toHaveBeenCalledTimes(1)
+    expect(mockText).toHaveBeenCalledTimes(1)
   })
 
   it("removes cached entries for non-OK responses so retries re-fetch", async () => {
     const {
       fetchWordPressGraphQL,
       fetchWithRetryMock,
-      mockJson,
+      mockText,
       getMemoStoreForTests,
     } = await setup()
 
@@ -146,7 +148,64 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     })
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
-    expect(mockJson).toHaveBeenCalledTimes(1)
+    expect(mockText).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns an invalid_payload failure when the response body is not JSON", async () => {
+    const {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      getMemoStoreForTests,
+    } = await setup()
+
+    const badResponse = {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: vi.fn().mockResolvedValue("<!doctype html><html></html>"),
+    }
+
+    fetchWithRetryMock.mockResolvedValueOnce(badResponse as unknown as Response)
+
+    const result = await fetchWordPressGraphQL("sz", "query")
+
+    expect(result).toMatchObject({
+      ok: false,
+      kind: "invalid_payload",
+      bodySnippet: "<!doctype html><html></html>",
+      status: 200,
+    })
+    expect(badResponse.text).toHaveBeenCalledTimes(1)
+    expect(getMemoStoreForTests().size).toBe(0)
+  })
+
+  it("does not memoize invalid payload responses so subsequent calls retry", async () => {
+    const {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+      mockText,
+      getMemoStoreForTests,
+    } = await setup()
+
+    const badResponse = {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: vi.fn().mockResolvedValue("not-json"),
+    }
+
+    fetchWithRetryMock.mockResolvedValueOnce(badResponse as unknown as Response)
+
+    const firstResult = await fetchWordPressGraphQL("sz", "query")
+
+    expect(firstResult).toMatchObject({ ok: false, kind: "invalid_payload" })
+    expect(getMemoStoreForTests().size).toBe(0)
+
+    const secondResult = await fetchWordPressGraphQL("sz", "query")
+
+    expect(secondResult).toMatchObject({ ok: true, data: { posts: [] } })
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
+    expect(mockText).toHaveBeenCalledTimes(1)
   })
 
   it("dedupes requests regardless of tag ordering", async () => {
