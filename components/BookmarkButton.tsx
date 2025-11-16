@@ -80,7 +80,6 @@ export const BookmarkButton = ({
             wp_post_id: postId,
             edition_code: editionCode,
             collection_id: collectionId || undefined,
-            country: editionCode,
             title,
             slug,
             excerpt,

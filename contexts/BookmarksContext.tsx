@@ -42,7 +42,6 @@ interface Bookmark {
   id: string
   userId: string
   wp_post_id: string
-  country?: string | null
   edition_code?: string | null
   collection_id?: string | null
   title: string
@@ -250,13 +249,17 @@ const formatBookmarkRow = (
     extractFeaturedImage(row.featuredImage) || extractFeaturedImage(metadata?.featuredImage) || null
 
   const readState = typeof row.readState === "string" ? (row.readState as BookmarkReadState) : undefined
+  const editionSource = row.editionCode || metadata?.country || DEFAULT_COUNTRY
+  const normalizedEditionCode =
+    typeof editionSource === "string" && editionSource.trim().length
+      ? editionSource.trim().toLowerCase()
+      : undefined
 
   return {
     id: row.id,
     userId: row.userId,
-    wp_post_id: row.wpPostId || row.postId,
-    country: row.country || metadata?.country || undefined,
-    edition_code: row.editionCode || row.country || metadata?.country || undefined,
+    wp_post_id: row.postId,
+    edition_code: normalizedEditionCode,
     collection_id: row.collectionId || undefined,
     title,
     slug: slug || undefined,
@@ -270,17 +273,17 @@ const formatBookmarkRow = (
   }
 }
 
-const getRowPostId = (row: BookmarkListRow): string => row.wpPostId || row.postId
+const getRowPostId = (row: BookmarkListRow): string => row.postId
 
 const buildHydrationPayload = (bookmarks: BookmarkListRow[]) => {
   const grouped = new Map<string, Set<string>>()
 
   bookmarks.forEach((bookmark) => {
-    const edition = (bookmark.editionCode || bookmark.country || DEFAULT_COUNTRY).toLowerCase()
+    const edition = (bookmark.editionCode || DEFAULT_COUNTRY).toLowerCase()
     if (!grouped.has(edition)) {
       grouped.set(edition, new Set())
     }
-    grouped.get(edition)!.add(bookmark.wpPostId || bookmark.postId)
+    grouped.get(edition)!.add(bookmark.postId)
   })
 
   return Array.from(grouped.entries()).map(([country, ids]) => ({
@@ -697,10 +700,10 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       }
 
       const postData = post as any
-      const editionCode = post.edition_code || post.country || null
+      const editionCode = post.edition_code ?? null
       const payload: AddBookmarkInput = {
         postId: post.wp_post_id,
-        country: editionCode,
+        editionCode,
         collectionId: post.collection_id || null,
         title: extractText(postData.title) || "Untitled Post",
         slug: typeof postData.slug === "string" ? postData.slug : "",
@@ -716,8 +719,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         id: `temp-${Date.now()}`,
         userId: user.id,
         wp_post_id: post.wp_post_id,
-        country: post.country || undefined,
-        edition_code: post.edition_code || post.country || undefined,
+        edition_code: editionCode || undefined,
         collection_id: post.collection_id || undefined,
         title: payload.title || "Untitled Post",
         slug: payload.slug || undefined,
@@ -786,9 +788,6 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const sanitized: UpdateBookmarkInput["updates"] = {}
 
-      if (Object.prototype.hasOwnProperty.call(updates, "country")) {
-        sanitized.country = updates.country ?? null
-      }
       if (Object.prototype.hasOwnProperty.call(updates, "edition_code")) {
         sanitized.editionCode = updates.edition_code ?? null
       }

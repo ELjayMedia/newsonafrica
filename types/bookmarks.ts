@@ -2,15 +2,7 @@ import type { Database } from "@/types/supabase"
 
 export type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
 
-type BookmarkPostId = BookmarkTableRow extends { post_id: infer PostId }
-  ? PostId
-  : BookmarkTableRow extends { wp_post_id: infer LegacyPostId }
-    ? LegacyPostId
-    : string
-
-type BookmarkCountry = BookmarkTableRow extends { country: infer Country }
-  ? Country
-  : string | null
+type BookmarkPostId = BookmarkTableRow["wp_post_id"]
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 export type BookmarkReadStateKey = BookmarkReadState | "unknown"
@@ -19,8 +11,6 @@ export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
   postId: BookmarkPostId
-  wpPostId?: BookmarkTableRow["wp_post_id"]
-  country: BookmarkCountry
   editionCode: BookmarkTableRow["edition_code"]
   collectionId: BookmarkTableRow["collection_id"]
   title: BookmarkTableRow["title"]
@@ -38,9 +28,7 @@ export const BOOKMARK_LIST_SELECT_COLUMNS = [
   "id",
   "user_id:userId",
   "wp_post_id:postId",
-  "wp_post_id:wpPostId",
   "slug",
-  "edition_code:country",
   "edition_code:editionCode",
   "collection_id:collectionId",
   "title",
@@ -58,9 +46,7 @@ export type BookmarkListRow = Pick<
   | "id"
   | "userId"
   | "postId"
-  | "wpPostId"
   | "slug"
-  | "country"
   | "editionCode"
   | "collectionId"
   | "title"
