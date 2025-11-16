@@ -17,8 +17,6 @@ export interface BookmarkCounterDelta {
 
 export type CollectionUnreadCounts = Record<string, number>
 
-const UNASSIGNED_COLLECTION_KEY = "__unassigned__"
-
 function parseCollectionCounts(value: Json | null): CollectionUnreadCounts {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {}
@@ -101,13 +99,6 @@ function buildCounterPayload(
     collection_unread_counts: sanitizedCounts,
     updated_at: new Date().toISOString(),
   }
-}
-
-export function collectionKeyForId(collectionId: string | null): string {
-  if (!collectionId) {
-    return UNASSIGNED_COLLECTION_KEY
-  }
-  return collectionId
 }
 
 export async function applyBookmarkCounterDelta(

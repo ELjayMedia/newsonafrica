@@ -13,6 +13,7 @@ type BookmarkCountry = BookmarkTableRow extends { country: infer Country }
   : string | null
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
+export type BookmarkReadStateKey = BookmarkReadState | "unknown"
 
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
@@ -70,6 +71,8 @@ export interface BookmarkStats {
   total: number
   unread: number
   categories: Record<string, number>
+  readStates: Record<BookmarkReadStateKey, number>
+  collections: Record<string, number>
 }
 
 export interface BookmarkPagination {
@@ -88,6 +91,8 @@ export interface BookmarkStatsDelta {
   total: number
   unread: number
   categories: Record<string, number>
+  readStates: Record<BookmarkReadStateKey, number>
+  collections: Record<string, number>
 }
 
 export interface BookmarkMutationPayload {

@@ -1,6 +1,7 @@
 import type { BookmarkListRow } from "@/types/bookmarks"
 import type { BookmarkCounterDelta } from "@/lib/bookmarks/counters"
-import { collectionKeyForId } from "@/lib/bookmarks/counters"
+import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
+import { isUnreadReadState } from "@/lib/bookmarks/read-state"
 import type { Database } from "@/types/supabase"
 
 export interface BookmarkUpdateInput {
@@ -25,7 +26,7 @@ export interface BookmarkUpdatePreparation {
 }
 
 function isBookmarkUnread(row: Pick<BookmarkListRow, "readState">): boolean {
-  return !row.readState || row.readState !== "read"
+  return isUnreadReadState(row.readState)
 }
 
 export function buildAdditionCounterDelta(row: BookmarkListRow): BookmarkCounterDelta {

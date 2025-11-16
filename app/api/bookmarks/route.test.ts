@@ -155,7 +155,13 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.data.added[0]).toMatchObject({ id: "bookmark-1", country: "ng" })
-    expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: { news: 1 } })
+    expect(json.data.statsDelta).toEqual({
+      total: 1,
+      unread: 1,
+      categories: { news: 1 },
+      readStates: { unread: 1 },
+      collections: { "collection-1": 1 },
+    })
     expectBookmarkTagInvalidation(user.id, ["ng"], ["collection-1"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -218,7 +224,13 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.data.added[0]).toMatchObject({ id: "bookmark-4" })
-    expect(json.data.statsDelta).toEqual({ total: 1, unread: 1, categories: {} })
+    expect(json.data.statsDelta).toEqual({
+      total: 1,
+      unread: 1,
+      categories: {},
+      readStates: { unread: 1 },
+      collections: { __unassigned__: 1 },
+    })
     expectBookmarkTagInvalidation(user.id, [null], [null])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -276,7 +288,13 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.data.updated[0]).toMatchObject({ id: "bookmark-2", notes: "updated" })
-    expect(json.data.statsDelta).toEqual({ total: 0, unread: 0, categories: {} })
+    expect(json.data.statsDelta).toEqual({
+      total: 0,
+      unread: 0,
+      categories: {},
+      readStates: {},
+      collections: { "collection-2": -1, "collection-3": 1 },
+    })
     expectBookmarkTagInvalidation(user.id, ["ke"], ["collection-2", "collection-3"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -399,7 +417,13 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.status).toBe(200)
     const json = await response.json()
     expect(json.data.removed[0]).toMatchObject({ postId: "post-3" })
-    expect(json.data.statsDelta).toEqual({ total: -1, unread: -1, categories: { tech: -1 } })
+    expect(json.data.statsDelta).toEqual({
+      total: -1,
+      unread: -1,
+      categories: { tech: -1 },
+      readStates: { unread: -1 },
+      collections: { "collection-9": -1 },
+    })
     expectBookmarkTagInvalidation(user.id, ["za"], ["collection-9"])
     expect(applyCookiesMock).toHaveBeenCalledTimes(1)
   })
@@ -510,7 +534,13 @@ describe("/api/bookmarks cursor pagination", () => {
       return { data: rows, error: null }
     })
 
-    fetchBookmarkStatsMock.mockResolvedValue({ total: 3, unread: 3, categories: {} })
+    fetchBookmarkStatsMock.mockResolvedValue({
+      total: 3,
+      unread: 3,
+      categories: {},
+      readStates: {},
+      collections: {},
+    })
 
     const request = new NextRequest("https://example.com/api/bookmarks?limit=2")
     const response = await GET(request)
