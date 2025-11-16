@@ -8,7 +8,6 @@ import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -24,11 +23,10 @@ import {
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 
-const ARTICLE_PAGE_REVALIDATE_SECONDS = CACHE_DURATIONS.SHORT
-
 export const dynamic = "force-static"
 export const dynamicParams = true
-export const revalidate = ARTICLE_PAGE_REVALIDATE_SECONDS
+// Keep this value in sync with CACHE_DURATIONS.SHORT (60 seconds)
+export const revalidate = 60
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
