@@ -136,13 +136,31 @@ pnpm dev
 
 Supabase schema changes are managed exclusively through the Supabase CLI migrations in [`supabase/migrations`](./supabase/migrations).
 
-\`\`\`bash
+```bash
 # Apply the latest migrations to your local database
 supabase db reset --no-backup
 
 # Or push migrations to a linked remote project
 supabase db push
-\`\`\`
+```
+
+After applying migrations, confirm the latest schema landed. The current release expects:
+
+1. `comments` and `bookmarks` store `wp_post_id` + `edition_code` (no remaining `post_id`/`country` columns) and default to the `comment_status` + `bookmark_read_state` enums.
+2. Bookmark organization data lives in `bookmark_collections` and the aggregate counts in `bookmark_user_counters`. Both tables enforce owner-only RLS policies while permitting the service role to backfill counters.
+3. Comment reactions are written to `comment_reactions` using the `comment_reaction_type` enum, and the trigger `update_comment_reaction_count_trigger` keeps `comments.reactions_count` in sync.
+
+You can double-check these expectations with the Supabase inspector:
+
+```bash
+# Inspect the bookmark-related tables
+supabase db inspect --schema public --table bookmark_collections
+supabase db inspect --schema public --table bookmark_user_counters
+
+# Confirm the reactions table and trigger exist
+supabase db inspect --schema public --table comment_reactions
+psql "$SUPABASE_DB_URL" -c "\d+ public.comment_reactions" -c "\d public.comments" | grep reactions_count
+```
 
 > [!IMPORTANT]
 > Legacy helper scripts that lived in `lib/supabase/sql` have been removed. Always edit or add new SQL through the CLI migration files so the schema stays in sync across every environment.
