@@ -25,7 +25,7 @@ function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
   }
 }
 
-async function resolveInitialAuthState(): Promise<AuthStatePayload | null> {
+export async function resolveInitialAuthState(): Promise<AuthStatePayload | null> {
   try {
     const result = await getCurrentSession()
     if (result.error) {
@@ -39,7 +39,7 @@ async function resolveInitialAuthState(): Promise<AuthStatePayload | null> {
   }
 }
 
-async function resolveInitialPreferences(): Promise<UserPreferencesSnapshot> {
+export async function resolveInitialPreferences(): Promise<UserPreferencesSnapshot> {
   try {
     const result = await getUserPreferences()
     if (result.error || !result.data) {
