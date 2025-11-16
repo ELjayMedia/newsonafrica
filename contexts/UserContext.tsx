@@ -440,8 +440,9 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
 
       // Otherwise redirect to auth page with return URL
       if (typeof window !== "undefined") {
-        const returnUrl = encodeURIComponent(pathname || "/")
-        router.push(`${fallbackUrl}?returnTo=${returnUrl}`)
+        const redirectPath = `${pathname ?? "/"}${window.location.search ?? ""}`
+        const redirectTo = encodeURIComponent(redirectPath || "/")
+        router.push(`${fallbackUrl}?redirectTo=${redirectTo}`)
       }
       return false
     },

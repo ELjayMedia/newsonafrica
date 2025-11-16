@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ProfileDropdown } from "@/components/ProfileDropdown"
-import { useEffect, useState } from "react"
-import { usePathname } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { BookmarkIcon, LogIn } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -12,6 +12,17 @@ export function TopBar() {
   const { user, profile, loading } = useAuth()
   const [showWelcome, setShowWelcome] = useState(false)
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const authSignInHref = useMemo(() => {
+    const path = pathname || "/"
+    const query = searchParams?.toString()
+    const destination = query ? `${path}?${query}` : path
+    const params = new URLSearchParams()
+    params.set("tab", "signin")
+    params.set("redirectTo", destination.startsWith("/") ? destination : "/")
+    return `/auth?${params.toString()}`
+  }, [pathname, searchParams])
 
   // Show welcome message for 5 seconds after login
   useEffect(() => {
@@ -90,7 +101,7 @@ export function TopBar() {
                     size="sm"
                     className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5 no-underline"
                   >
-                    <Link href="/auth?tab=signin">
+                    <Link href={authSignInHref}>
                       <LogIn className="h-4 w-4" />
                       <span>Sign In</span>
                     </Link>

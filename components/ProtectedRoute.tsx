@@ -19,8 +19,9 @@ export function ProtectedRoute({ children, fallbackUrl = "/auth" }: ProtectedRou
   useEffect(() => {
     // Only redirect after initial loading is complete
     if (!loading && !isAuthenticated) {
-      const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
-      router.push(`${fallbackUrl}?returnTo=${returnTo}`)
+      const currentPath = window.location.pathname + window.location.search
+      const redirectTo = encodeURIComponent(currentPath || "/")
+      router.push(`${fallbackUrl}?redirectTo=${redirectTo}`)
     }
   }, [isAuthenticated, loading, router, fallbackUrl])
 

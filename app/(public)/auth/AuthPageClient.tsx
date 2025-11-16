@@ -18,6 +18,7 @@ type AuthView = "sign_in" | "sign_up"
 interface AuthPageClientProps {
   searchParams?: {
     redirectTo?: string
+    returnTo?: string
     error?: string
   }
   defaultView?: AuthView
@@ -45,7 +46,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
     return defaultView ?? "sign_in"
   })()
 
-  const redirectParam = searchParams?.redirectTo
+  const redirectParam = searchParams?.redirectTo ?? searchParams?.returnTo
   const redirectTo = useMemo(() => {
     if (!redirectParam) return "/"
     return redirectParam.startsWith("/") ? redirectParam : "/"

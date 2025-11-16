@@ -9,7 +9,7 @@ export const metadata = {
 export default function AuthPage({
   searchParams,
 }: {
-  searchParams: { redirectTo?: string; error?: string }
+  searchParams: { redirectTo?: string; returnTo?: string; error?: string }
 }) {
   return <AuthPageClient searchParams={searchParams} />
 }
