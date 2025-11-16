@@ -4,7 +4,7 @@ import type React from "react"
 import { useMemo } from "react"
 import { useFormState, useFormStatus } from "react-dom"
 
-import { initialAuthFormState, signUpWithPasswordAction } from "@/app/auth/actions"
+import { initialAuthFormState, signUpWithPasswordAction } from "@/app/(public)/auth/actions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

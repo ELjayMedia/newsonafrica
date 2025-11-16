@@ -8,11 +8,15 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
 
 interface ProvidersProps {
   children: ReactNode
-  initialAuthState: AuthStatePayload | null
-  initialPreferences: UserPreferencesSnapshot
+  initialAuthState?: AuthStatePayload | null
+  initialPreferences?: UserPreferencesSnapshot | null
 }
 
-export function Providers({ children, initialAuthState, initialPreferences }: ProvidersProps) {
+export function Providers({
+  children,
+  initialAuthState = null,
+  initialPreferences = null,
+}: ProvidersProps) {
   return (
     <UserProvider initialState={initialAuthState}>
       <UserPreferencesProvider snapshot={initialPreferences}>
