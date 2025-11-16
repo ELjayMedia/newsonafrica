@@ -21,9 +21,12 @@ import {
 } from "./article-data"
 
 import { ArticleClientContent } from "./ArticleClientContent"
+import { ArticleServerFallback } from "./ArticleServerFallback"
 
 export const dynamic = "force-static"
 export const dynamicParams = true
+// Keep this value in sync with CACHE_DURATIONS.SHORT (60 seconds)
+export const revalidate = 60
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
@@ -162,6 +165,22 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (usingStaleContent) {
+      if (!resolvedArticle.staleArticle) {
+        const errorDigest =
+          typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
+            ? (resolvedArticle.error as { digest?: string }).digest
+            : undefined
+        const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
+
+        return (
+          <ArticleServerFallback
+            digest={errorDigest}
+            failureCountries={failureCountries}
+            staleArticle={resolvedArticle.staleArticle}
+          />
+        )
+      }
+
       throw resolvedArticle.error
     }
 
