@@ -48,6 +48,9 @@ news-on-africa/
 └── utils/                # Utility functions
 \`\`\`
 
+> [!NOTE]
+> Authentication server actions are centralized in [`app/actions/auth`](./app/actions/auth) to replace the removed `services/auth-service.ts` helpers.
+
 ### Data Flow
 
 1. **Content Source**: WordPress CMS with WPGraphQL
