@@ -40,6 +40,40 @@ interface ArticleClientShellProps {
   initialCommentTotal?: number
 }
 
+const WORDS_PER_MINUTE = 230
+
+const countWordsFromText = (text: string) => {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const words = trimmed.split(/\s+/).filter(Boolean).length
+  return words || null
+}
+
+const deriveReadingTimeFromText = (text: string) => {
+  const words = countWordsFromText(text)
+  if (!words) {
+    return null
+  }
+
+  return Math.max(1, Math.round(words / WORDS_PER_MINUTE))
+}
+
+const deriveKeyTakeawaysFromText = (text: string, fallbackTitle?: string) => {
+  const baseText = text.trim() || fallbackTitle?.trim() || ""
+  if (!baseText) {
+    return []
+  }
+
+  return baseText
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.replace(/^[\-\u2022•\s]+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+}
+
 const resolveRenderedText = (value: unknown): string => {
   if (typeof value === "string") {
     return value
@@ -249,176 +283,265 @@ export function ArticleClientShell({
     () => transformWordPressEmbeds(sanitizeArticleHtml(rewriteLegacyLinks(content, countryCode))),
     [content, countryCode],
   )
+  const sanitizedContentText = useMemo(() => stripHtml(content), [content])
+  const sanitizedExcerptText = useMemo(() => stripHtml(excerpt || ""), [excerpt])
+  const readingTimeMinutes = useMemo(
+    () => deriveReadingTimeFromText(sanitizedContentText),
+    [sanitizedContentText],
+  )
+  const wordCount = useMemo(() => countWordsFromText(sanitizedContentText), [sanitizedContentText])
+  const keyTakeawaySource = sanitizedExcerptText || sanitizedContentText
+  const keyTakeaways = useMemo(
+    () => deriveKeyTakeawaysFromText(keyTakeawaySource, stripHtml(title)),
+    [keyTakeawaySource, title],
+  )
 
   const shareUrl = `/${countryCode}/article/${slug}`
   const shareTitle = stripHtml(title)
   const shareDescription = stripHtml(excerpt || title)
+  const formattedPublishedDate = articleData?.date
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(new Date(articleData.date))
+    : null
+  const storySnapshotItems = [
+    readingTimeMinutes ? { label: "Reading time", value: `${readingTimeMinutes} min read` } : null,
+    wordCount ? { label: "Word count", value: wordCount.toLocaleString() } : null,
+    formattedPublishedDate ? { label: "Published", value: formattedPublishedDate } : null,
+    publicationDistance ? { label: "Updated", value: `${publicationDistance} ago` } : null,
+    { label: "Origin edition", value: (currentSourceCountry ?? countryCode).toUpperCase() },
+  ].filter((item): item is { label: string; value: string } => Boolean(item?.value))
+  const handleSubscribe = () => {
+    router.push(`/subscribe?country=${countryCode}`)
+  }
 
   return (
     <>
-      <article
-        id="article-content"
-        className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:px-0 lg:py-0"
-        ref={contentRef}
-      >
-        <header className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
-            <div className="flex flex-wrap gap-2">
-              {articleData?.categories?.nodes?.map((category: any) => {
-                const renderedName = resolveRenderedText(category?.name)
-                const fallbackName = typeof category?.name === "string" ? category.name : ""
-                const name = renderedName || fallbackName
-                if (!name) return null
+      <div className="relative isolate overflow-hidden bg-gradient-to-b from-muted/30 via-background to-background">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/15 via-transparent to-transparent"
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+            <article
+              id="article-content"
+              className="relative w-full max-w-3xl rounded-3xl border border-border/60 bg-background/80 px-4 py-6 shadow-lg ring-1 ring-border/30 backdrop-blur-lg sm:px-6 lg:mx-0 lg:max-w-none lg:px-10"
+              ref={contentRef}
+            >
+              <header className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap gap-2">
+                    {articleData?.categories?.nodes?.map((category: any) => {
+                      const renderedName = resolveRenderedText(category?.name)
+                      const fallbackName = typeof category?.name === "string" ? category.name : ""
+                      const name = renderedName || fallbackName
+                      if (!name) return null
 
-                return (
-                  <Badge
-                    key={category.id ?? name}
-                    variant="secondary"
-                    className="hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                  >
-                    {name}
-                  </Badge>
-                )
-              })}
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Calendar className="w-4 h-4" />
-              {publicationDistance ? (
-                <time dateTime={articleData?.date}>{publicationDistance} ago</time>
-              ) : null}
-            </div>
-          </div>
+                      return (
+                        <Badge
+                          key={category.id ?? name}
+                          variant="secondary"
+                          className="rounded-full bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {name}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Calendar className="w-4 h-4" />
+                    {publicationDistance ? (
+                      <time dateTime={articleData?.date}>{publicationDistance} ago</time>
+                    ) : null}
+                  </div>
+                </div>
 
-          <h1 className="font-bold mb-6 text-balance leading-tight text-3xl text-foreground sm:text-3xl text-left tracking-tight leading-4 lg:mb-3 mt-1.5">
-            {title}
-          </h1>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                    Feature story
+                  </div>
+                  <h1 className="font-bold text-balance text-3xl leading-tight text-foreground sm:text-4xl">
+                    {title}
+                  </h1>
+                  {authorName && (
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
+                        {authorAvatarUrl ? (
+                          <Image
+                            src={authorAvatarUrl || "/placeholder.svg"}
+                            alt={authorName}
+                            fill
+                            sizes="(max-width: 640px) 3rem, (max-width: 1024px) 3.5rem, 4rem"
+                            className="rounded-full object-cover ring-2 ring-border shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
+                            <User className="w-6 h-6 sm:w-7 sm:h-7 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-muted-foreground font-medium">Written by</span>
+                        <span className="text-base sm:text-lg font-semibold text-foreground">{authorName}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-          {authorName && (
-            <div className="flex items-center gap-3 mb-6 lg:mb-8">
-              <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex-shrink-0">
-                {authorAvatarUrl ? (
-                  <Image
-                    src={authorAvatarUrl || "/placeholder.svg"}
-                    alt={authorName}
-                    fill
-                    sizes="(max-width: 640px) 3rem, (max-width: 1024px) 3.5rem, 4rem"
-                    className="rounded-full object-cover ring-2 ring-border shadow-sm"
+                <div className="flex flex-wrap items-center gap-2.5 text-sm md:text-base text-muted-foreground">
+                  <ShareButtons
+                    title={shareTitle}
+                    url={shareUrl}
+                    description={shareDescription || shareTitle}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGiftArticle}
+                    aria-label="Gift article"
+                    className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+                  >
+                    <Gift className="w-3 h-3 md:w-4 md:h-4" aria-hidden="true" />
+                    <span className="hidden sm:inline">Gift article</span>
+                    <span className="sm:hidden">Gift</span>
+                  </Button>
+                  {postId && (
+                    <BookmarkButton
+                      postId={postId}
+                      editionCode={countryCode}
+                      slug={slug}
+                      title={title}
+                      featuredImage={heroImage}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center"
+                    />
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshArticle}
+                    disabled={isRefreshing}
+                    aria-label="Refresh article content"
+                    className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
+                  >
+                    {isRefreshing ? "Refreshing..." : "Refresh article"}
+                  </Button>
+                </div>
+
+                {refreshError && (
+                  <p className="text-sm text-destructive" role="alert" aria-live="polite">
+                    We couldn&apos;t refresh the article: {refreshError}
+                  </p>
+                )}
+
+                {featuredImageNode?.sourceUrl && heroImage && (
+                  <figure className="rounded-2xl overflow-hidden">
+                    <Image
+                      src={heroImage.url || "/placeholder.svg"}
+                      alt={heroImage.alt}
+                      width={heroImage.width}
+                      height={heroImage.height}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 768px"
+                      priority
+                      className="w-full h-auto aspect-video object-cover"
+                    />
+                    {featuredImageNode.caption && (
+                      <figcaption className="text-sm text-muted-foreground text-center mt-3 px-4">
+                        {resolveRenderedText(featuredImageNode.caption) ||
+                          (typeof featuredImageNode.caption === "string" ? featuredImageNode.caption : "")}
+                      </figcaption>
+                    )}
+                  </figure>
+                )}
+              </header>
+
+              <ArticleBody html={sanitizedHtml} className="mb-12 lg:mb-16" />
+
+              {postId && (
+                <section id="comments" className="border-t border-border/80 pt-10 mt-12">
+                  <CommentList
+                    postId={postId}
+                    editionCode={(currentSourceCountry ?? countryCode).toLowerCase()}
+                    initialComments={initialComments}
+                    initialCursor={initialCommentCursor}
+                    initialHasMore={initialCommentHasMore}
+                    initialTotal={initialCommentTotal}
+                  />
+                </section>
+              )}
+
+              <section className="border-t border-border/80 pt-10 mt-12">
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
+                </div>
+
+                {currentRelatedPosts.length > 0 ? (
+                  <ArticleList articles={currentRelatedPosts} layout="compact" showLoadMore={false} />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
-                    <User className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-muted-foreground" />
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-lg">No related articles found.</p>
                   </div>
                 )}
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Written by</span>
-                <span className="text-base sm:text-lg lg:text-xl font-semibold text-foreground">{authorName}</span>
-              </div>
-            </div>
-          )}
+              </section>
+            </article>
 
-          <div className="flex flex-wrap items-center gap-2.5 md:gap-3.5 text-sm md:text-base text-muted-foreground mb-2.5 rounded-full">
-            <ShareButtons
-              title={shareTitle}
-              url={shareUrl}
-              description={shareDescription || shareTitle}
-              variant="outline"
-              size="sm"
-              className="flex items-center"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleGiftArticle}
-              aria-label="Gift article"
-              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
-            >
-              <Gift className="w-3 h-3 md:w-4 md:h-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Gift article</span>
-              <span className="sm:hidden">Gift</span>
-            </Button>
-            {postId && (
-              <BookmarkButton
-                postId={postId}
-                editionCode={countryCode}
-                slug={slug}
-                title={title}
-                featuredImage={heroImage}
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-              />
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={refreshArticle}
-              disabled={isRefreshing}
-              aria-label="Refresh article content"
-              className="rounded-full flex items-center gap-1 md:gap-2 bg-white text-xs md:text-sm px-2 md:px-3 py-1 md:py-2"
-            >
-              {isRefreshing ? "Refreshing..." : "Refresh article"}
-            </Button>
+            <aside className="space-y-6 lg:sticky lg:top-24">
+              <Card className="p-6 space-y-4 shadow-md">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Story snapshot</p>
+                  <h3 className="text-xl font-semibold text-foreground">Need-to-know details</h3>
+                </div>
+                <dl className="space-y-4">
+                  {storySnapshotItems.map((item) => (
+                    <div key={`${item.label}-${item.value}`} className="flex items-start justify-between gap-3">
+                      <dt className="text-sm text-muted-foreground">{item.label}</dt>
+                      <dd className="text-sm font-semibold text-foreground text-right">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Card>
+
+              {keyTakeaways.length > 0 ? (
+                <Card className="p-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Key takeaways</p>
+                    <h3 className="text-xl font-semibold text-foreground">What happened</h3>
+                  </div>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    {keyTakeaways.map((point, index) => (
+                      <li key={`${point}-${index}`} className="flex gap-3">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              <Card className="p-6 space-y-4 border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Stay informed</p>
+                  <h3 className="text-xl font-semibold text-foreground">Get more from News On Africa</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Unlock unlimited stories, newsletters, and briefings tailored to the {countryCode.toUpperCase()} edition.
+                  </p>
+                </div>
+                <Button type="button" className="w-full" onClick={handleSubscribe}>
+                  See subscription options
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={handleGiftArticle}>
+                  Gift this story
+                </Button>
+              </Card>
+            </aside>
           </div>
-
-          {refreshError && (
-            <p className="text-sm text-destructive" role="alert" aria-live="polite">
-              We couldn&apos;t refresh the article: {refreshError}
-            </p>
-          )}
-
-          {featuredImageNode?.sourceUrl && heroImage && (
-            <figure className="mb-10 lg:mb-12 rounded-xl lg:rounded-2xl overflow-hidden">
-              <Image
-                src={heroImage.url || "/placeholder.svg"}
-                alt={heroImage.alt}
-                width={heroImage.width}
-                height={heroImage.height}
-                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 768px"
-                priority
-                className="w-full h-auto aspect-video object-cover rounded-xs shadow-none"
-              />
-              {featuredImageNode.caption && (
-                <figcaption className="text-sm text-muted-foreground text-center mt-3 px-4">
-                  {resolveRenderedText(featuredImageNode.caption) ||
-                    (typeof featuredImageNode.caption === "string" ? featuredImageNode.caption : "")}
-                </figcaption>
-              )}
-            </figure>
-          )}
-        </header>
-
-        <ArticleBody html={sanitizedHtml} className="mb-12 lg:mb-16" />
-
-        {postId && (
-          <section id="comments" className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
-            <CommentList
-              postId={postId}
-              editionCode={(currentSourceCountry ?? countryCode).toLowerCase()}
-              initialComments={initialComments}
-              initialCursor={initialCommentCursor}
-              initialHasMore={initialCommentHasMore}
-              initialTotal={initialCommentTotal}
-            />
-          </section>
-        )}
-
-        <section className="border-t border-border pt-10 mt-12 lg:mt-1.5 lg:pt-2.5">
-          <div className="flex items-center gap-3 mb-2.5">
-            <h2 className="text-2xl font-bold text-foreground lg:text-xl">Related Articles</h2>
-          </div>
-
-          {currentRelatedPosts.length > 0 ? (
-            <ArticleList articles={currentRelatedPosts} layout="compact" showLoadMore={false} />
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg">No related articles found.</p>
-            </div>
-          )}
-        </section>
-      </article>
+        </div>
+      </div>
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
         {showScrollTop && (
