@@ -201,6 +201,60 @@ describe("ArticleClientShell", () => {
     expect(screen.getByText("No related articles found.")).toBeInTheDocument()
   })
 
+  it("highlights reading time and key takeaways in the redesigned sidebar", () => {
+    const longContent = `<p>${Array.from({ length: 400 })
+      .map(() => "word")
+      .join(" ")}</p>`
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 222 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{
+          ...baseInitialData,
+          id: 222,
+          content: longContent,
+          excerpt: "First point. Second insight! Third detail?",
+        }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    expect(screen.getByText(/min read/i)).toBeInTheDocument()
+    expect(screen.getByText(/key takeaways/i)).toBeInTheDocument()
+    expect(screen.getByText("First point")).toBeInTheDocument()
+    expect(screen.getByText("Second insight")).toBeInTheDocument()
+  })
+
+  it("navigates to the subscription flow from the sidebar CTA", () => {
+    const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
+      article: { ...baseInitialData, id: 333 },
+      sourceCountry: "ng",
+      relatedPosts: [],
+    })
+
+    render(
+      <ArticleClientShell
+        slug="test-slug"
+        countryCode="ng"
+        initialData={{ ...baseInitialData, id: 333 }}
+        relatedPosts={[]}
+        fetchArticleWithFallback={fetcherMock}
+      />,
+    )
+
+    const subscribeButton = screen.getByRole("button", { name: /see subscription options/i })
+    fireEvent.click(subscribeButton)
+
+    expect(pushMock).toHaveBeenCalledWith("/subscribe?country=ng")
+  })
+
   it("renders the gift article button alongside share and bookmark controls", () => {
     const fetcherMock = vi.fn<ArticleFetcher>().mockResolvedValue({
       article: { ...baseInitialData, id: 123 },
