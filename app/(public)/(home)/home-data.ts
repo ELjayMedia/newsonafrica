@@ -681,10 +681,6 @@ async function loadTagPosts(countryCode: string, tag: string, options: any): Pro
   // Implementation here
 }
 
-async function loadUnstableCacheAdapter(fn: any, cacheTags: string[]): Promise<any> {
-  // Implementation here
-}
-
 // Types assumed to be defined elsewhere
 type WordPressPost = any
 type Category = any
