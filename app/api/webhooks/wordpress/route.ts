@@ -8,10 +8,9 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { kvCache } from "@/lib/cache/kv"
-import {
-  deleteLegacyPostRoute,
-  setLegacyPostRoute,
-} from "@/lib/legacy-routes"
+import { deleteLegacyPostRoute, setLegacyPostRoute } from "@/lib/legacy-routes"
+import { syncPostToIndex, deletePostFromIndex } from "@/lib/supabase/search"
+import { stripHtml } from "@/lib/search"
 
 export const runtime = "nodejs"
 
@@ -152,10 +151,7 @@ const normalizeSlug = (value: unknown): string | null => {
   return normalized || null
 }
 
-const derivePrimaryCategorySlug = (
-  post: any,
-  categorySlugs: string[],
-): string | null => {
+const derivePrimaryCategorySlug = (post: any, categorySlugs: string[]): string | null => {
   const candidates: unknown[] = [
     post?.primary_category,
     post?.primaryCategory,
@@ -247,6 +243,33 @@ export async function POST(request: NextRequest) {
             })
           }
 
+          if (resolvedCountry && postId) {
+            const title = post?.title?.rendered || post?.title || "Untitled"
+            const excerpt = post?.excerpt?.rendered || post?.excerpt || ""
+            const content = post?.content?.rendered || post?.content || ""
+            const publishedAt = post?.date || post?.date_gmt || new Date().toISOString()
+            const author = post?.author?.name || post?.author || ""
+            const featuredImageUrl =
+              post?.featured_image_url || post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || null
+
+            await syncPostToIndex({
+              edition_code: resolvedCountry,
+              wp_post_id: Number.parseInt(postId, 10),
+              slug: post.slug,
+              title: stripHtml(title),
+              excerpt: stripHtml(excerpt),
+              content_plain: stripHtml(content).slice(0, 5000), // Limit content to 5000 chars
+              tags: tagSlugs,
+              categories: categorySlugs,
+              author: stripHtml(author),
+              published_at: publishedAt,
+              url_path: getArticleUrl(post.slug, resolvedCountry),
+              featured_image_url: featuredImageUrl,
+            })
+
+            console.log(`[v0] Synced post ${postId} to search index for ${resolvedCountry}`)
+          }
+
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
           // Revalidate the specific post page for all supported countries
@@ -329,9 +352,7 @@ export async function POST(request: NextRequest) {
           for (const country of revalidationCountries) {
             revalidateByTag(cacheTags.posts(country))
           }
-          buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
-            tagsToRevalidate.add(tag),
-          )
+          buildCacheTags({ country: "all", section: "home" }).forEach((tag) => tagsToRevalidate.add(tag))
 
           await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 
@@ -351,6 +372,11 @@ export async function POST(request: NextRequest) {
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
           await deleteLegacyPostRoute(post.slug)
+
+          if (resolvedCountry && postId) {
+            await deletePostFromIndex(resolvedCountry, Number.parseInt(postId, 10))
+            console.log(`[v0] Deleted post ${postId} from search index for ${resolvedCountry}`)
+          }
 
           // Revalidate pages that might have referenced this post
           for (const country of revalidationCountries) {
@@ -398,9 +424,7 @@ export async function POST(request: NextRequest) {
           for (const country of revalidationCountries) {
             revalidateByTag(cacheTags.posts(country))
           }
-          buildCacheTags({ country: "all", section: "home" }).forEach((tag) =>
-            tagsToRevalidate.add(tag),
-          )
+          buildCacheTags({ country: "all", section: "home" }).forEach((tag) => tagsToRevalidate.add(tag))
 
           await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 

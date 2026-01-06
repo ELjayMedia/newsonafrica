@@ -1,15 +1,13 @@
 import type { NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import type { SearchRecord } from "@/types/search"
+import { searchContent } from "@/lib/supabase/search"
 
-import { normalizeBaseSearchParams, type NormalizedBaseSearchParams } from "./shared"
-import { executeWordPressSearchForScope } from "./wordpress-fallback"
-
-export { MAX_PAGES_PER_COUNTRY } from "./wordpress-fallback"
+import { normalizeBaseSearchParams } from "./shared"
 
 export const runtime = "nodejs"
-export const revalidate = 30
+export const revalidate = 0
+
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -20,7 +18,7 @@ const jsonWithNoStore = (request: NextRequest, data: any, init?: ResponseInit) =
   return response
 }
 
-const FALLBACK_RECORDS: SearchRecord[] = [
+const FALLBACK_RECORDS: any[] = [
   {
     objectID: "sz:welcome-to-news-on-africa",
     title: "Welcome to News On Africa",
@@ -38,11 +36,6 @@ const FALLBACK_RECORDS: SearchRecord[] = [
     published_at: new Date().toISOString(),
   },
 ]
-
-type NormalizedSearchParams = NormalizedBaseSearchParams & {
-  page: number
-  perPage: number
-}
 
 const getRateLimitKey = (request: NextRequest): string => {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
@@ -91,89 +84,11 @@ const normalizeIntegerParam = (
   return typeof max === "number" ? Math.min(clamped, max) : clamped
 }
 
-const normalizeSearchParams = (searchParams: URLSearchParams): NormalizedSearchParams => {
-  const baseParams = normalizeBaseSearchParams(searchParams)
-  const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
-  const perPage = normalizeIntegerParam(searchParams.get("per_page"), { fallback: 20, min: 1, max: 100 })
-  return { ...baseParams, page, perPage }
-}
-
-const FULL_SEARCH_CACHE_HEADER = "private, no-store, no-cache, must-revalidate"
-
 const respondWithSearch = (request: NextRequest, body: unknown, init?: ResponseInit) => {
   const response = jsonWithCors(request, body, init)
-  response.headers.set("Cache-Control", FULL_SEARCH_CACHE_HEADER)
+  response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate")
   return response
 }
-
-const buildFallbackResponse = (
-  params: NormalizedSearchParams,
-  startTime: number,
-): Record<string, unknown> => {
-  if (!params.query) {
-    return {
-      results: [],
-      total: 0,
-      totalPages: 1,
-      currentPage: params.page,
-      hasMore: false,
-      query: params.query,
-      suggestions: [],
-      performance: {
-        responseTime: Date.now() - startTime,
-        source: "fallback",
-      },
-    }
-  }
-
-  const filtered = FALLBACK_RECORDS.filter((record) => {
-    const haystack = `${record.title} ${record.excerpt}`.toLowerCase()
-    return haystack.includes(params.query.toLowerCase())
-  })
-
-  const start = (params.page - 1) * params.perPage
-  const results = filtered.slice(start, start + params.perPage)
-  const total = filtered.length
-  const totalPages = Math.max(1, Math.ceil(total / params.perPage))
-
-  return {
-    results,
-    total,
-    totalPages,
-    currentPage: Math.min(params.page, totalPages),
-    hasMore: start + results.length < total,
-    query: params.query,
-    suggestions: results.map((result) => result.title).slice(0, 5),
-    performance: {
-      responseTime: Date.now() - startTime,
-      source: "fallback",
-    },
-  }
-}
-
-const buildGraphQLResponse = (
-  request: NextRequest,
-  params: NormalizedSearchParams,
-  startTime: number,
-  result: Awaited<ReturnType<typeof executeWordPressSearchForScope>>,
-) =>
-  respondWithSearch(request, {
-    results: result.results,
-    total: result.total,
-    totalPages: result.totalPages,
-    currentPage: result.currentPage,
-    hasMore: result.hasMore,
-    query: params.query,
-    suggestions: result.suggestions,
-    performance: {
-      responseTime: Date.now() - startTime,
-      source: "graphql",
-      graphqlRequestCount: result.performance.totalRequests,
-      graphqlRequestBudget: result.performance.requestBudget,
-      graphqlBudgetExhausted: result.performance.budgetExhausted,
-      graphqlSearchElapsed: result.performance.elapsedMs,
-    },
-  })
 
 export async function GET(request: NextRequest) {
   logRequest(request)
@@ -197,26 +112,54 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
-  const normalizedParams = normalizeSearchParams(searchParams)
+  const baseParams = normalizeBaseSearchParams(searchParams)
+  const page = normalizeIntegerParam(searchParams.get("page"), { fallback: 1, min: 1 })
+  const perPage = normalizeIntegerParam(searchParams.get("per_page"), {
+    fallback: 20,
+    min: 1,
+    max: 100,
+  })
 
-  if (!normalizedParams.query) {
+  if (!baseParams.query) {
     return respondWithSearch(request, { error: "Missing search query" }, { status: 400 })
   }
 
   try {
-    const result = await executeWordPressSearchForScope(
-      normalizedParams.query,
-      normalizedParams.scope,
-      normalizedParams.page,
-      normalizedParams.perPage,
-    )
+    const edition = baseParams.scope.type === "country" ? baseParams.scope.country : undefined
 
-    return buildGraphQLResponse(request, normalizedParams, startTime, result)
+    const result = await searchContent(baseParams.query, {
+      edition,
+      page,
+      perPage,
+    })
+
+    return respondWithSearch(request, {
+      ...result,
+      query: baseParams.query,
+      performance: {
+        responseTime: Date.now() - startTime,
+        source: "supabase-fts",
+      },
+    })
   } catch (error) {
-    console.error("GraphQL search failed", error)
+    console.error("[v0] Search error:", error)
+
+    return respondWithSearch(
+      request,
+      {
+        results: [],
+        total: 0,
+        totalPages: 0,
+        currentPage: page,
+        hasMore: false,
+        query: baseParams.query,
+        suggestions: [],
+        performance: {
+          responseTime: Date.now() - startTime,
+          source: "error",
+        },
+      },
+      { status: 500 },
+    )
   }
-
-  return respondWithSearch(request, buildFallbackResponse(normalizedParams, startTime))
 }
-
-export const searchGET = GET

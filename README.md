@@ -19,7 +19,7 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 - **Authentication**: Multi-provider auth with email, Google, and Facebook
 - **Personalization**: User profiles, bookmarks, and preferences
 - **Ad integration**: Flexible ad placement system for monetization
-- **Search functionality**: Fast, relevant content discovery
+- **Supabase-powered search**: Fast full-text search with Postgres FTS, no external dependencies
 - **Multi-site architecture**: Support for country-specific editions
 
 ## 🏗️ Architecture
@@ -28,7 +28,7 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
 The application follows a feature-based architecture with the following structure:
 
-\`\`\`
+```
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -46,7 +46,7 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-\`\`\`
+```
 
 > [!NOTE]
 > Authentication server actions are centralized in [`app/actions/auth`](./app/actions/auth) to replace the removed `services/auth-service.ts` helpers.
@@ -71,7 +71,7 @@ news-on-africa/
 
 Create a `.env.local` file with the following variables:
 
-\`\`\`
+```
 # --- App Configuration ---
 NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
@@ -111,7 +111,7 @@ FEATURE_COMMENTS=true
 FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
-\`\`\`
+```
 
 > [!TIP]
 > Set `WORDPRESS_GRAPHQL_AUTH_HEADER` when your WordPress instance requires authenticated GraphQL access. Provide either the raw
@@ -122,7 +122,7 @@ FEATURE_ADVANCED_SEARCH=true
 > [!NOTE]
 > The repository standardizes on **pnpm** for dependency management. Install dependencies with `pnpm install` and keep `pnpm-lock.yaml` committed.
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
@@ -132,7 +132,7 @@ pnpm install
 
 # Run the development server
 pnpm dev
-\`\`\`
+```
 
 
 ### Database setup
@@ -168,14 +168,6 @@ psql "$SUPABASE_DB_URL" -c "\d+ public.comment_reactions" -c "\d public.comments
 > [!IMPORTANT]
 > Legacy helper scripts that lived in `lib/supabase/sql` have been removed. Always edit or add new SQL through the CLI migration files so the schema stays in sync across every environment.
 
-## 📦 Deployment
-
-The application is deployed on Vercel with the following configuration:
-
-1. **Build Command**: `pnpm build`
-2. **Output Directory**: `.next`
-3. **Environment Variables**: Set all required variables in Vercel dashboard
-
 ## 🧰 Cache Revalidation API
 
 Editorial tooling that calls `/api/revalidate` can target both broad content sweeps and specific tag-driven caches.
@@ -197,19 +189,54 @@ sync with ISR intervals.
 
 The application now communicates with WordPress exclusively through GraphQL, so REST fallbacks and application credentials are no longer required.
 
-### Partial Prerendering (PPR)
-
-- PPR is enabled globally through the `experimental.ppr = true` flag in `next.config.js` and leverages streaming to keep time-to-first-byte low for static sections while deferring personalized content.
-- Dynamic dashboards such as `/profile` and `/bookmarks` rely on the Supabase server client, which reads request cookies and therefore already opt into dynamic rendering without forcing `dynamic = "force-dynamic"`. This keeps them compatible with PPR while ensuring user-specific data is never cached.
-- Deployment engineers should monitor the Vercel request logs and Real User Monitoring dashboards for regressions (notably increased `x-vercel-cache` MISS ratios or hydration warnings). Roll back by disabling the flag if regressions appear.
-
 ## 🔍 Search
 
-The `/api/search` endpoint now reads directly from WordPress content. It supports optional `country`, `page`, `per_page`, and `sort` parameters and automatically falls back to a pan-African scope when no edition is provided. Typeahead suggestions are served from `/api/search/suggest`, which shares the same query, `country`, and `sort` parameters while returning lightweight suggestion lists.
+The search system uses **Supabase PostgreSQL Full-Text Search (FTS)** instead of external search services. This provides:
+
+- ✅ Fast search across all editions (SZ, ZA, NG, ZM)
+- ✅ Works reliably with low bandwidth
+- ✅ Typeahead suggestions with edge caching
+- ✅ No external dependencies (Algolia-free)
+- ✅ Simple infrastructure
+
+### Search Architecture
+
+**Content Index:** Posts are synced to a `content_index` table in Supabase with PostgreSQL `tsvector` columns for full-text search.
+
+**Real-time Sync:** WordPress webhooks automatically update the search index when posts are published/updated.
+
+**Search API:**
+- `/api/search` - Main search with ranking, pagination, and filters
+- `/api/search/suggest` - Fast typeahead suggestions (edge-cached)
+
+### Backfilling Search Data
+
+After deploying or to repair sync issues:
+
+```bash
+# Sync all countries
+pnpm backfill-search
+
+# Sync specific country with limit
+pnpm backfill-search -- --country=sz --limit=500
+
+# Sync with pagination
+pnpm backfill-search -- --country=za --limit=100 --offset=200
+```
+
+See [Search Migration Guide](./docs/SEARCH_MIGRATION.md) for detailed architecture and troubleshooting.
+
+## 📦 Deployment
+
+The application is deployed on Vercel with the following configuration:
+
+1. **Build Command**: `pnpm build`
+2. **Output Directory**: `.next`
+3. **Environment Variables**: Set all required variables in Vercel dashboard
 
 ## 🧪 Testing
 
-\`\`\`bash
+```bash
 # Run unit tests
 pnpm test
 
@@ -218,7 +245,7 @@ pnpm test:e2e
 
 # Run linting
 pnpm lint
-\`\`\`
+```
 
 ## 📚 Documentation
 

@@ -1,15 +1,10 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import {
-  getCategoryUrl,
-  DEFAULT_COUNTRY,
-  SUPPORTED_COUNTRIES,
-} from "@/lib/utils/routing"
+import { getCategoryUrl, DEFAULT_COUNTRY, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { AFRICAN_EDITION } from "@/lib/editions"
 import { getLegacyPostRoute } from "@/lib/legacy-routes"
 import type { Database } from "@/types/supabase"
-
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
@@ -52,9 +47,7 @@ function shouldForceLegacyHomeRedirect(request: NextRequest): boolean {
 }
 
 function getCountryFromRequest(request: NextRequest): string {
-  const rawCookieValue =
-    request.cookies.get("country")?.value ??
-    request.cookies.get("preferredCountry")?.value
+  const rawCookieValue = request.cookies.get("country")?.value ?? request.cookies.get("preferredCountry")?.value
 
   const normalized = rawCookieValue?.toLowerCase()
 
@@ -62,10 +55,7 @@ function getCountryFromRequest(request: NextRequest): string {
     return DEFAULT_COUNTRY
   }
 
-  if (
-    SUPPORTED_COUNTRIES.includes(normalized) ||
-    normalized === AFRICAN_EDITION.code
-  ) {
+  if (SUPPORTED_COUNTRIES.includes(normalized) || normalized === AFRICAN_EDITION.code) {
     return normalized
   }
 
@@ -131,9 +121,15 @@ export async function middleware(request: NextRequest) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createMiddlewareClient<Database>({ req: request, res: response }, {
-        supabaseUrl,
-        supabaseKey: supabaseAnonKey,
+      const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => response!.cookies.set(name, value, options))
+          },
+        },
       })
       await supabase.auth.getSession()
     }

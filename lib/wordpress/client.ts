@@ -1,9 +1,6 @@
 import { cache } from "react"
-
-import { WP_AUTH_HEADERS } from "@/config/env"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { fetchWithRetry } from "../utils/fetchWithRetry"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 export interface CountryConfig {
@@ -55,9 +52,7 @@ type MemoizedRequestEntry = {
   expiresAt: number
 }
 
-const getRequestScopedMemo = cache(
-  () => new Map<string, MemoizedRequestEntry>(),
-)
+const getRequestScopedMemo = cache(() => new Map<string, MemoizedRequestEntry>())
 
 type GlobalWithMemo = typeof globalThis & {
   [FALLBACK_MEMO_SYMBOL]?: Map<string, MemoizedRequestEntry>
@@ -108,13 +103,9 @@ export class WordPressGraphQLResponseError extends Error {
   }
 }
 
-export type WordPressGraphQLSuccess<T> =
-  { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
+export type WordPressGraphQLSuccess<T> = { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
 
-export type WordPressGraphQLFailureKind =
-  | "http_error"
-  | "graphql_error"
-  | "invalid_payload"
+export type WordPressGraphQLFailureKind = "http_error" | "graphql_error" | "invalid_payload"
 
 export interface WordPressGraphQLFailureBase {
   ok: false
@@ -131,8 +122,7 @@ export interface WordPressGraphQLHTTPFailure extends WordPressGraphQLFailureBase
   error: WordPressGraphQLHTTPError
 }
 
-export interface WordPressGraphQLResponseFailure
-  extends WordPressGraphQLFailureBase {
+export interface WordPressGraphQLResponseFailure extends WordPressGraphQLFailureBase {
   kind: "graphql_error"
   errors: Array<{ message: string; [key: string]: unknown }>
   error: WordPressGraphQLResponseError
@@ -152,8 +142,7 @@ export class WordPressGraphQLInvalidPayloadError extends Error {
   }
 }
 
-export interface WordPressGraphQLInvalidPayloadFailure
-  extends WordPressGraphQLFailureBase {
+export interface WordPressGraphQLInvalidPayloadFailure extends WordPressGraphQLFailureBase {
   kind: "invalid_payload"
   status: number
   statusText: string
@@ -167,14 +156,12 @@ export type WordPressGraphQLFailure =
   | WordPressGraphQLResponseFailure
   | WordPressGraphQLInvalidPayloadFailure
 
-export type WordPressGraphQLResult<T> =
-  | WordPressGraphQLSuccess<T>
-  | WordPressGraphQLFailure
+export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | WordPressGraphQLFailure
 
-const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {
+const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {\
   const base: { ok: true; data: T | null } = { ok: true, data }
 
-  if (data && typeof data === "object") {
+  if (data && typeof data === "object") {\
     return Object.assign({}, data, base) as WordPressGraphQLSuccess<T>
   }
 
@@ -183,10 +170,10 @@ const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {
 
 const buildHTTPFailureResult = (
   response: Response,
-): WordPressGraphQLHTTPFailure => {
+): WordPressGraphQLHTTPFailure => {\
   const error = new WordPressGraphQLHTTPError(response)
 
-  return {
+  return {\
     ok: false,
     kind: "http_error",
     message: error.message,
@@ -197,12 +184,12 @@ const buildHTTPFailureResult = (
   }
 }
 
-const buildGraphQLFailureResult = (
+const buildGraphQLFailureResult = (\
   errors: Array<{ message: string; [key: string]: unknown }>,
-): WordPressGraphQLResponseFailure => {
+): WordPressGraphQLResponseFailure => {\
   const error = new WordPressGraphQLResponseError(errors)
 
-  return {
+  return {\
     ok: false,
     kind: "graphql_error",
     message: error.message,
@@ -211,8 +198,8 @@ const buildGraphQLFailureResult = (
   }
 }
 
-const truncateBodySnippet = (body: string, maxLength = 512): string => {
-  if (body.length <= maxLength) {
+const truncateBodySnippet = (body: string, maxLength = 512): string => {\
+  if (body.length <= maxLength) {\
     return body
   }
 
@@ -223,11 +210,11 @@ const buildInvalidPayloadFailureResult = (
   response: Response,
   body: string,
   cause?: unknown,
-): WordPressGraphQLInvalidPayloadFailure => {
+): WordPressGraphQLInvalidPayloadFailure => {\
   const snippet = truncateBodySnippet(body)
   const error = new WordPressGraphQLInvalidPayloadError(response, snippet, cause)
 
-  return {
+  return {\
     ok: false,
     kind: "invalid_payload",
     message: error.message,
@@ -241,11 +228,26 @@ const buildInvalidPayloadFailureResult = (
 
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
-  query: string,
+  query: string,\
   variables?: Record<string, string | number | string[] | boolean>,
   options: FetchWordPressGraphQLOptions = {},
-): Promise<WordPressGraphQLResult<T>> {
+): Promise<WordPressGraphQLResult<T>> {\
   const base = getGraphQLEndpoint(countryCode)
+  
+  if (!base || base === '') {
+    console.error("[v0] GraphQL endpoint not configured for country:", countryCode)\
+    const error = new Error(`GraphQL endpoint not configured for country: ${countryCode}`)
+    return Promise.resolve({\
+      ok: false,
+      kind: "http_error" as const,
+      message: error.message,
+      status: 500,
+      statusText: "Configuration Error",\
+      response: new Response(null, { status: 500, statusText: "Configuration Error" }),\
+      error: new WordPressGraphQLHTTPError(new Response(null, { status: 500 })),
+    })
+  }
+
   const body = JSON.stringify({ query, variables })
   const dedupedTags = dedupe(options.tags)
   const hasTags = (dedupedTags?.length ?? 0) > 0
@@ -265,14 +267,14 @@ export function fetchWordPressGraphQL<T>(
   const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
   let memoizedEntry: MemoizedRequestEntry | undefined
 
-  const removeMemoizedEntry = () => {
-    if (!shouldMemoize || !memoizedRequests) {
+  const removeMemoizedEntry = () => {\
+    if (!shouldMemoize || !memoizedRequests) {\
       return
     }
 
     const currentEntry = memoizedRequests.get(cacheKey)
 
-    if (!currentEntry) {
+    if (!currentEntry) {\
       return
     }
 
@@ -281,30 +283,30 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  if (shouldMemoize && memoizedRequests) {
+  if (shouldMemoize && memoizedRequests) {\
     const cachedEntry = memoizedRequests.get(cacheKey) as
       | MemoizedRequestEntry
       | undefined
-    if (cachedEntry) {
-      const isExpired =
+    if (cachedEntry) {\
+      const isExpired =\
         cachedEntry.expiresAt !== Infinity && cachedEntry.expiresAt <= Date.now()
       if (isExpired) {
         memoizedRequests.delete(cacheKey)
-      } else if (cachedEntry.metadataKey === metadataKey) {
+      } else if (cachedEntry.metadataKey === metadataKey) {\
         return cachedEntry.promise as Promise<WordPressGraphQLResult<T>>
       }
     }
   }
+\
+  const headers: Record<string, string> = { "Content-Type\": \"application/json" }
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-
-  if (typeof window === "undefined" && WP_AUTH_HEADERS) {
+  if (typeof window === "undefined" && WP_AUTH_HEADERS) {\
     for (const [key, value] of Object.entries(WP_AUTH_HEADERS)) {
       headers[key] = value
     }
   }
 
-  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {
+  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {\
     method: "POST",
     headers,
     body,
@@ -317,7 +319,7 @@ export function fetchWordPressGraphQL<T>(
       ? {
           ...(resolvedRevalidate > CACHE_DURATIONS.NONE
             ? { revalidate: resolvedRevalidate }
-            : {}),
+            : {}),\
           ...(dedupedTags && dedupedTags.length > 0 ? { tags: dedupedTags } : {}),
         }
       : undefined
@@ -334,7 +336,12 @@ export function fetchWordPressGraphQL<T>(
   )
     .then(async (res) => {
       if (!res.ok) {
-        console.error("[v0] GraphQL request failed:", res.status, res.statusText)
+        console.error("[v0] GraphQL request failed:", {
+          country: countryCode,
+          endpoint: base,
+          status: res.status,
+          statusText: res.statusText,
+        })
         removeMemoizedEntry()
         return buildHTTPFailureResult(res)
       }
@@ -377,7 +384,12 @@ export function fetchWordPressGraphQL<T>(
       return buildSuccessResult<T>(json.data ?? null)
     })
     .catch((error) => {
-      console.error("[v0] GraphQL request exception:", error)
+      console.error("[v0] GraphQL request exception:", {
+        country: countryCode,
+        endpoint: base,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
       removeMemoizedEntry()
       throw error
     })

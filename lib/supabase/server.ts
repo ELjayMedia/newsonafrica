@@ -1,7 +1,7 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
-
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/config"
 import type { Database } from "@/types/supabase"
 
 export const SUPABASE_UNAVAILABLE_ERROR =
@@ -28,21 +28,15 @@ function createCookieAdapter() {
   }
 }
 
-function readEnv(value: string | undefined): string | null {
-  const trimmed = value?.trim()
-
-  return trimmed ? trimmed : null
-}
-
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const supabaseUrl = readEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)
-  const supabaseKey = readEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-
-  if (!supabaseUrl || !supabaseKey) {
+  try {
+    return {
+      supabaseUrl: getSupabaseUrl(),
+      supabaseKey: getSupabaseAnonKey(),
+    }
+  } catch {
     return null
   }
-
-  return { supabaseUrl, supabaseKey }
 }
 
 export function createServerClient(): SupabaseClient<Database> | null {
