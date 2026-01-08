@@ -104,7 +104,35 @@ describe("fetchArticleWithFallbackAction", () => {
     const result = await fetchArticleWithFallbackAction({ countryCode: "NG", slug: "Some-Slug" })
 
     expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith("ng", 99, 6)
-    expect(result).toEqual({ article: staleArticle, sourceCountry: "ng", relatedPosts })
+    expect(result).toEqual({
+      article: staleArticle,
+      sourceCountry: "ng",
+      relatedPosts,
+      error: "temporary_error",
+    })
+  })
+
+  it("returns a temporary error payload when no stale article is available", async () => {
+    const edition = { code: "NG", type: "country" } as const
+    mockResolveEdition.mockReturnValue(edition)
+    mockBuildArticleCountryPriority.mockReturnValue(["ng"])
+    mockLoadArticleWithFallback.mockResolvedValue({
+      status: "temporary_error",
+      error: new Error("Temporary"),
+      failures: [{ country: "ng", error: new Error("Outage") }],
+      staleArticle: null,
+      staleSourceCountry: null,
+      staleCanonicalCountry: null,
+    })
+
+    const result = await fetchArticleWithFallbackAction({ countryCode: "NG", slug: "Some-Slug" })
+
+    expect(result).toEqual({
+      article: null,
+      sourceCountry: "ng",
+      relatedPosts: [],
+      error: "temporary_error",
+    })
   })
 
   it("throws a consistent error when no edition is resolved", async () => {
