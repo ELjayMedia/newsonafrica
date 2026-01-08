@@ -146,15 +146,22 @@ export function ArticleClientShell({
     router.push(`/subscribe?${searchParams.toString()}`)
   }
 
-  const applyArticleUpdate = useCallback(
-    (result: FetchArticleWithFallbackActionResult) => {
-      setArticleData(result.article)
-      setCurrentRelatedPosts(result.relatedPosts)
-      setCurrentSourceCountry(result.sourceCountry)
+  const applyArticleUpdate = useCallback((result: FetchArticleWithFallbackActionResult) => {
+    if (!result.article) {
+      setRefreshError("We couldn't refresh the article right now. Please try again shortly.")
+      return
+    }
+
+    setArticleData(result.article)
+    setCurrentRelatedPosts(result.relatedPosts)
+    setCurrentSourceCountry(result.sourceCountry)
+
+    if (result.error === "temporary_error") {
+      setRefreshError("We couldn't refresh the article. Showing the latest saved version.")
+    } else {
       setRefreshError(null)
-    },
-    [],
-  )
+    }
+  }, [])
 
   const hydrationStateRef = useRef({
     hasHydrated: false,
