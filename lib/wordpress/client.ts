@@ -298,7 +298,9 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  const headers: Record<string, string> = { "Content-Type\": \"application/json" }
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
 
   if (typeof window === "undefined" && WP_AUTH_HEADERS) {
     for (const [key, value] of Object.entries(WP_AUTH_HEADERS)) {
