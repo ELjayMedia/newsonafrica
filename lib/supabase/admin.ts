@@ -11,7 +11,6 @@ type PublicSchema = Database["public"] & GenericSchema
 export type AdminSupabaseClient = SupabaseClient<Database, "public", PublicSchema>
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 
 let adminClient: AdminSupabaseClient | null = null
 let hasWarnedAboutAdminConfig = false
@@ -27,27 +26,17 @@ export function createAdminClient(): AdminSupabaseClient {
     if (!hasWarnedAboutAdminConfig) {
       hasWarnedAboutAdminConfig = true
       console.warn(
-        "Supabase admin environment variables are not configured. Returning default client instance.",
+        "Supabase admin environment variables are not fully configured. Falling back is not supported.",
       )
     }
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase environment variables are not configured.")
+    if (!supabaseUrl) {
+      throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to initialize the Supabase admin client.")
     }
 
-    adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-      global: {
-        headers: {
-          "x-application-name": "news-on-africa-admin",
-        },
-      },
-    }) as AdminSupabaseClient
-
-    return adminClient
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is required to initialize the Supabase admin client. Configure it before running admin tasks or migrations.",
+    )
   }
 
   adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseServiceKey, {

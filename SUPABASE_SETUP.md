@@ -12,6 +12,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 # Server-side variables - used in API routes and server components
+# The service role key is mandatory for any admin scripts, migrations, or background jobs
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_JWT_SECRET=your-jwt-secret
 ```
@@ -72,6 +73,8 @@ Used for admin operations with elevated privileges:
 import { createAdminClient } from '@/lib/supabase/admin'
 const supabase = createAdminClient()
 ```
+
+> The admin client **always** requires `SUPABASE_SERVICE_ROLE_KEY`. The anon key is not sufficient for migrations or privileged tasks.
 
 ## Testing Your Connection
 
