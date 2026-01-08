@@ -15,23 +15,23 @@ Articles are marked as premium if they have:
 ### Access Control Flow
 
 1. **Check if content is premium**
-   ```typescript
+   \`\`\`typescript
    const isPremium = isArticlePremium(article)
-   ```
+   \`\`\`
 
 2. **Check user authentication**
    - Unauthenticated users cannot access premium content
    - Authenticated users proceed to subscription check
 
 3. **Validate subscription**
-   ```typescript
+   \`\`\`typescript
    const check = await checkUserEntitlement(userId)
    if (check.hasAccess) {
      // Grant access
    } else {
      // Show paywall
    }
-   ```
+   \`\`\`
 
 ### Subscription Validation
 
@@ -43,7 +43,7 @@ A subscription is considered active if:
 
 ### Server-Side Access Control
 
-```typescript
+\`\`\`typescript
 import { validateContentAccess } from '@/lib/entitlements'
 
 export default async function ArticlePage({ params }) {
@@ -58,11 +58,11 @@ export default async function ArticlePage({ params }) {
   
   return <ArticleContent article={article} />
 }
-```
+\`\`\`
 
 ### Client-Side Components
 
-```typescript
+\`\`\`typescript
 import { checkMyEntitlement } from '@/app/actions/entitlements'
 import { Paywall } from '@/components/Paywall'
 
@@ -81,11 +81,11 @@ export function PremiumFeature() {
   
   return <FeatureContent />
 }
-```
+\`\`\`
 
 ### Show Premium Badge
 
-```typescript
+\`\`\`typescript
 import { SubscriptionBadge } from '@/components/SubscriptionBadge'
 import { isArticlePremium } from '@/lib/entitlements'
 
@@ -104,7 +104,7 @@ export function ArticleCard({ article }) {
     </Card>
   )
 }
-```
+\`\`\`
 
 ## Caching Strategy
 
@@ -119,17 +119,17 @@ Entitlement checks are cached for 1 minute per user:
 
 Returns boolean indicating if user has active subscription.
 
-```sql
+\`\`\`sql
 SELECT user_has_active_subscription('user-uuid');
-```
+\`\`\`
 
 ### get_active_subscription(user_id)
 
 Returns the user's active subscription record.
 
-```sql
+\`\`\`sql
 SELECT * FROM get_active_subscription('user-uuid');
-```
+\`\`\`
 
 ## Security Considerations
 
@@ -140,7 +140,7 @@ SELECT * FROM get_active_subscription('user-uuid');
 
 ## Testing
 
-```typescript
+\`\`\`typescript
 // Test subscription validation
 const mockUser = { id: 'test-user' }
 const mockArticle = {
@@ -150,7 +150,7 @@ const mockArticle = {
 const access = await validateContentAccess(mockUser.id, mockArticle)
 expect(access.hasAccess).toBe(false)
 expect(access.reason).toContain('subscription')
-```
+\`\`\`
 
 ## Future Enhancements
 

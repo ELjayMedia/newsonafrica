@@ -6,7 +6,7 @@ This document explains how to connect your News On Africa app to Supabase using 
 
 The app needs the following Supabase environment variables in your `.env.local` file:
 
-```env
+\`\`\`env
 # Client-side (public) variables - used in browser
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
@@ -15,7 +15,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 # The service role key is mandatory for any admin scripts, migrations, or background jobs
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_JWT_SECRET=your-jwt-secret
-```
+\`\`\`
 
 ## How to Get Your Supabase Credentials
 
@@ -55,24 +55,24 @@ The app has three Supabase client implementations:
 
 ### 1. Browser Client (`lib/supabase/browser-client.ts`)
 Used in client components for authentication and data fetching:
-```typescript
+\`\`\`typescript
 import { createClient } from '@/lib/supabase/browser-helpers'
 const supabase = createClient()
-```
+\`\`\`
 
 ### 2. Server Client (`lib/supabase/server.ts`)
 Used in Server Components and API routes:
-```typescript
+\`\`\`typescript
 import { createServerClient } from '@/lib/supabase/server'
 const supabase = createServerClient()
-```
+\`\`\`
 
 ### 3. Admin Client (`lib/supabase/admin.ts`)
 Used for admin operations with elevated privileges:
-```typescript
+\`\`\`typescript
 import { createAdminClient } from '@/lib/supabase/admin'
 const supabase = createAdminClient()
-```
+\`\`\`
 
 > The admin client **always** requires `SUPABASE_SERVICE_ROLE_KEY`. The anon key is not sufficient for migrations or privileged tasks.
 
@@ -81,9 +81,9 @@ const supabase = createAdminClient()
 After adding the environment variables to `.env.local`:
 
 1. Restart your development server:
-   ```bash
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 2. Visit `http://localhost:3000` - if Supabase is configured, you'll see authentication features
 

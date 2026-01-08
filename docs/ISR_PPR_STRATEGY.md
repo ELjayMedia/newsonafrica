@@ -72,7 +72,7 @@ Systematic tags via `/lib/cache/unified-cache.ts`:
 
 WordPress sends webhooks to `/api/revalidate` on content changes:
 
-```json
+\`\`\`json
 POST /api/revalidate
 {
   "secret": "xxx",
@@ -81,7 +81,7 @@ POST /api/revalidate
   "categories": ["politics", "news"],
   "tags": ["elections", "government"]
 }
-```
+\`\`\`
 
 Automatically invalidates:
 - Article page cache

@@ -6,7 +6,7 @@ News On Africa uses a unified, type-safe configuration system with Zod validatio
 
 ## Configuration Structure
 
-```typescript
+\`\`\`typescript
 import { config, getConfig, isFeatureEnabled } from '@/config'
 
 // Access config values
@@ -16,23 +16,23 @@ const isCommentsEnabled = config.features.comments
 
 // Or use helpers
 const enabled = isFeatureEnabled('bookmarks')
-```
+\`\`\`
 
 ## Environment Variables
 
 ### Required
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SITE_URL=https://app.newsonafrica.com
 NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_...
-```
+\`\`\`
 
 ### Optional
 
-```bash
+\`\`\`bash
 # WordPress
 WORDPRESS_REQUEST_TIMEOUT_MS=30000
 WORDPRESS_GRAPHQL_AUTH_HEADER={"Authorization": "Bearer token"}
@@ -52,7 +52,7 @@ FEATURE_ADVANCED_SEARCH=true
 # SEO
 NEXT_PUBLIC_TWITTER_HANDLE=@newsonafrica
 NEXT_PUBLIC_FACEBOOK_APP_ID=123456789
-```
+\`\`\`
 
 ## Configuration Sections
 
@@ -120,7 +120,7 @@ Old config files are deprecated:
 - `config/paystack.ts` → Merged into `config/index.ts`
 
 Update imports:
-```typescript
+\`\`\`typescript
 // Old
 import { ENV } from '@/config/env'
 import { appConfig } from '@/lib/config'

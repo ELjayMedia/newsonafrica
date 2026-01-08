@@ -14,7 +14,7 @@ News On Africa uses a unified caching strategy with Next.js ISR, Vercel KV fallb
 
 ### Basic Caching
 
-```typescript
+\`\`\`typescript
 import { cachedFetch, CACHE_TIMEOUTS } from '@/lib/cache/unified-cache'
 
 const data = await cachedFetch(
@@ -27,11 +27,11 @@ const data = await cachedFetch(
     fallback: defaultData,
   }
 )
-```
+\`\`\`
 
 ### WordPress Content
 
-```typescript
+\`\`\`typescript
 import { fetchPostWithCache } from '@/lib/wordpress/cached-client'
 
 const post = await fetchPostWithCache(
@@ -40,15 +40,15 @@ const post = await fetchPostWithCache(
   { slug: 'my-article' },
   { revalidate: CACHE_TIMEOUTS.LONG }
 )
-```
+\`\`\`
 
 ### Invalidation
 
-```typescript
+\`\`\`typescript
 import { invalidatePost } from '@/lib/cache/invalidation'
 
 await invalidatePost('sz', 'post-123')
-```
+\`\`\`
 
 ## Cache Timeouts
 
@@ -76,7 +76,7 @@ await invalidatePost('sz', 'post-123')
 
 WordPress sends webhooks to `/api/revalidate`:
 
-```json
+\`\`\`json
 POST /api/revalidate?secret=xxx
 {
   "type": "post",

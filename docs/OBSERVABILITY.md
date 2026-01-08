@@ -18,7 +18,7 @@ News On Africa uses a comprehensive observability stack for structured logging, 
 - Context-aware logging with metadata
 
 **Usage**:
-```typescript
+\`\`\`typescript
 import { logger } from '@/lib/observability/logger'
 
 // Set request context (done automatically in middleware)
@@ -28,10 +28,10 @@ logger.setRequestContext(requestId, userId, traceId)
 logger.info('User logged in', { email: user.email })
 logger.warn('Cache miss', { key: cacheKey })
 logger.error('Database query failed', error, { query, params })
-```
+\`\`\`
 
 **Log Format**:
-```json
+\`\`\`json
 {
   "timestamp": "2025-01-06T12:00:00.000Z",
   "level": "error",
@@ -50,7 +50,7 @@ logger.error('Database query failed', error, { query, params })
     "params": { "limit": 10 }
   }
 }
-```
+\`\`\`
 
 ### 2. Performance Monitoring
 
@@ -63,7 +63,7 @@ logger.error('Database query failed', error, { query, params })
 - Success/failure tracking
 
 **Usage**:
-```typescript
+\`\`\`typescript
 import { performanceMonitor } from '@/lib/observability/performance'
 
 // Manual timing
@@ -77,7 +77,7 @@ const posts = await performanceMonitor.measure(
   () => fetchPosts(),
   { endpoint: 'posts', country: 'sz' }
 )
-```
+\`\`\`
 
 ### 3. Error Tracking
 
@@ -90,7 +90,7 @@ const posts = await performanceMonitor.measure(
 - User impact tracking
 
 **Usage**:
-```typescript
+\`\`\`typescript
 import { errorTracker } from '@/lib/observability/errors'
 
 try {
@@ -109,7 +109,7 @@ errorTracker.captureMessage('High memory usage detected', 'warning', {
   tags: { component: 'home-feed' },
   extra: { memoryMB: 512 }
 })
-```
+\`\`\`
 
 ### 4. Alerting
 
@@ -122,7 +122,7 @@ errorTracker.captureMessage('High memory usage detected', 'warning', {
 - Tag-based alert routing
 
 **Usage**:
-```typescript
+\`\`\`typescript
 import { alertManager } from '@/lib/observability/alerts'
 
 // Trigger immediate alert
@@ -145,7 +145,7 @@ alertManager.triggerThrottled(
   10, // trigger after 10 occurrences
   60000 // within 60 second window
 )
-```
+\`\`\`
 
 ### 5. Observability Middleware
 
@@ -206,16 +206,16 @@ Middleware is automatically applied to all routes. Headers added:
 ## Best Practices
 
 ### 1. Always Use Structured Logging
-```typescript
+\`\`\`typescript
 // ❌ Don't
 console.log("User logged in:", user.email)
 
 // ✅ Do
 logger.info("User logged in", { email: user.email, userId: user.id })
-```
+\`\`\`
 
 ### 2. Add Context to Errors
-```typescript
+\`\`\`typescript
 // ❌ Don't
 catch (error) {
   logger.error("Failed", error)
@@ -229,10 +229,10 @@ catch (error) {
     extra: { userId, postId }
   })
 }
-```
+\`\`\`
 
 ### 3. Measure Critical Operations
-```typescript
+\`\`\`typescript
 // ❌ Don't
 const posts = await fetchPosts()
 
@@ -242,10 +242,10 @@ const posts = await performanceMonitor.measure(
   () => fetchPosts(),
   { country: 'sz', category: 'news' }
 )
-```
+\`\`\`
 
 ### 4. Use Throttled Alerts for High-Frequency Events
-```typescript
+\`\`\`typescript
 // ❌ Don't (alert storm!)
 if (errorRate > 0.05) {
   alertManager.trigger({ ... })
@@ -255,7 +255,7 @@ if (errorRate > 0.05) {
 if (errorRate > 0.05) {
   alertManager.triggerThrottled('high-error-rate', { ... }, 10, 60000)
 }
-```
+\`\`\`
 
 ## Monitoring Dashboards
 
@@ -312,9 +312,9 @@ if (errorRate > 0.05) {
 - Verify `SENTRY_DSN` is configured
 - Check error tracker integration
 - Review Sentry project settings
-```
+\`\`\`
 
-```plaintext file=".env.local"
+\`\`\`plaintext file=".env.local"
 ... existing code ...
 
 # Observability

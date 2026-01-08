@@ -16,7 +16,7 @@ News On Africa has migrated from Algolia to a **Supabase PostgreSQL full-text se
 
 Instead of searching WordPress at runtime, we maintain a search index in Supabase with one row per article:
 
-```sql
+\`\`\`sql
 CREATE TABLE public.content_index (
   id UUID PRIMARY KEY,
   edition_code TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE public.content_index (
   search_vector tsvector,  -- FTS column
   UNIQUE (edition_code, wp_post_id)
 );
-```
+\`\`\`
 
 ### Full-Text Search with `tsvector`
 
@@ -49,7 +49,7 @@ This is automatically updated via a trigger whenever a row is inserted/updated.
 
 ### GIN Indexes for Performance
 
-```sql
+\`\`\`sql
 -- Primary FTS index
 CREATE INDEX content_index_search_vector_idx 
   ON public.content_index USING GIN (search_vector);
@@ -63,7 +63,7 @@ CREATE INDEX content_index_tags_idx
   ON public.content_index USING GIN (tags);
 CREATE INDEX content_index_categories_idx 
   ON public.content_index USING GIN (categories);
-```
+\`\`\`
 
 ## Sync Strategy
 
@@ -79,7 +79,7 @@ When an editor publishes/updates a post in WordPress:
 
 Run the backfill script to sync existing posts:
 
-```bash
+\`\`\`bash
 # Sync all countries
 pnpm backfill-search
 
@@ -88,13 +88,13 @@ pnpm backfill-search -- --country=sz --limit=500
 
 # Sync with offset (pagination)
 pnpm backfill-search -- --country=za --limit=100 --offset=200
-```
+\`\`\`
 
 ### Sync Cursor Tracking
 
 The `content_sync_cursor` table tracks last sync time per edition:
 
-```sql
+\`\`\`sql
 CREATE TABLE public.content_sync_cursor (
   edition_code TEXT PRIMARY KEY,
   last_synced_at TIMESTAMPTZ NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE public.content_sync_cursor (
   error_message TEXT,
   updated_at TIMESTAMPTZ NOT NULL
 );
-```
+\`\`\`
 
 ## API Endpoints
 
@@ -117,7 +117,7 @@ CREATE TABLE public.content_sync_cursor (
 - `per_page` - Results per page (default: 20, max: 100)
 
 **Response:**
-```json
+\`\`\`json
 {
   "results": [...],
   "total": 1234,
@@ -130,7 +130,7 @@ CREATE TABLE public.content_sync_cursor (
     "source": "supabase-fts"
   }
 }
-```
+\`\`\`
 
 ### `/api/search/suggest` - Typeahead
 
@@ -139,7 +139,7 @@ CREATE TABLE public.content_sync_cursor (
 - `country` - Edition filter (optional)
 
 **Response:**
-```json
+\`\`\`json
 {
   "suggestions": ["Breaking News", "Business Update"],
   "performance": {
@@ -147,7 +147,7 @@ CREATE TABLE public.content_sync_cursor (
     "source": "supabase-fts"
   }
 }
-```
+\`\`\`
 
 **Caching:** 30s max-age, 60s stale-while-revalidate
 
@@ -155,7 +155,7 @@ CREATE TABLE public.content_sync_cursor (
 
 ### `search_content()` - Ranked Search
 
-```sql
+\`\`\`sql
 SELECT * FROM search_content(
   search_query := 'climate change',
   edition_filter := 'sz',
@@ -163,19 +163,19 @@ SELECT * FROM search_content(
   limit_count := 20,
   offset_count := 0
 );
-```
+\`\`\`
 
 Returns results ranked by `ts_rank_cd()` (cover density ranking).
 
 ### `search_suggestions()` - Prefix Match
 
-```sql
+\`\`\`sql
 SELECT * FROM search_suggestions(
   search_query := 'pol',
   edition_filter := 'za',
   limit_count := 10
 );
-```
+\`\`\`
 
 Uses `ILIKE` for fast prefix matching on titles.
 

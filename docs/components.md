@@ -4,12 +4,12 @@ The project follows a feature-first layout for React components. Use this guide 
 
 ## Directory structure
 
-```
+\`\`\`
 components/
 ├── features/       # Feature-scoped components (e.g. hero, live updates)
 ├── layout/         # Layout primitives shared across pages
 └── ui/             # Reusable UI atoms and molecules
-```
+\`\`\`
 
 ### `components/ui`
 

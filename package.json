@@ -62,6 +62,7 @@
     "p-limit": "latest",
     "path": "latest",
     "playwright": "latest",
+    "puppeteer-core": "latest",
     "react": "latest",
     "react-day-picker": "latest",
     "react-dom": "^19.0.0",

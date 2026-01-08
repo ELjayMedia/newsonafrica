@@ -28,7 +28,7 @@ See [Troubleshooting Guide](./docs/troubleshooting.md) for detailed solutions.
 
 The application follows a feature-based architecture with the following structure:
 
-```
+\`\`\`
 news-on-africa/
 ├── app/                  # Next.js App Router pages and layouts
 │   ├── api/              # API routes
@@ -46,7 +46,7 @@ news-on-africa/
 ├── services/             # API service modules
 ├── types/                # TypeScript type definitions
 └── utils/                # Utility functions
-```
+\`\`\`
 
 > [!NOTE]
 > Authentication server actions are centralized in [`app/actions/auth`](./app/actions/auth) to replace the removed `services/auth-service.ts` helpers.
@@ -71,7 +71,7 @@ news-on-africa/
 
 Create a `.env.local` file with the following variables:
 
-```
+\`\`\`
 # --- App Configuration ---
 NEXT_PUBLIC_DEFAULT_SITE=sz
 NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
@@ -111,7 +111,7 @@ FEATURE_COMMENTS=true
 FEATURE_BOOKMARKS=true
 FEATURE_SUBSCRIPTIONS=true
 FEATURE_ADVANCED_SEARCH=true
-```
+\`\`\`
 
 > [!TIP]
 > Set `WORDPRESS_GRAPHQL_AUTH_HEADER` when your WordPress instance requires authenticated GraphQL access. Provide either the raw
@@ -122,7 +122,7 @@ FEATURE_ADVANCED_SEARCH=true
 > [!NOTE]
 > The repository standardizes on **pnpm** for dependency management. Install dependencies with `pnpm install` and keep `pnpm-lock.yaml` committed.
 
-```bash
+\`\`\`bash
 # Clone the repository
 git clone https://github.com/your-org/news-on-africa.git
 cd news-on-africa
@@ -132,20 +132,20 @@ pnpm install
 
 # Run the development server
 pnpm dev
-```
+\`\`\`
 
 
 ### Database setup
 
 Supabase schema changes are managed exclusively through the Supabase CLI migrations in [`supabase/migrations`](./supabase/migrations).
 
-```bash
+\`\`\`bash
 # Apply the latest migrations to your local database
 supabase db reset --no-backup
 
 # Or push migrations to a linked remote project
 supabase db push
-```
+\`\`\`
 
 After applying migrations, confirm the latest schema landed. The current release expects:
 
@@ -155,7 +155,7 @@ After applying migrations, confirm the latest schema landed. The current release
 
 You can double-check these expectations with the Supabase inspector:
 
-```bash
+\`\`\`bash
 # Inspect the bookmark-related tables
 supabase db inspect --schema public --table bookmark_collections
 supabase db inspect --schema public --table bookmark_user_counters
@@ -163,7 +163,7 @@ supabase db inspect --schema public --table bookmark_user_counters
 # Confirm the reactions table and trigger exist
 supabase db inspect --schema public --table comment_reactions
 psql "$SUPABASE_DB_URL" -c "\d+ public.comment_reactions" -c "\d public.comments" | grep reactions_count
-```
+\`\`\`
 
 > [!IMPORTANT]
 > Legacy helper scripts that lived in `lib/supabase/sql` have been removed. Always edit or add new SQL through the CLI migration files so the schema stays in sync across every environment.
@@ -213,7 +213,7 @@ The search system uses **Supabase PostgreSQL Full-Text Search (FTS)** instead of
 
 After deploying or to repair sync issues:
 
-```bash
+\`\`\`bash
 # Sync all countries
 pnpm backfill-search
 
@@ -222,7 +222,7 @@ pnpm backfill-search -- --country=sz --limit=500
 
 # Sync with pagination
 pnpm backfill-search -- --country=za --limit=100 --offset=200
-```
+\`\`\`
 
 See [Search Migration Guide](./docs/SEARCH_MIGRATION.md) for detailed architecture and troubleshooting.
 
@@ -236,7 +236,7 @@ The application is deployed on Vercel with the following configuration:
 
 ## 🧪 Testing
 
-```bash
+\`\`\`bash
 # Run unit tests
 pnpm test
 
@@ -245,7 +245,7 @@ pnpm test:e2e
 
 # Run linting
 pnpm lint
-```
+\`\`\`
 
 ## 📚 Documentation
 
