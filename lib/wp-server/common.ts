@@ -1,5 +1,3 @@
-import { unstable_cache } from "next/cache"
-
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -32,12 +30,16 @@ export function createCacheAwareFunction<TArgs extends unknown[], TResult>(
     throw new Error("createCacheAwareFunction requires at least one cache key part")
   }
 
-  const cached = unstable_cache(source, Array.from(keyParts), {
-    revalidate,
-    tags: dedupe(tags),
-  })
+  return async (...args: TArgs) => {
+    const { unstable_cache } = await import("next/cache")
 
-  return (...args: TArgs) => cached(...args)
+    const cached = unstable_cache(source, Array.from(keyParts), {
+      revalidate,
+      tags: dedupe(tags),
+    })
+
+    return cached(...args)
+  }
 }
 
 export interface WithRetryOptions {
@@ -97,10 +99,7 @@ export interface ThrottledQueueOptions {
   intervalMs?: number
 }
 
-export function createThrottledQueue({
-  concurrency,
-  intervalMs = 0,
-}: ThrottledQueueOptions) {
+export function createThrottledQueue({ concurrency, intervalMs = 0 }: ThrottledQueueOptions) {
   const maxConcurrency = Math.max(1, Math.floor(concurrency))
   const throttleInterval = Math.max(0, intervalMs)
   const queue: ThrottledQueueTask<unknown>[] = []
@@ -137,8 +136,8 @@ export function createThrottledQueue({
 
     Promise.resolve()
       .then(task.start)
-      .then((value) => task.resolve(value))
-      .catch((error) => task.reject(error))
+      .then(task.resolve)
+      .catch(task.reject)
       .finally(() => {
         active -= 1
         tryStartNext()
@@ -153,7 +152,7 @@ export function createThrottledQueue({
     return new Promise<TValue>((resolve, reject) => {
       queue.push({
         start: async () => await Promise.resolve(start()),
-        resolve: (value) => resolve(value as TValue),
+        resolve,
         reject,
       })
 
@@ -245,9 +244,7 @@ export async function paginateRest<TItem>({
 
     const reachedLimit = collected.length >= limit
     const possibleMore =
-      totalPagesFromHeaders !== null
-        ? currentPage < totalPagesFromHeaders
-        : pageItems.length === perPage
+      totalPagesFromHeaders !== null ? currentPage < totalPagesFromHeaders : pageItems.length === perPage
 
     if (reachedLimit) {
       hasMore = possibleMore

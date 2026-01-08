@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache"
 import { kv } from "@vercel/kv"
 
 // Cache timeout constants
@@ -42,6 +41,8 @@ export async function cachedFetch<T>(
   const cacheKey = `cache:${key}`
 
   try {
+    const { unstable_cache } = await import("next/cache")
+
     // Wrap fetcher with timeout
     const fetchWithTimeout = () =>
       Promise.race([

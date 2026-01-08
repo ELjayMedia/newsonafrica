@@ -2,16 +2,14 @@ import type { ReactNode } from "react"
 
 import { Providers } from "../providers"
 import { AppChrome } from "../AppChrome"
-import { getCurrentSession, type AuthStatePayload } from "@/app/actions/auth"
-import { getUserPreferences, type UserPreferencesSnapshot } from "@/app/actions/preferences"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
-
-export const dynamic = "force-dynamic"
+import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
 
 interface AuthedLayoutProps {
   children: ReactNode
 }
 
+// These can be used by individual pages that need server-side auth
 function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
   return {
     userId: null,
@@ -25,44 +23,10 @@ function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
   }
 }
 
-export async function resolveInitialAuthState(): Promise<AuthStatePayload | null> {
-  try {
-    const result = await getCurrentSession()
-    if (result.error) {
-      console.error("Failed to resolve initial auth state:", result.error)
-      return null
-    }
-    return result.data
-  } catch (error) {
-    console.error("Unexpected error resolving initial auth state:", error)
-    return null
-  }
-}
-
-export async function resolveInitialPreferences(): Promise<UserPreferencesSnapshot> {
-  try {
-    const result = await getUserPreferences()
-    if (result.error || !result.data) {
-      if (result.error) {
-        console.error("Failed to resolve initial preferences:", result.error)
-      }
-      return createDefaultPreferencesSnapshot()
-    }
-    return result.data
-  } catch (error) {
-    console.error("Unexpected error resolving initial preferences:", error)
-    return createDefaultPreferencesSnapshot()
-  }
-}
-
-export default async function AuthedLayout({ children }: AuthedLayoutProps) {
-  const [initialAuthState, initialPreferences] = await Promise.all([
-    resolveInitialAuthState(),
-    resolveInitialPreferences(),
-  ])
-
+// Auth/preferences will be bootstrapped client-side in Providers
+export default function AuthedLayout({ children }: AuthedLayoutProps) {
   return (
-    <Providers initialAuthState={initialAuthState} initialPreferences={initialPreferences}>
+    <Providers initialAuthState={null} initialPreferences={null}>
       <AppChrome>{children}</AppChrome>
     </Providers>
   )
