@@ -23,18 +23,28 @@ import {
 import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 
+export async function generateStaticParams() {
+  // Only pre-generate top 100 most popular articles at build time
+  // Rest will be generated on-demand via dynamicParams=true
+  return []
+}
+
 export const dynamic = "force-static"
 export const dynamicParams = true
-// Keep this value in sync with CACHE_DURATIONS.SHORT (60 seconds)
-export const revalidate = 60
+export const revalidate = 300
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
 
-const resolveRelatedPostId = (article: {
-  databaseId?: number | null
-  id?: unknown
-} | null | undefined) => {
+const resolveRelatedPostId = (
+  article:
+    | {
+        databaseId?: number | null
+        id?: unknown
+      }
+    | null
+    | undefined,
+) => {
   if (typeof article?.databaseId === "number" && Number.isFinite(article.databaseId)) {
     return article.databaseId
   }
@@ -92,30 +102,28 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const placeholderImage = buildPlaceholderUrl(baseUrl)
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(
-    normalizedSlug,
-    countryPriority,
-    preview,
-  )
+  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, preview)
   const article =
     resolvedArticle.status === "found"
       ? resolvedArticle.article
       : resolvedArticle.status === "temporary_error"
-        ? resolvedArticle.staleArticle ?? null
+        ? (resolvedArticle.staleArticle ?? null)
         : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const title = stripHtml(article?.title ?? "") || "News On Africa"
   const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
-  const resolvedSourceCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.sourceCountry ?? editionCountry
-    : resolvedArticle.status === "temporary_error"
-      ? resolvedArticle.staleSourceCountry ?? editionCountry
-      : editionCountry
-  const resolvedCanonicalCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry
-    : resolvedArticle.status === "temporary_error"
-      ? resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry
-      : editionCountry
+  const resolvedSourceCountry =
+    resolvedArticle.status === "found"
+      ? (resolvedArticle.sourceCountry ?? editionCountry)
+      : resolvedArticle.status === "temporary_error"
+        ? (resolvedArticle.staleSourceCountry ?? editionCountry)
+        : editionCountry
+  const resolvedCanonicalCountry =
+    resolvedArticle.status === "found"
+      ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
+      : resolvedArticle.status === "temporary_error"
+        ? (resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry)
+        : editionCountry
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
     : routeCountryAlias
@@ -155,11 +163,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const routeCountry = normalizeRouteCountry(countryCode)
   const normalizedSlug = normalizeSlug(slug)
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(
-    normalizedSlug,
-    countryPriority,
-    preview,
-  )
+  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, preview)
 
   if (resolvedArticle.status === "not_found") {
     notFound()
@@ -167,9 +171,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   const usingStaleContent = resolvedArticle.status === "temporary_error"
   const articleData =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.article
-      : resolvedArticle.staleArticle ?? null
+    resolvedArticle.status === "found" ? resolvedArticle.article : (resolvedArticle.staleArticle ?? null)
 
   if (!articleData) {
     if (usingStaleContent) {
@@ -203,12 +205,14 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     })
   }
 
-  const resolvedSourceCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.sourceCountry ?? editionCountry
-    : resolvedArticle.staleSourceCountry ?? editionCountry
-  const resolvedCanonicalCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry
-    : resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry
+  const resolvedSourceCountry =
+    resolvedArticle.status === "found"
+      ? (resolvedArticle.sourceCountry ?? editionCountry)
+      : (resolvedArticle.staleSourceCountry ?? editionCountry)
+  const resolvedCanonicalCountry =
+    resolvedArticle.status === "found"
+      ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
+      : (resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry)
 
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
@@ -245,9 +249,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
         slug={normalizedSlug}
         countryCode={targetCountry}
         sourceCountryCode={
-          resolvedArticle.status === "found"
-            ? resolvedArticle.sourceCountry
-            : resolvedArticle.staleSourceCountry
+          resolvedArticle.status === "found" ? resolvedArticle.sourceCountry : resolvedArticle.staleSourceCountry
         }
         initialData={articleData}
         relatedPosts={relatedPosts}

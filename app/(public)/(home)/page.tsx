@@ -5,9 +5,10 @@ import { HomeContent } from "@/components/HomeContent"
 import { getSiteBaseUrl } from "@/lib/site-url"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { buildHomeContentProps } from "./home-data"
+import { ISR_CONFIG } from "@/lib/cache/isr-config"
 
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
-export const revalidate = 300
+export const revalidate = ISR_CONFIG.HOME
 
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, "")
 
@@ -50,8 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Page() {
   const baseUrl = getSiteBaseUrl()
-  const { initialPosts, featuredPosts, countryPosts, initialData } =
-    await buildHomeContentProps(baseUrl)
+  const { initialPosts, featuredPosts, countryPosts, initialData } = await buildHomeContentProps(baseUrl)
 
   return (
     <HomeContent

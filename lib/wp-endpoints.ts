@@ -1,4 +1,3 @@
-import { config } from "@/config"
 import { ENV } from "@/config/env"
 
 export interface WordPressEndpoints {
@@ -6,8 +5,8 @@ export interface WordPressEndpoints {
   rest: string
 }
 
-const BASE_URL = config.wordpress.baseUrl
-const DEFAULT_SITE = config.site.defaultCountry
+const BASE_URL = "https://newsonafrica.com"
+const DEFAULT_SITE = ENV.NEXT_PUBLIC_DEFAULT_SITE
 
 const GRAPHQL_SUFFIX = "GRAPHQL"
 const REST_SUFFIX = "REST_BASE"

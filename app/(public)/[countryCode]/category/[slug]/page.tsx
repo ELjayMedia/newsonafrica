@@ -9,6 +9,8 @@ import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
+import { ISR_CONFIG, STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
+import { getAllCategories } from "@/lib/wordpress/categories"
 
 interface Params {
   countryCode: string
@@ -19,7 +21,7 @@ export const runtime = "nodejs"
 export const dynamicParams = true
 
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with category caching.
-export const revalidate = 300
+export const revalidate = ISR_CONFIG.CATEGORY
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 
@@ -74,22 +76,18 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
   try {
     const breakerKey = `wordpress-category-metadata-${countryCode}`
-    const result = await getMemoizedCategoryPosts(
-      countryCode,
-      slug,
-      10,
-      () =>
-        circuitBreaker.execute(
-          breakerKey,
-          async () => await getPostsByCategoryForCountry(countryCode, slug, 10),
-          async () => ({
-            category: null,
-            posts: [],
-            hasNextPage: false,
-            endCursor: null,
-          }),
-          { country: countryCode, endpoint: "graphql:category-metadata" },
-        ),
+    const result = await getMemoizedCategoryPosts(countryCode, slug, 10, () =>
+      circuitBreaker.execute(
+        breakerKey,
+        async () => await getPostsByCategoryForCountry(countryCode, slug, 10),
+        async () => ({
+          category: null,
+          posts: [],
+          hasNextPage: false,
+          endCursor: null,
+        }),
+        { country: countryCode, endpoint: "graphql:category-metadata" },
+      ),
     )
     const { category, posts } = result
     if (!category) {
@@ -101,9 +99,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
           follow: false,
           noarchive: true,
         },
-      alternates: {
-        canonical: `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
-      },
+        alternates: {
+          canonical: `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`,
+        },
       }
     }
 
@@ -123,13 +121,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       .slice(0, 5)
       .map((title) => title.split(" ").slice(0, 3).join(" "))
 
-    const keywords = [
-      categoryName,
-      `${categoryName} News`,
-      "African News",
-      "News On Africa",
-      ...topPostKeywords,
-    ].join(", ")
+    const keywords = [categoryName, `${categoryName} News`, "African News", "News On Africa", ...topPostKeywords].join(
+      ", ",
+    )
 
     const metadata: Metadata = {
       title: `${categoryName} News - News On Africa`,
@@ -212,6 +206,27 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       },
     }
   }
+}
+
+export async function generateStaticParams() {
+  // Pre-generate all category pages for each edition
+  const editions = ["sz", "za", "ng", "zm"]
+  const params: { countryCode: string; slug: string }[] = []
+
+  for (const edition of editions) {
+    try {
+      const categories = await getAllCategories(edition)
+      categories.slice(0, STATIC_GENERATION_LIMITS.CATEGORIES).forEach((cat) => {
+        if (cat.slug) {
+          params.push({ countryCode: edition, slug: cat.slug })
+        }
+      })
+    } catch (error) {
+      console.error(`Failed to generate static params for ${edition} categories`, error)
+    }
+  }
+
+  return params
 }
 
 interface CountryCategoryPageProps {

@@ -40,6 +40,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/(.*)\\.js$",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+        ],
+      },
     ]
   },
   images: {
@@ -73,36 +82,6 @@ const nextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
   },
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-        ],
-      },
-      {
-        source: "/(.*)\\.js$",
-        headers: [
-          {
-            key: "Content-Type",
-            value: "application/javascript; charset=utf-8",
-          },
-        ],
-      },
-    ]
-  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -115,6 +94,7 @@ const nextConfig = {
     return config
   },
   experimental: {
+    ppr: true,
     scrollRestoration: true,
     largePageDataBytes: 12800000,
     optimizePackageImports: ["lucide-react", "date-fns", "lodash-es"],

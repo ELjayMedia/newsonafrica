@@ -18,9 +18,7 @@ import type {
   PostsByCategoryQuery,
 } from "@/types/wpgraphql"
 
-type CategoriesQueryNode = NonNullable<
-  NonNullable<CategoriesQuery["categories"]>["nodes"]
->[number]
+type CategoriesQueryNode = NonNullable<NonNullable<CategoriesQuery["categories"]>["nodes"]>[number]
 
 type CategoryNodeWithHierarchy = CategoriesQueryNode & {
   parentDatabaseId?: number | null
@@ -93,9 +91,9 @@ export async function getPostsForCategories(
       }
 
       const posts =
-        node.posts?.nodes?.filter((post): post is NonNullable<typeof post> => Boolean(post)).map((post) =>
-          mapGraphqlPostToWordPressPost(post, countryCode),
-        ) ?? []
+        node.posts?.nodes
+          ?.filter((post): post is NonNullable<typeof post> => Boolean(post))
+          .map((post) => mapGraphqlPostToWordPressPost(post, countryCode)) ?? []
 
       results[slug] = {
         category,
@@ -135,12 +133,10 @@ export async function getPostsByCategoryForCountry(
       variables.after = after
     }
 
-    const gqlData = await fetchWordPressGraphQL<PostsByCategoryQuery>(
-      countryCode,
-      POSTS_BY_CATEGORY_QUERY,
-      variables,
-      { tags, revalidate: CACHE_DURATIONS.SHORT },
-    )
+    const gqlData = await fetchWordPressGraphQL<PostsByCategoryQuery>(countryCode, POSTS_BY_CATEGORY_QUERY, variables, {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+    })
 
     if (gqlData?.posts && gqlData?.categories) {
       const catNode = gqlData.categories.nodes?.[0] ?? null
@@ -163,10 +159,7 @@ export async function getPostsByCategoryForCountry(
       }
     }
   } catch (error) {
-    console.error(
-      `[v0] Failed to fetch posts by category for ${categorySlug} (${countryCode}) via GraphQL:`,
-      error,
-    )
+    console.error(`[v0] Failed to fetch posts by category for ${categorySlug} (${countryCode}) via GraphQL:`, error)
   }
 
   return { category: null, posts: [], hasNextPage: false, endCursor: null }
@@ -176,16 +169,13 @@ export async function getCategoriesForCountry(countryCode: string) {
   const tags = buildCacheTags({ country: countryCode, section: "categories" })
 
   try {
-    const gqlData = await fetchWordPressGraphQL<CategoriesQuery>(
-      countryCode,
-      CATEGORIES_QUERY,
-      undefined,
-      { tags, revalidate: CACHE_DURATIONS.SHORT },
-    )
+    const gqlData = await fetchWordPressGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+    })
     if (gqlData?.categories?.nodes) {
-      const nodes = gqlData.categories.nodes.filter(
-        (node): node is CategoryNodeWithHierarchy =>
-          Boolean(node && typeof node.databaseId === "number"),
+      const nodes = gqlData.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
+        Boolean(node && typeof node.databaseId === "number"),
       )
 
       if (nodes.length === 0) {
@@ -202,8 +192,7 @@ export async function getCategoriesForCountry(countryCode: string) {
 
         nodeMap.set(node.databaseId, node)
 
-        const parentId =
-          typeof node.parentDatabaseId === "number" ? node.parentDatabaseId : null
+        const parentId = typeof node.parentDatabaseId === "number" ? node.parentDatabaseId : null
 
         if (parentId !== null) {
           if (!fallbackChildren.has(parentId)) {
@@ -214,9 +203,7 @@ export async function getCategoriesForCountry(countryCode: string) {
         }
       }
 
-      const resolveChildNodes = (
-        node: CategoryNodeWithHierarchy,
-      ): CategoryNodeWithHierarchy[] => {
+      const resolveChildNodes = (node: CategoryNodeWithHierarchy): CategoryNodeWithHierarchy[] => {
         const directChildren =
           node.children?.nodes
             ?.map((child) => {
@@ -232,8 +219,7 @@ export async function getCategoriesForCountry(countryCode: string) {
           return directChildren
         }
 
-        const databaseId =
-          typeof node.databaseId === "number" ? node.databaseId : null
+        const databaseId = typeof node.databaseId === "number" ? node.databaseId : null
 
         if (databaseId !== null && fallbackChildren.has(databaseId)) {
           return fallbackChildren.get(databaseId) ?? []
@@ -281,8 +267,7 @@ export async function getCategoriesForCountry(countryCode: string) {
       }
 
       const rootNodes = nodes.filter((node) => {
-        const parentId =
-          typeof node.parentDatabaseId === "number" ? node.parentDatabaseId : null
+        const parentId = typeof node.parentDatabaseId === "number" ? node.parentDatabaseId : null
 
         if (parentId === null) {
           return true
@@ -291,9 +276,7 @@ export async function getCategoriesForCountry(countryCode: string) {
         return !nodeMap.has(parentId)
       })
 
-      return rootNodes
-        .map((node) => buildCategoryTree(node))
-        .filter((category) => Boolean(category.slug))
+      return rootNodes.map((node) => buildCategoryTree(node)).filter((category) => Boolean(category.slug))
     }
   } catch (error) {
     console.error(`[v0] Failed to fetch categories via GraphQL for ${countryCode}:`, error)
@@ -302,11 +285,7 @@ export async function getCategoriesForCountry(countryCode: string) {
   return []
 }
 
-export async function fetchCategoryPosts(
-  slug: string,
-  cursor: string | null = null,
-  countryCode: string,
-) {
+export async function fetchCategoryPosts(slug: string, cursor: string | null = null, countryCode: string) {
   const tags = buildCacheTags({
     country: countryCode,
     section: "categories",
@@ -322,12 +301,10 @@ export async function fetchCategoryPosts(
     variables.after = cursor
   }
 
-  const data = await fetchWordPressGraphQL<CategoryPostsQuery>(
-    countryCode,
-    CATEGORY_POSTS_QUERY,
-    variables,
-    { tags, revalidate: CACHE_DURATIONS.SHORT },
-  )
+  const data = await fetchWordPressGraphQL<CategoryPostsQuery>(countryCode, CATEGORY_POSTS_QUERY, variables, {
+    tags,
+    revalidate: CACHE_DURATIONS.SHORT,
+  })
   if (!data?.posts || !data?.categories) return null
   const catNode = data.categories.nodes?.[0] ?? null
   const category = catNode
@@ -365,3 +342,5 @@ export const fetchCategories = async (countryCode = DEFAULT_COUNTRY) => {
     return []
   }
 }
+
+export const getAllCategories = getCategoriesForCountry
