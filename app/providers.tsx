@@ -23,12 +23,10 @@ function useClientBootstrap(
 ) {
   const [authState, setAuthState] = useState<AuthStatePayload | null>(initialAuthState ?? null)
   const [preferences, setPreferences] = useState<UserPreferencesSnapshot | null>(initialPreferences ?? null)
-  const [isBootstrapping, setIsBootstrapping] = useState(initialAuthState === null || initialAuthState === undefined)
 
   const bootstrap = useCallback(async () => {
     // If we already have server-provided auth state, skip bootstrap
     if (initialAuthState !== null && initialAuthState !== undefined) {
-      setIsBootstrapping(false)
       return
     }
 
@@ -43,7 +41,6 @@ function useClientBootstrap(
 
       if (sessionError) {
         console.error("[v0] Bootstrap session error:", sessionError)
-        setIsBootstrapping(false)
         return
       }
 
@@ -60,7 +57,6 @@ function useClientBootstrap(
           },
           profilePreferences: {},
         })
-        setIsBootstrapping(false)
         return
       }
 
@@ -126,8 +122,6 @@ function useClientBootstrap(
       }
     } catch (error) {
       console.error("[v0] Bootstrap error:", error)
-    } finally {
-      setIsBootstrapping(false)
     }
   }, [initialAuthState])
 
@@ -135,11 +129,11 @@ function useClientBootstrap(
     void bootstrap()
   }, [bootstrap])
 
-  return { authState, preferences, isBootstrapping }
+  return { authState, preferences }
 }
 
 export function Providers({ children, initialAuthState = null, initialPreferences = null }: ProvidersProps) {
-  const { authState, preferences, isBootstrapping } = useClientBootstrap(initialAuthState, initialPreferences)
+  const { authState, preferences } = useClientBootstrap(initialAuthState, initialPreferences)
 
   return (
     <UserProvider initialState={authState}>
