@@ -84,13 +84,13 @@ export const COUNTRY_AGGREGATE_CONCURRENCY = 4
 const homeFeedRequestLimit = pLimit(6)
 
 const scheduleHomeFeedTask = <T>(
-  timeoutMs: number,\
+  timeoutMs: number,
   task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
 ): Promise<T> =>
-  homeFeedRequestLimit(async () => {\
+  homeFeedRequestLimit(async () => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {\
+    try {
       return await task({ signal: controller.signal, timeout: timeoutMs })
     } finally {
       clearTimeout(timeoutId)
@@ -100,11 +100,11 @@ const scheduleHomeFeedTask = <T>(
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
   slices: Awaited<ReturnType<typeof getFrontPageSlicesForCountry>>,
-): HomePost[] => {\
+): HomePost[] => {
   const posts: HomePost[] = []
 
-  const pushPost = (post: WordPressPost | null | undefined) => {\
-    if (!post) {\
+  const pushPost = (post: WordPressPost | null | undefined) => {
+    if (!post) {
       return
     }
 
@@ -128,11 +128,11 @@ const mapFrontPageSlicesToHomePosts = (
   return dedupeHomePosts(posts)
 }
 
-async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {\
-  try {\
+async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {
+  try {
     const aggregated = await loadUnstableCacheAdapter(fetchAggregatedHomeNoCache, cacheTags)()
 
-    if (hasAggregatedHomeContent(aggregated)) {\
+    if (hasAggregatedHomeContent(aggregated)) {
       return aggregated
     }
   } catch (error) {
@@ -143,25 +143,25 @@ async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<Aggrega
 }
 
 const fetchAggregatedHomeNoCache = unstable_cache(
-  async (cacheTags: string[]): Promise<AggregatedHomeData> => {\
+  async (cacheTags: string[]): Promise<AggregatedHomeData> => {
     return fetchAggregatedHome()
   },
   ["aggregated-home-v1"],
-  {\
+  {
     tags: [],
     revalidate: CACHE_DURATIONS.MEDIUM,
   },
 )
 
-async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
+async function fetchAggregatedHome(): Promise<AggregatedHomeData> {
   return await Promise.all(
     ENABLED_COUNTRY_CODES.map((countryCode) =>
       fetchAggregatedForCountry(countryCode),
     ),
-  ).then((results) => {\
+  ).then((results) => {
     const aggregated: AggregatedHomeData = {}
 
-    results.forEach((result) => {\
+    results.forEach((result) => {
       if (result) {
         aggregated[result.countryCode] = result
       }
@@ -172,22 +172,22 @@ async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
 }
 
 async function fetchAggregatedForCountry(
-  countryCode: string,\
-): Promise<AggregatedHomeData[string]> {\
+  countryCode: string,
+): Promise<AggregatedHomeData[string]> {
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode as CountryCode] || null
 
-  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
         signal,
         timeout,
       })
 
-      return {\
+      return {
         posts: mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices),
         source: "frontpage" as const,
       }
-    } catch (error) {\
+    } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         console.error(
           `[v0] getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
@@ -203,37 +203,37 @@ async function fetchAggregatedForCountry(
     }
   })
 
-  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       return await loadPostsByMostRecent(countryCode, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)\
+      console.error(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
       return []
     }
   })
 
-  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       return await loadTagPosts(countryCode, defaultTag, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)\
+      console.error(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
       return []
     }
   })
 
-  const results = await Promise.all([frontPagePromise, recentPromise, taggedPromise])\
-  const best = results.reduce<{\
+  const results = await Promise.all([frontPagePromise, recentPromise, taggedPromise])
+  const best = results.reduce<{
     posts: HomePost[]
     source: string
   }>(
-    (acc, result) => {\
-      if (!result) {\
+    (acc, result) => {
+      if (!result) {
         return acc
       }
 
@@ -669,7 +669,7 @@ function mapPostsToHomePosts(posts: WordPressPost[], countryCode: string): HomeP
   // Implementation here
 }
 
-function getPostsForCategories(countryCode: string, categorySlugs: string[], limit: number): Promise<any> {
+async function getPostsForCategories(countryCode: string, categorySlugs: string[], limit: number): Promise<any> {
   // Implementation here
 }
 
