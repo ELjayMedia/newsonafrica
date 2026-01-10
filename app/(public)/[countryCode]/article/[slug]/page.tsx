@@ -175,19 +175,23 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (usingStaleContent) {
-      const errorDigest =
-        typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
-          ? (resolvedArticle.error as { digest?: string }).digest
-          : undefined
-      const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
+      if (!resolvedArticle.staleArticle) {
+        const errorDigest =
+          typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
+            ? (resolvedArticle.error as { digest?: string }).digest
+            : undefined
+        const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
 
-      return (
-        <ArticleServerFallback
-          digest={errorDigest}
-          failureCountries={failureCountries}
-          staleArticle={resolvedArticle.staleArticle}
-        />
-      )
+        return (
+          <ArticleServerFallback
+            digest={errorDigest}
+            failureCountries={failureCountries}
+            staleArticle={resolvedArticle.staleArticle}
+          />
+        )
+      }
+
+      throw resolvedArticle.error
     }
 
     notFound()

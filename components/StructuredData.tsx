@@ -1,5 +1,9 @@
 import type { Post } from "@/lib/types"
-import { ENV } from "@/config/env"
+
+const SITE_URL =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : process.env.NEXT_PUBLIC_SITE_URL || "http://app.newsonafrica.com"
 
 interface StructuredDataProps {
   post: Post
@@ -20,13 +24,13 @@ export function StructuredData({ post, url }: StructuredDataProps) {
     publisher: {
       "@type": "Organization",
       name: "News On Africa",
-        logo: {
-          "@type": "ImageObject",
-          url: `${ENV.NEXT_PUBLIC_SITE_URL}/logo.png`,
-        },
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/logo.png`,
+      },
     },
     description: post.excerpt,
-      image: post.featuredImage?.node?.sourceUrl || `${ENV.NEXT_PUBLIC_SITE_URL}/default-og-image.jpg`,
+    image: post.featuredImage?.node?.sourceUrl || `${SITE_URL}/default-og-image.jpg`,
     mainEntityOfPage: url,
   }
 

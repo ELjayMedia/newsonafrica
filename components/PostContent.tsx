@@ -13,8 +13,9 @@ import { Clock, MessageSquare, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils/date"
 import { getArticleUrl, getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
-import { ENV } from "@/config/env"
 import { AFRICAN_EDITION } from "@/lib/editions"
+
+const SITE_URL = typeof window !== "undefined" ? window.location.origin : ""
 
 interface PostContentProps {
   post: Post
@@ -26,9 +27,10 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
   }
 
   const rawEdition = (post as { country?: string | null }).country
-  const editionCode = typeof rawEdition === "string" && rawEdition.trim().length > 0
-    ? rawEdition.trim().toLowerCase()
-    : AFRICAN_EDITION.code
+  const editionCode =
+    typeof rawEdition === "string" && rawEdition.trim().length > 0
+      ? rawEdition.trim().toLowerCase()
+      : AFRICAN_EDITION.code
 
   return (
     <div className="container mx-auto px-4 pb-6 bg-white">
@@ -42,8 +44,8 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
 
           <div className="flex items-center gap-1">
             <span className="text-gray-500 text-xs">Share</span>
-              <SocialShare
-                url={`${ENV.NEXT_PUBLIC_SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
+            <SocialShare
+              url={`${SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center gap-1"
@@ -51,10 +53,8 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           </div>
         </div>
 
-        {/* Headline */}
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{post.title}</h1>
 
-        {/* Author and publication */}
         <div className="flex items-center justify-between mb-4 md:mb-3">
           <div className="flex flex-col">
             {post.author && (
@@ -67,7 +67,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
             )}
           </div>
 
-          {/* Interactive buttons */}
           <div className="flex flex-wrap gap-1 md:gap-2">
             <Button
               variant="outline"
@@ -96,7 +95,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           </div>
         </div>
 
-        {/* Featured image */}
         {post.featuredImage && post.featuredImage.node.sourceUrl && (
           <div className="mb-6">
             <Image
@@ -116,7 +114,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           </div>
         )}
 
-        {/* Article content */}
         <div
           className="prose prose-lg max-w-none mb-8 text-sm text-black"
           dangerouslySetInnerHTML={{
@@ -124,7 +121,6 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           }}
         />
 
-        {/* Categories and tags */}
         <div className="flex flex-wrap gap-2 mb-6">
           {post.categories?.nodes?.map((category: Category) => (
             <Link
@@ -137,12 +133,11 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           ))}
         </div>
 
-        {/* Bottom Social Sharing */}
         <div className="flex items-center justify-center py-6 border-t border-gray-200 mt-6">
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">Found this article helpful? Share it with others!</p>
-              <SocialShare
-                url={`${ENV.NEXT_PUBLIC_SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
+            <SocialShare
+              url={`${SITE_URL}${getArticleUrl(post.slug, (post as any).country)}`}
               title={post.title}
               description={post.excerpt || post.title}
               className="flex items-center justify-center gap-2"
@@ -150,12 +145,10 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           </div>
         </div>
 
-        {/* Comments Section */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <CommentList postId={post.id} editionCode={editionCode} />
         </div>
 
-        {/* Related Posts */}
         <RelatedPosts categories={post.categories?.nodes || []} currentPostId={post.id} />
       </article>
     </div>

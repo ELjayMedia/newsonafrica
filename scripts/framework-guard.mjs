@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { execSync } = require('node:child_process')
-const fs = require('node:fs')
-const path = require('node:path')
+import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 
 const BINARY_EXTENSIONS = new Set([
   '.png',
@@ -32,7 +32,7 @@ function isBinaryFile(filePath) {
   return BINARY_EXTENSIONS.has(ext)
 }
 
-const SCRIPT_RELATIVE_PATH = path.normalize('scripts/framework-guard.js')
+const SCRIPT_RELATIVE_PATH = path.normalize('scripts/framework-guard.mjs')
 
 function findSvelteReferences(files) {
   const matches = []

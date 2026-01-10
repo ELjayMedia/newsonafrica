@@ -1,3 +1,4 @@
+import "server-only"
 import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))

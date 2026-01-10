@@ -1,12 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Facebook, Mail, LinkIcon, PhoneIcon as WhatsApp, Share2, X, Check } from "lucide-react"
+import { Facebook, Mail, LinkIcon, WheatIcon as WhatsApp, Share2, X, Check } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { ENV } from "@/config/env"
 
 interface ShareButtonsProps {
   title: string
@@ -32,8 +31,8 @@ export function ShareButtons({
   const [copied, setCopied] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
 
-  // Ensure we have the full URL
-  const fullUrl = url.startsWith("http") ? url : `${ENV.NEXT_PUBLIC_SITE_URL}${url}`
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : ""
+  const fullUrl = url.startsWith("http") ? url : `${siteUrl}${url}`
 
   // Encode components for sharing
   const encodedUrl = encodeURIComponent(fullUrl)
@@ -164,7 +163,7 @@ export function ShareButtons({
             <div className="relative flex-1">
               <Button
                 variant="outline"
-                className="w-full justify-start text-left font-normal truncate pr-10"
+                className="w-full justify-start text-left font-normal truncate pr-10 bg-transparent"
                 onClick={handleCopyLink}
               >
                 <span className="truncate">{fullUrl}</span>

@@ -1,753 +1,125 @@
-import { NextResponse, type NextRequest } from "next/server"
-import type { PostgrestError, Session } from "@supabase/supabase-js"
-import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
+import { makeRoute } from "@/lib/api/route-helpers"
+import { successResponse } from "@/lib/api-utils"
 import { cacheTags } from "@/lib/cache"
 import { revalidateByTag } from "@/lib/server-cache-utils"
-import { createSupabaseRouteClient } from "@/lib/supabase/route"
-import { executeListQuery } from "@/lib/supabase/list-query"
-import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
-import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
+import { decodeCommentCursor } from "@/lib/comment-cursor"
+import { ValidationError } from "@/lib/validation"
+
 import {
-  ValidationError,
-  addValidationError,
-  hasValidationErrors,
-  type FieldErrors,
-} from "@/lib/validation"
-import type { CommentListRecord } from "@/types/comments"
+  validateGetCommentsParams,
+  validateCreateCommentPayload,
+  validateUpdateCommentPayload,
+} from "@/lib/comments/validators"
+import { resolveRequestEdition } from "@/lib/comments/edition"
+import { listComments, countCommentsIfFirstPage, getProfileLite, getLastUserCommentTime } from "@/lib/comments/queries"
+import { createComment, updateCommentAction } from "@/lib/comments/actions"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-function withCorsNoStore(request: NextRequest, response: NextResponse) {
-  const result = withCors(request, response)
-  result.headers.set("Cache-Control", "no-store")
-  return result
-}
-
-function serviceUnavailable(request: NextRequest) {
-  return withCorsNoStore(
-    request,
-    NextResponse.json({ success: false, error: "Supabase service unavailable" }, { status: 503 }),
-  )
-}
-
-const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
-const COMMENT_STATUS_SET = new Set(COMMENT_STATUSES)
-const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
-const COMMENT_ACTION_SET = new Set(COMMENT_ACTIONS)
-
-function applyOrFilters(
-  query: any,
-  statusConditions: string[],
-  cursorConditions: string[],
-) {
-  if (statusConditions.length === 0 && cursorConditions.length === 0) {
-    return query
-  }
-
-  const orGroups: string[] = []
-
-  if (statusConditions.length > 0 && cursorConditions.length > 0) {
-    for (const statusCondition of statusConditions) {
-      for (const cursorCondition of cursorConditions) {
-        orGroups.push(`and(${statusCondition},${cursorCondition})`)
-      }
-    }
-  } else if (statusConditions.length > 0) {
-    orGroups.push(...statusConditions)
-  } else {
-    orGroups.push(...cursorConditions)
-  }
-
-  if (orGroups.length > 0) {
-    query = query.or(orGroups.join(","))
-  }
-
-  return query
-}
-
-const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
-const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((edition) => edition.code.toLowerCase()))
-
-const COMMENT_LIST_SELECT_COLUMNS =
-  "id, wp_post_id, edition_code, user_id, body, parent_id, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, replies_count, reactions_count, profile:profiles(username, avatar_url)"
-
-function normalizeEditionCode(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-
-  if (!normalized) {
-    return null
-  }
-
-  if (SUPPORTED_EDITION_CODES.has(normalized)) {
-    return normalized
-  }
-
-  return null
-}
-
-function resolveRequestEdition(
-  request: NextRequest,
-  session: Session | null,
-  profileCountry?: string | null,
-): string {
-  const normalizedProfileCountry = normalizeEditionCode(profileCountry)
-  if (normalizedProfileCountry) {
-    return normalizedProfileCountry
-  }
-
-  const appMetadataCountry = normalizeEditionCode(session?.user?.app_metadata?.country)
-  if (appMetadataCountry) {
-    return appMetadataCountry
-  }
-
-  const userMetadataCountry = normalizeEditionCode(session?.user?.user_metadata?.country)
-  if (userMetadataCountry) {
-    return userMetadataCountry
-  }
-
-  for (const cookieName of EDITION_COOKIE_KEYS) {
-    const cookieValue = request.cookies.get(cookieName)?.value
-    const normalized = normalizeEditionCode(cookieValue)
-    if (normalized) {
-      return normalized
-    }
-  }
-
-  return AFRICAN_EDITION.code
-}
-
-type CommentStatus = (typeof COMMENT_STATUSES)[number]
-type CommentAction = (typeof COMMENT_ACTIONS)[number]
-
-function parseParentId(value: string | null): string | null | undefined {
-  if (value == null) {
-    return undefined
-  }
-
-  const trimmed = value.trim()
-  if (trimmed.length === 0 || trimmed.toLowerCase() === "null") {
-    return null
-  }
-
-  return trimmed
-}
-
-function normalizeEditionParam(value: string | null): string | null {
-  if (value == null) {
-    return null
-  }
-
-  const normalized = normalizeEditionCode(value)
-
-  if (!normalized) {
-    return null
-  }
-
-  return normalized
-}
-
-function validateGetCommentsParams(searchParams: URLSearchParams) {
-  const errors: FieldErrors = {}
-
-  const rawPostId =
-    searchParams.get("wp_post_id") ?? searchParams.get("wpPostId") ?? searchParams.get("postId")
-  const wpPostId = typeof rawPostId === "string" && rawPostId.trim().length > 0 ? rawPostId.trim() : null
-  if (!wpPostId) {
-    addValidationError(errors, "wp_post_id", "WordPress post ID is required")
-  }
-
-  const rawEdition =
-    searchParams.get("edition_code") ?? searchParams.get("editionCode") ?? searchParams.get("country")
-  const normalizedEdition = normalizeEditionParam(rawEdition)
-
-  if (rawEdition && !normalizedEdition) {
-    addValidationError(errors, "edition_code", "Edition code is invalid")
-  }
-
-  const editionCode = normalizedEdition ?? AFRICAN_EDITION.code
-
-  const rawPage = searchParams.get("page")
-  let page = 0
-  if (rawPage != null) {
-    const parsed = Number.parseInt(rawPage, 10)
-    if (Number.isNaN(parsed) || parsed < 0) {
-      addValidationError(errors, "page", "Page must be a non-negative integer")
-    } else {
-      page = parsed
-    }
-  }
-
-  const rawLimit = searchParams.get("limit")
-  let limit = 10
-  if (rawLimit != null) {
-    const parsed = Number.parseInt(rawLimit, 10)
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      addValidationError(errors, "limit", "Limit must be a positive integer")
-    } else if (parsed > 50) {
-      addValidationError(errors, "limit", "Limit cannot be greater than 50")
-    } else {
-      limit = parsed
-    }
-  }
-
-  const parentId = parseParentId(searchParams.get("parent_id") ?? searchParams.get("parentId"))
-
-  const rawCursor = searchParams.get("cursor")
-  const cursor = rawCursor && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined
-
-  const rawStatus = searchParams.get("status")
-  const status = rawStatus ? rawStatus.trim() : "active"
-
-  if (status && !COMMENT_STATUS_SET.has(status as CommentStatus)) {
-    addValidationError(errors, "status", "Invalid status value")
-  }
-
-  if (hasValidationErrors(errors) || !wpPostId) {
-    throw new ValidationError("Invalid query parameters", errors)
-  }
-
-  return {
-    wpPostId,
-    editionCode,
-    page,
-    limit,
-    parentId,
-    cursor,
-    status: (COMMENT_STATUS_SET.has(status as CommentStatus) ? status : "active") as CommentStatus,
-  }
-}
-
-function validateCreateCommentPayload(payload: unknown) {
-  if (payload == null || typeof payload !== "object") {
-    throw new ValidationError("Invalid request body", { body: ["Expected an object payload"] })
-  }
-
-  const record = payload as Record<string, unknown>
-  const errors: FieldErrors = {}
-
-  const rawPostId =
-    (typeof record.wp_post_id === "string" && record.wp_post_id.trim().length > 0
-      ? record.wp_post_id
-      : null) ??
-    (typeof record.wpPostId === "string" && record.wpPostId.trim().length > 0
-      ? record.wpPostId
-      : null) ??
-    (typeof record.postId === "string" && record.postId.trim().length > 0 ? record.postId : null)
-
-  if (!rawPostId) {
-    addValidationError(errors, "wp_post_id", "WordPress post ID is required")
-  }
-
-  const rawEdition =
-    (typeof record.edition_code === "string" ? record.edition_code : null) ??
-    (typeof record.editionCode === "string" ? record.editionCode : null)
-  const editionCode = normalizeEditionParam(rawEdition)
-
-  if (rawEdition && !editionCode) {
-    addValidationError(errors, "edition_code", "Edition code is invalid")
-  }
-
-  const bodyValue =
-    (typeof record.body === "string" ? record.body : null) ??
-    (typeof record.content === "string" ? record.content : null)
-
-  if (!bodyValue || bodyValue.length === 0) {
-    addValidationError(errors, "body", "Comment body is required")
-  } else if (bodyValue.length > 2000) {
-    addValidationError(errors, "body", "Comment is too long")
-  }
-
-  let parentId: string | null | undefined
-  const rawParent =
-    record.parent_id !== undefined ? record.parent_id : (record.parentId as unknown | undefined)
-  if (rawParent === null) {
-    parentId = null
-  } else if (typeof rawParent === "string") {
-    parentId = rawParent
-  } else if (rawParent !== undefined) {
-    addValidationError(errors, "parent_id", "Parent ID must be a string or null")
-  }
-
-  if (hasValidationErrors(errors) || !rawPostId || !bodyValue) {
-    throw new ValidationError("Invalid comment payload", errors)
-  }
-
-  return { wpPostId: rawPostId, editionCode: editionCode ?? null, body: bodyValue, parentId }
-}
-
-function validateUpdateCommentPayload(payload: unknown) {
-  if (payload == null || typeof payload !== "object") {
-    throw new ValidationError("Invalid request body", { body: ["Expected an object payload"] })
-  }
-
-  const record = payload as Record<string, unknown>
-  const errors: FieldErrors = {}
-
-  const id = typeof record.id === "string" && record.id.length > 0 ? record.id : null
-  if (!id) {
-    addValidationError(errors, "id", "Comment ID is required")
-  }
-
-  const action = typeof record.action === "string" ? record.action : null
-  if (!action || !COMMENT_ACTION_SET.has(action as CommentAction)) {
-    addValidationError(errors, "action", "Invalid action")
-  }
-
-  const reasonValue = record.reason
-  let reason: string | undefined
-  if (reasonValue === undefined) {
-    reason = undefined
-  } else if (typeof reasonValue === "string") {
-    reason = reasonValue
-  } else {
-    addValidationError(errors, "reason", "Reason must be a string")
-  }
-
-  if ((action as CommentAction) === "report" && (!reason || reason.length === 0)) {
-    addValidationError(errors, "reason", "Report reason is required")
-  }
-
-  if (hasValidationErrors(errors) || !id || !action) {
-    throw new ValidationError("Invalid comment update payload", errors)
-  }
-
-  return { id, action: action as CommentAction, reason }
-}
+const GET_ = makeRoute({ rateLimit: { limit: 30, tokenEnv: "COMMENTS_GET_API_CACHE_TOKEN" } })
+const POST_ = makeRoute({ rateLimit: { limit: 5, tokenEnv: "COMMENTS_POST_API_CACHE_TOKEN" }, requireAuth: true })
+const PATCH_ = makeRoute({ rateLimit: { limit: 10, tokenEnv: "COMMENTS_PATCH_API_CACHE_TOKEN" }, requireAuth: true })
 
 // Get comments for a post with pagination
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  logRequest(request)
-  let applyCookies = <T extends NextResponse>(response: T): T => response
-  try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 30, "COMMENTS_GET_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
+export const GET = GET_(async ({ request, supabase, session }) => {
+  const { searchParams } = new URL(request.url)
+  const params = validateGetCommentsParams(searchParams)
 
-    const routeClient = createSupabaseRouteClient(request)
-
-    if (!routeClient) {
-      return serviceUnavailable(request)
-    }
-
-    applyCookies = routeClient.applyCookies
-    const { supabase } = routeClient
-
-    const { searchParams } = new URL(request.url)
-
-    // Validate query parameters
-    const { wpPostId, editionCode, page, limit, parentId, status, cursor: cursorParam } =
-      validateGetCommentsParams(searchParams)
-
-    const decodedCursor = cursorParam ? decodeCommentCursor(cursorParam) : null
-    if (cursorParam && (!decodedCursor || decodedCursor.sort !== "newest")) {
-      throw new ValidationError("Invalid cursor", { cursor: ["Cursor is malformed"] })
-    }
-
-    const applyParentFilter = (builder: any) => {
-      if (parentId === null) {
-        return builder.is("parent_id", null)
-      }
-
-      if (parentId) {
-        return builder.eq("parent_id", parentId)
-      }
-
-      return builder
-    }
-
-    const simpleStatusFilters: Array<{ column: string; value: string }> = []
-    const statusOrConditions: string[] = []
-
-    const applySimpleStatusFilters = (builder: any) => {
-      let updated = builder
-      for (const filter of simpleStatusFilters) {
-        updated = updated.eq(filter.column, filter.value)
-      }
-      return updated
-    }
-
-    // Build query
-    const buildBaseQuery = (builder: any, { includeCursor }: { includeCursor: boolean }) => {
-      let updated = builder.eq("wp_post_id", wpPostId).eq("edition_code", editionCode)
-      updated = applyParentFilter(updated)
-      updated = applySimpleStatusFilters(updated)
-      return applyOrFilters(updated, statusOrConditions, includeCursor ? cursorConditions : [])
-    }
-
-    const {
-      data: { session },
-    }: { data: { session: Session | null } } = await supabase.auth.getSession()
-
-    let effectiveStatus = status
-    let isModerator = false
-
-    if (!session?.user && status === "all") {
-      effectiveStatus = "active"
-    }
-
-    if (session?.user && status !== "active") {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", session.user.id)
-        .single()
-
-      const isAdmin = (profile as { is_admin?: boolean | null } | null)?.is_admin
-      isModerator = Boolean(isAdmin)
-    }
-
-    if (!session?.user) {
-      simpleStatusFilters.push({ column: "status", value: effectiveStatus })
-    } else if (isModerator) {
-      if (effectiveStatus !== "all") {
-        simpleStatusFilters.push({ column: "status", value: effectiveStatus })
-      }
-    } else {
-      if (effectiveStatus === "all") {
-        statusOrConditions.push("status.eq.active")
-        statusOrConditions.push(`user_id.eq.${session.user.id}`)
-      } else if (effectiveStatus === "active") {
-        simpleStatusFilters.push({ column: "status", value: "active" })
-      } else {
-        simpleStatusFilters.push({ column: "status", value: effectiveStatus })
-        simpleStatusFilters.push({ column: "user_id", value: session.user.id })
-      }
-    }
-
-    const cursorConditions = buildCursorConditions("newest", decodedCursor)
-
-    const { data: commentsData, error } = (await executeListQuery(supabase, "comments", (query) => {
-      const baseQuery = buildBaseQuery(query.select(COMMENT_LIST_SELECT_COLUMNS), {
-        includeCursor: true,
-      })
-
-      return baseQuery
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(limit + 1)
-    })) as { data: CommentListRecord[] | null; error: PostgrestError | null }
-
-    if (error) {
-      throw new Error(`Failed to fetch comments: ${error.message}`)
-    }
-
-    const typedComments = (commentsData ?? []) as CommentListRecord[]
-
-    let totalCount: number | undefined
-
-    if (page === 0) {
-      const { count, error: countError } = await executeListQuery(
-        supabase,
-        "comments",
-        (query) =>
-          buildBaseQuery(query.select("id", { count: "exact", head: true }), { includeCursor: false }),
-      )
-
-      if (countError) {
-        console.error("Failed to count comments:", countError)
-      } else if (typeof count === "number") {
-        totalCount = count
-      } else {
-        totalCount = 0
-      }
-    }
-
-    if (typedComments.length === 0) {
-      return applyCookies(
-        withCorsNoStore(
-          request,
-          successResponse({
-            comments: [],
-            hasMore: false,
-            ...(totalCount !== undefined ? { totalCount } : {}),
-            nextCursor: null,
-          }),
-        ),
-      )
-    }
-
-    // Combine comments with profile data
-    const hasMore = typedComments.length > limit
-    const limitedComments = hasMore ? typedComments.slice(0, limit) : typedComments
-
-    const lastComment = limitedComments[limitedComments.length - 1]
-
-    const nextCursor =
-      hasMore && lastComment?.created_at && lastComment?.id
-        ? encodeCommentCursor({
-            sort: "newest",
-            createdAt: String(lastComment.created_at),
-            id: String(lastComment.id),
-          })
-        : null
-
-    const commentsWithProfiles = limitedComments.map((comment) => {
-      return {
-        ...comment,
-        profile: comment.profile ?? undefined,
-      }
-    })
-
-    return applyCookies(
-      withCorsNoStore(
-        request,
-        successResponse(
-          {
-            comments: commentsWithProfiles,
-            hasMore,
-            ...(totalCount !== undefined ? { totalCount } : {}),
-            nextCursor,
-          },
-          {
-            pagination: {
-              page,
-              limit,
-            },
-          },
-        ),
-      ),
-    )
-  } catch (error) {
-    return applyCookies(withCorsNoStore(request, handleApiError(error)))
+  const decodedCursor = params.cursor ? decodeCommentCursor(params.cursor) : null
+  if (params.cursor && (!decodedCursor || decodedCursor.sort !== "newest")) {
+    throw new ValidationError("Invalid cursor", { cursor: ["Cursor is malformed"] })
   }
-}
+
+  const { comments, hasMore, nextCursor } = await listComments(supabase, {
+    ...params,
+    session,
+    decodedCursor,
+  })
+
+  const totalCount = await countCommentsIfFirstPage(supabase, {
+    ...params,
+    session,
+    decodedCursor: null,
+  })
+
+  return successResponse(
+    {
+      comments,
+      hasMore,
+      ...(totalCount !== undefined ? { totalCount } : {}),
+      nextCursor,
+    },
+    {
+      pagination: { page: params.page, limit: params.limit },
+    },
+  )
+})
 
 // Create a new comment
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  logRequest(request)
-  let applyCookies = <T extends NextResponse>(response: T): T => response
+export const POST = POST_(async ({ request, supabase, session }) => {
+  let body: unknown
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 5, "COMMENTS_POST_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
-
-    const routeClient = createSupabaseRouteClient(request)
-
-    if (!routeClient) {
-      return serviceUnavailable(request)
-    }
-
-    applyCookies = routeClient.applyCookies
-    const { supabase } = routeClient
-
-    // Check if user is authenticated
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Unauthorized"))))
-    }
-
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
-    }
-
-    // Validate request body
-    const { wpPostId, editionCode, body: commentBody, parentId } = validateCreateCommentPayload(body)
-
-    // Rate limiting check - get user's last comment timestamp
-    const { data: lastComment, error: lastCommentError } = await supabase
-      .from("comments")
-      .select("created_at")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
-
-    const lastCommentRecord = lastComment as { created_at: string } | null
-
-    if (!lastCommentError && lastCommentRecord) {
-      const lastCommentTime = new Date(lastCommentRecord.created_at).getTime()
-      const currentTime = Date.now()
-      const timeDiff = currentTime - lastCommentTime
-
-      // Rate limit: 10 seconds between comments
-      if (timeDiff < 10000) {
-        return applyCookies(
-          handleApiError(
-            new Error(
-              `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
-            ),
-          ),
-        )
-      }
-    }
-
-    const {
-      data: profile,
-      error: profileError,
-    } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, country")
-      .eq("id", session.user.id)
-      .maybeSingle()
-
-    const requestEdition = resolveRequestEdition(request, session, profile?.country)
-
-    const newComment = {
-      wp_post_id: wpPostId,
-      edition_code: editionCode ?? requestEdition,
-      user_id: session.user.id,
-      body: commentBody,
-      parent_id: parentId ?? null,
-      status: "active",
-    }
-
-    // Insert the comment
-    const { data: comment, error } = await supabase.from("comments").insert(newComment).select().single()
-
-    if (error) {
-      throw new Error(`Failed to create comment: ${error.message}`)
-    }
-
-    const commentTag = cacheTags.comments(editionCode ?? requestEdition, wpPostId)
-
-    if (profileError || !profile) {
-      // Still return the comment, just without profile data
-
-      revalidateByTag(commentTag)
-      return applyCookies(successResponse(comment))
-    }
-
-    // Return the comment with profile data
-    revalidateByTag(commentTag)
-    return applyCookies(
-      successResponse({
-        ...comment,
-        profile: {
-          username: profile.username,
-          avatar_url: profile.avatar_url,
-        },
-      }),
-    )
-  } catch (error) {
-    return applyCookies(withCorsNoStore(request, handleApiError(error)))
+    body = await request.json()
+  } catch {
+    throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
   }
-}
+
+  const { wpPostId, editionCode, body: commentBody, parentId } = validateCreateCommentPayload(body)
+
+  // Rate limiting check - 10 seconds between comments
+  const lastCommentTime = await getLastUserCommentTime(supabase, session!.user.id)
+  if (lastCommentTime) {
+    const timeDiff = Date.now() - lastCommentTime
+    if (timeDiff < 10000) {
+      throw new Error(
+        `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
+      )
+    }
+  }
+
+  const profile = await getProfileLite(supabase, session!.user.id)
+  const requestEdition = resolveRequestEdition(request, session, profile?.country)
+  const finalEdition = editionCode ?? requestEdition
+
+  const comment = await createComment(supabase, {
+    wpPostId,
+    editionCode: finalEdition,
+    userId: session!.user.id,
+    body: commentBody,
+    parentId: parentId ?? null,
+  })
+
+  revalidateByTag(cacheTags.comments(finalEdition, wpPostId))
+
+  return successResponse({
+    ...comment,
+    profile: profile ? { username: profile.username, avatar_url: profile.avatar_url } : undefined,
+  })
+})
 
 // Update comment status (report, delete, approve)
-export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  logRequest(request)
-  let applyCookies = <T extends NextResponse>(response: T): T => response
+export const PATCH = PATCH_(async ({ request, supabase, session }) => {
+  let body: unknown
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await applyRateLimit(request, 10, "COMMENTS_PATCH_API_CACHE_TOKEN")
-    if (rateLimitResponse) return withCorsNoStore(request, rateLimitResponse)
-
-    const routeClient = createSupabaseRouteClient(request)
-
-    if (!routeClient) {
-      return serviceUnavailable(request)
-    }
-
-    applyCookies = routeClient.applyCookies
-    const { supabase } = routeClient
-
-    // Check if user is authenticated
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Unauthorized"))))
-    }
-
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
-    }
-
-    // Validate request body
-    const { id, action, reason } = validateUpdateCommentPayload(body)
-
-    if (action === "report" && !reason) {
-      return applyCookies(handleApiError(new Error("Report reason is required")))
-    }
-
-    // Check if the comment exists
-    const { data: comment, error: fetchError } = await supabase
-      .from("comments")
-      .select("*")
-      .eq("id", id)
-      .single()
-
-    if (fetchError || !comment) {
-      return applyCookies(withCorsNoStore(request, handleApiError(new Error("Comment not found"))))
-    }
-
-    const commentRecord = comment as {
-      user_id?: string | null
-      wp_post_id?: string | number | null
-      edition_code?: string | null
-    }
-
-    let updateData = {}
-
-    switch (action) {
-      case "report":
-        updateData = {
-          status: "flagged",
-          reported_by: session.user.id,
-          report_reason: reason,
-        }
-        break
-      case "delete":
-        // Only allow the author to delete their own comment
-        if (commentRecord.user_id !== session.user.id) {
-          return applyCookies(
-            withCorsNoStore(request, handleApiError(new Error("You can only delete your own comments"))),
-          )
-        }
-        updateData = { status: "deleted" }
-        break
-      case "approve":
-        // Check if user is a moderator (implement your own logic)
-        // For now, we'll just check if the user is the author
-        if (commentRecord.user_id !== session.user.id) {
-          return applyCookies(
-            withCorsNoStore(
-              request,
-              handleApiError(new Error("You don't have permission to approve this comment")),
-            ),
-          )
-        }
-        updateData = {
-          status: "active",
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: session.user.id,
-        }
-        break
-    }
-
-    // Update the comment
-    // @ts-expect-error -- Supabase type inference does not recognize our generic schema in route handlers
-    const { error } = await supabase.from("comments").update(updateData).eq("id", id)
-
-    if (error) {
-      throw new Error(`Failed to ${action} comment: ${error.message}`)
-    }
-
-    const targetEdition =
-      normalizeEditionCode(commentRecord.edition_code ?? null) ?? AFRICAN_EDITION.code
-    const targetPostId = commentRecord.wp_post_id != null ? String(commentRecord.wp_post_id) : null
-
-    if (targetPostId) {
-      revalidateByTag(cacheTags.comments(targetEdition, targetPostId))
-    }
-    return applyCookies(successResponse({ success: true, action }))
-  } catch (error) {
-    return applyCookies(withCorsNoStore(request, handleApiError(error)))
+    body = await request.json()
+  } catch {
+    throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
   }
-}
+
+  const { id, action, reason } = validateUpdateCommentPayload(body)
+
+  const result = await updateCommentAction(supabase, {
+    id,
+    action,
+    reason,
+    userId: session!.user.id,
+  })
+
+  if (result.tagToRevalidate) {
+    revalidateByTag(result.tagToRevalidate)
+  }
+
+  return successResponse({ success: true, action })
+})

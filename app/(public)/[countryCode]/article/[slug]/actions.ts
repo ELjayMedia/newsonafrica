@@ -45,10 +45,9 @@ export interface FetchArticleWithFallbackActionInput {
 }
 
 export interface FetchArticleWithFallbackActionResult {
-  article: WordPressPost | null
+  article: WordPressPost
   sourceCountry: string
   relatedPosts: WordPressPost[]
-  error?: "temporary_error"
 }
 
 const resolveRelatedPostId = (article: {
@@ -102,21 +101,12 @@ export async function fetchArticleWithFallbackAction({
       : resolvedArticle.staleArticle ?? null
 
   if (!articleData) {
-    if (resolvedArticle.status === "temporary_error") {
-      return {
-        article: null,
-        sourceCountry: editionCountry,
-        relatedPosts: [],
-        error: "temporary_error",
-      }
-    }
-    throw new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
+    throw resolvedArticle.error ?? new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
   }
 
-  const sourceCountry =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.sourceCountry ?? editionCountry
-      : resolvedArticle.staleSourceCountry ?? editionCountry
+  const sourceCountry = resolvedArticle.status === "found"
+    ? resolvedArticle.sourceCountry ?? editionCountry
+    : resolvedArticle.staleSourceCountry ?? editionCountry
 
   const relatedPostId = resolveRelatedPostId(articleData)
   let relatedPosts: WordPressPost[] = []
@@ -138,15 +128,9 @@ export async function fetchArticleWithFallbackAction({
     }
   }
 
-  const result: FetchArticleWithFallbackActionResult = {
+  return {
     article: articleData,
     sourceCountry,
     relatedPosts,
   }
-
-  if (resolvedArticle.status === "temporary_error") {
-    result.error = "temporary_error"
-  }
-
-  return result
 }

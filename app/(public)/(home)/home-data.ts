@@ -10,6 +10,23 @@ import type { HomePost } from "@/types/home"
 export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const HOME_FEED_FALLBACK_LIMIT = 6
 
+const COUNTRY_CODES = [] as string[]
+const MAX_AGGREGATED_HOME_COUNTRY_REQUESTS = 4
+const defaultTag = ""
+const FEED_BUILDER_POOL_SIZE = 10
+
+let _unstable_cache: typeof import("next/cache").unstable_cache | null = null
+
+async function getUnstableCache() {
+  if (!_unstable_cache) {
+    const nextCache = await import("next/cache")
+    _unstable_cache = nextCache.unstable_cache
+  }
+  return _unstable_cache
+}
+
+const unstable_cache_sync = <T extends (...args: any[]) => any>(fn: T, _keyParts: string[], _options: any): T => fn
+
 const createEmptyAggregatedHome = (): AggregatedHomeData => ({
   heroPost: null,
   secondaryPosts: [],
@@ -84,13 +101,13 @@ export const COUNTRY_AGGREGATE_CONCURRENCY = 4
 const homeFeedRequestLimit = pLimit(6)
 
 const scheduleHomeFeedTask = <T>(
-  timeoutMs: number,
+  timeoutMs: number,\
   task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
 ): Promise<T> =>
-  homeFeedRequestLimit(async () => {
+  homeFeedRequestLimit(async () => {\
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {
+    try {\
       return await task({ signal: controller.signal, timeout: timeoutMs })
     } finally {
       clearTimeout(timeoutId)
@@ -100,11 +117,11 @@ const scheduleHomeFeedTask = <T>(
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
   slices: Awaited<ReturnType<typeof getFrontPageSlicesForCountry>>,
-): HomePost[] => {
+): HomePost[] => {\
   const posts: HomePost[] = []
 
-  const pushPost = (post: WordPressPost | null | undefined) => {
-    if (!post) {
+  const pushPost = (post: WordPressPost | null | undefined) => {\
+    if (!post) {\
       return
     }
 
@@ -128,11 +145,11 @@ const mapFrontPageSlicesToHomePosts = (
   return dedupeHomePosts(posts)
 }
 
-async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {
-  try {
+async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {\
+  try {\
     const aggregated = await loadUnstableCacheAdapter(fetchAggregatedHomeNoCache, cacheTags)()
 
-    if (hasAggregatedHomeContent(aggregated)) {
+    if (hasAggregatedHomeContent(aggregated)) {\
       return aggregated
     }
   } catch (error) {
@@ -142,26 +159,45 @@ async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<Aggrega
   return createEmptyAggregatedHome()
 }
 
-const fetchAggregatedHomeNoCache = unstable_cache(
-  async (cacheTags: string[]): Promise<AggregatedHomeData> => {
-    return fetchAggregatedHome()
-  },
-  ["aggregated-home-v1"],
-  {
-    tags: [],
-    revalidate: CACHE_DURATIONS.MEDIUM,
-  },
-)
+async function fetchAggregatedHomeNoCacheImpl(cacheTags: string[]): Promise<AggregatedHomeData> {\
+  return fetchAggregatedHome()
+}
 
-async function fetchAggregatedHome(): Promise<AggregatedHomeData> {
+let _fetchAggregatedHomeNoCache: ((cacheTags: string[]) => Promise<AggregatedHomeData>) | null = null
+
+async function getFetchAggregatedHomeNoCache() {\
+  if (!_fetchAggregatedHomeNoCache) {\
+    try {\
+      const unstableCache = await getUnstableCache()
+      _fetchAggregatedHomeNoCache = unstableCache(
+        fetchAggregatedHomeNoCacheImpl,
+        ["aggregated-home-v1"],
+        {\
+          tags: [],
+          revalidate: CACHE_DURATIONS.MEDIUM,
+        }
+      )
+    } catch {
+      _fetchAggregatedHomeNoCache = fetchAggregatedHomeNoCacheImpl
+    }
+  }
+  return _fetchAggregatedHomeNoCache
+}
+
+export const fetchAggregatedHomeNoCache = async (cacheTags: string[]): Promise<AggregatedHomeData> => {\
+  const fn = await getFetchAggregatedHomeNoCache()
+  return fn(cacheTags)
+}
+
+async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
   return await Promise.all(
     ENABLED_COUNTRY_CODES.map((countryCode) =>
       fetchAggregatedForCountry(countryCode),
     ),
-  ).then((results) => {
+  ).then((results) => {\
     const aggregated: AggregatedHomeData = {}
 
-    results.forEach((result) => {
+    results.forEach((result) => {\
       if (result) {
         aggregated[result.countryCode] = result
       }
@@ -172,22 +208,22 @@ async function fetchAggregatedHome(): Promise<AggregatedHomeData> {
 }
 
 async function fetchAggregatedForCountry(
-  countryCode: string,
-): Promise<AggregatedHomeData[string]> {
+  countryCode: string,\
+): Promise<AggregatedHomeData[string]> {\
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode as CountryCode] || null
 
-  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {
-    try {
+  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {\
+    try {\
       const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
         signal,
         timeout,
       })
 
-      return {
+      return {\
         posts: mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices),
         source: "frontpage" as const,
       }
-    } catch (error) {
+    } catch (error) {\
       if (error instanceof Error && error.name === "AbortError") {
         console.error(
           `[v0] getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
@@ -203,26 +239,26 @@ async function fetchAggregatedForCountry(
     }
   })
 
-  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
-    try {
+  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {\
+    try {\
       return await loadPostsByMostRecent(countryCode, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
+      console.error(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)\
       return []
     }
   })
 
-  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
-    try {
+  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {\
+    try {\
       return await loadTagPosts(countryCode, defaultTag, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
+      console.error(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)\
       return []
     }
   })
@@ -249,20 +285,43 @@ async function fetchAggregatedForCountry(
   return buildAggregatedHomeFromPosts(best.posts)
 }
 
-export const fetchAggregatedHomeForCountry = unstable_cache(
-  async (
-    countryCode: string,
-    limit = HOME_FEED_FALLBACK_LIMIT,
-  ): Promise<AggregatedHomeData> => fetchAggregatedHomeForCountryUncached(countryCode, limit),
-  ["home-feed-for-country"],
-  {
-    revalidate: HOME_FEED_REVALIDATE,
-    tags: buildCacheTags({
-      country: countryCode,
-      section: "home-feed",
-    }),
-  },
-)
+async function fetchAggregatedHomeForCountryImpl(
+  countryCode: string,
+  limit = HOME_FEED_FALLBACK_LIMIT,
+): Promise<AggregatedHomeData> {
+  return fetchAggregatedHomeForCountryUncached(countryCode, limit)
+}
+
+let _fetchAggregatedHomeForCountry: ((countryCode: string, limit?: number) => Promise<AggregatedHomeData>) | null = null
+
+async function getFetchAggregatedHomeForCountry() {
+  if (!_fetchAggregatedHomeForCountry) {
+    try {
+      const unstableCache = await getUnstableCache()
+      _fetchAggregatedHomeForCountry = unstableCache(
+        fetchAggregatedHomeForCountryImpl,
+        ["home-feed-for-country"],
+        {
+          revalidate: HOME_FEED_REVALIDATE,
+          tags: buildCacheTags({
+            section: "home-feed",
+          }),
+        }
+      )
+    } catch {
+      _fetchAggregatedHomeForCountry = fetchAggregatedHomeForCountryImpl
+    }
+  }
+  return _fetchAggregatedHomeForCountry
+}
+
+export const fetchAggregatedHomeForCountry = async (
+  countryCode: string,
+  limit = HOME_FEED_FALLBACK_LIMIT,
+): Promise<AggregatedHomeData> => {
+  const fn = await getFetchAggregatedHomeForCountry()
+  return fn(countryCode, limit)
+}
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
 
@@ -558,38 +617,53 @@ const shouldUseFallbackCache =
   typeof process !== "undefined" &&
   (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST))
 
-const createCachedFetcher = (
+function createCachedFetcher<T>(
   keyParts: string[],
-  tags: readonly string[] | string[],
-  fn: HomeContentFetcher,
-): HomeContentFetcher => {
-  if (shouldUseFallbackCache) {
-    const fallbackStore = new Map<string, Promise<HomeContentServerProps>>()
+  fn: (baseUrl: string) => Promise<T>,
+  tags: string[] = [],
+): (baseUrl: string) => Promise<T> {
+  const fallbackStore = new Map<string, Promise<T>>()
+  let cachedFn: ((baseUrl: string) => Promise<T>) | null = null
+  let cacheInitPromise: Promise<void> | null = null
 
-    return async (_baseUrl: string) => {
-      const fallbackKey = JSON.stringify([keyParts, _baseUrl])
-
-      if (!fallbackStore.has(fallbackKey)) {
-        fallbackStore.set(fallbackKey, fn(_baseUrl))
+  const initCache = async () => {
+    if (cacheInitPromise) return cacheInitPromise
+    cacheInitPromise = (async () => {
+      try {
+        const unstableCache = await getUnstableCache()
+        cachedFn = unstableCache(fn, keyParts, {
+          revalidate: HOME_FEED_REVALIDATE,
+          tags,
+        })
+      } catch {
+        cachedFn = fn
       }
-
-      return fallbackStore.get(fallbackKey)!
-    }
+    })()
+    return cacheInitPromise
   }
 
-  const cached = unstable_cache(fn, keyParts, {
-    revalidate: HOME_FEED_REVALIDATE,
-    tags,
-  })
+  return async (baseUrl: string) => {
+    // Check runtime environment
+    if (typeof window !== "undefined") {
+      const fallbackKey = JSON.stringify([keyParts, baseUrl])
+      if (!fallbackStore.has(fallbackKey)) {
+        fallbackStore.set(fallbackKey, fn(baseUrl))
+      }
+      return fallbackStore.get(fallbackKey)!
+    }
 
-  return async (_baseUrl: string) => {
+    await initCache()
+
+    if (!cachedFn) {
+      return fn(baseUrl)
+    }
+
     try {
-      return await cached(_baseUrl)
+      return await cachedFn(baseUrl)
     } catch (error) {
       if (isNextCacheUnavailableError(error)) {
-        return fn(_baseUrl)
+        return fn(baseUrl)
       }
-
       throw error
     }
   }
@@ -597,7 +671,6 @@ const createCachedFetcher = (
 
 const cachedBuildHomeContentProps = createCachedFetcher(
   ["home-content", "default"],
-  HOME_FEED_CACHE_TAGS,
   buildHomeContentPropsUncached,
 )
 
@@ -619,9 +692,9 @@ const getEditionCache = (edition: SupportedEdition) => {
 
     cached = createCachedFetcher(
       ["home-content", cacheKey],
-      mergeTags(HOME_FEED_CACHE_TAGS, editionTags),
       async (_baseUrl: string) =>
         buildHomeContentPropsForEditionUncached(_baseUrl, edition),
+      editionTags,
     )
 
     editionCache.set(cacheKey, cached)
@@ -692,13 +765,10 @@ const categoryConfigs = [] as any[]
 const homePageConfig = {} as any
 const ENABLED_COUNTRY_CODES = [] as string[]
 const DEFAULT_TAGS_BY_COUNTRY = {} as any
-const COUNTRY_CODES = [] as string[]
-const MAX_AGGREGATED_HOME_COUNTRY_REQUESTS = 4
-const defaultTag = ""
-const FEED_BUILDER_POOL_SIZE = 10
+
 const isAfricanEdition = (edition: SupportedEdition) => edition.code === AFRICAN_EDITION.code
 const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN_EDITION.code
-const unstable_cache = (fn: any, keyParts: string[], options: any) => fn
+
 const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 
 const FRONT_PAGE_TIMEOUT_MS = 2500
