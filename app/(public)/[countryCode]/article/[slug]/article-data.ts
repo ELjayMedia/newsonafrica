@@ -1,7 +1,6 @@
 import { ENV } from "@/config/env"
 import { cacheTags } from "@/lib/cache"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { createCacheEntry as createKvCacheEntry, kvCache } from "@/lib/cache/kv"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import {
@@ -17,8 +16,6 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
 const ARTICLE_CACHE_KEY_PREFIX = "article"
-const ARTICLE_CACHE_KV_TTL_SECONDS = 15 * 60
-const ARTICLE_CACHE_KV_STALE_THRESHOLD_MS = 90_000
 
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
 
@@ -255,56 +252,6 @@ const buildCachedArticlePayload = (
   }
 }
 
-const persistArticleCache = (country: string, slug: string, payload: CachedArticlePayload): void => {
-  const latestCacheKey = buildArticleCacheKey(country, slug)
-  const versionKeySegment = resolveCacheVersionSegment(payload.version)
-  const versionedCacheKey =
-    versionKeySegment === DEFAULT_ARTICLE_CACHE_VERSION
-      ? latestCacheKey
-      : buildArticleCacheKey(country, slug, versionKeySegment)
-  const cacheKeys = Array.from(new Set([latestCacheKey, versionedCacheKey]))
-
-  void (async () => {
-    for (const cacheKey of cacheKeys) {
-      try {
-        await kvCache.set(cacheKey, createKvCacheEntry(payload), ARTICLE_CACHE_KV_TTL_SECONDS)
-      } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("[v0] Failed to persist article cache entry", { cacheKey, error })
-        }
-      }
-    }
-  })()
-}
-
-const readStaleArticleFromKV = async (
-  countryPriority: string[],
-  slug: string,
-): Promise<CachedArticleResolution | null> => {
-  for (const country of countryPriority) {
-    const latestCacheKey = buildArticleCacheKey(country, slug)
-
-    try {
-      const kvEntry = await kvCache.get<CachedArticlePayload>(latestCacheKey)
-      if (kvEntry?.value) {
-        const normalizedPayload = buildCachedArticlePayload(
-          country,
-          slug,
-          kvEntry.value,
-          kvEntry.value.sourceCountry ?? country,
-        )
-        return { ...normalizedPayload, cacheCountry: country }
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[v0] Failed to read stale article from KV", { country, slug, error })
-      }
-    }
-  }
-
-  return null
-}
-
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
   const signature = computeEditionConfigSignature()
@@ -343,9 +290,6 @@ export type ArticleFallbackTemporaryError = {
   status: "temporary_error"
   error: ArticleTemporarilyUnavailableError
   failures: ArticleTemporaryFailure[]
-  staleArticle?: WordPressPost | null
-  staleSourceCountry?: string | null
-  staleCanonicalCountry?: string | null
 }
 
 export type ArticleLoadResult =
@@ -356,30 +300,13 @@ export type ArticleLoadResult =
 export class ArticleTemporarilyUnavailableError extends AggregateError {
   public readonly failures: ArticleTemporaryFailure[]
 
-  public readonly staleArticle: WordPressPost | null
-
-  public readonly staleSourceCountry: string | null
-
-  public readonly staleCanonicalCountry: string | null
-
-  constructor(
-    failures: ArticleTemporaryFailure[],
-    message: string,
-    options?: {
-      staleArticle?: WordPressPost | null
-      staleSourceCountry?: string | null
-      staleCanonicalCountry?: string | null
-    },
-  ) {
+  constructor(failures: ArticleTemporaryFailure[], message: string) {
     super(
       failures.map(({ error, failure }) => failure?.error ?? error),
       message,
     )
     this.name = "ArticleTemporarilyUnavailableError"
     this.failures = failures
-    this.staleArticle = options?.staleArticle ?? null
-    this.staleSourceCountry = options?.staleSourceCountry ?? null
-    this.staleCanonicalCountry = options?.staleCanonicalCountry ?? null
   }
 }
 
@@ -410,17 +337,13 @@ export async function loadArticleWithFallback(
       failure: primaryArticle.failure,
     })
   } else if (primaryArticle.status === "found") {
-    const cachedPayload = buildCachedArticlePayload(primaryCountry, normalizedSlug, primaryArticle, primaryCountry)
-    if (!preview) {
-      persistArticleCache(primaryCountry, normalizedSlug, cachedPayload)
-    }
     return {
       status: "found",
-      article: cachedPayload.article,
-      tags: cachedPayload.tags,
-      version: cachedPayload.version,
-      canonicalCountry: cachedPayload.canonicalCountry,
-      sourceCountry: cachedPayload.sourceCountry,
+      article: primaryArticle.article,
+      tags: primaryArticle.tags,
+      version: primaryArticle.version,
+      canonicalCountry: primaryArticle.canonicalCountry,
+      sourceCountry: primaryCountry,
     }
   }
 
@@ -434,46 +357,18 @@ export async function loadArticleWithFallback(
         failure: fallbackArticle.failure,
       })
     } else if (fallbackArticle.status === "found") {
-      const cachedPayload = buildCachedArticlePayload(fallbackCountry, normalizedSlug, fallbackArticle, fallbackCountry)
-      if (!preview) {
-        persistArticleCache(fallbackCountry, normalizedSlug, cachedPayload)
-      }
       return {
         status: "found",
-        article: cachedPayload.article,
-        tags: cachedPayload.tags,
-        version: cachedPayload.version,
-        canonicalCountry: cachedPayload.canonicalCountry,
-        sourceCountry: cachedPayload.sourceCountry,
+        article: fallbackArticle.article,
+        tags: fallbackArticle.tags,
+        version: fallbackArticle.version,
+        canonicalCountry: fallbackArticle.canonicalCountry,
+        sourceCountry: fallbackCountry,
       }
     }
   }
 
   if (temporaryFailures.length > 0 && !preview) {
-    const stale = await readStaleArticleFromKV(countryPriority, normalizedSlug)
-    if (stale?.article) {
-      const stalePayload = buildCachedArticlePayload(
-        stale.sourceCountry ?? stale.cacheCountry,
-        normalizedSlug,
-        stale,
-        stale.sourceCountry ?? stale.cacheCountry,
-      )
-      const message = buildTemporaryFailureMessage(temporaryFailures)
-      const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message, {
-        staleArticle: stalePayload.article,
-        staleSourceCountry: stalePayload.sourceCountry,
-        staleCanonicalCountry: stalePayload.canonicalCountry,
-      })
-      return {
-        status: "temporary_error",
-        error,
-        failures: temporaryFailures,
-        staleArticle: stalePayload.article,
-        staleSourceCountry: stalePayload.sourceCountry,
-        staleCanonicalCountry: stalePayload.canonicalCountry,
-      }
-    }
-
     const message = buildTemporaryFailureMessage(temporaryFailures)
     const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message)
     return {

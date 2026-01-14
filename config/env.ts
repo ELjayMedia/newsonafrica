@@ -46,6 +46,7 @@ const CLIENT_ENV_SCHEMA = z.object({
   NEXT_PUBLIC_DEFAULT_SITE: stringWithDefault("sz"),
   NEXT_PUBLIC_WP_SZ_GRAPHQL: graphQlEndpointOverride("sz"),
   NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
+  NEXT_PUBLIC_WP_REST_FALLBACK: z.enum(["0", "1"]).optional().default("0"), // Add REST fallback feature flag (dev-only)
 })
 
 const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
@@ -53,6 +54,8 @@ const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
 type EnvConfig = z.infer<typeof CLIENT_ENV_SCHEMA>
 
 const ENV: Readonly<EnvConfig> = Object.freeze(parsedEnv)
+
+export const REVALIDATION_SECRET = process.env.REVALIDATION_SECRET || ""
 
 export { ENV }
 export type { EnvConfig }

@@ -10,7 +10,7 @@ import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
-const toSerializable = <T>(value: T): T => {
+function toSerializable<T>(value: T): T {
   if (value === null || value === undefined) {
     return value
   }

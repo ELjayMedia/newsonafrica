@@ -21,7 +21,7 @@ interface OAuthOptions {
   redirectTo?: string
 }
 
-const toSerializable = <T>(value: T): T => {
+function toSerializable<T>(value: T): T {
   if (value === null || value === undefined) {
     return value
   }
@@ -43,11 +43,7 @@ const getSiteUrl = () => {
 }
 
 async function fetchProfile(supabase: SupabaseServerClient, userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle()
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
 
   if (error) {
     throw new ActionError("Failed to load profile", { cause: error })
@@ -157,9 +153,7 @@ export async function signUp(params: {
     // Supabase's type inference can resolve the insert payload to `never` when the
     // generated schema types omit relationship metadata, so we cast to `never`
     // after validating with `satisfies` above.
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert(newProfile as never)
+    const { error: profileError } = await supabase.from("profiles").insert(newProfile as never)
 
     if (profileError) {
       throw new ActionError("Failed to create profile", { cause: profileError })
@@ -187,9 +181,7 @@ export async function signOut(): Promise<ActionResult<{ success: true }>> {
   })
 }
 
-export async function updateAuthCountry(
-  countryCode: string | null,
-): Promise<ActionResult<{ success: true }>> {
+export async function updateAuthCountry(countryCode: string | null): Promise<ActionResult<{ success: true }>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     const user = session?.user
 
@@ -208,8 +200,7 @@ export async function updateAuthCountry(
       throw new ActionError("Failed to load profile", { cause: profileError })
     }
 
-    const existingCountry =
-      typeof profile?.country === "string" ? profile.country.toLowerCase() : null
+    const existingCountry = typeof profile?.country === "string" ? profile.country.toLowerCase() : null
 
     if (existingCountry === normalized) {
       return { success: true }

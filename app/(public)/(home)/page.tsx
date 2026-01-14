@@ -6,9 +6,12 @@ import { getSiteBaseUrl } from "@/lib/site-url"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { buildHomeContentProps } from "./home-data"
 import { ISR_CONFIG } from "@/lib/cache/isr-config"
+import { cacheTags } from "@/lib/cache"
 
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with home feed caching.
 export const revalidate = ISR_CONFIG.HOME
+
+export const tags = [cacheTags.home(AFRICAN_EDITION.code), cacheTags.homeFeed()]
 
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, "")
 

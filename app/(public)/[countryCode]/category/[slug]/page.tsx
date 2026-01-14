@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
 import { ISR_CONFIG, STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
 import { getAllCategories } from "@/lib/wordpress/categories"
+import { cacheTags } from "@/lib/cache"
 
 interface Params {
   countryCode: string
@@ -227,6 +228,11 @@ export async function generateStaticParams() {
   }
 
   return params
+}
+
+export async function generateTags({ params }: { params: Promise<Params> }) {
+  const { countryCode, slug } = await params
+  return [cacheTags.category(countryCode, slug), cacheTags.edition(countryCode)]
 }
 
 interface CountryCategoryPageProps {

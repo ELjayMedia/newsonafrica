@@ -1,31 +1,30 @@
 import type { NextRequest } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
-import { revalidateByTag } from "@/lib/server-cache-utils"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { cacheTags } from "@/lib/cache"
 import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
-import {
-  ValidationError,
-  addValidationError,
-  hasValidationErrors,
-  type FieldErrors,
-} from "@/lib/validation"
+import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
 
 export const runtime = "nodejs"
 
 // Cache policy: none (manual revalidation endpoint)
 export const revalidate = 0
 
+type RevalidateAction = "post_published" | "post_updated" | "post_deleted" | "category_updated"
+
 type RevalidatePayload = {
-  secret: string
+  secret?: string
   slug?: string
-  postId?: string
-  country: string
-  categories: string[]
-  tags: string[]
+  postId?: string | number
+  country?: string
+  categories?: string[]
+  tags?: string[]
   path?: string
-  sections: string[]
+  sections?: string[]
+  action?: RevalidateAction
+  post_slug?: string
+  category_slug?: string
 }
 
 const normalizeString = (value: unknown, { lowercase = false } = {}): string | undefined => {
@@ -64,25 +63,84 @@ function parseRevalidatePayload(body: unknown): RevalidatePayload {
   const payload = body as Record<string, unknown>
 
   const secret = normalizeString(payload.secret)
-  if (!secret) {
+
+  if (!secret && !process.env.REVALIDATION_SECRET) {
     addValidationError(errors, "secret", "A secret token is required")
   }
 
-  const slug = normalizeString(payload.slug, { lowercase: true })
-  const postId = normalizeString(payload.postId)
+  const slug = normalizeString(payload.slug || payload.post_slug, { lowercase: true })
+  const postId = normalizeString(payload.postId || payload.post_id)
   const country =
     normalizeString(payload.country, { lowercase: true }) ??
-    (process.env.NEXT_PUBLIC_DEFAULT_SITE?.toLowerCase() ?? DEFAULT_COUNTRY)
+    process.env.NEXT_PUBLIC_DEFAULT_SITE?.toLowerCase() ??
+    DEFAULT_COUNTRY
   const categories = normalizeArray(payload.categories, { lowercase: true })
   const tags = normalizeArray(payload.tags, { lowercase: true })
   const sections = normalizeArray(payload.sections, { lowercase: true })
   const path = normalizeString(payload.path)
+  const action = normalizeString(payload.action, { lowercase: true }) as RevalidateAction | undefined
+  const categorySlug = normalizeString(payload.category_slug, { lowercase: true })
 
   if (hasValidationErrors(errors)) {
     throw new ValidationError("Invalid revalidation request", errors)
   }
 
-  return { secret, slug, postId, country, categories, tags, path, sections }
+  return {
+    secret,
+    slug,
+    postId,
+    country,
+    categories: categorySlug ? [...categories, categorySlug] : categories,
+    tags,
+    path,
+    sections,
+    action,
+  }
+}
+
+function getTagsForAction(action: RevalidateAction, payload: RevalidatePayload): string[] {
+  const { country = DEFAULT_COUNTRY, slug, postId } = payload
+  const tagsToAdd: string[] = []
+
+  switch (action) {
+    case "post_published":
+    case "post_updated":
+      // Revalidate the specific post
+      if (postId) {
+        tagsToAdd.push(cacheTags.post(country, postId))
+      }
+      if (slug) {
+        tagsToAdd.push(cacheTags.postSlug(country, slug))
+      }
+      // Revalidate home page and feed
+      tagsToAdd.push(cacheTags.home(country))
+      tagsToAdd.push(...buildCacheTags({ country, section: "home-feed" }))
+      // Revalidate posts list
+      tagsToAdd.push(cacheTags.posts(country))
+      break
+
+    case "post_deleted":
+      // Revalidate the specific post and home
+      if (postId) {
+        tagsToAdd.push(cacheTags.post(country, postId))
+      }
+      if (slug) {
+        tagsToAdd.push(cacheTags.postSlug(country, slug))
+      }
+      tagsToAdd.push(cacheTags.home(country))
+      tagsToAdd.push(cacheTags.posts(country))
+      break
+
+    case "category_updated":
+      // Revalidate the category and its posts
+      if (payload.category_slug) {
+        tagsToAdd.push(cacheTags.category(country, payload.category_slug))
+      }
+      tagsToAdd.push(cacheTags.categories(country))
+      break
+  }
+
+  return tagsToAdd
 }
 
 export async function POST(request: NextRequest) {
@@ -93,18 +151,32 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const payload = parseRevalidatePayload(await request.json())
-    const { secret, slug, postId, country, categories, tags, path, sections } = payload
+    const { secret, slug, postId, country = DEFAULT_COUNTRY, categories, tags, path, sections, action } = payload
 
-    if (secret !== process.env.REVALIDATION_SECRET) {
-      throw new Error("Invalid revalidation secret")
+    const headerSecret = request.headers.get("X-Revalidate-Secret")
+    const providedSecret = headerSecret || secret
+
+    if (providedSecret !== process.env.REVALIDATION_SECRET) {
+      return withCors(
+        request,
+        new Response(JSON.stringify({ error: "Invalid revalidation secret" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
     }
 
     const tagsToRevalidate = new Set<string>()
     const pathsToRevalidate = new Set<string>()
 
-    tagsToRevalidate.add(cacheTags.posts(country))
-    tagsToRevalidate.add(cacheTags.categories(country))
-    tagsToRevalidate.add(cacheTags.tags(country))
+    if (action) {
+      getTagsForAction(action, payload).forEach((tag) => tagsToRevalidate.add(tag))
+    } else {
+      // Original logic: explicit tag-based revalidation
+      tagsToRevalidate.add(cacheTags.posts(country))
+      tagsToRevalidate.add(cacheTags.categories(country))
+      tagsToRevalidate.add(cacheTags.tags(country))
+    }
 
     if (slug) {
       tagsToRevalidate.add(cacheTags.postSlug(country, slug))
@@ -136,12 +208,12 @@ export async function POST(request: NextRequest) {
     })
 
     tagsToRevalidate.forEach((cacheTag) => {
-      revalidateByTag(cacheTag)
+      revalidateTag(cacheTag)
     })
 
     const responsePayload = {
       revalidated: true,
-      now: Date.now(),
+      timestamp: new Date().toISOString(),
       paths: Array.from(pathsToRevalidate),
       tags: Array.from(tagsToRevalidate).sort(),
     }

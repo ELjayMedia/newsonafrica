@@ -1,6 +1,5 @@
 import "server-only"
 import pLimit from "p-limit"
-
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { buildCacheTags } from "@/lib/cache/tag-utils"
 import { AFRICAN_EDITION } from "@/lib/editions"
@@ -10,7 +9,6 @@ import type { HomePost } from "@/types/home"
 export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const HOME_FEED_FALLBACK_LIMIT = 6
 
-const COUNTRY_CODES = [] as string[]
 const MAX_AGGREGATED_HOME_COUNTRY_REQUESTS = 4
 const defaultTag = ""
 const FEED_BUILDER_POOL_SIZE = 10
@@ -210,7 +208,7 @@ async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
 async function fetchAggregatedForCountry(
   countryCode: string,\
 ): Promise<AggregatedHomeData[string]> {\
-  const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode as CountryCode] || null
+  const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
 
   const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {\
     try {\
@@ -354,6 +352,11 @@ type HomeContentInitialData = {
   recentPosts: HomePost[]
   categoryPosts?: Record<string, HomePost[]>
 }
+
+type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
+type CountryPosts = Record<string, HomePost[]>
+
+const DEFAULT_TAGS_BY_COUNTRY: Record<string, string> = {}
 
 const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData => {
   const taggedPosts = posts.slice(0, TAGGED_POST_LIMIT)
@@ -530,6 +533,23 @@ export async function buildCountryPosts(
     africanAggregate,
   }
 }
+
+const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): HomePost => {
+  return {
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    country: countryCode,
+    date: post.dateGmt || post.date,
+    globalRelayId: post.id,
+    category: post.categories?.[0]?.name || null,
+    featuredImage: post.featuredImage?.node || null,
+  }
+}
+
+const mapPostsToHomePosts = (posts: WordPressPost[], countryCode: string): HomePost[] =>
+  posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
 
 async function buildHomeContentPropsUncached(
   _baseUrl: string,
@@ -734,11 +754,7 @@ async function getFpTaggedPostsForCountry(countryCode: string, limit: number, op
   // Implementation here
 }
 
-function mapWordPressPostToHomePost(post: WordPressPost, countryCode: string): HomePost {
-  // Implementation here
-}
-
-function mapPostsToHomePosts(posts: WordPressPost[], countryCode: string): HomePost[] {
+async function getCategoriesForCountry(countryCode: string): Promise<any> {
   // Implementation here
 }
 
@@ -754,18 +770,6 @@ async function loadTagPosts(countryCode: string, tag: string, options: any): Pro
   // Implementation here
 }
 
-// Types assumed to be defined elsewhere
-type WordPressPost = any
-type Category = any
-type CountryPosts = any
-type SupportedEdition = any
-const SUPPORTED_COUNTRIES = [] as string[]
-const DEFAULT_COUNTRY = ""
-const categoryConfigs = [] as any[]
-const homePageConfig = {} as any
-const ENABLED_COUNTRY_CODES = [] as string[]
-const DEFAULT_TAGS_BY_COUNTRY = {} as any
-
 const isAfricanEdition = (edition: SupportedEdition) => edition.code === AFRICAN_EDITION.code
 const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN_EDITION.code
 
@@ -774,3 +778,5 @@ const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 const FRONT_PAGE_TIMEOUT_MS = 2500
 const RECENT_TIMEOUT_MS = 1200
 const TAG_TIMEOUT_MS = 900
+
+const ENABLED_COUNTRY_CODES = [] // Implementation here

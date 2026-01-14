@@ -42,6 +42,9 @@ export const cacheTags = {
   edition(edition: EditionInput): string {
     return `edition:${normalizeEdition(edition)}`
   },
+  home(edition: EditionInput): string {
+    return `home:${normalizeEdition(edition)}`
+  },
   posts(edition: EditionInput): string {
     return editionScope(edition, "posts")
   },
@@ -56,6 +59,9 @@ export const cacheTags = {
   },
   category(edition: EditionInput, id: IdentifierInput): string {
     return editionEntity(edition, "category", id)
+  },
+  author(edition: EditionInput, slug: IdentifierInput): string {
+    return editionEntity(edition, "author", slug)
   },
   tags(edition: EditionInput): string {
     return editionScope(edition, "tags")
