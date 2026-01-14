@@ -4,7 +4,7 @@ vi.mock("./client", () => ({
   fetchWordPressGraphQL: vi.fn(),
 }))
 
-import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
+import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { getFpTagForCountry } from "./shared"
 import { CACHE_DURATIONS } from "../cache/constants"

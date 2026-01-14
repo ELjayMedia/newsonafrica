@@ -3,7 +3,7 @@ import {
   CATEGORY_POSTS_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
-} from "../wordpress-queries"
+} from "@/lib/wordpress/queries"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { fetchWordPressGraphQL } from "../wordpress/client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"

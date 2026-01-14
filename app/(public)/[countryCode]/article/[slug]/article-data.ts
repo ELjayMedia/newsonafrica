@@ -10,7 +10,7 @@ import {
   type WordPressGraphQLResult,
 } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
-import { POST_BY_SLUG_QUERY } from "@/lib/wordpress-queries"
+import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"

@@ -5,7 +5,7 @@ import {
   CATEGORY_POSTS_QUERY,
   CATEGORIES_QUERY,
   POSTS_BY_CATEGORY_QUERY,
-} from "../wordpress-queries"
+} from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "./shared"

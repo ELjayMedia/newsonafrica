@@ -22,7 +22,7 @@ const {
   resetArticleCountryPriorityCache,
 } = articleData
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { POST_BY_SLUG_QUERY } from '@/lib/wordpress-queries'
+import { POST_BY_SLUG_QUERY } from '@/lib/wordpress/queries'
 import { cacheTags } from '@/lib/cache'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'
 import { createCacheEntry, kvCache } from '@/lib/cache/kv'

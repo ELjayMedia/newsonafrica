@@ -58,7 +58,7 @@ import {
   POST_BY_SLUG_QUERY,
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
-} from '@/lib/wordpress-queries'
+} from '@/lib/wordpress/queries'
 import { buildArticleCountryPriority, loadArticleWithFallback } from './article-data'
 import * as articleDataModule from './article-data'
 import { enhancedCache } from '@/lib/cache/enhanced-cache'

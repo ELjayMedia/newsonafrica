@@ -1,6 +1,6 @@
 import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
-import { TAG_BY_SLUG_QUERY } from "../wordpress-queries"
+import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"

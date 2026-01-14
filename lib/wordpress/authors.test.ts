@@ -9,7 +9,7 @@ vi.mock("./client", () => ({
 import { fetchWordPressGraphQL } from "./client"
 import { fetchAuthors, fetchAuthorData, getAuthorBySlug } from "./authors"
 import { CACHE_DURATIONS } from "../cache/constants"
-import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "../wordpress-queries"
+import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "@/lib/wordpress/queries"
 
 const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
 
