@@ -1,7 +1,7 @@
 import * as log from "../log"
 import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
-import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "../wordpress-queries"
+import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { PostSummaryFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
 import type { HomePost } from "@/types/home"

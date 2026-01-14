@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { POST_FIELDS_FRAGMENT, POST_SUMMARY_FIELDS_FRAGMENT } from "@/lib/wordpress-queries"
+import { POST_FIELDS_FRAGMENT, POST_SUMMARY_FIELDS_FRAGMENT } from "@/lib/wordpress/queries"
 
 describe("wordpress post fragments", () => {
   it("omits heavy fields from the summary fragment", () => {

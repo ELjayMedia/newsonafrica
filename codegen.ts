@@ -18,7 +18,7 @@ const config: CodegenConfig = {
       },
     },
   ],
-  documents: ["lib/wordpress-queries.ts"],
+  documents: ["lib/wordpress/queries.ts"],
   generates: {
     "types/wpgraphql.ts": {
       plugins: ["typescript", "typescript-operations"],
