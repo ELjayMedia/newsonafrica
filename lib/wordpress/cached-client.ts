@@ -1,5 +1,5 @@
 import { fetchWordPressGraphQL } from "./client"
-import { cacheWordPressContent, storeKVFallback } from "@/lib/cache/unified-cache"
+import { cacheWordPressContent, storeKVFallback } from "@/lib/server/unified-cache"
 
 /**
  * WordPress GraphQL wrapper with unified caching
