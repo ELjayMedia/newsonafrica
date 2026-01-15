@@ -1,5 +1,4 @@
 import "server-only"
-import { buildCacheTags, type BuildCacheTagsParams } from "../cache/tag-utils"
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -162,10 +161,6 @@ export function createThrottledQueue({ concurrency, intervalMs = 0 }: ThrottledQ
       }
     })
   }
-}
-
-export function buildWpCacheTags(params: BuildCacheTagsParams): string[] {
-  return buildCacheTags(params)
 }
 
 export interface RestPaginationResult<TItem> {

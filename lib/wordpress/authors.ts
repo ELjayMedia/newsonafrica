@@ -1,5 +1,5 @@
-import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { AuthorDataQuery, AuthorsQuery } from "@/types/wpgraphql"
@@ -80,7 +80,7 @@ const mapGraphqlAuthorToWordPressAuthor = (
 }
 
 export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordPressAuthor[]> => {
-  const tags = buildCacheTags({ country: countryCode, section: "authors" })
+  const tags = [cacheTags.edition(countryCode)]
   const data = await fetchWordPressGraphQL<AuthorsQuery>(
     countryCode,
     AUTHORS_QUERY,
@@ -111,11 +111,7 @@ export async function fetchAuthorData(
   countryCode = DEFAULT_COUNTRY,
   limit = 10,
 ): Promise<AuthorPostsResult | null> {
-  const tags = buildCacheTags({
-    country: countryCode,
-    section: "authors",
-    extra: [`author:${slug}`],
-  })
+  const tags = [cacheTags.edition(countryCode), cacheTags.author(countryCode, slug)]
 
   const data = await fetchWordPressGraphQL<AuthorDataQuery>(
     countryCode,

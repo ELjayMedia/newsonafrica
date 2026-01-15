@@ -1,5 +1,5 @@
-import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import {
   CATEGORY_POSTS_BATCH_QUERY,
   CATEGORY_POSTS_QUERY,
@@ -44,11 +44,7 @@ export async function getPostsForCategories(
     return {}
   }
 
-  const tags = buildCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: normalizedSlugs.map((slug) => `category:${slug}`),
-  })
+  const tags = [cacheTags.edition(countryCode), ...normalizedSlugs.map((slug) => cacheTags.category(countryCode, slug))]
 
   const ensureEntry = (results: Record<string, CategoryPostsResult>, slug: string) => {
     if (!results[slug]) {
@@ -117,11 +113,7 @@ export async function getPostsByCategoryForCountry(
   after?: string | null,
 ): Promise<CategoryPostsResult> {
   const slug = categorySlug.trim().toLowerCase()
-  const tags = buildCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: [slug ? `category:${slug}` : null],
-  })
+  const tags = [cacheTags.edition(countryCode), cacheTags.category(countryCode, slug)]
 
   try {
     const variables: Record<string, string | number> = {
@@ -166,7 +158,7 @@ export async function getPostsByCategoryForCountry(
 }
 
 export async function getCategoriesForCountry(countryCode: string) {
-  const tags = buildCacheTags({ country: countryCode, section: "categories" })
+  const tags = [cacheTags.edition(countryCode)]
 
   try {
     const gqlData = await fetchWordPressGraphQL<CategoriesQuery>(countryCode, CATEGORIES_QUERY, undefined, {
@@ -286,11 +278,7 @@ export async function getCategoriesForCountry(countryCode: string) {
 }
 
 export async function fetchCategoryPosts(slug: string, cursor: string | null = null, countryCode: string) {
-  const tags = buildCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: [`category:${slug}`],
-  })
+  const tags = [cacheTags.edition(countryCode), cacheTags.category(countryCode, slug)]
 
   const variables: Record<string, string | number | string[]> = {
     slug,

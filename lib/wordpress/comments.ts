@@ -1,7 +1,6 @@
 import * as log from "../log"
-import { buildCacheTags } from "../cache/tag-utils"
-import { tag } from "../cache"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import { fetchWordPressGraphQL } from "./client"
 import {
   APPROVE_COMMENT_MUTATION,
@@ -99,11 +98,7 @@ const mapGraphqlCommentToWordPressComment = (
 export async function fetchPendingComments(
   countryCode = DEFAULT_COUNTRY,
 ): Promise<WordPressComment[]> {
-  const tags = [
-    ...buildCacheTags({ country: countryCode, section: "comments" }),
-    tag.edition(countryCode),
-    tag.comments(countryCode, "pending"),
-  ]
+  const tags = [cacheTags.edition(countryCode)]
 
   try {
     const data = await fetchWordPressGraphQL<PendingCommentsQueryResult>(

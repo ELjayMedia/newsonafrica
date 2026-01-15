@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
-import { buildCacheTags } from "@/lib/cache/tag-utils"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
 import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
 
@@ -109,14 +108,10 @@ function getTagsForAction(action: RevalidateAction, payload: RevalidatePayload):
       if (postId) {
         tagsToAdd.push(cacheTags.post(country, postId))
       }
-      if (slug) {
-        tagsToAdd.push(cacheTags.postSlug(country, slug))
-      }
       // Revalidate home page and feed
       tagsToAdd.push(cacheTags.home(country))
-      tagsToAdd.push(...buildCacheTags({ country, section: "home-feed" }))
-      // Revalidate posts list
-      tagsToAdd.push(cacheTags.posts(country))
+      // Revalidate edition-scoped lists
+      tagsToAdd.push(cacheTags.edition(country))
       break
 
     case "post_deleted":
@@ -124,11 +119,8 @@ function getTagsForAction(action: RevalidateAction, payload: RevalidatePayload):
       if (postId) {
         tagsToAdd.push(cacheTags.post(country, postId))
       }
-      if (slug) {
-        tagsToAdd.push(cacheTags.postSlug(country, slug))
-      }
       tagsToAdd.push(cacheTags.home(country))
-      tagsToAdd.push(cacheTags.posts(country))
+      tagsToAdd.push(cacheTags.edition(country))
       break
 
     case "category_updated":
@@ -136,7 +128,7 @@ function getTagsForAction(action: RevalidateAction, payload: RevalidatePayload):
       if (payload.category_slug) {
         tagsToAdd.push(cacheTags.category(country, payload.category_slug))
       }
-      tagsToAdd.push(cacheTags.categories(country))
+      tagsToAdd.push(cacheTags.edition(country))
       break
   }
 
@@ -173,13 +165,11 @@ export async function POST(request: NextRequest) {
       getTagsForAction(action, payload).forEach((tag) => tagsToRevalidate.add(tag))
     } else {
       // Original logic: explicit tag-based revalidation
-      tagsToRevalidate.add(cacheTags.posts(country))
-      tagsToRevalidate.add(cacheTags.categories(country))
-      tagsToRevalidate.add(cacheTags.tags(country))
+      tagsToRevalidate.add(cacheTags.edition(country))
+      tagsToRevalidate.add(cacheTags.home(country))
     }
 
     if (slug) {
-      tagsToRevalidate.add(cacheTags.postSlug(country, slug))
       pathsToRevalidate.add(getArticleUrl(slug, country))
     }
 
@@ -195,9 +185,12 @@ export async function POST(request: NextRequest) {
       tagsToRevalidate.add(cacheTags.tag(country, tag))
     })
 
-    sections.forEach((section) => {
-      buildCacheTags({ country, section }).forEach((cacheTag) => tagsToRevalidate.add(cacheTag))
-    })
+    if (sections.length > 0) {
+      tagsToRevalidate.add(cacheTags.edition(country))
+      if (sections.some((section) => section === "home" || section === "frontpage")) {
+        tagsToRevalidate.add(cacheTags.home(country))
+      }
+    }
 
     if (path) {
       pathsToRevalidate.add(path)
