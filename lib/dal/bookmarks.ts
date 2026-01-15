@@ -8,12 +8,19 @@ type SupabaseServerClient = SupabaseClient<Database>
 export type Bookmark = Database["public"]["Tables"]["bookmarks"]["Row"]
 
 // POSTGREST CONTRACT: bookmarks.listUserBookmarks
-export async function listUserBookmarks(supabase: SupabaseServerClient, userId: string): Promise<Bookmark[]> {
+export async function listUserBookmarks(
+  supabase: SupabaseServerClient,
+  userId: string,
+  options?: { limit?: number },
+): Promise<Bookmark[]> {
+  const requestedLimit = options?.limit ?? 20
+  const limit = Math.min(Math.max(requestedLimit, 1), 100)
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
+    .limit(limit)
 
   if (error) {
     throw new Error(`Failed to fetch bookmarks: ${error.message}`)
@@ -25,12 +32,11 @@ export async function listUserBookmarks(supabase: SupabaseServerClient, userId: 
 // POSTGREST CONTRACT: bookmarks.addBookmark
 export async function addBookmark(
   supabase: SupabaseServerClient,
-  userId: string,
   bookmark: Bookmark["Insert"],
 ): Promise<Bookmark> {
   const { data, error } = await supabase
     .from("bookmarks")
-    .insert({ ...bookmark, user_id: userId })
+    .insert(bookmark)
     .select()
     .single()
 

@@ -24,7 +24,6 @@ export interface BookmarkData {
 
 export async function createBookmark(
   accessToken: string,
-  userId: string,
   bookmark: { post_id: number; post_slug: string; post_title: string; edition: string },
 ): Promise<BookmarkData> {
   const url = `${SUPABASE_URL}/rest/v1/bookmarks?select=id,user_id,post_id,post_slug,post_title,edition,created_at`
@@ -38,7 +37,6 @@ export async function createBookmark(
       Prefer: "return=representation",
     },
     body: JSON.stringify({
-      user_id: userId,
       ...bookmark,
     }),
   })
@@ -56,11 +54,14 @@ export async function listUserBookmarks(
   accessToken: string,
   userId: string,
   edition?: string,
+  options?: { limit?: number },
 ): Promise<BookmarkData[]> {
+  const requestedLimit = options?.limit ?? 20
+  const limit = Math.min(Math.max(requestedLimit, 1), 100)
   const params = new URLSearchParams({
     select: "id,user_id,post_id,post_slug,post_title,edition,created_at",
     order: "created_at.desc",
-    limit: "50",
+    limit: String(limit),
   })
 
   if (edition) {

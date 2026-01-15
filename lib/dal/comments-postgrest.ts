@@ -61,13 +61,20 @@ export async function createComment(
   return data[0] as CommentData
 }
 
-export async function listPostComments(accessToken: string, postId: number, edition: string): Promise<CommentData[]> {
+export async function listPostComments(
+  accessToken: string,
+  postId: number,
+  edition: string,
+  options?: { limit?: number },
+): Promise<CommentData[]> {
+  const requestedLimit = options?.limit ?? 20
+  const limit = Math.min(Math.max(requestedLimit, 1), 100)
   const params = new URLSearchParams({
     wp_post_id: `eq.${postId}`,
     edition: `eq.${edition}`,
     select: "id,wp_post_id,created_by,content,edition,parent_id,created_at",
     order: "created_at.desc",
-    limit: "100",
+    limit: String(limit),
   })
 
   const url = `${SUPABASE_URL}/rest/v1/comments?${params.toString()}`

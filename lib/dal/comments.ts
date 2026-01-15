@@ -14,6 +14,8 @@ export async function listPostComments(
   editionCode: string,
   options?: { limit?: number; offset?: number },
 ): Promise<Comment[]> {
+  const requestedLimit = options?.limit ?? 20
+  const limit = Math.min(Math.max(requestedLimit, 1), 100)
   let query = supabase
     .from("comments")
     .select("*")
@@ -22,12 +24,10 @@ export async function listPostComments(
     .is("parent_id", null)
     .order("created_at", { ascending: false })
 
-  if (options?.limit) {
-    query = query.limit(options.limit)
-  }
+  query = query.limit(limit)
 
   if (options?.offset) {
-    query = query.range(options.offset, options.offset + (options.limit || 10) - 1)
+    query = query.range(options.offset, options.offset + limit - 1)
   }
 
   const { data, error } = await query
