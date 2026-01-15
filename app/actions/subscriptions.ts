@@ -10,7 +10,7 @@ import { executeListQuery } from "@/lib/supabase/list-query"
 export type SubscriptionRow = Database["public"]["Tables"]["subscriptions"]["Row"]
 export type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
 
-const toSerializable = <T>(value: T): T => {
+function toSerializable<T>(value: T): T {
   if (value === null || value === undefined) {
     return value
   }

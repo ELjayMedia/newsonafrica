@@ -46,7 +46,15 @@ const CLIENT_ENV_SCHEMA = z.object({
   NEXT_PUBLIC_DEFAULT_SITE: stringWithDefault("sz"),
   NEXT_PUBLIC_WP_SZ_GRAPHQL: graphQlEndpointOverride("sz"),
   NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
-  NEXT_PUBLIC_WP_REST_FALLBACK: z.enum(["0", "1"]).optional().default("0"), // Add REST fallback feature flag (dev-only)
+  NEXT_PUBLIC_WP_REST_FALLBACK: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        return val === "1" || val.toLowerCase() === "true" ? "1" : "0"
+      }
+      return val ? "1" : "0"
+    },
+    z.enum(["0", "1"]).default("0"),
+  ),
 })
 
 const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
