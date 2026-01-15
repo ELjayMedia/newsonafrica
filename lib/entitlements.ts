@@ -1,5 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server"
-import { cachedFetch, CACHE_TIMEOUTS, buildTags } from "@/lib/cache/unified-cache"
+import { cachedFetch, CACHE_TIMEOUTS, buildTags } from "@/lib/server/unified-cache"
 import type { Database } from "@/types/supabase"
 
 type SubscriptionRow = Database["public"]["Tables"]["subscriptions"]["Row"]

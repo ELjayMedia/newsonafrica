@@ -60,7 +60,7 @@ Defined in `/lib/cache/isr-config.ts`:
 
 ### Tag-Based Invalidation
 
-Systematic tags via `/lib/cache/unified-cache.ts`:
+Systematic tags via `/lib/server/unified-cache.ts`:
 
 - `post:{country}:{slug}` - Individual articles
 - `category:{country}:{slug}` - Category pages
@@ -113,7 +113,7 @@ Track ISR effectiveness via:
 
 ## Best Practices
 
-1. **Use unified cache helpers** - Always use `cachedFetch` from `/lib/cache/unified-cache.ts`
+1. **Use unified cache helpers** - Always use `cachedFetch` from `/lib/server/unified-cache.ts`
 2. **Tag everything** - Systematic tags enable surgical invalidation
 3. **Set appropriate revalidate times** - Use `ISR_CONFIG` constants
 4. **Wrap dynamic content in Suspense** - Enable PPR granularity

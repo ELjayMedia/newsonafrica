@@ -15,7 +15,7 @@ News On Africa uses a unified caching strategy with Next.js ISR, Vercel KV fallb
 ### Basic Caching
 
 \`\`\`typescript
-import { cachedFetch, CACHE_TIMEOUTS } from '@/lib/cache/unified-cache'
+import { cachedFetch, CACHE_TIMEOUTS } from '@/lib/server/unified-cache'
 
 const data = await cachedFetch(
   'my-key',
