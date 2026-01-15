@@ -13,7 +13,8 @@ vi.mock("@/lib/supabase/browser-helpers", () => ({
   },
 }))
 
-const createQueryBuilder = <T>(result: T) => {
+// NOTE: <T,> is important here to avoid TSX/JSX parsing ambiguities ("unbalanced tags")
+const createQueryBuilder = <T,>(result: T) => {
   const builder: any = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
@@ -51,12 +52,10 @@ describe("fetchComments", () => {
           {
             id: "comment-1",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-1",
             body: "Root comment",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
@@ -71,12 +70,10 @@ describe("fetchComments", () => {
           {
             id: "comment-2",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-2",
             body: "Reply comment",
             parent_id: "comment-1",
-
             replies_count: 0,
             created_at: "2024-01-01T01:00:00Z",
             status: "active",
@@ -181,12 +178,10 @@ describe("fetchComments", () => {
           {
             id: "comment-3",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-3",
             body: "Newest",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
@@ -196,12 +191,10 @@ describe("fetchComments", () => {
           {
             id: "comment-2",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-2",
             body: "Second",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
@@ -211,12 +204,10 @@ describe("fetchComments", () => {
           {
             id: "comment-1",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-1",
             body: "Oldest",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
@@ -232,12 +223,10 @@ describe("fetchComments", () => {
           {
             id: "comment-1",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-1",
             body: "Oldest",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
@@ -250,7 +239,10 @@ describe("fetchComments", () => {
       createQueryBuilder({ data: [], error: null }),
     ]
 
-    const reactionBuilders = [createQueryBuilder({ data: [], error: null }), createQueryBuilder({ data: [], error: null })]
+    const reactionBuilders = [
+      createQueryBuilder({ data: [], error: null }),
+      createQueryBuilder({ data: [], error: null }),
+    ]
 
     const rpcResponses = [
       { data: { exists: true }, error: null },
@@ -289,8 +281,10 @@ describe("fetchComments", () => {
     expect(firstPage.hasMore).toBe(true)
     expect(firstPage.comments).toHaveLength(2)
     expect(firstPage.total).toBe(3)
+
     const firstCursor = firstPage.nextCursor
     expect(firstCursor).toBeTruthy()
+
     const decodedFirstCursor = decodeCommentCursor(firstCursor ?? "")
     expect(decodedFirstCursor).toEqual({ sort: "newest", createdAt: "2024-01-02T00:00:00Z", id: "comment-2" })
 
@@ -313,12 +307,10 @@ describe("fetchComments", () => {
           {
             id: "comment-1",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-1",
             body: "Oldest",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",
@@ -328,12 +320,10 @@ describe("fetchComments", () => {
           {
             id: "comment-2",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-2",
             body: "Middle",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
@@ -343,12 +333,10 @@ describe("fetchComments", () => {
           {
             id: "comment-3",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-3",
             body: "Newest",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
@@ -413,12 +401,10 @@ describe("fetchComments", () => {
           {
             id: "comment-1",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-1",
             body: "Popular",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-03T00:00:00Z",
             status: "active",
@@ -428,12 +414,10 @@ describe("fetchComments", () => {
           {
             id: "comment-2",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-2",
             body: "Also popular",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-02T00:00:00Z",
             status: "active",
@@ -443,12 +427,10 @@ describe("fetchComments", () => {
           {
             id: "comment-3",
             wp_post_id: "post-1",
-
             edition_code: "ng",
             user_id: "author-3",
             body: "Less popular",
             parent_id: null,
-
             replies_count: 0,
             created_at: "2024-01-01T00:00:00Z",
             status: "active",

@@ -1,17 +1,16 @@
 import "server-only"
 import pLimit from "p-limit"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { cacheTags } from "@/lib/cache/cacheTags"
-import { AFRICAN_EDITION } from "@/lib/editions"
 import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
 export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
 const HOME_FEED_FALLBACK_LIMIT = 6
 
-const MAX_AGGREGATED_HOME_COUNTRY_REQUESTS = 4
-const defaultTag = ""
-const FEED_BUILDER_POOL_SIZE = 10
+const COUNTRY_AGGREGATE_CONCURRENCY = 4
+const FEATURED_POST_LIMIT = 6
+const TAGGED_POST_LIMIT = 8
+const RECENT_POST_LIMIT = 10
 
 let _unstable_cache: typeof import("next/cache").unstable_cache | null = null
 
@@ -22,8 +21,6 @@ async function getUnstableCache() {
   }
   return _unstable_cache
 }
-
-const unstable_cache_sync = <T extends (...args: any[]) => any>(fn: T, _keyParts: string[], _options: any): T => fn
 
 const createEmptyAggregatedHome = (): AggregatedHomeData => ({
   heroPost: null,
@@ -44,10 +41,7 @@ const createHomePostKey = (post: HomePost): string => {
     return `${post.country ?? ""}:${post.slug}`
   }
 
-  return JSON.stringify({
-    title: post.title,
-    date: post.date,
-  })
+  return `${post.country ?? ""}:${post.slug ?? ""}:${post.title ?? ""}:${post.date ?? ""}`
 }
 
 const dedupeHomePosts = (posts: HomePost[]): HomePost[] => {
@@ -82,24 +76,16 @@ const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => 
   }
 }
 
-export const HOME_FEED_CACHE_TAGS = [cacheTags.home("all")]
-
-const normalizeCacheTags = (cacheTags: string[]): string[] => Array.from(new Set(cacheTags)).sort()
-
 const hasAggregatedHomeContent = ({ heroPost, secondaryPosts, remainingPosts }: AggregatedHomeData): boolean =>
   Boolean(heroPost || secondaryPosts.length > 0 || remainingPosts.length > 0)
 
-const FEATURED_POST_LIMIT = 6
-const TAGGED_POST_LIMIT = 8
-const RECENT_POST_LIMIT = 10
-export const COUNTRY_AGGREGATE_CONCURRENCY = 4
-const homeFeedRequestLimit = pLimit(6)
+const homeFeedTaskLimit = pLimit(COUNTRY_AGGREGATE_CONCURRENCY)
 
 const scheduleHomeFeedTask = <T>(
   timeoutMs: number,\
   task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
 ): Promise<T> =>
-  homeFeedRequestLimit(async () => {\
+  homeFeedTaskLimit(async () => {\
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
     try {\
@@ -140,71 +126,9 @@ const mapFrontPageSlicesToHomePosts = (
   return dedupeHomePosts(posts)
 }
 
-async function fetchAggregatedHomeUncached(cacheTags: string[]): Promise<AggregatedHomeData> {\
-  try {\
-    const aggregated = await loadUnstableCacheAdapter(fetchAggregatedHomeNoCache, cacheTags)()
-
-    if (hasAggregatedHomeContent(aggregated)) {\
-      return aggregated
-    }
-  } catch (error) {
-    console.error("[v0] fetchAggregatedHomeUncached error:", error)
-  }
-
-  return createEmptyAggregatedHome()
-}
-
-async function fetchAggregatedHomeNoCacheImpl(cacheTags: string[]): Promise<AggregatedHomeData> {\
-  return fetchAggregatedHome()
-}
-
-let _fetchAggregatedHomeNoCache: ((cacheTags: string[]) => Promise<AggregatedHomeData>) | null = null
-
-async function getFetchAggregatedHomeNoCache() {\
-  if (!_fetchAggregatedHomeNoCache) {\
-    try {\
-      const unstableCache = await getUnstableCache()
-      _fetchAggregatedHomeNoCache = unstableCache(
-        fetchAggregatedHomeNoCacheImpl,
-        ["aggregated-home-v1"],
-        {\
-          tags: [],
-          revalidate: CACHE_DURATIONS.MEDIUM,
-        }
-      )
-    } catch {
-      _fetchAggregatedHomeNoCache = fetchAggregatedHomeNoCacheImpl
-    }
-  }
-  return _fetchAggregatedHomeNoCache
-}
-
-export const fetchAggregatedHomeNoCache = async (cacheTags: string[]): Promise<AggregatedHomeData> => {\
-  const fn = await getFetchAggregatedHomeNoCache()
-  return fn(cacheTags)
-}
-
-async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
-  return await Promise.all(
-    ENABLED_COUNTRY_CODES.map((countryCode) =>
-      fetchAggregatedForCountry(countryCode),
-    ),
-  ).then((results) => {\
-    const aggregated: AggregatedHomeData = {}
-
-    results.forEach((result) => {\
-      if (result) {
-        aggregated[result.countryCode] = result
-      }
-    })
-
-    return aggregated
-  })
-}
-
 async function fetchAggregatedForCountry(
-  countryCode: string,\
-): Promise<AggregatedHomeData[string]> {\
+  countryCode: string,
+): Promise<AggregatedHomeData> {\
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
 
   const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {\
@@ -220,7 +144,7 @@ async function fetchAggregatedForCountry(
       }
     } catch (error) {\
       if (error instanceof Error && error.name === "AbortError") {
-        console.error(
+        console.debug(
           `[v0] getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
         )
       } else {
@@ -241,7 +165,7 @@ async function fetchAggregatedForCountry(
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)\
+      console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)\
       return []
     }
   })
@@ -253,67 +177,68 @@ async function fetchAggregatedForCountry(
         timeout,
       })
     } catch (error) {
-      console.error(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)\
+      console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)\
       return []
     }
   })
 
   const results = await Promise.all([frontPagePromise, recentPromise, taggedPromise])
-  const best = results.reduce<{
-    posts: HomePost[]
-    source: string
-  }>(
-    (acc, result) => {
-      if (!result) {
-        return acc
-      }
+  
+  const scored = results.map((result) => {\
+    if (!result) return { score: -1, result: null }
+    
+    const sourceWeight = result.source === "frontpage" ? 1000 : result.source === "tagged" ? 500 : 0
+    return {\
+      score: sourceWeight + result.posts.length,
+      result,
+    }
+  })
 
-      if (result.posts.length > acc.posts.length) {
-        return result
-      }
-
-      return acc
-    },
-    { posts: [], source: "" },
+  const best = scored.reduce((acc, curr) =>
+    curr.score > acc.score ? curr : acc,\
+    { score: -1, result: null as any },
   )
 
-  return buildAggregatedHomeFromPosts(best.posts)
+  return buildAggregatedHomeFromPosts(best.result?.posts ?? [])
 }
 
-async function fetchAggregatedHomeForCountryImpl(
+async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
+  return await Promise.all(
+    ENABLED_COUNTRY_CODES.map((countryCode) =>
+      fetchAggregatedForCountry(countryCode),
+    ),
+  ).then((results) => {\
+    const aggregated: AggregatedHomeData = {}
+
+    results.forEach((result) => {\
+      if (result) {
+        aggregated[result.countryCode] = result
+      }
+    })
+
+    return aggregated
+  })
+}
+
+async function fetchAggregatedHomeForCountry(
   countryCode: string,
   limit = HOME_FEED_FALLBACK_LIMIT,
-): Promise<AggregatedHomeData> {
-  return fetchAggregatedHomeForCountryUncached(countryCode, limit)
-}
-
-let _fetchAggregatedHomeForCountry: ((countryCode: string, limit?: number) => Promise<AggregatedHomeData>) | null = null
-
-async function getFetchAggregatedHomeForCountry() {
-  if (!_fetchAggregatedHomeForCountry) {
-    try {
-      const unstableCache = await getUnstableCache()
-      _fetchAggregatedHomeForCountry = unstableCache(
-        fetchAggregatedHomeForCountryImpl,
-        ["home-feed-for-country"],
-        {
-          revalidate: HOME_FEED_REVALIDATE,
-          tags: [cacheTags.home("all")],
-        }
-      )
-    } catch {
-      _fetchAggregatedHomeForCountry = fetchAggregatedHomeForCountryImpl
+): Promise<AggregatedHomeData> {\
+  const unstableCache = await getUnstableCache()
+  
+  const cached = unstableCache(
+    async () => {\
+      const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
+      return await Promise.resolve(createEmptyAggregatedHome())
+    },
+    ["home-feed-for-country", countryCode, String(limit)],
+    {\
+      revalidate: HOME_FEED_REVALIDATE,
+      tags: [cacheTags.home(countryCode), cacheTags.edition(countryCode)],
     }
-  }
-  return _fetchAggregatedHomeForCountry
-}
-
-export const fetchAggregatedHomeForCountry = async (
-  countryCode: string,
-  limit = HOME_FEED_FALLBACK_LIMIT,
-): Promise<AggregatedHomeData> => {
-  const fn = await getFetchAggregatedHomeForCountry()
-  return fn(countryCode, limit)
+  )
+  
+  return cached()
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
@@ -322,7 +247,7 @@ const flattenAggregatedHome = ({
   heroPost,
   secondaryPosts,
   remainingPosts,
-}: AggregatedHomeData): HomePost[] => {
+}: AggregatedHomeData): HomePost[] => {\
   const posts: HomePost[] = []
 
   if (heroPost) {
@@ -340,15 +265,15 @@ const flattenAggregatedHome = ({
   return posts
 }
 
-type HomeContentInitialData = {
+type HomeContentInitialData = {\
   taggedPosts: HomePost[]
   featuredPosts: HomePost[]
   categories: Category[]
-  recentPosts: HomePost[]
+  recentPosts: HomePost[]\
   categoryPosts?: Record<string, HomePost[]>
 }
 
-type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
+type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]\
 type CountryPosts = Record<string, HomePost[]>
 
 const DEFAULT_TAGS_BY_COUNTRY: Record<string, string> = {}
@@ -558,7 +483,7 @@ async function buildHomeContentPropsUncached(
   const aggregatedFromCountries = africanAggregate ?? createEmptyAggregatedHome()
   const aggregatedHome = hasAggregatedHomeContent(aggregatedFromCountries)
     ? aggregatedFromCountries
-    : await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
+    : await fetchAggregatedHome()
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
   const categoryPosts = await loadCategoryPostsForHome(DEFAULT_COUNTRY)
@@ -577,7 +502,7 @@ async function buildHomeContentPropsForEditionUncached(
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
   const aggregatedHome = isAfricanEdition(edition)
-    ? await fetchAggregatedHome(HOME_FEED_CACHE_TAGS)
+    ? await fetchAggregatedHome()
     : await fetchAggregatedHomeForCountry(edition.code)
 
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
@@ -602,42 +527,13 @@ async function buildHomeContentPropsForEditionUncached(
   }
 }
 
-const mergeTags = (
-  ...tagGroups: Array<readonly string[] | string[] | undefined>
-): string[] => {
-  const set = new Set<string>()
-  for (const group of tagGroups) {
-    if (!group) continue
-    for (const tag of group) {
-      if (tag) {
-        set.add(tag)
-      }
-    }
-  }
-
-  return Array.from(set)
-}
-
 type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
-
-const isNextCacheUnavailableError = (error: unknown): boolean =>
-  Boolean(
-    error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      (error as { digest?: unknown }).digest === "E469",
-  )
-
-const shouldUseFallbackCache =
-  typeof process !== "undefined" &&
-  (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST))
 
 function createCachedFetcher<T>(
   keyParts: string[],
   fn: (baseUrl: string) => Promise<T>,
   tags: string[] = [],
 ): (baseUrl: string) => Promise<T> {
-  const fallbackStore = new Map<string, Promise<T>>()
   let cachedFn: ((baseUrl: string) => Promise<T>) | null = null
   let cacheInitPromise: Promise<void> | null = null
 
@@ -658,15 +554,6 @@ function createCachedFetcher<T>(
   }
 
   return async (baseUrl: string) => {
-    // Check runtime environment
-    if (typeof window !== "undefined") {
-      const fallbackKey = JSON.stringify([keyParts, baseUrl])
-      if (!fallbackStore.has(fallbackKey)) {
-        fallbackStore.set(fallbackKey, fn(baseUrl))
-      }
-      return fallbackStore.get(fallbackKey)!
-    }
-
     await initCache()
 
     if (!cachedFn) {
@@ -676,10 +563,7 @@ function createCachedFetcher<T>(
     try {
       return await cachedFn(baseUrl)
     } catch (error) {
-      if (isNextCacheUnavailableError(error)) {
-        return fn(baseUrl)
-      }
-      throw error
+      return fn(baseUrl)
     }
   }
 }
@@ -687,28 +571,18 @@ function createCachedFetcher<T>(
 const cachedBuildHomeContentProps = createCachedFetcher(
   ["home-content", "default"],
   buildHomeContentPropsUncached,
+  [cacheTags.home("all")],
 )
 
-const editionCache = new Map<string, HomeContentFetcher>()
-
 const getEditionCache = (edition: SupportedEdition) => {
-  const cacheKey = edition.code
-  let cached = editionCache.get(cacheKey)
+  const editionTags = [cacheTags.home(edition.code), cacheTags.edition(edition.code)]
 
-  if (!cached) {
-    const editionTags = [cacheTags.home(edition.code), cacheTags.edition(edition.code)]
-
-    cached = createCachedFetcher(
-      ["home-content", cacheKey],
-      async (_baseUrl: string) =>
-        buildHomeContentPropsForEditionUncached(_baseUrl, edition),
-      editionTags,
-    )
-
-    editionCache.set(cacheKey, cached)
-  }
-
-  return cached
+  return createCachedFetcher(
+    ["home-content", edition.code],
+    async (_baseUrl: string) =>
+      buildHomeContentPropsForEditionUncached(_baseUrl, edition),
+    editionTags,
+  )
 }
 
 export async function buildHomeContentProps(
@@ -721,14 +595,19 @@ export async function buildHomeContentPropsForEdition(
   _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
-  const cached = getEditionCache(edition)
-  return cached(_baseUrl)
+  const fetcher = getEditionCache(edition)
+  return fetcher(_baseUrl)
 }
 
-// Helper functions assumed to be defined elsewhere
-async function getAggregatedLatestHome(limit: number): Promise<AggregatedHomeData> {
-  // Implementation here
-}
+const FRONT_PAGE_TIMEOUT_MS = 2500
+const RECENT_TIMEOUT_MS = 1200
+const TAG_TIMEOUT_MS = 900
+
+const ENABLED_COUNTRY_CODES = [] // Implementation here
+const SUPPORTED_COUNTRIES = [] // Implementation here
+const DEFAULT_COUNTRY = "" // Implementation here
+const categoryConfigs: any[] = [] // Implementation here
+const homePageConfig: any = {} // Implementation here
 
 async function getFrontPageSlicesForCountry(countryCode: string, options: any): Promise<any> {
   // Implementation here
@@ -763,8 +642,12 @@ const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN
 
 const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 
-const FRONT_PAGE_TIMEOUT_MS = 2500
-const RECENT_TIMEOUT_MS = 1200
-const TAG_TIMEOUT_MS = 900
+const AFRICAN_EDITION = {
+  code: "AF",
+  name: "African Edition",
+}
 
-const ENABLED_COUNTRY_CODES = [] // Implementation here
+const cacheTags = {
+  home: (countryCode: string) => `home:${countryCode}`,
+  edition: (countryCode: string) => `edition:${countryCode}`,
+}

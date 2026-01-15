@@ -29,7 +29,7 @@ const createSupabaseRouteClientMock = vi.fn(() => {
 
   return {
     supabase: currentSupabaseClient,
-    applyCookies: <T>(response: T) => response,
+    applyCookies: <T,>(response: T): T => response,
   }
 })
 
@@ -43,10 +43,7 @@ vi.mock("@/lib/server-cache-utils", () => ({
   revalidateByTag: revalidateByTagMock,
 }))
 
-function createCommentsQuery(
-  comments: CommentRecord[],
-  onRange: (result: CommentRecord[]) => void,
-) {
+function createCommentsQuery(comments: CommentRecord[], onRange: (result: CommentRecord[]) => void) {
   const eqFilters = new Map<string, string>()
   const nullFilters = new Set<string>()
   let orConditions: Array<{ column: string; value: string }> | null = null
@@ -173,8 +170,7 @@ function createSupabaseClient({
   }
 }
 
-const createRequest = (search: string) =>
-  new NextRequest(`https://example.com/api/comments?wp_post_id=post-1${search}`)
+const createRequest = (search: string) => new NextRequest(`https://example.com/api/comments?wp_post_id=post-1${search}`)
 
 describe("GET /api/comments", () => {
   beforeEach(() => {
@@ -430,9 +426,7 @@ describe("POST /api/comments", () => {
       }),
     )
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateByTagMock).toHaveBeenCalledWith(
-      cacheTags.comments("african-edition", "post-1"),
-    )
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("african-edition", "post-1"))
   })
 })
 
@@ -505,8 +499,6 @@ describe("PATCH /api/comments", () => {
 
     expect(response.status).toBe(200)
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateByTagMock).toHaveBeenCalledWith(
-      cacheTags.comments("ng", "post-123"),
-    )
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("ng", "post-123"))
   })
 })
