@@ -3,7 +3,6 @@ const withAnalyzer = require("@next/bundle-analyzer")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typedRoutes: true,
   modularizeImports: {
     "date-fns": {
       transform: "date-fns/{{member}}",
