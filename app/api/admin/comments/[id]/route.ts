@@ -5,9 +5,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
 import { revalidateTag } from "next/cache"
 import { cacheTags } from "@/lib/cache"
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+import { PostgRESTError } from "@/lib/supabase/rest/errors"
+import { updateCommentServerOnly } from "@/lib/supabase/rest/server/comments"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const adminToken = request.headers.get("x-admin-token")
@@ -18,27 +17,25 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const body = await request.json()
   const { id } = params
 
-  const url = `${SUPABASE_URL}/rest/v1/comments?id=eq.${id}`
+  try {
+    const comment = await updateCommentServerOnly({ id, updates: body })
 
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify(body),
-  })
+    revalidateTag(cacheTags.comments(comment.edition_code, comment.wp_post_id))
 
-  if (!response.ok) {
-    return NextResponse.json({ error: "Failed to update comment" }, { status: response.status })
+    return NextResponse.json({
+      id: comment.id,
+      wp_post_id: Number(comment.wp_post_id),
+      content: comment.body,
+      created_by: comment.user_id,
+      edition: comment.edition_code,
+      status: comment.status,
+      created_at: comment.created_at,
+    })
+  } catch (error) {
+    if (error instanceof PostgRESTError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
   }
-
-  const data = await response.json()
-  const comment = data[0]
-
-  revalidateTag(cacheTags.comments(comment.wp_post_id, comment.edition))
-
-  return NextResponse.json(comment)
 }

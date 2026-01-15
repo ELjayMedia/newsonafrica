@@ -4,9 +4,8 @@
 
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+import { PostgRESTError } from "@/lib/supabase/rest/errors"
+import { listCommentsForModerationServerOnly, updateCommentServerOnly } from "@/lib/supabase/rest/server/comments"
 
 export async function GET(request: NextRequest) {
   // Verify admin access (implement your own auth)
@@ -17,33 +16,27 @@ export async function GET(request: NextRequest) {
 
   const status = request.nextUrl.searchParams.get("status") || "all"
 
-  const params = new URLSearchParams({
-    select: "id,wp_post_id,created_by,content,edition,status,created_at",
-    order: "created_at.desc",
-    limit: "100",
-  })
+  try {
+    const comments = await listCommentsForModerationServerOnly({ status })
 
-  if (status !== "all") {
-    params.append("status", `eq.${status}`)
+    const responsePayload = comments.map((comment) => ({
+      id: comment.id,
+      wp_post_id: Number(comment.wp_post_id),
+      content: comment.body,
+      created_by: comment.user_id,
+      edition: comment.edition_code,
+      status: comment.status,
+      created_at: comment.created_at,
+    }))
+
+    return NextResponse.json(responsePayload)
+  } catch (error) {
+    if (error instanceof PostgRESTError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 })
   }
-
-  const url = `${SUPABASE_URL}/rest/v1/comments?${params.toString()}`
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      Accept: "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    return NextResponse.json({ error: "Failed to fetch comments" }, { status: response.status })
-  }
-
-  const comments = await response.json()
-  return NextResponse.json(comments)
 }
 
 export async function PATCH(request: NextRequest) {
@@ -56,21 +49,18 @@ export async function PATCH(request: NextRequest) {
   const commentId = request.nextUrl.searchParams.get("id")
   const body = await request.json()
 
-  const url = `${SUPABASE_URL}/rest/v1/comments?id=eq.${commentId}`
-
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      apikey: SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!response.ok) {
-    return NextResponse.json({ error: "Failed to update comment" }, { status: response.status })
+  if (!commentId) {
+    return NextResponse.json({ error: "Missing comment id" }, { status: 400 })
   }
 
-  return NextResponse.json({ success: true })
+  try {
+    await updateCommentServerOnly({ id: commentId, updates: body })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    if (error instanceof PostgRESTError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
+  }
 }
