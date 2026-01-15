@@ -3,7 +3,6 @@ const withAnalyzer = require("@next/bundle-analyzer")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typedRoutes: true,
   modularizeImports: {
     "date-fns": {
       transform: "date-fns/{{member}}",
@@ -94,7 +93,6 @@ const nextConfig = {
     return config
   },
   experimental: {
-    ppr: true,
     scrollRestoration: true,
     largePageDataBytes: 12800000,
     optimizePackageImports: ["lucide-react", "date-fns", "lodash-es"],
