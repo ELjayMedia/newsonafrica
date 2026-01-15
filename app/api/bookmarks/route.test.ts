@@ -9,7 +9,6 @@ vi.mock("@/lib/supabase/route", () => ({
 
 vi.mock("@/lib/server-cache-utils", () => ({
   revalidateByTag: vi.fn(),
-  revalidateMultiplePaths: vi.fn(),
 }))
 
 const executeListQueryMock = vi.fn()
@@ -47,7 +46,7 @@ vi.mock("@/lib/bookmarks/mutations", () => ({
 }))
 
 import { createSupabaseRouteClient } from "@/lib/supabase/route"
-import { revalidateByTag, revalidateMultiplePaths } from "@/lib/server-cache-utils"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import { cacheTags } from "@/lib/cache"
 import { DELETE, GET, POST, PUT } from "./route"
 
@@ -66,7 +65,6 @@ function expectBookmarkTagInvalidation(
 
   expect(new Set(calls)).toEqual(expectedTags)
   expect(calls).toHaveLength(expectedTags.size)
-  expect(revalidateMultiplePaths).not.toHaveBeenCalled()
 }
 
 describe("/api/bookmarks cache revalidation", () => {
@@ -504,7 +502,6 @@ describe("/api/bookmarks cache revalidation", () => {
     expect(response.headers.get("access-control-allow-origin")).toBeNull()
     expect(applyCookiesMock).not.toHaveBeenCalled()
     expect(revalidateByTag).not.toHaveBeenCalled()
-    expect(revalidateMultiplePaths).not.toHaveBeenCalled()
   })
 })
 

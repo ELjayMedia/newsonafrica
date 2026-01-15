@@ -10,18 +10,13 @@ vi.mock("@/lib/api-utils", async () => {
   }
 })
 
-vi.mock("@/lib/server-cache-utils", () => ({
-  revalidateByTag: vi.fn(),
-}))
-
 vi.mock("next/cache", () => ({
-  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }))
 
-import { revalidateByTag } from "@/lib/server-cache-utils"
-import { revalidatePath } from "next/cache"
+import { revalidateTag } from "next/cache"
 import { cacheTags } from "@/lib/cache/cacheTags"
-import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { POST } from "./route"
 
 const SECRET = "test-secret"
@@ -53,9 +48,7 @@ describe("/api/revalidate", () => {
 
     await POST(request)
 
-    expect(revalidatePath).toHaveBeenCalledWith(getArticleUrl("my-story", "ng"))
-
-    const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
+    const tagCalls = vi.mocked(revalidateTag).mock.calls.flat()
     expect(tagCalls).toEqual(
       expect.arrayContaining([
         cacheTags.edition("ng"),
@@ -72,20 +65,17 @@ describe("/api/revalidate", () => {
     const request = createRequest({
       secret: SECRET,
       slug: "latest-update",
-      path: "/extra-path",
       sections: ["frontpage", "FrontPage"],
     })
 
     await POST(request)
 
-    expect(revalidatePath).toHaveBeenCalledWith(getArticleUrl("latest-update", DEFAULT_COUNTRY))
-    expect(revalidatePath).toHaveBeenCalledWith("/extra-path")
-
-    const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
+    const tagCalls = vi.mocked(revalidateTag).mock.calls.flat()
     expect(tagCalls).toEqual(
       expect.arrayContaining([
         cacheTags.edition(DEFAULT_COUNTRY),
         cacheTags.home(DEFAULT_COUNTRY),
+        cacheTags.post(DEFAULT_COUNTRY, "latest-update"),
       ]),
     )
   })
