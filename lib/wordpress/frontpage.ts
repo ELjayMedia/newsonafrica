@@ -1,6 +1,6 @@
 import * as log from "../log"
-import { buildCacheTags } from "../cache/tag-utils"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { PostSummaryFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
@@ -118,11 +118,7 @@ export async function getFrontPageSlicesForCountry(
   const request = options?.request
 
   const totalLatest = heroFallbackLimit + trendingLimit + latestLimit
-  const tags = buildCacheTags({
-    country: countryCode,
-    section: "frontpage",
-    extra: ["batched"],
-  })
+  const tags = [cacheTags.home(countryCode), cacheTags.edition(countryCode)]
 
   try {
     console.log("[v0] Fetching frontpage slices for:", countryCode)
@@ -182,7 +178,7 @@ export async function getFpTaggedPostsForCountry(
   limit = 8,
   request?: { timeout?: number; signal?: AbortSignal },
 ): Promise<HomePost[]> {
-  const tags = buildCacheTags({ country: countryCode, section: "frontpage", extra: [`tag:${FP_TAG_SLUG}`] })
+  const tags = [cacheTags.home(countryCode), cacheTags.edition(countryCode), cacheTags.tag(countryCode, FP_TAG_SLUG)]
 
   try {
     console.log("[v0] Fetching FP tagged posts for:", countryCode)

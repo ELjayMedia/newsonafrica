@@ -1,7 +1,7 @@
 import "server-only"
 import pLimit from "p-limit"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { buildCacheTags } from "@/lib/cache/tag-utils"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { AFRICAN_EDITION } from "@/lib/editions"
 import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
@@ -82,10 +82,7 @@ const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => 
   }
 }
 
-export const HOME_FEED_CACHE_TAGS = buildCacheTags({
-  section: "home-feed",
-  extra: ["tag:home-feed"],
-})
+export const HOME_FEED_CACHE_TAGS = [cacheTags.home("all")]
 
 const normalizeCacheTags = (cacheTags: string[]): string[] => Array.from(new Set(cacheTags)).sort()
 
@@ -301,9 +298,7 @@ async function getFetchAggregatedHomeForCountry() {
         ["home-feed-for-country"],
         {
           revalidate: HOME_FEED_REVALIDATE,
-          tags: buildCacheTags({
-            section: "home-feed",
-          }),
+          tags: [cacheTags.home("all")],
         }
       )
     } catch {
@@ -701,14 +696,7 @@ const getEditionCache = (edition: SupportedEdition) => {
   let cached = editionCache.get(cacheKey)
 
   if (!cached) {
-    const editionTags = buildCacheTags({
-      country: isCountryEdition(edition) ? edition.code : undefined,
-      section: "home-feed",
-      extra: [
-        `edition:${edition.code}`,
-        isAfricanEdition(edition) ? "edition:africa" : undefined,
-      ],
-    })
+    const editionTags = [cacheTags.home(edition.code), cacheTags.edition(edition.code)]
 
     cached = createCachedFetcher(
       ["home-content", cacheKey],

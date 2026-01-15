@@ -15,7 +15,7 @@ import type {
   CategoriesQuery,
   PostsByCategoryQuery,
 } from "@/types/wpgraphql"
-import { buildWpCacheTags } from "./common"
+import { cacheTags } from "../cache/cacheTags"
 
 const createEmptyResult = (): CategoryPostsResult => ({
   category: null,
@@ -72,11 +72,7 @@ export async function getPostsForCategories(
     return {}
   }
 
-  const tags = buildWpCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: normalizedSlugs.map((slug) => `category:${slug}`),
-  })
+  const tags = [cacheTags.edition(countryCode), ...normalizedSlugs.map((slug) => cacheTags.category(countryCode, slug))]
 
   let data: CategoryPostsBatchQuery | null = null
 
@@ -129,11 +125,7 @@ export async function getPostsByCategoryForCountry(
   after?: string | null,
 ): Promise<CategoryPostsResult> {
   const slug = normalizeSlug(categorySlug)
-  const tags = buildWpCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: [slug ? `category:${slug}` : null],
-  })
+  const tags = [cacheTags.edition(countryCode), cacheTags.category(countryCode, slug)]
 
   let data: PostsByCategoryQuery | null = null
 
@@ -177,7 +169,7 @@ export async function getPostsByCategoryForCountry(
 }
 
 export async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  const tags = buildWpCacheTags({ country: countryCode, section: "categories" })
+  const tags = [cacheTags.edition(countryCode)]
 
   try {
     const data = await fetchWordPressGraphQL<CategoriesQuery>(
@@ -200,11 +192,7 @@ export async function fetchCategoryPosts(
   countryCode: string = DEFAULT_COUNTRY,
 ) {
   const normalizedSlug = normalizeSlug(slug)
-  const tags = buildWpCacheTags({
-    country: countryCode,
-    section: "categories",
-    extra: [`category:${normalizedSlug}`],
-  })
+  const tags = [cacheTags.edition(countryCode), cacheTags.category(countryCode, normalizedSlug)]
 
   const variables: Record<string, string | number | string[]> = {
     slug,

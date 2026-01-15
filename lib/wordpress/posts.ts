@@ -1,7 +1,6 @@
 import { ENV } from "@/config/env"
-import { buildCacheTags } from "../cache/tag-utils"
-import { tag } from "../cache"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import {
   FEATURED_POSTS_QUERY,
   LATEST_POSTS_QUERY,
@@ -92,11 +91,7 @@ export async function getLatestPostsForCountry(
   cursor?: string | null,
   options?: { request?: { timeout?: number; signal?: AbortSignal } },
 ): Promise<PaginatedPostsResult> {
-  const tags = [
-    ...buildCacheTags({ country: countryCode, section: "news" }),
-    tag.edition(countryCode),
-    tag.posts(countryCode),
-  ]
+  const tags = [cacheTags.edition(countryCode)]
   const request = options?.request
 
   try {
@@ -172,10 +167,8 @@ export async function getRelatedPostsForCountry(
   }
 
   const tags = [
-    ...buildCacheTags({ country: countryCode, section: "related", extra: [`post:${postCacheKey}`] }),
-    tag.edition(countryCode),
-    tag.posts(countryCode),
-    tag.post(countryCode, postCacheKey),
+    cacheTags.edition(countryCode),
+    cacheTags.post(countryCode, postCacheKey),
   ]
 
   const gqlPost = await fetchWordPressGraphQL<PostCategoriesQuery>(
@@ -225,14 +218,9 @@ export const getRelatedPosts = async (
 
   if (tags.length > 0) {
     const relatedTags = [
-      ...buildCacheTags({
-        country,
-        section: "related",
-        extra: [`post:${postId}`, ...tags.map((tagSlug) => `tag:${tagSlug}`)],
-      }),
-      tag.edition(country),
-      tag.posts(country),
-      tag.post(country, postId),
+      cacheTags.edition(country),
+      cacheTags.post(country, postId),
+      ...tags.map((tagSlug) => cacheTags.tag(country, tagSlug)),
     ]
     const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
       country,
@@ -494,16 +482,7 @@ export const fetchTaggedPosts = async ({
   first = 10,
   countryCode = DEFAULT_COUNTRY,
 }: FetchTaggedPostsInput): Promise<FetchTaggedPostsResult> => {
-  const cacheTags = [
-    ...buildCacheTags({
-      country: countryCode,
-      section: "tags",
-      extra: [`tag:${slug}`],
-    }),
-      tag.edition(countryCode),
-      tag.tags(countryCode),
-      tag.tag(countryCode, slug),
-  ]
+  const tags = [cacheTags.edition(countryCode), cacheTags.tag(countryCode, slug)]
 
   try {
     const gqlData = await fetchWordPressGraphQL<LatestPostsQuery>(
@@ -514,7 +493,7 @@ export const fetchTaggedPosts = async ({
         first,
         ...(after ? { after } : {}),
       },
-      { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+      { tags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
     if (gqlData?.posts) {
@@ -581,17 +560,13 @@ export const fetchPosts = async (
   } = options
 
   const extraTags = [
-    category ? `category:${category}` : null,
-    tag ? `tag:${tag}` : null,
-    author ? `author:${author}` : null,
-    featured ? "filter:featured" : null,
-    search ? `search:${search}` : null,
-    ids && ids.length > 0 ? `ids:${ids.map(String).sort().join("-")}` : null,
+    category ? cacheTags.category(countryCode, category) : null,
+    tag ? cacheTags.tag(countryCode, tag) : null,
+    author ? cacheTags.author(countryCode, author) : null,
   ]
   const cacheTagList = [
-    ...buildCacheTags({ country: countryCode, section: "posts", extra: extraTags }),
-    tag.edition(countryCode),
-    tag.posts(countryCode),
+    cacheTags.edition(countryCode),
+    ...extraTags.filter((value): value is string => Boolean(value)),
   ]
 
   const offset = Math.max(0, Math.floor(page - 1) * perPage)
@@ -660,11 +635,7 @@ export const fetchPosts = async (
 
 export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
   try {
-    const tags = [
-      ...buildCacheTags({ country: countryCode, section: "tags" }),
-      tag.edition(countryCode),
-      tag.tags(countryCode),
-    ]
+    const tags = [cacheTags.edition(countryCode)]
     const gqlData = await fetchWordPressGraphQL<TagsQueryResult>(
       countryCode,
       TAGS_QUERY,
@@ -683,33 +654,24 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
 }
 
 export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY) => {
-  const cacheTags = [
-    ...buildCacheTags({ country: countryCode, section: "tags", extra: [`tag:${slug}`] }),
-    tag.edition(countryCode),
-    tag.tags(countryCode),
-    tag.tag(countryCode, slug),
-  ]
+  const tags = [cacheTags.edition(countryCode), cacheTags.tag(countryCode, slug)]
   const gqlData = await fetchWordPressGraphQL<TagBySlugQueryResult>(
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+    { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   return mapGraphqlTagNode(gqlData?.tag) ?? null
 }
 
 export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
-  const cacheTags = [
-    ...buildCacheTags({ country: countryCode, section: "tags" }),
-    tag.edition(countryCode),
-    tag.tags(countryCode),
-  ]
+  const tags = [cacheTags.edition(countryCode)]
   const gqlData = await fetchWordPressGraphQL<TagsQueryResult>(
     countryCode,
     TAGS_QUERY,
     { first: 100, hideEmpty: true },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+    { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
   const nodes = gqlData?.tags?.nodes ?? []
@@ -725,12 +687,7 @@ export async function fetchPost({
   slug: string
   countryCode?: string
 }) {
-  const tags = [
-    ...buildCacheTags({ country: countryCode, section: "post", extra: [`slug:${slug}`] }),
-    tag.edition(countryCode),
-    tag.posts(countryCode),
-    tag.postSlug(countryCode, slug),
-  ]
+  const tags = [cacheTags.edition(countryCode)]
   const gqlData = await fetchWordPressGraphQL<PostBySlugQueryResult>(
     countryCode,
     POST_BY_SLUG_QUERY,
@@ -791,12 +748,7 @@ export function resolveCountryCode(input: string): string | null {
 }
 
 export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10) {
-  const cacheTags = [
-    ...buildCacheTags({ country: countryCode, section: "featured", extra: ["tag:featured"] }),
-    tag.edition(countryCode),
-    tag.posts(countryCode),
-    tag.tag(countryCode, "featured"),
-  ]
+  const tags = [cacheTags.edition(countryCode), cacheTags.tag(countryCode, "featured")]
 
   const gqlData = await fetchWordPressGraphQL<FeaturedPostsQuery>(
     countryCode,
@@ -805,7 +757,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
       tag: "featured",
       first: limit,
     },
-    { tags: cacheTags, revalidate: CACHE_DURATIONS.SHORT },
+    { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
   if (gqlData?.posts) {
     const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []

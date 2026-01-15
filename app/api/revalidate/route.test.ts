@@ -20,7 +20,7 @@ vi.mock("next/cache", () => ({
 
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { revalidatePath } from "next/cache"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
 import { POST } from "./route"
 
@@ -58,10 +58,8 @@ describe("/api/revalidate", () => {
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
     expect(tagCalls).toEqual(
       expect.arrayContaining([
-        cacheTags.posts("ng"),
-        cacheTags.categories("ng"),
-        cacheTags.tags("ng"),
-        cacheTags.postSlug("ng", "my-story"),
+        cacheTags.edition("ng"),
+        cacheTags.home("ng"),
         cacheTags.post("ng", "77"),
         cacheTags.category("ng", "politics"),
         cacheTags.tag("ng", "breaking"),
@@ -86,11 +84,8 @@ describe("/api/revalidate", () => {
     const tagCalls = vi.mocked(revalidateByTag).mock.calls.flat()
     expect(tagCalls).toEqual(
       expect.arrayContaining([
-        cacheTags.posts(DEFAULT_COUNTRY),
-        cacheTags.categories(DEFAULT_COUNTRY),
-        cacheTags.tags(DEFAULT_COUNTRY),
-        "country:" + DEFAULT_COUNTRY,
-        "section:frontpage",
+        cacheTags.edition(DEFAULT_COUNTRY),
+        cacheTags.home(DEFAULT_COUNTRY),
       ]),
     )
   })
