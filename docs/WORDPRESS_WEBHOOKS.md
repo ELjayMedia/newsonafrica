@@ -23,9 +23,9 @@ News On Africa uses WordPress webhooks to trigger on-demand revalidation of cach
 ### 1. Environment Variables
 
 Add to `.env.local`:
-```bash
+\`\`\`bash
 REVALIDATION_SECRET=your-super-secret-key-here-min-32-chars
-```
+\`\`\`
 
 **Security Notes:**
 - Use a strong random string (min 32 characters)
@@ -43,19 +43,19 @@ Install a webhook plugin or add custom code to trigger revalidation on content u
 
 ### 3. Webhook Endpoint
 
-```
+\`\`\`
 POST https://newsonafrica.com/api/revalidate
-```
+\`\`\`
 
 ---
 
 ## Request Format
 
 ### Headers
-```http
+\`\`\`http
 Content-Type: application/json
 X-Revalidate-Secret: your-super-secret-key-here
-```
+\`\`\`
 
 ### Authentication
 Secret can be provided via:
@@ -70,14 +70,14 @@ Secret can be provided via:
 
 WordPress sends an action type and minimal metadata. Next.js automatically generates the correct cache tags.
 
-```json
+\`\`\`json
 {
   "action": "post_published",
   "country": "sz",
   "post_id": 123,
   "post_slug": "breaking-news-story"
 }
-```
+\`\`\`
 
 **Supported Actions:**
 
@@ -92,17 +92,17 @@ WordPress sends an action type and minimal metadata. Next.js automatically gener
 
 For advanced use cases, send specific cache tags to revalidate:
 
-```json
+\`\`\`json
 {
   "tags": ["post:sz:123", "home:sz", "edition:sz:category:politics"]
 }
-```
+\`\`\`
 
 ### Option 3: Mixed Approach
 
 Combine both methods:
 
-```json
+\`\`\`json
 {
   "action": "post_published",
   "country": "sz",
@@ -111,7 +111,7 @@ Combine both methods:
   "categories": ["politics", "economy"],
   "sections": ["home-feed", "trending"]
 }
-```
+\`\`\`
 
 ---
 
@@ -143,7 +143,7 @@ All tags follow a hierarchical namespace pattern:
 
 Add to your WordPress theme's `functions.php` or create a custom plugin:
 
-```php
+\`\`\`php
 <?php
 /**
  * News On Africa - Next.js ISR Revalidation
@@ -251,7 +251,7 @@ function noa_revalidate_category($term_id) {
         'category_slug' => $term->slug,
     ));
 }
-```
+\`\`\`
 
 ---
 
@@ -259,7 +259,7 @@ function noa_revalidate_category($term_id) {
 
 ### Using curl
 
-```bash
+\`\`\`bash
 # Test with action-based payload
 curl -X POST https://newsonafrica.com/api/revalidate \
   -H "Content-Type: application/json" \
@@ -279,11 +279,11 @@ curl -X POST https://newsonafrica.com/api/revalidate \
   -d '{
     "tags": ["edition:sz:post:123", "home:sz"]
   }'
-```
+\`\`\`
 
 ### Expected Response
 
-```json
+\`\`\`json
 {
   "revalidated": true,
   "timestamp": "2026-01-11T12:30:00.000Z",
@@ -298,7 +298,7 @@ curl -X POST https://newsonafrica.com/api/revalidate \
     "section:home-feed"
   ]
 }
-```
+\`\`\`
 
 ---
 
@@ -308,10 +308,10 @@ curl -X POST https://newsonafrica.com/api/revalidate \
 
 Check your Next.js logs for revalidation events:
 
-```
+\`\`\`
 [api/revalidate] POST 200 - Revalidated 7 tags
 Tags: ["edition:sz:post:123", "home:sz", ...]
-```
+\`\`\`
 
 ### Vercel Logs
 
@@ -325,7 +325,7 @@ If deployed on Vercel, check the Function Logs in your project dashboard:
 
 Add debugging to track webhook delivery:
 
-```php
+\`\`\`php
 function noa_trigger_revalidation($payload) {
     $response = wp_remote_post(NEXTJS_REVALIDATE_URL, array(
         'headers' => array(
@@ -343,7 +343,7 @@ function noa_trigger_revalidation($payload) {
         error_log('NOA Revalidation success: ' . $body);
     }
 }
-```
+\`\`\`
 
 ---
 
@@ -385,12 +385,12 @@ function noa_trigger_revalidation($payload) {
 **Solutions:**
 
 1. **Verify correct tags are being revalidated:**
-   ```bash
+   \`\`\`bash
    curl -v https://newsonafrica.com/api/revalidate \
      -H "X-Revalidate-Secret: your-secret" \
      -H "Content-Type: application/json" \
      -d '{"action":"post_updated","country":"sz","post_id":123,"post_slug":"article-slug"}'
-   ```
+   \`\`\`
    
 2. **Check page is using matching tags:**
    - Article pages should use: `edition:sz:post:123` and `edition:sz:post-slug:article-slug`
@@ -398,18 +398,18 @@ function noa_trigger_revalidation($payload) {
    - Home page should use: `home:sz` and `section:home-feed`
 
 3. **Try path-based revalidation as fallback:**
-   ```json
+   \`\`\`json
    {
      "path": "/sz/article/article-slug"
    }
-   ```
+   \`\`\`
 
 4. **Clear Next.js cache manually:**
-   ```bash
+   \`\`\`bash
    # In your Next.js project
    rm -rf .next/cache
    npm run build
-   ```
+   \`\`\`
 
 5. **Check ISR configuration:**
    - Verify pages have `export const revalidate` set
@@ -436,16 +436,16 @@ function noa_trigger_revalidation($payload) {
 - Avoid revalidating entire site unnecessarily
 
 ### 2. Non-Blocking Webhooks
-```php
+\`\`\`php
 wp_remote_post(NEXTJS_REVALIDATE_URL, array(
     'blocking' => false,  // Don't wait for response
     'timeout' => 5,
 ));
-```
+\`\`\`
 
 ### 3. Batch Related Changes
 If updating multiple posts, batch into single webhook:
-```json
+\`\`\`json
 {
   "tags": [
     "edition:sz:post:123",
@@ -454,7 +454,7 @@ If updating multiple posts, batch into single webhook:
     "home:sz"
   ]
 }
-```
+\`\`\`
 
 ### 4. Monitoring & Alerting
 - Set up monitoring for 401/500 errors
@@ -475,7 +475,7 @@ If updating multiple posts, batch into single webhook:
 
 For complex scenarios, extend the revalidation endpoint:
 
-```typescript
+\`\`\`typescript
 // app/api/revalidate/route.ts
 
 // Add custom action
@@ -486,19 +486,19 @@ case "homepage_refresh":
     tagsToRevalidate.add(cacheTags.posts(country))
   })
   break
-```
+\`\`\`
 
 ### Scheduled Revalidation
 
 For time-sensitive content (e.g., hourly news digest), use cron:
 
-```bash
+\`\`\`bash
 # Cron job to revalidate home page every hour
 0 * * * * curl -X POST https://newsonafrica.com/api/revalidate \
   -H "X-Revalidate-Secret: $REVALIDATION_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"tags":["home:sz","home:za","home:ng","home:zm"]}'
-```
+\`\`\`
 
 ---
 

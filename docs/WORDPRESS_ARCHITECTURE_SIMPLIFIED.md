@@ -15,7 +15,7 @@ The News On Africa platform now uses **WPGraphQL as the single, authoritative co
 
 ### Request Flow
 
-```
+\`\`\`
 Client Request
     ↓
 GraphQL Query (via fetchWordPressGraphQL)
@@ -25,7 +25,7 @@ GraphQL Query (via fetchWordPressGraphQL)
     └─ Failure (5xx)
         ├─ KV Cache Hit → Serve stale data with "retry later" banner
         └─ No Cache → Show error boundary ("content unavailable")
-```
+\`\`\`
 
 ### Key Components
 
@@ -39,13 +39,13 @@ GraphQL Query (via fetchWordPressGraphQL)
 
 ### Environment Variables
 
-```bash
+\`\`\`bash
 # Production (default - REST fallback disabled)
 WP_REST_FALLBACK=0
 
 # Development (REST fallback enabled for emergency debugging)
 WP_REST_FALLBACK=1
-```
+\`\`\`
 
 ### Feature Flag Usage
 
@@ -76,7 +76,7 @@ The REST fallback is currently feature-flagged but NOT implemented. If needed in
 
 When GraphQL fails, logs include:
 
-```json
+\`\`\`json
 {
   "level": "error",
   "message": "GraphQL request failed",
@@ -85,7 +85,7 @@ When GraphQL fails, logs include:
   "status": 500,
   "kind": "http_error"
 }
-```
+\`\`\`
 
 Alert on:
 - Sustained 5xx errors from WordPress (indicates server issues)
