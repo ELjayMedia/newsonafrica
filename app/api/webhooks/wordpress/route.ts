@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server"
-import { revalidatePath } from "next/cache"
 import { createHmac, timingSafeEqual } from "node:crypto"
-import { SUPPORTED_COUNTRIES, getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
 import { KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache/cacheTags"
 import { revalidateByTag } from "@/lib/server-cache-utils"
@@ -230,6 +229,7 @@ export async function POST(request: NextRequest) {
           const tagSlugs = extractTagSlugs(post)
           const tagsToRevalidate = new Set<string>()
           const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
+          const postIdentifier = postId ?? post.slug
 
           const resolvedCountry = deriveCountryFromPost(post)
           const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
@@ -271,16 +271,12 @@ export async function POST(request: NextRequest) {
 
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
-          // Revalidate the specific post page for all supported countries
+          // Revalidate the specific post tags for all supported countries
           for (const country of revalidationCountries) {
-            const articlePath = getArticleUrl(post.slug, country)
-            revalidatePath(articlePath)
-            revalidatePath(`${articlePath}/opengraph-image`)
-
             tagsToRevalidate.add(cacheTags.edition(country))
             tagsToRevalidate.add(cacheTags.home(country))
-            if (postId) {
-              tagsToRevalidate.add(cacheTags.post(country, postId))
+            if (postIdentifier) {
+              tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
             }
 
             categorySlugs.forEach((slug) => {
@@ -291,24 +287,8 @@ export async function POST(request: NextRequest) {
               tagsToRevalidate.add(cacheTags.tag(country, slug))
             })
           }
-          if (postId) {
-            for (const country of revalidationCountries) {
-              revalidateByTag(cacheTags.post(country, postId))
-            }
-          }
-
-          // Revalidate category pages if categories are present
-          categorySlugs.forEach((slug) => {
-            for (const country of revalidationCountries) {
-              revalidateByTag(cacheTags.category(country, slug))
-            }
-          })
 
           // Revalidate home page to show latest posts
-          revalidatePath("/")
-          for (const country of revalidationCountries) {
-            revalidateByTag(cacheTags.home(country))
-          }
           tagsToRevalidate.add(cacheTags.home("all"))
 
           await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
@@ -325,6 +305,7 @@ export async function POST(request: NextRequest) {
           const tagSlugs = extractTagSlugs(post)
           const tagsToRevalidate = new Set<string>()
           const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
+          const postIdentifier = postId ?? post.slug
           const resolvedCountry = deriveCountryFromPost(post)
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
@@ -337,14 +318,10 @@ export async function POST(request: NextRequest) {
 
           // Revalidate pages that might have referenced this post
           for (const country of revalidationCountries) {
-            const articlePath = getArticleUrl(post.slug, country)
-            revalidatePath(articlePath)
-            revalidatePath(`${articlePath}/opengraph-image`)
-
             tagsToRevalidate.add(cacheTags.edition(country))
             tagsToRevalidate.add(cacheTags.home(country))
-            if (postId) {
-              tagsToRevalidate.add(cacheTags.post(country, postId))
+            if (postIdentifier) {
+              tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
             }
 
             categorySlugs.forEach((slug) => {
@@ -355,25 +332,9 @@ export async function POST(request: NextRequest) {
               tagsToRevalidate.add(cacheTags.tag(country, slug))
             })
           }
-
-          categorySlugs.forEach((slug) => {
-            for (const country of revalidationCountries) {
-              revalidateByTag(cacheTags.category(country, slug))
-            }
-          })
-          revalidatePath("/")
-          for (const country of revalidationCountries) {
-            revalidateByTag(cacheTags.home(country))
-          }
           tagsToRevalidate.add(cacheTags.home("all"))
 
           await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
-
-          if (postId) {
-            for (const country of revalidationCountries) {
-              revalidateByTag(cacheTags.post(country, postId))
-            }
-          }
 
           tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
 
@@ -386,12 +347,6 @@ export async function POST(request: NextRequest) {
           const resolvedCountry = deriveCountryFromPost(post)
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
 
-          // Revalidate country-specific category pages
-          for (const country of revalidationCountries) {
-            revalidatePath(getCategoryUrl(post.slug, country))
-          }
-          // Legacy path
-          revalidatePath(`/category/${post.slug}`)
           for (const country of revalidationCountries) {
             revalidateByTag(cacheTags.category(country, post.slug))
           }

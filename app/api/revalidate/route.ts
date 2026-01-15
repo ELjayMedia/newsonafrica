@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server"
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateTag } from "next/cache"
 import { applyRateLimit, handleApiError, successResponse, withCors, logRequest } from "@/lib/api-utils"
 import { cacheTags } from "@/lib/cache/cacheTags"
-import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
 
 export const runtime = "nodejs"
@@ -19,7 +19,6 @@ type RevalidatePayload = {
   country?: string
   categories?: string[]
   tags?: string[]
-  path?: string
   sections?: string[]
   action?: RevalidateAction
   post_slug?: string
@@ -76,7 +75,6 @@ function parseRevalidatePayload(body: unknown): RevalidatePayload {
   const categories = normalizeArray(payload.categories, { lowercase: true })
   const tags = normalizeArray(payload.tags, { lowercase: true })
   const sections = normalizeArray(payload.sections, { lowercase: true })
-  const path = normalizeString(payload.path)
   const action = normalizeString(payload.action, { lowercase: true }) as RevalidateAction | undefined
   const categorySlug = normalizeString(payload.category_slug, { lowercase: true })
 
@@ -91,7 +89,6 @@ function parseRevalidatePayload(body: unknown): RevalidatePayload {
     country,
     categories: categorySlug ? [...categories, categorySlug] : categories,
     tags,
-    path,
     sections,
     action,
   }
@@ -143,7 +140,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) return withCors(request, rateLimitResponse)
 
     const payload = parseRevalidatePayload(await request.json())
-    const { secret, slug, postId, country = DEFAULT_COUNTRY, categories, tags, path, sections, action } = payload
+    const { secret, slug, postId, country = DEFAULT_COUNTRY, categories, tags, sections, action } = payload
 
     const headerSecret = request.headers.get("X-Revalidate-Secret")
     const providedSecret = headerSecret || secret
@@ -159,7 +156,6 @@ export async function POST(request: NextRequest) {
     }
 
     const tagsToRevalidate = new Set<string>()
-    const pathsToRevalidate = new Set<string>()
 
     if (action) {
       getTagsForAction(action, payload).forEach((tag) => tagsToRevalidate.add(tag))
@@ -169,12 +165,9 @@ export async function POST(request: NextRequest) {
       tagsToRevalidate.add(cacheTags.home(country))
     }
 
-    if (slug) {
-      pathsToRevalidate.add(getArticleUrl(slug, country))
-    }
-
-    if (postId) {
-      tagsToRevalidate.add(cacheTags.post(country, postId))
+    const postIdentifier = postId ?? slug
+    if (postIdentifier) {
+      tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
     }
 
     categories.forEach((category) => {
@@ -192,14 +185,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (path) {
-      pathsToRevalidate.add(path)
-    }
-
-    pathsToRevalidate.forEach((targetPath) => {
-      revalidatePath(targetPath)
-    })
-
     tagsToRevalidate.forEach((cacheTag) => {
       revalidateTag(cacheTag)
     })
@@ -207,7 +192,6 @@ export async function POST(request: NextRequest) {
     const responsePayload = {
       revalidated: true,
       timestamp: new Date().toISOString(),
-      paths: Array.from(pathsToRevalidate),
       tags: Array.from(tagsToRevalidate).sort(),
     }
 
