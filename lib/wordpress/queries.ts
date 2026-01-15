@@ -382,6 +382,17 @@ export const TAGS_QUERY = gql`
   }
 `
 
+export const COUNTRIES_QUERY = gql`
+  query Countries($first: Int = 100) {
+    countries(first: $first) {
+      nodes {
+        databaseId
+        slug
+      }
+    }
+  }
+`
+
 export const TAG_BY_SLUG_QUERY = gql`
   query TagBySlug($slug: ID!) {
     tag(id: $slug, idType: SLUG) {
