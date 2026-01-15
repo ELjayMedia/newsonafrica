@@ -66,22 +66,22 @@ The following MUST NEVER appear in:
 - Browser-accessible bundles
 - Edge functions that run client-side
 
-```
+\`\`\`
 SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_JWT_SECRET
 POSTGRES_PASSWORD
 Any variable not prefixed with NEXT_PUBLIC_
-```
+\`\`\`
 
 ### Enforcement
 
-```typescript
+\`\`\`typescript
 // lib/supabase/env.ts — Server-only module
 import "server-only";
 
 export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // This file CANNOT be imported in client components
-```
+\`\`\`
 
 ---
 
@@ -89,33 +89,33 @@ export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 ### Header Set: Public/Anonymous Reads
 
-```http
+\`\`\`http
 GET /rest/v1/wp_posts_cache?select=*&limit=10
 Host: {PROJECT_REF}.supabase.co
 apikey: {ANON_KEY}
 Accept: application/json
-```
+\`\`\`
 
 ### Header Set: Authenticated User Calls
 
-```http
+\`\`\`http
 GET /rest/v1/bookmarks?select=*
 Host: {PROJECT_REF}.supabase.co
 apikey: {ANON_KEY}
 Authorization: Bearer {ACCESS_TOKEN}
 Accept: application/json
-```
+\`\`\`
 
 ### Header Set: Server/Service Calls (Server Only)
 
-```http
+\`\`\`http
 POST /rest/v1/app_write_events
 Host: {PROJECT_REF}.supabase.co
 apikey: {ANON_KEY}
 Authorization: Bearer {SERVICE_ROLE_KEY}
 Content-Type: application/json
 Prefer: return=representation
-```
+\`\`\`
 
 ### Content-Type Rules
 
@@ -141,7 +141,7 @@ Prefer: return=representation
 
 ### SDK Location
 
-```
+\`\`\`
 lib/
 └── supabase/
     └── rest/
@@ -156,11 +156,11 @@ lib/
         ├── profiles.ts      # Profile feature SDK
         ├── wp-cache.ts      # WP posts cache SDK
         └── events.ts        # App write events SDK (server-only)
-```
+\`\`\`
 
 ### Function Naming Convention
 
-```typescript
+\`\`\`typescript
 // Pattern: {verb}{Resource}{Qualifier?}
 listMyBookmarks()        // GET user's bookmarks
 getBookmarkByPost()      // GET single by criteria
@@ -171,22 +171,22 @@ deleteBookmark()         // DELETE
 // Server-only suffix
 upsertMyBookmarkCountersServerOnly()
 logEventServerOnly()
-```
+\`\`\`
 
 ### No Direct Fetch Rule
 
-```typescript
+\`\`\`typescript
 // FORBIDDEN — Direct fetch in component
 const res = await fetch(`${SUPABASE_URL}/rest/v1/bookmarks?...`);
 
 // REQUIRED — Use SDK function
 import { listMyBookmarks } from "@/lib/supabase/rest/bookmarks";
 const bookmarks = await listMyBookmarks({ limit: 20 });
-```
+\`\`\`
 
 ### Centralized Error Handling
 
-```typescript
+\`\`\`typescript
 // lib/supabase/rest/errors.ts
 export class PostgRESTError extends Error {
   constructor(
@@ -214,11 +214,11 @@ export async function parseResponse<T>(res: Response): Promise<T> {
   }
   return res.json();
 }
-```
+\`\`\`
 
 ### Pagination Defaults
 
-```typescript
+\`\`\`typescript
 // lib/supabase/rest/constants.ts
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;
@@ -227,7 +227,7 @@ export const MAX_LIMIT = 100;
 export async function listMyBookmarks({ limit = DEFAULT_LIMIT, offset = 0 }) {
   // limit is always applied, never unbounded
 }
-```
+\`\`\`
 
 ---
 
@@ -235,34 +235,34 @@ export async function listMyBookmarks({ limit = DEFAULT_LIMIT, offset = 0 }) {
 
 ### Server Components: Public Reads (Cacheable)
 
-```typescript
+\`\`\`typescript
 // Public data — cache with ISR
 const posts = await getCachedPost({
   edition_code: "sz",
   wp_post_id: 123,
   next: { revalidate: 300, tags: ["wp-cache:sz:123"] }
 });
-```
+\`\`\`
 
 ### User-Specific Reads (No Shared Cache)
 
-```typescript
+\`\`\`typescript
 // User data — never cache in shared store
 const bookmarks = await listMyBookmarks({
   limit: 20,
   next: { cache: "no-store" }
 });
-```
+\`\`\`
 
 ### Mutations: Cache Busting
 
-```typescript
+\`\`\`typescript
 import { revalidateTag } from "next/cache";
 
 // After mutation, invalidate related tags
 await createBookmark({ wp_post_id: 123, edition_code: "sz" });
 revalidateTag("bookmarks:user");
-```
+\`\`\`
 
 ### DO / DON'T Matrix
 
@@ -276,7 +276,7 @@ revalidateTag("bookmarks:user");
 
 ### Fetch Options Template
 
-```typescript
+\`\`\`typescript
 // lib/supabase/rest/fetch.ts
 type CacheStrategy = 
   | { cache: "no-store" }
@@ -289,7 +289,7 @@ export function publicReadCache(tags: string[]): CacheStrategy {
 export function userDataCache(): CacheStrategy {
   return { cache: "no-store" };
 }
-```
+\`\`\`
 
 ---
 
@@ -299,7 +299,7 @@ export function userDataCache(): CacheStrategy {
 
 #### `listMyBookmarks`
 
-```typescript
+\`\`\`typescript
 function listMyBookmarks(params?: {
   edition_code?: string;
   collection_id?: string;
@@ -307,12 +307,12 @@ function listMyBookmarks(params?: {
   limit?: number;  // default: 20, max: 100
   offset?: number; // default: 0
 }): Promise<Bookmark[]>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/bookmarks`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,user_id,wp_post_id,edition_code,collection_id,read_state,created_at,updated_at
 &user_id=eq.{from_jwt}
 &edition_code=eq.{edition_code}
@@ -321,12 +321,12 @@ function listMyBookmarks(params?: {
 &order=created_at.desc
 &limit={limit}
 &offset={offset}
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
 **Response Shape:**
-```typescript
+\`\`\`typescript
 interface Bookmark {
   id: string;
   user_id: string;
@@ -337,7 +337,7 @@ interface Bookmark {
   created_at: string;
   updated_at: string;
 }
-```
+\`\`\`
 
 **Error Cases:**
 - `401` — No/invalid token → redirect to login
@@ -347,22 +347,22 @@ interface Bookmark {
 
 #### `getBookmarkByPost`
 
-```typescript
+\`\`\`typescript
 function getBookmarkByPost(params: {
   wp_post_id: number;
   edition_code: string;
 }): Promise<Bookmark | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/bookmarks`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,user_id,wp_post_id,edition_code,collection_id,read_state,created_at,updated_at
 &wp_post_id=eq.{wp_post_id}
 &edition_code=eq.{edition_code}
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
@@ -370,24 +370,24 @@ function getBookmarkByPost(params: {
 
 #### `createBookmark`
 
-```typescript
+\`\`\`typescript
 function createBookmark(params: {
   wp_post_id: number;
   edition_code: string;
   collection_id?: string;
 }): Promise<Bookmark>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/bookmarks`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "wp_post_id": 123,
   "edition_code": "sz",
   "collection_id": "uuid-or-null"
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -397,21 +397,21 @@ function createBookmark(params: {
 
 #### `updateBookmarkReadState`
 
-```typescript
+\`\`\`typescript
 function updateBookmarkReadState(params: {
   id: string;
   read_state: "unread" | "read";
 }): Promise<Bookmark>
-```
+\`\`\`
 
 **Endpoint:** `PATCH /rest/v1/bookmarks?id=eq.{id}`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "read_state": "read"
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -419,9 +419,9 @@ function updateBookmarkReadState(params: {
 
 #### `deleteBookmark`
 
-```typescript
+\`\`\`typescript
 function deleteBookmark(params: { id: string }): Promise<void>
-```
+\`\`\`
 
 **Endpoint:** `DELETE /rest/v1/bookmarks?id=eq.{id}`
 
@@ -431,12 +431,12 @@ function deleteBookmark(params: { id: string }): Promise<void>
 
 #### `deleteBookmarksForPost`
 
-```typescript
+\`\`\`typescript
 function deleteBookmarksForPost(params: {
   wp_post_id: number;
   edition_code: string;
 }): Promise<void>
-```
+\`\`\`
 
 **Endpoint:** `DELETE /rest/v1/bookmarks?wp_post_id=eq.{wp_post_id}&edition_code=eq.{edition_code}`
 
@@ -448,17 +448,17 @@ function deleteBookmarksForPost(params: {
 
 #### `listMyCollections`
 
-```typescript
+\`\`\`typescript
 function listMyCollections(): Promise<BookmarkCollection[]>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/bookmark_collections`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,user_id,name,description,is_default,created_at,updated_at
 &order=is_default.desc,name.asc
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
@@ -466,24 +466,24 @@ function listMyCollections(): Promise<BookmarkCollection[]>
 
 #### `createCollection`
 
-```typescript
+\`\`\`typescript
 function createCollection(params: {
   name: string;
   description?: string;
   is_default?: boolean;
 }): Promise<BookmarkCollection>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/bookmark_collections`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "name": "Read Later",
   "description": "Articles to read later",
   "is_default": false
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -491,14 +491,14 @@ function createCollection(params: {
 
 #### `updateCollection`
 
-```typescript
+\`\`\`typescript
 function updateCollection(params: {
   id: string;
   name?: string;
   description?: string;
   is_default?: boolean;
 }): Promise<BookmarkCollection>
-```
+\`\`\`
 
 **Endpoint:** `PATCH /rest/v1/bookmark_collections?id=eq.{id}`
 
@@ -508,9 +508,9 @@ function updateCollection(params: {
 
 #### `deleteCollection`
 
-```typescript
+\`\`\`typescript
 function deleteCollection(params: { id: string }): Promise<void>
-```
+\`\`\`
 
 **Endpoint:** `DELETE /rest/v1/bookmark_collections?id=eq.{id}`
 
@@ -524,17 +524,17 @@ function deleteCollection(params: { id: string }): Promise<void>
 
 #### `getMyBookmarkCounters`
 
-```typescript
+\`\`\`typescript
 function getMyBookmarkCounters(): Promise<BookmarkUserCounter | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/bookmark_user_counters`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=user_id,total_bookmarks,unread_bookmarks,updated_at
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
@@ -542,7 +542,7 @@ function getMyBookmarkCounters(): Promise<BookmarkUserCounter | null>
 
 #### `upsertMyBookmarkCountersServerOnly`
 
-```typescript
+\`\`\`typescript
 // SERVER-ONLY — lib/supabase/rest/server/counters.ts
 import "server-only";
 
@@ -551,7 +551,7 @@ function upsertMyBookmarkCountersServerOnly(params: {
   total_bookmarks: number;
   unread_bookmarks: number;
 }): Promise<BookmarkUserCounter>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/bookmark_user_counters`
 
@@ -565,19 +565,19 @@ function upsertMyBookmarkCountersServerOnly(params: {
 
 #### `listApprovedComments`
 
-```typescript
+\`\`\`typescript
 function listApprovedComments(params: {
   wp_post_id: number;
   edition_code: string;
   limit?: number;  // default: 20
   offset?: number; // default: 0
 }): Promise<Comment[]>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/comments`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,user_id,wp_post_id,edition_code,parent_id,body,status,created_at,updated_at,profiles(display_name,avatar_url)
 &wp_post_id=eq.{wp_post_id}
 &edition_code=eq.{edition_code}
@@ -585,7 +585,7 @@ function listApprovedComments(params: {
 &order=created_at.asc
 &limit={limit}
 &offset={offset}
-```
+\`\`\`
 
 **Required Headers:** Public/Anonymous (approved comments are public)
 
@@ -595,26 +595,26 @@ function listApprovedComments(params: {
 
 #### `createComment`
 
-```typescript
+\`\`\`typescript
 function createComment(params: {
   wp_post_id: number;
   edition_code: string;
   body: string;
   parent_id?: string;
 }): Promise<Comment>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/comments`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "wp_post_id": 123,
   "edition_code": "sz",
   "body": "Great article!",
   "parent_id": null
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -624,21 +624,21 @@ function createComment(params: {
 
 #### `updateMyCommentBody`
 
-```typescript
+\`\`\`typescript
 function updateMyCommentBody(params: {
   id: string;
   body: string;
 }): Promise<Comment>
-```
+\`\`\`
 
 **Endpoint:** `PATCH /rest/v1/comments?id=eq.{id}`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "body": "Updated comment text"
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -648,9 +648,9 @@ function updateMyCommentBody(params: {
 
 #### `deleteMyComment`
 
-```typescript
+\`\`\`typescript
 function deleteMyComment(params: { id: string }): Promise<void>
-```
+\`\`\`
 
 **Endpoint:** `DELETE /rest/v1/comments?id=eq.{id}`
 
@@ -662,22 +662,22 @@ function deleteMyComment(params: { id: string }): Promise<void>
 
 #### `reportComment`
 
-```typescript
+\`\`\`typescript
 function reportComment(params: {
   comment_id: string;
   reason?: string;
 }): Promise<CommentReport>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/comment_reports`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "comment_id": "uuid",
   "reason": "Spam"
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -687,22 +687,22 @@ function reportComment(params: {
 
 #### `getCommentCounters`
 
-```typescript
+\`\`\`typescript
 function getCommentCounters(params: {
   wp_post_id: number;
   edition_code: string;
 }): Promise<CommentPostCounter | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/comment_post_counters`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=wp_post_id,edition_code,total_comments,approved_comments,updated_at
 &wp_post_id=eq.{wp_post_id}
 &edition_code=eq.{edition_code}
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Public/Anonymous
 
@@ -710,7 +710,7 @@ function getCommentCounters(params: {
 
 #### `updateCountersServerOnly`
 
-```typescript
+\`\`\`typescript
 // SERVER-ONLY
 import "server-only";
 
@@ -720,7 +720,7 @@ function updateCountersServerOnly(params: {
   total_comments: number;
   approved_comments: number;
 }): Promise<CommentPostCounter>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/comment_post_counters`
 
@@ -732,17 +732,17 @@ function updateCountersServerOnly(params: {
 
 #### `getMyProfile`
 
-```typescript
+\`\`\`typescript
 function getMyProfile(): Promise<Profile | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/profiles`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,display_name,avatar_url,created_at,updated_at
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
@@ -750,22 +750,22 @@ function getMyProfile(): Promise<Profile | null>
 
 #### `updateMyProfile`
 
-```typescript
+\`\`\`typescript
 function updateMyProfile(params: {
   display_name?: string;
   avatar_url?: string;
 }): Promise<Profile>
-```
+\`\`\`
 
 **Endpoint:** `PATCH /rest/v1/profiles?id=eq.{user_id_from_jwt}`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "display_name": "John Doe",
   "avatar_url": "https://..."
 }
-```
+\`\`\`
 
 **Required Headers:** Authenticated User + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -775,22 +775,22 @@ function updateMyProfile(params: {
 
 #### `getCachedPost`
 
-```typescript
+\`\`\`typescript
 function getCachedPost(params: {
   edition_code: string;
   wp_post_id: number;
 }): Promise<WPPostCache | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/wp_posts_cache`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=edition_code,wp_post_id,slug,title,excerpt,featured_image_url,published_at,cached_at
 &edition_code=eq.{edition_code}
 &wp_post_id=eq.{wp_post_id}
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Public/Anonymous
 
@@ -800,22 +800,22 @@ function getCachedPost(params: {
 
 #### `findCachedPostBySlug`
 
-```typescript
+\`\`\`typescript
 function findCachedPostBySlug(params: {
   edition_code?: string;
   slug: string;
 }): Promise<WPPostCache | null>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/wp_posts_cache`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=edition_code,wp_post_id,slug,title,excerpt,featured_image_url,published_at,cached_at
 &slug=eq.{slug}
 &edition_code=eq.{edition_code}  // optional
 &limit=1
-```
+\`\`\`
 
 **Required Headers:** Public/Anonymous
 
@@ -823,24 +823,24 @@ function findCachedPostBySlug(params: {
 
 #### `searchCachedPostsByTitle`
 
-```typescript
+\`\`\`typescript
 function searchCachedPostsByTitle(params: {
   edition_code?: string;
   q: string;
   limit?: number; // default: 20
 }): Promise<WPPostCache[]>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/wp_posts_cache`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=edition_code,wp_post_id,slug,title,excerpt,featured_image_url,published_at
 &title=ilike.*{q}*
 &edition_code=eq.{edition_code}  // optional
 &order=published_at.desc
 &limit={limit}
-```
+\`\`\`
 
 **Required Headers:** Public/Anonymous
 
@@ -852,7 +852,7 @@ function searchCachedPostsByTitle(params: {
 
 #### `logEventServerOnly`
 
-```typescript
+\`\`\`typescript
 // SERVER-ONLY
 import "server-only";
 
@@ -861,18 +861,18 @@ function logEventServerOnly(params: {
   action: string;
   key?: string;
 }): Promise<AppWriteEvent>
-```
+\`\`\`
 
 **Endpoint:** `POST /rest/v1/app_write_events`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "user_id": "uuid-or-null",
   "action": "bookmark_created",
   "key": "sz:123"
 }
-```
+\`\`\`
 
 **Required Headers:** Service Role + `Content-Type: application/json` + `Prefer: return=representation`
 
@@ -880,22 +880,22 @@ function logEventServerOnly(params: {
 
 #### `listMyEvents`
 
-```typescript
+\`\`\`typescript
 function listMyEvents(params?: {
   limit?: number;
   offset?: number;
 }): Promise<AppWriteEvent[]>
-```
+\`\`\`
 
 **Endpoint:** `GET /rest/v1/app_write_events`
 
 **Allowed Querystring:**
-```
+\`\`\`
 ?select=id,user_id,action,key,created_at
 &order=created_at.desc
 &limit={limit}
 &offset={offset}
-```
+\`\`\`
 
 **Required Headers:** Authenticated User
 
@@ -914,16 +914,16 @@ function listMyEvents(params?: {
 
 ### MUST NOT
 
-```typescript
+\`\`\`typescript
 // FORBIDDEN — Causes repeated pg_timezone_names queries
 const tz = await supabase.rpc('get_timezone');
 const posts = await listPosts();
 const tz2 = await supabase.rpc('get_timezone'); // DRIFT!
-```
+\`\`\`
 
 ### Correct Pattern
 
-```typescript
+\`\`\`typescript
 // lib/timezone.ts
 let cachedTimezone: string | null = null;
 
@@ -944,7 +944,7 @@ function ArticleDate({ isoDate }: { isoDate: string }) {
   const formatted = formatInTimeZone(isoDate, tz, "MMM d, yyyy h:mm a");
   return <time dateTime={isoDate}>{formatted}</time>;
 }
-```
+\`\`\`
 
 ### Rule
 
@@ -976,7 +976,7 @@ function ArticleDate({ isoDate }: { isoDate: string }) {
 
 ### Trust Boundary
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────┐
 │                  Browser                     │
 │  ┌─────────────┐                            │
@@ -995,7 +995,7 @@ function ArticleDate({ isoDate }: { isoDate: string }) {
 │  │ Table Exposure (no blocked_passwords)│    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
-```
+\`\`\`
 
 ---
 
@@ -1016,7 +1016,7 @@ function ArticleDate({ isoDate }: { isoDate: string }) {
 
 ### Automated Lint Rules (Recommended)
 
-```javascript
+\`\`\`javascript
 // .eslintrc.js
 module.exports = {
   rules: {
@@ -1033,7 +1033,7 @@ module.exports = {
     }]
   }
 };
-```
+\`\`\`
 
 ---
 
@@ -1041,7 +1041,7 @@ module.exports = {
 
 ### Example 1: List Unread Bookmarks
 
-```typescript
+\`\`\`typescript
 // Client component
 const bookmarks = await listMyBookmarks({
   read_state: "unread",
@@ -1061,11 +1061,11 @@ const res = await fetch(
     cache: "no-store"
   }
 );
-```
+\`\`\`
 
 ### Example 2: Create Bookmark
 
-```typescript
+\`\`\`typescript
 const bookmark = await createBookmark({
   wp_post_id: 123,
   edition_code: "sz",
@@ -1088,11 +1088,11 @@ const res = await fetch(`${SUPABASE_URL}/rest/v1/bookmarks`, {
   }),
   cache: "no-store"
 });
-```
+\`\`\`
 
 ### Example 3: Move Bookmark to Collection (PATCH)
 
-```typescript
+\`\`\`typescript
 const updated = await updateBookmark({
   id: "uuid-bookmark-id",
   collection_id: "uuid-collection-id"
@@ -1113,11 +1113,11 @@ const res = await fetch(
     cache: "no-store"
   }
 );
-```
+\`\`\`
 
 ### Example 4: List Collections
 
-```typescript
+\`\`\`typescript
 const collections = await listMyCollections();
 
 // Underlying fetch
@@ -1131,11 +1131,11 @@ const res = await fetch(
     cache: "no-store"
   }
 );
-```
+\`\`\`
 
 ### Example 5: Create Comment
 
-```typescript
+\`\`\`typescript
 const comment = await createComment({
   wp_post_id: 456,
   edition_code: "za",
@@ -1160,11 +1160,11 @@ const res = await fetch(`${SUPABASE_URL}/rest/v1/comments`, {
   }),
   cache: "no-store"
 });
-```
+\`\`\`
 
 ### Example 6: List Approved Comments
 
-```typescript
+\`\`\`typescript
 const comments = await listApprovedComments({
   wp_post_id: 456,
   edition_code: "za",
@@ -1182,11 +1182,11 @@ const res = await fetch(
     next: { revalidate: 60, tags: ["comments:za:456"] }
   }
 );
-```
+\`\`\`
 
 ### Example 7: Report Comment
 
-```typescript
+\`\`\`typescript
 const report = await reportComment({
   comment_id: "uuid-comment-id",
   reason: "Spam content"
@@ -1207,11 +1207,11 @@ const res = await fetch(`${SUPABASE_URL}/rest/v1/comment_reports`, {
   }),
   cache: "no-store"
 });
-```
+\`\`\`
 
 ### Example 8: Get and Update Profile
 
-```typescript
+\`\`\`typescript
 // Get
 const profile = await getMyProfile();
 
@@ -1239,11 +1239,11 @@ const res = await fetch(
     cache: "no-store"
   }
 );
-```
+\`\`\`
 
 ### Example 9: Get WP Post Cache by Slug
 
-```typescript
+\`\`\`typescript
 const post = await findCachedPostBySlug({
   edition_code: "sz",
   slug: "breaking-news-article"
@@ -1259,11 +1259,11 @@ const res = await fetch(
     next: { revalidate: 300, tags: ["wp-cache:sz:slug:breaking-news-article"] }
   }
 );
-```
+\`\`\`
 
 ### Example 10: Get Comment Counters
 
-```typescript
+\`\`\`typescript
 const counters = await getCommentCounters({
   wp_post_id: 456,
   edition_code: "za"
@@ -1279,11 +1279,11 @@ const res = await fetch(
     next: { revalidate: 60, tags: ["comment-counters:za:456"] }
   }
 );
-```
+\`\`\`
 
 ### Example 11: Log Event (SERVER-ONLY)
 
-```typescript
+\`\`\`typescript
 // lib/supabase/rest/server/events.ts
 import "server-only";
 
@@ -1309,11 +1309,11 @@ const res = await fetch(`${SUPABASE_URL}/rest/v1/app_write_events`, {
   }),
   cache: "no-store"
 });
-```
+\`\`\`
 
 ### Example 12: Upsert Bookmark Counters (SERVER-ONLY)
 
-```typescript
+\`\`\`typescript
 // lib/supabase/rest/server/counters.ts
 import "server-only";
 
@@ -1339,7 +1339,7 @@ const res = await fetch(`${SUPABASE_URL}/rest/v1/bookmark_user_counters`, {
   }),
   cache: "no-store"
 });
-```
+\`\`\`
 
 ---
 

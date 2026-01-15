@@ -82,7 +82,7 @@ Any code, refactor, or feature that violates this contract **must be rejected**.
 - Auth: `x-revalidate-secret` header
 
 ### 4.3 Payload Contract
-```json
+\`\`\`json
 {
   "event": "post_updated",
   "edition": "sz",
@@ -91,7 +91,7 @@ Any code, refactor, or feature that violates this contract **must be rejected**.
   "categories": ["politics", "local"],
   "tags": ["breaking", "government"]
 }
-```
+\`\`\`
 
 ### 4.4 Revalidation Rules
 - Next.js MUST call `revalidateTag()` ONLY
@@ -103,14 +103,14 @@ Any code, refactor, or feature that violates this contract **must be rejected**.
 ## 5. Data Layer Contract
 
 ### 5.1 Folder Structure (MANDATORY)
-```
+\`\`\`
 lib/
   wordpress/
     client.ts          # fetchGraphQL() with tags
     queries.ts         # GraphQL queries ONLY
     mappers.ts         # WPGraphQL → UI transforms
     errors.ts          # Typed errors
-```
+\`\`\`
 
 ### 5.2 Responsibilities
 - `client.ts`

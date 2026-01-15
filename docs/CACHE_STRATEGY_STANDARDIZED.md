@@ -13,7 +13,7 @@ All data fetching in the News On Africa app MUST use one of 3 cache classes. Thi
 - Tag/author pages
 
 **Cache Strategy**:
-```typescript
+\`\`\`typescript
 // In page.tsx or route handler
 export const revalidate = 3600 // ISR: revalidate every hour
 export const dynamicParams = true // generate on-demand
@@ -25,7 +25,7 @@ const gqlResult = await fetchWordPressGraphQL(countryCode, QUERY, variables, {
     cacheTags.category(countryCode, slug),  // e.g., "category:sz:politics"
   ]
 })
-```
+\`\`\`
 
 **Revalidation**: Via WordPress webhooks → `/api/revalidate` → `revalidateTag()` (instant)
 
@@ -46,7 +46,7 @@ const gqlResult = await fetchWordPressGraphQL(countryCode, QUERY, variables, {
 - Comments on articles
 
 **Cache Strategy**:
-```typescript
+\`\`\`typescript
 // In route.ts or server action
 export const revalidate = 0  // Never cache
 // OR
@@ -57,7 +57,7 @@ const bookmarks = await fetchBookmarks(userId, {
   cache: "no-store",  // Always fresh from PostgREST
   revalidate: false   // Disable ISR
 })
-```
+\`\`\`
 
 **Caching Duration**: None (always fresh)
 
@@ -73,7 +73,7 @@ const bookmarks = await fetchBookmarks(userId, {
 - Client-side autocomplete
 
 **Cache Strategy**:
-```typescript
+\`\`\`typescript
 // In route.ts
 export const revalidate = 0
 
@@ -83,7 +83,7 @@ const { data, isLoading } = useSWR(
   (url) => fetch(url, { cache: "no-store" }),
   { revalidateOnFocus: false, dedupingInterval: 500 }
 )
-```
+\`\`\`
 
 **Caching Duration**: None (in-memory dedup only)
 
@@ -93,7 +93,7 @@ const { data, isLoading } = useSWR(
 
 ## Cache Class Decision Tree
 
-```
+\`\`\`
 Is it WordPress content?
 ├─ Yes, published content?
 │  └─ Use CLASS 1 (ISR + Tags)
@@ -104,7 +104,7 @@ Is it WordPress content?
    │
    └─ No, is it search?
       └─ Use CLASS 3 (Client-Only)
-```
+\`\`\`
 
 ---
 

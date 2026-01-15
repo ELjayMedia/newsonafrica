@@ -40,7 +40,7 @@ Before committing any WordPress integration code, verify:
 When using v0.dev to generate or refactor code:
 
 **Required Prompt Addition:**
-```
+\`\`\`
 You MUST follow ARCHITECTURE_CONTRACT.md strictly. Do not:
 - Use WordPress REST for content rendering
 - Create multiple cache layers
@@ -49,50 +49,50 @@ You MUST follow ARCHITECTURE_CONTRACT.md strictly. Do not:
 - Use arrow functions with generics in server actions
 
 Reference the contract before generating code.
-```
+\`\`\`
 
 ## Common Violations and Fixes
 
 ### ❌ Violation: Time-only revalidation
-```typescript
+\`\`\`typescript
 export const revalidate = 300 // DON'T
-```
+\`\`\`
 
 ### ✅ Fix: Tag-based revalidation
-```typescript
+\`\`\`typescript
 export const revalidate = 300 // Optional time-based fallback
 // In fetch:
 fetch(url, { next: { tags: [cacheTags.post(edition, postId)] } })
-```
+\`\`\`
 
 ### ❌ Violation: REST + GraphQL mixing
-```typescript
+\`\`\`typescript
 const post = await fetchGraphQL(query)
 const comments = await fetch('/wp-json/wp/v2/comments') // DON'T
-```
+\`\`\`
 
 ### ✅ Fix: Consistent GraphQL
-```typescript
+\`\`\`typescript
 const post = await fetchGraphQL(query)
 const comments = await fetchGraphQL(commentsQuery) // Only if needed
 // Better: Use Supabase for comments
-```
+\`\`\`
 
 ### ❌ Violation: Generic arrow function in server action
-```typescript
+\`\`\`typescript
 const toSerializable = <T>(value: T): T => { ... } // DON'T
-```
+\`\`\`
 
 ### ✅ Fix: Function declaration
-```typescript
+\`\`\`typescript
 function toSerializable<T>(value: T): T { ... }
-```
+\`\`\`
 
 ## Testing Compliance
 
 Run these checks before deployment:
 
-```bash
+\`\`\`bash
 # Check for REST API usage in content pages
 grep -r "wp-json" app/(public)
 
@@ -104,7 +104,7 @@ grep -r "fetch(" app/(public) | grep -v "next: { tags:"
 
 # Check for unstable_cache outside lib/server
 find lib -name "*.ts" -not -path "lib/server/*" | xargs grep -l "unstable_cache"
-```
+\`\`\`
 
 ## Deployment Validation
 
