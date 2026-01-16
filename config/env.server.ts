@@ -111,6 +111,7 @@ type ServerEnvConfig = z.infer<typeof SERVER_ENV_SCHEMA>
 type WordPressGraphQLAuthHeaders = Readonly<Record<string, string>> | undefined
 
 export const SERVER_ENV: Readonly<ServerEnvConfig> = Object.freeze(parsedServerEnv)
+
 export const WP_AUTH_HEADERS: WordPressGraphQLAuthHeaders = parsedWordPressAuthHeaders
   ? Object.freeze({ ...parsedWordPressAuthHeaders })
   : undefined

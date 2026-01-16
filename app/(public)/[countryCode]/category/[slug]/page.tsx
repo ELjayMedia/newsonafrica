@@ -9,7 +9,7 @@ import { PostList } from "@/components/posts/PostList"
 import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
-import { ISR_CONFIG, STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
+import { STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
 import { getAllCategories } from "@/lib/wordpress/categories"
 import { cacheTags } from "@/lib/cache"
 
@@ -22,7 +22,7 @@ export const runtime = "nodejs"
 export const dynamicParams = true
 
 // Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with category caching.
-export const revalidate = ISR_CONFIG.CATEGORY
+export const revalidate = 300
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 

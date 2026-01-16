@@ -2,6 +2,7 @@ import { cache } from "react"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
+import { WP_AUTH_HEADERS, fetchWithRetry } from "@/lib/wp-fetch"
 
 export interface CountryConfig {
   code: string
@@ -158,22 +159,20 @@ export type WordPressGraphQLFailure =
 
 export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | WordPressGraphQLFailure
 
-const buildSuccessResult = <T>(data: T | null): WordPressGraphQLSuccess<T> => {\
+function buildSuccessResult<T>(data: T | null): WordPressGraphQLSuccess<T> {
   const base: { ok: true; data: T | null } = { ok: true, data }
 
-  if (data && typeof data === "object") {\
+  if (data && typeof data === "object") {
     return Object.assign({}, data, base) as WordPressGraphQLSuccess<T>
   }
 
   return base as WordPressGraphQLSuccess<T>
 }
 
-const buildHTTPFailureResult = (
-  response: Response,
-): WordPressGraphQLHTTPFailure => {\
+const buildHTTPFailureResult = (response: Response): WordPressGraphQLHTTPFailure => {
   const error = new WordPressGraphQLHTTPError(response)
 
-  return {\
+  return {
     ok: false,
     kind: "http_error",
     message: error.message,
@@ -184,12 +183,12 @@ const buildHTTPFailureResult = (
   }
 }
 
-const buildGraphQLFailureResult = (\
+const buildGraphQLFailureResult = (
   errors: Array<{ message: string; [key: string]: unknown }>,
-): WordPressGraphQLResponseFailure => {\
+): WordPressGraphQLResponseFailure => {
   const error = new WordPressGraphQLResponseError(errors)
 
-  return {\
+  return {
     ok: false,
     kind: "graphql_error",
     message: error.message,
@@ -198,8 +197,8 @@ const buildGraphQLFailureResult = (\
   }
 }
 
-const truncateBodySnippet = (body: string, maxLength = 512): string => {\
-  if (body.length <= maxLength) {\
+const truncateBodySnippet = (body: string, maxLength = 512): string => {
+  if (body.length <= maxLength) {
     return body
   }
 
@@ -210,11 +209,11 @@ const buildInvalidPayloadFailureResult = (
   response: Response,
   body: string,
   cause?: unknown,
-): WordPressGraphQLInvalidPayloadFailure => {\
+): WordPressGraphQLInvalidPayloadFailure => {
   const snippet = truncateBodySnippet(body)
   const error = new WordPressGraphQLInvalidPayloadError(response, snippet, cause)
 
-  return {\
+  return {
     ok: false,
     kind: "invalid_payload",
     message: error.message,
@@ -226,26 +225,27 @@ const buildInvalidPayloadFailureResult = (
   }
 }
 
-const WP_REST_FALLBACK_ENABLED = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_WP_REST_FALLBACK === "1"
+const WP_REST_FALLBACK_ENABLED =
+  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_WP_REST_FALLBACK === "1"
 
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
-  query: string,\
+  query: string,
   variables?: Record<string, string | number | string[] | boolean>,
   options: FetchWordPressGraphQLOptions = {},
-): Promise<WordPressGraphQLResult<T>> {\
+): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
 
-  if (!base || base === '') {
-    console.error("[v0] GraphQL endpoint not configured for country:", countryCode)\
+  if (!base || base === "") {
+    console.error("[v0] GraphQL endpoint not configured for country:", countryCode)
     const error = new Error(`GraphQL endpoint not configured for country: ${countryCode}`)
-    return Promise.resolve({\
+    return Promise.resolve({
       ok: false,
       kind: "http_error" as const,
       message: error.message,
       status: 500,
-      statusText: "Configuration Error",\
-      response: new Response(null, { status: 500, statusText: "Configuration Error" }),\
+      statusText: "Configuration Error",
+      response: new Response(null, { status: 500, statusText: "Configuration Error" }),
       error: new WordPressGraphQLHTTPError(new Response(null, { status: 500 })),
     })
   }
@@ -263,20 +263,18 @@ export function fetchWordPressGraphQL<T>(
   const shouldMemoize = memoizationTtlSeconds > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
   const cacheKey = `${base}::${body}::${tagsKey}`
-  const metadataKey = shouldMemoize
-    ? `ttl:${memoizationTtlSeconds}`
-    : "ttl:0"
+  const metadataKey = shouldMemoize ? `ttl:${memoizationTtlSeconds}` : "ttl:0"
   const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
   let memoizedEntry: MemoizedRequestEntry | undefined
 
-  const removeMemoizedEntry = () => {\
-    if (!shouldMemoize || !memoizedRequests) {\
+  const removeMemoizedEntry = () => {
+    if (!shouldMemoize || !memoizedRequests) {
       return
     }
 
     const currentEntry = memoizedRequests.get(cacheKey)
 
-    if (!currentEntry) {\
+    if (!currentEntry) {
       return
     }
 
@@ -285,32 +283,29 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  if (shouldMemoize && memoizedRequests) {\
-    const cachedEntry = memoizedRequests.get(cacheKey) as
-      | MemoizedRequestEntry
-      | undefined
-    if (cachedEntry) {\
-      const isExpired =\
-        cachedEntry.expiresAt !== Infinity && cachedEntry.expiresAt <= Date.now()
+  if (shouldMemoize && memoizedRequests) {
+    const cachedEntry = memoizedRequests.get(cacheKey) as MemoizedRequestEntry | undefined
+    if (cachedEntry) {
+      const isExpired = cachedEntry.expiresAt !== Number.POSITIVE_INFINITY && cachedEntry.expiresAt <= Date.now()
       if (isExpired) {
         memoizedRequests.delete(cacheKey)
-      } else if (cachedEntry.metadataKey === metadataKey) {\
+      } else if (cachedEntry.metadataKey === metadataKey) {
         return cachedEntry.promise as Promise<WordPressGraphQLResult<T>>
       }
     }
   }
-\
+
   const headers: Record<string, string> = {
-    "Content-Type\": \"application/json",
+    "Content-Type": "application/json",
   }
 
-  if (typeof window === "undefined" && WP_AUTH_HEADERS) {\
+  if (typeof window === "undefined" && WP_AUTH_HEADERS) {
     for (const [key, value] of Object.entries(WP_AUTH_HEADERS)) {
       headers[key] = value
     }
   }
 
-  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {\
+  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {
     method: "POST",
     headers,
     body,
@@ -321,9 +316,7 @@ export function fetchWordPressGraphQL<T>(
   const nextCacheConfig =
     resolvedRevalidate > CACHE_DURATIONS.NONE || (dedupedTags?.length ?? 0) > 0
       ? {
-          ...(resolvedRevalidate > CACHE_DURATIONS.NONE
-            ? { revalidate: resolvedRevalidate }
-            : {}),\
+          ...(resolvedRevalidate > CACHE_DURATIONS.NONE ? { revalidate: resolvedRevalidate } : {}),
           ...(dedupedTags && dedupedTags.length > 0 ? { tags: dedupedTags } : {}),
         }
       : undefined
@@ -334,10 +327,7 @@ export function fetchWordPressGraphQL<T>(
     fetchOptions.cache = "no-store"
   }
 
-  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(
-    base,
-    fetchOptions,
-  )
+  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, fetchOptions)
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", {
@@ -399,10 +389,7 @@ export function fetchWordPressGraphQL<T>(
     })
 
   if (shouldMemoize && memoizedRequests) {
-    const expiresAt =
-      memoizationTtlSeconds > 0
-        ? Date.now() + memoizationTtlSeconds * 1000
-        : Number.POSITIVE_INFINITY
+    const expiresAt = memoizationTtlSeconds > 0 ? Date.now() + memoizationTtlSeconds * 1000 : Number.POSITIVE_INFINITY
 
     const entry: MemoizedRequestEntry = {
       promise: requestPromise,
@@ -436,7 +423,7 @@ export async function fetchWordPressGraphQLWithFallback<T>(
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<WordPressGraphQLResult<T>> {
   const result = await fetchWordPressGraphQL<T>(countryCode, query, variables, options)
-  
+
   if (result.ok) {
     return result
   }
@@ -447,7 +434,7 @@ export async function fetchWordPressGraphQLWithFallback<T>(
       country: countryCode,
       status: result.status,
     })
-    
+
     // Note: KV cache access would go here if configured
     // For now, we fail gracefully to let the UI show "retry later" message
   }
