@@ -146,15 +146,19 @@ export function ArticleClientShell({
     router.push(`/subscribe?${searchParams.toString()}`)
   }
 
-  const applyArticleUpdate = useCallback(
-    (result: FetchArticleWithFallbackActionResult) => {
+  const applyArticleUpdate = useCallback((result: FetchArticleWithFallbackActionResult) => {
+    if (result.article) {
       setArticleData(result.article)
       setCurrentRelatedPosts(result.relatedPosts)
       setCurrentSourceCountry(result.sourceCountry)
+    }
+
+    if (result.error) {
+      setRefreshError(result.error.message)
+    } else {
       setRefreshError(null)
-    },
-    [],
-  )
+    }
+  }, [])
 
   const hydrationStateRef = useRef({
     hasHydrated: false,

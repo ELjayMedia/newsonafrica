@@ -45,9 +45,13 @@ export interface FetchArticleWithFallbackActionInput {
 }
 
 export interface FetchArticleWithFallbackActionResult {
-  article: WordPressPost
+  article: WordPressPost | null
   sourceCountry: string
   relatedPosts: WordPressPost[]
+  error?: {
+    type: "temporary_error"
+    message: string
+  }
 }
 
 const resolveRelatedPostId = (article: {
@@ -101,7 +105,18 @@ export async function fetchArticleWithFallbackAction({
       : resolvedArticle.staleArticle ?? null
 
   if (!articleData) {
-    throw resolvedArticle.error ?? new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
+    return {
+      article: null,
+      sourceCountry: editionCountry,
+      relatedPosts: [],
+      error: {
+        type: "temporary_error",
+        message:
+          resolvedArticle.error instanceof Error
+            ? resolvedArticle.error.message
+            : "Temporary error while refreshing this article.",
+      },
+    }
   }
 
   const sourceCountry = resolvedArticle.status === "found"
