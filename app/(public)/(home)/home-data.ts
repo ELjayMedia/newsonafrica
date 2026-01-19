@@ -82,13 +82,13 @@ const hasAggregatedHomeContent = ({ heroPost, secondaryPosts, remainingPosts }: 
 const homeFeedTaskLimit = pLimit(COUNTRY_AGGREGATE_CONCURRENCY)
 
 const scheduleHomeFeedTask = <T>(
-  timeoutMs: number,\
+  timeoutMs: number,
   task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
 ): Promise<T> =>
-  homeFeedTaskLimit(async () => {\
+  homeFeedTaskLimit(async () => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {\
+    try {
       return await task({ signal: controller.signal, timeout: timeoutMs })
     } finally {
       clearTimeout(timeoutId)
@@ -98,11 +98,11 @@ const scheduleHomeFeedTask = <T>(
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
   slices: Awaited<ReturnType<typeof getFrontPageSlicesForCountry>>,
-): HomePost[] => {\
+): HomePost[] => {
   const posts: HomePost[] = []
 
-  const pushPost = (post: WordPressPost | null | undefined) => {\
-    if (!post) {\
+  const pushPost = (post: WordPressPost | null | undefined) => {
+    if (!post) {
       return
     }
 
@@ -128,21 +128,21 @@ const mapFrontPageSlicesToHomePosts = (
 
 async function fetchAggregatedForCountry(
   countryCode: string,
-): Promise<AggregatedHomeData> {\
+): Promise<AggregatedHomeData> {
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
 
-  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
         signal,
         timeout,
       })
 
-      return {\
+      return {
         posts: mapFrontPageSlicesToHomePosts(countryCode, frontPageSlices),
         source: "frontpage" as const,
       }
-    } catch (error) {\
+    } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         console.debug(
           `[v0] getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
@@ -158,59 +158,59 @@ async function fetchAggregatedForCountry(
     }
   })
 
-  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       return await loadPostsByMostRecent(countryCode, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)\
+      console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
       return []
     }
   })
 
-  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {\
-    try {\
+  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
+    try {
       return await loadTagPosts(countryCode, defaultTag, {
         signal,
         timeout,
       })
     } catch (error) {
-      console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)\
+      console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
       return []
     }
   })
 
   const results = await Promise.all([frontPagePromise, recentPromise, taggedPromise])
   
-  const scored = results.map((result) => {\
+  const scored = results.map((result) => {
     if (!result) return { score: -1, result: null }
     
     const sourceWeight = result.source === "frontpage" ? 1000 : result.source === "tagged" ? 500 : 0
-    return {\
+    return {
       score: sourceWeight + result.posts.length,
       result,
     }
   })
 
   const best = scored.reduce((acc, curr) =>
-    curr.score > acc.score ? curr : acc,\
+    curr.score > acc.score ? curr : acc,
     { score: -1, result: null as any },
   )
 
   return buildAggregatedHomeFromPosts(best.result?.posts ?? [])
 }
 
-async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
+async function fetchAggregatedHome(): Promise<AggregatedHomeData> {
   return await Promise.all(
     ENABLED_COUNTRY_CODES.map((countryCode) =>
       fetchAggregatedForCountry(countryCode),
     ),
-  ).then((results) => {\
+  ).then((results) => {
     const aggregated: AggregatedHomeData = {}
 
-    results.forEach((result) => {\
+    results.forEach((result) => {
       if (result) {
         aggregated[result.countryCode] = result
       }
@@ -223,16 +223,16 @@ async function fetchAggregatedHome(): Promise<AggregatedHomeData> {\
 async function fetchAggregatedHomeForCountry(
   countryCode: string,
   limit = HOME_FEED_FALLBACK_LIMIT,
-): Promise<AggregatedHomeData> {\
+): Promise<AggregatedHomeData> {
   const unstableCache = await getUnstableCache()
   
   const cached = unstableCache(
-    async () => {\
+    async () => {
       const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
       return await Promise.resolve(createEmptyAggregatedHome())
     },
     ["home-feed-for-country", countryCode, String(limit)],
-    {\
+    {
       revalidate: HOME_FEED_REVALIDATE,
       tags: [cacheTags.home(countryCode), cacheTags.edition(countryCode)],
     }
@@ -247,7 +247,7 @@ const flattenAggregatedHome = ({
   heroPost,
   secondaryPosts,
   remainingPosts,
-}: AggregatedHomeData): HomePost[] => {\
+}: AggregatedHomeData): HomePost[] => {
   const posts: HomePost[] = []
 
   if (heroPost) {
@@ -265,15 +265,15 @@ const flattenAggregatedHome = ({
   return posts
 }
 
-type HomeContentInitialData = {\
+type HomeContentInitialData = {
   taggedPosts: HomePost[]
   featuredPosts: HomePost[]
   categories: Category[]
-  recentPosts: HomePost[]\
+  recentPosts: HomePost[]
   categoryPosts?: Record<string, HomePost[]>
 }
 
-type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]\
+type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
 type CountryPosts = Record<string, HomePost[]>
 
 const DEFAULT_TAGS_BY_COUNTRY: Record<string, string> = {}
