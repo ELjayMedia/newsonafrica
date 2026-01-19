@@ -1,7 +1,6 @@
-import { WP_AUTH_HEADERS } from "@/config/env.server"
 import { getRestBase } from "@/lib/wp-endpoints"
-
-import { fetchWithRetry, type FetchWithRetryOptions } from "../utils/fetchWithRetry"
+import { WP_AUTH_HEADERS, fetchWithRetry } from "@/lib/wordpress/server"
+import type { FetchWithRetryOptions } from "../utils/fetchWithRetry"
 
 export interface FetchWordPressRestOptions extends FetchWithRetryOptions {
   /**
