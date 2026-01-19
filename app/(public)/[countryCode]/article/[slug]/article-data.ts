@@ -3,12 +3,8 @@ import { cacheTags } from "@/lib/cache"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import {
-  COUNTRIES,
-  fetchWordPressGraphQL,
-  type WordPressGraphQLFailure,
-  type WordPressGraphQLResult,
-} from "@/lib/wordpress/client"
+import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
+import { COUNTRIES } from "@/lib/wordpress/countries"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"

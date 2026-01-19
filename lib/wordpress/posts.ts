@@ -13,7 +13,8 @@ import {
   TAGGED_POSTS_QUERY,
   TAGS_QUERY,
 } from "@/lib/wordpress/queries"
-import { fetchWordPressGraphQL, COUNTRIES } from "./client"
+import { fetchWordPressGraphQL } from "./client"
+import { COUNTRIES } from "./countries"
 import { AFRICAN_EDITION } from "../editions"
 import type { WordPressPost } from "@/types/wp"
 import type {

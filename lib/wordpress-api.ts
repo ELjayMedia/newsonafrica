@@ -25,8 +25,9 @@ export type {
   WordPressTag,
 } from "./wordpress/types"
 
-export { COUNTRIES, fetchWordPressGraphQL } from "./wordpress/client"
-export type { CountryConfig } from "./wordpress/client"
+export { fetchWordPressGraphQL } from "./wordpress/client"
+export { COUNTRIES } from "./wordpress/countries"
+export type { CountryConfig } from "./wordpress/countries"
 export type { WordPressPost } from "@/types/wp"
 
 export async function updateUserProfile() {
