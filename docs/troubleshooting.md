@@ -7,6 +7,11 @@ This guide captures the most common issues developers encounter when running New
 1. Verify your environment variables in Vercel (or `.env.local`) only include **valid** overrides:
    - `NEXT_PUBLIC_WP_SZ_GRAPHQL`
    - `NEXT_PUBLIC_WP_ZA_GRAPHQL`
+   - `NEXT_PUBLIC_WP_NG_GRAPHQL`
+   - `NEXT_PUBLIC_WP_KE_GRAPHQL`
+   - `NEXT_PUBLIC_WP_TZ_GRAPHQL`
+   - `NEXT_PUBLIC_WP_EG_GRAPHQL`
+   - `NEXT_PUBLIC_WP_GH_GRAPHQL`
    - Additional editions must follow the pattern `NEXT_PUBLIC_WP_{COUNTRY}_GRAPHQL`.
 2. Remove any malformed values. The application automatically falls back to the default endpoints when an override is missing.
 3. Redeploy after cleaning the variables. Stale builds frequently cache the broken endpoint configuration.
