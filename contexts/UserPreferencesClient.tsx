@@ -95,7 +95,7 @@ interface UserPreferencesClientProviderProps {
   initialData: UserPreferencesSnapshot
 }
 
-export function UserPreferencesClientProvider({ children, initialData }: UserPreferencesClientProviderProps) {
+function UserPreferencesClientProvider({ children, initialData }: UserPreferencesClientProviderProps) {
   const { user, loading: userLoading } = useUser()
   const [preferences, setPreferences] = useState<UserPreferences>(
     initialData.preferences ?? DEFAULT_USER_PREFERENCES,
@@ -464,6 +464,48 @@ export function UserPreferencesClientProvider({ children, initialData }: UserPre
   return <UserPreferencesContext.Provider value={value}>{children}</UserPreferencesContext.Provider>
 }
 
+interface UserPreferencesProviderProps {
+  children: ReactNode
+  snapshot: UserPreferencesSnapshot | null
+}
+
+// Normalize server-provided snapshots for client consumption.
+function normalizeSnapshot(snapshot: UserPreferencesSnapshot | null): UserPreferencesSnapshot {
+  if (!snapshot) {
+    return {
+      userId: null,
+      preferences: {
+        ...DEFAULT_USER_PREFERENCES,
+        sections: [...DEFAULT_USER_PREFERENCES.sections],
+        blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
+        countries: [...DEFAULT_USER_PREFERENCES.countries],
+      },
+      profilePreferences: {},
+    }
+  }
+
+  const mergedPreferences = {
+    ...DEFAULT_USER_PREFERENCES,
+    ...(snapshot.preferences ?? DEFAULT_USER_PREFERENCES),
+  }
+
+  return {
+    userId: snapshot.userId ?? null,
+    preferences: {
+      ...mergedPreferences,
+      sections: [...mergedPreferences.sections],
+      blockedTopics: [...mergedPreferences.blockedTopics],
+      countries: [...mergedPreferences.countries],
+    },
+    profilePreferences: { ...(snapshot.profilePreferences ?? {}) },
+  }
+}
+
+export function UserPreferencesProvider({ children, snapshot }: UserPreferencesProviderProps) {
+  const initialData = useMemo(() => normalizeSnapshot(snapshot), [snapshot])
+  return <UserPreferencesClientProvider initialData={initialData}>{children}</UserPreferencesClientProvider>
+}
+
 export function useUserPreferences() {
   const context = useContext(UserPreferencesContext)
   if (!context) {
@@ -471,3 +513,5 @@ export function useUserPreferences() {
   }
   return context
 }
+
+export type { ThemePreference, BookmarkSortPreference, UserPreferences }
