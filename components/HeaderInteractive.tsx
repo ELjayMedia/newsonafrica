@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 
 import { HeaderClient, type HeaderCategory } from "@/components/HeaderClient"
-import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
 import { sortCategoriesByPreference } from "./header-utils"
 

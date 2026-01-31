@@ -7,7 +7,7 @@ import { Clock, TrendingUp } from "lucide-react"
 
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { getArticleUrl, getCurrentCountry } from "@/lib/utils/routing"
-import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
 interface SidebarContentProps {
@@ -155,7 +155,7 @@ export function SidebarContent({ data, country: providedCountry }: SidebarConten
                   {post.featuredImage?.node?.sourceUrl ? (
                     <div className="flex-shrink-0 relative w-20 h-16 rounded-md overflow-hidden">
                       <Image
-                        src={post.featuredImage.node.sourceUrl}
+                        src={post.featuredImage.node.sourceUrl || "/placeholder.svg"}
                         alt={post.featuredImage.node.altText || post.title || "Article thumbnail"}
                         fill
                         className="object-cover"

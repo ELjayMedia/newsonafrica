@@ -10,7 +10,7 @@ import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
-import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { fetchCommentsPageAction } from "@/app/(public)/[countryCode]/article/[slug]/actions"
 
@@ -368,7 +368,7 @@ export function CommentList({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto">
+            <Button variant="outline" size="sm" className="ml-auto bg-transparent">
               <ArrowUpDown className="mr-2 h-4 w-4" />
               {getSortOptionText(sortOption)}
             </Button>
@@ -421,7 +421,7 @@ export function CommentList({
       ) : error ? (
         <div className="p-4 bg-red-50 text-red-700 rounded-md">
           <p>{error}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={handleRetry}>
+          <Button variant="outline" size="sm" className="mt-2 bg-transparent" onClick={handleRetry}>
             Try Again
           </Button>
         </div>

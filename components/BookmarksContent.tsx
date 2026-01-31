@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getArticleUrl } from "@/lib/utils/routing"
-import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 type SortOption = "newest" | "oldest" | "title" | "unread"

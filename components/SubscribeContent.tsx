@@ -15,7 +15,7 @@ import { Check, HelpCircle, Lock, Shield, CreditCard, Calendar, Award } from "lu
 import { useUser } from "@/contexts/UserContext"
 import Link from "next/link"
 import Image from "next/image"
-import { useUserPreferences } from "@/contexts/UserPreferencesClient"
+import { useUserPreferences } from "@/contexts/UserPreferencesContext"
 
 export function SubscribeContent() {
   const [email, setEmail] = useState("")
