@@ -7,7 +7,7 @@ import type { AuthStatePayload } from "@/app/actions/auth"
 import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
 import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
-import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext"
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
