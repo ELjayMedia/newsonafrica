@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo, useTransition } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { supabase } from "@/lib/supabase/browser-helpers"
+import { cleanupRealtimeChannel } from "@/lib/supabase/realtime"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -270,7 +271,7 @@ export function CommentList({
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      void cleanupRealtimeChannel(supabase, channel)
     }
   }, [postId])
 
