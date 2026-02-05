@@ -519,6 +519,11 @@ async function buildHomeContentPropsForEditionUncached(
 
 type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
 
+const cacheTags = {
+  home: (countryCode: string) => `home:${countryCode}`,
+  edition: (countryCode: string) => `edition:${countryCode}`,
+}
+
 function createCachedFetcher<T>(
   keyParts: string[],
   fn: (baseUrl: string) => Promise<T>,
@@ -645,9 +650,4 @@ const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 const AFRICAN_EDITION = {
   code: "AF",
   name: "African Edition",
-}
-
-const cacheTags = {
-  home: (countryCode: string) => `home:${countryCode}`,
-  edition: (countryCode: string) => `edition:${countryCode}`,
 }
