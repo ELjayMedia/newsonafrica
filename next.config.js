@@ -90,6 +90,11 @@ const nextConfig = {
         tls: false,
       }
     }
+    // Suppress the "Serializing big strings" warning by increasing the threshold
+    config.infrastructureLogging = {
+      ...config.infrastructureLogging,
+      level: "error",
+    }
     return config
   },
   experimental: {
