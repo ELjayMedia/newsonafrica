@@ -40,6 +40,27 @@ export const appConfig = {
     cacheTimeout: 300000, // 5 minutes
   },
 
+  // Home Page Configuration
+  home: {
+    limits: {
+      featured: 6,
+      tagged: 8,
+      recent: 10,
+      fallback: 6,
+      categoryPosts: 5,
+    },
+    timeouts: {
+      frontPage: 2500,
+      recent: 1200,
+      tag: 900,
+    },
+    concurrency: 4,
+    editions: {
+      african: { code: "AF", name: "African Edition" },
+    },
+    defaultTagsByCountry: {} as Record<string, string>,
+  },
+
   // Feature Flags
   features: {
     comments: process.env.FEATURE_COMMENTS === "true",

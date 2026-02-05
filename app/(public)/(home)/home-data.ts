@@ -1,16 +1,44 @@
 import "server-only"
 import pLimit from "p-limit"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+import { appConfig } from "@/lib/config"
 import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
-export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
-const HOME_FEED_FALLBACK_LIMIT = 6
+// Derive all constants from centralized config
+const { home: homeConfig, countries: countryConfig } = appConfig
 
-const COUNTRY_AGGREGATE_CONCURRENCY = 4
-const FEATURED_POST_LIMIT = 6
-const TAGGED_POST_LIMIT = 8
-const RECENT_POST_LIMIT = 10
+export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
+
+// Limits derived from config
+const {
+  featured: FEATURED_POST_LIMIT,
+  tagged: TAGGED_POST_LIMIT,
+  recent: RECENT_POST_LIMIT,
+  fallback: HOME_FEED_FALLBACK_LIMIT,
+  categoryPosts: CATEGORY_POST_LIMIT,
+} = homeConfig.limits
+
+// Timeouts derived from config
+const {
+  frontPage: FRONT_PAGE_TIMEOUT_MS,
+  recent: RECENT_TIMEOUT_MS,
+  tag: TAG_TIMEOUT_MS,
+} = homeConfig.timeouts
+
+// Concurrency from config
+const COUNTRY_AGGREGATE_CONCURRENCY = homeConfig.concurrency
+
+// Country settings from config
+const ENABLED_COUNTRY_CODES = countryConfig.supported
+const SUPPORTED_COUNTRIES = countryConfig.supported
+const DEFAULT_COUNTRY = countryConfig.default
+
+// Edition from config
+const AFRICAN_EDITION = homeConfig.editions.african
+
+// Tags from config
+const DEFAULT_TAGS_BY_COUNTRY = homeConfig.defaultTagsByCountry
 
 let _unstable_cache: typeof import("next/cache").unstable_cache | null = null
 
@@ -276,7 +304,7 @@ type HomeContentInitialData = {
 type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
 type CountryPosts = Record<string, HomePost[]>
 
-const DEFAULT_TAGS_BY_COUNTRY: Record<string, string> = {}
+// DEFAULT_TAGS_BY_COUNTRY is now derived from appConfig at the top of the file
 
 const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData => {
   const taggedPosts = posts.slice(0, TAGGED_POST_LIMIT)
@@ -519,9 +547,10 @@ async function buildHomeContentPropsForEditionUncached(
 
 type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
 
+// Use centralized cache tags
 const cacheTags = {
-  home: (countryCode: string) => `home:${countryCode}`,
-  edition: (countryCode: string) => `edition:${countryCode}`,
+  home: CACHE_TAGS.HOME_COUNTRY,
+  edition: CACHE_TAGS.EDITION,
 }
 
 function createCachedFetcher<T>(
@@ -594,15 +623,8 @@ export async function buildHomeContentPropsForEdition(
   return fetcher(_baseUrl)
 }
 
-const FRONT_PAGE_TIMEOUT_MS = 2500
-const RECENT_TIMEOUT_MS = 1200
-const TAG_TIMEOUT_MS = 900
-
-const ENABLED_COUNTRY_CODES = [] // Implementation here
-const SUPPORTED_COUNTRIES = [] // Implementation here
-const DEFAULT_COUNTRY = "" // Implementation here
-const categoryConfigs: any[] = [] // Implementation here
-const homePageConfig: any = {} // Implementation here
+// Category configuration - derived from content config
+const categoryConfigs = appConfig.content.categories.map(name => ({ name, typeOverride: null }))
 
 const configuredCategorySlugs = Array.from(
   new Set(
@@ -611,8 +633,6 @@ const configuredCategorySlugs = Array.from(
       .filter((slug) => slug.length > 0),
   ),
 )
-
-const CATEGORY_POST_LIMIT = homePageConfig.categorySection?.postsPerCategory ?? 5
 
 async function getFrontPageSlicesForCountry(countryCode: string, options: any): Promise<any> {
   // Implementation here
@@ -647,7 +667,4 @@ const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN
 
 const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 
-const AFRICAN_EDITION = {
-  code: "AF",
-  name: "African Edition",
-}
+// AFRICAN_EDITION is now derived from appConfig.home.editions.african at the top of the file

@@ -8,6 +8,8 @@ export const CACHE_DURATIONS = {
 
 export const CACHE_TAGS = {
   HOME: "home",
+  HOME_COUNTRY: (countryCode: string) => `home:${countryCode}`,
+  EDITION: (countryCode: string) => `edition:${countryCode}`,
   POSTS: "posts",
   POST: (id: string | number) => `post-${id}`,
   CATEGORIES: "categories",
