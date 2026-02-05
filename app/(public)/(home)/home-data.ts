@@ -1,7 +1,16 @@
 import "server-only"
-import pLimit from "p-limit"
 import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
 import { appConfig } from "@/lib/config"
+import {
+  createHomePostKey,
+  dedupeHomePosts,
+  createEmptyAggregatedHome,
+  buildAggregatedHomeFromPosts,
+  hasAggregatedHomeContent,
+  flattenAggregatedHome,
+} from "@/lib/utils/posts"
+import { getUnstableCache, createCachedFetcher } from "@/lib/utils/cache"
+import { createTaskScheduler } from "@/lib/utils/async"
 import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
@@ -40,88 +49,11 @@ const AFRICAN_EDITION = homeConfig.editions.african
 // Tags from config
 const DEFAULT_TAGS_BY_COUNTRY = homeConfig.defaultTagsByCountry
 
-let _unstable_cache: typeof import("next/cache").unstable_cache | null = null
+// Post utilities imported from @/lib/utils/posts
+// Cache utilities imported from @/lib/utils/cache
 
-async function getUnstableCache() {
-  if (!_unstable_cache) {
-    const nextCache = await import("next/cache")
-    _unstable_cache = nextCache.unstable_cache
-  }
-  return _unstable_cache
-}
-
-const createEmptyAggregatedHome = (): AggregatedHomeData => ({
-  heroPost: null,
-  secondaryPosts: [],
-  remainingPosts: [],
-})
-
-const createHomePostKey = (post: HomePost): string => {
-  if (post.globalRelayId) {
-    return post.globalRelayId
-  }
-
-  if (post.id) {
-    return `${post.country ?? ""}:${post.id}`
-  }
-
-  if (post.slug) {
-    return `${post.country ?? ""}:${post.slug}`
-  }
-
-  return `${post.country ?? ""}:${post.slug ?? ""}:${post.title ?? ""}:${post.date ?? ""}`
-}
-
-const dedupeHomePosts = (posts: HomePost[]): HomePost[] => {
-  const seen = new Set<string>()
-  const unique: HomePost[] = []
-
-  for (const post of posts) {
-    const key = createHomePostKey(post)
-
-    if (!seen.has(key)) {
-      seen.add(key)
-      unique.push(post)
-    }
-  }
-
-  return unique
-}
-
-const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => {
-  const uniquePosts = dedupeHomePosts(posts)
-
-  if (uniquePosts.length === 0) {
-    return createEmptyAggregatedHome()
-  }
-
-  const [heroPost, ...rest] = uniquePosts
-
-  return {
-    heroPost,
-    secondaryPosts: rest.slice(0, 3),
-    remainingPosts: rest.slice(3),
-  }
-}
-
-const hasAggregatedHomeContent = ({ heroPost, secondaryPosts, remainingPosts }: AggregatedHomeData): boolean =>
-  Boolean(heroPost || secondaryPosts.length > 0 || remainingPosts.length > 0)
-
-const homeFeedTaskLimit = pLimit(COUNTRY_AGGREGATE_CONCURRENCY)
-
-const scheduleHomeFeedTask = <T>(
-  timeoutMs: number,
-  task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
-): Promise<T> =>
-  homeFeedTaskLimit(async () => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      return await task({ signal: controller.signal, timeout: timeoutMs })
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  })
+// Task scheduler from @/lib/utils/async
+const scheduleHomeFeedTask = createTaskScheduler(COUNTRY_AGGREGATE_CONCURRENCY)
 
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
@@ -271,27 +203,7 @@ async function fetchAggregatedHomeForCountry(
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
 
-const flattenAggregatedHome = ({
-  heroPost,
-  secondaryPosts,
-  remainingPosts,
-}: AggregatedHomeData): HomePost[] => {
-  const posts: HomePost[] = []
-
-  if (heroPost) {
-    posts.push(heroPost)
-  }
-
-  if (secondaryPosts?.length) {
-    posts.push(...secondaryPosts)
-  }
-
-  if (remainingPosts?.length) {
-    posts.push(...remainingPosts)
-  }
-
-  return posts
-}
+// flattenAggregatedHome imported from @/lib/utils/posts
 
 type HomeContentInitialData = {
   taggedPosts: HomePost[]
@@ -553,46 +465,15 @@ const cacheTags = {
   edition: CACHE_TAGS.EDITION,
 }
 
-function createCachedFetcher<T>(
+// createCachedFetcher imported from @/lib/utils/cache
+// Wrapper to use centralized config for revalidate time
+const createHomeContentCachedFetcher = <T>(
   keyParts: string[],
   fn: (baseUrl: string) => Promise<T>,
   tags: string[] = [],
-): (baseUrl: string) => Promise<T> {
-  let cachedFn: ((baseUrl: string) => Promise<T>) | null = null
-  let cacheInitPromise: Promise<void> | null = null
+) => createCachedFetcher(keyParts, fn, { revalidate: HOME_FEED_REVALIDATE, tags })
 
-  const initCache = async () => {
-    if (cacheInitPromise) return cacheInitPromise
-    cacheInitPromise = (async () => {
-      try {
-        const unstableCache = await getUnstableCache()
-        cachedFn = unstableCache(fn, keyParts, {
-          revalidate: HOME_FEED_REVALIDATE,
-          tags,
-        })
-      } catch {
-        cachedFn = fn
-      }
-    })()
-    return cacheInitPromise
-  }
-
-  return async (baseUrl: string) => {
-    await initCache()
-
-    if (!cachedFn) {
-      return fn(baseUrl)
-    }
-
-    try {
-      return await cachedFn(baseUrl)
-    } catch (error) {
-      return fn(baseUrl)
-    }
-  }
-}
-
-const cachedBuildHomeContentProps = createCachedFetcher(
+const cachedBuildHomeContentProps = createHomeContentCachedFetcher(
   ["home-content", "default"],
   buildHomeContentPropsUncached,
   [cacheTags.home("all")],
@@ -601,7 +482,7 @@ const cachedBuildHomeContentProps = createCachedFetcher(
 const getEditionCache = (edition: SupportedEdition) => {
   const editionTags = [cacheTags.home(edition.code), cacheTags.edition(edition.code)]
 
-  return createCachedFetcher(
+  return createHomeContentCachedFetcher(
     ["home-content", edition.code],
     async (_baseUrl: string) =>
       buildHomeContentPropsForEditionUncached(_baseUrl, edition),
