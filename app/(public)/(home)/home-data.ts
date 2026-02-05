@@ -292,16 +292,6 @@ const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData =>
   }
 }
 
-const configuredCategorySlugs = Array.from(
-  new Set(
-    categoryConfigs
-      .map((config) => (config.typeOverride ?? config.name).toLowerCase())
-      .filter((slug) => slug.length > 0),
-  ),
-)
-
-const CATEGORY_POST_LIMIT = homePageConfig.categorySection?.postsPerCategory ?? 5
-
 const loadCategoryPostsForHome = async (
   countryCode: string,
 ): Promise<Record<string, HomePost[]>> => {
@@ -608,6 +598,16 @@ const SUPPORTED_COUNTRIES = [] // Implementation here
 const DEFAULT_COUNTRY = "" // Implementation here
 const categoryConfigs: any[] = [] // Implementation here
 const homePageConfig: any = {} // Implementation here
+
+const configuredCategorySlugs = Array.from(
+  new Set(
+    categoryConfigs
+      .map((config) => (config.typeOverride ?? config.name).toLowerCase())
+      .filter((slug) => slug.length > 0),
+  ),
+)
+
+const CATEGORY_POST_LIMIT = homePageConfig.categorySection?.postsPerCategory ?? 5
 
 async function getFrontPageSlicesForCountry(countryCode: string, options: any): Promise<any> {
   // Implementation here
