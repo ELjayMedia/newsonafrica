@@ -90,10 +90,17 @@ const nextConfig = {
         tls: false,
       }
     }
-    // Suppress the "Serializing big strings" warning by increasing the threshold
+    // Suppress the "Serializing big strings" warning
     config.infrastructureLogging = {
       ...config.infrastructureLogging,
       level: "error",
+    }
+    // Increase the cache threshold to prevent big string warnings
+    if (config.cache && typeof config.cache === "object") {
+      config.cache = {
+        ...config.cache,
+        maxMemoryGenerations: 1,
+      }
     }
     return config
   },
