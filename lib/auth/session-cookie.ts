@@ -1,9 +1,15 @@
 import { createHmac, timingSafeEqual } from "crypto"
 import { cookies } from "next/headers"
+import { appConfig } from "@/lib/config"
 
-export const SESSION_COOKIE_NAME = "sess"
-const SESSION_COOKIE_TTL_MS = 5 * 60 * 1000 // 5 minutes before considered stale
-const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7 // 7 days persisted
+// Constants derived from centralized config
+const {
+  sessionCookieName: SESSION_COOKIE_NAME,
+  sessionCookieTtlMs: SESSION_COOKIE_TTL_MS,
+  sessionCookieMaxAgeSeconds: SESSION_COOKIE_MAX_AGE_SECONDS,
+} = appConfig.auth
+
+export { SESSION_COOKIE_NAME }
 
 export interface SessionCookieProfile {
   userId: string

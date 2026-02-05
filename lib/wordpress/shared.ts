@@ -1,10 +1,10 @@
 import { CACHE_DURATIONS } from "../cache/constants"
 import { cacheTags } from "../cache/cacheTags"
+import { appConfig } from "@/lib/config"
 import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
-import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 
@@ -41,8 +41,9 @@ export const mapGraphqlTagNode = (node: GraphqlTagNode): WordPressTag | null => 
   }
 }
 
-export const DEFAULT_COUNTRY = DEFAULT_SITE_COUNTRY
-export const FP_TAG_SLUG = "fp" as const
+// Constants derived from centralized config
+export const DEFAULT_COUNTRY = appConfig.countries.default
+export const FP_TAG_SLUG = appConfig.content.fpTagSlug
 
 type GetFpTagForCountryOptions = {
   slug?: string

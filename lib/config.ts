@@ -12,6 +12,10 @@ export const appConfig = {
     timeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000,
+    restMaxPerPage: 100,
+    defaultPageSize: 100,
+    requestThrottleMs: 150,
+    graphqlBatchSize: 100,
   },
 
   // Supported African Countries
@@ -28,8 +32,10 @@ export const appConfig = {
   content: {
     postsPerPage: 20,
     relatedPostsCount: 6,
+    relatedPostsTimeoutMs: 1000,
     excerptLength: 150,
     categories: ["news", "business", "sport", "entertainment", "life", "health", "politics", "food", "opinion"],
+    fpTagSlug: "fp" as const,
   },
 
   // Performance Configuration
@@ -38,6 +44,15 @@ export const appConfig = {
     lazyLoading: true,
     prefetchLinks: true,
     cacheTimeout: 300000, // 5 minutes
+  },
+
+  // Front Page Configuration
+  frontPage: {
+    heroLimit: 8,
+    heroFallbackLimit: 3,
+    trendingLimit: 7,
+    latestLimit: 20,
+    heroTags: ["fp"] as const,
   },
 
   // Home Page Configuration
@@ -59,6 +74,53 @@ export const appConfig = {
       african: { code: "AF", name: "African Edition" },
     },
     defaultTagsByCountry: {} as Record<string, string>,
+  },
+
+  // Comments Configuration
+  comments: {
+    pageSize: 100,
+    rateLimitSeconds: 10,
+  },
+
+  // Search Configuration
+  search: {
+    resultsPerPage: 12,
+    cacheDurationMs: 5 * 60 * 1000, // 5 minutes
+  },
+
+  // Bookmarks Configuration
+  bookmarks: {
+    defaultCollectionSlug: "general",
+    defaultCollectionName: "Saved Articles",
+    defaultCollectionDescription: "Articles saved outside a specific edition",
+  },
+
+  // Auth Configuration
+  auth: {
+    sessionCookieName: "sess",
+    sessionCookieTtlMs: 5 * 60 * 1000, // 5 minutes before considered stale
+    sessionCookieMaxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+    sessionRefreshBufferMs: 5 * 60 * 1000, // 5 minutes
+  },
+
+  // UI Configuration
+  ui: {
+    mobileBreakpoint: 768,
+    toastLimit: 1,
+    toastRemoveDelay: 1000000,
+    sidebar: {
+      cookieName: "sidebar:state",
+      cookieMaxAge: 60 * 60 * 24 * 7,
+      width: "16rem",
+      widthMobile: "18rem",
+      widthIcon: "3rem",
+      keyboardShortcut: "b",
+    },
+  },
+
+  // Sitemap Configuration
+  sitemap: {
+    recentPostLimit: 100,
   },
 
   // Feature Flags
