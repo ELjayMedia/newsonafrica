@@ -7,6 +7,7 @@ import { PanelLeft } from 'lucide-react'
 
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
+import { appConfig } from '@/lib/config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -14,12 +15,15 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-const SIDEBAR_COOKIE_NAME = 'sidebar:state'
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = '16rem'
-const SIDEBAR_WIDTH_MOBILE = '18rem'
-const SIDEBAR_WIDTH_ICON = '3rem'
-const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
+// Constants derived from centralized config
+const {
+  cookieName: SIDEBAR_COOKIE_NAME,
+  cookieMaxAge: SIDEBAR_COOKIE_MAX_AGE,
+  width: SIDEBAR_WIDTH,
+  widthMobile: SIDEBAR_WIDTH_MOBILE,
+  widthIcon: SIDEBAR_WIDTH_ICON,
+  keyboardShortcut: SIDEBAR_KEYBOARD_SHORTCUT,
+} = appConfig.ui.sidebar
 
 type SidebarContext = {
   state: 'expanded' | 'collapsed'

@@ -1,99 +1,59 @@
 import "server-only"
-import pLimit from "p-limit"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+import { appConfig } from "@/lib/config"
+import {
+  createHomePostKey,
+  dedupeHomePosts,
+  createEmptyAggregatedHome,
+  buildAggregatedHomeFromPosts,
+  hasAggregatedHomeContent,
+  flattenAggregatedHome,
+} from "@/lib/utils/posts"
+import { getUnstableCache, createCachedFetcher } from "@/lib/utils/cache"
+import { createTaskScheduler } from "@/lib/utils/async"
 import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
+// Derive all constants from centralized config
+const { home: homeConfig, countries: countryConfig } = appConfig
+
 export const HOME_FEED_REVALIDATE = CACHE_DURATIONS.MEDIUM
-const HOME_FEED_FALLBACK_LIMIT = 6
 
-const COUNTRY_AGGREGATE_CONCURRENCY = 4
-const FEATURED_POST_LIMIT = 6
-const TAGGED_POST_LIMIT = 8
-const RECENT_POST_LIMIT = 10
+// Limits derived from config
+const {
+  featured: FEATURED_POST_LIMIT,
+  tagged: TAGGED_POST_LIMIT,
+  recent: RECENT_POST_LIMIT,
+  fallback: HOME_FEED_FALLBACK_LIMIT,
+  categoryPosts: CATEGORY_POST_LIMIT,
+} = homeConfig.limits
 
-let _unstable_cache: typeof import("next/cache").unstable_cache | null = null
+// Timeouts derived from config
+const {
+  frontPage: FRONT_PAGE_TIMEOUT_MS,
+  recent: RECENT_TIMEOUT_MS,
+  tag: TAG_TIMEOUT_MS,
+} = homeConfig.timeouts
 
-async function getUnstableCache() {
-  if (!_unstable_cache) {
-    const nextCache = await import("next/cache")
-    _unstable_cache = nextCache.unstable_cache
-  }
-  return _unstable_cache
-}
+// Concurrency from config
+const COUNTRY_AGGREGATE_CONCURRENCY = homeConfig.concurrency
 
-const createEmptyAggregatedHome = (): AggregatedHomeData => ({
-  heroPost: null,
-  secondaryPosts: [],
-  remainingPosts: [],
-})
+// Country settings from config
+const ENABLED_COUNTRY_CODES = countryConfig.supported
+const SUPPORTED_COUNTRIES = countryConfig.supported
+const DEFAULT_COUNTRY = countryConfig.default
 
-const createHomePostKey = (post: HomePost): string => {
-  if (post.globalRelayId) {
-    return post.globalRelayId
-  }
+// Edition from config
+const AFRICAN_EDITION = homeConfig.editions.african
 
-  if (post.id) {
-    return `${post.country ?? ""}:${post.id}`
-  }
+// Tags from config
+const DEFAULT_TAGS_BY_COUNTRY = homeConfig.defaultTagsByCountry
 
-  if (post.slug) {
-    return `${post.country ?? ""}:${post.slug}`
-  }
+// Post utilities imported from @/lib/utils/posts
+// Cache utilities imported from @/lib/utils/cache
 
-  return `${post.country ?? ""}:${post.slug ?? ""}:${post.title ?? ""}:${post.date ?? ""}`
-}
-
-const dedupeHomePosts = (posts: HomePost[]): HomePost[] => {
-  const seen = new Set<string>()
-  const unique: HomePost[] = []
-
-  for (const post of posts) {
-    const key = createHomePostKey(post)
-
-    if (!seen.has(key)) {
-      seen.add(key)
-      unique.push(post)
-    }
-  }
-
-  return unique
-}
-
-const buildAggregatedHomeFromPosts = (posts: HomePost[]): AggregatedHomeData => {
-  const uniquePosts = dedupeHomePosts(posts)
-
-  if (uniquePosts.length === 0) {
-    return createEmptyAggregatedHome()
-  }
-
-  const [heroPost, ...rest] = uniquePosts
-
-  return {
-    heroPost,
-    secondaryPosts: rest.slice(0, 3),
-    remainingPosts: rest.slice(3),
-  }
-}
-
-const hasAggregatedHomeContent = ({ heroPost, secondaryPosts, remainingPosts }: AggregatedHomeData): boolean =>
-  Boolean(heroPost || secondaryPosts.length > 0 || remainingPosts.length > 0)
-
-const homeFeedTaskLimit = pLimit(COUNTRY_AGGREGATE_CONCURRENCY)
-
-const scheduleHomeFeedTask = <T>(
-  timeoutMs: number,
-  task: (context: { signal: AbortSignal; timeout: number }) => Promise<T>,
-): Promise<T> =>
-  homeFeedTaskLimit(async () => {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      return await task({ signal: controller.signal, timeout: timeoutMs })
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  })
+// Task scheduler from @/lib/utils/async
+const scheduleHomeFeedTask = createTaskScheduler(COUNTRY_AGGREGATE_CONCURRENCY)
 
 const mapFrontPageSlicesToHomePosts = (
   countryCode: string,
@@ -243,27 +203,7 @@ async function fetchAggregatedHomeForCountry(
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
 
-const flattenAggregatedHome = ({
-  heroPost,
-  secondaryPosts,
-  remainingPosts,
-}: AggregatedHomeData): HomePost[] => {
-  const posts: HomePost[] = []
-
-  if (heroPost) {
-    posts.push(heroPost)
-  }
-
-  if (secondaryPosts?.length) {
-    posts.push(...secondaryPosts)
-  }
-
-  if (remainingPosts?.length) {
-    posts.push(...remainingPosts)
-  }
-
-  return posts
-}
+// flattenAggregatedHome imported from @/lib/utils/posts
 
 type HomeContentInitialData = {
   taggedPosts: HomePost[]
@@ -276,7 +216,7 @@ type HomeContentInitialData = {
 type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
 type CountryPosts = Record<string, HomePost[]>
 
-const DEFAULT_TAGS_BY_COUNTRY: Record<string, string> = {}
+// DEFAULT_TAGS_BY_COUNTRY is now derived from appConfig at the top of the file
 
 const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData => {
   const taggedPosts = posts.slice(0, TAGGED_POST_LIMIT)
@@ -291,16 +231,6 @@ const buildInitialDataFromPosts = (posts: HomePost[]): HomeContentInitialData =>
     categoryPosts: {},
   }
 }
-
-const configuredCategorySlugs = Array.from(
-  new Set(
-    categoryConfigs
-      .map((config) => (config.typeOverride ?? config.name).toLowerCase())
-      .filter((slug) => slug.length > 0),
-  ),
-)
-
-const CATEGORY_POST_LIMIT = homePageConfig.categorySection?.postsPerCategory ?? 5
 
 const loadCategoryPostsForHome = async (
   countryCode: string,
@@ -529,46 +459,21 @@ async function buildHomeContentPropsForEditionUncached(
 
 type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
 
-function createCachedFetcher<T>(
+// Use centralized cache tags
+const cacheTags = {
+  home: CACHE_TAGS.HOME_COUNTRY,
+  edition: CACHE_TAGS.EDITION,
+}
+
+// createCachedFetcher imported from @/lib/utils/cache
+// Wrapper to use centralized config for revalidate time
+const createHomeContentCachedFetcher = <T>(
   keyParts: string[],
   fn: (baseUrl: string) => Promise<T>,
   tags: string[] = [],
-): (baseUrl: string) => Promise<T> {
-  let cachedFn: ((baseUrl: string) => Promise<T>) | null = null
-  let cacheInitPromise: Promise<void> | null = null
+) => createCachedFetcher(keyParts, fn, { revalidate: HOME_FEED_REVALIDATE, tags })
 
-  const initCache = async () => {
-    if (cacheInitPromise) return cacheInitPromise
-    cacheInitPromise = (async () => {
-      try {
-        const unstableCache = await getUnstableCache()
-        cachedFn = unstableCache(fn, keyParts, {
-          revalidate: HOME_FEED_REVALIDATE,
-          tags,
-        })
-      } catch {
-        cachedFn = fn
-      }
-    })()
-    return cacheInitPromise
-  }
-
-  return async (baseUrl: string) => {
-    await initCache()
-
-    if (!cachedFn) {
-      return fn(baseUrl)
-    }
-
-    try {
-      return await cachedFn(baseUrl)
-    } catch (error) {
-      return fn(baseUrl)
-    }
-  }
-}
-
-const cachedBuildHomeContentProps = createCachedFetcher(
+const cachedBuildHomeContentProps = createHomeContentCachedFetcher(
   ["home-content", "default"],
   buildHomeContentPropsUncached,
   [cacheTags.home("all")],
@@ -577,7 +482,7 @@ const cachedBuildHomeContentProps = createCachedFetcher(
 const getEditionCache = (edition: SupportedEdition) => {
   const editionTags = [cacheTags.home(edition.code), cacheTags.edition(edition.code)]
 
-  return createCachedFetcher(
+  return createHomeContentCachedFetcher(
     ["home-content", edition.code],
     async (_baseUrl: string) =>
       buildHomeContentPropsForEditionUncached(_baseUrl, edition),
@@ -599,15 +504,16 @@ export async function buildHomeContentPropsForEdition(
   return fetcher(_baseUrl)
 }
 
-const FRONT_PAGE_TIMEOUT_MS = 2500
-const RECENT_TIMEOUT_MS = 1200
-const TAG_TIMEOUT_MS = 900
+// Category configuration - derived from content config
+const categoryConfigs = appConfig.content.categories.map(name => ({ name, typeOverride: null }))
 
-const ENABLED_COUNTRY_CODES = [] // Implementation here
-const SUPPORTED_COUNTRIES = [] // Implementation here
-const DEFAULT_COUNTRY = "" // Implementation here
-const categoryConfigs: any[] = [] // Implementation here
-const homePageConfig: any = {} // Implementation here
+const configuredCategorySlugs = Array.from(
+  new Set(
+    categoryConfigs
+      .map((config) => (config.typeOverride ?? config.name).toLowerCase())
+      .filter((slug) => slug.length > 0),
+  ),
+)
 
 async function getFrontPageSlicesForCountry(countryCode: string, options: any): Promise<any> {
   // Implementation here
@@ -642,12 +548,4 @@ const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN
 
 const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 
-const AFRICAN_EDITION = {
-  code: "AF",
-  name: "African Edition",
-}
-
-const cacheTags = {
-  home: (countryCode: string) => `home:${countryCode}`,
-  edition: (countryCode: string) => `edition:${countryCode}`,
-}
+// AFRICAN_EDITION is now derived from appConfig.home.editions.african at the top of the file

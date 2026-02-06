@@ -2,12 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { BookmarkCollectionRow } from "@/types/bookmarks"
 import type { Database } from "@/types/supabase"
+import { appConfig } from "@/lib/config"
 
 type BookmarkSupabaseClient = SupabaseClient<Database>
 
-const DEFAULT_COLLECTION_SLUG = "general"
-const DEFAULT_COLLECTION_NAME = "Saved Articles"
-const DEFAULT_COLLECTION_DESCRIPTION = "Articles saved outside a specific edition"
+// Constants derived from centralized config
+const {
+  defaultCollectionSlug: DEFAULT_COLLECTION_SLUG,
+  defaultCollectionName: DEFAULT_COLLECTION_NAME,
+  defaultCollectionDescription: DEFAULT_COLLECTION_DESCRIPTION,
+} = appConfig.bookmarks
 
 function deriveSlug(editionCode?: string | null): string {
   if (editionCode && typeof editionCode === "string") {

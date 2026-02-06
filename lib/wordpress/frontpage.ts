@@ -1,6 +1,7 @@
 import * as log from "../log"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { cacheTags } from "../cache/cacheTags"
+import { appConfig } from "@/lib/config"
 import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { PostSummaryFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
@@ -24,11 +25,14 @@ type FrontPageSlicesQueryResult = {
   } | null
 }
 
-const FRONT_PAGE_HERO_LIMIT = 8
-const FRONT_PAGE_HERO_FALLBACK_LIMIT = 3
-const FRONT_PAGE_TRENDING_LIMIT = 7
-const FRONT_PAGE_LATEST_LIMIT = 20
-const FRONT_PAGE_HERO_TAGS = [FP_TAG_SLUG] as const
+// Constants derived from centralized config
+const {
+  heroLimit: FRONT_PAGE_HERO_LIMIT,
+  heroFallbackLimit: FRONT_PAGE_HERO_FALLBACK_LIMIT,
+  trendingLimit: FRONT_PAGE_TRENDING_LIMIT,
+  latestLimit: FRONT_PAGE_LATEST_LIMIT,
+  heroTags: FRONT_PAGE_HERO_TAGS,
+} = appConfig.frontPage
 
 const createEmptyFrontPageSlices = (): FrontPageSlicesResult => ({
   hero: { heroPost: undefined, secondaryStories: [] },
