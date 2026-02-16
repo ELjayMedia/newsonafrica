@@ -199,9 +199,6 @@ const buildInvalidPayloadFailureResult = (
   }
 }
 
-const WP_REST_FALLBACK_ENABLED =
-  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_WP_REST_FALLBACK === "1"
-
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
@@ -388,32 +385,6 @@ export function fetchWordPressGraphQL<T>(
   }
 
   return requestPromise
-}
-
-export async function fetchWordPressGraphQLWithFallback<T>(
-  countryCode: string,
-  query: string,
-  variables?: Record<string, string | number | string[] | boolean>,
-  options: FetchWordPressGraphQLOptions = {},
-): Promise<WordPressGraphQLResult<T>> {
-  const result = await fetchWordPressGraphQL<T>(countryCode, query, variables, options)
-
-  if (result.ok) {
-    return result
-  }
-
-  // If GraphQL fails, attempt to serve from KV cache (stale-while-revalidate)
-  if (result.kind === "http_error" && result.status >= 500) {
-    console.warn("[v0] GraphQL server error, attempting stale cache fallback", {
-      country: countryCode,
-      status: result.status,
-    })
-
-    // Note: KV cache access would go here if configured
-    // For now, we fail gracefully to let the UI show "retry later" message
-  }
-
-  return result
 }
 
 export const __getMemoizedRequestsForTests = () => getMemoizedRequests()
