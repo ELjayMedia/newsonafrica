@@ -49,9 +49,7 @@ const CLIENT_ENV_SCHEMA = z.object({
   NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
   NEXT_PUBLIC_WP_NG_GRAPHQL: graphQlEndpointOverride("ng"),
   NEXT_PUBLIC_WP_KE_GRAPHQL: graphQlEndpointOverride("ke"),
-  NEXT_PUBLIC_WP_TZ_GRAPHQL: graphQlEndpointOverride("tz"),
   NEXT_PUBLIC_WP_EG_GRAPHQL: graphQlEndpointOverride("eg"),
-  NEXT_PUBLIC_WP_GH_GRAPHQL: graphQlEndpointOverride("gh"),
 })
 
 const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
