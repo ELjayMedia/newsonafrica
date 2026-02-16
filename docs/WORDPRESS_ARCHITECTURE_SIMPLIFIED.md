@@ -16,14 +16,13 @@ The News On Africa platform now uses **WPGraphQL as the single, authoritative co
 
 \`\`\`
 Client Request
-    ↓
+↓
 GraphQL Query (via fetchWordPressGraphQL)
-    ↓
-    ├─ Success → Return fresh data + cache
-    │
-    └─ Failure (5xx)
-        ├─ KV Cache Hit → Serve stale data with "retry later" banner
-        └─ No Cache → Show error boundary ("content unavailable")
+↓
+├─ Success → Return fresh data + cache
+│
+└─ Failure (5xx)
+└─ Return typed temporary error → Show error boundary ("content unavailable")
 \`\`\`
 
 ### Key Components
@@ -49,17 +48,16 @@ No REST fallback feature flag is used.
 
 ### GraphQL Failures
 
-| Scenario | Behavior |
-|----------|----------|
-| Network timeout | Return cached data with retry banner |
-| 5xx server error | Attempt KV cache, show error boundary if no cache |
-| GraphQL validation error | Return error, DO NOT retry via REST |
-| Invalid endpoint | Fail fast with clear error message |
+| Scenario                 | Behavior                                                 |
+| ------------------------ | -------------------------------------------------------- |
+| Network timeout          | Return typed temporary error and let UI show retry state |
+| 5xx server error         | Return typed temporary error and let UI show retry state |
+| GraphQL validation error | Return error, DO NOT retry via REST                      |
+| Invalid endpoint         | Fail fast with clear error message                       |
 
 ### User Experience
 
 - **Fresh Data Available**: Show content normally
-- **Stale Data Available**: Show content + "We're updating..." banner
 - **No Cache**: Show error boundary with "Retry" button
 
 ## Monitoring
@@ -68,16 +66,17 @@ When GraphQL fails, logs include:
 
 \`\`\`json
 {
-  "level": "error",
-  "message": "GraphQL request failed",
-  "country": "sz",
-  "endpoint": "https://...",
-  "status": 500,
-  "kind": "http_error"
+"level": "error",
+"message": "GraphQL request failed",
+"country": "sz",
+"endpoint": "https://...",
+"status": 500,
+"kind": "http_error"
 }
 \`\`\`
 
 Alert on:
+
 - Sustained 5xx errors from WordPress (indicates server issues)
 - Spike in requests hitting error boundary (indicates cache misses)
 

@@ -2,12 +2,12 @@
 
 ## Overview
 
-News On Africa uses a unified caching strategy with Next.js ISR, Vercel KV fallbacks, and systematic tag-based invalidation.
+News On Africa uses a unified caching strategy with Next.js ISR, request memoization, and systematic tag-based invalidation.
 
 ## Cache Layers
 
 1. **Next.js Data Cache** - Primary cache with ISR and PPR
-2. **Vercel KV** - Stale fallback when primary fails
+2. **Request Memoization** - De-duplicates identical in-flight requests
 3. **Edge Cache** - CDN caching via headers
 
 ## Usage
@@ -18,14 +18,14 @@ News On Africa uses a unified caching strategy with Next.js ISR, Vercel KV fallb
 import { cachedFetch, CACHE_TIMEOUTS } from '@/lib/server/unified-cache'
 
 const data = await cachedFetch(
-  'my-key',
-  async () => fetchData(),
-  {
-    tags: ['my-tag'],
-    revalidate: CACHE_TIMEOUTS.MEDIUM,
-    timeout: 10000,
-    fallback: defaultData,
-  }
+'my-key',
+async () => fetchData(),
+{
+tags: ['my-tag'],
+revalidate: CACHE_TIMEOUTS.MEDIUM,
+timeout: 10000,
+fallback: defaultData,
+}
 )
 \`\`\`
 
@@ -35,10 +35,10 @@ const data = await cachedFetch(
 import { fetchPostWithCache } from '@/lib/wordpress/cached-client'
 
 const post = await fetchPostWithCache(
-  'sz',
-  POST_QUERY,
-  { slug: 'my-article' },
-  { revalidate: CACHE_TIMEOUTS.LONG }
+'sz',
+POST_QUERY,
+{ slug: 'my-article' },
+{ revalidate: CACHE_TIMEOUTS.LONG }
 )
 \`\`\`
 
@@ -65,12 +65,11 @@ await invalidatePost('sz', 'post-123')
 - `user:*` - User-specific data
 - `search:*` - Search results
 
-## Fallback Strategy
+## Failure Strategy
 
-1. Try Next.js cache
-2. On timeout/error, try KV fallback
-3. If fallback provided, return it
-4. Otherwise, throw error
+1. Try Next.js cache/fetch path
+2. On timeout/error, return a typed temporary failure
+3. Let the UI show a retry/error state
 
 ## Webhook Integration
 
@@ -79,7 +78,7 @@ WordPress sends webhooks to `/api/revalidate`:
 \`\`\`json
 POST /api/revalidate?secret=xxx
 {
-  "type": "post",
-  "editionCode": "sz",
-  "id": "post-123"
+"type": "post",
+"editionCode": "sz",
+"id": "post-123"
 }
