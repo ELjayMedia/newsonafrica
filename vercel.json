@@ -3,10 +3,6 @@
     {
       "path": "/api/revalidate?type=all",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/webhooks/wordpress",
-      "schedule": "0 6 * * *"
     }
   ],
   "headers": [
@@ -80,8 +76,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_SITE_URL": "https://app.newsonafrica.com"
-  }
+  ]
 }

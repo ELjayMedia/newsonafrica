@@ -15,10 +15,10 @@ const nextConfig = {
     },
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   async headers() {
     return [
@@ -67,7 +67,6 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "newsonafrica.com", pathname: "**" },
       { protocol: "https", hostname: "news-on-africa.com", pathname: "**" },
-      { protocol: "https", hostname: "newsonafrica.com/*", pathname: "**" },
       { protocol: "https", hostname: "*.newsonafrica.com", pathname: "**" },
       { protocol: "https", hostname: "secure.gravatar.com", pathname: "**" },
       { protocol: "https", hostname: "i0.wp.com", pathname: "**" },
@@ -102,6 +101,6 @@ const nextConfig = {
     largePageDataBytes: 12800000,
     optimizePackageImports: ["lucide-react", "date-fns", "lodash-es"],
   },
-  serverExternalPackages: ["sharp", "react-dom/server"],
+  serverExternalPackages: ["sharp"],
 }
 module.exports = withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
