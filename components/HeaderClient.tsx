@@ -46,7 +46,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <header
-        className={`bg-white mx-auto max-w-[980px] shadow-md z-10 ${
+        className={`sticky top-12 bg-white mx-auto max-w-[980px] shadow-md z-40 ${
           hideOnMobile ? "hidden md:block" : pathname === "/search" ? "hidden sm:block" : ""
         }`}
       >
