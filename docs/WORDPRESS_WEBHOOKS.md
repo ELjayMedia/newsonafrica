@@ -138,9 +138,11 @@ All tags follow a hierarchical namespace pattern:
 
 ---
 
-## WordPress Plugin Integration
+---
 
-### Example: Custom Functions.php Code
+## WordPress Integration Options
+
+### Option 1: Custom Functions.php Code (Recommended)
 
 Add to your WordPress theme's `functions.php` or create a custom plugin:
 
@@ -256,7 +258,12 @@ function noa_revalidate_category($term_id) {
 
 ---
 
-## Testing
+### Option 2: Third-Party Webhook Plugins
+
+Alternatively, use established WordPress webhook plugins:
+- **WP Webhooks Pro** - Drag-and-drop webhook builder with UI
+- **WP REST API Post Notifier** - Lightweight REST-based webhooks
+- **Action Scheduler + Custom Code** - For scheduled/async webhooks
 
 ### Using curl
 

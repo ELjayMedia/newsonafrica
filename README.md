@@ -82,10 +82,6 @@ NEXT_PUBLIC_SITE_URL=http://app.newsonafrica.com
 NEXT_PUBLIC_WP_SZ_GRAPHQL=https://newsonafrica.com/sz/graphql
 NEXT_PUBLIC_WP_ZA_GRAPHQL=https://newsonafrica.com/za/graphql
 NEXT_PUBLIC_WP_NG_GRAPHQL=https://newsonafrica.com/ng/graphql
-NEXT_PUBLIC_WP_KE_GRAPHQL=https://newsonafrica.com/ke/graphql
-NEXT_PUBLIC_WP_TZ_GRAPHQL=https://newsonafrica.com/tz/graphql
-NEXT_PUBLIC_WP_EG_GRAPHQL=https://newsonafrica.com/eg/graphql
-NEXT_PUBLIC_WP_GH_GRAPHQL=https://newsonafrica.com/gh/graphql
 
 # --- WordPress Authentication (Optional) ---
 # Provide credentials for build-time/server-side GraphQL requests.
