@@ -28,10 +28,6 @@ export function ArticleClientContent({
       initialData={initialData}
       relatedPosts={relatedPosts}
       fetchArticleWithFallback={fetchArticleWithFallback}
-      initialComments={[]}
-      initialCommentCursor={null}
-      initialCommentHasMore={false}
-      initialCommentTotal={0}
     />
   )
 }
