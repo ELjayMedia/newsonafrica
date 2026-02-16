@@ -277,6 +277,10 @@ export function fetchWordPressGraphQL<T>(
     })
   }
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[v0] WPGraphQL endpoint resolved:", { country: countryCode, endpoint: base })
+  }
+
   const requestPayload = options.persistedQueryId
     ? { persistedQueryId: options.persistedQueryId, variables }
     : { query, variables }
@@ -338,7 +342,7 @@ export function fetchWordPressGraphQL<T>(
     "Content-Type": "application/json",
   }
 
-  if (typeof window === "undefined" && options.authHeaders) {
+  if (options.authHeaders) {
     for (const [key, value] of Object.entries(options.authHeaders)) {
       headers[key] = value
     }
@@ -372,11 +376,14 @@ export function fetchWordPressGraphQL<T>(
   const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(requestUrl, fetchOptions)
     .then(async (res) => {
       if (!res.ok) {
+        const bodyText = await res.text().catch(() => "")
         console.error("[v0] GraphQL request failed:", {
           country: countryCode,
           endpoint: base,
           status: res.status,
           statusText: res.statusText,
+          contentType: res.headers.get("content-type"),
+          bodySnippet: truncateBodySnippet(bodyText),
         })
         removeMemoizedEntry()
         return buildHTTPFailureResult(res)
@@ -395,7 +402,16 @@ export function fetchWordPressGraphQL<T>(
       try {
         parsedPayload = rawBody ? JSON.parse(rawBody) : {}
       } catch (parseError) {
-        console.error("[v0] GraphQL response JSON parse failed")
+        const looksLikeHTML = /^\s*</.test(rawBody)
+        console.error("[v0] GraphQL response JSON parse failed", {
+          country: countryCode,
+          endpoint: base,
+          status: res.status,
+          statusText: res.statusText,
+          contentType: res.headers.get("content-type"),
+          bodySnippet: truncateBodySnippet(rawBody),
+          hint: looksLikeHTML ? "Response looks like HTML (likely wrong URL/redirect/auth/WAF)" : undefined,
+        })
         removeMemoizedEntry()
         return buildInvalidPayloadFailureResult(res, rawBody, parseError)
       }
