@@ -51,7 +51,7 @@ describe("getFpTagForCountry", () => {
   it("returns null when the GraphQL request throws", async () => {
     mockFetchFromWpGraphQL.mockRejectedValueOnce(new Error("network"))
 
-    const result = await getFpTagForCountry("ke")
+    const result = await getFpTagForCountry("ng")
 
     expect(mockFetchFromWpGraphQL).toHaveBeenCalled()
     expect(result).toBeNull()

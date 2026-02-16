@@ -44,34 +44,6 @@ const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint">> =
     canonicalUrl: `${SITE_BASE_URL}/ng`,
     hreflang: "en-NG",
   },
-  {
-    code: "ke",
-    name: "Kenya",
-    flag: "🇰🇪",
-    canonicalUrl: `${SITE_BASE_URL}/ke`,
-    hreflang: "en-KE",
-  },
-  {
-    code: "tz",
-    name: "Tanzania",
-    flag: "🇹🇿",
-    canonicalUrl: `${SITE_BASE_URL}/tz`,
-    hreflang: "en-TZ",
-  },
-  {
-    code: "eg",
-    name: "Egypt",
-    flag: "🇪🇬",
-    canonicalUrl: `${SITE_BASE_URL}/eg`,
-    hreflang: "en-EG",
-  },
-  {
-    code: "gh",
-    name: "Ghana",
-    flag: "🇬🇭",
-    canonicalUrl: `${SITE_BASE_URL}/gh`,
-    hreflang: "en-GH",
-  },
 ]
 
 export const SUPPORTED_COUNTRIES: CountryEdition[] = COUNTRY_DEFINITIONS.map((country) => ({

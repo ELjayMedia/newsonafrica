@@ -21,14 +21,14 @@ describe("[countryCode] layout", () => {
     const { default: CountryLayout } = await import("./layout")
 
     const ui = (
-      <CountryLayout params={{ countryCode: "ke" }}>
+      <CountryLayout params={{ countryCode: "ng" }}>
         <div>Country page</div>
       </CountryLayout>
     )
 
     const { getByTestId } = render(ui)
 
-    expect(resolveCountryMock).toHaveBeenCalledWith("ke")
+    expect(resolveCountryMock).toHaveBeenCalledWith("ng")
     expect(getByTestId("edition-shell")).toHaveAttribute("data-country", "ng")
   })
 })
