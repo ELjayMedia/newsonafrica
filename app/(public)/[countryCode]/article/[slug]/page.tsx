@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const routeCountryAlias = normalizeRouteCountry(countryCode)
   const edition = resolveEdition(countryCode)
   const normalizedSlug = normalizeSlug(slug)
-  const { isEnabled: preview } = draftMode()
+  const { isEnabled: preview } = await draftMode()
 
   if (!edition) {
     const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
@@ -153,7 +153,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 export default async function ArticlePage({ params }: RouteParamsPromise) {
   const { countryCode, slug } = await params
   const edition = resolveEdition(countryCode)
-  const { isEnabled: preview } = draftMode()
+  const { isEnabled: preview } = await draftMode()
 
   if (!edition) {
     notFound()
