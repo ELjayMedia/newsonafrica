@@ -4,6 +4,7 @@ import Link from "next/link"
 import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
+import { Header } from "@/components/Header"
 import { TopBar } from "@/components/TopBar"
 import { BottomNavigation } from "@/components/BottomNavigation"
 import { Toaster } from "@/components/ui/toaster"
@@ -21,6 +22,9 @@ export function AppChrome({ children }: AppChromeProps) {
       </Suspense>
       <ClientDynamicComponents />
       <TopBar />
+      <Suspense fallback={<div className="h-16 bg-white shadow-md" />}>
+        <Header />
+      </Suspense>
       <div className="flex-grow rounded-xs shadow-none bg-transparent">
         <div className="mx-auto max-w-full md:max-w-[980px]">{children}</div>
       </div>
