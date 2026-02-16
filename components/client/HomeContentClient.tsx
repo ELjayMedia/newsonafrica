@@ -14,7 +14,7 @@ import { siteConfig } from "@/config/site"
 import { categoryConfigs, type CategoryConfig } from "@/config/homeConfig"
 import { getWebPageSchema } from "@/lib/schema"
 import { getArticleUrl, getCategoryUrl, getCurrentCountry } from "@/lib/utils/routing"
-import type { Category } from "@/types/content"
+import type { WordPressCategory } from "@/types/wp"
 import type { CountryPosts, HomePost } from "@/types/home"
 
 export interface HomeContentClientProps {
@@ -24,7 +24,7 @@ export interface HomeContentClientProps {
   initialData?: {
     taggedPosts: HomePost[]
     featuredPosts: HomePost[]
-    categories: Category[]
+    categories: WordPressCategory[]
     recentPosts: HomePost[]
     categoryPosts?: Record<string, HomePost[]>
   }
