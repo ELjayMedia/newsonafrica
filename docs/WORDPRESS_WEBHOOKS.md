@@ -9,12 +9,13 @@ News On Africa uses WordPress webhooks to trigger on-demand revalidation of cach
 - **Primary Data Source**: WordPress GraphQL (WPGraphQL)
 - **Caching Strategy**: Next.js ISR with tag-based cache invalidation
 - **Revalidation Trigger**: WordPress webhooks → Next.js API route
-- **Fallback**: KV cache for stale content when WordPress is unavailable
+- **Fallback**: No persistent stale-content fallback; rely on normal retries and clear errors
 
 ### Cache Layers
 1. **Next.js Fetch Cache**: Primary layer with tag-based invalidation
-2. **Request Memoization**: Deduplicates identical requests within single render
-3. **KV Cache**: Persistent stale content for temporary WordPress failures
+2. **Request Memoization**: Deduplicates identical requests within a single render pass
+
+> Standard WordPress content flows no longer write to KV/Redis stale fallbacks.
 
 ---
 
