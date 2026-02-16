@@ -49,7 +49,7 @@ export function TopBar() {
   }, [user, pathname])
 
   return (
-    <div className="sticky top-0 z-50 bg-black text-white hidden md:block">
+    <div className="bg-black text-white hidden md:block">
       <div className="mx-auto max-w-[980px] px-4 py-2 flex justify-between items-center">
         <div className="text-sm">
           {showWelcome && user ? (
