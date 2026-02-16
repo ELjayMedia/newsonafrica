@@ -74,14 +74,14 @@ describe("content server actions", () => {
 
     const result = await fetchTaggedPostsAction({
       slug: "tech",
-      countryCode: "ke",
+      countryCode: "ng",
       first: 8,
       after: "cursor-3",
     })
 
     expect(fetchTaggedPostsMock).toHaveBeenCalledWith({
       slug: "tech",
-      countryCode: "ke",
+      countryCode: "ng",
       first: 8,
       after: "cursor-3",
     })

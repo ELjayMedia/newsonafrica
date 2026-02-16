@@ -22,7 +22,7 @@ afterEach(() => {
 describe("LayoutStructure", () => {
   it.each([
     ["ng"],
-    ["ke"],
+    ["za"],
   ])("passes the %s edition through to header and sidebar", (countryCode) => {
     render(
       <LayoutStructure countryCode={countryCode}>

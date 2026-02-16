@@ -1,65 +1,26 @@
 import { z } from "zod"
 
-const DEFAULT_SITE_URL = "http://app.newsonafrica.com"
+/**
+ * Environment variables for News on Africa (3 editions only)
+ * Supports: Eswatini (sz), South Africa (za), Nigeria (ng)
+ */
+export const ENV_SCHEMA = z
+  .object({
+    NEXT_PUBLIC_SITE_URL: z.string().url().default("https://newsonafrica.com"),
+    NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().url().optional(),
+    NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().url().optional(),
+    NEXT_PUBLIC_WP_NG_GRAPHQL: z.string().url().optional(),
+    NEXT_PUBLIC_DEFAULT_SITE: z.enum(["sz", "za", "ng"]).default("sz"),
+    WORDPRESS_WEBHOOK_SECRET: z.string().optional(),
+    REVALIDATION_SECRET: z.string().optional(),
+  })
+  .passthrough()
 
-const trimToUndefined = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
-    return undefined
-  }
+export const ENV = ENV_SCHEMA.parse(process.env)
 
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
-}
+export type EnvConfig = z.infer<typeof ENV_SCHEMA>
 
-const stringWithDefault = (defaultValue: string) => z.preprocess(trimToUndefined, z.string().default(defaultValue))
+// Export commonly used env variables
+export const REVALIDATION_SECRET = ENV.REVALIDATION_SECRET || ""
+export const WORDPRESS_WEBHOOK_SECRET = ENV.WORDPRESS_WEBHOOK_SECRET || ""
 
-const graphQlEndpointOverride = (countryCode: string) =>
-  z.preprocess(
-    trimToUndefined,
-    z
-      .string()
-      .url({ message: "Expected an absolute GraphQL endpoint URL" })
-      .superRefine((value, ctx) => {
-        try {
-          const url = new URL(value)
-          const normalizedPath = url.pathname.replace(/\/+$/, "").toLowerCase()
-          const expectedSuffix = `/${countryCode.toLowerCase()}/graphql`
-
-          if (!normalizedPath.endsWith(expectedSuffix)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Expected the GraphQL endpoint to end with "${expectedSuffix}"`,
-            })
-          }
-        } catch {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Expected a valid GraphQL endpoint URL",
-          })
-        }
-      })
-      .optional(),
-  )
-
-const CLIENT_ENV_SCHEMA = z.object({
-  NEXT_PUBLIC_SITE_URL: stringWithDefault(DEFAULT_SITE_URL),
-  NEXT_PUBLIC_DEFAULT_SITE: stringWithDefault("sz"),
-  NEXT_PUBLIC_WP_SZ_GRAPHQL: graphQlEndpointOverride("sz"),
-  NEXT_PUBLIC_WP_ZA_GRAPHQL: graphQlEndpointOverride("za"),
-  NEXT_PUBLIC_WP_NG_GRAPHQL: graphQlEndpointOverride("ng"),
-  NEXT_PUBLIC_WP_KE_GRAPHQL: graphQlEndpointOverride("ke"),
-  NEXT_PUBLIC_WP_TZ_GRAPHQL: graphQlEndpointOverride("tz"),
-  NEXT_PUBLIC_WP_EG_GRAPHQL: graphQlEndpointOverride("eg"),
-  NEXT_PUBLIC_WP_GH_GRAPHQL: graphQlEndpointOverride("gh"),
-})
-
-const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
-
-type EnvConfig = z.infer<typeof CLIENT_ENV_SCHEMA>
-
-const ENV: Readonly<EnvConfig> = Object.freeze(parsedEnv)
-
-export const REVALIDATION_SECRET = process.env.REVALIDATION_SECRET || ""
-
-export { ENV }
-export type { EnvConfig }

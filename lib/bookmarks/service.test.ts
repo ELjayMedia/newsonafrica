@@ -95,7 +95,7 @@ describe("bookmark service contracts", () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
-    const payload = await addBookmarkForUser(supabase as any, "user-1", { postId: "post-1" }, { revalidate, editionHints: ["ke"] })
+    const payload = await addBookmarkForUser(supabase as any, "user-1", { postId: "post-1" }, { revalidate, editionHints: ["ng"] })
 
     expect(payload.added).toHaveLength(1)
     expect(applyCounterDeltaMock).toHaveBeenCalled()

@@ -6,8 +6,6 @@ describe("getGraphQLEndpoint", () => {
   beforeEach(() => {
     vi.resetModules()
     delete process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL
-    delete process.env.NEXT_PUBLIC_WP_TZ_GRAPHQL
-    delete process.env.NEXT_PUBLIC_WP_GH_GRAPHQL
     process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   })
 
@@ -84,7 +82,6 @@ describe("getGraphQLEndpoint", () => {
 describe("getWpEndpoints", () => {
   beforeEach(() => {
     vi.resetModules()
-    delete process.env.NEXT_PUBLIC_WP_TZ_GRAPHQL
     process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   })
 
@@ -94,18 +91,18 @@ describe("getWpEndpoints", () => {
 
   it("uses the default GraphQL endpoint when the override would have caused 404s", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-    process.env.NEXT_PUBLIC_WP_TZ_GRAPHQL = "https://example.com/graphql"
+    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://example.com/graphql"
 
     const { getWpEndpoints } = await import("./wp-endpoints")
 
-    expect(getWpEndpoints("tz").graphql).toBe("https://newsonafrica.com/tz/graphql")
+    expect(getWpEndpoints("sz").graphql).toBe("https://newsonafrica.com/sz/graphql")
     expect(warnSpy).toHaveBeenCalledWith(
       "Ignoring WP GraphQL override",
       expect.objectContaining({
-        country: "tz",
+        country: "sz",
         graphqlOverride: "https://example.com/graphql",
-        defaultGraphQLEndpoint: "https://newsonafrica.com/tz/graphql",
-        reason: 'expected pathname to include "/tz/graphql"',
+        defaultGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
+        reason: 'expected pathname to include "/sz/graphql"',
       }),
     )
   })

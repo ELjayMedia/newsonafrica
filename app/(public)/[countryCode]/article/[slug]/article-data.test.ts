@@ -62,7 +62,7 @@ describe("article-data", () => {
     const priority = buildArticleCountryPriority("african-edition");
 
     expect(priority).toEqual(
-      expect.arrayContaining(["sz", "za", "ng", "ke", "tz", "eg", "gh"]),
+      expect.arrayContaining(["sz", "za", "ng"]),
     );
     expect(priority).not.toContain("african-edition");
     expect(priority.every((code) => normalizeCountryCode(code) === code)).toBe(

@@ -7,7 +7,7 @@ vi.mock("@/app/EditionLayoutShell", () => ({
   ),
 }))
 
-const resolveCountryMock = vi.fn(() => "tz")
+const resolveCountryMock = vi.fn(() => "sz")
 vi.mock("@/lib/utils/routing", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/utils/routing")>()
   return {
@@ -24,6 +24,6 @@ describe("home layout", () => {
     const { getByTestId } = render(ui)
 
     expect(resolveCountryMock).toHaveBeenCalledWith(undefined)
-    expect(getByTestId("home-shell")).toHaveAttribute("data-country", "tz")
+    expect(getByTestId("home-shell")).toHaveAttribute("data-country", "sz")
   })
 })

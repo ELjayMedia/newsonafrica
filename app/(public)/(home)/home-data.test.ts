@@ -506,7 +506,7 @@ describe("buildCountryPosts", () => {
 
     const preloadedCountry = "ng"
     const preloadedAggregate = aggregatedFor(preloadedCountry)
-    const countryCodes = ["ng", "za", "ke", "tz", "za", "ng", "eg", "gh"] as const
+    const countryCodes = ["ng", "za", "za", "ng"] as const
 
     const result = (await homeDataModule.buildCountryPosts(
       countryCodes,
@@ -522,7 +522,7 @@ describe("buildCountryPosts", () => {
       africanAggregate?: AggregatedHomeData
     }
 
-    const expectedCountries = ["ng", "za", "ke", "tz", "eg", "gh"]
+    const expectedCountries = ["ng", "za"]
 
     expect(Object.keys(result.countryPosts).sort()).toEqual([...expectedCountries].sort())
     expectedCountries.forEach((countryCode) => {
