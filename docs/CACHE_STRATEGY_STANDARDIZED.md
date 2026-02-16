@@ -85,9 +85,9 @@ const { data, isLoading } = useSWR(
 )
 \`\`\`
 
-**Caching Duration**: None (in-memory dedup only)
+**Caching Duration**: None (`revalidate: 0` / `cache: "no-store"`).
 
-**Notes**: Search is rarely cached because queries vary wildly; in-memory dedup prevents thundering herd for identical rapid requests.
+**Notes**: Search intentionally does not use a separate process-local cache. Only Next.js request-level memoization/dedup may occur naturally during a single render cycle.
 
 ---
 
@@ -113,7 +113,7 @@ Is it WordPress content?
 ❌ **DO NOT**:
 - Mix classes (e.g., ISR + Supabase in same route)
 - Add custom `cache` logic per route
-- Use Redis/Upstash as fallback (removed)
+- Use Redis/Upstash or KV stale fallbacks
 - Try to cache user-specific data via ISR
 - Cache search results (defeats purpose)
 
@@ -132,12 +132,12 @@ Is it WordPress content?
 - [ ] GraphQL queries include appropriate tags
 - [ ] User data routes use `cache: "no-store"`
 - [ ] Search routes avoid caching entirely
-- [ ] Error handling shows "retry later" (not stale fallback)
+- [ ] Error handling shows "retry later" (no stale fallback layer)
 
 ---
 
 ## Migration Status
-- ✅ Removed Redis/Upstash fallback
+- ✅ Removed Redis/Upstash/KV stale fallback layers for standard WordPress flows
 - ✅ Article pages are fully static (Class 1)
 - ✅ Comments moved to client-only (Class 2)
 - ✅ Search is client-only (Class 3)

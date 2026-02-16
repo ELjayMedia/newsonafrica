@@ -12,7 +12,6 @@ import type { WordPressPost } from "@/types/wp"
 import type { PostSummaryFieldsFragment } from "@/types/wpgraphql"
 
 const DEFAULT_SITE_COUNTRY = (process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz").toLowerCase()
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export type WordPressSearchResult = WordPressPost
 
@@ -40,7 +39,6 @@ type SearchPostsQueryResult = {
 type OrderByOption = "relevance" | "date" | "title"
 type OrderDirectionOption = "asc" | "desc"
 
-const searchCache = new Map<string, { data: SearchResponse; timestamp: number }>()
 
 const isGraphQlFailure = <T>(
   result: WordPressGraphQLResult<T>,
@@ -66,15 +64,6 @@ const resolveOrderField = (orderBy: OrderByOption): string => {
 
 const resolveOrderDirection = (order: OrderDirectionOption): "ASC" | "DESC" =>
   order === "asc" ? "ASC" : "DESC"
-
-const buildCacheKey = (
-  country: string,
-  query: string,
-  page: number,
-  perPage: number,
-  orderField: string,
-  orderDirection: "ASC" | "DESC",
-) => `search:${country}:${query}:${page}:${perPage}:${orderField}:${orderDirection}`
 
 const buildEmptyResponse = (
   query: string,
@@ -120,11 +109,6 @@ export async function searchWordPressPosts(
     return buildEmptyResponse(trimmedQuery, page, perPage, startTime)
   }
 
-  const cacheKey = buildCacheKey(country, trimmedQuery, page, perPage, orderField, orderDirection)
-  const cached = searchCache.get(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return { ...cached.data, searchTime: Date.now() - startTime }
-  }
 
   const variables: Record<string, unknown> = {
     first: perPage,
@@ -147,7 +131,6 @@ export async function searchWordPressPosts(
         console.error("WordPress GraphQL search failed", gqlResult.error)
       }
       const fallback = buildEmptyResponse(trimmedQuery, page, perPage, startTime)
-      searchCache.set(cacheKey, { data: fallback, timestamp: Date.now() })
       return fallback
     }
 
@@ -179,12 +162,10 @@ export async function searchWordPressPosts(
       suggestions,
     }
 
-    searchCache.set(cacheKey, { data: response, timestamp: Date.now() })
     return response
   } catch (error) {
     console.error("WordPress GraphQL search encountered an error", error)
     const fallback = buildEmptyResponse(trimmedQuery, page, perPage, startTime)
-    searchCache.set(cacheKey, { data: fallback, timestamp: Date.now() })
     return fallback
   }
 }
@@ -219,9 +200,11 @@ export async function getSearchSuggestions(
   }
 }
 
-export function clearSearchCache(): void {
-  searchCache.clear()
-}
+/**
+ * No-op: process-local search caching has been retired.
+ * Search now relies on Next.js fetch cache policy configured in fetchWordPressGraphQL.
+ */
+export function clearSearchCache(): void {}
 
 export async function searchWordPressPostsAction(
   query: string,

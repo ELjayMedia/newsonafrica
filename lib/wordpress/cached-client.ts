@@ -1,5 +1,5 @@
 import { fetchWordPressGraphQL } from "./client"
-import { cacheWordPressContent, storeKVFallback } from "@/lib/server/unified-cache"
+import { cacheWordPressContent } from "@/lib/server/unified-cache"
 
 /**
  * WordPress GraphQL wrapper with unified caching
@@ -19,14 +19,7 @@ export async function fetchPostWithCache<T>(
     editionCode,
     "post",
     postId,
-    async () => {
-      const data = await fetchWordPressGraphQL<T>(editionCode, query, variables)
-
-      // Store in KV as stale fallback
-      await storeKVFallback(`wp:${editionCode}:post:${postId}`, data)
-
-      return data
-    },
+    () => fetchWordPressGraphQL<T>(editionCode, query, variables),
     options,
   )
 
@@ -51,13 +44,7 @@ export async function fetchPostsWithCache<T>(
     editionCode,
     "page",
     cacheKey,
-    async () => {
-      const data = await fetchWordPressGraphQL<T>(editionCode, query, variables)
-
-      await storeKVFallback(`wp:${cacheKey}`, data)
-
-      return data
-    },
+    () => fetchWordPressGraphQL<T>(editionCode, query, variables),
     options,
   )
 

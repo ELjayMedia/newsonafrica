@@ -1,5 +1,4 @@
 import "server-only"
-import { kv } from "@vercel/kv"
 
 // Cache timeout constants
 export const CACHE_TIMEOUTS = {
@@ -61,19 +60,6 @@ export async function cachedFetch<T>(
   } catch (error) {
     console.error(`[v0] Cache fetch failed for ${key}:`, error)
 
-    // Try KV fallback if available
-    if (process.env.KV_REST_API_URL) {
-      try {
-        const kvData = await kv.get<T>(cacheKey)
-        if (kvData) {
-          console.log(`[v0] Using KV fallback for ${key}`)
-          return kvData
-        }
-      } catch (kvError) {
-        console.error(`[v0] KV fallback failed for ${key}:`, kvError)
-      }
-    }
-
     // Return fallback or rethrow
     if (fallback !== undefined) {
       console.log(`[v0] Using fallback value for ${key}`)
@@ -116,17 +102,4 @@ export async function cacheWordPressContent<T>(
     revalidate: options.revalidate ?? CACHE_TIMEOUTS.LONG,
     fallback: options.fallback,
   })
-}
-
-/**
- * Store data in KV as stale fallback
- */
-export async function storeKVFallback<T>(key: string, data: T, ttl = 86400) {
-  if (!process.env.KV_REST_API_URL) return
-
-  try {
-    await kv.set(`cache:${key}`, data, { ex: ttl })
-  } catch (error) {
-    console.error(`[v0] Failed to store KV fallback for ${key}:`, error)
-  }
 }
