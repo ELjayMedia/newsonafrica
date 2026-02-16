@@ -31,7 +31,7 @@ export default async function BookmarksLayout({ children }: { children: React.Re
   let initialBookmarks: BookmarkListPayload | null = null
 
   if (session?.user) {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const serializedCookies = cookieStore
       .getAll()
       .map(({ name, value }) => `${name}=${encodeURIComponent(value)}`)

@@ -9,6 +9,7 @@ import {
   dbRowToDomainBookmark,
   extractFeaturedImage,
   extractText,
+  apiPayloadToDomainBookmarkDraft,
 } from "@/lib/bookmarks/mappers"
 
 export type { Bookmark, BookmarkHydrationMap }
@@ -18,6 +19,6 @@ export const formatBookmarkRow = (row: BookmarkListRow, metadata?: BookmarkHydra
 
 export const getRowPostId = (row: BookmarkListRow): string => row.postId
 
-export { buildHydrationPayload, extractFeaturedImage, extractText }
+export { buildHydrationPayload, extractFeaturedImage, extractText, apiPayloadToDomainBookmarkDraft }
 
 export type { BookmarkTextValue }
