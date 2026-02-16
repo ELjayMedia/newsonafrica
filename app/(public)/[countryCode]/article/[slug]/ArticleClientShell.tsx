@@ -40,13 +40,13 @@ const WORDS_PER_MINUTE = 230
 
 const countWordsFromText = (text: string) => {
   const trimmed = text.trim()
-  if (!trimmed) return null
-  return trimmed.split(/\s+/).filter(Boolean).length || null
+  if (!trimmed) return undefined
+  return trimmed.split(/\s+/).filter(Boolean).length || undefined
 }
 
 const deriveReadingTimeFromText = (text: string) => {
   const words = countWordsFromText(text)
-  if (!words) return null
+  if (!words) return undefined
   return Math.max(1, Math.round(words / WORDS_PER_MINUTE))
 }
 
@@ -101,7 +101,7 @@ export function ArticleClientShell({
     resolveRenderedText(articleData?.author?.node?.name ?? articleData?.author?.name) ||
     articleData?.author?.node?.name ||
     articleData?.author?.name ||
-    null
+    undefined
   const authorAvatarUrl =
     (typeof articleData?.author?.node?.avatar?.url === "string"
       ? articleData.author.node.avatar.url
@@ -124,7 +124,9 @@ export function ArticleClientShell({
   const wordCount = useMemo(() => countWordsFromText(sanitizedContentText), [sanitizedContentText])
 
   // Category
-  const category = articleData?.categories?.nodes?.[0]?.name || articleData?.categories?.[0]?.name
+  const category = articleData?.categories?.nodes?.[0]?.name
+
+  const bookmarkPostId = articleData?.id ?? (typeof articleData?.databaseId === "number" ? String(articleData.databaseId) : slug)
 
   // Share info
   const shareUrl = `/${countryCode}/article/${slug}`
@@ -171,7 +173,15 @@ export function ArticleClientShell({
         {/* Share and Bookmark Actions */}
         <div className="flex flex-wrap items-center gap-4">
           <ShareButtons title={shareTitle} url={shareUrl} description={shareDescription} variant="outline" />
-          <BookmarkButton isBookmarked={isBookmarked} onChange={setIsBookmarked} />
+          <BookmarkButton
+            postId={bookmarkPostId}
+            editionCode={countryCode}
+            slug={slug}
+            title={shareTitle || "Untitled Post"}
+            excerpt={shareDescription}
+            featuredImage={heroImage}
+            onBookmarkChange={setIsBookmarked}
+          />
         </div>
 
         {/* Featured Image */}
