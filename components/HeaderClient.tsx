@@ -27,7 +27,6 @@ interface HeaderClientProps {
 export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const hideOnMobile = ["/bookmarks", "/profile"].includes(pathname)
 
   const sortedCategories = categories && categories.length > 0 ? categories : []
 
@@ -46,9 +45,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
       <header
-        className={`sticky top-12 bg-white mx-auto max-w-[980px] shadow-md z-40 ${
-          hideOnMobile ? "hidden md:block" : pathname === "/search" ? "hidden sm:block" : ""
-        }`}
+        className="sticky top-12 bg-white mx-auto max-w-[980px] shadow-md z-40"
       >
         <div className="w-full md:mx-auto -mb-4">
           {/* Top Bar */}
