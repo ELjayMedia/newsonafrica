@@ -51,15 +51,6 @@ const CLIENT_ENV_SCHEMA = z.object({
   NEXT_PUBLIC_WP_TZ_GRAPHQL: graphQlEndpointOverride("tz"),
   NEXT_PUBLIC_WP_EG_GRAPHQL: graphQlEndpointOverride("eg"),
   NEXT_PUBLIC_WP_GH_GRAPHQL: graphQlEndpointOverride("gh"),
-  NEXT_PUBLIC_WP_REST_FALLBACK: z.preprocess(
-    (val) => {
-      if (typeof val === "string") {
-        return val === "1" || val.toLowerCase() === "true" ? "1" : "0"
-      }
-      return val ? "1" : "0"
-    },
-    z.enum(["0", "1"]).default("0"),
-  ),
 })
 
 const parsedEnv = CLIENT_ENV_SCHEMA.parse(process.env)
