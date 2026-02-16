@@ -36,6 +36,11 @@ export function OnboardingClient() {
       router.push("/auth?redirectTo=/onboarding")
     } else if (profile) {
       // Pre-fill form with existing profile data
+      const receiveNewsletter =
+        profile.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences)
+          ? (profile.preferences as { receiveNewsletter?: unknown }).receiveNewsletter
+          : undefined
+
       setFormData((prev) => ({
         ...prev,
         fullName: profile.full_name || "",
@@ -43,7 +48,7 @@ export function OnboardingClient() {
         location: profile.location || "",
         avatarUrl: profile.avatar_url || "",
         interests: profile.interests || [],
-        receiveNewsletter: profile.preferences?.receiveNewsletter ?? true,
+        receiveNewsletter: typeof receiveNewsletter === "boolean" ? receiveNewsletter : true,
       }))
     }
   }, [loading, user, profile, router])
@@ -275,7 +280,7 @@ export function OnboardingClient() {
                       <div className="flex items-center">
                         <Checkbox
                           checked={formData.interests.includes(interest)}
-                          onCheckedChange={() => handleInterestToggle(interest)}
+                          onChange={() => handleInterestToggle(interest)}
                           className="mr-2"
                           id={`interest-${interest}`}
                         />
@@ -305,7 +310,7 @@ export function OnboardingClient() {
                     <Checkbox
                       id="newsletter"
                       checked={formData.receiveNewsletter}
-                      onCheckedChange={(checked) => setFormData({ ...formData, receiveNewsletter: checked === true })}
+                      onChange={(event) => setFormData({ ...formData, receiveNewsletter: event.target.checked })}
                     />
                     <div>
                       <Label htmlFor="newsletter" className="font-medium">
