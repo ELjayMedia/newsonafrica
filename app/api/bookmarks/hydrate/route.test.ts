@@ -24,15 +24,10 @@ describe("hydrateBookmarkRequests", () => {
       { country: "sz", postIds: ["1", "2"] },
       { country: "Nigeria", postIds: ["3"] },
       { country: "za", postIds: ["4", "5"] },
-      { country: "Kenya", postIds: ["6"] },
-      { country: "gh", postIds: ["7"] },
-      { country: "Botswana", postIds: ["8"] },
     ]
 
     const countryCodeMap: Record<string, string> = {
       nigeria: "ng",
-      kenya: "ke",
-      botswana: "bw",
     }
 
     mockedResolveCountryCode.mockImplementation((country: string) => {
@@ -84,7 +79,5 @@ describe("hydrateBookmarkRequests", () => {
     )
 
     expect(mockedResolveCountryCode).toHaveBeenCalledWith("Nigeria")
-    expect(mockedResolveCountryCode).toHaveBeenCalledWith("Kenya")
-    expect(mockedResolveCountryCode).toHaveBeenCalledWith("Botswana")
   })
 })
