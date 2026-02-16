@@ -13,7 +13,7 @@ validateRequiredEnv()
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
-  metadataBase: new URL(ENV.NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL("https://newsonafrica.com"),
   applicationName: "News On Africa",
   keywords: ["Africa", "news", "journalism", "current events", "African news"],
   authors: [{ name: "News On Africa Team" }],
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-    generator: "v0.app",
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -35,7 +35,7 @@ export default function RootLayout({
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
   return (
-    <html lang="en" className="font-sans">
+    <html lang="en" className="font-sans" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
