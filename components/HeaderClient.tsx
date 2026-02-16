@@ -27,7 +27,7 @@ interface HeaderClientProps {
 export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const hideOnMobile = ["/bookmarks", "/profile", "/subscribe"].includes(pathname)
+  const hideOnMobile = ["/bookmarks", "/profile"].includes(pathname)
 
   const sortedCategories = categories && categories.length > 0 ? categories : []
 
