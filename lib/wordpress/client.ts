@@ -100,6 +100,15 @@ const getMemoizedRequests = (): Map<string, MemoizedRequestEntry> => {
   return fallbackStore
 }
 
+const formatGraphQLErrors = (errors: Array<{ message: string;[key: string]: unknown }>) =>
+  errors.map((e) => ({
+    message: e.message,
+    path: (e as any).path,
+    code: (e as any)?.extensions?.code,
+    category: (e as any)?.extensions?.category,
+    locations: (e as any).locations,
+  }))
+
 export class WordPressGraphQLHTTPError extends Error {
   public readonly status: number
   public readonly statusText: string
@@ -116,9 +125,9 @@ export class WordPressGraphQLHTTPError extends Error {
 }
 
 export class WordPressGraphQLResponseError extends Error {
-  public readonly errors: Array<{ message: string; [key: string]: unknown }>
+  public readonly errors: Array<{ message: string;[key: string]: unknown }>
 
-  constructor(errors: Array<{ message: string; [key: string]: unknown }>) {
+  constructor(errors: Array<{ message: string;[key: string]: unknown }>) {
     super("WordPress GraphQL response contained errors")
     this.name = "WordPressGraphQLResponseError"
     this.errors = errors
@@ -146,7 +155,7 @@ export interface WordPressGraphQLHTTPFailure extends WordPressGraphQLFailureBase
 
 export interface WordPressGraphQLResponseFailure extends WordPressGraphQLFailureBase {
   kind: "graphql_error"
-  errors: Array<{ message: string; [key: string]: unknown }>
+  errors: Array<{ message: string;[key: string]: unknown }>
   error: WordPressGraphQLResponseError
 }
 
@@ -205,7 +214,7 @@ const buildHTTPFailureResult = (response: Response): WordPressGraphQLHTTPFailure
 }
 
 const buildGraphQLFailureResult = (
-  errors: Array<{ message: string; [key: string]: unknown }>,
+  errors: Array<{ message: string;[key: string]: unknown }>,
 ): WordPressGraphQLResponseFailure => {
   const error = new WordPressGraphQLResponseError(errors)
 
@@ -349,9 +358,9 @@ export function fetchWordPressGraphQL<T>(
   const nextCacheConfig =
     resolvedRevalidate > CACHE_DURATIONS.NONE || (dedupedTags?.length ?? 0) > 0
       ? {
-          ...(resolvedRevalidate > CACHE_DURATIONS.NONE ? { revalidate: resolvedRevalidate } : {}),
-          ...(dedupedTags && dedupedTags.length > 0 ? { tags: dedupedTags } : {}),
-        }
+        ...(resolvedRevalidate > CACHE_DURATIONS.NONE ? { revalidate: resolvedRevalidate } : {}),
+        ...(dedupedTags && dedupedTags.length > 0 ? { tags: dedupedTags } : {}),
+      }
       : undefined
 
   if (nextCacheConfig) {
@@ -399,54 +408,54 @@ export function fetchWordPressGraphQL<T>(
 
       const json = parsedPayload as {
         data?: T
-        errors?: Array<{ message: string; [key: string]: unknown }>
+        errors?: Array<{ message: string;[key: string]: unknown }>
       }
 
       if (json.errors && json.errors.length > 0) {
-        console.error("[v0] GraphQL errors:", json.errors)
+        const pretty = formatGraphQLErrors(json.errors)
+
+        console.error("[v0] GraphQL errors:", {
+          country: countryCode,
+          endpoint: base,
+          transport: usesGetTransport ? "GET" : "POST",
+          persistedQueryId: options.persistedQueryId ?? null,
+          // helpful without dumping the whole query
+          queryPreview: options.persistedQueryId ? null : query.trim().slice(0, 180),
+          variables,
+          errors: pretty,
+        })
+
         removeMemoizedEntry()
         return buildGraphQLFailureResult(json.errors)
       }
 
-      return buildSuccessResult<T>(json.data ?? null)
-    })
-    .catch((error) => {
-      console.error("[v0] GraphQL request exception:", {
-        country: countryCode,
-        endpoint: base,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      })
-      removeMemoizedEntry()
-      throw error
-    })
 
-  if (shouldMemoize && memoizedRequests) {
-    const expiresAt = memoizationTtlSeconds > 0 ? Date.now() + memoizationTtlSeconds * 1000 : Number.POSITIVE_INFINITY
+      if (shouldMemoize && memoizedRequests) {
+        const expiresAt = memoizationTtlSeconds > 0 ? Date.now() + memoizationTtlSeconds * 1000 : Number.POSITIVE_INFINITY
 
-    const entry: MemoizedRequestEntry = {
-      promise: requestPromise,
-      metadataKey,
-      expiresAt,
-    }
-    memoizedEntry = entry
-    memoizedRequests.set(cacheKey, entry)
-
-    if (memoizationTtlSeconds > 0) {
-      const timeout = setTimeout(() => {
-        const currentEntry = memoizedRequests.get(cacheKey)
-        if (currentEntry === entry) {
-          memoizedRequests.delete(cacheKey)
+        const entry: MemoizedRequestEntry = {
+          promise: requestPromise,
+          metadataKey,
+          expiresAt,
         }
-      }, memoizationTtlSeconds * 1000)
+        memoizedEntry = entry
+        memoizedRequests.set(cacheKey, entry)
 
-      if (typeof timeout.unref === "function") {
-        timeout.unref()
+        if (memoizationTtlSeconds > 0) {
+          const timeout = setTimeout(() => {
+            const currentEntry = memoizedRequests.get(cacheKey)
+            if (currentEntry === entry) {
+              memoizedRequests.delete(cacheKey)
+            }
+          }, memoizationTtlSeconds * 1000)
+
+          if (typeof timeout.unref === "function") {
+            timeout.unref()
+          }
+        }
       }
-    }
-  }
 
-  return requestPromise
-}
+      return requestPromise
+    }
 
 export const __getMemoizedRequestsForTests = () => getMemoizedRequests()
