@@ -26,6 +26,8 @@ import {
   type UpdateBookmarkInput,
 } from "@/app/actions/bookmarks"
 import type {
+  BookmarkApiPayload,
+  BookmarkDomainModel,
   BookmarkListPayload,
   BookmarkMutationPayload,
   BookmarkPagination,
@@ -34,6 +36,7 @@ import type {
 import { ensureActionError } from "@/lib/supabase/action-result"
 import {
   buildHydrationPayload,
+  apiPayloadToDomainBookmarkDraft,
   extractFeaturedImage,
   extractText,
   formatBookmarkRow,
@@ -59,9 +62,9 @@ interface BookmarksContextType {
   loading: boolean
   stats: BookmarkStats
   pagination: BookmarkPagination
-  addBookmark: (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => Promise<void>
+  addBookmark: (post: BookmarkApiPayload) => Promise<void>
   removeBookmark: (postId: string) => Promise<void>
-  toggleBookmark: (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => Promise<void>
+  toggleBookmark: (post: BookmarkApiPayload) => Promise<void>
   updateBookmark: (postId: string, updates: Partial<Bookmark>) => Promise<void>
   bulkRemoveBookmarks: (postIds: string[]) => Promise<void>
   markAsRead: (postId: string) => Promise<void>
@@ -135,7 +138,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   useEffect(() => {
     cacheRef.current.clear()
     bookmarks.forEach((bookmark) => {
-      cacheRef.current.set(bookmark.postId || bookmark.wp_post_id, bookmark)
+      cacheRef.current.set(bookmark.postId, bookmark)
     })
   }, [bookmarks])
 
@@ -189,7 +192,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const removalSet = new Set(removals.map((row) => getRowPostId(row)))
       let nextBookmarks = bookmarksRef.current.filter(
-        (bookmark) => !removalSet.has(bookmark.postId || bookmark.wp_post_id),
+        (bookmark) => !removalSet.has(bookmark.postId),
       )
 
       const changeMap = new Map<string, Bookmark>()
@@ -209,11 +212,11 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       if (changeMap.size > 0) {
         nextBookmarks = nextBookmarks.map((bookmark) =>
-          changeMap.get(bookmark.postId || bookmark.wp_post_id) ?? bookmark,
+          changeMap.get(bookmark.postId) ?? bookmark,
         )
 
         const existingPostIds = new Set(
-          nextBookmarks.map((bookmark) => bookmark.postId || bookmark.wp_post_id),
+          nextBookmarks.map((bookmark) => bookmark.postId),
         )
         const newEntries: Bookmark[] = []
         for (const postId of additionSet) {
@@ -383,42 +386,40 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   }, [applyListPayload, fetchBookmarks, initialData, startTransition, user])
 
   const addBookmark = useCallback(
-    async (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => {
+    async (post: BookmarkApiPayload) => {
       if (!user) throw new Error("User not authenticated")
-      if (isBookmarked(post.postId || post.wp_post_id)) return
+      const draft = apiPayloadToDomainBookmarkDraft(post)
+      if (!draft.postId || isBookmarked(draft.postId)) return
 
-      const postData = post as any
-      const editionCode = post.edition_code ?? null
+      const editionCode = draft.editionCode ?? null
       const payload: AddBookmarkInput = {
-        postId: post.wp_post_id,
+        postId: draft.postId,
         editionCode,
-        collectionId: post.collection_id || null,
-        title: extractText(postData.title) || "Untitled Post",
-        slug: typeof postData.slug === "string" ? postData.slug : "",
-        excerpt: extractText(postData.excerpt),
-        featuredImage: extractFeaturedImage(postData.featured_image || postData.featuredImage) || null,
-        category: post.category || null,
-        tags: post.tags || null,
-        note: post.note || null,
+        collectionId: draft.collectionId || null,
+        title: extractText(draft.title) || "Untitled Post",
+        slug: typeof draft.slug === "string" ? draft.slug : "",
+        excerpt: extractText(draft.excerpt),
+        featuredImage: extractFeaturedImage(draft.featuredImage) || null,
+        category: draft.category || null,
+        tags: draft.tags || null,
+        note: draft.note || null,
       }
 
-      const optimisticBookmark: Bookmark = {
+      const optimisticBookmark: BookmarkDomainModel = {
         id: `temp-${Date.now()}`,
         userId: user.id,
-        wp_post_id: post.wp_post_id,
-        postId: post.wp_post_id,
-        edition_code: editionCode || undefined,
-        collection_id: post.collection_id || undefined,
-        collectionId: post.collection_id || undefined,
+        postId: draft.postId,
+        editionCode: editionCode || undefined,
+        collectionId: draft.collectionId || undefined,
         title: payload.title || "Untitled Post",
         slug: payload.slug || undefined,
         excerpt: payload.excerpt || undefined,
         createdAt: new Date().toISOString(),
         featuredImage: payload.featuredImage || null,
-        category: post.category || undefined,
-        tags: post.tags || undefined,
+        category: draft.category || undefined,
+        tags: draft.tags || undefined,
         readState: "unread",
-        note: post.note || undefined,
+        note: draft.note || undefined,
       }
 
       return executeMutation(() => addBookmarkAction(payload), {
@@ -451,7 +452,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         const previousBookmarks = bookmarksRef.current
         const previousStats = statsRef.current
 
-        const nextBookmarks = previousBookmarks.filter((b) => (b.postId || b.wp_post_id) !== postId)
+        const nextBookmarks = previousBookmarks.filter((b) => b.postId !== postId)
         setBookmarks(nextBookmarks)
         setStats(deriveStatsFromBookmarks(nextBookmarks))
 
@@ -477,7 +478,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const sanitized: UpdateBookmarkInput["updates"] = {}
 
-      if (Object.prototype.hasOwnProperty.call(updates, "edition_code")) sanitized.editionCode = updates.edition_code ?? null
+      if (Object.prototype.hasOwnProperty.call(updates, "editionCode")) sanitized.editionCode = updates.editionCode ?? null
       if (Object.prototype.hasOwnProperty.call(updates, "title")) sanitized.title = updates.title ?? null
       if (Object.prototype.hasOwnProperty.call(updates, "slug")) sanitized.slug = updates.slug ?? null
       if (Object.prototype.hasOwnProperty.call(updates, "excerpt")) sanitized.excerpt = updates.excerpt ?? null
@@ -500,7 +501,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            (bookmark.postId || bookmark.wp_post_id) === postId ? { ...bookmark, ...updates } : bookmark,
+            bookmark.postId === postId ? { ...bookmark, ...updates } : bookmark,
           )
 
           setBookmarks(nextBookmarks)
@@ -532,7 +533,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.filter(
-            (bookmark) => !postIds.includes(bookmark.postId || bookmark.wp_post_id),
+            (bookmark) => !postIds.includes(bookmark.postId),
           )
           setBookmarks(nextBookmarks)
           setStats(deriveStatsFromBookmarks(nextBookmarks))
@@ -593,7 +594,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            (bookmark.postId || bookmark.wp_post_id) === postId
+            (bookmark.postId) === postId
               ? { ...bookmark, readState: "read" as const }
               : bookmark,
           )
@@ -624,7 +625,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            (bookmark.postId || bookmark.wp_post_id) === postId
+            (bookmark.postId) === postId
               ? { ...bookmark, readState: "unread" as const }
               : bookmark,
           )
@@ -646,9 +647,12 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
     await updateBookmark(postId, { note })
   }, [updateBookmark])
 
-  const toggleBookmark = useCallback(async (post: Omit<Bookmark, "id" | "userId" | "createdAt">) => {
-    if (isBookmarked(post.postId || post.wp_post_id)) {
-      await removeBookmark(post.postId || post.wp_post_id)
+  const toggleBookmark = useCallback(async (post: BookmarkApiPayload) => {
+    const draft = apiPayloadToDomainBookmarkDraft(post)
+    if (!draft.postId) return
+
+    if (isBookmarked(draft.postId)) {
+      await removeBookmark(draft.postId)
     } else {
       await addBookmark(post)
     }

@@ -1,3 +1,4 @@
+import type { BookmarkListRow } from "@/types/bookmarks"
 import { describe, expect, it } from "vitest"
 import { buildHydrationPayload, extractFeaturedImage, extractText, formatBookmarkRow } from "./bookmarks-mappers"
 
@@ -18,7 +19,7 @@ describe("bookmarks-mappers", () => {
   })
 
   it("formatBookmarkRow falls back to hydration metadata", () => {
-    const row = {
+    const row: BookmarkListRow = {
       id: "b1",
       userId: "u1",
       postId: "p1",
@@ -46,16 +47,16 @@ describe("bookmarks-mappers", () => {
 
     expect(bookmark.title).toBe("Meta title")
     expect(bookmark.slug).toBe("from-meta")
-    expect(bookmark.edition_code).toBe("zw")
+    expect(bookmark.editionCode).toBe("zw")
     expect(bookmark.postId).toBe("p1")
   })
 
   it("buildHydrationPayload groups unique ids by country", () => {
     const payload = buildHydrationPayload([
-      { postId: "1", editionCode: "SZ" } as any,
-      { postId: "2", editionCode: "sz" } as any,
-      { postId: "3", editionCode: "ZW" } as any,
-      { postId: "2", editionCode: "sz" } as any,
+      { ...rowFixture, postId: "1", editionCode: "SZ" },
+      { ...rowFixture, postId: "2", editionCode: "sz" },
+      { ...rowFixture, postId: "3", editionCode: "ZW" },
+      { ...rowFixture, postId: "2", editionCode: "sz" },
     ])
 
     expect(payload).toEqual([
@@ -64,3 +65,20 @@ describe("bookmarks-mappers", () => {
     ])
   })
 })
+
+const rowFixture: BookmarkListRow = {
+  id: "fixture",
+  userId: "user",
+  postId: "fixture-post",
+  slug: null,
+  editionCode: null,
+  collectionId: null,
+  title: "",
+  excerpt: "",
+  featuredImage: null,
+  category: null,
+  tags: null,
+  readState: null,
+  note: null,
+  createdAt: "2024-01-01T00:00:00.000Z",
+}

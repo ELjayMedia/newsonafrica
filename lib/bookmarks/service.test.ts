@@ -61,6 +61,7 @@ describe("bookmark service contracts", () => {
       }
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
     const payload = await listBookmarksForUser({} as any, "user-1", {
       limit: 10,
       search: "hello",
@@ -93,6 +94,7 @@ describe("bookmark service contracts", () => {
       from: vi.fn().mockImplementationOnce(() => existingChain).mockImplementationOnce(() => insertChain),
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
     const payload = await addBookmarkForUser(supabase as any, "user-1", { postId: "post-1" }, { revalidate, editionHints: ["ke"] })
 
     expect(payload.added).toHaveLength(1)
@@ -117,6 +119,7 @@ describe("bookmark service contracts", () => {
       from: vi.fn().mockImplementationOnce(() => loadChain).mockImplementationOnce(() => updateChain),
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
     const payload = await updateBookmarkForUser(supabase as any, "user-1", "post-1", { readState: "read" })
     expect(payload.updated).toHaveLength(1)
     expect(payload.statsDelta.total).toBe(0)
@@ -132,6 +135,7 @@ describe("bookmark service contracts", () => {
     }
     const supabase = { from: vi.fn().mockReturnValue(deleteChain) }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
     const payload = await bulkRemoveBookmarksForUser(supabase as any, "user-1", ["post-1", "post-2"])
     expect(payload.removed).toHaveLength(1)
     expect(deleteChain.in).toHaveBeenCalledWith("wp_post_id", ["post-1", "post-2"])

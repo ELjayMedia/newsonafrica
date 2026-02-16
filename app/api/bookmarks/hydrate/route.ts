@@ -41,7 +41,11 @@ const extractText = (value: unknown): string | undefined => {
   return undefined
 }
 
-const extractFeaturedImage = (value: any): BookmarkHydrationPost["featuredImage"] => {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null
+}
+
+const extractFeaturedImage = (value: unknown): BookmarkHydrationPost["featuredImage"] => {
   if (!value) return null
   if (typeof value === "string") {
     try {
@@ -51,14 +55,30 @@ const extractFeaturedImage = (value: any): BookmarkHydrationPost["featuredImage"
       return null
     }
   }
-  if (value?.node) {
-    return extractFeaturedImage(value.node)
+
+  const obj = asRecord(value)
+  if (!obj) return null
+
+  const node = asRecord(obj.node)
+  if (node) {
+    return extractFeaturedImage(node)
   }
 
+  const mediaDetails = asRecord(obj.mediaDetails)
+  const mediaDetailsLegacy = asRecord(obj.media_details)
+  const guid = asRecord(obj.guid)
+
   const url =
-    value?.url || value?.sourceUrl || value?.source_url || value?.media_details?.source_url || value?.guid?.rendered
-  const width = value?.width || value?.mediaDetails?.width || value?.media_details?.width
-  const height = value?.height || value?.mediaDetails?.height || value?.media_details?.height
+    (typeof obj.url === "string" && obj.url) ||
+    (typeof obj.sourceUrl === "string" && obj.sourceUrl) ||
+    (typeof obj.source_url === "string" && obj.source_url) ||
+    (typeof mediaDetailsLegacy?.source_url === "string" && mediaDetailsLegacy.source_url) ||
+    (typeof guid?.rendered === "string" && guid.rendered) ||
+    undefined
+  const widthValue = obj.width ?? mediaDetails?.width ?? mediaDetailsLegacy?.width
+  const heightValue = obj.height ?? mediaDetails?.height ?? mediaDetailsLegacy?.height
+  const width = typeof widthValue === "number" ? widthValue : undefined
+  const height = typeof heightValue === "number" ? heightValue : undefined
 
   if (!url && !width && !height) {
     return null
@@ -176,17 +196,22 @@ export async function hydrateBookmarkRequests(
           })
           const postsArray = Array.isArray(result) ? result : result?.data || []
 
-          postsArray.forEach((post: any) => {
-            if (!post?.id) return
-            const id = String(post.id)
+          postsArray.forEach((post: unknown) => {
+            const postRecord = asRecord(post)
+            if (!postRecord?.id) return
+            const id = String(postRecord.id)
+            const embedded = asRecord(postRecord._embedded)
+            const featuredMedia = Array.isArray(embedded?.["wp:featuredmedia"])
+              ? embedded?.["wp:featuredmedia"]
+              : []
             postsById[id] = {
               id,
               country,
-              slug: typeof post.slug === "string" ? post.slug : undefined,
-              title: extractText(post.title),
-              excerpt: extractText(post.excerpt),
+              slug: typeof postRecord.slug === "string" ? postRecord.slug : undefined,
+              title: extractText(postRecord.title),
+              excerpt: extractText(postRecord.excerpt),
               featuredImage:
-                extractFeaturedImage(post.featuredImage || post._embedded?.["wp:featuredmedia"]?.[0]) || null,
+                extractFeaturedImage(postRecord.featuredImage ?? featuredMedia[0]) || null,
             }
           })
         } catch (error) {

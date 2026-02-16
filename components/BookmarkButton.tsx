@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import type { BookmarkFeaturedImageValue } from "@/types/bookmarks"
 
 interface BookmarkButtonProps {
   editionCode?: string
@@ -16,7 +17,7 @@ interface BookmarkButtonProps {
   title?: string
   slug?: string
   excerpt?: string
-  featuredImage?: any
+  featuredImage?: BookmarkFeaturedImageValue | Record<string, unknown> | string
   variant?: "default" | "outline" | "ghost" | "secondary"
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
@@ -77,9 +78,9 @@ export const BookmarkButton = ({
           })
         } else {
           await addBookmark({
-            wp_post_id: postId,
-            edition_code: editionCode,
-            collection_id: collectionId || undefined,
+            postId,
+            editionCode,
+            collectionId: collectionId || undefined,
             title,
             slug,
             excerpt,

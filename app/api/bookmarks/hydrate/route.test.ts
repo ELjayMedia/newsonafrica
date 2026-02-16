@@ -8,7 +8,10 @@ vi.mock("@/lib/wordpress-api", () => ({
 import { hydrateBookmarkRequests, HYDRATE_CONCURRENCY } from "./route"
 import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
 
-const mockedFetchPosts = fetchPosts as Mock<[any], Promise<any>>
+type FetchPostsInput = { ids: string[]; perPage?: number; countryCode?: string }
+type FetchPostsOutput = Array<{ id: string; slug?: string; title?: string; excerpt?: { rendered?: string } | string }>
+
+const mockedFetchPosts = fetchPosts as Mock<[FetchPostsInput], Promise<FetchPostsOutput>>
 const mockedResolveCountryCode = resolveCountryCode as Mock<[string], string | undefined>
 
 beforeEach(() => {
