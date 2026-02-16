@@ -9,6 +9,53 @@ export interface FetchWordPressGraphQLOptions {
   timeout?: number
   signal?: AbortSignal
   authHeaders?: Record<string, string>
+  transport?: "post" | "get"
+  persistedQueryId?: string
+}
+
+const MAX_GET_URL_LENGTH = 2000
+
+const isEligibleReadQuery = (query: string): boolean => {
+  const normalizedQuery = query.trim()
+
+  if (!normalizedQuery) {
+    return false
+  }
+
+  return normalizedQuery.startsWith("{") || /^query\b/i.test(normalizedQuery)
+}
+
+const encodeVariablesForUrl = (
+  variables?: Record<string, string | number | string[] | boolean>,
+): string | undefined => {
+  if (!variables || Object.keys(variables).length === 0) {
+    return undefined
+  }
+
+  return JSON.stringify(variables)
+}
+
+const buildGraphQLGetUrl = (
+  base: string,
+  query: string,
+  variables?: Record<string, string | number | string[] | boolean>,
+  persistedQueryId?: string,
+): string => {
+  const params = new URLSearchParams()
+  const encodedVariables = encodeVariablesForUrl(variables)
+
+  if (persistedQueryId) {
+    params.set("persistedQueryId", persistedQueryId)
+  } else {
+    params.set("query", query)
+  }
+
+  if (encodedVariables) {
+    params.set("variables", encodedVariables)
+  }
+
+  const separator = base.includes("?") ? "&" : "?"
+  return `${base}${separator}${params.toString()}`
 }
 
 const dedupe = (values?: readonly string[]): string[] | undefined => {
@@ -221,7 +268,19 @@ export function fetchWordPressGraphQL<T>(
     })
   }
 
-  const body = JSON.stringify({ query, variables })
+  const requestPayload = options.persistedQueryId
+    ? { persistedQueryId: options.persistedQueryId, variables }
+    : { query, variables }
+  const body = JSON.stringify(requestPayload)
+  const requestedTransport = options.transport ?? "post"
+  const canUseGetTransport =
+    requestedTransport === "get" &&
+    (options.persistedQueryId ? true : isEligibleReadQuery(query))
+  const getUrl = canUseGetTransport
+    ? buildGraphQLGetUrl(base, query, variables, options.persistedQueryId)
+    : undefined
+  const usesGetTransport = Boolean(getUrl) && getUrl.length <= MAX_GET_URL_LENGTH
+  const requestUrl = usesGetTransport ? getUrl : base
   const dedupedTags = dedupe(options.tags)
   const hasTags = (dedupedTags?.length ?? 0) > 0
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
@@ -233,7 +292,7 @@ export function fetchWordPressGraphQL<T>(
         : CACHE_DURATIONS.NONE
   const shouldMemoize = memoizationTtlSeconds > CACHE_DURATIONS.NONE
   const tagsKey = dedupedTags?.join(",") ?? ""
-  const cacheKey = `${base}::${body}::${tagsKey}`
+  const cacheKey = `${requestedTransport}:${requestUrl}::${body}::${tagsKey}`
   const metadataKey = shouldMemoize ? `ttl:${memoizationTtlSeconds}` : "ttl:0"
   const memoizedRequests = shouldMemoize ? getMemoizedRequests() : undefined
   let memoizedEntry: MemoizedRequestEntry | undefined
@@ -277,11 +336,14 @@ export function fetchWordPressGraphQL<T>(
   }
 
   const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {
-    method: "POST",
+    method: usesGetTransport ? "GET" : "POST",
     headers,
-    body,
     timeout: options.timeout,
     signal: options.signal,
+  }
+
+  if (!usesGetTransport) {
+    fetchOptions.body = body
   }
 
   const nextCacheConfig =
@@ -298,7 +360,7 @@ export function fetchWordPressGraphQL<T>(
     fetchOptions.cache = "no-store"
   }
 
-  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(base, fetchOptions)
+  const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(requestUrl, fetchOptions)
     .then(async (res) => {
       if (!res.ok) {
         console.error("[v0] GraphQL request failed:", {
