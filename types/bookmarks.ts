@@ -7,6 +7,66 @@ type BookmarkPostId = BookmarkTableRow["wp_post_id"]
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 export type BookmarkReadStateKey = BookmarkReadState | "unknown"
 
+export interface BookmarkFeaturedImage {
+  url?: string
+  width?: number
+  height?: number
+}
+
+export type BookmarkFeaturedImageValue = BookmarkFeaturedImage | null
+
+export type BookmarkTextValue = string | { rendered?: unknown } | null | undefined
+
+export interface BookmarkHydrationMetadata {
+  id: string
+  country?: string
+  slug?: string
+  title?: BookmarkTextValue
+  excerpt?: BookmarkTextValue
+  featuredImage?: BookmarkFeaturedImageValue | Record<string, unknown> | string
+}
+
+export type BookmarkHydrationMap = Record<string, BookmarkHydrationMetadata>
+
+export interface BookmarkDomainModel {
+  id: BookmarkTableRow["id"]
+  userId: BookmarkTableRow["user_id"]
+  postId: BookmarkPostId
+  editionCode?: BookmarkTableRow["edition_code"]
+  collectionId?: BookmarkTableRow["collection_id"]
+  title: string
+  slug?: BookmarkTableRow["slug"]
+  excerpt?: BookmarkTableRow["excerpt"]
+  createdAt: BookmarkTableRow["created_at"]
+  featuredImage: BookmarkFeaturedImageValue
+  category?: BookmarkTableRow["category"]
+  tags?: BookmarkTableRow["tags"]
+  readState?: BookmarkReadState
+  note?: BookmarkTableRow["note"]
+}
+
+export interface BookmarkApiPayload {
+  postId?: string
+  wpPostId?: string
+  wp_post_id?: string
+  editionCode?: string | null
+  edition_code?: string | null
+  country?: string | null
+  collectionId?: string | null
+  collection_id?: string | null
+  title?: BookmarkTextValue
+  slug?: string | null
+  excerpt?: BookmarkTextValue
+  featuredImage?: Record<string, unknown> | BookmarkFeaturedImageValue | string
+  featured_image?: Record<string, unknown> | BookmarkFeaturedImageValue | string
+  category?: string | null
+  tags?: string[] | null
+  readState?: BookmarkReadState | null
+  status?: BookmarkReadState | null
+  note?: string | null
+  notes?: string | null
+}
+
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
@@ -16,7 +76,7 @@ export interface BookmarkRow {
   title: BookmarkTableRow["title"]
   slug: BookmarkTableRow["slug"]
   excerpt: BookmarkTableRow["excerpt"]
-  featuredImage: BookmarkTableRow["featured_image"]
+  featuredImage: Record<string, unknown> | null
   category: BookmarkTableRow["category"]
   tags: BookmarkTableRow["tags"]
   readState: BookmarkTableRow["read_state"]

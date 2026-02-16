@@ -8,6 +8,7 @@
     "react/no-children-prop": "off",
     "no-unused-vars": "off",
     "unused-imports/no-unused-imports": "error",
+    "@typescript-eslint/no-explicit-any": "off",
     "unused-imports/no-unused-vars": [
       "warn",
       {
@@ -39,6 +40,24 @@
     ]
   },
   "overrides": [
+    {
+      "files": [
+        "contexts/bookmarks/**/*.{ts,tsx}",
+        "lib/bookmarks/**/*.{ts,tsx}",
+        "types/bookmarks.ts",
+        "app/api/bookmarks/**/*.{ts,tsx}",
+        "components/BookmarkButton.tsx",
+        "components/BookmarksContent.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": [
+          "error",
+          {
+            "ignoreRestArgs": false
+          }
+        ]
+      }
+    },
     {
       "files": [
         "app/**/*",

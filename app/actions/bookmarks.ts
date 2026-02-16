@@ -6,7 +6,6 @@ import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import { withSupabaseSession } from "@/app/actions/supabase"
 import {
   type BookmarkListPayload,
-  type BookmarkListRow,
   type BookmarkMutationPayload,
   type BookmarkRow,
   type BookmarkTableRow,

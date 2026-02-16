@@ -9,4 +9,4 @@ export {
   type BookmarksProviderProps,
   useBookmarks,
 } from "./bookmarks/bookmarks-provider"
-export type { Bookmark } from "./bookmarks/bookmarks-mappers"
+export type { BookmarkDomainModel as Bookmark } from "@/types/bookmarks"

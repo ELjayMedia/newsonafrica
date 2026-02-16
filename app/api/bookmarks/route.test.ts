@@ -25,6 +25,7 @@ describe("/api/bookmarks route transport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(createSupabaseRouteClient).mockReturnValue({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test double for a minimal Supabase client surface.
       supabase: { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } }, error: null }) } } as any,
       applyCookies: applyCookiesMock,
     })

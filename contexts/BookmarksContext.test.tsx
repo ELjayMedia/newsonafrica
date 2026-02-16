@@ -146,7 +146,7 @@ describe("BookmarksProvider optimistic updates", () => {
         tags: ["tag"],
         readState: "unread",
         note: null,
-        edition_code: "sz",
+        editionCode: "sz",
       })
     })
 
