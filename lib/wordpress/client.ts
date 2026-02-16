@@ -473,5 +473,6 @@ export function fetchWordPressGraphQL<T>(
 
       return requestPromise
     }
+  }
 
 export const __getMemoizedRequestsForTests = () => getMemoizedRequests()
