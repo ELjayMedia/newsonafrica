@@ -437,7 +437,7 @@ export function fetchWordPressGraphQL<T>(
           persistedQueryId: options.persistedQueryId ?? null,
           // helpful without dumping the whole query
           queryPreview: options.persistedQueryId ? null : query.trim().slice(0, 180),
-          variables,
+          variables: variables ?? null,
           errors: pretty,
         })
 
