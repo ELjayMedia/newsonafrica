@@ -38,7 +38,8 @@ const graphQlEndpointOverride = (countryCode: string) =>
           })
         }
       })
-      .optional(),
+      .nullish()
+      .transform((val) => val || undefined),
   )
 
 const CLIENT_ENV_SCHEMA = z.object({
