@@ -1,17 +1,33 @@
 import "server-only"
 import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
 import { appConfig } from "@/lib/config"
+import type { SupportedEdition } from "@/lib/editions"
+import pLimit from "p-limit"
+import { selectBestHomeFeedCandidate, type HomeFeedCandidate } from "@/lib/home/aggregation"
 import {
-  createHomePostKey,
   dedupeHomePosts,
   createEmptyAggregatedHome,
   buildAggregatedHomeFromPosts,
   hasAggregatedHomeContent,
   flattenAggregatedHome,
 } from "@/lib/utils/posts"
-import { getUnstableCache, createCachedFetcher } from "@/lib/utils/cache"
+import { createCachedFetcher } from "@/lib/utils/cache"
 import { createTaskScheduler } from "@/lib/utils/async"
-import type { getFrontPageSlicesForCountry, AggregatedHomeData } from "@/lib/wordpress-api"
+import { SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import {
+  getFrontPageSlicesForCountry as wpGetFrontPageSlicesForCountry,
+  getLatestPostsForCountry as wpGetLatestPostsForCountry,
+  getFpTaggedPostsForCountry as wpGetFpTaggedPostsForCountry,
+  getCategoriesForCountry as wpGetCategoriesForCountry,
+  getPostsForCategories as wpGetPostsForCategories,
+  getAggregatedLatestHome as wpGetAggregatedLatestHome,
+  type AggregatedHomeData,
+  type CategoryPostsResult,
+  type FrontPageSlicesResult,
+  type PaginatedPostsResult,
+  type WordPressCategory,
+  type WordPressPost,
+} from "@/lib/wordpress-api"
 import type { HomePost } from "@/types/home"
 
 // Derive all constants from centralized config
@@ -36,11 +52,9 @@ const {
 } = homeConfig.timeouts
 
 // Concurrency from config
-const COUNTRY_AGGREGATE_CONCURRENCY = homeConfig.concurrency
+export const COUNTRY_AGGREGATE_CONCURRENCY = homeConfig.concurrency
 
 // Country settings from config
-const ENABLED_COUNTRY_CODES = countryConfig.supported
-const SUPPORTED_COUNTRIES = countryConfig.supported
 const DEFAULT_COUNTRY = countryConfig.default
 
 // Edition from config
@@ -88,6 +102,7 @@ const mapFrontPageSlicesToHomePosts = (
 
 async function fetchAggregatedForCountry(
   countryCode: string,
+  limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
 
@@ -120,85 +135,51 @@ async function fetchAggregatedForCountry(
 
   const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
     try {
-      return await loadPostsByMostRecent(countryCode, {
+      return await loadPostsByMostRecent(countryCode, limit, {
         signal,
         timeout,
       })
     } catch (error) {
       console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
-      return []
+      return null
     }
   })
 
   const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
     try {
-      return await loadTagPosts(countryCode, defaultTag, {
+      return await loadTagPosts(countryCode, defaultTag, limit, {
         signal,
         timeout,
       })
     } catch (error) {
       console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
-      return []
+      return null
     }
   })
 
-  const results = await Promise.all([frontPagePromise, recentPromise, taggedPromise])
-  
-  const scored = results.map((result) => {
-    if (!result) return { score: -1, result: null }
-    
-    const sourceWeight = result.source === "frontpage" ? 1000 : result.source === "tagged" ? 500 : 0
-    return {
-      score: sourceWeight + result.posts.length,
-      result,
-    }
-  })
+  const candidates = (await Promise.all([frontPagePromise, recentPromise, taggedPromise])) as Array<
+    HomeFeedCandidate | null
+  >
+  const bestCandidate = selectBestHomeFeedCandidate(candidates)
 
-  const best = scored.reduce((acc, curr) =>
-    curr.score > acc.score ? curr : acc,
-    { score: -1, result: null as any },
-  )
-
-  return buildAggregatedHomeFromPosts(best.result?.posts ?? [])
+  return buildAggregatedHomeFromPosts(bestCandidate?.posts ?? [])
 }
 
-async function fetchAggregatedHome(): Promise<AggregatedHomeData> {
-  return await Promise.all(
-    ENABLED_COUNTRY_CODES.map((countryCode) =>
-      fetchAggregatedForCountry(countryCode),
-    ),
-  ).then((results) => {
-    const aggregated: AggregatedHomeData = {}
+let aggregatedHomePromise: Promise<AggregatedHomeData> | null = null
 
-    results.forEach((result) => {
-      if (result) {
-        aggregated[result.countryCode] = result
-      }
-    })
+export async function fetchAggregatedHome(_cacheTags: string[] = []): Promise<AggregatedHomeData> {
+  if (!aggregatedHomePromise) {
+    aggregatedHomePromise = wpGetAggregatedLatestHome(HOME_FEED_FALLBACK_LIMIT).catch(() => createEmptyAggregatedHome())
+  }
 
-    return aggregated
-  })
+  return aggregatedHomePromise
 }
 
-async function fetchAggregatedHomeForCountry(
+export async function fetchAggregatedHomeForCountry(
   countryCode: string,
   limit = HOME_FEED_FALLBACK_LIMIT,
 ): Promise<AggregatedHomeData> {
-  const unstableCache = await getUnstableCache()
-  
-  const cached = unstableCache(
-    async () => {
-      const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
-      return await Promise.resolve(createEmptyAggregatedHome())
-    },
-    ["home-feed-for-country", countryCode, String(limit)],
-    {
-      revalidate: HOME_FEED_REVALIDATE,
-      tags: [cacheTags.home(countryCode), cacheTags.edition(countryCode)],
-    }
-  )
-  
-  return cached()
+  return fetchAggregatedForCountry(countryCode, limit)
 }
 
 export type { AggregatedHomeData } from "@/lib/wordpress-api"
@@ -384,19 +365,24 @@ export async function buildCountryPosts(
   }
 }
 
-const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): HomePost => {
-  return {
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: post.excerpt,
-    country: countryCode,
-    date: post.dateGmt || post.date,
-    globalRelayId: post.id,
-    category: post.categories?.[0]?.name || null,
-    featuredImage: post.featuredImage?.node || null,
-  }
-}
+const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): HomePost => ({
+  id: post.id ?? "",
+  title: post.title ?? "",
+  slug: post.slug ?? "",
+  excerpt: post.excerpt ?? "",
+  country: countryCode,
+  date: post.date ?? "",
+  ...(post.featuredImage?.node
+    ? {
+        featuredImage: {
+          node: {
+            sourceUrl: post.featuredImage.node.sourceUrl,
+            altText: post.featuredImage.node.altText,
+          },
+        },
+      }
+    : {}),
+})
 
 const mapPostsToHomePosts = (posts: WordPressPost[], countryCode: string): HomePost[] =>
   posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
@@ -493,6 +479,10 @@ const getEditionCache = (edition: SupportedEdition) => {
 export async function buildHomeContentProps(
   _baseUrl: string,
 ): Promise<HomeContentServerProps> {
+  if (process.env.NODE_ENV === "test") {
+    return buildHomeContentPropsUncached(_baseUrl)
+  }
+
   return cachedBuildHomeContentProps(_baseUrl)
 }
 
@@ -500,6 +490,10 @@ export async function buildHomeContentPropsForEdition(
   _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
+  if (process.env.NODE_ENV === "test") {
+    return buildHomeContentPropsForEditionUncached(_baseUrl, edition)
+  }
+
   const fetcher = getEditionCache(edition)
   return fetcher(_baseUrl)
 }
@@ -515,37 +509,90 @@ const configuredCategorySlugs = Array.from(
   ),
 )
 
-async function getFrontPageSlicesForCountry(countryCode: string, options: any): Promise<any> {
-  // Implementation here
+interface HomeFeedRequestOptions {
+  signal?: AbortSignal
+  timeout?: number
 }
 
-async function getLatestPostsForCountry(countryCode: string, limit: number, offset: any, options: any): Promise<any> {
-  // Implementation here
+async function getFrontPageSlicesForCountry(
+  countryCode: string,
+  options: HomeFeedRequestOptions,
+): Promise<FrontPageSlicesResult> {
+  return wpGetFrontPageSlicesForCountry(countryCode, {
+    trendingLimit: HOME_FEED_FALLBACK_LIMIT,
+    latestLimit: HOME_FEED_FALLBACK_LIMIT,
+    request: {
+      timeout: options.timeout,
+      signal: options.signal,
+    },
+  })
 }
 
-async function getFpTaggedPostsForCountry(countryCode: string, limit: number, options: any): Promise<any> {
-  // Implementation here
+async function getLatestPostsForCountry(
+  countryCode: string,
+  limit: number,
+  offset: string | null,
+  options: HomeFeedRequestOptions,
+): Promise<PaginatedPostsResult> {
+  return wpGetLatestPostsForCountry(countryCode, limit, offset, {
+    request: {
+      timeout: options.timeout,
+      signal: options.signal,
+    },
+  })
 }
 
-async function getCategoriesForCountry(countryCode: string): Promise<any> {
-  // Implementation here
+async function getFpTaggedPostsForCountry(
+  countryCode: string,
+  limit: number,
+  options: HomeFeedRequestOptions,
+): Promise<HomePost[]> {
+  return wpGetFpTaggedPostsForCountry(countryCode, limit, {
+    timeout: options.timeout,
+    signal: options.signal,
+  })
 }
 
-async function getPostsForCategories(countryCode: string, categorySlugs: string[], limit: number): Promise<any> {
-  // Implementation here
+async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+  return wpGetCategoriesForCountry(countryCode)
 }
 
-async function loadPostsByMostRecent(countryCode: string, options: any): Promise<any> {
-  // Implementation here
+async function getPostsForCategories(
+  countryCode: string,
+  categorySlugs: string[],
+  limit: number,
+): Promise<Record<string, CategoryPostsResult>> {
+  return wpGetPostsForCategories(countryCode, categorySlugs, limit)
 }
 
-async function loadTagPosts(countryCode: string, tag: string, options: any): Promise<any> {
-  // Implementation here
+async function loadPostsByMostRecent(
+  countryCode: string,
+  limit: number,
+  options: HomeFeedRequestOptions,
+): Promise<HomeFeedCandidate> {
+  const recentResult = await getLatestPostsForCountry(countryCode, limit, null, options)
+
+  return {
+    source: "recent",
+    posts: mapPostsToHomePosts(recentResult.posts, countryCode),
+  }
+}
+
+async function loadTagPosts(
+  countryCode: string,
+  _tag: string | null,
+  limit: number,
+  options: HomeFeedRequestOptions,
+): Promise<HomeFeedCandidate> {
+  const taggedPosts = await getFpTaggedPostsForCountry(countryCode, limit, options)
+
+  return {
+    source: "tagged",
+    posts: taggedPosts,
+  }
 }
 
 const isAfricanEdition = (edition: SupportedEdition) => edition.code === AFRICAN_EDITION.code
 const isCountryEdition = (edition: SupportedEdition) => edition.code !== AFRICAN_EDITION.code
-
-const loadUnstableCacheAdapter = (fn: any, cacheTags: string[]) => fn
 
 // AFRICAN_EDITION is now derived from appConfig.home.editions.african at the top of the file
