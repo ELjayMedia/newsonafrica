@@ -351,3 +351,132 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect((entry?.expiresAt ?? 0) - Date.now()).toBeGreaterThan(0)
   })
 })
+
+
+describe("fetchWordPressGraphQL transport modes", () => {
+  afterEach(() => {
+    vi.resetModules()
+    vi.doUnmock("../utils/fetchWithRetry")
+    vi.restoreAllMocks()
+  })
+
+  const setup = async () => {
+    const fetchWithRetryMock = vi.fn()
+
+    vi.doMock("../utils/fetchWithRetry", () => ({
+      fetchWithRetry: fetchWithRetryMock,
+    }))
+
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: vi.fn().mockResolvedValue(JSON.stringify({ data: { posts: [] } })),
+    }
+
+    fetchWithRetryMock.mockResolvedValue(mockResponse as unknown as Response)
+
+    const { fetchWordPressGraphQL } = await import("./client")
+
+    return {
+      fetchWordPressGraphQL,
+      fetchWithRetryMock,
+    }
+  }
+
+  it("uses POST transport by default", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL("sz", "query Posts { posts { id } }", { limit: 3 })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          query: "query Posts { posts { id } }",
+          variables: { limit: 3 },
+        }),
+      }),
+    )
+  })
+
+  it("uses GET transport for eligible read queries", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL("sz", "query Posts($slug: String!) { post(id: $slug) { id } }", { slug: "hello world" }, { transport: "get" })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.stringContaining("query=query+Posts%28%24slug%3A+String%21%29+%7B+post%28id%3A+%24slug%29+%7B+id+%7D+%7D"),
+      expect.objectContaining({
+        method: "GET",
+      }),
+    )
+
+    const [, fetchOptions] = fetchWithRetryMock.mock.calls[0]
+    expect(fetchOptions.body).toBeUndefined()
+  })
+
+  it("uses persisted query identifier when configured", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL(
+      "sz",
+      "query Posts { posts { id } }",
+      { locale: "en" },
+      { transport: "get", persistedQueryId: "abc123" },
+    )
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.stringContaining("persistedQueryId=abc123"),
+      expect.objectContaining({
+        method: "GET",
+      }),
+    )
+
+    const [requestUrl] = fetchWithRetryMock.mock.calls[0]
+    expect(String(requestUrl)).not.toContain("query=")
+    expect(String(requestUrl)).toContain("variables=%7B%22locale%22%3A%22en%22%7D")
+  })
+
+  it("falls back to POST when GET is requested for unsupported query forms", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL("sz", "mutation UpdatePost { updatePost(id: 1) { id } }", undefined, {
+      transport: "get",
+    })
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          query: "mutation UpdatePost { updatePost(id: 1) { id } }",
+          variables: undefined,
+        }),
+      }),
+    )
+  })
+
+  it("falls back to POST when GET URL would be too long", async () => {
+    const { fetchWordPressGraphQL, fetchWithRetryMock } = await setup()
+
+    await fetchWordPressGraphQL(
+      "sz",
+      "query Posts($slug: String!) { post(id: $slug) { id } }",
+      { slug: "x".repeat(5000) },
+      { transport: "get" },
+    )
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+      }),
+    )
+
+    const [requestUrl, fetchOptions] = fetchWithRetryMock.mock.calls[0]
+    expect(String(requestUrl)).not.toContain("query=")
+    expect(fetchOptions.body).toContain('"slug":"')
+  })
+})
