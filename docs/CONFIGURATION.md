@@ -36,6 +36,7 @@ NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_...
 # WordPress
 WORDPRESS_REQUEST_TIMEOUT_MS=30000
 WORDPRESS_GRAPHQL_AUTH_HEADER={"Authorization": "Bearer token"}
+WP_REST_FALLBACK=0 # server-only flag, do not prefix with NEXT_PUBLIC_
 
 # Supabase
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
@@ -68,6 +69,8 @@ NEXT_PUBLIC_FACEBOOK_APP_ID=123456789
 - `retryAttempts`: Number of retry attempts
 - `retryDelay`: Delay between retries in ms
 - `authHeaders`: Optional auth headers for GraphQL
+
+> `WP_REST_FALLBACK` is read on the server runtime only (Node/SSR). Do not expose it as `NEXT_PUBLIC_*`.
 
 ### Editions
 - `supported`: Array of supported country codes

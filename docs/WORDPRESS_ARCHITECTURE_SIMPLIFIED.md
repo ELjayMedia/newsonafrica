@@ -8,7 +8,7 @@ The News On Africa platform now uses **WPGraphQL as the single, authoritative co
 
 1. **One Source of Truth**: WPGraphQL is the primary and only production content source
 2. **Graceful Degradation**: When WPGraphQL fails, serve stale cached content with a "retry later" message
-3. **Dev-Only Fallback**: REST API fallback is feature-flagged (`WP_REST_FALLBACK=1`) for dev/emergency use only
+3. **Dev-Only Fallback**: REST API fallback is feature-flagged (`WP_REST_FALLBACK=1`) for server-side dev/emergency use only
 4. **No Mid-Flight Switching**: Never switch between GraphQL and REST during a request
 
 ## Architecture
@@ -33,17 +33,17 @@ GraphQL Query (via fetchWordPressGraphQL)
 - **`fetchWordPressGraphQL()`**: Primary GraphQL fetcher with error handling
 - **`fetchWordPressGraphQLWithFallback()`**: Adds stale-cache serving on 5xx errors
 - **`WordPressErrorBoundary`**: Client-side error boundary for graceful failures
-- **`WP_REST_FALLBACK`**: Feature flag (0 = disabled in prod, 1 = enabled for dev)
+- **`WP_REST_FALLBACK`**: Server-only feature flag (0 = disabled in prod, 1 = enabled for dev)
 
 ## Configuration
 
 ### Environment Variables
 
 \`\`\`bash
-# Production (default - REST fallback disabled)
+# Production/server runtime (default - REST fallback disabled)
 WP_REST_FALLBACK=0
 
-# Development (REST fallback enabled for emergency debugging)
+# Development/server runtime (REST fallback enabled for emergency debugging)
 WP_REST_FALLBACK=1
 \`\`\`
 
@@ -51,7 +51,7 @@ WP_REST_FALLBACK=1
 
 The REST fallback is currently feature-flagged but NOT implemented. If needed in production:
 
-1. Set `WP_REST_FALLBACK=1` in Vercel environment
+1. Set server env var `WP_REST_FALLBACK=1` in Vercel environment (not `NEXT_PUBLIC_*`)
 2. Uncomment REST fallback code in `lib/wordpress/client.ts`
 3. Restart deployment
 

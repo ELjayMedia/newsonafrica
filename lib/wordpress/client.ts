@@ -199,8 +199,7 @@ const buildInvalidPayloadFailureResult = (
   }
 }
 
-const WP_REST_FALLBACK_ENABLED =
-  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_WP_REST_FALLBACK === "1"
+const WP_REST_FALLBACK_ENABLED = process.env.NODE_ENV !== "production" && process.env.WP_REST_FALLBACK === "1"
 
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
