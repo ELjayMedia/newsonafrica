@@ -1,8 +1,12 @@
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { getRequiredEnvVar } from "@/lib/env"
+
+function getSupabaseAnonKey(): string {
+  return getRequiredEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+}
 
 export function publicHeaders(): HeadersInit {
   return {
-    apikey: ANON_KEY,
+    apikey: getSupabaseAnonKey(),
     Accept: "application/json",
   }
 }
