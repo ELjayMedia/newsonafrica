@@ -34,6 +34,8 @@ export const cacheTags = {
     `category:${normalizeEdition(edition)}:${normalizeSlug(slug)}`,
   post: (edition: EditionInput, postId: IdentifierInput) =>
     `post:${normalizeEdition(edition)}:${normalizeIdentifier(postId)}`,
+  postSlug: (edition: EditionInput, slug: IdentifierInput) =>
+    `post-slug:${normalizeEdition(edition)}:${normalizeSlug(slug)}`,
   author: (edition: EditionInput, slug: IdentifierInput) =>
     `author:${normalizeEdition(edition)}:${normalizeSlug(slug)}`,
   tag: (edition: EditionInput, slug: IdentifierInput) => `tag:${normalizeEdition(edition)}:${normalizeSlug(slug)}`,
