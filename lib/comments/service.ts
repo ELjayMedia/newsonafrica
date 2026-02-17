@@ -179,7 +179,7 @@ export async function listCommentsService(
 
 export async function createCommentService(
   supabase: SupabaseClient<Database>,
-  params: { wpPostId: string; editionCode: string | null; userId: string; body: string; parentId: string | null },
+  params: { wpPostId: string; editionCode: string | null; userId: string; body: string; parentId: string | null; isRichText: boolean },
 ) {
   const edition = normalizeEditionCode(params.editionCode) ?? AFRICAN_EDITION.code
   const { data, error } = await supabase
@@ -191,6 +191,7 @@ export async function createCommentService(
       body: params.body,
       parent_id: params.parentId,
       status: "active",
+      is_rich_text: params.isRichText,
     })
     .select(COMMENT_SELECT)
     .single()

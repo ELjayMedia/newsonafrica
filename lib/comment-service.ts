@@ -100,12 +100,12 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
   return payload
 }
 
-export async function updateComment(id: string, body: string, _isRichText?: boolean): Promise<Comment | undefined> {
+export async function updateComment(id: string, body: string, isRichText?: boolean): Promise<Comment | undefined> {
   return parseApi<Comment>(
     await fetch(`/api/comments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, is_rich_text: isRichText === true }),
       credentials: "include",
     }),
   )

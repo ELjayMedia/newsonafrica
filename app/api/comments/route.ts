@@ -62,7 +62,7 @@ export const POST = POST_(async ({ request, supabase, session }) => {
     throw new ValidationError("Invalid JSON payload", { body: ["Unable to parse request body"] })
   }
 
-  const { wpPostId, editionCode, body: commentBody, parentId } = validateCreateCommentPayload(body)
+  const { wpPostId, editionCode, body: commentBody, parentId, isRichText } = validateCreateCommentPayload(body)
 
   const lastCommentTime = await getLastUserCommentTime(supabase, session!.user.id)
   if (lastCommentTime) {
@@ -82,6 +82,7 @@ export const POST = POST_(async ({ request, supabase, session }) => {
     userId: session!.user.id,
     body: commentBody,
     parentId: parentId ?? null,
+    isRichText,
   })
 
   revalidateByTag(result.cacheTag)

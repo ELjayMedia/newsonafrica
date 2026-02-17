@@ -12,6 +12,7 @@ import { Loader2, AlertCircle, Bold, Italic, LinkIcon, Code } from "lucide-react
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Toggle } from "@/components/ui/toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { renderRichTextComment } from "@/lib/comments/rich-text-renderer"
 
 
 interface CommentFormProps {
@@ -201,20 +202,7 @@ export function CommentForm({
       return <div className="whitespace-pre-wrap">{content}</div>
     }
 
-    // Simple markdown rendering for preview
-    const html = content
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      // Italic
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      // Links
-      .replace(/\[([^\]]+)\]$$([^)]+)$$/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>')
-      // Code
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
-      // Line breaks
-      .replace(/\n/g, "<br />")
-
-    return <div dangerouslySetInnerHTML={{ __html: html }} />
+    return <div>{renderRichTextComment(content)}</div>
   }
 
   if (!user) {
