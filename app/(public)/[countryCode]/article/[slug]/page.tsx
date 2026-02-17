@@ -235,7 +235,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       <ArticleClientContent
         slug={normalizedSlug}
         countryCode={targetCountry}
-        sourceCountryCode={resolvedArticle.sourceCountry}
+        sourceCountryCode={resolvedSourceCountry}
         initialData={articleData}
         relatedPosts={relatedPosts}
       />
