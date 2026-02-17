@@ -121,13 +121,7 @@ export async function fetchArticleWithFallbackAction({
     throw new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
   }
 
-  const usingStaleContent = resolvedArticle.status === "temporary_error"
-  const articleData =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.article
-      : resolvedArticle.staleArticle ?? null
-
-  if (!articleData) {
+  if (resolvedArticle.status === "temporary_error") {
     return {
       article: null,
       sourceCountry: editionCountry,
@@ -142,9 +136,9 @@ export async function fetchArticleWithFallbackAction({
     }
   }
 
-  const sourceCountry = resolvedArticle.status === "found"
-    ? resolvedArticle.sourceCountry ?? editionCountry
-    : resolvedArticle.staleSourceCountry ?? editionCountry
+  const articleData = resolvedArticle.article
+
+  const sourceCountry = resolvedArticle.sourceCountry ?? editionCountry
 
   const relatedPostId = resolveRelatedPostId(articleData)
   let relatedPosts: WordPressPost[] = []
@@ -159,7 +153,6 @@ export async function fetchArticleWithFallbackAction({
           sourceCountry,
           relatedPostId,
           slug: normalizedSlug,
-          usingStaleContent,
         })
       }
       relatedPosts = []
