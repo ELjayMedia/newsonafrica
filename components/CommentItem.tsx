@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
-import { updateComment, deleteComment } from "@/lib/comment-service"
+import { updateComment, deleteComment, reportComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -150,13 +150,11 @@ export function CommentItem({
     setIsReporting(true)
 
     try {
-      // This would call the reportComment function, but we'll skip it for now
-      // since the schema might not be updated yet
-      // await reportComment({
-      //   commentId: comment.id,
-      //   reportedBy: user?.id || '',
-      //   reason: reportReason
-      // })
+      await reportComment({
+        commentId: comment.id,
+        reportedBy: user?.id || "",
+        reason: reportReason.trim(),
+      })
 
       toast({
         title: "Comment reported",
@@ -166,9 +164,10 @@ export function CommentItem({
       setReportReason("")
     } catch (error) {
       console.error("Failed to report comment:", error)
+      const message = error instanceof Error ? error.message : "Unable to submit your report right now"
       toast({
         title: "Report failed",
-        description: "Failed to report this comment. Please try again.",
+        description: `${message}. Please check your connection and try again.`,
         variant: "destructive",
       })
     } finally {
@@ -326,7 +325,7 @@ export function CommentItem({
             <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleReport} disabled={isReporting || !reportReason.trim()}>
+            <Button onClick={handleReport} disabled={isReporting}>
               {isReporting ? "Submitting..." : "Submit Report"}
             </Button>
           </DialogFooter>
