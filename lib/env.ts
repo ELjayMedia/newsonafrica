@@ -4,6 +4,16 @@ let validated = false
 
 const isBlank = (value: string | undefined): boolean => !value || value.trim().length === 0
 
+export function getRequiredEnvVar(name: string): string {
+  const value = process.env[name]
+
+  if (isBlank(value)) {
+    throw new Error(`Missing required environment variable: ${name}`)
+  }
+
+  return value
+}
+
 export function validateRequiredEnv(): void {
   if (validated) {
     return

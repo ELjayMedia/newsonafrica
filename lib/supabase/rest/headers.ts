@@ -1,10 +1,14 @@
-import { getSupabaseBrowserEnv } from "@/config/supabase-env"
+import { getRequiredEnvVar } from "@/lib/env"
+
+function getSupabaseAnonKey(): string {
+  return getRequiredEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+}
 
 export function publicHeaders(): HeadersInit {
   const { supabaseAnonKey } = getSupabaseBrowserEnv()
 
   return {
-    apikey: supabaseAnonKey,
+    apikey: getSupabaseAnonKey(),
     Accept: "application/json",
   }
 }

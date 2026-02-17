@@ -1,14 +1,18 @@
 import "server-only"
 
-import { getSupabaseServerEnv } from "@/config/supabase-env"
+import { getRequiredEnvVar } from "@/lib/env"
 
 import { publicHeaders } from "./headers"
+
+function getSupabaseServiceRoleKey(): string {
+  return getRequiredEnvVar("SUPABASE_SERVICE_ROLE_KEY")
+}
 
 export function serviceRoleHeaders(): HeadersInit {
   const { supabaseServiceRoleKey } = getSupabaseServerEnv()
 
   return {
     ...publicHeaders(),
-    Authorization: `Bearer ${supabaseServiceRoleKey}`,
+    Authorization: `Bearer ${getSupabaseServiceRoleKey()}`,
   }
 }
