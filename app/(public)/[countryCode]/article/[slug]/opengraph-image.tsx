@@ -86,7 +86,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
       ? resolvedArticle.article
       : resolvedArticle.status === "temporary_error"
         ? resolvedArticle.staleArticle ?? null
-        : resolvedArticle?.article ?? null
+        : null
   const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 
   return new ImageResponse(

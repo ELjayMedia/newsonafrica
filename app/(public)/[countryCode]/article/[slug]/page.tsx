@@ -245,7 +245,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
         slug={normalizedSlug}
         countryCode={targetCountry}
         sourceCountryCode={
-          resolvedArticle.status === "found" ? resolvedArticle.sourceCountry : resolvedArticle.staleSourceCountry
+          resolvedArticle.status === "found" ? resolvedArticle.sourceCountry : (resolvedArticle.staleSourceCountry ?? undefined)
         }
         initialData={articleData}
         relatedPosts={relatedPosts}
