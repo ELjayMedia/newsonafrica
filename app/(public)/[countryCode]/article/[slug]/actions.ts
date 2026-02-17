@@ -67,15 +67,22 @@ export interface FetchArticleWithFallbackActionInput {
   slug: string
 }
 
-export interface FetchArticleWithFallbackActionResult {
-  article: WordPressPost | null
-  sourceCountry: string
-  relatedPosts: WordPressPost[]
-  error?: {
-    type: "temporary_error"
-    message: string
-  }
-}
+export type FetchArticleWithFallbackActionResult =
+  | {
+      article: WordPressPost
+      sourceCountry: string
+      relatedPosts: WordPressPost[]
+      error?: undefined
+    }
+  | {
+      article: null
+      sourceCountry: string
+      relatedPosts: WordPressPost[]
+      error: {
+        type: "temporary_error"
+        message: string
+      }
+    }
 
 const resolveRelatedPostId = (article: {
   databaseId?: number | null
