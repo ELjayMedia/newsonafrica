@@ -1,9 +1,10 @@
 // Admin comments moderation endpoint.
-// Migration note: canonical comment domain logic is centralized in lib/comments/service.ts.
+// Canonical moderation backend: Supabase comments service via lib/comments/service.ts.
 
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { normalizeCommentModerationFilter, normalizeCommentStatus, type ModerationFilterStatus } from "@/lib/comments/moderation-status"
 import { adminUpdateCommentService, listAdminCommentsService } from "@/lib/comments/service"
 
 export async function GET(request: NextRequest) {
@@ -63,7 +64,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    await adminUpdateCommentService(createAdminClient(), commentId, body)
+    await adminUpdateCommentService(createAdminClient(), commentId, updates)
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })

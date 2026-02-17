@@ -1,10 +1,11 @@
 // Admin API: Update Single Comment (Service Role Only)
-// Migration note: canonical comment domain logic is centralized in lib/comments/service.ts.
+// Canonical moderation backend: Supabase comments service via lib/comments/service.ts.
 
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
 import { revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { normalizeCommentStatus } from "@/lib/comments/moderation-status"
 import { adminUpdateCommentService } from "@/lib/comments/service"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
@@ -26,7 +27,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   try {
-    const result = await adminUpdateCommentService(createAdminClient(), id, body)
+    const result = await adminUpdateCommentService(createAdminClient(), id, updates)
     revalidateTag(result.cacheTag)
 
     return NextResponse.json({
