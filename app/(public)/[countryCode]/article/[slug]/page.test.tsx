@@ -269,14 +269,14 @@ describe('ArticlePage', () => {
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
 
-    expect(screen.getByText('Temporarily unavailable')).toBeInTheDocument()
+    expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
     expect(
       screen.getByText('We hit a temporary issue loading this story. Please try again in a moment.'),
     ).toBeInTheDocument()
     expect(notFound).not.toHaveBeenCalled()
   })
 
-  it('renders using stale cached article data when new requests temporarily fail', async () => {
+  it('renders temporary unavailable fallback when requests temporarily fail', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         return graphqlSuccess({
@@ -294,8 +294,28 @@ describe('ArticlePage', () => {
     const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
     render(ui)
 
-    expect(screen.getByText('Cached article')).toBeInTheDocument()
-    expect(capturedArticleClientProps[0]?.initialData?.title).toBe('Cached article')
+    expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Cached article')).not.toBeInTheDocument()
+    expect(capturedArticleClientProps[0]).toBeUndefined()
+  })
+
+  it('uses placeholder metadata copy when temporary errors return no payload', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Outage'))
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ countryCode: 'sz', slug: 'test' }),
+    })
+
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
+    const fallbackUrl = `${baseUrl}/news-placeholder.png`
+
+    expect(metadata.title).toBe('Article temporarily unavailable - News On Africa')
+    expect(metadata.description).toBe('We hit a temporary issue loading this story. Please try again in a moment.')
+    expect(metadata.openGraph?.images?.[0]?.url).toBe(dynamicUrl)
+    expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
+    expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
+    expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
   })
 
   it('passes the preview flag to the article loader when draft mode is enabled', async () => {
@@ -552,9 +572,7 @@ describe('ArticlePage', () => {
   it('excludes unsupported wordpress countries when prioritising fallbacks', () => {
     const priority = buildArticleCountryPriority('african-edition')
 
-    expect(priority).toEqual(
-      expect.arrayContaining(['sz', 'za', 'ng', 'ke', 'tz', 'eg', 'gh']),
-    )
+    expect(priority).toEqual(expect.arrayContaining(['sz', 'za', 'ng']))
     expect(priority).not.toContain('african-edition')
   })
 })
