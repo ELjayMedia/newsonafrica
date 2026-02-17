@@ -20,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { renderRichTextComment } from "@/lib/comments/rich-text-renderer"
 
 interface CommentItemProps {
   comment: Comment
@@ -71,23 +72,7 @@ export function CommentItem({
       return <div className="mt-1 text-sm whitespace-pre-wrap">{comment.body}</div>
     }
 
-    // Simple markdown rendering
-    const html = comment.body
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      // Italic
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      // Links
-      .replace(
-        /\[([^\]]+)\]$$([^)]+)$$/g,
-        '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
-      )
-      // Code
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded">$1</code>')
-      // Line breaks
-      .replace(/\n/g, "<br />")
-
-    return <div className="mt-1 text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+    return <div className="mt-1 text-sm">{renderRichTextComment(comment.body)}</div>
   }
 
   const handleReply = () => {

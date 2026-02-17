@@ -1,5 +1,6 @@
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
+import { validateRichTextFormatting } from "@/lib/comments/rich-text"
 
 export const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
 export const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
@@ -67,6 +68,11 @@ export function validateGetCommentsParams(searchParams: URLSearchParams) {
   return { wpPostId, editionCode, page, limit, parentId, cursor, status: status as CommentStatus }
 }
 
+export function validateCommentBodyFormatting(body: string, isRichText: boolean): string | null {
+  if (!isRichText) return null
+  return validateRichTextFormatting(body)
+}
+
 export function validateCreateCommentPayload(payload: unknown) {
   if (payload == null || typeof payload !== "object") {
     throw new ValidationError("Invalid request body", { body: ["Expected an object payload"] })
@@ -102,11 +108,17 @@ export function validateCreateCommentPayload(payload: unknown) {
   else if (typeof rawParent === "string") parentId = rawParent
   else if (rawParent !== undefined) addValidationError(errors, "parent_id", "Parent ID must be a string or null")
 
+  const isRichText = record.is_rich_text === true || record.isRichText === true
+  if (bodyValue) {
+    const formattingError = validateCommentBodyFormatting(bodyValue, isRichText)
+    if (formattingError) addValidationError(errors, "body", formattingError)
+  }
+
   if (hasValidationErrors(errors) || !rawPostId || !bodyValue) {
     throw new ValidationError("Invalid comment payload", errors)
   }
 
-  return { wpPostId: rawPostId, editionCode, body: bodyValue, parentId }
+  return { wpPostId: rawPostId, editionCode, body: bodyValue, parentId, isRichText }
 }
 
 export function validateUpdateCommentPayload(payload: unknown) {

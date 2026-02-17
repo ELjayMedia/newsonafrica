@@ -5,6 +5,7 @@ import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { createSupabaseRouteClient } from "@/lib/supabase/route"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { applyCommentActionService, updateCommentBodyService } from "@/lib/comments/service"
+import { validateCommentBodyFormatting } from "@/lib/comments/validators"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -46,10 +47,16 @@ export async function PATCH(request: NextRequest, context: CommentRouteContext) 
       return applyCookies(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
     }
 
-    const bodyPayload = (await request.json()) as { body?: string; content?: string }
+    const bodyPayload = (await request.json()) as { body?: string; content?: string; is_rich_text?: boolean; isRichText?: boolean }
     const body = typeof bodyPayload.body === "string" ? bodyPayload.body.trim() : String(bodyPayload.content ?? "").trim()
     if (!body) {
       return applyCookies(jsonWithCors(request, { error: "Body is required" }, { status: 400 }))
+    }
+
+    const isRichText = bodyPayload.is_rich_text === true || bodyPayload.isRichText === true
+    const formattingError = validateCommentBodyFormatting(body, isRichText)
+    if (formattingError) {
+      return applyCookies(jsonWithCors(request, { error: formattingError }, { status: 400 }))
     }
 
     const result = await updateCommentBodyService(supabase, {
