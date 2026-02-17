@@ -103,27 +103,23 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, preview)
-  const article =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.article
-      : resolvedArticle.status === "temporary_error"
-        ? (resolvedArticle.staleArticle ?? null)
-        : null
+  const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
-  const title = stripHtml(article?.title ?? "") || "News On Africa"
-  const description = stripHtml(article?.excerpt ?? "") || "Latest stories from News On Africa."
+  const isTemporaryError = resolvedArticle.status === "temporary_error"
+  const title =
+    stripHtml(article?.title ?? "") ||
+    (isTemporaryError ? "Article temporarily unavailable" : "News On Africa")
+  const description =
+    stripHtml(article?.excerpt ?? "") ||
+    (isTemporaryError
+      ? "We hit a temporary issue loading this story. Please try again in a moment."
+      : "Latest stories from News On Africa.")
   const resolvedSourceCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.sourceCountry ?? editionCountry)
-      : resolvedArticle.status === "temporary_error"
-        ? (resolvedArticle.staleSourceCountry ?? editionCountry)
-        : editionCountry
+    resolvedArticle.status === "found" ? (resolvedArticle.sourceCountry ?? editionCountry) : editionCountry
   const resolvedCanonicalCountry =
     resolvedArticle.status === "found"
       ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
-      : resolvedArticle.status === "temporary_error"
-        ? (resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry)
-        : editionCountry
+      : editionCountry
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
     : routeCountryAlias
@@ -169,12 +165,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     notFound()
   }
 
-  const usingStaleContent = resolvedArticle.status === "temporary_error"
-  const articleData =
-    resolvedArticle.status === "found" ? resolvedArticle.article : (resolvedArticle.staleArticle ?? null)
+  const isTemporaryError = resolvedArticle.status === "temporary_error"
+  const articleData = resolvedArticle.status === "found" ? resolvedArticle.article : null
 
   if (!articleData) {
-    if (usingStaleContent) {
+    if (isTemporaryError) {
       const errorDigest =
         typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
           ? (resolvedArticle.error as { digest?: string }).digest
@@ -182,18 +177,14 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
 
       return (
-        <ArticleServerFallback
-          digest={errorDigest}
-          failureCountries={failureCountries}
-          staleArticle={resolvedArticle.staleArticle}
-        />
+        <ArticleServerFallback digest={errorDigest} failureCountries={failureCountries} />
       )
     }
 
     notFound()
   }
 
-  if (usingStaleContent && process.env.NODE_ENV !== "production") {
+  if (isTemporaryError && process.env.NODE_ENV !== "production") {
     console.warn("Serving stale article content due to temporary failure", {
       error: resolvedArticle.error,
       slug: normalizedSlug,
@@ -204,11 +195,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const resolvedSourceCountry =
     resolvedArticle.status === "found"
       ? (resolvedArticle.sourceCountry ?? editionCountry)
-      : (resolvedArticle.staleSourceCountry ?? editionCountry)
+      : editionCountry
   const resolvedCanonicalCountry =
     resolvedArticle.status === "found"
       ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
-      : (resolvedArticle.staleCanonicalCountry ?? resolvedArticle.staleSourceCountry ?? editionCountry)
+      : editionCountry
 
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
@@ -244,9 +235,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       <ArticleClientContent
         slug={normalizedSlug}
         countryCode={targetCountry}
-        sourceCountryCode={
-          resolvedArticle.status === "found" ? resolvedArticle.sourceCountry : (resolvedArticle.staleSourceCountry ?? undefined)
-        }
+        sourceCountryCode={resolvedArticle.sourceCountry}
         initialData={articleData}
         relatedPosts={relatedPosts}
       />
