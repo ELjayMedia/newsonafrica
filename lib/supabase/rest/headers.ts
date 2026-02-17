@@ -1,8 +1,10 @@
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { getSupabaseBrowserEnv } from "@/config/supabase-env"
 
 export function publicHeaders(): HeadersInit {
+  const { supabaseAnonKey } = getSupabaseBrowserEnv()
+
   return {
-    apikey: ANON_KEY,
+    apikey: supabaseAnonKey,
     Accept: "application/json",
   }
 }

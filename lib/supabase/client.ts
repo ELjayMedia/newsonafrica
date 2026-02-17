@@ -1,17 +1,18 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { SupabaseClient } from "@supabase/supabase-js"
+
+import { getSupabaseBrowserEnv, hasSupabaseBrowserEnv } from "@/config/supabase-env"
 import type { Database } from "@/types/supabase"
 
 let browserClient: SupabaseClient<Database> | null = null
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  return hasSupabaseBrowserEnv()
 }
 
 export function getSupabaseBrowserClient(): SupabaseClient<Database> {
   if (!browserClient) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const { supabaseUrl, supabaseAnonKey } = getSupabaseBrowserEnv()
 
     browserClient = createClientComponentClient<Database>({
       supabaseUrl,
