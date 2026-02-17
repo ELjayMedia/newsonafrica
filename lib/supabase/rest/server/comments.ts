@@ -5,9 +5,10 @@ import { parseResponse } from "../errors"
 import { jsonHeaders, preferHeaders } from "../headers"
 import { serviceRoleHeaders } from "../server"
 import type { Comment } from "../types"
+import type { ModerationFilterStatus } from "@/lib/comments/moderation-status"
 
 export async function listCommentsForModerationServerOnly(params?: {
-  status?: string
+  status?: ModerationFilterStatus
   limit?: number
   fetchOptions?: RequestInit
 }): Promise<Comment[]> {

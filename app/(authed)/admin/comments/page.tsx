@@ -9,6 +9,12 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  CANONICAL_COMMENT_STATUSES,
+  COMMENT_STATUS_LABELS,
+  type CanonicalCommentStatus,
+  type ModerationFilterStatus,
+} from "@/lib/comments/moderation-status"
 
 interface AdminComment {
   id: string
@@ -16,14 +22,16 @@ interface AdminComment {
   content: string
   created_by: string
   edition: string
-  status: "approved" | "pending" | "rejected"
+  status: CanonicalCommentStatus
   created_at: string
 }
+
+const MODERATION_FILTERS: ModerationFilterStatus[] = ["all", ...CANONICAL_COMMENT_STATUSES]
 
 export default function CommentsModeration() {
   const [comments, setComments] = useState<AdminComment[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending")
+  const [filter, setFilter] = useState<ModerationFilterStatus>("pending")
 
   useEffect(() => {
     fetchComments()
@@ -43,7 +51,7 @@ export default function CommentsModeration() {
     }
   }
 
-  async function updateCommentStatus(commentId: string, status: string) {
+  async function updateCommentStatus(commentId: string, status: CanonicalCommentStatus) {
     try {
       const res = await fetch(`/api/admin/comments/${commentId}`, {
         method: "PATCH",
@@ -66,13 +74,13 @@ export default function CommentsModeration() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4">
-            {["all", "pending", "approved", "rejected"].map((status) => (
+            {MODERATION_FILTERS.map((status) => (
               <Button
                 key={status}
                 variant={filter === status ? "default" : "outline"}
-                onClick={() => setFilter(status as any)}
+                onClick={() => setFilter(status)}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {COMMENT_STATUS_LABELS[status]}
               </Button>
             ))}
           </div>
@@ -90,15 +98,18 @@ export default function CommentsModeration() {
                       <p className="font-semibold">Post #{comment.wp_post_id}</p>
                       <p className="text-sm text-gray-500">By {comment.created_by}</p>
                     </div>
-                    <Badge>{comment.status}</Badge>
+                    <Badge>{COMMENT_STATUS_LABELS[comment.status]}</Badge>
                   </div>
                   <p className="text-sm">{comment.content}</p>
                   <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline" onClick={() => updateCommentStatus(comment.id, "approved")}>
-                      Approve
+                    <Button size="sm" variant="outline" onClick={() => updateCommentStatus(comment.id, "active")}>
+                      Mark Active
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => updateCommentStatus(comment.id, "rejected")}>
-                      Reject
+                    <Button size="sm" variant="outline" onClick={() => updateCommentStatus(comment.id, "flagged")}>
+                      Mark Flagged
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => updateCommentStatus(comment.id, "deleted")}>
+                      Mark Deleted
                     </Button>
                   </div>
                 </div>

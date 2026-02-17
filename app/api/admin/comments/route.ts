@@ -5,6 +5,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
 import { PostgRESTError } from "@/lib/supabase/rest/errors"
+import {
+  normalizeCommentModerationFilter,
+  normalizeCommentStatus,
+  type ModerationFilterStatus,
+} from "@/lib/comments/moderation-status"
 import { listCommentsForModerationServerOnly, updateCommentServerOnly } from "@/lib/supabase/rest/server/comments"
 
 export async function GET(request: NextRequest) {
@@ -14,7 +19,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const status = request.nextUrl.searchParams.get("status") || "all"
+  const rawStatus = request.nextUrl.searchParams.get("status") || "all"
+
+  let status: ModerationFilterStatus
+  try {
+    status = normalizeCommentModerationFilter(rawStatus)
+  } catch {
+    return NextResponse.json({ error: "Invalid status filter" }, { status: 400 })
+  }
 
   try {
     const comments = await listCommentsForModerationServerOnly({ status })
@@ -49,12 +61,21 @@ export async function PATCH(request: NextRequest) {
   const commentId = request.nextUrl.searchParams.get("id")
   const body = await request.json()
 
+  const updates = { ...body }
+  if (typeof updates.status === "string") {
+    try {
+      updates.status = normalizeCommentStatus(updates.status)
+    } catch {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+    }
+  }
+
   if (!commentId) {
     return NextResponse.json({ error: "Missing comment id" }, { status: 400 })
   }
 
   try {
-    await updateCommentServerOnly({ id: commentId, updates: body })
+    await updateCommentServerOnly({ id: commentId, updates })
     return NextResponse.json({ success: true })
   } catch (error) {
     if (error instanceof PostgRESTError) {

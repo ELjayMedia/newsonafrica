@@ -24,12 +24,12 @@ export function CommentModeration() {
     loadPendingComments()
   }, [])
 
-  const handleApprove = async (commentId: number) => {
+  const handleSetActive = async (commentId: number) => {
     try {
       await approveComment(commentId)
       setPendingComments(pendingComments.filter((comment) => comment.id !== commentId))
     } catch (error) {
-      console.error("Failed to approve comment:", error)
+      console.error("Failed to set comment active:", error)
     }
   }
 
@@ -56,8 +56,8 @@ export function CommentModeration() {
                 <p className="text-sm text-gray-500">{new Date(comment.date).toLocaleDateString()}</p>
               </div>
               <div>
-                <Button variant="outline" size="sm" onClick={() => handleApprove(comment.id)} className="mr-2">
-                  Approve
+                <Button variant="outline" size="sm" onClick={() => handleSetActive(comment.id)} className="mr-2">
+                  Mark Active
                 </Button>
                 <Button variant="destructive" size="sm" onClick={() => handleDelete(comment.id)}>
                   Delete
