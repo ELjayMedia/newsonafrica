@@ -81,12 +81,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
 
   const countryPriority = buildArticleCountryPriority(normalizedCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
-  const post =
-    resolvedArticle.status === "found"
-      ? resolvedArticle.article
-      : resolvedArticle.status === "temporary_error"
-        ? resolvedArticle.staleArticle ?? null
-        : resolvedArticle?.article ?? null
+  const post = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 
   return new ImageResponse(
