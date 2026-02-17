@@ -1,7 +1,7 @@
 "use server"
 
 import type { CommentSortOption } from "@/lib/supabase-schema"
-import { fetchComments } from "@/lib/comment-service"
+import { listCommentsService } from "@/lib/comments/service"
 import { createServerComponentSupabaseClient } from "@/lib/supabase/server-component-client"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
 import type { WordPressPost } from "@/types/wp"
@@ -32,11 +32,34 @@ export async function fetchCommentsPageAction({
   sortOption = "newest",
   cursor = null,
 }: FetchCommentsPageActionInput) {
+  void sortOption
+
   const supabase = createServerComponentSupabaseClient()
   if (!supabase) {
     return { comments: [], hasMore: false, nextCursor: null, total: 0 }
   }
-  return fetchComments(postId, editionCode, page, pageSize, sortOption, supabase, cursor ?? undefined)
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  const result = await listCommentsService(supabase, {
+    wpPostId: postId,
+    editionCode,
+    page,
+    limit: pageSize,
+    parentId: null,
+    status: "active",
+    cursor: cursor ?? undefined,
+    session,
+  })
+
+  return {
+    comments: result.comments,
+    hasMore: result.hasMore,
+    nextCursor: result.nextCursor,
+    total: result.totalCount,
+  }
 }
 
 export interface FetchArticleWithFallbackActionInput {

@@ -1,19 +1,12 @@
-// Admin API: Comments Moderation (Service Role Only)
-// ===================================================
-// CONTRACT: Service role bypasses RLS, retrieves ALL comments for admin review
+// Admin comments moderation endpoint.
+// Migration note: canonical comment domain logic is centralized in lib/comments/service.ts.
 
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
-import { PostgRESTError } from "@/lib/supabase/rest/errors"
-import {
-  normalizeCommentModerationFilter,
-  normalizeCommentStatus,
-  type ModerationFilterStatus,
-} from "@/lib/comments/moderation-status"
-import { listCommentsForModerationServerOnly, updateCommentServerOnly } from "@/lib/supabase/rest/server/comments"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { adminUpdateCommentService, listAdminCommentsService } from "@/lib/comments/service"
 
 export async function GET(request: NextRequest) {
-  // Verify admin access (implement your own auth)
   const adminToken = request.headers.get("x-admin-token")
   if (adminToken !== REVALIDATION_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -29,30 +22,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const comments = await listCommentsForModerationServerOnly({ status })
+    const comments = await listAdminCommentsService(createAdminClient(), status)
 
-    const responsePayload = comments.map((comment) => ({
-      id: comment.id,
-      wp_post_id: Number(comment.wp_post_id),
-      content: comment.body,
-      created_by: comment.user_id,
-      edition: comment.edition_code,
-      status: comment.status,
-      created_at: comment.created_at,
-    }))
-
-    return NextResponse.json(responsePayload)
-  } catch (error) {
-    if (error instanceof PostgRESTError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
+    return NextResponse.json(
+      comments.map((comment) => ({
+        id: comment.id,
+        wp_post_id: Number(comment.wp_post_id),
+        content: comment.body,
+        created_by: comment.user_id,
+        edition: comment.edition_code,
+        status: comment.status,
+        created_at: comment.created_at,
+      })),
+    )
+  } catch {
     return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
-  // Verify admin access
   const adminToken = request.headers.get("x-admin-token")
   if (adminToken !== REVALIDATION_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -75,13 +63,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    await updateCommentServerOnly({ id: commentId, updates })
+    await adminUpdateCommentService(createAdminClient(), commentId, body)
     return NextResponse.json({ success: true })
-  } catch (error) {
-    if (error instanceof PostgRESTError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
+  } catch {
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
   }
 }

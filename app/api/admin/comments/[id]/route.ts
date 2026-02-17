@@ -1,13 +1,11 @@
 // Admin API: Update Single Comment (Service Role Only)
-// ====================================================
+// Migration note: canonical comment domain logic is centralized in lib/comments/service.ts.
 
 import { type NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET } from "@/config/env"
 import { revalidateTag } from "next/cache"
-import { cacheTags } from "@/lib/cache"
-import { PostgRESTError } from "@/lib/supabase/rest/errors"
-import { normalizeCommentStatus } from "@/lib/comments/moderation-status"
-import { updateCommentServerOnly } from "@/lib/supabase/rest/server/comments"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { adminUpdateCommentService } from "@/lib/comments/service"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const adminToken = request.headers.get("x-admin-token")
@@ -28,24 +26,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   try {
-    const comment = await updateCommentServerOnly({ id, updates })
-
-    revalidateTag(cacheTags.comments(comment.edition_code, comment.wp_post_id))
+    const result = await adminUpdateCommentService(createAdminClient(), id, body)
+    revalidateTag(result.cacheTag)
 
     return NextResponse.json({
-      id: comment.id,
-      wp_post_id: Number(comment.wp_post_id),
-      content: comment.body,
-      created_by: comment.user_id,
-      edition: comment.edition_code,
-      status: comment.status,
-      created_at: comment.created_at,
+      id: result.comment.id,
+      wp_post_id: Number(result.comment.wp_post_id),
+      content: result.comment.body,
+      created_by: result.comment.user_id,
+      edition: result.comment.edition_code,
+      status: result.comment.status,
+      created_at: result.comment.created_at,
     })
-  } catch (error) {
-    if (error instanceof PostgRESTError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
+  } catch {
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
   }
 }
