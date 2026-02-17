@@ -310,11 +310,13 @@ describe("POST /api/comments", () => {
     profile,
     profileError = null,
     onInsert,
+    lastCommentCreatedAt,
   }: {
     session: { user: { id: string; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } }
     profile: ProfileRecord | null
     profileError?: { message: string } | null
     onInsert: (payload: Record<string, unknown>) => void
+    lastCommentCreatedAt?: string | null
   }) {
     const createCommentsBuilder = () => {
       const builder: any = {}
@@ -323,7 +325,16 @@ describe("POST /api/comments", () => {
       builder.eq = vi.fn(() => builder)
       builder.order = vi.fn(() => builder)
       builder.limit = vi.fn(() => builder)
-      builder.single = vi.fn(async () => ({ data: null, error: null }))
+      let isFirstSingle = true
+      builder.single = vi.fn(async () => {
+        if (isFirstSingle) {
+          isFirstSingle = false
+          if (lastCommentCreatedAt) {
+            return { data: { created_at: lastCommentCreatedAt }, error: null }
+          }
+        }
+        return { data: null, error: null }
+      })
       builder.insert = vi.fn((payload: Record<string, unknown>) => {
         onInsert(payload)
         return {
@@ -428,6 +439,44 @@ describe("POST /api/comments", () => {
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("african-edition", "post-1"))
   })
+
+  it("returns structured retry metadata when posting too quickly", async () => {
+    const onInsert = vi.fn()
+
+    currentSupabaseClient = createPostSupabaseClient({
+      session: { user: { id: "user-1", app_metadata: {}, user_metadata: {} } },
+      profile: { id: "user-1", country: "ng" },
+      onInsert,
+      lastCommentCreatedAt: new Date().toISOString(),
+    })
+
+    const { POST } = await import("./route")
+
+    const response = await POST(
+      new NextRequest("https://example.com/api/comments", {
+        method: "POST",
+        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
+        headers: { "content-type": "application/json" },
+      }),
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get("retry-after")).toBeTruthy()
+
+    const body = (await response.json()) as {
+      success: boolean
+      error: string
+      meta?: { rateLimit?: { retryAfterSeconds?: number } }
+    }
+
+    expect(body.success).toBe(false)
+    expect(body.error).toContain("Rate limited")
+    expect(body.meta?.rateLimit?.retryAfterSeconds).toBeTypeOf("number")
+    expect(body.meta?.rateLimit?.retryAfterSeconds).toBeGreaterThan(0)
+    expect(onInsert).not.toHaveBeenCalled()
+    expect(revalidateByTagMock).not.toHaveBeenCalled()
+  })
+
 })
 
 describe("PATCH /api/comments", () => {

@@ -6,8 +6,25 @@ import type { Comment, NewComment, ReportCommentData, CommentSortOption } from "
 // - Canonical comment domain logic now lives in lib/comments/service.ts and route handlers.
 // - This file is a thin client/server fetch wrapper kept for backward compatibility.
 
-const recentSubmissions = new Map<string, number>()
-const RATE_LIMIT_SECONDS = 10
+export class ApiRequestError extends Error {
+  readonly status: number
+  readonly meta?: Record<string, unknown>
+
+  constructor(message: string, status: number, meta?: Record<string, unknown>) {
+    super(message)
+    this.name = "ApiRequestError"
+    this.status = status
+    this.meta = meta
+  }
+
+  get retryAfterSeconds(): number | null {
+    const maybeRateLimit = this.meta?.rateLimit
+    if (!maybeRateLimit || typeof maybeRateLimit !== "object") return null
+
+    const candidate = (maybeRateLimit as { retryAfterSeconds?: unknown }).retryAfterSeconds
+    return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : null
+  }
+}
 
 type ApiEnvelope<T> = {
   success?: boolean
@@ -29,11 +46,15 @@ const toQuery = (params: Record<string, string | number | null | undefined>) => 
 async function parseApi<T>(response: Response): Promise<T> {
   const json = (await response.json().catch(() => null)) as ApiEnvelope<T> | T | null
   if (!response.ok) {
+    const meta =
+      json && typeof json === "object" && "meta" in json && json.meta && typeof json.meta === "object"
+        ? (json.meta as Record<string, unknown>)
+        : undefined
     const message =
       json && typeof json === "object" && "error" in json && typeof json.error === "string"
         ? json.error
         : `Request failed (${response.status})`
-    throw new Error(message)
+    throw new ApiRequestError(message, response.status, meta)
   }
 
   if (json && typeof json === "object" && "success" in json) {
@@ -45,16 +66,6 @@ async function parseApi<T>(response: Response): Promise<T> {
   }
 
   return json as T
-}
-
-export function isRateLimited(userId: string): boolean {
-  const lastSubmission = recentSubmissions.get(userId)
-  if (!lastSubmission) return false
-  return Date.now() - lastSubmission < RATE_LIMIT_SECONDS * 1000
-}
-
-export function recordSubmission(userId: string): void {
-  recentSubmissions.set(userId, Date.now())
 }
 
 export async function fetchComments(
@@ -96,7 +107,6 @@ export async function addComment(comment: NewComment): Promise<Comment | undefin
       credentials: "include",
     }),
   )
-  recordSubmission(comment.user_id)
   return payload
 }
 

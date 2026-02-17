@@ -4,6 +4,7 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ValidationError } from "@/lib/validation"
 
 import { validateGetCommentsParams, validateCreateCommentPayload, validateUpdateCommentPayload } from "@/lib/comments/validators"
+import { NextResponse } from "next/server"
 import { resolveRequestEdition } from "@/lib/comments/edition"
 import { getProfileLite, getLastUserCommentTime } from "@/lib/comments/queries"
 import {
@@ -15,6 +16,8 @@ import {
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
+
+const COMMENT_POST_RATE_LIMIT_MS = 10_000
 
 const GET_ = makeRoute({ rateLimit: { limit: 30, tokenEnv: "COMMENTS_GET_API_CACHE_TOKEN" } })
 const POST_ = makeRoute({ rateLimit: { limit: 5, tokenEnv: "COMMENTS_POST_API_CACHE_TOKEN" }, requireAuth: true })
@@ -67,8 +70,25 @@ export const POST = POST_(async ({ request, supabase, session }) => {
   const lastCommentTime = await getLastUserCommentTime(supabase, session!.user.id)
   if (lastCommentTime) {
     const timeDiff = Date.now() - lastCommentTime
-    if (timeDiff < 10000) {
-      throw new Error(`Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`)
+    if (timeDiff < COMMENT_POST_RATE_LIMIT_MS) {
+      const retryAfterSeconds = Math.ceil((COMMENT_POST_RATE_LIMIT_MS - timeDiff) / 1000)
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Rate limited. Please wait ${retryAfterSeconds} seconds before commenting again.`,
+          meta: {
+            rateLimit: {
+              retryAfterSeconds,
+            },
+          },
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
+          },
+        },
+      )
     }
   }
 
