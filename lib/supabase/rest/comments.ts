@@ -4,7 +4,7 @@ import { parseResponse } from "./errors"
 import { authHeaders, jsonHeaders, preferHeaders, publicHeaders } from "./headers"
 import type { Comment, CommentPostCounter, CommentReport, CommentWithProfile } from "./types"
 
-type ApprovedCommentParams = {
+type ActiveCommentParams = {
   wp_post_id: number
   edition_code: string
   limit?: number
@@ -12,19 +12,19 @@ type ApprovedCommentParams = {
   fetchOptions?: RequestInit
 }
 
-export async function listApprovedComments({
+export async function listActiveComments({
   wp_post_id,
   edition_code,
   limit = DEFAULT_LIMIT,
   offset = 0,
   fetchOptions,
-}: ApprovedCommentParams): Promise<CommentWithProfile[]> {
+}: ActiveCommentParams): Promise<CommentWithProfile[]> {
   const params = new URLSearchParams({
     select:
       "id,user_id,wp_post_id,edition_code,parent_id,body,status,created_at,updated_at,profiles(display_name,avatar_url)",
     wp_post_id: `eq.${wp_post_id}`,
     edition_code: `eq.${edition_code}`,
-    status: "eq.approved",
+    status: "eq.active",
     order: "created_at.asc",
     limit: String(Math.min(limit, MAX_LIMIT)),
     offset: String(offset),

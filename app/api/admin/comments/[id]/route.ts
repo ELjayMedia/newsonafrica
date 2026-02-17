@@ -16,6 +16,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const body = await request.json()
   const { id } = params
 
+  const updates = { ...body }
+  if (typeof updates.status === "string") {
+    try {
+      updates.status = normalizeCommentStatus(updates.status)
+    } catch {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+    }
+  }
+
   try {
     const result = await adminUpdateCommentService(createAdminClient(), id, body)
     revalidateTag(result.cacheTag)
