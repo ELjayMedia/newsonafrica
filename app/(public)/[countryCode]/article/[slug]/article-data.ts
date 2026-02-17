@@ -286,6 +286,9 @@ export type ArticleFallbackTemporaryError = {
   status: "temporary_error"
   error: ArticleTemporarilyUnavailableError
   failures: ArticleTemporaryFailure[]
+  staleArticle?: WordPressPost | null
+  staleSourceCountry?: string | null
+  staleCanonicalCountry?: string | null
 }
 
 export type ArticleLoadResult =
