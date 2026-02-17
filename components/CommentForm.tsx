@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { useUser } from "@/contexts/UserContext"
-import { addComment, isRateLimited, createOptimisticComment } from "@/lib/comment-service"
+import { addComment, ApiRequestError, createOptimisticComment } from "@/lib/comment-service"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
@@ -53,6 +53,12 @@ export function CommentForm({
     }
   }, [])
 
+  useEffect(() => {
+    if (remainingTime === 0 && error?.startsWith("Rate limited.")) {
+      setError(null)
+    }
+  }, [remainingTime, error])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) {
@@ -70,35 +76,6 @@ export function CommentForm({
         description: "Please write something before submitting",
         variant: "destructive",
       })
-      return
-    }
-
-    // Check rate limiting
-    if (isRateLimited(user.id)) {
-      const lastSubmission = localStorage.getItem(`lastCommentSubmission_${user.id}`)
-      const lastSubmissionTime = lastSubmission ? Number.parseInt(lastSubmission, 10) : 0
-      const timeElapsed = Date.now() - lastSubmissionTime
-      const timeRemaining = Math.ceil((10000 - timeElapsed) / 1000)
-
-      setRemainingTime(timeRemaining)
-      setError(`Please wait ${timeRemaining} seconds before posting another comment`)
-
-      // Start countdown timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-
-      timerRef.current = setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current)
-            setError(null)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-
       return
     }
 
@@ -126,8 +103,6 @@ export function CommentForm({
       // Update UI immediately with optimistic comment
       onCommentAdded(optimisticComment)
 
-      // Store submission time for rate limiting
-      localStorage.setItem(`lastCommentSubmission_${user.id}`, Date.now().toString())
 
       // Reset form
       setContent("")
@@ -146,21 +121,48 @@ export function CommentForm({
     } catch (error: any) {
       console.error("Failed to post comment:", error)
 
-      // Check if this is a schema-related error
-      if (
+      if (error instanceof ApiRequestError && error.status === 429) {
+        const retryAfterSeconds = error.retryAfterSeconds ?? 1
+        setRemainingTime(retryAfterSeconds)
+        setError(error.message)
+
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+        }
+
+        timerRef.current = setInterval(() => {
+          setRemainingTime((prev) => {
+            if (prev <= 1) {
+              if (timerRef.current) clearInterval(timerRef.current)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+
+        toast({
+          title: "Slow down",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else if (
         error.message &&
         (error.message.includes("status") || error.message.includes("column") || error.message.includes("schema"))
       ) {
         setError("The comment system needs a database update. Your comment may still be posted.")
+        toast({
+          title: "Comment failed",
+          description: "Failed to post your comment. Please try again.",
+          variant: "destructive",
+        })
       } else {
         setError("Failed to post your comment. Please try again.")
+        toast({
+          title: "Comment failed",
+          description: "Failed to post your comment. Please try again.",
+          variant: "destructive",
+        })
       }
-
-      toast({
-        title: "Comment failed",
-        description: "Failed to post your comment. Please try again.",
-        variant: "destructive",
-      })
     } finally {
       setIsSubmitting(false)
     }
