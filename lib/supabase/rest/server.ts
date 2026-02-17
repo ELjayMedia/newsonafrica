@@ -9,6 +9,8 @@ function getSupabaseServiceRoleKey(): string {
 }
 
 export function serviceRoleHeaders(): HeadersInit {
+  const { supabaseServiceRoleKey } = getSupabaseServerEnv()
+
   return {
     ...publicHeaders(),
     Authorization: `Bearer ${getSupabaseServiceRoleKey()}`,

@@ -5,7 +5,7 @@ export const REST_BASE_URL = `${NORMALIZED_SUPABASE_URL}/rest/v1`
 
 export function buildRestUrl(path: string, params?: URLSearchParams): string {
   const normalizedPath = path.replace(/^\/+/, "")
-  const baseUrl = `${REST_BASE_URL}/${normalizedPath}`
+  const baseUrl = `${getRestBaseUrl()}/${normalizedPath}`
 
   if (!params || [...params.keys()].length === 0) {
     return baseUrl

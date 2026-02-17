@@ -4,13 +4,12 @@ import {
   type SupabaseClient,
 } from "@supabase/supabase-js"
 
+import { getSupabaseServerEnv } from "@/config/supabase-env"
 import type { Database } from "@/types/supabase"
 
 type PublicSchema = Database["public"] & GenericSchema
 
 export type AdminSupabaseClient = SupabaseClient<Database, "public", PublicSchema>
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
 
 let adminClient: AdminSupabaseClient | null = null
 let hasWarnedAboutAdminConfig = false
@@ -20,26 +19,23 @@ export function createAdminClient(): AdminSupabaseClient {
     return adminClient
   }
 
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  let supabaseUrl: string
+  let supabaseServiceRoleKey: string
 
-  if (!supabaseUrl || !supabaseServiceKey) {
+  try {
+    const env = getSupabaseServerEnv()
+    supabaseUrl = env.supabaseUrl
+    supabaseServiceRoleKey = env.supabaseServiceRoleKey
+  } catch (error) {
     if (!hasWarnedAboutAdminConfig) {
       hasWarnedAboutAdminConfig = true
-      console.warn(
-        "Supabase admin environment variables are not fully configured. Falling back is not supported.",
-      )
+      console.warn("Supabase admin environment variables are not fully configured. Falling back is not supported.")
     }
 
-    if (!supabaseUrl) {
-      throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to initialize the Supabase admin client.")
-    }
-
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is required to initialize the Supabase admin client. Configure it before running admin tasks or migrations.",
-    )
+    throw error
   }
 
-  adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseServiceKey, {
+  adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
