@@ -6,10 +6,8 @@ import { supabase } from "@/lib/supabase/browser-helpers"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
-import { MessageSquare, AlertCircle, ArrowUpDown } from "lucide-react"
+import { MessageSquare, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MIGRATION_INSTRUCTIONS } from "@/lib/supabase-migrations"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { fetchCommentsPageAction } from "@/app/(public)/[countryCode]/article/[slug]/actions"
@@ -34,8 +32,8 @@ export function CommentList({
   const commentCacheRef = useRef<Map<string, Comment>>(new Map())
   const commentLocationRef = useRef<Map<string, { pageIndex: number; itemIndex: number }>>(new Map())
   const commentSlicesRef = useRef<Comment[][]>(initialComments.length > 0 ? [initialComments] : [])
-  const paginationRef = useRef({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
-  const [pagination, setPagination] = useState({ page: 0, cursor: initialCursor, hasMore: initialHasMore })
+  const paginationRef = useRef({ cursor: initialCursor, hasMore: initialHasMore })
+  const [pagination, setPagination] = useState({ cursor: initialCursor, hasMore: initialHasMore })
   const [baseCommentCount, setBaseCommentCount] = useState(() => {
     if (initialComments.length > 0) {
       const cache = commentCacheRef.current
@@ -58,16 +56,13 @@ export function CommentList({
     typeof initialTotal === "number" ? initialTotal : initialComments.length,
   )
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
-  const [showMigrationInfo, setShowMigrationInfo] = useState(false)
   const { preferences, setCommentSortPreference } = useUserPreferences()
   const [sortOption, setSortOption] = useState<CommentSortOption>(preferences.commentSort)
-  const [retryCount, setRetryCount] = useState(0)
-  const maxRetries = 3
   const [isPending, startTransition] = useTransition()
   const isFetching = loading || isPending
   const hasHydratedInitial = useRef(initialComments.length > 0)
   const isInitialLoad = isFetching && !hasHydratedInitial.current
-  const isLoadingMore = isFetching && pagination.page > 0
+  const isLoadingMore = isFetching && !isInitialLoad
 
   useEffect(() => {
     paginationRef.current = pagination
@@ -168,12 +163,7 @@ export function CommentList({
       try {
         setLoading(true)
 
-        if (retryCount > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
-        }
-
         const currentPagination = paginationRef.current
-        const nextPage = append ? currentPagination.page + 1 : 0
         const cursorValue = cursorOverride ?? (append ? currentPagination.cursor : null)
 
         const {
@@ -184,7 +174,7 @@ export function CommentList({
         } = await fetchCommentsPageAction({
           postId,
           editionCode,
-          page: nextPage,
+          page: append ? 1 : 0,
           pageSize: 10,
           sortOption,
           cursor: cursorValue ?? null,
@@ -194,7 +184,6 @@ export function CommentList({
           mergeComments(fetchedComments, append)
 
           setPagination({
-            page: nextPage,
             cursor: fetchedNextCursor ?? null,
             hasMore: moreAvailable,
           })
@@ -206,35 +195,17 @@ export function CommentList({
           }
 
           setError(null)
-          setRetryCount(0)
           hasHydratedInitial.current = true
         })
       } catch (err: any) {
         console.error("Error loading comments:", err)
 
-        if (retryCount < maxRetries) {
-          setRetryCount((prev) => prev + 1)
-          console.log(`Retrying (${retryCount + 1}/${maxRetries})...`)
-          return loadComments({ append, cursorOverride })
-        }
-
-        if (
-          err.message &&
-          (err.message.includes("status") ||
-            err.message.includes("column") ||
-            err.message.includes("schema") ||
-            err.message.includes("execute is not a function"))
-        ) {
-          setShowMigrationInfo(true)
-          setError("The comment system needs a database update. Please contact the administrator.")
-        } else {
-          setError("Failed to load comments. Please try refreshing the page.")
-        }
+        setError("Failed to load comments. Please try refreshing the page.")
       } finally {
         setLoading(false)
       }
     },
-    [maxRetries, mergeComments, postId, retryCount, sortOption, startTransition],
+    [mergeComments, postId, sortOption, startTransition],
   )
 
   const loadCommentsRef = useRef(loadComments)
@@ -251,7 +222,6 @@ export function CommentList({
       return
     }
 
-    setRetryCount(0)
     hasHydratedInitial.current = false
     void loadCommentsRef.current({ append: false })
   }, [postId, sortOption])
@@ -282,7 +252,6 @@ export function CommentList({
         setOptimisticComments((prev) => [optimisticComment, ...prev])
       } else {
         // Real comment was added, refresh the list and clear optimistic comments
-        setRetryCount(0) // Reset retry count
         void loadComments({ append: false })
         setOptimisticComments([])
       }
@@ -343,7 +312,6 @@ export function CommentList({
 
   // Handle retry
   const handleRetry = () => {
-    setRetryCount(0)
     setError(null)
     void loadComments({ append: false })
   }
@@ -388,20 +356,6 @@ export function CommentList({
         isRateLimited={isRateLimited}
         rateLimitTimeRemaining={getRateLimitTimeRemaining}
       />
-
-      {showMigrationInfo && (
-        <Alert variant="warning" className="my-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <p className="font-medium">Database Migration Required</p>
-            <p className="text-sm mt-1">
-              The enhanced comment system requires a database update. Please provide the following SQL to your database
-              administrator:
-            </p>
-            <pre className="text-xs bg-gray-100 p-2 mt-2 rounded overflow-auto max-h-40">{MIGRATION_INSTRUCTIONS}</pre>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {isInitialLoad ? (
         <div className="space-y-3 mt-4">

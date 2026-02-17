@@ -1,18 +1,16 @@
 import { makeRoute } from "@/lib/api/route-helpers"
-import { successResponse } from "@/lib/api-utils"
-import { cacheTags } from "@/lib/cache"
+import { successResponse, handleApiError, withCors } from "@/lib/api-utils"
 import { revalidateByTag } from "@/lib/server-cache-utils"
-import { decodeCommentCursor } from "@/lib/comment-cursor"
 import { ValidationError } from "@/lib/validation"
 
-import {
-  validateGetCommentsParams,
-  validateCreateCommentPayload,
-  validateUpdateCommentPayload,
-} from "@/lib/comments/validators"
+import { validateGetCommentsParams, validateCreateCommentPayload, validateUpdateCommentPayload } from "@/lib/comments/validators"
 import { resolveRequestEdition } from "@/lib/comments/edition"
-import { listComments, countCommentsIfFirstPage, getProfileLite, getLastUserCommentTime } from "@/lib/comments/queries"
-import { createComment, updateCommentAction } from "@/lib/comments/actions"
+import { getProfileLite, getLastUserCommentTime } from "@/lib/comments/queries"
+import {
+  applyCommentActionService,
+  createCommentService,
+  listCommentsService,
+} from "@/lib/comments/service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -22,26 +20,14 @@ const GET_ = makeRoute({ rateLimit: { limit: 30, tokenEnv: "COMMENTS_GET_API_CAC
 const POST_ = makeRoute({ rateLimit: { limit: 5, tokenEnv: "COMMENTS_POST_API_CACHE_TOKEN" }, requireAuth: true })
 const PATCH_ = makeRoute({ rateLimit: { limit: 10, tokenEnv: "COMMENTS_PATCH_API_CACHE_TOKEN" }, requireAuth: true })
 
-// Get comments for a post with pagination
-export const GET = GET_(async ({ request, supabase, session }) => {
+const GET_HANDLER = GET_(async ({ request, supabase, session }) => {
   const { searchParams } = new URL(request.url)
   const params = validateGetCommentsParams(searchParams)
 
-  const decodedCursor = params.cursor ? decodeCommentCursor(params.cursor) : null
-  if (params.cursor && (!decodedCursor || decodedCursor.sort !== "newest")) {
-    throw new ValidationError("Invalid cursor", { cursor: ["Cursor is malformed"] })
-  }
-
-  const { comments, hasMore, nextCursor } = await listComments(supabase, {
+  const { comments, hasMore, nextCursor, totalCount } = await listCommentsService(supabase, {
     ...params,
     session,
-    decodedCursor,
-  })
-
-  const totalCount = await countCommentsIfFirstPage(supabase, {
-    ...params,
-    session,
-    decodedCursor: null,
+    cursor: params.cursor,
   })
 
   return successResponse(
@@ -57,7 +43,17 @@ export const GET = GET_(async ({ request, supabase, session }) => {
   )
 })
 
-// Create a new comment
+export const GET = async (request: Request) => {
+  try {
+    const { searchParams } = new URL(request.url)
+    validateGetCommentsParams(searchParams)
+  } catch (error) {
+    return withCors(request, handleApiError(error))
+  }
+
+  return GET_HANDLER(request as any)
+}
+
 export const POST = POST_(async ({ request, supabase, session }) => {
   let body: unknown
   try {
@@ -68,14 +64,11 @@ export const POST = POST_(async ({ request, supabase, session }) => {
 
   const { wpPostId, editionCode, body: commentBody, parentId } = validateCreateCommentPayload(body)
 
-  // Rate limiting check - 10 seconds between comments
   const lastCommentTime = await getLastUserCommentTime(supabase, session!.user.id)
   if (lastCommentTime) {
     const timeDiff = Date.now() - lastCommentTime
     if (timeDiff < 10000) {
-      throw new Error(
-        `Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`,
-      )
+      throw new Error(`Rate limited. Please wait ${Math.ceil((10000 - timeDiff) / 1000)} seconds before commenting again.`)
     }
   }
 
@@ -83,7 +76,7 @@ export const POST = POST_(async ({ request, supabase, session }) => {
   const requestEdition = resolveRequestEdition(request, session, profile?.country)
   const finalEdition = editionCode ?? requestEdition
 
-  const comment = await createComment(supabase, {
+  const result = await createCommentService(supabase, {
     wpPostId,
     editionCode: finalEdition,
     userId: session!.user.id,
@@ -91,15 +84,14 @@ export const POST = POST_(async ({ request, supabase, session }) => {
     parentId: parentId ?? null,
   })
 
-  revalidateByTag(cacheTags.comments(finalEdition, wpPostId))
+  revalidateByTag(result.cacheTag)
 
   return successResponse({
-    ...comment,
+    ...result.comment,
     profile: profile ? { username: profile.username, avatar_url: profile.avatar_url } : undefined,
   })
 })
 
-// Update comment status (report, delete, approve)
 export const PATCH = PATCH_(async ({ request, supabase, session }) => {
   let body: unknown
   try {
@@ -110,16 +102,14 @@ export const PATCH = PATCH_(async ({ request, supabase, session }) => {
 
   const { id, action, reason } = validateUpdateCommentPayload(body)
 
-  const result = await updateCommentAction(supabase, {
+  const result = await applyCommentActionService(supabase, {
     id,
     action,
     reason,
     userId: session!.user.id,
   })
 
-  if (result.tagToRevalidate) {
-    revalidateByTag(result.tagToRevalidate)
-  }
+  revalidateByTag(result.cacheTag)
 
   return successResponse({ success: true, action })
 })
