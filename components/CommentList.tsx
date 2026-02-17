@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, useMemo, useTransition } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { Virtuoso } from "react-virtuoso"
-import { supabase } from "@/lib/supabase/browser-helpers"
 import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -10,7 +9,9 @@ import { MessageSquare, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { fetchCommentsPageAction } from "@/app/(public)/[countryCode]/article/[slug]/actions"
+import { useCommentsQuery } from "@/hooks/useCommentsQuery"
+import { useOptimisticComments } from "@/hooks/useOptimisticComments"
+import { useCommentsRealtimeSync } from "@/hooks/useCommentsRealtimeSync"
 
 interface CommentListProps {
   postId: string
@@ -29,38 +30,35 @@ export function CommentList({
   initialHasMore = false,
   initialTotal,
 }: CommentListProps) {
-  const commentCacheRef = useRef<Map<string, Comment>>(new Map())
-  const commentLocationRef = useRef<Map<string, { pageIndex: number; itemIndex: number }>>(new Map())
-  const commentSlicesRef = useRef<Comment[][]>(initialComments.length > 0 ? [initialComments] : [])
   const paginationRef = useRef({ cursor: initialCursor, hasMore: initialHasMore })
-  const [pagination, setPagination] = useState({ cursor: initialCursor, hasMore: initialHasMore })
-  const [baseCommentCount, setBaseCommentCount] = useState(() => {
-    if (initialComments.length > 0) {
-      const cache = commentCacheRef.current
-      const locationMap = commentLocationRef.current
-      cache.clear()
-      locationMap.clear()
-      initialComments.forEach((comment, index) => {
-        cache.set(comment.id, comment)
-        locationMap.set(comment.id, { pageIndex: 0, itemIndex: index })
-      })
-      return initialComments.length
-    }
-
-    return 0
-  })
-  const [listVersion, setListVersion] = useState(initialComments.length > 0 ? 1 : 0)
-  const [loading, setLoading] = useState(initialComments.length === 0)
-  const [error, setError] = useState<string | null>(null)
-  const [totalComments, setTotalComments] = useState(
-    typeof initialTotal === "number" ? initialTotal : initialComments.length,
-  )
-  const [optimisticComments, setOptimisticComments] = useState<Comment[]>([])
   const { preferences, setCommentSortPreference } = useUserPreferences()
   const [sortOption, setSortOption] = useState<CommentSortOption>(preferences.commentSort)
-  const [isPending, startTransition] = useTransition()
+  const {
+    comments,
+    loading,
+    isPending,
+    error,
+    totalComments,
+    pagination,
+    hasHydratedInitial,
+    loadComments,
+    loadMoreComments,
+    refreshComments,
+    upsertComment,
+    removeComment,
+  } = useCommentsQuery({
+    postId,
+    editionCode,
+    sortOption,
+    initialComments,
+    initialCursor,
+    initialHasMore,
+    initialTotal,
+  })
+  const { renderedComments, failedCommentSet, addOptimisticComment, clearOptimisticComments, rollbackOptimisticComment } =
+    useOptimisticComments(comments)
+
   const isFetching = loading || isPending
-  const hasHydratedInitial = useRef(initialComments.length > 0)
   const isInitialLoad = isFetching && !hasHydratedInitial.current
   const isLoadingMore = isFetching && !isInitialLoad
 
@@ -68,207 +66,37 @@ export function CommentList({
     paginationRef.current = pagination
   }, [pagination])
 
-  const mergeComments = useCallback(
-    (incoming: Comment[], append: boolean) => {
-      const cache = commentCacheRef.current
-      const locationMap = commentLocationRef.current
+  const totalRenderableComments = renderedComments.length
 
-      if (!append) {
-        cache.clear()
-        locationMap.clear()
-        commentSlicesRef.current = incoming.length > 0 ? [incoming] : []
-        incoming.forEach((comment, index) => {
-          cache.set(comment.id, comment)
-          locationMap.set(comment.id, { pageIndex: 0, itemIndex: index })
-        })
-        setBaseCommentCount(incoming.length)
-        setListVersion((version) => version + 1)
-        return
-      }
-
-      if (incoming.length === 0) {
-        setListVersion((version) => version + 1)
-        return
-      }
-
-      const newEntries: Comment[] = []
-
-      incoming.forEach((comment) => {
-        cache.set(comment.id, comment)
-        const existingLocation = locationMap.get(comment.id)
-
-        if (existingLocation) {
-          const page = commentSlicesRef.current[existingLocation.pageIndex]
-          if (page) {
-            page[existingLocation.itemIndex] = comment
-          }
-        } else {
-          newEntries.push(comment)
-        }
-      })
-
-      if (newEntries.length > 0) {
-        const newPageIndex = commentSlicesRef.current.length
-        commentSlicesRef.current.push(newEntries)
-        newEntries.forEach((comment, index) => {
-          locationMap.set(comment.id, { pageIndex: newPageIndex, itemIndex: index })
-        })
-      }
-
-      setBaseCommentCount(locationMap.size)
-      setListVersion((version) => version + 1)
-    },
-    [],
-  )
-
-  const totalRenderableComments = optimisticComments.length + baseCommentCount
-
-  const getCommentAtIndex = useCallback(
-    (index: number): Comment | undefined => {
-      void listVersion
-
-      if (index < optimisticComments.length) {
-        return optimisticComments[index]
-      }
-
-      let normalizedIndex = index - optimisticComments.length
-      const slices = commentSlicesRef.current
-
-      for (let pageIndex = 0; pageIndex < slices.length; pageIndex++) {
-        const page = slices[pageIndex]
-        if (normalizedIndex < page.length) {
-          const comment = page[normalizedIndex]
-          if (!comment) {
-            return undefined
-          }
-          return commentCacheRef.current.get(comment.id) ?? comment
-        }
-        normalizedIndex -= page.length
-      }
-
-      return undefined
-    },
-    [listVersion, optimisticComments],
-  )
+  const getCommentAtIndex = useCallback((index: number): Comment | undefined => renderedComments[index], [renderedComments])
 
   // For rate limiting
   const lastCommentTime = useRef<number | null>(null)
   const RATE_LIMIT_MS = 10000 // 10 seconds
 
-  // For optimistic updates
-  const [failedComments, setFailedComments] = useState<string[]>([])
-
-  const loadComments = useCallback(
-    async ({ append = false, cursorOverride }: { append?: boolean; cursorOverride?: string | null } = {}) => {
-      try {
-        setLoading(true)
-
-        const currentPagination = paginationRef.current
-        const cursorValue = cursorOverride ?? (append ? currentPagination.cursor : null)
-
-        const {
-          comments: fetchedComments,
-          hasMore: moreAvailable,
-          nextCursor: fetchedNextCursor,
-          total,
-        } = await fetchCommentsPageAction({
-          postId,
-          editionCode,
-          page: append ? 1 : 0,
-          pageSize: 10,
-          sortOption,
-          cursor: cursorValue ?? null,
-        })
-
-        startTransition(() => {
-          mergeComments(fetchedComments, append)
-
-          setPagination({
-            cursor: fetchedNextCursor ?? null,
-            hasMore: moreAvailable,
-          })
-
-          if (typeof total === "number") {
-            setTotalComments(total)
-          } else if (!append && fetchedComments.length === 0) {
-            setTotalComments(0)
-          }
-
-          setError(null)
-          hasHydratedInitial.current = true
-        })
-      } catch (err: any) {
-        console.error("Error loading comments:", err)
-
-        setError("Failed to load comments. Please try refreshing the page.")
-      } finally {
-        setLoading(false)
-      }
-    },
-    [mergeComments, postId, sortOption, startTransition],
-  )
-
-  const loadCommentsRef = useRef(loadComments)
-
-  useEffect(() => {
-    loadCommentsRef.current = loadComments
-  }, [loadComments])
-
-  const skipInitialFetchRef = useRef(initialComments.length > 0)
-
-  useEffect(() => {
-    if (skipInitialFetchRef.current) {
-      skipInitialFetchRef.current = false
-      return
-    }
-
-    hasHydratedInitial.current = false
-    void loadCommentsRef.current({ append: false })
-  }, [postId, sortOption])
-
-  // Subscribe to realtime updates for this post's comments
-  useEffect(() => {
-    const channel = supabase
-      .channel(`comments-${postId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comments', filter: `wp_post_id=eq.${postId}` },
-        () => {
-          void loadCommentsRef.current({ append: false })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [postId])
+  useCommentsRealtimeSync({
+    postId,
+    upsertComment,
+    removeComment,
+  })
 
   // Handle optimistic updates
   const handleCommentAdded = useCallback(
     (optimisticComment?: Comment) => {
       if (optimisticComment?.isOptimistic) {
-        // Add optimistic comment to the UI
-        setOptimisticComments((prev) => [optimisticComment, ...prev])
+        addOptimisticComment(optimisticComment)
       } else {
-        // Real comment was added, refresh the list and clear optimistic comments
         void loadComments({ append: false })
-        setOptimisticComments([])
+        clearOptimisticComments()
       }
     },
-    [loadComments],
+    [addOptimisticComment, clearOptimisticComments, loadComments],
   )
 
   // Handle comment failure
   const handleCommentFailed = useCallback((commentId: string) => {
-    setFailedComments((prev) => [...prev, commentId])
-
-    // Remove from optimistic comments after a delay
-    setTimeout(() => {
-      setOptimisticComments((prev) => prev.filter((comment) => comment.id !== commentId))
-      setFailedComments((prev) => prev.filter((id) => id !== commentId))
-    }, 5000) // Show error state for 5 seconds
-  }, [])
+    rollbackOptimisticComment(commentId)
+  }, [rollbackOptimisticComment])
 
   // Check if user is rate limited
   const isRateLimited = useCallback(() => {
@@ -312,19 +140,8 @@ export function CommentList({
 
   // Handle retry
   const handleRetry = () => {
-    setError(null)
-    void loadComments({ append: false })
+    refreshComments()
   }
-
-  const failedCommentSet = useMemo(() => new Set(failedComments), [failedComments])
-
-  const loadMoreComments = useCallback(() => {
-    if (!paginationRef.current.hasMore || isFetching) {
-      return
-    }
-
-    void loadComments({ append: true })
-  }, [isFetching, loadComments])
 
   return (
     <div id="comments" className="mt-4 space-y-4">
@@ -399,11 +216,11 @@ export function CommentList({
               }
 
               return (
-                <CommentItem
+              <CommentItem
                   comment={comment}
                   postId={postId}
                   editionCode={editionCode}
-                  onCommentUpdated={() => void loadComments({ append: false })}
+                  onCommentUpdated={refreshComments}
                   onReplyAdded={handleCommentAdded}
                   onReplyFailed={handleCommentFailed}
                   isRateLimited={isRateLimited}
