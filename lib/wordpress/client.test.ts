@@ -61,7 +61,6 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(result).toMatchObject({
       ok: true,
       data: { posts: [] },
-      posts: [],
     })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
     expect(mockText).toHaveBeenCalledTimes(1)
@@ -81,7 +80,6 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(secondResult).toMatchObject({
       ok: true,
       data: { posts: [] },
-      posts: [],
     })
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1)
     expect(mockText).toHaveBeenCalledTimes(1)
@@ -108,7 +106,6 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     await expect(secondPromise).resolves.toMatchObject({
       ok: true,
       data: { posts: [] },
-      posts: [],
     })
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
@@ -144,7 +141,6 @@ describe("fetchWordPressGraphQL in-flight deduplication", () => {
     expect(secondResult).toMatchObject({
       ok: true,
       data: { posts: [] },
-      posts: [],
     })
 
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2)
