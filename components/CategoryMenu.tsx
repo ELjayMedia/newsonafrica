@@ -8,16 +8,13 @@ import { getCategoryUrl } from "@/lib/utils/routing"
 import { DEFAULT_COUNTRY } from "@/lib/wordpress/shared"
 import type { WordPressCategory } from "@/types/wp"
 
-type CategorySummary = Required<Pick<WordPressCategory, "name" | "slug">> &
-  Pick<WordPressCategory, "id" | "count">
+type CategorySummary = Required<Pick<WordPressCategory, "name" | "slug">> & Pick<WordPressCategory, "id" | "count">
 
 const loadCategories = cache(async (countryCode?: string): Promise<CategorySummary[]> => {
   try {
     const categories = await fetchAllCategories(countryCode ?? DEFAULT_COUNTRY)
 
-    if (!Array.isArray(categories)) {
-      return []
-    }
+    if (!Array.isArray(categories)) return []
 
     return categories
       .filter((category): category is CategorySummary => Boolean(category?.slug && category?.name))
@@ -48,9 +45,7 @@ function CategoryMenuSkeleton() {
 async function CategoryMenuContent({ countryCode }: { countryCode?: string }) {
   const categories = await loadCategories(countryCode)
 
-  if (categories.length === 0) {
-    return null
-  }
+  if (categories.length === 0) return null
 
   return (
     <nav className="mb-6 overflow-x-auto scrollbar-hide" aria-label="Categories">
@@ -79,7 +74,6 @@ async function CategoryMenuContent({ countryCode }: { countryCode?: string }) {
 export default function CategoryMenu({ countryCode }: { countryCode?: string }) {
   return (
     <Suspense fallback={<CategoryMenuSkeleton />}>
-      {/* @ts-expect-error Async Server Component */}
       <CategoryMenuContent countryCode={countryCode} />
     </Suspense>
   )
