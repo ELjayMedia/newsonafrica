@@ -23,6 +23,19 @@ interface CommentFormProps {
   onCancel?: () => void
   placeholder?: string
 }
+export interface CommentFormProps {
+  postId: string
+  editionCode: string
+  parentId?: string
+  placeholder?: string
+  onCommentAdded?: (optimisticComment?: Comment) => void
+  onCancel?: () => void
+
+  // ✅ add these
+  isRateLimited?: () => boolean
+  rateLimitTimeRemaining?: () => number
+}
+
 
 export function CommentForm({
   postId,
