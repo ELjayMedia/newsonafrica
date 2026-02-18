@@ -49,10 +49,6 @@ type ProfilePreferencesColumn = ProfilesUpdate["preferences"]
 
 type ProfileSelect = Pick<ProfileRow, "interests" | "preferences">
 
-const payload: ProfilesUpdate = {
-  preferences: profilePreferencesRaw as ProfilePreferencesColumn,
-}
-
 async function ensureUserSettings(
   supabase: SupabaseServerClient,
   userId: string,
