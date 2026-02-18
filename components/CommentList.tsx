@@ -166,14 +166,6 @@ export function CommentList({
         </DropdownMenu>
       </div>
 
-      <CommentForm
-        postId={postId}
-        editionCode={editionCode}
-        onCommentAdded={handleCommentAdded}
-        isRateLimited={isRateLimited}
-        rateLimitTimeRemaining={getRateLimitTimeRemaining}
-      />
-
       {isInitialLoad ? (
         <div className="space-y-3 mt-4">
           {[...Array(3)].map((_, i) => (
@@ -216,7 +208,7 @@ export function CommentList({
               }
 
               return (
-              <CommentItem
+                <CommentItem
                   comment={comment}
                   postId={postId}
                   editionCode={editionCode}
