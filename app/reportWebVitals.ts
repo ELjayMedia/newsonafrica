@@ -2,21 +2,33 @@ import type { NextWebVitalsMetric } from "next/app"
 
 const METRICS_ENDPOINT = "/api/metrics"
 
+type MetricExtras = {
+  delta?: number
+  entries?: unknown
+  rating?: string
+  startTime?: number
+  navigationType?: string
+  label?: string
+}
+
 function buildPayload(metric: NextWebVitalsMetric) {
-  const { id, name, label, value, delta, entries, rating, startTime, navigationType } = metric
+  // Next's type is stricter in some versions; treat these fields as optional extras.
+  const m = metric as NextWebVitalsMetric & MetricExtras
+
+  const { id, name, value } = m
   const location = typeof window !== "undefined" ? window.location : undefined
 
   return {
     event: "web-vitals" as const,
     id,
     name,
-    label,
+    label: m.label,
     value,
-    delta,
-    entries,
-    rating,
-    startTime,
-    navigationType,
+    delta: m.delta,
+    entries: m.entries,
+    rating: m.rating,
+    startTime: m.startTime,
+    navigationType: m.navigationType,
     page: location?.pathname,
     href: location?.href,
   }
