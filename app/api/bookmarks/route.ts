@@ -58,26 +58,32 @@ function getRequestEditionPreferences(request: NextRequest): string[] {
   return Array.from(editions)
 }
 
-function parseCursor(value: string | null, fallbackSortBy: string) {
-  if (!value) {
-    return null
-  }
+// ✅ Infer CursorInput from listBookmarksForUser so this route stays type-safe
+type ListBookmarksOptions = Parameters<typeof listBookmarksForUser>[2]
+type CursorInput = NonNullable<ListBookmarksOptions["cursor"]>
+type SortBy = CursorInput["sortBy"]
+type SortOrder = CursorInput["sortOrder"]
+
+function parseCursor(value: string | null, fallbackSortBy: SortBy): CursorInput | null {
+  if (!value) return null
 
   try {
     const decoded = JSON.parse(decodeURIComponent(value))
-    if (!decoded || typeof decoded !== "object") {
-      return null
-    }
+    if (!decoded || typeof decoded !== "object") return null
 
     const parsed = decoded as Record<string, unknown>
-    const cursorSortBy = resolveSortColumn(typeof parsed.sortBy === "string" ? parsed.sortBy : fallbackSortBy)
-    const cursorSortOrder = parsed.sortOrder === "asc" ? "asc" : "desc"
-    const cursorValue = typeof parsed.value === "string" || typeof parsed.value === "number" ? parsed.value : null
+
+    const cursorSortBy = resolveSortColumn(
+      typeof parsed.sortBy === "string" ? parsed.sortBy : String(fallbackSortBy),
+    ) as SortBy
+
+    const cursorSortOrder: SortOrder = parsed.sortOrder === "asc" ? "asc" : "desc"
+
+    const cursorValue =
+      typeof parsed.value === "string" || typeof parsed.value === "number" ? parsed.value : null
     const cursorId = typeof parsed.id === "string" ? parsed.id : null
 
-    if (cursorValue === null || !cursorId) {
-      return null
-    }
+    if (cursorValue === null || !cursorId) return null
 
     return {
       sortBy: cursorSortBy,
@@ -113,13 +119,16 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const sortBy = resolveSortColumn(searchParams.get("sortBy"))
+
+    const sortBy = resolveSortColumn(searchParams.get("sortBy")) as SortBy
+    const sortOrder: SortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc"
+
     const listPayload = await listBookmarksForUser(supabase, user.id, {
-      limit: Math.max(Number.parseInt(searchParams.get("limit") || "20"), 1),
+      limit: Math.max(Number.parseInt(searchParams.get("limit") || "20", 10), 1),
       search: searchParams.get("search"),
       category: searchParams.get("category"),
       readState: searchParams.get("readState") ?? searchParams.get("status"),
-      sortOrder: searchParams.get("sortOrder") === "asc" ? "asc" : "desc",
+      sortOrder,
       sortBy,
       cursor: parseCursor(searchParams.get("cursor"), sortBy),
       postId: searchParams.get("postId") ?? searchParams.get("wpPostId") ?? searchParams.get("wp_post_id"),
@@ -272,13 +281,13 @@ export async function DELETE(request: NextRequest) {
 
     const mutationPayload = postIds?.length
       ? await bulkRemoveBookmarksForUser(supabase, user.id, postIds, {
-          revalidate: revalidateByTag,
-          editionHints: getRequestEditionPreferences(request),
-        })
+        revalidate: revalidateByTag,
+        editionHints: getRequestEditionPreferences(request),
+      })
       : await bulkRemoveBookmarksForUser(supabase, user.id, [postId ?? ""], {
-          revalidate: revalidateByTag,
-          editionHints: getRequestEditionPreferences(request),
-        })
+        revalidate: revalidateByTag,
+        editionHints: getRequestEditionPreferences(request),
+      })
 
     return successResponse(request, respond, mutationPayload)
   } catch (error) {
