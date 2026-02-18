@@ -225,7 +225,6 @@ await writeSessionCookie({
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
       }
-    }
 
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
