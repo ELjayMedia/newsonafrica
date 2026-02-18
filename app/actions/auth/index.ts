@@ -6,6 +6,7 @@ import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/su
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
+import { mapProfileRowToAuthProfile } from "@/lib/supabase/adapters/profiles"
 import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
@@ -28,14 +29,6 @@ export interface AuthStatePayload {
 interface OAuthOptions {
   provider: "google" | "facebook"
   redirectTo?: string
-}
-
-function toSerializable<T>(value: T): T {
-  if (value === null || value === undefined) {
-    return value
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T
 }
 
 const getSiteUrl = () => {
@@ -62,14 +55,14 @@ async function fetchProfile(supabase: SupabaseServerClient, userId: string): Pro
     throw new ActionError("Failed to load profile", { cause: error })
   }
 
-  return data ?? null
+  return mapProfileRowToAuthProfile(data)
 }
 
 function serializeAuthState(state: AuthStatePayload): AuthStatePayload {
   return {
-    session: toSerializable(state.session),
-    user: toSerializable(state.user),
-    profile: toSerializable(state.profile),
+    session: JSON.parse(JSON.stringify(state.session)),
+    user: JSON.parse(JSON.stringify(state.user)),
+    profile: mapProfileRowToAuthProfile(state.profile),
   }
 }
 
@@ -306,7 +299,7 @@ export async function getProfile(): Promise<ActionResult<ProfileAuthRow | null>>
     }
 
     const profile = await fetchProfile(supabase, session.user.id)
-    return toSerializable(profile)
+    return mapProfileRowToAuthProfile(profile)
   })
 }
 
@@ -336,6 +329,6 @@ export async function updateProfile(
 
     revalidateByTag(CACHE_TAGS.USERS)
 
-    return toSerializable(data)
+    return mapProfileRowToAuthProfile(data) as Profile
   })
 }

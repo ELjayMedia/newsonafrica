@@ -9,8 +9,7 @@ import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
-import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
-import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
+import { mapUserPreferencesRowToSnapshot } from "@/lib/supabase/adapters/user-preferences"
 
 type UserPreferencesBootstrapRow = {
   user_id: string
@@ -75,16 +74,7 @@ function useClientBootstrap(
       if (!session?.user) {
         // No session, use defaults
         setAuthState(null)
-        setPreferences({
-          userId: null,
-          preferences: {
-            ...DEFAULT_USER_PREFERENCES,
-            sections: [...DEFAULT_USER_PREFERENCES.sections],
-            blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
-            countries: [...DEFAULT_USER_PREFERENCES.countries],
-          },
-          profilePreferences: {},
-        })
+        setPreferences(mapUserPreferencesRowToSnapshot({ userId: null }))
         setIsBootstrapping(false)
         return
       }
@@ -119,8 +109,8 @@ function useClientBootstrap(
           console.error("[v0] Bootstrap preferences error:", prefsError)
         }
 
-        if (userPrefs) {
-          setPreferences({
+        setPreferences(
+          mapUserPreferencesRowToSnapshot({
             userId: session.user.id,
             preferences: {
               theme: userPrefs.theme ?? DEFAULT_USER_PREFERENCES.theme,
@@ -164,7 +154,7 @@ function useClientBootstrap(
 }
 
 export function Providers({ children, initialAuthState = null, initialPreferences = null }: ProvidersProps) {
-  const { authState, preferences, isBootstrapping } = useClientBootstrap(initialAuthState, initialPreferences)
+  const { authState, preferences } = useClientBootstrap(initialAuthState, initialPreferences)
 
   return (
     <UserProvider initialState={authState}>
