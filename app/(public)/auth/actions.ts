@@ -210,20 +210,18 @@ export async function signUpWithPasswordAction(
     }
 
     const user = data.user
-    if (!user) {
-      throw new Error("Auth succeeded but no user was returned.")
-    }
 
-    const userId = user.id
+    if (!user) {
+      return createErrorState("Auth succeeded but no user was returned.")
+    }
 
     try {
       await writeSessionCookie({
-        userId,
-        username: null,
+        userId: user.id,
+        username: user.email ?? null,
         avatar_url: null,
         role: user.role ?? null,
         created_at: user.created_at ?? null,
-        updated_at: null,
       })
     } catch (cookieError) {
       console.error("Failed to prime session cookie after sign-up", cookieError)
