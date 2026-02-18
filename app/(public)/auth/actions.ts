@@ -131,6 +131,7 @@ export async function signInWithPasswordAction(
 
     const user = data.user
     const userId = user?.id
+
     if (userId) {
       try {
         await writeSessionCookie({
@@ -142,10 +143,9 @@ export async function signInWithPasswordAction(
           updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
         })
       } catch (cookieError) {
-        console.error("Failed to prime session cookie after sign-up", cookieError)
+        console.error("Failed to prime session cookie after password sign-in", cookieError)
       }
     }
-
 
     redirect(redirectTo)
   } catch (error) {
@@ -205,16 +205,18 @@ export async function signUpWithPasswordAction(
       return createErrorState(error.message)
     }
 
-    const userId = data.user?.id
+    const user = data.user
+    const userId = user?.id
+
     if (userId) {
       try {
         await writeSessionCookie({
           userId,
-          username: data.user.email ?? null,
+          username: user?.email ?? null,
           avatar_url: null,
-          role: data.user.role ?? null,
-          created_at: data.user.created_at ?? null,
-          updated_at: data.user.updated_at ?? null,
+          role: (user as { role?: string | null })?.role ?? null,
+          created_at: (user as { created_at?: string | null })?.created_at ?? null,
+          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
         })
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
