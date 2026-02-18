@@ -1,14 +1,12 @@
 "use client"
 
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
-
 import { Slot } from "./slot"
 
-interface SelectContextValue {
-  value: string | undefined
-  setValue: (value: string) => void
+type SelectContextValue<T extends string> = {
+  value: T | undefined
+  setValue: (value: T) => void
   open: boolean
   setOpen: (open: boolean) => void
   triggerRef: React.MutableRefObject<HTMLElement | null>
@@ -16,25 +14,31 @@ interface SelectContextValue {
   setSelectedLabel: (label: React.ReactNode) => void
 }
 
-const SelectContext = React.createContext<SelectContextValue | null>(null)
+// Context can't be truly generic, so we store "any" and cast at usage points.
+const SelectContext = React.createContext<SelectContextValue<any> | null>(null)
 
-function useSelectContext(component: string) {
+function useSelectContext<T extends string>(component: string) {
   const context = React.useContext(SelectContext)
   if (!context) {
     throw new Error(`${component} must be used within <Select>`)
   }
-  return context
+  return context as SelectContextValue<T>
 }
 
-interface SelectProps {
+export interface SelectProps<T extends string = string> {
   children: React.ReactNode
-  value?: string
-  defaultValue?: string
-  onValueChange?: (value: string) => void
+  value?: T
+  defaultValue?: T
+  onValueChange?: (value: T) => void
 }
 
-const Select = ({ children, value, defaultValue, onValueChange }: SelectProps) => {
-  const [internalValue, setInternalValue] = React.useState<string | undefined>(defaultValue)
+const Select = <T extends string = string,>({
+  children,
+  value,
+  defaultValue,
+  onValueChange,
+}: SelectProps<T>) => {
+  const [internalValue, setInternalValue] = React.useState<T | undefined>(defaultValue)
   const [selectedLabel, setSelectedLabel] = React.useState<React.ReactNode>(null)
   const [open, setOpenState] = React.useState(false)
   const triggerRef = React.useRef<HTMLElement | null>(null)
@@ -42,7 +46,7 @@ const Select = ({ children, value, defaultValue, onValueChange }: SelectProps) =
   const currentValue = value !== undefined ? value : internalValue
 
   const setValue = React.useCallback(
-    (next: string) => {
+    (next: T) => {
       if (value === undefined) {
         setInternalValue(next)
       }
@@ -55,16 +59,22 @@ const Select = ({ children, value, defaultValue, onValueChange }: SelectProps) =
     setOpenState(next)
   }, [])
 
-  const contextValue = React.useMemo<SelectContextValue>(
-    () => ({ value: currentValue, setValue, open, setOpen, triggerRef, selectedLabel, setSelectedLabel }),
+  const contextValue = React.useMemo<SelectContextValue<T>>(
+    () => ({
+      value: currentValue,
+      setValue,
+      open,
+      setOpen,
+      triggerRef,
+      selectedLabel,
+      setSelectedLabel,
+    }),
     [currentValue, setValue, open, setOpen, selectedLabel],
   )
 
   return (
     <SelectContext.Provider value={contextValue}>
-      <div className="relative inline-flex w-full flex-col">
-        {children}
-      </div>
+      <div className="relative inline-flex w-full flex-col">{children}</div>
     </SelectContext.Provider>
   )
 }
@@ -75,7 +85,7 @@ const SelectTrigger = React.forwardRef<
   any,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 >(({ className, asChild = false, onClick, children, ...props }, forwardedRef) => {
-  const { open, setOpen, triggerRef, selectedLabel } = useSelectContext("SelectTrigger")
+  const { open, setOpen, triggerRef, selectedLabel } = useSelectContext<string>("SelectTrigger")
   const Comp = asChild ? Slot : "button"
 
   return (
@@ -85,7 +95,7 @@ const SelectTrigger = React.forwardRef<
         if (typeof forwardedRef === "function") {
           forwardedRef(node)
         } else if (forwardedRef && typeof forwardedRef === "object") {
-          ;(forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node
+          ; (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node
         }
         triggerRef.current = node
       }}
@@ -112,7 +122,7 @@ SelectTrigger.displayName = "SelectTrigger"
 
 const SelectContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, style, ...props }, forwardedRef) => {
-    const { open, setOpen, triggerRef } = useSelectContext("SelectContent")
+    const { open, setOpen, triggerRef } = useSelectContext<string>("SelectContent")
     const contentRef = React.useRef<HTMLDivElement | null>(null)
 
     React.useImperativeHandle(forwardedRef, () => contentRef.current as HTMLDivElement)
@@ -129,9 +139,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
       }
 
       function handleEscape(event: KeyboardEvent) {
-        if (event.key === "Escape") {
-          setOpen(false)
-        }
+        if (event.key === "Escape") setOpen(false)
       }
 
       document.addEventListener("pointerdown", handlePointerDown)
@@ -143,9 +151,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
       }
     }, [open, setOpen, triggerRef])
 
-    if (!open) {
-      return null
-    }
+    if (!open) return null
 
     const triggerWidth = triggerRef.current?.offsetWidth
 
@@ -171,7 +177,7 @@ const SelectItem = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string }
 >(({ className, value, children, onClick, ...props }, forwardedRef) => {
-  const { value: selectedValue, setValue, setOpen, setSelectedLabel } = useSelectContext("SelectItem")
+  const { value: selectedValue, setValue, setOpen, setSelectedLabel } = useSelectContext<string>("SelectItem")
   const isActive = selectedValue === value
 
   return (
@@ -203,7 +209,7 @@ const SelectItem = React.forwardRef<
 SelectItem.displayName = "SelectItem"
 
 const SelectValue = ({ placeholder, className }: { placeholder?: React.ReactNode; className?: string }) => {
-  const { selectedLabel, value } = useSelectContext("SelectValue")
+  const { selectedLabel, value } = useSelectContext<string>("SelectValue")
   return <span className={cn("line-clamp-1", className)}>{value ? selectedLabel : placeholder}</span>
 }
 SelectValue.displayName = "SelectValue"
@@ -214,7 +220,9 @@ const SelectGroup = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 SelectGroup.displayName = "SelectGroup"
 
 const SelectLabel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn("px-2 py-1.5 text-sm font-semibold", className)} {...props} />,
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("px-2 py-1.5 text-sm font-semibold", className)} {...props} />
+  ),
 )
 SelectLabel.displayName = "SelectLabel"
 
