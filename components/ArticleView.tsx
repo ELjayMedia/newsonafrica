@@ -330,10 +330,10 @@ export default function ArticleView({ post }: ArticleViewProps) {
             featuredImage={
               featuredImage?.node?.sourceUrl
                 ? {
-                    url: featuredImage.node.sourceUrl,
-                    width: featuredImage.node.mediaDetails?.width || 1200,
-                    height: featuredImage.node.mediaDetails?.height || 800,
-                  }
+                  url: featuredImage.node.sourceUrl,
+                  width: featuredImage.node.mediaDetails?.width || 1200,
+                  height: featuredImage.node.mediaDetails?.height || 800,
+                }
                 : undefined
             }
             variant="outline"
@@ -412,10 +412,10 @@ export default function ArticleView({ post }: ArticleViewProps) {
               featuredImage={
                 featuredImage?.node?.sourceUrl
                   ? {
-                      url: featuredImage.node.sourceUrl,
-                      width: featuredImage.node.mediaDetails?.width || 1200,
-                      height: featuredImage.node.mediaDetails?.height || 800,
-                    }
+                    url: featuredImage.node.sourceUrl,
+                    width: featuredImage.node.mediaDetails?.width || 1200,
+                    height: featuredImage.node.mediaDetails?.height || 800,
+                  }
                   : undefined
               }
               variant="outline"
