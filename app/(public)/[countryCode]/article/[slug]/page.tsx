@@ -242,7 +242,6 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     </>
   )
 }
-// ... (all the previous code remains the same)
 
 // We reach here only if resolvedArticle.status === "found" (because of earlier checks)
 if (resolvedArticle.status !== "found") {
