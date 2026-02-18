@@ -9,11 +9,20 @@ import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+export type ProfileAuthRow = Pick<
+  Profile,
+  "id" | "username" | "handle" | "avatar_url" | "email" | "full_name" | "role" | "preferences" | "country" | "created_at" | "updated_at"
+>
+
+const PROFILE_AUTH_SELECT_COLUMNS =
+  "id, username, handle, avatar_url, email, full_name, role, preferences, country, created_at, updated_at"
+const PROFILE_FULL_SELECT_COLUMNS =
+  "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
 export interface AuthStatePayload {
   session: Session | null
   user: User | null
-  profile: Profile | null
+  profile: ProfileAuthRow | null
 }
 
 interface OAuthOptions {
@@ -42,8 +51,12 @@ const getSiteUrl = () => {
   return "http://localhost:3000"
 }
 
-async function fetchProfile(supabase: SupabaseServerClient, userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
+async function fetchProfile(supabase: SupabaseServerClient, userId: string): Promise<ProfileAuthRow | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_AUTH_SELECT_COLUMNS)
+    .eq("id", userId)
+    .maybeSingle<ProfileAuthRow>()
 
   if (error) {
     throw new ActionError("Failed to load profile", { cause: error })
@@ -62,7 +75,7 @@ function serializeAuthState(state: AuthStatePayload): AuthStatePayload {
 
 export async function getCurrentSession(): Promise<ActionResult<AuthStatePayload>> {
   return withSupabaseSession(async ({ supabase, session }) => {
-    let profile: Profile | null = null
+    let profile: ProfileAuthRow | null = null
 
     if (session?.user) {
       profile = await fetchProfile(supabase, session.user.id)
@@ -236,7 +249,7 @@ export async function refreshSession(): Promise<ActionResult<AuthStatePayload>> 
 
     const session = data.session ?? null
     const user = session?.user ?? null
-    let profile: Profile | null = null
+    let profile: ProfileAuthRow | null = null
 
     if (user) {
       profile = await fetchProfile(supabase, user.id)
@@ -286,7 +299,7 @@ export async function signInWithOAuth({
   })
 }
 
-export async function getProfile(): Promise<ActionResult<Profile | null>> {
+export async function getProfile(): Promise<ActionResult<ProfileAuthRow | null>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     if (!session?.user) {
       return null
@@ -314,8 +327,8 @@ export async function updateProfile(
       .from("profiles")
       .update(payload as never)
       .eq("id", session.user.id)
-      .select()
-      .single()
+      .select(PROFILE_FULL_SELECT_COLUMNS)
+      .single<Profile>()
 
     if (error || !data) {
       throw new ActionError("Failed to update profile", { cause: error })

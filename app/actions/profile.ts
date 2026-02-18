@@ -9,6 +9,13 @@ import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
 import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+export type ProfileDetailsRow = Pick<
+  Profile,
+  "id" | "username" | "handle" | "full_name" | "avatar_url" | "website" | "email" | "bio" | "country" | "location" | "interests" | "preferences" | "updated_at" | "created_at" | "is_admin" | "onboarded" | "role"
+>
+
+const PROFILE_DETAILS_SELECT_COLUMNS =
+  "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
 function toSerializable<T>(value: T): T {
   if (value === null || value === undefined) {
@@ -18,7 +25,7 @@ function toSerializable<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-export async function getProfileById(userId: string): Promise<ActionResult<Profile | null>> {
+export async function getProfileById(userId: string): Promise<ActionResult<ProfileDetailsRow | null>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     if (!session?.user) {
       throw new ActionError("User not authenticated", { status: 401 })
@@ -28,7 +35,7 @@ export async function getProfileById(userId: string): Promise<ActionResult<Profi
       throw new ActionError("You do not have access to this profile", { status: 403 })
     }
 
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
+    const { data, error } = await supabase.from("profiles").select(PROFILE_DETAILS_SELECT_COLUMNS).eq("id", userId).maybeSingle<ProfileDetailsRow>()
 
     if (error) {
       throw new ActionError("Failed to load profile", { cause: error })

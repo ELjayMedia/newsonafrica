@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { useEffect, useState, useCallback } from "react"
 
-import type { AuthStatePayload } from "@/app/actions/auth"
+import type { AuthStatePayload, ProfileAuthRow } from "@/app/actions/auth"
 import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
 import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
@@ -11,6 +11,30 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
+
+type UserPreferencesBootstrapRow = {
+  user_id: string
+  theme?: "light" | "dark" | "system" | null
+  language?: string | null
+  email_notifications?: boolean | null
+  push_notifications?: boolean | null
+  sections?: string[] | null
+  blocked_topics?: string[] | null
+  countries?: string[] | null
+}
+
+const PROFILE_BOOTSTRAP_SELECT_COLUMNS =
+  "id, username, handle, avatar_url, email, full_name, role, preferences, country, created_at, updated_at"
+const USER_PREFERENCES_BOOTSTRAP_SELECT_COLUMNS =
+  "user_id, theme, language, email_notifications, push_notifications, sections, blocked_topics, countries"
+
+function toProfilePreferences(value: ProfileAuthRow["preferences"]): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+
+  return {}
+}
 
 interface ProvidersProps {
   children: ReactNode
@@ -68,9 +92,9 @@ function useClientBootstrap(
       // Fetch profile if we have a user
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select(PROFILE_BOOTSTRAP_SELECT_COLUMNS)
         .eq("id", session.user.id)
-        .single()
+        .single<ProfileAuthRow>()
 
       if (profileError && profileError.code !== "PGRST116") {
         console.error("[v0] Bootstrap profile error:", profileError)
@@ -87,9 +111,9 @@ function useClientBootstrap(
       if (session.user) {
         const { data: userPrefs, error: prefsError } = await supabase
           .from("user_preferences")
-          .select("*")
+          .select(USER_PREFERENCES_BOOTSTRAP_SELECT_COLUMNS)
           .eq("user_id", session.user.id)
-          .single()
+          .single<UserPreferencesBootstrapRow>()
 
         if (prefsError && prefsError.code !== "PGRST116") {
           console.error("[v0] Bootstrap preferences error:", prefsError)
@@ -99,7 +123,7 @@ function useClientBootstrap(
           setPreferences({
             userId: session.user.id,
             preferences: {
-              theme: (userPrefs.theme as "light" | "dark" | "system") ?? DEFAULT_USER_PREFERENCES.theme,
+              theme: userPrefs.theme ?? DEFAULT_USER_PREFERENCES.theme,
               language: userPrefs.language ?? DEFAULT_USER_PREFERENCES.language,
               emailNotifications: userPrefs.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
               pushNotifications: userPrefs.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
