@@ -6,17 +6,10 @@ import { withSupabaseSession } from "@/app/actions/supabase"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
+import { mapProfileRowToAuthProfile } from "@/lib/supabase/adapters/profiles"
 import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
-
-function toSerializable<T>(value: T): T {
-  if (value === null || value === undefined) {
-    return value
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T
-}
 
 export async function getProfileById(userId: string): Promise<ActionResult<Profile | null>> {
   return withSupabaseSession(async ({ supabase, session }) => {
@@ -34,7 +27,7 @@ export async function getProfileById(userId: string): Promise<ActionResult<Profi
       throw new ActionError("Failed to load profile", { cause: error })
     }
 
-    return toSerializable(data ?? null)
+    return mapProfileRowToAuthProfile(data)
   })
 }
 
@@ -69,6 +62,6 @@ export async function uploadProfileAvatar(formData: FormData): Promise<ActionRes
 
     revalidateByTag(CACHE_TAGS.USERS)
 
-    return toSerializable({ avatarUrl })
+    return { avatarUrl }
   })
 }

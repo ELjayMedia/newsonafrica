@@ -4,13 +4,12 @@ import type { ReactNode } from "react"
 import { useEffect, useState, useCallback } from "react"
 
 import type { AuthStatePayload } from "@/app/actions/auth"
-import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
+import type { UserPreferencesSnapshot } from "@/lib/supabase/adapters/user-preferences"
 import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
-import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
-import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
+import { mapUserPreferencesRowToSnapshot } from "@/lib/supabase/adapters/user-preferences"
 
 interface ProvidersProps {
   children: ReactNode
@@ -51,16 +50,7 @@ function useClientBootstrap(
       if (!session?.user) {
         // No session, use defaults
         setAuthState(null)
-        setPreferences({
-          userId: null,
-          preferences: {
-            ...DEFAULT_USER_PREFERENCES,
-            sections: [...DEFAULT_USER_PREFERENCES.sections],
-            blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
-            countries: [...DEFAULT_USER_PREFERENCES.countries],
-          },
-          profilePreferences: {},
-        })
+        setPreferences(mapUserPreferencesRowToSnapshot({ userId: null }))
         setIsBootstrapping(false)
         return
       }
@@ -95,35 +85,13 @@ function useClientBootstrap(
           console.error("[v0] Bootstrap preferences error:", prefsError)
         }
 
-        if (userPrefs) {
-          setPreferences({
+        setPreferences(
+          mapUserPreferencesRowToSnapshot({
             userId: session.user.id,
-            preferences: {
-              theme: (userPrefs.theme as "light" | "dark" | "system") ?? DEFAULT_USER_PREFERENCES.theme,
-              language: userPrefs.language ?? DEFAULT_USER_PREFERENCES.language,
-              emailNotifications: userPrefs.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
-              pushNotifications: userPrefs.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
-              sections: userPrefs.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
-              blockedTopics: userPrefs.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
-              countries: userPrefs.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
-              commentSort: DEFAULT_USER_PREFERENCES.commentSort,
-              bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
-              lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
-            },
-            profilePreferences: parseProfilePreferences(profile?.preferences),
-          })
-        } else {
-          setPreferences({
-            userId: session.user.id,
-            preferences: {
-              ...DEFAULT_USER_PREFERENCES,
-              sections: [...DEFAULT_USER_PREFERENCES.sections],
-              blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
-              countries: [...DEFAULT_USER_PREFERENCES.countries],
-            },
-            profilePreferences: parseProfilePreferences(profile?.preferences),
-          })
-        }
+            contentRow: userPrefs,
+            profilePreferences: profile?.preferences,
+          }),
+        )
       }
     } catch (error) {
       console.error("[v0] Bootstrap error:", error)
@@ -140,7 +108,7 @@ function useClientBootstrap(
 }
 
 export function Providers({ children, initialAuthState = null, initialPreferences = null }: ProvidersProps) {
-  const { authState, preferences, isBootstrapping } = useClientBootstrap(initialAuthState, initialPreferences)
+  const { authState, preferences } = useClientBootstrap(initialAuthState, initialPreferences)
 
   return (
     <UserProvider initialState={authState}>
