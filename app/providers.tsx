@@ -11,14 +11,13 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
-import type { ProfilePreferences } from "@/types/profile-preferences" // <-- adjust path to your real file
+import type { ProfilePreferences } from "@/types/profile-preferences"
 
 interface ProvidersProps {
   children: ReactNode
   initialAuthState?: AuthStatePayload | null
   initialPreferences?: UserPreferencesSnapshot | null
 }
-
 
 function normalizeProfilePreferences(value: unknown): ProfilePreferences {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -36,6 +35,7 @@ function useClientBootstrap(
   const [isBootstrapping, setIsBootstrapping] = useState(initialAuthState === null || initialAuthState === undefined)
 
   const bootstrap = useCallback(async () => {
+    // If we already have server-provided auth state, skip bootstrap
     if (initialAuthState !== null && initialAuthState !== undefined) {
       setIsBootstrapping(false)
       return
@@ -51,7 +51,6 @@ function useClientBootstrap(
 
       if (sessionError) {
         console.error("[v0] Bootstrap session error:", sessionError)
-        setIsBootstrapping(false)
         return
       }
 
@@ -67,7 +66,6 @@ function useClientBootstrap(
           },
           profilePreferences: {},
         })
-        setIsBootstrapping(false)
         return
       }
 
