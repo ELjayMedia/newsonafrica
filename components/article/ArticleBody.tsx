@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { JSX, ReactNode } from "react"
 import { parse, type HTMLElement, type Node as HtmlNode, type TextNode } from "node-html-parser"
 
 import { cn } from "@/lib/utils"
@@ -214,12 +214,13 @@ function renderBlock(block: ArticleBlock, index: number): ReactNode {
         6: "mt-4 mb-2 text-base font-semibold uppercase tracking-wide text-foreground/90",
       }
 
-      const Tag = (`h${block.level}` as keyof JSX.IntrinsicElements) ?? "h3"
+      const level = block.level >= 1 && block.level <= 6 ? block.level : 3
+      const Tag = `h${level}` as keyof JSX.IntrinsicElements
 
       return (
         <Tag
           key={`heading-${index}`}
-          className={headingClasses[block.level] ?? headingClasses[3]}
+          className={headingClasses[level] ?? headingClasses[3]}
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
       )

@@ -1,13 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { getUserSubscriptions } from "@/app/actions/subscriptions"
+import { getUserSubscriptions, type SubscriptionRow } from "@/app/actions/subscriptions"
 import { ActionError } from "@/lib/supabase/action-result"
-
-type Subscription = Awaited<ReturnType<typeof getUserSubscriptions>> extends {
-  data: infer T
-}
-  ? NonNullable<T>[number]
-  : never
 
 export async function SubscriptionsContent({ userId }: { userId: string }) {
   const result = await getUserSubscriptions(userId)
@@ -52,7 +46,7 @@ export async function SubscriptionsContent({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {subscriptions.map((subscription: Subscription) => (
+      {subscriptions.map((subscription: SubscriptionRow) => (
         <Card key={subscription.id}>
           <CardHeader>
             <CardTitle>{subscription.plan}</CardTitle>
