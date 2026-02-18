@@ -11,7 +11,6 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
-// ✅ use the type you actually have
 import type { ProfilePreferences } from "@/types/profile-preferences" // <-- adjust path to your real file
 
 interface ProvidersProps {
@@ -20,7 +19,7 @@ interface ProvidersProps {
   initialPreferences?: UserPreferencesSnapshot | null
 }
 
-// ✅ runtime guard so jsonb doesn't break TypeScript
+
 function normalizeProfilePreferences(value: unknown): ProfilePreferences {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {} as ProfilePreferences
