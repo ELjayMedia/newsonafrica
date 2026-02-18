@@ -189,7 +189,6 @@ async function ensureUserPreferencesSnapshot(
 ): Promise<UserPreferencesSnapshot> {
   const profile = await fetchProfile(supabase, userId)
   const defaultSections = Array.isArray(profile?.interests) ? (profile?.interests as string[]) : []
-
   const settingsRow = await ensureUserSettings(supabase, userId)
   const contentRow = await ensureContentPreferences(supabase, userId, defaultSections)
 
