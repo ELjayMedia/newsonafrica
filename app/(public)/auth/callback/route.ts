@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
       if (data.session) {
         // Check if user profile exists, create if not
-        const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.session.user.id).single()
+        const { data: profile } = await supabase.from("profiles").select("id").eq("id", data.session.user.id).maybeSingle()
 
         if (!profile) {
           // Create profile for new user
