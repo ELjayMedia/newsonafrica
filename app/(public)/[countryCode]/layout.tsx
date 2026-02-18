@@ -15,5 +15,5 @@ export default async function CountryLayout({ children, params }: CountryLayoutP
   const resolvedParams = await params;
   const countryCode = resolveCountryForLayout(resolvedParams?.countryCode);
 
-  return <EditionLayoutShell countryCode={countryCode}>{children}</EditionLayoutShell>;
+  return <EditionLayoutShell countryCode={countryCode} children={undefined}>{children}</EditionLayoutShell>;
 }
