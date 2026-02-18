@@ -210,31 +210,34 @@ export async function signUpWithPasswordAction(
     }
 
     const user = data.user
-if (!user) {
-  throw new Error("Auth succeeded but no user was returned.")
-}
+    if (!user) {
+      throw new Error("Auth succeeded but no user was returned.")
+    }
 
-await writeSessionCookie({
-  userId,
-  username: user.email ?? null,
-  avatar_url: null,
-  role: user.role ?? null,
-  created_at: user.created_at ?? null,
-})
+    const userId = user.id
 
-      } catch (cookieError) {
-        console.error("Failed to prime session cookie after sign-up", cookieError)
-      }
+    try {
+      await writeSessionCookie({
+        userId,
+        username: null,
+        avatar_url: null,
+        role: user.role ?? null,
+        created_at: user.created_at ?? null,
+        updated_at: null,
+      })
+    } catch (cookieError) {
+      console.error("Failed to prime session cookie after sign-up", cookieError)
+    }
 
-    return createSuccessState(DEFAULT_SUCCESS_MESSAGE);
+    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to sign up", error)
 
     if (error instanceof Error && error.message.startsWith("Missing ")) {
-      return createErrorState(error.message);
+      return createErrorState(error.message)
     }
 
-    return createErrorState(DEFAULT_ERROR_MESSAGE);
+    return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
 }
 
