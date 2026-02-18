@@ -35,11 +35,9 @@ export const HYDRATE_CONCURRENCY = 4
 const extractText = (value: unknown): string | undefined => {
   if (!value) return undefined
   if (typeof value === "string") return value
-  if (typeof value === "object" && "rendered" in (value as Record<string, unknown>)) {
-    const rendered = (value as { rendered?: unknown }).rendered
-    return typeof rendered === "string" ? rendered : undefined
-  }
-  return undefined
+
+  const rendered = asRecord(value).rendered
+  return typeof rendered === "string" ? rendered : undefined
 }
 
 const extractFeaturedImage = (value: unknown): BookmarkHydrationPost["featuredImage"] => {
