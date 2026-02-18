@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { CommentList } from "@/components/CommentList"
-import type { Post } from "@/types/post"
-import type { Category } from "@/types/category"
+import type { Post, Category } from "@/types/content"
 import Image from "next/image"
 import Link from "next/link"
 import { RelatedPosts } from "@/components/RelatedPosts"
@@ -149,7 +148,7 @@ export const PostContent: React.FC<PostContentProps> = ({ post }) => {
           <CommentList postId={post.id} editionCode={editionCode} />
         </div>
 
-        <RelatedPosts categories={post.categories?.nodes || []} currentPostId={post.id} />
+        <RelatedPosts posts={[]} />
       </article>
     </div>
   )
