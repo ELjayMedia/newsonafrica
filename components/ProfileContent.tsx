@@ -75,7 +75,7 @@ export default function ProfileContent({ initialSession }: ProfileContentProps) 
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary fallback={<div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">Something went wrong while loading your profile.</div>}>
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 mb-8">

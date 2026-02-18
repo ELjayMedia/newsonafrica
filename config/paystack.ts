@@ -16,3 +16,5 @@ export interface SupabaseSubscription {
 export type SubscriptionPlan = PaystackSubscriptionPlan
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = BASE_SUBSCRIPTION_PLANS
+
+export type { PaystackOptions } from "@/types/paystack"

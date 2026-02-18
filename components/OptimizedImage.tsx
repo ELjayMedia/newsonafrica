@@ -25,7 +25,7 @@ export const OptimizedImage = memo(function OptimizedImage({
   height,
   ...props
 }: OptimizedImageProps) {
-  const [imgSrc, setImgSrc] = useState<string>(src)
+  const [imgSrc, setImgSrc] = useState<ImageProps["src"]>(src)
   const [error, setError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 

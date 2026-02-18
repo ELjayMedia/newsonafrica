@@ -23,6 +23,7 @@ export interface Post {
     node: {
       sourceUrl: string
       altText?: string
+      caption?: string
     }
   }
   author: {
