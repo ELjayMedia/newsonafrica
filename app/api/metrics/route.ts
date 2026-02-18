@@ -21,10 +21,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function normalizeForwardedFor(request: NextRequest): string | undefined {
+  const xf = request.headers.get("x-forwarded-for")
+  if (xf && xf.trim()) return xf
+  const ip = request.ip
+  return typeof ip === "string" && ip.trim() ? ip : undefined
+}
+
 function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayload | null {
   const cacheKey = typeof data.cacheKey === "string" ? data.cacheKey : undefined
   const status = data.status === "hit" || data.status === "miss" ? data.status : undefined
-
   if (!cacheKey || !status) return null
 
   const cacheName = typeof data.cacheName === "string" ? data.cacheName : undefined
@@ -39,6 +45,36 @@ function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayloa
   }
 }
 
+function normalizeWebVitalsPayload(data: Record<string, unknown>): MetricsEventPayload | null {
+  // These three are required by your MetricsEventPayload union (per the error output)
+  const id = typeof data.id === "string" ? data.id : undefined
+  const startTime = typeof data.startTime === "number" ? data.startTime : undefined
+  const value = typeof data.value === "number" ? data.value : undefined
+
+  // These are also expected
+  const label = data.label === "web-vital" || data.label === "custom" ? data.label : undefined
+  const name = typeof data.name === "string" ? data.name : undefined
+
+  if (!id || typeof startTime !== "number" || typeof value !== "number" || !label || !name) {
+    return null
+  }
+
+  const attribution = isRecord(data.attribution) ? (data.attribution as Record<string, unknown>) : undefined
+
+  // IMPORTANT: build a minimal object — do NOT spread the whole input record
+  return {
+    event: "web-vitals",
+    id,
+    startTime,
+    value,
+    label: label as any,
+    name: name as any,
+    ...(attribution ? { attribution } : {}),
+    ...(typeof data.page === "string" ? { page: data.page } : {}),
+    ...(typeof data.href === "string" ? { href: data.href } : {}),
+  } as MetricsEventPayload
+}
+
 function normalizePayload(request: NextRequest, data: unknown): NormalizedPayload | null {
   if (!isRecord(data)) return null
 
@@ -48,24 +84,13 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
   if (!event || !ACCEPTED_EVENTS.has(event as any)) return null
 
   if (event === "web-vitals") {
-    const name = typeof data.name === "string" ? data.name : undefined
-    const value = typeof data.value === "number" ? data.value : undefined
-    const id = typeof data.id === "string" ? data.id : undefined
-
-    if (!name || typeof value !== "number" || !id) return null
-
-    const base: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(data)) {
-      base[key] = val
-    }
+    const payload = normalizeWebVitalsPayload(data)
+    if (!payload) return null
 
     return {
-      ...(base as MetricsEventPayload),
-      event: "web-vitals",
-      page: typeof data.page === "string" ? data.page : undefined,
-      href: typeof data.href === "string" ? data.href : undefined,
+      ...payload,
       userAgent: request.headers.get("user-agent") ?? undefined,
-      forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
+      forwardedFor: normalizeForwardedFor(request),
     }
   }
 
@@ -75,7 +100,7 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
   return {
     ...cachePayload,
     userAgent: request.headers.get("user-agent") ?? undefined,
-    forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
+    forwardedFor: normalizeForwardedFor(request),
   }
 }
 
