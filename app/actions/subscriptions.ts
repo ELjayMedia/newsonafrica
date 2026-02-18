@@ -18,7 +18,9 @@ function toSerializable<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-export async function getUserSubscriptions(userId: string): Promise<ActionResult<SubscriptionRow[]>> {
+export async function getUserSubscriptions(
+  userId: string
+): Promise<ActionResult<SubscriptionRow[]>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     if (!session?.user) {
       throw new ActionError("User not authenticated", { status: 401 })
@@ -28,15 +30,24 @@ export async function getUserSubscriptions(userId: string): Promise<ActionResult
       throw new ActionError("You do not have access to these subscriptions", { status: 403 })
     }
 
-    const { data, error } = await executeListQuery(supabase, "subscriptions", (query) =>
-      query.select<SubscriptionRow>("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    const { data, error } = await executeListQuery(
+      supabase,
+      "subscriptions",
+      (query) =>
+        query
+          .select<SubscriptionRow>("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
     )
 
     if (error) {
       throw new ActionError("Failed to load subscriptions", { cause: error })
     }
 
-    return toSerializable(data ?? [])
+    return {
+      data: toSerializable(data ?? []),
+      error: null,
+    }
   })
 }
 
@@ -52,17 +63,23 @@ interface RecordSubscriptionInput {
   endDate?: string | null
 }
 
-export async function recordSubscription(input: RecordSubscriptionInput): Promise<ActionResult<SubscriptionRow>> {
+export async function recordSubscription(
+  input: RecordSubscriptionInput
+): Promise<ActionResult<SubscriptionRow>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     if (!session?.user) {
       throw new ActionError("User not authenticated", { status: 401 })
     }
 
     if (session.user.id !== input.userId) {
-      throw new ActionError("You do not have access to record this subscription", { status: 403 })
+      throw new ActionError(
+        "You do not have access to record this subscription",
+        { status: 403 }
+      )
     }
 
     const nowIso = new Date().toISOString()
+
     const payload: SubscriptionInsert = {
       id: input.paymentId,
       user_id: input.userId,
@@ -85,11 +102,16 @@ export async function recordSubscription(input: RecordSubscriptionInput): Promis
       .single()
 
     if (error || !data) {
-      throw new ActionError("Failed to record subscription", { cause: error })
+      throw new ActionError("Failed to record subscription", {
+        cause: error,
+      })
     }
 
     revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
 
-    return toSerializable(data)
+    return {
+      data: toSerializable(data),
+      error: null,
+    }
   })
 }
