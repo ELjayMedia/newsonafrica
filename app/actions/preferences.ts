@@ -44,6 +44,8 @@ export interface UpdateProfilePreferencesInput {
 type UserSettingsRow = Database["public"]["Tables"]["user_settings"]["Row"]
 type UserPreferencesRow = Database["public"]["Tables"]["user_preferences"]["Row"]
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"]
+type ProfilesUpdate = Database["public"]["Tables"]["profiles"]["Update"]
+type ProfilePreferencesColumn = ProfilesUpdate["preferences"]
 
 type ProfileSelect = Pick<ProfileRow, "interests" | "preferences">
 
