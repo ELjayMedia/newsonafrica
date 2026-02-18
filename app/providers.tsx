@@ -11,19 +11,25 @@ import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
-import type { ProfilePreferences } from "@/types/profile-preferences"
-
 interface ProvidersProps {
   children: ReactNode
   initialAuthState?: AuthStatePayload | null
   initialPreferences?: UserPreferencesSnapshot | null
 }
 
+/**
+ * `profiles.preferences` is a JSON/JSONB column in Supabase.
+ * Keep it as a plain object to avoid TS union issues.
+ */
+type ProfilePreferences = Record<string, unknown>
+
 function normalizeProfilePreferences(value: unknown): ProfilePreferences {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {} as ProfilePreferences
-  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
   return value as ProfilePreferences
+}
+
+function normalizeTheme(value: unknown): "light" | "dark" | "system" {
+  return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_USER_PREFERENCES.theme
 }
 
 function useClientBootstrap(
@@ -101,13 +107,13 @@ function useClientBootstrap(
         setPreferences({
           userId: session.user.id,
           preferences: {
-            theme: (userPrefs.theme as "light" | "dark" | "system") ?? DEFAULT_USER_PREFERENCES.theme,
-            language: userPrefs.language ?? DEFAULT_USER_PREFERENCES.language,
-            emailNotifications: userPrefs.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
-            pushNotifications: userPrefs.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
-            sections: userPrefs.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
-            blockedTopics: userPrefs.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
-            countries: userPrefs.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
+            theme: normalizeTheme((userPrefs as any).theme),
+            language: (userPrefs as any).language ?? DEFAULT_USER_PREFERENCES.language,
+            emailNotifications: (userPrefs as any).email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
+            pushNotifications: (userPrefs as any).push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
+            sections: (userPrefs as any).sections ?? [...DEFAULT_USER_PREFERENCES.sections],
+            blockedTopics: (userPrefs as any).blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
+            countries: (userPrefs as any).countries ?? [...DEFAULT_USER_PREFERENCES.countries],
             commentSort: DEFAULT_USER_PREFERENCES.commentSort,
             bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
             lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
