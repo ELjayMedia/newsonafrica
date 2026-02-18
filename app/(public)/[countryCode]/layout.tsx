@@ -5,13 +5,15 @@ import { resolveCountryForLayout } from "@/lib/utils/routing"
 
 interface CountryLayoutProps {
   children: ReactNode
-  params: {
+  params: Promise<{
     countryCode?: string
-  }
+  }>  // ← Change type to Promise (recommended for clarity)
 }
 
-export default function CountryLayout({ children, params }: CountryLayoutProps) {
-  const countryCode = resolveCountryForLayout(params?.countryCode)
+export default async function CountryLayout({ children, params }: CountryLayoutProps) {
+  // Await params once at the top (safest pattern)
+  const resolvedParams = await params;
+  const countryCode = resolveCountryForLayout(resolvedParams?.countryCode);
 
-  return <EditionLayoutShell countryCode={countryCode}>{children}</EditionLayoutShell>
+  return <EditionLayoutShell countryCode={countryCode}>{children}</EditionLayoutShell>;
 }
