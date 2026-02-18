@@ -16,7 +16,7 @@ export interface SupabaseResponse<T = unknown> {
 export interface AuthResponse {
   user: User | null
   session: Session | null
-  profile?: UserProfile | null
+  profile?: ProfileAuthRow | null
   error: string | null
   success: boolean
 }
@@ -30,6 +30,31 @@ export interface UploadResponse {
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 export type UserProfile = Profile
+
+type ProfileAuthRow = Pick<Profile, "id" | "username" | "avatar_url" | "role" | "handle">
+type ProfileFullRow = Pick<
+  Profile,
+  | "id"
+  | "username"
+  | "handle"
+  | "full_name"
+  | "avatar_url"
+  | "website"
+  | "email"
+  | "bio"
+  | "country"
+  | "location"
+  | "interests"
+  | "preferences"
+  | "updated_at"
+  | "created_at"
+  | "is_admin"
+  | "onboarded"
+  | "role"
+>
+
+const PROFILE_FULL_SELECT_COLUMNS =
+  "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
 type CachedProfile = { data: UserProfile; timestamp: number }
 
@@ -127,7 +152,7 @@ function createSessionCookiePayload(
 
 export async function getUserSession(
   client: SupabaseClient<Database> = getSupabaseBrowserClient(),
-): Promise<AuthResponse & { profile: UserProfile | null }> {
+): Promise<AuthResponse & { profile: ProfileAuthRow | null }> {
   if (typeof window === "undefined") {
     throw new Error(
       "getUserSession is only available in client-side environments. Import getServerUserSession from '@/lib/supabase/server-component-client' instead.",
@@ -166,7 +191,7 @@ export async function getUserSession(
       .from("profiles")
       .select(USER_PROFILE_SELECT_COLUMNS)
       .eq("id", user.id)
-      .single()
+      .single<ProfileAuthRow>()
 
     if (profileError) {
       console.error("Error fetching user profile:", profileError)
@@ -182,7 +207,7 @@ export async function getUserSession(
     return {
       user,
       session,
-      profile: profile as UserProfile,
+      profile,
       error: null,
       success: true,
     }
@@ -604,14 +629,18 @@ export async function getUserProfile(
     }
   }
 
-  const { data, error } = await client.from("profiles").select("*").eq("id", userId).single()
+  const { data, error } = await client
+    .from("profiles")
+    .select(PROFILE_FULL_SELECT_COLUMNS)
+    .eq("id", userId)
+    .single<ProfileFullRow>()
 
   if (error || !data) {
     console.error("Error fetching user profile:", error)
     throw error ?? new Error("Profile not found")
   }
 
-  const profile = data as UserProfile
+  const profile = data
 
   if (useCache) {
     profileCache.set(userId, { data: profile, timestamp: now })
@@ -639,15 +668,15 @@ export async function updateUserProfile(
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId)
-    .select()
-    .single()
+    .select(PROFILE_FULL_SELECT_COLUMNS)
+    .single<ProfileFullRow>()
 
   if (error || !data) {
     console.error("Error updating user profile:", error)
     throw error ?? new Error("Profile update failed")
   }
 
-  const profile = data as UserProfile
+  const profile = data
 
   profileCache.set(userId, { data: profile, timestamp: Date.now() })
 
@@ -744,12 +773,12 @@ export async function handleSocialLoginProfile(
 
   const { data: existingProfile, error: fetchError } = await client
     .from("profiles")
-    .select("*")
+    .select(PROFILE_FULL_SELECT_COLUMNS)
     .eq("id", user.id)
     .maybeSingle()
 
   if (existingProfile && !fetchError) {
-    return existingProfile as UserProfile
+    return existingProfile
   }
 
   if (fetchError && fetchError.code !== "PGRST116") {
@@ -758,8 +787,8 @@ export async function handleSocialLoginProfile(
 
   const email = user.email ?? undefined
   const displayName =
-    (user.user_metadata?.full_name as string | undefined) ||
-    (user.user_metadata?.name as string | undefined) ||
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
     email?.split("@")[0] ||
     "User"
 
@@ -785,8 +814,8 @@ export async function handleSocialLoginProfile(
     id: user.id,
     username,
     email: user.email ?? null,
-    full_name: (user.user_metadata?.full_name as string | undefined) ?? null,
-    avatar_url: (user.user_metadata?.avatar_url as string | undefined) ?? null,
+    full_name: user.user_metadata?.full_name ?? null,
+    avatar_url: user.user_metadata?.avatar_url ?? null,
     website: null,
     bio: null,
     country: null,
@@ -801,14 +830,14 @@ export async function handleSocialLoginProfile(
     handle: null,
   }
 
-  const { data, error } = await client.from("profiles").insert(newProfile).select().single()
+  const { data, error } = await client.from("profiles").insert(newProfile).select(PROFILE_FULL_SELECT_COLUMNS).single<ProfileFullRow>()
 
   if (error || !data) {
     console.error("Error creating profile:", error)
     throw error ?? new Error("Profile creation failed")
   }
 
-  const profile = data as UserProfile
+  const profile = data
 
   profileCache.set(user.id, { data: profile, timestamp: Date.now() })
 
