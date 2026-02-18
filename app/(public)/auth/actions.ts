@@ -226,15 +226,15 @@ await writeSessionCookie({
         console.error("Failed to prime session cookie after sign-up", cookieError)
       }
 
-    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
+    return createSuccessState(DEFAULT_SUCCESS_MESSAGE);
   } catch (error) {
     console.error("Failed to sign up", error)
 
     if (error instanceof Error && error.message.startsWith("Missing ")) {
-      return createErrorState(error.message)
+      return createErrorState(error.message);
     }
 
-    return createErrorState(DEFAULT_ERROR_MESSAGE)
+    return createErrorState(DEFAULT_ERROR_MESSAGE);
   }
 }
 
