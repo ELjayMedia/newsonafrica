@@ -22,11 +22,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeForwardedFor(request: NextRequest): string | undefined {
+  // Most reliable on Vercel/CF/etc
   const xf = request.headers.get("x-forwarded-for")
   if (xf && xf.trim()) return xf
-  const ip = request.ip
-  return typeof ip === "string" && ip.trim() ? ip : undefined
+
+  // Common alternative used by reverse proxies
+  const xr = request.headers.get("x-real-ip")
+  if (xr && xr.trim()) return xr
+
+  // No IP available in this runtime/request type
+  return undefined
 }
+
 
 function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayload | null {
   const cacheKey = typeof data.cacheKey === "string" ? data.cacheKey : undefined
