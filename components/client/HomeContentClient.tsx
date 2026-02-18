@@ -65,7 +65,7 @@ const mapCategoryPostsForConfigs = (
 const buildFallbackData = (
   baselinePosts: HomePost[],
   featuredPosts: HomePost[],
-): Required<HomeContentClientProps["initialData"]> => {
+): HomeContentData => {
   if (baselinePosts.length === 0 && featuredPosts.length === 0) {
     return {
       taggedPosts: [],
@@ -164,7 +164,7 @@ export function HomeContentClient({
   ]
 
   const CategorySection = (config: CategoryConfig) => {
-    const { name, layout, typeOverride } = config
+    const { name, typeOverride } = config
     const resolvedSlug = resolveCategorySlug(config)
     const normalizedSlug = resolvedSlug.toLowerCase()
     const posts = categoryPosts[normalizedSlug] || []
@@ -186,7 +186,6 @@ export function HomeContentClient({
             ...post,
             type: typeOverride,
           }))}
-          layout={layout}
           className="compact-grid"
         />
       </article>
