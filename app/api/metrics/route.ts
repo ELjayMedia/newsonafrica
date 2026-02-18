@@ -6,7 +6,7 @@ import type { CacheMetricPayload, MetricsEventPayload, MetricsEnvelope } from "@
 
 export const runtime = "edge"
 
-const ACCEPTED_EVENTS = new Set(["web-vitals", "cache"])
+const ACCEPTED_EVENTS = new Set(["web-vitals", "cache"] as const)
 
 type NormalizedPayload = MetricsEventPayload & {
   forwardedFor?: string
@@ -17,15 +17,18 @@ function badRequest(request: NextRequest, message: string) {
   return jsonWithCors(request, { error: message }, { status: 400 })
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayload | null {
   const cacheKey = typeof data.cacheKey === "string" ? data.cacheKey : undefined
   const status = data.status === "hit" || data.status === "miss" ? data.status : undefined
-  if (!cacheKey || !status) {
-    return null
-  }
+
+  if (!cacheKey || !status) return null
 
   const cacheName = typeof data.cacheName === "string" ? data.cacheName : undefined
-  const metadata = typeof data.metadata === "object" && data.metadata != null ? data.metadata : undefined
+  const metadata = isRecord(data.metadata) ? (data.metadata as Record<string, unknown>) : undefined
 
   return {
     event: "cache",
@@ -37,47 +40,37 @@ function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayloa
 }
 
 function normalizePayload(request: NextRequest, data: unknown): NormalizedPayload | null {
-  if (!data || typeof data !== "object") {
-    return null
-  }
+  if (!isRecord(data)) return null
 
-  const record = data as Record<string, unknown>
-  const event = typeof record.event === "string" ? record.event : typeof record.type === "string" ? record.type : null
+  const event =
+    typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
 
-  if (!event || !ACCEPTED_EVENTS.has(event)) {
-    return null
-  }
+  if (!event || !ACCEPTED_EVENTS.has(event as any)) return null
 
   if (event === "web-vitals") {
-    const name = typeof record.name === "string" ? record.name : undefined
-    const value = typeof record.value === "number" ? record.value : undefined
-    const id = typeof record.id === "string" ? record.id : undefined
+    const name = typeof data.name === "string" ? data.name : undefined
+    const value = typeof data.value === "number" ? data.value : undefined
+    const id = typeof data.id === "string" ? data.id : undefined
 
-    if (!name || typeof value !== "number" || !id) {
-      return null
-    }
+    if (!name || typeof value !== "number" || !id) return null
 
     const base: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(record)) {
-      if (typeof key === "string") {
-        base[key] = val
-      }
+    for (const [key, val] of Object.entries(data)) {
+      base[key] = val
     }
 
     return {
       ...(base as MetricsEventPayload),
       event: "web-vitals",
-      page: typeof record.page === "string" ? record.page : undefined,
-      href: typeof record.href === "string" ? record.href : undefined,
+      page: typeof data.page === "string" ? data.page : undefined,
+      href: typeof data.href === "string" ? data.href : undefined,
       userAgent: request.headers.get("user-agent") ?? undefined,
       forwardedFor: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
     }
   }
 
-  const cachePayload = normalizeCachePayload(record)
-  if (!cachePayload) {
-    return null
-  }
+  const cachePayload = normalizeCachePayload(data)
+  if (!cachePayload) return null
 
   return {
     ...cachePayload,
