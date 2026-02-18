@@ -1,8 +1,8 @@
-import { fetchCategories, fetchTags, fetchRecentPosts } from "@/lib/wordpress-api"
-import Link from "next/link"
-import { getCategoryUrl } from "@/lib/utils/routing"
 import type { Metadata } from "next"
-import { getArticleUrl } from "@/lib/utils/routing"
+import Link from "next/link"
+
+import { fetchCategories, fetchRecentPosts, fetchTags } from "@/lib/wordpress-api"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 export const runtime = "nodejs"
 
@@ -11,16 +11,33 @@ export const metadata: Metadata = {
   description: "Complete sitemap of News On Africa website",
 }
 
+type SitemapCategory = {
+  slug: string
+  name: string
+}
+
+type SitemapTag = {
+  slug: string
+  name: string
+}
+
+type SitemapPost = {
+  slug: string
+  title: string
+  date: string
+  country?: string | null
+}
+
 export default async function SitemapPage() {
-  const [categories, tags, recentPosts] = await Promise.allSettled([
-    fetchCategories().catch(() => []),
-    fetchTags().catch(() => []),
-    fetchRecentPosts(50).catch(() => []),
+  const [categories, tags, recentPosts] = (await Promise.allSettled([
+    fetchCategories().catch(() => [] as SitemapCategory[]),
+    fetchTags().catch(() => [] as SitemapTag[]),
+    fetchRecentPosts(50).catch(() => [] as SitemapPost[]),
   ]).then((results) => [
-    results[0].status === "fulfilled" ? results[0].value : [],
-    results[1].status === "fulfilled" ? results[1].value : [],
-    results[2].status === "fulfilled" ? results[2].value : [],
-  ])
+    results[0].status === "fulfilled" ? (results[0].value as SitemapCategory[]) : ([] as SitemapCategory[]),
+    results[1].status === "fulfilled" ? (results[1].value as SitemapTag[]) : ([] as SitemapTag[]),
+    results[2].status === "fulfilled" ? (results[2].value as SitemapPost[]) : ([] as SitemapPost[]),
+  ])) as [SitemapCategory[], SitemapTag[], SitemapPost[]]
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -96,7 +113,7 @@ export default async function SitemapPage() {
             <>
               <h2 className="text-2xl font-semibold mb-4">Categories</h2>
               <ul className="grid grid-cols-2 gap-2">
-                {categories.map((category) => (
+                {categories.map((category: SitemapCategory) => (
                   <li key={category.slug}>
                     <Link href={getCategoryUrl(category.slug)} className="text-blue-600 hover:underline">
                       {category.name}
@@ -111,7 +128,7 @@ export default async function SitemapPage() {
             <>
               <h2 className="text-2xl font-semibold mt-8 mb-4">Popular Tags</h2>
               <div className="flex flex-wrap gap-2">
-                {tags.slice(0, 30).map((tag) => (
+                {tags.slice(0, 30).map((tag: SitemapTag) => (
                   <Link
                     key={tag.slug}
                     href={`/tag/${tag.slug}`}
@@ -130,9 +147,9 @@ export default async function SitemapPage() {
         <div className="mt-12">
           <h2 className="text-2xl font-semibold mb-4">Recent Articles</h2>
           <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentPosts.map((post) => (
+            {recentPosts.map((post: SitemapPost) => (
               <li key={post.slug} className="border-b pb-2">
-                <Link href={getArticleUrl(post.slug, (post as any)?.country)} className="text-blue-600 hover:underline">
+                <Link href={getArticleUrl(post.slug, post.country ?? undefined)} className="text-blue-600 hover:underline">
                   {post.title}
                 </Link>
                 <p className="text-sm text-gray-500">{new Date(post.date).toLocaleDateString()}</p>
