@@ -21,12 +21,14 @@ interface Params {
 export const runtime = "nodejs"
 export const dynamicParams = true
 
-// Matches CACHE_DURATIONS.MEDIUM (5 minutes) to align with category caching.
+// Matches CACHE_DURATIONS.MEDIUM (5 minutes)
 export const revalidate = 300
 
 type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountry>>
 
 const categoryPostsMemo = new Map<string, Promise<CategoryPostsResult>>()
+
+type CategoryLike = { slug?: string | null }
 
 const getRenderedText = (value: unknown): string | null => {
   if (typeof value === "string") {
@@ -68,6 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { circuitBreaker } = await import("@/lib/api/circuit-breaker")
   const { enhancedCache } = await import("@/lib/cache/enhanced-cache")
   const { countryCode, slug } = await params
+
   const cacheKey = `category-metadata-${countryCode}-${slug}`
   const cached = enhancedCache.get<Metadata>(cacheKey)
 
@@ -77,6 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
   try {
     const breakerKey = `wordpress-category-metadata-${countryCode}`
+
     const result = await getMemoizedCategoryPosts(countryCode, slug, 10, () =>
       circuitBreaker.execute(
         breakerKey,
@@ -90,7 +94,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
         { country: countryCode, endpoint: "graphql:category-metadata" },
       ),
     )
+
     const { category, posts } = result
+
     if (!category) {
       return {
         title: "Category Not Found - News On Africa",
@@ -107,12 +113,16 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     }
 
     const categoryName = category.name ?? "Category"
-    const baseDescription = category.description || `Latest articles in the ${categoryName} category`
+    const baseDescription =
+      category.description || `Latest articles in the ${categoryName} category`
+
     const postCount = category.count ?? posts.length
+
     const description = `${baseDescription}. Browse ${postCount} articles covering ${categoryName.toLowerCase()} news from across Africa.`
 
     const featuredPost = posts.find((post) => post.featuredImage?.node?.sourceUrl)
-    const featuredImageUrl = featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
+    const featuredImageUrl =
+      featuredPost?.featuredImage?.node?.sourceUrl || "/default-category-image.jpg"
 
     const canonicalUrl = `${ENV.NEXT_PUBLIC_SITE_URL}/${countryCode}/category/${slug}`
 
@@ -122,9 +132,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       .slice(0, 5)
       .map((title) => title.split(" ").slice(0, 3).join(" "))
 
-    const keywords = [categoryName, `${categoryName} News`, "African News", "News On Africa", ...topPostKeywords].join(
-      ", ",
-    )
+    const keywords = [
+      categoryName,
+      `${categoryName} News`,
+      "African News",
+      "News On Africa",
+      ...topPostKeywords,
+    ].join(", ")
 
     const metadata: Metadata = {
       title: `${categoryName} News - News On Africa`,
@@ -141,11 +155,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       robots: {
         index: true,
         follow: true,
-        nocache: false,
         googleBot: {
           index: true,
           follow: true,
-          noimageindex: false,
           "max-video-preview": -1,
           "max-image-preview": "large",
           "max-snippet": -1,
@@ -164,21 +176,6 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
             width: 1200,
             height: 630,
             alt: `${categoryName} news from News On Africa`,
-            type: "image/jpeg",
-          },
-          {
-            url: featuredImageUrl,
-            width: 800,
-            height: 600,
-            alt: `${categoryName} news from News On Africa`,
-            type: "image/jpeg",
-          },
-          {
-            url: featuredImageUrl,
-            width: 400,
-            height: 300,
-            alt: `${categoryName} news from News On Africa`,
-            type: "image/jpeg",
           },
         ],
       },
@@ -188,17 +185,14 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
         description,
         images: [featuredImageUrl],
       },
-      other: {
-        "article:section": categoryName,
-        "article:tag": categoryName,
-        bingbot: "index, follow, max-snippet:-1, max-image-preview:large",
-      },
     }
 
     enhancedCache.set(cacheKey, metadata, 60 * 60)
+
     return metadata
   } catch (error) {
     log.error(`Error generating metadata for category ${slug}`, { error })
+
     return {
       title: `${slug} News - News On Africa`,
       description: `Latest articles in the ${slug} category from News On Africa`,
@@ -210,20 +204,27 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 }
 
 export async function generateStaticParams() {
-  // Pre-generate all category pages for each edition
-  const editions = ["sz", "za", "ng", "zm"]
+  // Only editions we support
+  const editions = ["sz", "za", "ng"] as const
+
   const params: { countryCode: string; slug: string }[] = []
 
   for (const edition of editions) {
     try {
-      const categories = await getAllCategories(edition)
-      categories.slice(0, STATIC_GENERATION_LIMITS.CATEGORIES).forEach((cat) => {
-        if (cat.slug) {
-          params.push({ countryCode: edition, slug: cat.slug })
-        }
-      })
+      const categories = (await getAllCategories(edition)) as CategoryLike[]
+
+      categories
+        .slice(0, STATIC_GENERATION_LIMITS.CATEGORIES)
+        .forEach((cat: CategoryLike) => {
+          if (cat.slug) {
+            params.push({ countryCode: edition, slug: cat.slug })
+          }
+        })
     } catch (error) {
-      console.error(`Failed to generate static params for ${edition} categories`, error)
+      console.error(
+        `Failed to generate static params for ${edition} categories`,
+        error,
+      )
     }
   }
 
@@ -240,7 +241,9 @@ interface CountryCategoryPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function CountryCategoryPage({ params }: CountryCategoryPageProps) {
+export default async function CountryCategoryPage({
+  params,
+}: CountryCategoryPageProps) {
   const { countryCode, slug } = await params
 
   try {
@@ -254,7 +257,10 @@ export default async function CountryCategoryPage({ params }: CountryCategoryPag
 
     return (
       <div className="container mx-auto space-y-10 px-4 py-10">
-        <CategoryHeader category={result.category} relatedCategories={result.relatedCategories} />
+        <CategoryHeader
+          category={result.category}
+          relatedCategories={result.relatedCategories}
+        />
 
         {hasPosts ? (
           <div className="space-y-8">
@@ -269,7 +275,9 @@ export default async function CountryCategoryPage({ params }: CountryCategoryPag
             )}
           </div>
         ) : (
-          <EmptyState message={`We haven't published any articles for ${result.category.name} yet.`} />
+          <EmptyState
+            message={`We haven't published any articles for ${result.category.name} yet.`}
+          />
         )}
       </div>
     )
@@ -277,7 +285,11 @@ export default async function CountryCategoryPage({ params }: CountryCategoryPag
     if (error instanceof Error && error.message === "NEXT_NOT_FOUND") {
       throw error
     }
-    log.error(`Error fetching category ${slug} for ${countryCode}`, { error })
+
+    log.error(`Error fetching category ${slug} for ${countryCode}`, {
+      error,
+    })
+
     return (
       <div className="container mx-auto px-4 py-10">
         <ErrorState retryHref={`/${countryCode}/category/${slug}`} />
