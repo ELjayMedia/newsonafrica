@@ -4,6 +4,19 @@ import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
+type SlugEntity = { slug?: string }
+type CountryEntity = { code?: string }
+type CategoryEntity = { slug?: string }
+
+type PostEntity = {
+  slug: string
+  country?: string
+  date?: string
+  modified?: string
+  title?: string
+  featuredImage?: { node?: { sourceUrl?: string } }
+}
+
 function escapeXml(input: string) {
   return input
     .replace(/&/g, "&amp;")
@@ -23,35 +36,36 @@ function safeIsoDate(value: unknown): string | undefined {
 export async function GET() {
   const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
-  // Fetch everything
-  let posts: Awaited<ReturnType<typeof fetchRecentPosts>>
+  let posts: PostEntity[] = []
   try {
-    posts = await fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT)
+    posts = (await fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT)) as unknown as PostEntity[]
   } catch (error) {
     console.error("Error fetching posts for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
   }
 
-  let categories: Awaited<ReturnType<typeof fetchCategories>>
+  let categories: CategoryEntity[] = []
   try {
-    categories = await fetchCategories()
+    categories = (await fetchCategories()) as unknown as CategoryEntity[]
   } catch (error) {
     console.error("Error fetching categories for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 502 })
   }
 
-  let countries: Awaited<ReturnType<typeof fetchCountries>>
+  let countries: CountryEntity[] = []
   try {
-    countries = await fetchCountries()
+    countries = (await fetchCountries()) as unknown as CountryEntity[]
   } catch (error) {
     console.error("Error fetching countries for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch countries" }, { status: 502 })
   }
 
-  let tags: Awaited<ReturnType<typeof fetchTags>>
-  let authors: Awaited<ReturnType<typeof fetchAuthors>>
+  let tags: SlugEntity[] = []
+  let authors: SlugEntity[] = []
   try {
-    ;[tags, authors] = await Promise.all([fetchTags(), fetchAuthors()])
+    const [t, a] = await Promise.all([fetchTags(), fetchAuthors()])
+    tags = t as unknown as SlugEntity[]
+    authors = a as unknown as SlugEntity[]
   } catch (error) {
     console.error("Error fetching tags/authors for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch tags or authors" }, { status: 502 })
@@ -63,20 +77,19 @@ export async function GET() {
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 `
 
-    // Add posts
-    posts.forEach((post) => {
-      // FIX: avoid passing undefined into Date()
+    // Posts
+    posts.forEach((post: PostEntity) => {
       const lastmod =
-        safeIsoDate((post as any)?.modified) ??
-        safeIsoDate((post as any)?.date) ??
+        safeIsoDate(post.modified) ??
+        safeIsoDate(post.date) ??
         undefined
 
-      const featuredUrl = (post as any)?.featuredImage?.node?.sourceUrl as string | undefined
-      const title = typeof (post as any)?.title === "string" ? (post as any).title : ""
+      const featuredUrl = post.featuredImage?.node?.sourceUrl
+      const title = typeof post.title === "string" ? post.title : ""
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl((post as any).slug, (post as any)?.country)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country)}</loc>
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -91,12 +104,14 @@ export async function GET() {
   </url>`
     })
 
-    // Add categories for each country
-    countries.forEach((c) => {
-      categories.forEach((category) => {
-        const code = (c as any)?.code as string | undefined
-        const catSlug = (category as any)?.slug as string | undefined
-        if (!code || !catSlug) return
+    // Categories per country
+    countries.forEach((c: CountryEntity) => {
+      const code = c.code
+      if (!code) return
+
+      categories.forEach((category: CategoryEntity) => {
+        const catSlug = category.slug
+        if (!catSlug) return
 
         sitemap += `
   <url>
@@ -108,9 +123,9 @@ export async function GET() {
       })
     })
 
-    // Add tags
-    tags.forEach((tag) => {
-      const slug = (tag as any)?.slug as string | undefined
+    // Tags
+    tags.forEach((tag: SlugEntity) => {
+      const slug = tag.slug
       if (!slug) return
 
       sitemap += `
@@ -122,9 +137,9 @@ export async function GET() {
   </url>`
     })
 
-    // Add authors
-    authors.forEach((author) => {
-      const slug = (author as any)?.slug as string | undefined
+    // Authors
+    authors.forEach((author: SlugEntity) => {
+      const slug = author.slug
       if (!slug) return
 
       sitemap += `
