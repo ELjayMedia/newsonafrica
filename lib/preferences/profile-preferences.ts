@@ -1,4 +1,5 @@
 import type { CommentSortOption } from "@/lib/supabase-schema"
+import { asRecord } from "@/lib/supabase/adapters/json"
 import type { BookmarkSortPreference } from "@/types/user-preferences"
 
 export type RawProfilePreferences = Record<string, unknown>
@@ -9,16 +10,8 @@ export type StoredProfilePreferences = {
   last_subscription_plan?: string | null
 }
 
-export function isRecord(value: unknown): value is RawProfilePreferences {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
 export function parseProfilePreferences(value: unknown): RawProfilePreferences {
-  if (isRecord(value)) {
-    return { ...value }
-  }
-
-  return {}
+  return { ...asRecord(value) }
 }
 
 export function extractStoredPreferences(raw: RawProfilePreferences): StoredProfilePreferences {

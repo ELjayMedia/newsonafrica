@@ -4,6 +4,7 @@ import pLimit from "p-limit"
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
 import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
 import { logRequest } from "@/lib/api-utils"
+import { asRecord } from "@/lib/supabase/adapters/json"
 
 export const runtime = "nodejs"
 
@@ -34,15 +35,9 @@ export const HYDRATE_CONCURRENCY = 4
 const extractText = (value: unknown): string | undefined => {
   if (!value) return undefined
   if (typeof value === "string") return value
-  if (typeof value === "object" && "rendered" in (value as Record<string, unknown>)) {
-    const rendered = (value as { rendered?: unknown }).rendered
-    return typeof rendered === "string" ? rendered : undefined
-  }
-  return undefined
-}
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null
+  const rendered = asRecord(value).rendered
+  return typeof rendered === "string" ? rendered : undefined
 }
 
 const extractFeaturedImage = (value: unknown): BookmarkHydrationPost["featuredImage"] => {
@@ -57,10 +52,9 @@ const extractFeaturedImage = (value: unknown): BookmarkHydrationPost["featuredIm
   }
 
   const obj = asRecord(value)
-  if (!obj) return null
 
   const node = asRecord(obj.node)
-  if (node) {
+  if (Object.keys(node).length > 0) {
     return extractFeaturedImage(node)
   }
 

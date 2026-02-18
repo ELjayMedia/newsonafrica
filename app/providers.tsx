@@ -10,6 +10,7 @@ import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
+import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
 
 type UserPreferencesBootstrapRow = {
   user_id: string
@@ -133,7 +134,7 @@ function useClientBootstrap(
               bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
               lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
             },
-            profilePreferences: toProfilePreferences(profile?.preferences ?? null),
+            profilePreferences: parseProfilePreferences(profile?.preferences),
           })
         } else {
           setPreferences({
@@ -144,7 +145,7 @@ function useClientBootstrap(
               blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
               countries: [...DEFAULT_USER_PREFERENCES.countries],
             },
-            profilePreferences: toProfilePreferences(profile?.preferences ?? null),
+            profilePreferences: parseProfilePreferences(profile?.preferences),
           })
         }
       }
