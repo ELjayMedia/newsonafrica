@@ -26,7 +26,7 @@ const isEligibleReadQuery = (query: string): boolean => {
 }
 
 const encodeVariablesForUrl = (
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, unknown>,
 ): string | undefined => {
   if (!variables || Object.keys(variables).length === 0) {
     return undefined
@@ -38,7 +38,7 @@ const encodeVariablesForUrl = (
 const buildGraphQLGetUrl = (
   base: string,
   query: string,
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, unknown>,
   persistedQueryId?: string,
 ): string => {
   const params = new URLSearchParams()
@@ -125,7 +125,7 @@ export class WordPressGraphQLResponseError extends Error {
   }
 }
 
-export type WordPressGraphQLSuccess<T> = { ok: true; data: T | null } & (T extends object ? T : Record<string, never>)
+export type WordPressGraphQLSuccess<T> = { ok: true; data: T }
 
 export type WordPressGraphQLFailureKind = "http_error" | "graphql_error" | "invalid_payload"
 
@@ -180,14 +180,8 @@ export type WordPressGraphQLFailure =
 
 export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | WordPressGraphQLFailure
 
-function buildSuccessResult<T>(data: T | null): WordPressGraphQLSuccess<T> {
-  const base: { ok: true; data: T | null } = { ok: true, data }
-
-  if (data && typeof data === "object") {
-    return Object.assign({}, data, base) as WordPressGraphQLSuccess<T>
-  }
-
-  return base as WordPressGraphQLSuccess<T>
+function buildSuccessResult<T>(data: T): WordPressGraphQLSuccess<T> {
+  return { ok: true, data }
 }
 
 const buildHTTPFailureResult = (response: Response): WordPressGraphQLHTTPFailure => {
@@ -249,7 +243,7 @@ const buildInvalidPayloadFailureResult = (
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, unknown>,
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
@@ -408,7 +402,7 @@ export function fetchWordPressGraphQL<T>(
         return buildGraphQLFailureResult(json.errors)
       }
 
-      return buildSuccessResult<T>(json.data ?? null)
+      return buildSuccessResult<T>((json.data ?? null) as T)
     })
     .catch((error) => {
       console.error("[v0] GraphQL request exception:", {

@@ -22,7 +22,10 @@ describe("getFpTagForCountry", () => {
 
   it("returns the GraphQL tag when data is available", async () => {
     mockFetchFromWpGraphQL.mockResolvedValueOnce({
-      tag: { databaseId: 101, slug: "fp", name: "Front Page" },
+      ok: true,
+      data: {
+        tag: { databaseId: 101, slug: "fp", name: "Front Page" },
+      },
     } as any)
 
     const result = await getFpTagForCountry("za")
@@ -31,16 +34,16 @@ describe("getFpTagForCountry", () => {
       "za",
       TAG_BY_SLUG_QUERY,
       { slug: "fp" },
-      expect.objectContaining({
+      {
         revalidate: CACHE_DURATIONS.NONE,
-        tags: ["country:za", "section:tags", "tag:fp"],
-      }),
+        tags: ["edition:za", "tag:za:fp"],
+      },
     )
     expect(result).toEqual({ databaseId: 101, id: 101, name: "Front Page", slug: "fp" })
   })
 
   it("returns null when GraphQL returns no tag", async () => {
-    mockFetchFromWpGraphQL.mockResolvedValueOnce({ tag: null } as any)
+    mockFetchFromWpGraphQL.mockResolvedValueOnce({ ok: true, data: { tag: null } } as any)
 
     const result = await getFpTagForCountry("ng")
 
@@ -48,6 +51,15 @@ describe("getFpTagForCountry", () => {
     expect(result).toBeNull()
   })
 
+
+  it("returns null when GraphQL returns a failure envelope", async () => {
+    mockFetchFromWpGraphQL.mockResolvedValueOnce({ ok: false, kind: "http_error", message: "boom" } as any)
+
+    const result = await getFpTagForCountry("ng")
+
+    expect(mockFetchFromWpGraphQL).toHaveBeenCalled()
+    expect(result).toBeNull()
+  })
   it("returns null when the GraphQL request throws", async () => {
     mockFetchFromWpGraphQL.mockRejectedValueOnce(new Error("network"))
 
