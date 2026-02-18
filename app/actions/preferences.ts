@@ -49,6 +49,10 @@ type ProfilePreferencesColumn = ProfilesUpdate["preferences"]
 
 type ProfileSelect = Pick<ProfileRow, "interests" | "preferences">
 
+const payload: ProfilesUpdate = {
+  preferences: profilePreferencesRaw as ProfilePreferencesColumn,
+}
+
 async function ensureUserSettings(
   supabase: SupabaseServerClient,
   userId: string,
@@ -197,9 +201,12 @@ async function ensureUserPreferencesSnapshot(
   )
 
   if (didChange) {
+    const payload: ProfilesUpdate = {
+      preferences: profilePreferencesRaw as ProfilesUpdate["preferences"],
+    }
     const { error: syncError } = await supabase
       .from("profiles")
-      .update({ preferences: profilePreferencesRaw as unknown as ProfilePreferencesColumn })
+      .update(payload)
       .eq("id", userId)
 
     if (syncError) {
@@ -353,10 +360,15 @@ export async function updateProfilePreferences(input: UpdateProfilePreferencesIn
       Object.prototype.hasOwnProperty.call(input, "last_subscription_plan")
 
     if (hasExplicitUpdates || didChange) {
+      const payload: ProfilesUpdate = {
+        preferences: sanitizedRaw as ProfilesUpdate["preferences"],
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ preferences: sanitizedRaw as unknown as ProfilePreferencesColumn })
+        .update(payload)
         .eq("id", userId)
+
 
       if (updateError) {
         throw updateError
