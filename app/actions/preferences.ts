@@ -198,7 +198,7 @@ async function ensureUserPreferencesSnapshot(
   if (didChange) {
     const { error: syncError } = await supabase
       .from("profiles")
-      .update({ preferences: profilePreferencesRaw })
+      .update({ preferences: profilePreferencesRaw as unknown as ProfilePreferencesColumn })
       .eq("id", userId)
 
     if (syncError) {
@@ -354,7 +354,7 @@ export async function updateProfilePreferences(input: UpdateProfilePreferencesIn
     if (hasExplicitUpdates || didChange) {
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ preferences: sanitizedRaw })
+        .update({ preferences: sanitizedRaw as unknown as ProfilePreferencesColumn })
         .eq("id", userId)
 
       if (updateError) {
