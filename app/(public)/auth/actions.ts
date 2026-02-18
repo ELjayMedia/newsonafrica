@@ -129,27 +129,23 @@ export async function signInWithPasswordAction(
       return createErrorState(error.message)
     }
 
-    const userId = data.user?.id
+    const user = data.user
+    const userId = user?.id
     if (userId) {
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, avatar_url, role, created_at, updated_at")
-          .eq("id", userId)
-          .maybeSingle()
-
         await writeSessionCookie({
           userId,
-          username: profile?.username ?? null,
-          avatar_url: profile?.avatar_url ?? null,
-          role: profile?.role ?? null,
-          created_at: profile?.created_at ?? null,
-          updated_at: profile?.updated_at ?? null,
+          username: user?.email ?? null,
+          avatar_url: null,
+          role: (user as { role?: string | null })?.role ?? null,
+          created_at: (user as { created_at?: string | null })?.created_at ?? null,
+          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
         })
       } catch (cookieError) {
-        console.error("Failed to prime session cookie after password sign-in", cookieError)
+        console.error("Failed to prime session cookie after sign-up", cookieError)
       }
     }
+
 
     redirect(redirectTo)
   } catch (error) {
