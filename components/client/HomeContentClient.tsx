@@ -30,6 +30,8 @@ export interface HomeContentClientProps {
   }
 }
 
+type HomeContentData = Required<NonNullable<HomeContentClientProps["initialData"]>>
+
 const isOnline = () => {
   if (typeof navigator !== "undefined" && "onLine" in navigator) {
     return navigator.onLine
@@ -97,10 +99,13 @@ export function HomeContentClient({
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
 
-  const resolvedData = useMemo(() => {
+  const resolvedData = useMemo<HomeContentData>(() => {
     if (initialData) {
       return {
-        ...initialData,
+        taggedPosts: initialData.taggedPosts ?? [],
+        featuredPosts: initialData.featuredPosts ?? [],
+        categories: initialData.categories ?? [],
+        recentPosts: initialData.recentPosts ?? [],
         categoryPosts: initialData.categoryPosts ?? {},
       }
     }

@@ -33,13 +33,13 @@ export function ArticleRelatedSection({
           <ArticleCard
             key={article.id}
             href={`/${countryCode}/article/${article.slug}`}
-            headline={article.title}
-            excerpt={article.excerpt}
-            category={article.categories?.[0]?.name}
-            timestamp={article.date}
+            headline={article.title ?? "Untitled"}
+            excerpt={article.excerpt ?? ""}
+            category={article.categories?.nodes?.[0]?.name}
+            timestamp={article.date ?? ""}
             image={{
               src: article.featuredImage?.node?.sourceUrl,
-              alt: article.title,
+              alt: article.title ?? "Related article image",
             }}
             variant="compact"
           />

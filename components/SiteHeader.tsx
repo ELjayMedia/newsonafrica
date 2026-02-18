@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { getCategoryUrl, getHomeHref } from "@/lib/utils/routing"
+import { getCategoryUrl, getCurrentCountry, getHomeHref } from "@/lib/utils/routing"
 import Image from "next/image"
 import { Menu, ChevronDown, Twitter, Facebook } from "lucide-react"
 import { WeatherWidget } from "@/components/WeatherWidget"
@@ -179,7 +179,7 @@ export function SiteHeader() {
     const loadCategories = async () => {
       try {
         setCategoriesState((prev) => ({ ...prev, loading: true, error: null }))
-        const categories = await fetchAllCategories()
+        const categories = await fetchAllCategories(getCurrentCountry(pathname))
 
         const normalizeCategory = (cat: any): Category => {
           const deriveId = (input: any) => {
@@ -201,7 +201,7 @@ export function SiteHeader() {
           const children = Array.isArray(cat?.children)
             ? cat.children
                 .map((child: any) => normalizeCategory(child))
-                .filter((child) => Boolean(child.slug))
+                .filter((child: Category) => Boolean(child.slug))
             : []
 
           return {
@@ -215,7 +215,7 @@ export function SiteHeader() {
         }
 
         const organizedCategories = Array.isArray(categories)
-          ? categories.map((cat: any) => normalizeCategory(cat)).filter((cat) => cat.slug)
+          ? categories.map((cat: any) => normalizeCategory(cat)).filter((cat: Category) => cat.slug)
           : []
 
         setCategoriesState({

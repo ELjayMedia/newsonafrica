@@ -4,7 +4,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react"
 
 interface Props {
   children: ReactNode
-  fallback: ReactNode
+  fallback?: ReactNode
   onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      return this.props.fallback
+      return this.props.fallback ?? null
     }
 
     return this.props.children
