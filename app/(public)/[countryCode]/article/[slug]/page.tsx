@@ -24,8 +24,6 @@ import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 
 export async function generateStaticParams() {
-  // Only pre-generate top 100 most popular articles at build time
-  // Rest will be generated on-demand via dynamicParams=true
   return []
 }
 
@@ -50,12 +48,9 @@ const resolveRelatedPostId = (
   }
 
   const relayId = article?.id
-  if (typeof relayId !== "string") {
-    return null
-  }
+  if (typeof relayId !== "string") return null
 
   let decodedRelayId: string
-
   try {
     decodedRelayId = Buffer.from(relayId, "base64").toString("utf8")
   } catch {
@@ -106,23 +101,31 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const isTemporaryError = resolvedArticle.status === "temporary_error"
+
   const title =
     stripHtml(article?.title ?? "") ||
     (isTemporaryError ? "Article temporarily unavailable" : "News On Africa")
+
   const description =
     stripHtml(article?.excerpt ?? "") ||
     (isTemporaryError
       ? "We hit a temporary issue loading this story. Please try again in a moment."
       : "Latest stories from News On Africa.")
+
   const resolvedSourceCountry =
-    resolvedArticle.status === "found" ? (resolvedArticle.sourceCountry ?? editionCountry) : editionCountry
+    resolvedArticle.status === "found"
+      ? (resolvedArticle.sourceCountry ?? editionCountry)
+      : editionCountry
+
   const resolvedCanonicalCountry =
     resolvedArticle.status === "found"
       ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
       : editionCountry
+
   const targetCountry = isCountryEdition(edition)
     ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
     : routeCountryAlias
+
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${normalizedSlug}`
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, normalizedSlug)
 
@@ -151,9 +154,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const edition = resolveEdition(countryCode)
   const { isEnabled: preview } = await draftMode()
 
-  if (!edition) {
-    notFound()
-  }
+  if (!edition) notFound()
 
   const editionCountry = normalizeCountryCode(edition.code)
   const routeCountry = normalizeRouteCountry(countryCode)
@@ -161,9 +162,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const countryPriority = buildArticleCountryPriority(editionCountry)
   const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, preview)
 
-  if (resolvedArticle.status === "not_found") {
-    notFound()
-  }
+  if (resolvedArticle.status === "not_found") notFound()
 
   const isTemporaryError = resolvedArticle.status === "temporary_error"
   const articleData = resolvedArticle.status === "found" ? resolvedArticle.article : null
@@ -176,9 +175,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
           : undefined
       const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
 
-      return (
-        <ArticleServerFallback digest={errorDigest} failureCountries={failureCountries} />
-      )
+      return <ArticleServerFallback digest={errorDigest} failureCountries={failureCountries} />
     }
 
     notFound()
@@ -196,6 +193,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     resolvedArticle.status === "found"
       ? (resolvedArticle.sourceCountry ?? editionCountry)
       : editionCountry
+
   const resolvedCanonicalCountry =
     resolvedArticle.status === "found"
       ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
@@ -221,7 +219,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       relatedPosts = await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6)
     } catch (relatedError) {
       if (process.env.NODE_ENV !== "production") {
-        console.warn("Failed to load related posts for article", { relatedError, relatedCountry, relatedPostId })
+        console.warn("Failed to load related posts for article", {
+          relatedError,
+          relatedCountry,
+          relatedPostId,
+        })
       }
       relatedPosts = []
     }
@@ -235,7 +237,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       <ArticleClientContent
         slug={normalizedSlug}
         countryCode={targetCountry}
-        sourceCountryCode={resolvedArticle.sourceCountry}
+        sourceCountryCode={resolvedSourceCountry}
         initialData={articleData}
         relatedPosts={relatedPosts}
       />
