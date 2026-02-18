@@ -217,7 +217,7 @@ export async function generateStaticParams() {
   for (const edition of editions) {
     try {
       const categories = await getAllCategories(edition)
-      categories.slice(0, STATIC_GENERATION_LIMITS.CATEGORIES).forEach((cat) => {
+      categories.slice(0, STATIC_GENERATION_LIMITS.CATEGORIES).forEach((cat: import('@/types/wp').WordPressCategory) => {
         if (cat.slug) {
           params.push({ countryCode: edition, slug: cat.slug })
         }
