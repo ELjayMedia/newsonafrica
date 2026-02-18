@@ -8,14 +8,8 @@ export const revalidate = 0
 const PREVIEW_SECRET = process.env.WORDPRESS_PREVIEW_SECRET
 
 const isValidSecret = (secret: string | null): boolean => {
-  if (!PREVIEW_SECRET) {
-    return false
-  }
-
-  if (!secret) {
-    return false
-  }
-
+  if (!PREVIEW_SECRET) return false
+  if (!secret) return false
   return secret === PREVIEW_SECRET
 }
 
@@ -42,7 +36,9 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Both countryCode and slug parameters are required", { status: 400 })
   }
 
-  draftMode().enable()
+  // ✅ Next 15: draftMode() is async in your types
+  const dm = await draftMode()
+  dm.enable()
 
   const redirectUrl = buildRedirectUrl(request, countryCode, slug)
 
