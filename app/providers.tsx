@@ -10,7 +10,9 @@ import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
-import type { RawProfilePreferences } from "@/types/user-preferences"
+
+// ✅ use the type you actually have
+import type { ProfilePreferences } from "@/types/profile-preferences" // <-- adjust path to your real file
 
 interface ProvidersProps {
   children: ReactNode
@@ -18,9 +20,12 @@ interface ProvidersProps {
   initialPreferences?: UserPreferencesSnapshot | null
 }
 
-const coerceProfilePreferences = (value: unknown): RawProfilePreferences => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
-  return value as RawProfilePreferences
+// ✅ runtime guard so jsonb doesn't break TypeScript
+function normalizeProfilePreferences(value: unknown): ProfilePreferences {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {} as ProfilePreferences
+  }
+  return value as ProfilePreferences
 }
 
 function useClientBootstrap(
@@ -32,7 +37,6 @@ function useClientBootstrap(
   const [isBootstrapping, setIsBootstrapping] = useState(initialAuthState === null || initialAuthState === undefined)
 
   const bootstrap = useCallback(async () => {
-    // If we already have server-provided auth state, skip bootstrap
     if (initialAuthState !== null && initialAuthState !== undefined) {
       setIsBootstrapping(false)
       return
@@ -41,7 +45,6 @@ function useClientBootstrap(
     try {
       const supabase = createClient()
 
-      // Get session from browser client
       const {
         data: { session },
         error: sessionError,
@@ -54,7 +57,6 @@ function useClientBootstrap(
       }
 
       if (!session?.user) {
-        // No session, use defaults
         setAuthState(null)
         setPreferences({
           userId: null,
@@ -70,7 +72,6 @@ function useClientBootstrap(
         return
       }
 
-      // Fetch profile if we have a user
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -81,54 +82,52 @@ function useClientBootstrap(
         console.error("[v0] Bootstrap profile error:", profileError)
       }
 
-      // Set auth state
       setAuthState({
         session,
         user: session.user,
         profile: profile ?? null,
       })
 
-      // Fetch user preferences if logged in
-      if (session.user) {
-        const { data: userPrefs, error: prefsError } = await supabase
-          .from("user_preferences")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .single()
+      const profilePreferences = normalizeProfilePreferences((profile as any)?.preferences)
 
-        if (prefsError && prefsError.code !== "PGRST116") {
-          console.error("[v0] Bootstrap preferences error:", prefsError)
-        }
+      const { data: userPrefs, error: prefsError } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .single()
 
-        if (userPrefs) {
-          setPreferences({
-            userId: session.user.id,
-            preferences: {
-              theme: (userPrefs.theme ?? DEFAULT_USER_PREFERENCES.theme) as "light" | "dark" | "system",
-              language: userPrefs.language ?? DEFAULT_USER_PREFERENCES.language,
-              emailNotifications: userPrefs.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
-              pushNotifications: userPrefs.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
-              sections: userPrefs.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
-              blockedTopics: userPrefs.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
-              countries: userPrefs.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
-              commentSort: DEFAULT_USER_PREFERENCES.commentSort,
-              bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
-              lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
-            },
-            profilePreferences: coerceProfilePreferences((profile as any)?.preferences),
-          })
-        } else {
-          setPreferences({
-            userId: session.user.id,
-            preferences: {
-              ...DEFAULT_USER_PREFERENCES,
-              sections: [...DEFAULT_USER_PREFERENCES.sections],
-              blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
-              countries: [...DEFAULT_USER_PREFERENCES.countries],
-            },
-            profilePreferences: coerceProfilePreferences((profile as any)?.preferences),
-          })
-        }
+      if (prefsError && prefsError.code !== "PGRST116") {
+        console.error("[v0] Bootstrap preferences error:", prefsError)
+      }
+
+      if (userPrefs) {
+        setPreferences({
+          userId: session.user.id,
+          preferences: {
+            theme: (userPrefs.theme as "light" | "dark" | "system") ?? DEFAULT_USER_PREFERENCES.theme,
+            language: userPrefs.language ?? DEFAULT_USER_PREFERENCES.language,
+            emailNotifications: userPrefs.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
+            pushNotifications: userPrefs.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
+            sections: userPrefs.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
+            blockedTopics: userPrefs.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
+            countries: userPrefs.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
+            commentSort: DEFAULT_USER_PREFERENCES.commentSort,
+            bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
+            lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
+          },
+          profilePreferences,
+        })
+      } else {
+        setPreferences({
+          userId: session.user.id,
+          preferences: {
+            ...DEFAULT_USER_PREFERENCES,
+            sections: [...DEFAULT_USER_PREFERENCES.sections],
+            blockedTopics: [...DEFAULT_USER_PREFERENCES.blockedTopics],
+            countries: [...DEFAULT_USER_PREFERENCES.countries],
+          },
+          profilePreferences,
+        })
       }
     } catch (error) {
       console.error("[v0] Bootstrap error:", error)
@@ -145,7 +144,7 @@ function useClientBootstrap(
 }
 
 export function Providers({ children, initialAuthState = null, initialPreferences = null }: ProvidersProps) {
-  const { authState, preferences, isBootstrapping } = useClientBootstrap(initialAuthState, initialPreferences)
+  const { authState, preferences } = useClientBootstrap(initialAuthState, initialPreferences)
 
   return (
     <UserProvider initialState={authState}>
