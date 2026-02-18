@@ -4,10 +4,27 @@ import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
+function escapeXml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;")
+}
+
+function safeIsoDate(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value) return undefined
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return undefined
+  return d.toISOString()
+}
+
 export async function GET() {
   const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
-  let posts
+  // Fetch everything
+  let posts: Awaited<ReturnType<typeof fetchRecentPosts>>
   try {
     posts = await fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT)
   } catch (error) {
@@ -15,7 +32,7 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
   }
 
-  let categories
+  let categories: Awaited<ReturnType<typeof fetchCategories>>
   try {
     categories = await fetchCategories()
   } catch (error) {
@@ -23,16 +40,16 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 502 })
   }
 
-  let _countries
+  let countries: Awaited<ReturnType<typeof fetchCountries>>
   try {
-    _countries = await fetchCountries()
+    countries = await fetchCountries()
   } catch (error) {
     console.error("Error fetching countries for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch countries" }, { status: 502 })
   }
 
-  let tags
-  let authors
+  let tags: Awaited<ReturnType<typeof fetchTags>>
+  let authors: Awaited<ReturnType<typeof fetchAuthors>>
   try {
     ;[tags, authors] = await Promise.all([fetchTags(), fetchAuthors()])
   } catch (error) {
@@ -41,7 +58,6 @@ export async function GET() {
   }
 
   try {
-    // Build the sitemap
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
@@ -49,32 +65,42 @@ export async function GET() {
 
     // Add posts
     posts.forEach((post) => {
-      const postDate = new Date(post.modified || post.date).toISOString()
+      // FIX: avoid passing undefined into Date()
+      const lastmod =
+        safeIsoDate((post as any)?.modified) ??
+        safeIsoDate((post as any)?.date) ??
+        undefined
+
+      const featuredUrl = (post as any)?.featuredImage?.node?.sourceUrl as string | undefined
+      const title = typeof (post as any)?.title === "string" ? (post as any).title : ""
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, (post as any)?.country)}</loc>
-    <lastmod>${postDate}</lastmod>
+    <loc>${baseUrl}${getArticleUrl((post as any).slug, (post as any)?.country)}</loc>
+    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-    ${
-      post.featuredImage?.node?.sourceUrl
-        ? `
+    ${featuredUrl
+          ? `
     <image:image>
-      <image:loc>${post.featuredImage.node.sourceUrl}</image:loc>
-      <image:title>${post.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</image:title>
+      <image:loc>${featuredUrl}</image:loc>
+      <image:title>${escapeXml(title)}</image:title>
     </image:image>`
-        : ""
-    }
+          : ""
+        }
   </url>`
     })
 
     // Add categories for each country
-    _countries.forEach((c) => {
+    countries.forEach((c) => {
       categories.forEach((category) => {
+        const code = (c as any)?.code as string | undefined
+        const catSlug = (category as any)?.slug as string | undefined
+        if (!code || !catSlug) return
+
         sitemap += `
   <url>
-    <loc>${baseUrl}${getCategoryUrl(category.slug, c.code)}</loc>
+    <loc>${baseUrl}${getCategoryUrl(catSlug, code)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -84,9 +110,12 @@ export async function GET() {
 
     // Add tags
     tags.forEach((tag) => {
+      const slug = (tag as any)?.slug as string | undefined
+      if (!slug) return
+
       sitemap += `
   <url>
-    <loc>${baseUrl}/tag/${tag.slug}</loc>
+    <loc>${baseUrl}/tag/${slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -95,9 +124,12 @@ export async function GET() {
 
     // Add authors
     authors.forEach((author) => {
+      const slug = (author as any)?.slug as string | undefined
+      if (!slug) return
+
       sitemap += `
   <url>
-    <loc>${baseUrl}/author/${author.slug}</loc>
+    <loc>${baseUrl}/author/${slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
