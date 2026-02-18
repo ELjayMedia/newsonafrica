@@ -6,6 +6,17 @@ import Link from "next/link"
 import { ChevronLeft, ChevronRight, Clock, TrendingUp } from "lucide-react"
 import { cn, motionSafe } from "@/lib/utils"
 import { getArticleUrl } from "@/lib/utils/routing"
+import type { RelatedPost } from "@/lib/types/related"
+
+type RelatedArticlesProps = {
+  posts: RelatedPost[]
+  loading?: boolean
+  title?: string
+  layout?: "grid" | "carousel"
+  showMetadata?: boolean
+  enableAI?: boolean
+  className?: string
+}
 
 interface RelatedPost {
   id: string
