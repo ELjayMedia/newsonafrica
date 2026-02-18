@@ -209,17 +209,19 @@ export async function signUpWithPasswordAction(
       return createErrorState(error.message)
     }
 
-    const userId = data.user?.id
-    if (userId) {
-      try {
-        await writeSessionCookie({
-          userId,
-          username: data.user.email ?? null,
-          avatar_url: null,
-          role: data.user.role ?? null,
-          created_at: data.user.created_at ?? null,
-          updated_at: data.user.updated_at ?? null,
-        })
+    const user = data.user
+if (!user) {
+  throw new Error("Auth succeeded but no user was returned.")
+}
+
+await writeSessionCookie({
+  userId,
+  username: user.email ?? null,
+  avatar_url: null,
+  role: user.role ?? null,
+  created_at: user.created_at ?? null,
+})
+
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
       }
