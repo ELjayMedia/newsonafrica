@@ -5,6 +5,7 @@ import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { normalizeGraphqlPostNode } from "@/lib/wordpress/adapters/graphql-post"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 
@@ -128,7 +129,12 @@ export const mapGraphqlNodeToHomePost = (
   post: unknown,
   countryCode: string,
 ): HomePost => {
-  const mapped = mapGraphqlPostToWordPressPost(post as any, countryCode)
+  const normalizedPost = normalizeGraphqlPostNode(post)
+  if (!normalizedPost) {
+    return mapWordPressPostToHomePost({ slug: "", title: "", excerpt: "", date: "" }, countryCode)
+  }
+
+  const mapped = mapGraphqlPostToWordPressPost(normalizedPost, countryCode)
   return mapWordPressPostToHomePost(mapped, countryCode)
 }
 

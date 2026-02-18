@@ -1,6 +1,11 @@
 {
-  "extends": ["next/core-web-vitals"],
-  "plugins": ["unused-imports", "@typescript-eslint"],
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "plugins": [
+    "unused-imports",
+    "@typescript-eslint"
+  ],
   "rules": {
     "react/no-unescaped-entities": "off",
     "@next/next/no-html-link-for-pages": "off",
@@ -69,6 +74,25 @@
       ],
       "rules": {
         "no-restricted-syntax": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "**/*.test.{ts,tsx}",
+        "**/__tests__/**/*.{ts,tsx}",
+        "lib/**/adapters/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "TSAsExpression > TSAnyKeyword",
+            "message": "Avoid `as any` outside adapter directories. Move unsafe casts into lib/**/adapters and return typed outputs."
+          }
+        ]
       }
     }
   ]

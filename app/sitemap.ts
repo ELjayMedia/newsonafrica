@@ -3,6 +3,7 @@ import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/li
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 300
@@ -104,7 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
 
       return {
-        url: `${baseUrl}${getArticleUrl(post.slug, (post as any)?.country)}`,
+        url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
         lastModified: postDate,
         changeFrequency: isRecent ? "daily" : ("weekly" as const),
         priority: isRecent ? 0.9 : 0.7,
