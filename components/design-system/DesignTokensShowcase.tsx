@@ -74,7 +74,7 @@ export function DesignTokensShowcase() {
             <CardDescription>Consistent spacing scale based on 4px grid system</CardDescription>
           </CardHeader>
           <CardContent>
-            <Grid cols={7} gap={4}>
+            <Grid cols="auto-fit-sm" gap={4}>
               {spacingTokens.map((token) => (
                 <div key={token.name} className="flex flex-col items-center space-y-2">
                   <div className={`${token.class} bg-primary rounded`} />
