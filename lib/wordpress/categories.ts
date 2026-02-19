@@ -135,7 +135,7 @@ export async function getPostsByCategoryForCountry(
       revalidate: CACHE_DURATIONS.SHORT,
     })
 
-    if (gqlData?.posts && gqlData?.categories) {
+    if (gqlData.ok && gqlData.posts && gqlData.categories) {
       const catNode = gqlData.categories.nodes?.[0] ?? null
       const category = catNode
         ? {
@@ -170,7 +170,7 @@ export async function getCategoriesForCountry(countryCode: string) {
       tags,
       revalidate: CACHE_DURATIONS.SHORT,
     })
-    if (gqlData?.categories?.nodes) {
+    if (gqlData.ok && gqlData.categories?.nodes) {
       const nodes = gqlData.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
         Boolean(node && typeof node.databaseId === "number"),
       )
@@ -298,7 +298,7 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
     tags,
     revalidate: CACHE_DURATIONS.SHORT,
   })
-  if (!data?.posts || !data?.categories) return null
+  if (!data.ok || !data.posts || !data.categories) return null
   const catNode = data.categories.nodes?.[0] ?? null
   const category = catNode
     ? {

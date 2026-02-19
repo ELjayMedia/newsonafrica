@@ -4,7 +4,7 @@ type FetchWithTimeoutOptions = Parameters<typeof fetchWithTimeout>[1]
 
 type NextFetchRequestConfig = FetchWithTimeoutOptions extends { next?: infer T }
   ? T
-  : never
+  : Record<string, unknown>
 
 export interface FetchWithRetryOptions extends RequestInit {
   timeout?: number
