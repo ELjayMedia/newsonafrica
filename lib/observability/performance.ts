@@ -33,7 +33,7 @@ class PerformanceMonitor {
       metadata,
     }
 
-    logger.info("Performance metric", metric)
+    logger.info("Performance metric", { ...metric })
 
     // Send to metrics endpoint
     if (typeof window === "undefined") {

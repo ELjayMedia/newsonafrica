@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase/browser-helpers"
 import type { Comment } from "@/lib/supabase-schema"
@@ -11,12 +12,6 @@ interface UseCommentsRealtimeSyncOptions {
   removeComment: (commentId: string) => void
 }
 
-type RealtimePayload = {
-  eventType?: "INSERT" | "UPDATE" | "DELETE"
-  new?: Comment
-  old?: { id?: string }
-}
-
 export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }: UseCommentsRealtimeSyncOptions) {
   useEffect(() => {
     const channel = supabase
@@ -24,7 +19,7 @@ export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comments", filter: `wp_post_id=eq.${postId}` },
-        (payload: RealtimePayload) => {
+        (payload: RealtimePostgresChangesPayload<Comment>) => {
           if (payload.eventType === "DELETE" && payload.old?.id) {
             removeComment(payload.old.id)
             return

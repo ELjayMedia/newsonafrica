@@ -49,7 +49,7 @@ const selectAvatarUrl = (
 
 type GraphqlAuthorLike =
   | NonNullable<AuthorDataQuery["user"]>
-  | NonNullable<NonNullable<AuthorsQuery["users"]>["nodes"]>[number]
+  | NonNullable<NonNullable<NonNullable<AuthorsQuery["users"]>["nodes"]>[number]>
 
 const mapGraphqlAuthorToWordPressAuthor = (
   author: GraphqlAuthorLike,
@@ -88,8 +88,12 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordP
     { tags, revalidate: CACHE_DURATIONS.NONE },
   )
 
+  if (!data.ok) {
+    return []
+  }
+
   const nodes =
-    data?.users?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    data.users?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
   return nodes.map((node) => mapGraphqlAuthorToWordPressAuthor(node, node.slug ?? ""))
 }
@@ -112,18 +116,22 @@ export async function fetchAuthorData(
   limit = 10,
 ): Promise<AuthorPostsResult | null> {
   const tags = [cacheTags.edition(countryCode), cacheTags.author(countryCode, slug)]
+  const variables: Record<string, string | number | boolean | string[]> = {
+    slug,
+    first: limit,
+  }
+
+  if (cursor) {
+    variables.after = cursor
+  }
 
   const data = await fetchWordPressGraphQL<AuthorDataQuery>(
     countryCode,
     AUTHOR_DATA_QUERY,
-    {
-      slug,
-      after: cursor,
-      first: limit,
-    },
+    variables,
     { tags, revalidate: CACHE_DURATIONS.NONE },
   )
-  if (!data?.user) return null
+  if (!data.ok || !data.user) return null
   const author = mapGraphqlAuthorToWordPressAuthor(data.user, slug)
   const nodes = data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {

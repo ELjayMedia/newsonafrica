@@ -7,7 +7,7 @@ const isBlank = (value: string | undefined): boolean => !value || value.trim().l
 export function getRequiredEnvVar(name: string): string {
   const value = process.env[name]
 
-  if (isBlank(value)) {
+  if (value === undefined || value.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${name}`)
   }
 

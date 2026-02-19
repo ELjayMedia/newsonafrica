@@ -1,9 +1,18 @@
-import type { BookmarkListRow, BookmarkStatsDelta } from "@/types/bookmarks"
+import type { BookmarkListRow, BookmarkReadStateKey, BookmarkStatsDelta } from "@/types/bookmarks"
 import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
 import { isUnreadReadStateKey, resolveReadStateKey } from "@/lib/bookmarks/read-state"
 
+function createEmptyReadStateCounts(): Record<BookmarkReadStateKey, number> {
+  return {
+    unread: 0,
+    in_progress: 0,
+    read: 0,
+    unknown: 0,
+  }
+}
+
 export function createEmptyStatsDelta(): BookmarkStatsDelta {
-  return { total: 0, unread: 0, categories: {}, readStates: {}, collections: {} }
+  return { total: 0, unread: 0, categories: {}, readStates: createEmptyReadStateCounts(), collections: {} }
 }
 
 function mergeCategoryDelta(

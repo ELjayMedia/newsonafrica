@@ -1,15 +1,12 @@
 import {
   createClient as createSupabaseAdminClient,
-  type GenericSchema,
   type SupabaseClient,
 } from "@supabase/supabase-js"
 
 import { getSupabaseServerEnv } from "@/config/supabase-env"
 import type { Database } from "@/types/supabase"
 
-type PublicSchema = Database["public"] & GenericSchema
-
-export type AdminSupabaseClient = SupabaseClient<Database, "public", PublicSchema>
+export type AdminSupabaseClient = SupabaseClient<Database>
 
 let adminClient: AdminSupabaseClient | null = null
 let hasWarnedAboutAdminConfig = false

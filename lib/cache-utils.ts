@@ -1,14 +1,18 @@
 import { cache } from "react"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { fetchWithTimeout } from "./utils/fetchWithTimeout"
-import type { NextFetchRequestConfig } from "next/server"
 
 export { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+
+type NextFetchOptions = {
+  revalidate?: number | false
+  tags?: string[]
+}
 
 // Cached fetch function with revalidation
 type CachedFetchOptions = RequestInit & {
   timeout?: number
-  next?: NextFetchRequestConfig
+  next?: NextFetchOptions
 }
 
 export const cachedFetch = cache(
@@ -29,7 +33,7 @@ export const cachedFetch = cache(
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
           const { timeout = 10000, next, ...restOptions } = options ?? {}
-          const nextOptions: NextFetchRequestConfig = {
+          const nextOptions: NextFetchOptions = {
             revalidate: cacheDuration,
             ...(next ?? {}),
             ...(tags && tags.length > 0 ? { tags } : {}),

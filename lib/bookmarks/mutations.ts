@@ -169,7 +169,7 @@ export function prepareBookmarkUpdatePayload(
   })
 
   assignField("featuredImage", (value) => {
-    dbUpdates.featured_image = value && typeof value === "object" ? value : null
+    dbUpdates.featured_image = value && typeof value === "object" ? (value as NonNullable<typeof dbUpdates.featured_image>) : null
   })
 
   assignField("collectionId", (value) => {

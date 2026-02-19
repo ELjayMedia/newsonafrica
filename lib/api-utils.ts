@@ -17,9 +17,21 @@ const limiter = rateLimit({
   uniqueTokenPerInterval: 500,
 })
 
+function getRequestIdentifierIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get("x-forwarded-for")
+  if (forwardedFor) {
+    const firstIp = forwardedFor.split(",")[0]?.trim()
+    if (firstIp) {
+      return firstIp
+    }
+  }
+
+  return request.headers.get("x-real-ip") ?? "127.0.0.1"
+}
+
 export async function applyRateLimit(request: NextRequest, limit: number, token: string) {
   try {
-    const identifier = `${token}-${request.ip ?? "127.0.0.1"}`
+    const identifier = `${token}-${getRequestIdentifierIp(request)}`
     await limiter.check(limit, identifier)
     return null
   } catch (error) {

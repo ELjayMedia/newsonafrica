@@ -122,7 +122,7 @@ export async function searchWordPressPosts(
     const gqlResult = await fetchWordPressGraphQL<SearchPostsQueryResult>(
       country,
       POSTS_QUERY,
-      variables,
+      variables as Record<string, string | number | boolean | string[]>,
       { revalidate: CACHE_DURATIONS.NONE },
     )
 

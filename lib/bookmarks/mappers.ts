@@ -16,6 +16,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null
 }
 
+function featuredImageToRecord(value: BookmarkFeaturedImageValue): Record<string, unknown> | null {
+  return value ? { ...value } : null
+}
+
 export const extractText = (value: BookmarkTextValue): string => {
   if (!value) return ""
   if (typeof value === "string") return value
@@ -122,7 +126,7 @@ export const domainBookmarkToDbRow = (bookmark: BookmarkDomainModel): BookmarkRo
   slug: bookmark.slug ?? null,
   excerpt: bookmark.excerpt ?? null,
   createdAt: bookmark.createdAt,
-  featuredImage: bookmark.featuredImage,
+  featuredImage: featuredImageToRecord(bookmark.featuredImage),
   category: bookmark.category ?? null,
   tags: bookmark.tags ?? null,
   readState: bookmark.readState ?? null,

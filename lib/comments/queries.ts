@@ -2,7 +2,7 @@ import type { SupabaseClient, Session, PostgrestError } from "@supabase/supabase
 import type { Database } from "@/types/supabase"
 import type { CommentListRecord } from "@/types/comments"
 import { executeListQuery } from "@/lib/supabase/list-query"
-import { buildCursorConditions, encodeCommentCursor, type DecodedCursor } from "@/lib/comment-cursor"
+import { buildCursorConditions, encodeCommentCursor, type CommentCursor } from "@/lib/comment-cursor"
 
 const COMMENT_LIST_SELECT_COLUMNS =
   "id, wp_post_id, edition_code, user_id, body, parent_id, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, replies_count, reactions_count, profile:profiles(username, avatar_url)"
@@ -16,7 +16,7 @@ interface ListCommentsParams {
   parentId?: string | null
   status: CommentStatus
   session: Session | null
-  decodedCursor: DecodedCursor | null
+  decodedCursor: CommentCursor | null
 }
 
 function applyOrFilters(query: any, statusConditions: string[], cursorConditions: string[]) {
@@ -210,15 +210,13 @@ export async function countCommentsIfFirstPage(
     return query.or(conditions.join(","))
   }
 
-  const { count, error: countError } = await executeListQuery(supabase, "comments", (query) => {
-    let updated = query
-      .select("id", { count: "exact", head: true })
-      .eq("wp_post_id", wpPostId)
-      .eq("edition_code", editionCode)
-    updated = applyParentFilter(updated)
-    updated = applySimpleStatusFilters(updated)
-    return applyOrFilters(updated, statusOrConditions)
-  })
+  let countQuery = supabase.from("comments").select("id", { count: "exact", head: true })
+  countQuery = countQuery.eq("wp_post_id", wpPostId).eq("edition_code", editionCode)
+  countQuery = applyParentFilter(countQuery)
+  countQuery = applySimpleStatusFilters(countQuery)
+  countQuery = applyOrFilters(countQuery, statusOrConditions)
+
+  const { count, error: countError } = await countQuery
 
   if (countError) {
     console.error("Failed to count comments:", countError)

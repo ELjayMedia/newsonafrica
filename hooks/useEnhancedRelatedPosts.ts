@@ -82,13 +82,14 @@ export function useEnhancedRelatedPosts({
 
       // Simple heuristic: posts with comments or recent posts in trending categories
       const hasComments = (post as any).commentCount > 5
-      const isRecent = Date.now() - new Date(post.date).getTime() < 7 * 24 * 60 * 60 * 1000 // 7 days
+      const postTimestamp = post.date ? new Date(post.date).getTime() : Number.NEGATIVE_INFINITY
+      const isRecent = Date.now() - postTimestamp < 7 * 24 * 60 * 60 * 1000 // 7 days
       const trendingCategories = ["politics", "business", "sports", "entertainment"]
       const isInTrendingCategory = post.categories?.nodes?.some((cat) =>
-        trendingCategories.includes(cat.slug.toLowerCase()),
+        typeof cat.slug === "string" && trendingCategories.includes(cat.slug.toLowerCase()),
       )
 
-      return hasComments || (isRecent && isInTrendingCategory)
+      return hasComments || (isRecent && Boolean(isInTrendingCategory))
     },
     [enablePopularityBoost],
   )
@@ -134,7 +135,9 @@ export function useEnhancedRelatedPosts({
         }
 
         // Tertiary sort: recency
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
+        const bTime = b.date ? new Date(b.date).getTime() : 0
+        const aTime = a.date ? new Date(a.date).getTime() : 0
+        return bTime - aTime
       })
 
       const finalPosts = sortedPosts.slice(0, limit)

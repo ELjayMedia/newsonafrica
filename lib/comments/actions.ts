@@ -15,7 +15,7 @@ interface CreateCommentParams {
 export async function createComment(supabase: SupabaseClient<Database>, params: CreateCommentParams) {
   const { wpPostId, editionCode, userId, body, parentId } = params
 
-  const newComment = {
+  const newComment: Database["public"]["Tables"]["comments"]["Insert"] = {
     wp_post_id: wpPostId,
     edition_code: editionCode,
     user_id: userId,
@@ -106,7 +106,6 @@ export async function updateCommentAction(
   }
 
   // Update the comment
-  // @ts-expect-error -- Supabase type inference does not recognize our generic schema in route handlers
   const { error } = await supabase.from("comments").update(updateData).eq("id", id)
 
   if (error) {
