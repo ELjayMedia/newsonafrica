@@ -20,7 +20,9 @@ export function AppChrome({ children }: AppChromeProps) {
         <ScrollToTop />
       </Suspense>
       <ClientDynamicComponents />
-      <TopBar />
+      <Suspense fallback={null}>
+        <TopBar />
+      </Suspense>
       <div className="flex-grow rounded-xs shadow-none bg-transparent">
         <div className="mx-auto max-w-full md:max-w-[980px]">{children}</div>
       </div>
