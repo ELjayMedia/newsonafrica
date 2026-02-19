@@ -127,12 +127,12 @@ const asLoadArticleResult = (
 
   let node: PostFieldsFragment | null = null
 
-  if (preview && result.post) {
-    node = result.post
+  if (preview && result.data.post) {
+    node = result.data.post
   }
 
   if (!node) {
-    node = result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
+    node = result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
   }
 
   if (!node) {
