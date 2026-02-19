@@ -196,7 +196,7 @@ export async function getRelatedPostsForCountry(
     const catIds =
       postData.post.categories?.nodes
         ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
-        .map((c) => Number(c!.databaseId)) ?? []
+        .map((c) => String(c.databaseId)) ?? []
     if (catIds.length > 0) {
       const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
         countryCode,
@@ -271,8 +271,8 @@ export const getRelatedPosts = async (
   }
 
   const posts = await getRelatedPostsForCountry(country, postId, limit)
-  const postIdString = String(postId)
-  return posts.filter((p) => String(p.id) !== postIdString)
+  return posts.filter((p) => p.databaseId !== Number(postId) && p.id !== postId)
+}
 }
 
 const resolveRenderedText = (value: unknown): string => {
@@ -618,23 +618,17 @@ export const fetchPosts = async (
 
   const includeIds = Array.isArray(ids)
     ? ids
-        .map((value) => {
-          const numeric = Number(value)
-          return Number.isNaN(numeric) ? String(value) : numeric
-        })
-        .filter((value) => value !== undefined && value !== null)
+        .map((value) => String(value))
+        .filter((value) => value.length > 0)
     : undefined
 
   const authorIds = author
     ? [author]
-        .map((value) => {
-          const numeric = Number(value)
-          return Number.isNaN(numeric) ? String(value) : numeric
-        })
-        .filter((value) => value !== undefined && value !== null)
+        .map((value) => String(value))
+        .filter((value) => value.length > 0)
     : undefined
 
-  const variables: Record<string, unknown> = {
+  const variables: Record<string, string | number | boolean | string[] | readonly string[]> = {
     first: perPage,
     offset,
   }

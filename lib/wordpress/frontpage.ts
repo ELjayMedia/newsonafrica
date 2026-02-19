@@ -276,7 +276,9 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
       remainingPosts,
     }
   } catch (error) {
-    log.error("[v0] Aggregated latest posts request failed", error)
+    log.error("[v0] Aggregated latest posts request failed", {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return fallback
   }
 }

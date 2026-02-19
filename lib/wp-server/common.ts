@@ -88,9 +88,9 @@ export async function withRetry<TResult>(
   }
 }
 
-interface ThrottledQueueTask<TValue> {
-  start: () => Promise<TValue>
-  resolve: (value: TValue | PromiseLike<TValue>) => void
+interface ThrottledQueueTask {
+  start: () => Promise<unknown>
+  resolve: (value: unknown) => void
   reject: (reason: unknown) => void
 }
 
@@ -102,7 +102,7 @@ export interface ThrottledQueueOptions {
 export function createThrottledQueue({ concurrency, intervalMs = 0 }: ThrottledQueueOptions) {
   const maxConcurrency = Math.max(1, Math.floor(concurrency))
   const throttleInterval = Math.max(0, intervalMs)
-  const queue: ThrottledQueueTask<unknown>[] = []
+  const queue: ThrottledQueueTask[] = []
 
   let active = 0
   let lastStart = 0
@@ -152,7 +152,7 @@ export function createThrottledQueue({ concurrency, intervalMs = 0 }: ThrottledQ
     return new Promise<TValue>((resolve, reject) => {
       queue.push({
         start: async () => await Promise.resolve(start()),
-        resolve,
+        resolve: (value) => resolve(value as TValue),
         reject,
       })
 
