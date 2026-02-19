@@ -3,6 +3,7 @@ import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountr
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 
 type SlugEntity = { slug?: string }
 type CountryEntity = { code?: string }
@@ -89,8 +90,8 @@ export async function GET() {
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country)}</loc>
-    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
+    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
+    <lastmod>${postDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     ${featuredUrl

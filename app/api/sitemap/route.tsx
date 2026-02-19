@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 import { logRequest, withCors } from "@/lib/api-utils"
 import { ENV } from "@/config/env"
+
+const fetchAllCategories = async () => []
+const fetchRecentPosts = async () => []
 
 // Cache policy: long (30 minutes)
 export const revalidate = 1800
@@ -70,7 +74,7 @@ export async function GET(request: Request) {
         .map(
           (post) => `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,

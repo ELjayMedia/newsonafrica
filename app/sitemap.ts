@@ -3,6 +3,7 @@ import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/li
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 300
@@ -120,40 +121,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]
 
     // Post pages - include all metadata needed for news sitemaps
-    const postPages: MetadataRoute.Sitemap = posts
-      .filter((post: PostEntity) => !!post?.slug)
-      .map((post: PostEntity) => {
-        const postDate = safeDate(post.modified ?? post.date)
-        const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
-        const title = typeof post.title === "string" ? post.title : ""
+    const postPages = posts.map((post) => {
+      const postDate = new Date(post.modified || post.date)
+      const isRecent =
+        Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
 
-        const keywords =
-          post.categories?.nodes
-            ?.map((cat: CategoryNode) => cat.name)
-            .filter((n): n is string => typeof n === "string" && n.length > 0)
-            .join(", ") ?? ""
-
-        const imageUrl = post.featuredImage?.node?.sourceUrl
-        const imageAlt =
-          (typeof post.featuredImage?.node?.altText === "string" && post.featuredImage.node.altText) || title
-
-        return {
-          url: `${baseUrl}${getArticleUrl(post.slug, post.country)}`,
-          lastModified: postDate,
-          changeFrequency: isRecent ? "daily" : "weekly",
-          priority: isRecent ? 0.9 : 0.7,
-
-          // Extra fields are fine at runtime, but TS typing for MetadataRoute.Sitemap is strict.
-          // If you *must* keep `news`/`images`, either:
-          // 1) move these to /server-sitemap.xml route (recommended), OR
-          // 2) cast this object to `any` at the end.
-          ...(isRecent
-            ? ({
-              news: {
-                publication: { name: "News On Africa", language: "en" },
-                publicationDate: postDate,
-                title,
-                keywords,
+      return {
+        url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
+        lastModified: postDate,
+        changeFrequency: isRecent ? "daily" : ("weekly" as const),
+        priority: isRecent ? 0.9 : 0.7,
+        // Additional news sitemap data
+        news: isRecent
+          ? {
+              publication: {
+                name: "News On Africa",
+                language: "en",
+              },
+              publicationDate: postDate,
+              title: post.title,
+              keywords:
+                post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
+            }
+          : undefined,
+        // Image data if available
+        images: post.featuredImage?.node?.sourceUrl
+          ? [
+              {
+                url: post.featuredImage.node.sourceUrl,
+                title: post.title,
+                alt: post.featuredImage.node.altText || post.title,
               },
             } as any)
             : {}),

@@ -9,6 +9,7 @@ import { fetchWordPressGraphQL } from "../wordpress/client"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { DEFAULT_COUNTRY } from "../wordpress/shared"
 import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
+import { mapGraphqlCategoryToWordPressCategory } from "@/lib/wp-server/adapters"
 import type {
   CategoryPostsBatchQuery,
   CategoryPostsQuery,
@@ -25,22 +26,6 @@ const createEmptyResult = (): CategoryPostsResult => ({
 })
 
 const normalizeSlug = (slug: string | null | undefined) => slug?.trim().toLowerCase() ?? ""
-
-type GraphqlCategoryNode = {
-  databaseId?: number | null
-  name?: string | null
-  slug?: string | null
-  description?: string | null
-  count?: number | null
-}
-
-const mapCategoryFromGraphql = (node: GraphqlCategoryNode | null | undefined): WordPressCategory => ({
-  id: node?.databaseId ?? 0,
-  name: node?.name ?? "",
-  slug: node?.slug ?? "",
-  description: node?.description ?? undefined,
-  count: node?.count ?? undefined,
-})
 
 const ensureResultEntries = (
   results: Record<string, CategoryPostsResult>,
@@ -77,7 +62,7 @@ export async function getPostsForCategories(
   let data: CategoryPostsBatchQuery | null = null
 
   try {
-    data = await fetchWordPressGraphQL<CategoryPostsBatchQuery>(
+    const result = await fetchWordPressGraphQL<CategoryPostsBatchQuery>(
       countryCode,
       CATEGORY_POSTS_BATCH_QUERY,
       {
@@ -86,6 +71,13 @@ export async function getPostsForCategories(
       },
       { tags, revalidate: CACHE_DURATIONS.NONE },
     )
+
+    if (!result.ok) {
+      console.error(`[v1] Failed to fetch category posts batch for ${countryCode}:`, result)
+      return ensureResultEntries({}, normalizedSlugs)
+    }
+
+    data = result.data
   } catch (error) {
     console.error(
       `[v1] Failed to fetch category posts batch for ${countryCode}:`,
@@ -108,7 +100,7 @@ export async function getPostsForCategories(
       ) ?? []
 
     results[slug] = {
-      category: mapCategoryFromGraphql(node),
+      category: mapGraphqlCategoryToWordPressCategory(node),
       posts,
       hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
       endCursor: node.posts?.pageInfo?.endCursor ?? null,
@@ -127,8 +119,6 @@ export async function getPostsByCategoryForCountry(
   const slug = normalizeSlug(categorySlug)
   const tags = [cacheTags.edition(countryCode), cacheTags.category(countryCode, slug)]
 
-  let data: PostsByCategoryQuery | null = null
-
   const variables: Record<string, string | number> = {
     category: categorySlug,
     first: limit,
@@ -139,32 +129,43 @@ export async function getPostsByCategoryForCountry(
   }
 
   try {
-    data = await fetchWordPressGraphQL<PostsByCategoryQuery>(
+    const result = await fetchWordPressGraphQL<PostsByCategoryQuery>(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
       { tags, revalidate: CACHE_DURATIONS.NONE },
     )
+
+    if (!result.ok) {
+      console.error(
+        `[v1] Failed to fetch posts by category for ${categorySlug} (${countryCode}):`,
+        result,
+      )
+      return createEmptyResult()
+    }
+
+    const data = result.data
+
+    if (!data?.posts || !data?.categories) {
+      return createEmptyResult()
+    }
+
+    const catNode = data.categories.nodes?.[0] ?? null
+    const category = catNode ? mapGraphqlCategoryToWordPressCategory(catNode) : null
+    const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+
+    return {
+      category,
+      posts: nodes.map((post) => mapGraphqlPostToWordPressPost(post, countryCode)),
+      hasNextPage: data.posts.pageInfo?.hasNextPage ?? false,
+      endCursor: data.posts.pageInfo?.endCursor ?? null,
+    }
   } catch (error) {
     console.error(
       `[v1] Failed to fetch posts by category for ${categorySlug} (${countryCode}):`,
       error,
     )
-  }
-
-  if (!data?.posts || !data?.categories) {
     return createEmptyResult()
-  }
-
-  const catNode = data.categories.nodes?.[0] ?? null
-  const category = catNode ? mapCategoryFromGraphql(catNode) : null
-  const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
-
-  return {
-    category,
-    posts: nodes.map((post) => mapGraphqlPostToWordPressPost(post, countryCode)),
-    hasNextPage: data.posts.pageInfo?.hasNextPage ?? false,
-    endCursor: data.posts.pageInfo?.endCursor ?? null,
   }
 }
 
@@ -172,14 +173,21 @@ export async function getCategoriesForCountry(countryCode: string): Promise<Word
   const tags = [cacheTags.edition(countryCode)]
 
   try {
-    const data = await fetchWordPressGraphQL<CategoriesQuery>(
+    const result = await fetchWordPressGraphQL<CategoriesQuery>(
       countryCode,
       CATEGORIES_QUERY,
       undefined,
       { tags, revalidate: CACHE_DURATIONS.NONE },
     )
+
+    if (!result.ok) {
+      console.error(`[v1] Failed to fetch categories for ${countryCode}:`, result)
+      return []
+    }
+
+    const data = result.data
     const nodes = data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
-    return nodes.map((node) => mapCategoryFromGraphql(node))
+    return nodes.map((node) => mapGraphqlCategoryToWordPressCategory(node))
   } catch (error) {
     console.error(`[v1] Failed to fetch categories for ${countryCode}:`, error)
     return []
@@ -203,19 +211,26 @@ export async function fetchCategoryPosts(
     variables.after = cursor
   }
 
-  const data = await fetchWordPressGraphQL<CategoryPostsQuery>(
+  const result = await fetchWordPressGraphQL<CategoryPostsQuery>(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
     { tags, revalidate: CACHE_DURATIONS.NONE },
   )
 
+  if (!result.ok) {
+    console.error(`[v1] Failed to fetch category posts for ${slug} (${countryCode}):`, result)
+    return null
+  }
+
+  const data = result.data
+
   if (!data?.posts || !data?.categories) {
     return null
   }
 
   const catNode = data.categories.nodes?.[0] ?? null
-  const category = catNode ? mapCategoryFromGraphql(catNode) : null
+  const category = catNode ? mapGraphqlCategoryToWordPressCategory(catNode) : null
   const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
   return {

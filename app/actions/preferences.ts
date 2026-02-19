@@ -3,23 +3,22 @@
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError } from "@/lib/supabase/action-result"
-import { sanitizeProfilePreferences, parseProfilePreferences } from "@/lib/preferences/profile-preferences"
-import type { RawProfilePreferences, StoredProfilePreferences } from "@/lib/preferences/profile-preferences"
+import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
+import {
+  mapProfilePreferencesToStored,
+  mapUserPreferencesRowToSnapshot,
+  type UserPreferencesSnapshot,
+} from "@/lib/supabase/adapters/user-preferences"
 import { withSupabaseSession, type SupabaseServerClient } from "./supabase"
 import type { Database } from "@/types/supabase"
 import {
-  DEFAULT_USER_PREFERENCES,
-  type UserPreferences,
   type ThemePreference,
   type BookmarkSortPreference,
 } from "@/types/user-preferences"
 import type { CommentSortOption } from "@/lib/supabase-schema"
 
-export interface UserPreferencesSnapshot {
-  userId: string | null
-  preferences: UserPreferences
-  profilePreferences: RawProfilePreferences
-}
+export type { UserPreferencesSnapshot } from "@/lib/supabase/adapters/user-preferences"
+
 
 export interface UpdatePreferencesInput {
   settings?: {
@@ -152,37 +151,6 @@ function resolveSections(
   return defaultSections
 }
 
-function buildUserPreferences(
-  settingsRow: UserSettingsRow | null,
-  contentRow: UserPreferencesRow | null,
-  storedProfilePreferences: StoredProfilePreferences,
-  defaultSections: string[],
-): UserPreferences {
-  const sections = resolveSections(contentRow, defaultSections)
-
-  return {
-    theme: (settingsRow?.theme as ThemePreference) || DEFAULT_USER_PREFERENCES.theme,
-    language: settingsRow?.language || DEFAULT_USER_PREFERENCES.language,
-    emailNotifications:
-      typeof settingsRow?.email_notifications === "boolean"
-        ? settingsRow.email_notifications
-        : DEFAULT_USER_PREFERENCES.emailNotifications,
-    pushNotifications:
-      typeof settingsRow?.push_notifications === "boolean"
-        ? settingsRow.push_notifications
-        : DEFAULT_USER_PREFERENCES.pushNotifications,
-    sections,
-    blockedTopics: Array.isArray(contentRow?.blocked_topics) ? contentRow.blocked_topics : [],
-    countries: Array.isArray(contentRow?.countries) ? contentRow.countries : [],
-    commentSort: storedProfilePreferences.comment_sort ?? DEFAULT_USER_PREFERENCES.commentSort,
-    bookmarkSort: storedProfilePreferences.bookmark_sort ?? DEFAULT_USER_PREFERENCES.bookmarkSort,
-    lastSubscriptionPlan:
-      storedProfilePreferences.last_subscription_plan !== undefined
-        ? storedProfilePreferences.last_subscription_plan
-        : DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
-  }
-}
-
 async function ensureUserPreferencesSnapshot(
   supabase: SupabaseServerClient,
   userId: string,
@@ -192,7 +160,7 @@ async function ensureUserPreferencesSnapshot(
   const settingsRow = await ensureUserSettings(supabase, userId)
   const contentRow = await ensureContentPreferences(supabase, userId, defaultSections)
 
-  const { raw: profilePreferencesRaw, stored: storedProfilePreferences, didChange } = sanitizeProfilePreferences(
+  const { raw: profilePreferencesRaw, didChange } = mapProfilePreferencesToStored(
     profile?.preferences,
   )
 
@@ -210,11 +178,13 @@ async function ensureUserPreferencesSnapshot(
     }
   }
 
-  return {
+  return mapUserPreferencesRowToSnapshot({
     userId,
-    preferences: buildUserPreferences(settingsRow, contentRow, storedProfilePreferences, defaultSections),
+    settingsRow,
+    contentRow,
     profilePreferences: profilePreferencesRaw,
-  }
+    defaultSections: resolveSections(contentRow, defaultSections),
+  })
 }
 
 export async function getUserPreferences() {
@@ -222,11 +192,9 @@ export async function getUserPreferences() {
     const userId = session?.user?.id ?? null
 
     if (!userId) {
-      return {
+      return mapUserPreferencesRowToSnapshot({
         userId: null,
-        preferences: DEFAULT_USER_PREFERENCES,
-        profilePreferences: {},
-      }
+      })
     }
 
     return ensureUserPreferencesSnapshot(supabase, userId)

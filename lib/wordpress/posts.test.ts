@@ -24,11 +24,14 @@ describe("getRelatedPostsForCountry", () => {
 
     mockFetch
       .mockResolvedValueOnce({
-        post: {
-          categories: { nodes: [{ databaseId: 7 }] },
+        ok: true,
+        data: {
+          post: {
+            categories: { nodes: [{ databaseId: 7 }] },
+          },
         },
       })
-      .mockResolvedValueOnce({ posts: { nodes: [] } })
+      .mockResolvedValueOnce({ ok: true, data: { posts: { nodes: [] } } })
 
     await getRelatedPostsForCountry("sz", "42", 3)
 
@@ -39,13 +42,23 @@ describe("getRelatedPostsForCountry", () => {
     expect(secondCallOptions?.timeout).toBe(1000)
     expect(secondCallOptions?.revalidate).toBe(CACHE_DURATIONS.SHORT)
   })
+
+  it("returns an empty list when category lookup fails", async () => {
+    const mockFetch = fetchWordPressGraphQL as unknown as Mock
+
+    mockFetch.mockResolvedValueOnce({ ok: false, kind: "http_error", message: "down" })
+
+    const result = await getRelatedPostsForCountry("sz", "42", 3)
+
+    expect(result).toEqual([])
+  })
 })
 
 describe("getRelatedPosts", () => {
   it("forwards the related posts timeout when querying by tags", async () => {
     const mockFetch = fetchWordPressGraphQL as unknown as Mock
 
-    mockFetch.mockResolvedValueOnce({ posts: { nodes: [] } })
+    mockFetch.mockResolvedValueOnce({ ok: true, data: { posts: { nodes: [] } } })
 
     await getRelatedPosts("42", [], ["analysis"], 4, "sz")
 
