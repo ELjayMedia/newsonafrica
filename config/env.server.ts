@@ -2,29 +2,24 @@ import "server-only"
 import { z } from "zod"
 
 const trimToUndefined = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
-    return undefined
-  }
-
+  if (typeof value !== "string") return undefined
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-const stringWithDefault = (defaultValue: string) => z.preprocess(trimToUndefined, z.string().default(defaultValue))
+const stringWithDefault = (defaultValue: string) =>
+  z.preprocess(trimToUndefined, z.string().default(defaultValue))
 
 const positiveIntegerWithDefault = (defaultValue: number) =>
   z.preprocess(
     (value) => {
       const trimmed = trimToUndefined(value)
-      if (!trimmed) {
-        return undefined
-      }
-
-      const parsed = Number.parseInt(trimmed, 10)
-      return parsed
+      // If empty/missing -> let default() kick in
+      if (!trimmed) return undefined
+      return trimmed
     },
-    z
-      .number({ required_error: "Expected a number" })
+    z.coerce
+      .number()
       .int({ message: "Expected an integer" })
       .positive({ message: "Expected a positive integer" })
       .default(defaultValue),
@@ -38,6 +33,7 @@ const WORDPRESS_AUTH_HEADERS_SCHEMA = z.preprocess(
   z
     .string()
     .transform((value, ctx) => {
+      // Allow "Bearer xxx" style (single Authorization header)
       if (!value.startsWith("{")) {
         return { Authorization: value }
       }
