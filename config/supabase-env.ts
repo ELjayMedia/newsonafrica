@@ -68,7 +68,7 @@ export function getSupabaseServerEnv(): SupabaseServerEnv {
     throw createSupabaseEnvError(missingVariables)
   }
 
-  // ✅ Type narrowing for TS (after the throw above, these are guaranteed)
+  // Type narrowing for TS (after the throw above, these are guaranteed)
   if (!browserEnv) {
     throw createSupabaseEnvError(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"])
   }
