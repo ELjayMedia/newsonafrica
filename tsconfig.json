@@ -30,28 +30,28 @@
     }
   },
   "include": [
+    "next-env.d.ts",
     "app/**/*",
-    "codegen.ts",
     "components/**/*",
     "config/**/*",
     "contexts/**/*",
     "docs/**/*",
     "hooks/**/*",
     "lib/**/*",
-    "middleware.test.ts",
-    "middleware.ts",
-    "next-env.d.ts",
-    "next.config.js",
     "services/**/*",
-    "supabase/**/*",
     "types/**/*",
     "utils/**/*",
+    "middleware.ts",
+    "middleware.test.ts",
+    "codegen.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
+    "next.config.js",
     ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
+<<<<<<< HEAD
     "scripts",
     "@v0/scripts",
     ".next",
@@ -59,3 +59,12 @@
     "supabase/functions"
   ]
 }
+=======
+    ".next",
+    "out",
+    "scripts",
+    "@v0/scripts",
+    "supabase/functions/**"
+  ]
+}
+>>>>>>> 2d834299 (feat: update tsconfig.json compilerOptions and include paths)
