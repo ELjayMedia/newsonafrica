@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "target": "ES6",
     "skipLibCheck": true,
@@ -20,29 +24,37 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
+    "next-env.d.ts",
     "app/**/*",
-    "codegen.ts",
     "components/**/*",
     "config/**/*",
     "contexts/**/*",
     "docs/**/*",
     "hooks/**/*",
     "lib/**/*",
-    "middleware.test.ts",
-    "middleware.ts",
-    "next-env.d.ts",
-    "next.config.js",
     "services/**/*",
-    "supabase/**/*",
     "types/**/*",
     "utils/**/*",
+    "middleware.ts",
+    "middleware.test.ts",
+    "codegen.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
+    "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "scripts", "@v0/scripts", ".next", "out"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "out",
+    "scripts",
+    "@v0/scripts",
+    "supabase/functions/**"
+  ]
 }
