@@ -184,8 +184,3 @@ export function useEnhancedRelatedPosts({
     retry,
   }
 }
-return {
-  posts: RelatedPost[],
-  loading: boolean,
-  error: unknown,
-}
