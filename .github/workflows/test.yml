@@ -10,18 +10,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-      - run: npm ci --legacy-peer-deps
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      # Optional but good: pin pnpm to what your repo expects
+      # - name: Use pnpm version from package.json
+      #   run: corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
+
       - name: Typecheck
-        run: npm run typecheck
-      - run: npm run test
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
       - name: Analyze bundle
-        run: npm run analyze
+        run: pnpm run analyze
+
       - name: Upload bundle analyzer report
         if: always()
         uses: actions/upload-artifact@v4
