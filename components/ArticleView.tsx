@@ -1,14 +1,16 @@
 "use client"
+
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { CalendarIcon, Clock } from "lucide-react"
+
 import { getCategoryUrl, rewriteLegacyLinks } from "@/lib/utils/routing"
 import { formatDate } from "@/lib/utils/date"
-import { CalendarIcon, Clock } from "lucide-react"
 import { BookmarkButton } from "./BookmarkButton"
 import { ShareButtons } from "./ShareButtons"
 import { useUser } from "@/contexts/UserContext"
-import { usePathname } from "next/navigation"
 import { useArticleScrollPosition } from "@/hooks/useArticleScrollPosition"
 import { RelatedArticles } from "./RelatedArticles"
 import { useEnhancedRelatedPosts } from "@/hooks/useEnhancedRelatedPosts"
@@ -52,10 +54,26 @@ interface ArticleViewProps {
   }
 }
 
+/**
+ * Local “UI-safe” related post type.
+ * This avoids the “Two different types with this name exist” issue by not importing RelatedPost at all.
+ */
+type RelatedPostForUI = {
+  id: string
+  slug: string
+  title: string
+  excerpt?: string | null
+  date?: string | null
+  country?: string | null
+  featuredImage?: { url?: string | null; alt?: string | null } | null
+}
+
 export default function ArticleView({ post }: ArticleViewProps) {
   const { isAuthenticated } = useUser()
   const pathname = usePathname()
+
   const { id, title, content, date, featuredImage, author, categories, readingTime, excerpt, slug } = post
+
   const isNewVisit = useRef(true)
   const [hasInitialized, setHasInitialized] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
@@ -73,11 +91,53 @@ export default function ArticleView({ post }: ArticleViewProps) {
   } = useEnhancedRelatedPosts({
     postId: id,
     categories: categoryIds,
-    tags: [], // Add tags if available in your post data structure
-    limit: 8, // Increased limit for carousel
-    enableAI: false, // Disabled AI recommendations
-    enablePopularityBoost: true, // Keep popularity-based sorting
+    tags: [],
+    limit: 8,
+    enableAI: false,
+    enablePopularityBoost: true,
   })
+
+  /**
+   * Normalize related posts to a strict shape:
+   * - ensure id is always string
+   * - ensure required fields exist
+   * - unify possible image field shapes
+   */
+  const relatedPostsSafe: RelatedPostForUI[] = (relatedPosts ?? [])
+    .map((p: any): RelatedPostForUI | null => {
+      const rawId = p?.id
+      const rawSlug = p?.slug
+      const rawTitle = p?.title
+
+      // Required fields
+      if (!rawId || !rawSlug || !rawTitle) return null
+
+      // Try multiple possible image shapes (hook implementations vary)
+      const sourceUrl =
+        p?.featuredImage?.node?.sourceUrl ??
+        p?.featuredImage?.url ??
+        p?.image?.sourceUrl ??
+        p?.image?.url ??
+        null
+
+      const altText =
+        p?.featuredImage?.node?.altText ??
+        p?.featuredImage?.alt ??
+        p?.image?.altText ??
+        p?.image?.alt ??
+        null
+
+      return {
+        id: String(rawId),
+        slug: String(rawSlug),
+        title: String(rawTitle),
+        excerpt: (p?.excerpt ?? null) as string | null,
+        date: (p?.date ?? p?.modified ?? null) as string | null,
+        country: (p?.country ?? p?.editionCode ?? null) as string | null,
+        featuredImage: sourceUrl ? { url: sourceUrl, alt: altText } : null,
+      }
+    })
+    .filter(Boolean) as RelatedPostForUI[]
 
   // Use our custom hook to manage scroll position
   const { scrollPosition, hasRestoredPosition, restoreScrollPosition, clearScrollPosition, saveScrollPosition } =
@@ -85,22 +145,18 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
   // Force scroll to top on initial load
   useEffect(() => {
-    // Check if URL has a hash fragment (like #comments)
     const hasHash = window.location.hash !== ""
 
-    // Force scroll to top on component mount
     const scrollToPageTop = () => {
       window.scrollTo({
         top: 0,
-        behavior: "auto", // Use auto for immediate scroll
+        behavior: "auto",
       })
     }
 
-    // Execute scroll with a slight delay to ensure it overrides any browser behavior
     const timeoutId = setTimeout(() => {
       scrollToPageTop()
 
-      // If there was a hash, remove it without triggering a navigation
       if (hasHash) {
         const newUrl = window.location.pathname + window.location.search
         window.history.replaceState(null, "", newUrl)
@@ -117,19 +173,17 @@ export default function ArticleView({ post }: ArticleViewProps) {
     if (!isAuthenticated) return
 
     const handleScroll = () => {
-      // Don't save position during programmatic scrolling
       if (isManualScrolling.current || forceScrollToTop.current) return
 
       const currentPosition = window.scrollY
-      // Only save if we've scrolled more than 100px from last saved position
       if (Math.abs(currentPosition - lastScrollPosition.current) > 100) {
         lastScrollPosition.current = currentPosition
+        // saveScrollPosition expects 1 arg in your usage
         saveScrollPosition(currentPosition)
       }
     }
 
-    // Throttled scroll event listener
-    let scrollTimeout: NodeJS.Timeout
+    let scrollTimeout: ReturnType<typeof setTimeout> | null = null
     const throttledScroll = () => {
       if (scrollTimeout) clearTimeout(scrollTimeout)
       scrollTimeout = setTimeout(handleScroll, 200)
@@ -148,19 +202,15 @@ export default function ArticleView({ post }: ArticleViewProps) {
     if (!isAuthenticated || hasInitialized) return
     setHasInitialized(true)
 
-    // Always force scroll to top first
     forceScrollToTop.current = true
     window.scrollTo({
       top: 0,
-      behavior: "auto", // Use auto for immediate scroll
+      behavior: "auto",
     })
 
-    // If this is a new visit and we have a saved position
     if (isNewVisit.current && scrollPosition > 0 && !hasRestoredPosition) {
-      // Set flag to prevent saving during programmatic scrolling
       isManualScrolling.current = true
 
-      // Show a notification that we're restoring position
       const notification = document.createElement("div")
       notification.className =
         "fixed bottom-4 right-4 bg-black bg-opacity-80 text-white px-4 py-2 rounded-full z-50 flex items-center justify-between"
@@ -173,16 +223,15 @@ export default function ArticleView({ post }: ArticleViewProps) {
       `
       document.body.appendChild(notification)
 
-      // Add event listener to the restore button
+      let restoreTimeout: ReturnType<typeof setTimeout> | null = null
+
       const restoreButton = notification.querySelector(".restore-btn")
       if (restoreButton) {
         restoreButton.addEventListener("click", () => {
-          // Clear the timeout, remove notification, and restore position
           if (restoreTimeout) clearTimeout(restoreTimeout)
-          document.body.removeChild(notification)
+          if (document.body.contains(notification)) document.body.removeChild(notification)
           restoreScrollPosition()
 
-          // Reset flags after scrolling
           setTimeout(() => {
             isManualScrolling.current = false
             forceScrollToTop.current = false
@@ -190,21 +239,18 @@ export default function ArticleView({ post }: ArticleViewProps) {
         })
       }
 
-      // Add event listener to the cancel button
       const cancelButton = notification.querySelector(".cancel-btn")
       if (cancelButton) {
         cancelButton.addEventListener("click", () => {
-          // Clear the timeout, remove notification, and stay at top
           if (restoreTimeout) clearTimeout(restoreTimeout)
-          document.body.removeChild(notification)
+          if (document.body.contains(notification)) document.body.removeChild(notification)
           clearScrollPosition()
           isManualScrolling.current = false
           forceScrollToTop.current = false
         })
       }
 
-      // Auto-dismiss the notification after 10 seconds
-      const restoreTimeout = setTimeout(() => {
+      restoreTimeout = setTimeout(() => {
         if (document.body.contains(notification)) {
           document.body.removeChild(notification)
         }
@@ -219,7 +265,6 @@ export default function ArticleView({ post }: ArticleViewProps) {
         }
       }
     } else {
-      // Reset flags
       isManualScrolling.current = false
       forceScrollToTop.current = false
     }
@@ -246,11 +291,12 @@ export default function ArticleView({ post }: ArticleViewProps) {
   // Clear scroll position when user explicitly navigates to a different article
   useEffect(() => {
     return () => {
-      // This runs when the component unmounts
-      // We don't clear if it's a page refresh or browser navigation
-      if (performance.navigation?.type !== 1) {
-        // 1 is TYPE_RELOAD
-        // We keep the position in sessionStorage, just mark that we're leaving
+      // performance.navigation is deprecated; this is a safer “best effort” check
+      const entries = performance.getEntriesByType?.("navigation") as PerformanceNavigationTiming[] | undefined
+      const navType = entries?.[0]?.type
+      const isReload = navType === "reload"
+
+      if (!isReload) {
         isNewVisit.current = true
       }
     }
@@ -262,13 +308,10 @@ export default function ArticleView({ post }: ArticleViewProps) {
   }
 
   const formattedDate = formatDate(date)
-
-  // Extract the first category if available
   const primaryCategory = categories?.edges?.[0]?.node
 
   return (
     <article ref={articleRef} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Article Header */}
       <header className="mb-8 lg:mb-12">
         {primaryCategory && (
           <Link
@@ -330,10 +373,10 @@ export default function ArticleView({ post }: ArticleViewProps) {
             featuredImage={
               featuredImage?.node?.sourceUrl
                 ? {
-                    url: featuredImage.node.sourceUrl,
-                    width: featuredImage.node.mediaDetails?.width || 1200,
-                    height: featuredImage.node.mediaDetails?.height || 800,
-                  }
+                  url: featuredImage.node.sourceUrl,
+                  width: featuredImage.node.mediaDetails?.width || 1200,
+                  height: featuredImage.node.mediaDetails?.height || 800,
+                }
                 : undefined
             }
             variant="outline"
@@ -412,10 +455,10 @@ export default function ArticleView({ post }: ArticleViewProps) {
               featuredImage={
                 featuredImage?.node?.sourceUrl
                   ? {
-                      url: featuredImage.node.sourceUrl,
-                      width: featuredImage.node.mediaDetails?.width || 1200,
-                      height: featuredImage.node.mediaDetails?.height || 800,
-                    }
+                    url: featuredImage.node.sourceUrl,
+                    width: featuredImage.node.mediaDetails?.width || 1200,
+                    height: featuredImage.node.mediaDetails?.height || 800,
+                  }
                   : undefined
               }
               variant="outline"
@@ -428,7 +471,8 @@ export default function ArticleView({ post }: ArticleViewProps) {
 
       <div className="border-t border-border pt-10 mb-12">
         <RelatedArticles
-          posts={relatedPosts || []}
+          // ✅ Use normalized array to satisfy RelatedArticles typing
+          posts={relatedPostsSafe as any}
           loading={loadingRelated}
           title="You might also like"
           layout="carousel"
@@ -438,15 +482,12 @@ export default function ArticleView({ post }: ArticleViewProps) {
         />
       </div>
 
-      {/* Comments Section would go here */}
       <div id="comments-section" className="border-t border-border pt-8">
-        {/* Comments component will be rendered here */}
         <div className="text-center text-gray-500 py-8">
           <p>Comments section will appear here</p>
         </div>
       </div>
 
-      {/* Scroll to top button */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}

@@ -30,6 +30,8 @@ export interface HomeContentClientProps {
   }
 }
 
+type HomeContentData = Required<NonNullable<HomeContentClientProps["initialData"]>>
+
 const isOnline = () => {
   if (typeof navigator !== "undefined" && "onLine" in navigator) {
     return navigator.onLine
@@ -63,7 +65,7 @@ const mapCategoryPostsForConfigs = (
 const buildFallbackData = (
   baselinePosts: HomePost[],
   featuredPosts: HomePost[],
-): Required<HomeContentClientProps["initialData"]> => {
+): HomeContentData => {
   if (baselinePosts.length === 0 && featuredPosts.length === 0) {
     return {
       taggedPosts: [],
@@ -97,10 +99,13 @@ export function HomeContentClient({
   const initialCountryPosts = countryPosts[currentCountry] || initialPosts
   const baselinePosts = initialCountryPosts.length ? initialCountryPosts : initialPosts
 
-  const resolvedData = useMemo(() => {
+  const resolvedData = useMemo<HomeContentData>(() => {
     if (initialData) {
       return {
-        ...initialData,
+        taggedPosts: initialData.taggedPosts ?? [],
+        featuredPosts: initialData.featuredPosts ?? [],
+        categories: initialData.categories ?? [],
+        recentPosts: initialData.recentPosts ?? [],
         categoryPosts: initialData.categoryPosts ?? {},
       }
     }
@@ -159,7 +164,7 @@ export function HomeContentClient({
   ]
 
   const CategorySection = (config: CategoryConfig) => {
-    const { name, layout, typeOverride } = config
+    const { name, typeOverride } = config
     const resolvedSlug = resolveCategorySlug(config)
     const normalizedSlug = resolvedSlug.toLowerCase()
     const posts = categoryPosts[normalizedSlug] || []
@@ -181,7 +186,6 @@ export function HomeContentClient({
             ...post,
             type: typeOverride,
           }))}
-          layout={layout}
           className="compact-grid"
         />
       </article>

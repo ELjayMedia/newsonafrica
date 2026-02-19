@@ -26,7 +26,6 @@ export function CommentButton({ commentCount, className }: CommentButtonProps) {
       toast({
         title: "Sign in to comment",
         description: "Join the conversation by signing in to your account",
-        duration: 3000,
       })
     }
   }

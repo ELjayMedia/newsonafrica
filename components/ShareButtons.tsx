@@ -47,9 +47,11 @@ export function ShareButtons({
     email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
   }
 
+  const canNativeShare = typeof navigator !== "undefined" && typeof (navigator as Navigator & { share?: Navigator["share"] }).share === "function"
+
   // Handle native sharing if available
   const handleNativeShare = async () => {
-    if (navigator.share) {
+    if (canNativeShare) {
       try {
         await navigator.share({
           title,
@@ -89,7 +91,7 @@ export function ShareButtons({
   }
 
   // If native sharing is available on mobile, use that
-  if (isMobile && navigator.share) {
+  if (isMobile && canNativeShare) {
     return (
       <Button
         variant="outline"

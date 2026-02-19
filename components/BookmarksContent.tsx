@@ -58,7 +58,7 @@ export default function BookmarksContent() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<SortOption>(preferences.bookmarkSort)
+  const [sortBy, setSortBy] = useState<SortOption>(preferences.bookmarkSort as SortOption)
   const [filterBy, setFilterBy] = useState<FilterOption>("all")
   const [selectedCategory, _setSelectedCategory] = useState<string>("all")
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
@@ -71,9 +71,10 @@ export default function BookmarksContent() {
   }, [preferences.bookmarkSort])
 
   const handleSortChange = useCallback(
-    (value: SortOption) => {
-      setSortBy(value)
-      void setBookmarkSortPreference(value)
+    (value: string) => {
+      const next = value as SortOption
+      setSortBy(next)
+      void setBookmarkSortPreference(next)
     },
     [setBookmarkSortPreference],
   )
@@ -269,7 +270,7 @@ export default function BookmarksContent() {
             </SelectContent>
           </Select>
 
-          <Select value={filterBy} onValueChange={(value: FilterOption) => setFilterBy(value)}>
+          <Select value={filterBy} onValueChange={(v) => setFilterBy(v as FilterOption)}>
             <SelectTrigger className="w-24">
               <SelectValue />
             </SelectTrigger>
@@ -322,6 +323,10 @@ export default function BookmarksContent() {
           filteredBookmarks.map((bookmark) => {
             const sanitizedExcerpt = sanitizeExcerpt(bookmark.excerpt)
 
+            // ✅ FIX: slug must be a string for getArticleUrl()
+            const slug = bookmark.slug ?? ""
+            const href = slug ? getArticleUrl(slug, bookmark.editionCode ?? undefined) : "/"
+
             return (
               <Card key={bookmark.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
@@ -329,12 +334,11 @@ export default function BookmarksContent() {
                     <Checkbox
                       checked={selectedBookmarks.includes(bookmark.postId)}
                       onCheckedChange={(checked) => {
-                        if (checked) {
+                        const isChecked = Boolean(checked)
+                        if (isChecked) {
                           setSelectedBookmarks((prev) => [...prev, bookmark.postId])
                         } else {
-                          setSelectedBookmarks((prev) =>
-                            prev.filter((id) => id !== bookmark.postId),
-                          )
+                          setSelectedBookmarks((prev) => prev.filter((id) => id !== bookmark.postId))
                         }
                       }}
                     />
@@ -342,106 +346,102 @@ export default function BookmarksContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-
-                        <Link
-                          href={getArticleUrl(bookmark.slug, bookmark.editionCode || undefined)}
-                          className="block hover:text-blue-600 transition-colors"
-                        >
-
-                          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
-                        </Link>
-
-                        {sanitizedExcerpt && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{sanitizedExcerpt}</p>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                          <span className="flex items-center">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
-                          </span>
-
-                          {bookmark.readState === "unread" && (
-                            <Badge variant="secondary" className="text-xs">
-                              Unread
-                            </Badge>
+                          {slug ? (
+                            <Link href={href} className="block hover:text-blue-600 transition-colors">
+                              <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
+                            </Link>
+                          ) : (
+                            <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{bookmark.title}</h3>
                           )}
 
-                          {bookmark.category && (
+                          {sanitizedExcerpt && (
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{sanitizedExcerpt}</p>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            <span className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDistanceToNow(new Date(bookmark.createdAt), { addSuffix: true })}
+                            </span>
+
+                            {bookmark.readState === "unread" && (
+                              <Badge variant="secondary" className="text-xs">
+                                Unread
+                              </Badge>
+                            )}
+
+                            {bookmark.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {bookmark.category}
+                              </Badge>
+                            )}
+
+                            {bookmark.editionCode && (
+                              <Badge variant="outline" className="text-xs">
+                                Edition: {String(bookmark.editionCode).toUpperCase()}
+                              </Badge>
+                            )}
+
                             <Badge variant="outline" className="text-xs">
-                              {bookmark.category}
+                              Collection: {bookmark.collectionId ?? "Unassigned"}
                             </Badge>
-                          )}
 
-                          {bookmark.editionCode && (
-                            <Badge variant="outline" className="text-xs">
-                              Edition: {bookmark.editionCode.toUpperCase()}
-                            </Badge>
-                          )}
-
-                          <Badge variant="outline" className="text-xs">
-                            Collection: {bookmark.collectionId ?? "Unassigned"}
-                          </Badge>
+                            {bookmark.note && (
+                              <span className="flex items-center text-blue-600">
+                                <StickyNote className="h-3 w-3 mr-1" />
+                                Note
+                              </span>
+                            )}
+                          </div>
 
                           {bookmark.note && (
-                            <span className="flex items-center text-blue-600">
-                              <StickyNote className="h-3 w-3 mr-1" />
-                              Note
-                            </span>
+                            <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">{bookmark.note}</div>
                           )}
                         </div>
 
-                        {bookmark.note && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-gray-700">{bookmark.note}</div>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (bookmark.readState === "read") {
+                                  markAsUnread(bookmark.postId)
+                                } else {
+                                  markAsRead(bookmark.postId)
+                                }
+                              }}
+                            >
+                              <BookOpen className="h-4 w-4 mr-2" />
+                              Mark as {bookmark.readState === "read" ? "Unread" : "Read"}
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setNoteBookmarkId(bookmark.postId)
+                                setNoteText(bookmark.note || "")
+                                setNoteDialogOpen(true)
+                              }}
+                            >
+                              <StickyNote className="h-4 w-4 mr-2" />
+                              {bookmark.note ? "Edit Note" : "Add Note"}
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem onClick={() => removeBookmark(bookmark.postId)} className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (bookmark.readState === "read") {
-                                markAsUnread(bookmark.postId)
-                              } else {
-                                markAsRead(bookmark.postId)
-                              }
-                            }}
-                          >
-                            <BookOpen className="h-4 w-4 mr-2" />
-                            Mark as {bookmark.readState === "read" ? "Unread" : "Read"}
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setNoteBookmarkId(bookmark.postId)
-                              setNoteText(bookmark.note || "")
-                              setNoteDialogOpen(true)
-                            }}
-                          >
-                            <StickyNote className="h-4 w-4 mr-2" />
-                            {bookmark.note ? "Edit Note" : "Add Note"}
-                          </DropdownMenuItem>
-
-                          <DropdownMenuSeparator />
-
-                          <DropdownMenuItem
-                            onClick={() => removeBookmark(bookmark.postId)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
               </Card>
             )
           })

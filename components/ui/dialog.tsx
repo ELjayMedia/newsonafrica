@@ -130,8 +130,10 @@ const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
 )
 DialogOverlay.displayName = "DialogOverlay"
 
-const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, forwardedRef) => {
+const DialogContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { showCloseButton?: boolean }
+>(({ className, children, showCloseButton = true, ...props }, forwardedRef) => {
     const { open, setOpen, titleId, descriptionId } = useDialogContext("DialogContent")
     const [mounted, setMounted] = React.useState(false)
     const portalNode = React.useMemo(() => (typeof document === "undefined" ? null : document.createElement("div")), [])
@@ -180,6 +182,16 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
           data-state={open ? "open" : "closed"}
           {...props}
         >
+          {showCloseButton ? (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setOpen(false)}
+              className="absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
           {children}
         </div>
       </div>

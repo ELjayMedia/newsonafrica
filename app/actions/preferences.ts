@@ -43,6 +43,8 @@ export interface UpdateProfilePreferencesInput {
 type UserSettingsRow = Database["public"]["Tables"]["user_settings"]["Row"]
 type UserPreferencesRow = Database["public"]["Tables"]["user_preferences"]["Row"]
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"]
+type ProfilesUpdate = Database["public"]["Tables"]["profiles"]["Update"]
+type ProfilePreferencesColumn = ProfilesUpdate["preferences"]
 
 type ProfileSelect = Pick<ProfileRow, "interests" | "preferences">
 
@@ -155,7 +157,6 @@ async function ensureUserPreferencesSnapshot(
 ): Promise<UserPreferencesSnapshot> {
   const profile = await fetchProfile(supabase, userId)
   const defaultSections = Array.isArray(profile?.interests) ? (profile?.interests as string[]) : []
-
   const settingsRow = await ensureUserSettings(supabase, userId)
   const contentRow = await ensureContentPreferences(supabase, userId, defaultSections)
 
@@ -164,9 +165,12 @@ async function ensureUserPreferencesSnapshot(
   )
 
   if (didChange) {
+    const payload: ProfilesUpdate = {
+      preferences: profilePreferencesRaw as ProfilesUpdate["preferences"],
+    }
     const { error: syncError } = await supabase
       .from("profiles")
-      .update({ preferences: profilePreferencesRaw })
+      .update(payload)
       .eq("id", userId)
 
     if (syncError) {
@@ -320,10 +324,15 @@ export async function updateProfilePreferences(input: UpdateProfilePreferencesIn
       Object.prototype.hasOwnProperty.call(input, "last_subscription_plan")
 
     if (hasExplicitUpdates || didChange) {
+      const payload: ProfilesUpdate = {
+        preferences: sanitizedRaw as ProfilesUpdate["preferences"],
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ preferences: sanitizedRaw })
+        .update(payload)
         .eq("id", userId)
+
 
       if (updateError) {
         throw updateError

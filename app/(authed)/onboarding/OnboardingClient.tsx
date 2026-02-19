@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { useRouter } from "next/navigation"
@@ -10,10 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, Upload, ChevronRight, CheckCircle } from "lucide-react"
 import Image from "next/image"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function OnboardingClient() {
   const { user, profile, updateProfile, loading } = useUser()
@@ -82,11 +81,9 @@ export function OnboardingClient() {
       // Upload avatar if changed
       let avatarUrl = formData.avatarUrl
       if (formData.avatarFile) {
-        // Create a FormData object to upload the file
         const uploadData = new FormData()
         uploadData.append("avatar", formData.avatarFile)
 
-        // Upload the file
         const uploadRes = await fetch("/api/user/upload-avatar", {
           method: "POST",
           body: uploadData,
@@ -118,7 +115,6 @@ export function OnboardingClient() {
         description: "Your profile has been successfully updated.",
       })
 
-      // Redirect to personalized feed
       router.push("/for-you")
     } catch (error) {
       console.error("Error updating profile:", error)
@@ -202,10 +198,10 @@ export function OnboardingClient() {
                       <AvatarFallback className="text-lg bg-blue-600">
                         {formData.fullName
                           ? formData.fullName
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
                           : user?.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -272,15 +268,14 @@ export function OnboardingClient() {
                   {interests.map((interest) => (
                     <div
                       key={interest}
-                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                        formData.interests.includes(interest) ? "bg-blue-50 border-blue-300" : "hover:bg-gray-50"
-                      }`}
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${formData.interests.includes(interest) ? "bg-blue-50 border-blue-300" : "hover:bg-gray-50"
+                        }`}
                       onClick={() => handleInterestToggle(interest)}
                     >
                       <div className="flex items-center">
                         <Checkbox
                           checked={formData.interests.includes(interest)}
-                          onChange={() => handleInterestToggle(interest)}
+                          onCheckedChange={() => handleInterestToggle(interest)}
                           className="mr-2"
                           id={`interest-${interest}`}
                         />
@@ -310,7 +305,9 @@ export function OnboardingClient() {
                     <Checkbox
                       id="newsletter"
                       checked={formData.receiveNewsletter}
-                      onChange={(event) => setFormData({ ...formData, receiveNewsletter: event.target.checked })}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, receiveNewsletter: Boolean(checked) })
+                      }
                     />
                     <div>
                       <Label htmlFor="newsletter" className="font-medium">

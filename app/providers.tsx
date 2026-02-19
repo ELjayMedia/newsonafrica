@@ -41,6 +41,21 @@ interface ProvidersProps {
   initialPreferences?: UserPreferencesSnapshot | null
 }
 
+/**
+ * `profiles.preferences` is a JSON/JSONB column in Supabase.
+ * Keep it as a plain object to avoid TS union issues.
+ */
+type ProfilePreferences = Record<string, unknown>
+
+function normalizeProfilePreferences(value: unknown): ProfilePreferences {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return value as ProfilePreferences
+}
+
+function normalizeTheme(value: unknown): "light" | "dark" | "system" {
+  return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_USER_PREFERENCES.theme
+}
+
 function useClientBootstrap(
   initialAuthState: AuthStatePayload | null | undefined,
   initialPreferences: UserPreferencesSnapshot | null | undefined,
@@ -59,7 +74,6 @@ function useClientBootstrap(
     try {
       const supabase = createClient()
 
-      // Get session from browser client
       const {
         data: { session },
         error: sessionError,
@@ -67,19 +81,16 @@ function useClientBootstrap(
 
       if (sessionError) {
         console.error("[v0] Bootstrap session error:", sessionError)
-        setIsBootstrapping(false)
         return
       }
 
       if (!session?.user) {
-        // No session, use defaults
         setAuthState(null)
         setPreferences(mapUserPreferencesRowToSnapshot({ userId: null }))
         setIsBootstrapping(false)
         return
       }
 
-      // Fetch profile if we have a user
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select(PROFILE_BOOTSTRAP_SELECT_COLUMNS)
@@ -90,7 +101,6 @@ function useClientBootstrap(
         console.error("[v0] Bootstrap profile error:", profileError)
       }
 
-      // Set auth state
       setAuthState({
         session,
         user: session.user,

@@ -5,52 +5,88 @@ import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 
+type SlugEntity = { slug?: string }
+type CountryEntity = { code?: string }
+type CategoryEntity = { slug?: string }
+
+type PostEntity = {
+  slug: string
+  country?: string
+  date?: string
+  modified?: string
+  title?: string
+  featuredImage?: { node?: { sourceUrl?: string } }
+}
+
+function escapeXml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;")
+}
+
+function safeIsoDate(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value) return undefined
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return undefined
+  return d.toISOString()
+}
+
 export async function GET() {
   const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
 
-  let posts
+  let posts: PostEntity[] = []
   try {
-    posts = await fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT)
+    posts = (await fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT)) as unknown as PostEntity[]
   } catch (error) {
     console.error("Error fetching posts for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
   }
 
-  let categories
+  let categories: CategoryEntity[] = []
   try {
-    categories = await fetchCategories()
+    categories = (await fetchCategories()) as unknown as CategoryEntity[]
   } catch (error) {
     console.error("Error fetching categories for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 502 })
   }
 
-  let _countries
+  let countries: CountryEntity[] = []
   try {
-    _countries = await fetchCountries()
+    countries = (await fetchCountries()) as unknown as CountryEntity[]
   } catch (error) {
     console.error("Error fetching countries for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch countries" }, { status: 502 })
   }
 
-  let tags
-  let authors
+  let tags: SlugEntity[] = []
+  let authors: SlugEntity[] = []
   try {
-    ;[tags, authors] = await Promise.all([fetchTags(), fetchAuthors()])
+    const [t, a] = await Promise.all([fetchTags(), fetchAuthors()])
+    tags = t as unknown as SlugEntity[]
+    authors = a as unknown as SlugEntity[]
   } catch (error) {
     console.error("Error fetching tags/authors for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch tags or authors" }, { status: 502 })
   }
 
   try {
-    // Build the sitemap
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 `
 
-    // Add posts
-    posts.forEach((post) => {
-      const postDate = new Date(post.modified || post.date).toISOString()
+    // Posts
+    posts.forEach((post: PostEntity) => {
+      const lastmod =
+        safeIsoDate(post.modified) ??
+        safeIsoDate(post.date) ??
+        undefined
+
+      const featuredUrl = post.featuredImage?.node?.sourceUrl
+      const title = typeof post.title === "string" ? post.title : ""
 
       sitemap += `
   <url>
@@ -58,24 +94,29 @@ export async function GET() {
     <lastmod>${postDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-    ${
-      post.featuredImage?.node?.sourceUrl
-        ? `
+    ${featuredUrl
+          ? `
     <image:image>
-      <image:loc>${post.featuredImage.node.sourceUrl}</image:loc>
-      <image:title>${post.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</image:title>
+      <image:loc>${featuredUrl}</image:loc>
+      <image:title>${escapeXml(title)}</image:title>
     </image:image>`
-        : ""
-    }
+          : ""
+        }
   </url>`
     })
 
-    // Add categories for each country
-    _countries.forEach((c) => {
-      categories.forEach((category) => {
+    // Categories per country
+    countries.forEach((c: CountryEntity) => {
+      const code = c.code
+      if (!code) return
+
+      categories.forEach((category: CategoryEntity) => {
+        const catSlug = category.slug
+        if (!catSlug) return
+
         sitemap += `
   <url>
-    <loc>${baseUrl}${getCategoryUrl(category.slug, c.code)}</loc>
+    <loc>${baseUrl}${getCategoryUrl(catSlug, code)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -83,22 +124,28 @@ export async function GET() {
       })
     })
 
-    // Add tags
-    tags.forEach((tag) => {
+    // Tags
+    tags.forEach((tag: SlugEntity) => {
+      const slug = tag.slug
+      if (!slug) return
+
       sitemap += `
   <url>
-    <loc>${baseUrl}/tag/${tag.slug}</loc>
+    <loc>${baseUrl}/tag/${slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>`
     })
 
-    // Add authors
-    authors.forEach((author) => {
+    // Authors
+    authors.forEach((author: SlugEntity) => {
+      const slug = author.slug
+      if (!slug) return
+
       sitemap += `
   <url>
-    <loc>${baseUrl}/author/${author.slug}</loc>
+    <loc>${baseUrl}/author/${slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

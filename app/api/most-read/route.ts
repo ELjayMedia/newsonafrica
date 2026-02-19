@@ -8,9 +8,7 @@ const DEFAULT_LIMIT = 5
 const MAX_LIMIT = 50
 
 const extractPosts = (payload: unknown): unknown[] => {
-  if (Array.isArray(payload)) {
-    return payload
-  }
+  if (Array.isArray(payload)) return payload
   if (payload && typeof payload === "object" && Array.isArray((payload as any).posts)) {
     return (payload as any).posts
   }
@@ -18,9 +16,7 @@ const extractPosts = (payload: unknown): unknown[] => {
 }
 
 const resolveRenderedText = (value: unknown): string => {
-  if (typeof value === "string") {
-    return decodeHtmlEntities(value)
-  }
+  if (typeof value === "string") return decodeHtmlEntities(value)
   if (
     value &&
     typeof value === "object" &&
@@ -45,6 +41,7 @@ const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefine
             : typeof node.url === "string"
               ? node.url
               : undefined
+
       const altText =
         typeof node.altText === "string"
           ? node.altText
@@ -53,13 +50,9 @@ const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefine
             : typeof node.alt === "string"
               ? node.alt
               : undefined
+
       if (sourceUrl) {
-        return {
-          node: {
-            sourceUrl,
-            altText,
-          },
-        }
+        return { node: { sourceUrl, altText } }
       }
     }
   }
@@ -72,28 +65,20 @@ const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefine
         : undefined
 
   if (directUrl) {
-    return {
-      node: {
-        sourceUrl: directUrl,
-      },
-    }
+    return { node: { sourceUrl: directUrl } }
   }
 
   return undefined
 }
 
 const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost | null => {
-  if (!post || typeof post !== "object") {
-    return null
-  }
+  if (!post || typeof post !== "object") return null
 
   const item = post as Record<string, unknown>
   const slug = typeof item.slug === "string" ? item.slug : ""
   const title = resolveRenderedText(item.title)
 
-  if (!slug || !title) {
-    return null
-  }
+  if (!slug || !title) return null
 
   const rawId = item.id ?? slug
   const id = typeof rawId === "string" ? rawId : String(rawId)
@@ -113,19 +98,38 @@ const normalizeMostReadPost = (post: unknown, fallbackCountry: string): HomePost
   }
 }
 
-const getBaseAnalyticsUrl = () => {
+const getBaseAnalyticsUrl = (): string => {
   const base = ENV.ANALYTICS_API_BASE_URL
-  return base.replace(/\/?$/, "")
+
+  // ✅ Narrow unknown -> string
+  if (typeof base !== "string" || !base.trim()) {
+    // Fail gracefully: return empty, caller will handle with a 503
+    return ""
+  }
+
+  return base.trim().replace(/\/+$/, "")
 }
 
 export async function GET(request: Request) {
+  const base = getBaseAnalyticsUrl()
+  if (!base) {
+    return NextResponse.json(
+      { error: "Analytics service is not configured" },
+      { status: 503 },
+    )
+  }
+
   const { searchParams } = new URL(request.url)
   const countryParam = searchParams.get("country")?.toLowerCase()
-  const country = countryParam && countryParam.length > 0 ? countryParam : ENV.NEXT_PUBLIC_DEFAULT_SITE || "sz"
-  const limitParam = Number(searchParams.get("limit"))
-  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(Math.floor(limitParam), MAX_LIMIT) : DEFAULT_LIMIT
+  const country = countryParam && countryParam.length > 0 ? countryParam : (ENV.NEXT_PUBLIC_DEFAULT_SITE || "sz")
 
-  const upstream = new URL(`${getBaseAnalyticsUrl()}/most-read`)
+  const limitParam = Number(searchParams.get("limit"))
+  const limit =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.floor(limitParam), MAX_LIMIT)
+      : DEFAULT_LIMIT
+
+  const upstream = new URL(`${base}/most-read`)
   upstream.searchParams.set("country", country)
   upstream.searchParams.set("limit", String(limit))
 
@@ -152,9 +156,6 @@ export async function GET(request: Request) {
     return NextResponse.json(posts)
   } catch (error) {
     console.error("[api/most-read] Failed to proxy most-read posts", error)
-    return NextResponse.json(
-      { error: "Failed to fetch most-read posts" },
-      { status: 502 },
-    )
+    return NextResponse.json({ error: "Failed to fetch most-read posts" }, { status: 502 })
   }
 }
