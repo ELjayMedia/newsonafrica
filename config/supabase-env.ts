@@ -13,10 +13,7 @@ const SUPABASE_ENV_CALIBRATION_PATH =
 
 function readEnv(name: string): string | null {
   const value = process.env[name]
-
-  if (!value) {
-    return null
-  }
+  if (!value) return null
 
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
@@ -36,14 +33,9 @@ function parseSupabaseBrowserEnv(): SupabaseBrowserEnv | null {
   const supabaseUrl = readEnv("NEXT_PUBLIC_SUPABASE_URL")
   const supabaseAnonKey = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return null
-  }
+  if (!supabaseUrl || !supabaseAnonKey) return null
 
-  return {
-    supabaseUrl,
-    supabaseAnonKey,
-  }
+  return { supabaseUrl, supabaseAnonKey }
 }
 
 export function hasSupabaseBrowserEnv(): boolean {
@@ -52,11 +44,9 @@ export function hasSupabaseBrowserEnv(): boolean {
 
 export function getSupabaseBrowserEnv(): SupabaseBrowserEnv {
   const env = parseSupabaseBrowserEnv()
-
   if (!env) {
     throw createSupabaseEnvError(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"])
   }
-
   return env
 }
 
@@ -70,20 +60,20 @@ export function getSupabaseServerEnv(): SupabaseServerEnv {
 
   const missingVariables: string[] = []
 
-  if (!browserEnv?.supabaseUrl) {
-    missingVariables.push("NEXT_PUBLIC_SUPABASE_URL")
-  }
-
-  if (!browserEnv?.supabaseAnonKey) {
-    missingVariables.push("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-  }
-
-  if (!supabaseServiceRoleKey) {
-    missingVariables.push("SUPABASE_SERVICE_ROLE_KEY")
-  }
+  if (!browserEnv?.supabaseUrl) missingVariables.push("NEXT_PUBLIC_SUPABASE_URL")
+  if (!browserEnv?.supabaseAnonKey) missingVariables.push("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+  if (!supabaseServiceRoleKey) missingVariables.push("SUPABASE_SERVICE_ROLE_KEY")
 
   if (missingVariables.length > 0) {
     throw createSupabaseEnvError(missingVariables)
+  }
+
+  // ✅ Type narrowing for TS (after the throw above, these are guaranteed)
+  if (!browserEnv) {
+    throw createSupabaseEnvError(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"])
+  }
+  if (!supabaseServiceRoleKey) {
+    throw createSupabaseEnvError(["SUPABASE_SERVICE_ROLE_KEY"])
   }
 
   return {
