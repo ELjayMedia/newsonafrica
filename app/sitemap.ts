@@ -74,64 +74,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ])
 
   try {
-    // Static pages
     const staticPages: MetadataRoute.Sitemap = [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: "daily",
-        priority: 1.0,
-      },
-      {
-        url: `${baseUrl}/subscribe`,
-        lastModified: new Date(),
-        changeFrequency: "monthly",
-        priority: 0.7,
-      },
-      {
-        url: `${baseUrl}/search`,
-        lastModified: new Date(),
-        changeFrequency: "monthly",
-        priority: 0.7,
-      },
-      {
-        url: `${baseUrl}/auth`,
-        lastModified: new Date(),
-        changeFrequency: "monthly",
-        priority: 0.6,
-      },
-      {
-        url: `${baseUrl}/privacy-policy`,
-        lastModified: new Date(),
-        changeFrequency: "yearly",
-        priority: 0.3,
-      },
-      {
-        url: `${baseUrl}/terms-of-service`,
-        lastModified: new Date(),
-        changeFrequency: "yearly",
-        priority: 0.3,
-      },
-      {
-        url: `${baseUrl}/sitemap.html`,
-        lastModified: new Date(),
-        changeFrequency: "weekly",
-        priority: 0.5,
-      },
+      { url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
+      { url: `${baseUrl}/subscribe`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+      { url: `${baseUrl}/search`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+      { url: `${baseUrl}/auth`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+      { url: `${baseUrl}/privacy-policy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+      { url: `${baseUrl}/terms-of-service`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+      { url: `${baseUrl}/sitemap.html`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.5 },
     ]
 
-    // Post pages - include all metadata needed for news sitemaps
-    const postPages = posts.map((post) => {
-      const postDate = new Date(post.modified || post.date)
-      const isRecent =
-        Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000 // 2 days
+    const postPages: MetadataRoute.Sitemap = posts.map((post) => {
+      const postDate = safeDate(post.modified || post.date)
+      const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000
 
       return {
         url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
         lastModified: postDate,
-        changeFrequency: isRecent ? "daily" : ("weekly" as const),
+        changeFrequency: isRecent ? "daily" : "weekly",
         priority: isRecent ? 0.9 : 0.7,
-        // Additional news sitemap data
         news: isRecent
           ? {
               publication: {
@@ -140,11 +101,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               },
               publicationDate: postDate,
               title: post.title,
-              keywords:
-                post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
+              keywords: post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
             }
           : undefined,
-        // Image data if available
         images: post.featuredImage?.node?.sourceUrl
           ? [
               {
@@ -152,24 +111,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 title: post.title,
                 alt: post.featuredImage.node.altText || post.title,
               },
-            } as any)
-            : {}),
+            ]
+          : undefined,
+      } as MetadataRoute.Sitemap[number]
+    })
 
-          ...(imageUrl
-            ? ({
-              images: [
-                {
-                  url: imageUrl,
-                  title,
-                  alt: imageAlt,
-                },
-              ],
-            } as any)
-            : {}),
-        }
-      })
-
-    // Category pages
     const categoryPages: MetadataRoute.Sitemap = categories
       .filter((category: CategoryEntity) => !!category?.slug)
       .flatMap((category: CategoryEntity) =>
@@ -181,7 +127,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         })),
       )
 
-    // Tag pages
     const tagPages: MetadataRoute.Sitemap = tags
       .filter((tag: SlugEntity) => !!tag?.slug)
       .map((tag: SlugEntity) => ({
@@ -191,7 +136,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
       }))
 
-    // Author pages
     const authorPages: MetadataRoute.Sitemap = authors
       .filter((author: SlugEntity) => !!author?.slug)
       .map((author: SlugEntity) => ({
@@ -206,13 +150,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     )
   } catch (error) {
     console.warn("Error generating sitemap:", error instanceof Error ? error.message : error)
-    return [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: "daily",
-        priority: 1.0,
-      },
-    ]
+    return [{ url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 }]
   }
 }
