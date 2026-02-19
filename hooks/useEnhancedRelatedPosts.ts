@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getRelatedPosts } from "@/lib/wordpress-api"
 import type { WordPressPost } from "@/types/wp"
-import type { RelatedPost } from "@/lib/types/related"
 
 interface RelatedPost extends WordPressPost {
   similarity?: number
