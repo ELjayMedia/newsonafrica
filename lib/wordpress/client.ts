@@ -1,7 +1,7 @@
 import { cache } from "react"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
-import { fetchWithRetry } from "@/lib/utils/fetchWithRetry"
+import { fetchWithRetry, type FetchWithRetryOptions } from "@/lib/utils/fetchWithRetry"
 
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
@@ -26,7 +26,7 @@ const isEligibleReadQuery = (query: string): boolean => {
 }
 
 const encodeVariablesForUrl = (
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, string | number | string[] | readonly string[] | boolean>,
 ): string | undefined => {
   if (!variables || Object.keys(variables).length === 0) {
     return undefined
@@ -38,7 +38,7 @@ const encodeVariablesForUrl = (
 const buildGraphQLGetUrl = (
   base: string,
   query: string,
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, string | number | string[] | readonly string[] | boolean>,
   persistedQueryId?: string,
 ): string => {
   const params = new URLSearchParams()
@@ -178,7 +178,7 @@ export type WordPressGraphQLFailure =
   | WordPressGraphQLResponseFailure
   | WordPressGraphQLInvalidPayloadFailure
 
-export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | WordPressGraphQLFailure
+export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | (WordPressGraphQLFailure & Partial<T>)
 
 function buildSuccessResult<T>(data: T | null): WordPressGraphQLSuccess<T> {
   const base: { ok: true; data: T | null } = { ok: true, data }
@@ -249,7 +249,7 @@ const buildInvalidPayloadFailureResult = (
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
-  variables?: Record<string, string | number | string[] | boolean>,
+  variables?: Record<string, string | number | string[] | readonly string[] | boolean>,
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<WordPressGraphQLResult<T>> {
   const base = getGraphQLEndpoint(countryCode)
@@ -279,8 +279,8 @@ export function fetchWordPressGraphQL<T>(
   const getUrl = canUseGetTransport
     ? buildGraphQLGetUrl(base, query, variables, options.persistedQueryId)
     : undefined
-  const usesGetTransport = Boolean(getUrl) && getUrl.length <= MAX_GET_URL_LENGTH
-  const requestUrl = usesGetTransport ? getUrl : base
+  const usesGetTransport = typeof getUrl === "string" && getUrl.length <= MAX_GET_URL_LENGTH
+  const requestUrl = usesGetTransport && getUrl ? getUrl : base
   const dedupedTags = dedupe(options.tags)
   const hasTags = (dedupedTags?.length ?? 0) > 0
   const resolvedRevalidate = options.revalidate ?? CACHE_DURATIONS.MEDIUM
@@ -335,7 +335,7 @@ export function fetchWordPressGraphQL<T>(
     }
   }
 
-  const fetchOptions: Parameters<typeof fetchWithRetry>[1] = {
+  const fetchOptions: FetchWithRetryOptions = {
     method: usesGetTransport ? "GET" : "POST",
     headers,
     timeout: options.timeout,
