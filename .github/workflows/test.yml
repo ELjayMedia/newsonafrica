@@ -8,23 +8,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
+      # Setup Node + pnpm cache
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Enable corepack (pnpm)
+      # Enable pnpm via corepack (comes with Node 22)
+      - name: Enable pnpm
         run: corepack enable
 
-      # Optional but good: pin pnpm to what your repo expects
-      # - name: Use pnpm version from package.json
-      #   run: corepack prepare pnpm@9.15.0 --activate
-
-      - name: Install deps
+      # Install dependencies strictly
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Lint
