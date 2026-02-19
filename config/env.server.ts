@@ -96,7 +96,7 @@ const WORDPRESS_AUTH_HEADERS_SCHEMA = z.preprocess(
 )
 
 const SERVER_ENV_SCHEMA = z.object({
-  ANALYTICS_API_BASE_URL: stringWithDefault("https://newsonafrica.com/api/analytics"),
+  ANALYTICS_API_BASE_URL: stringWithDefault("./api/analytics"),
   WORDPRESS_REQUEST_TIMEOUT_MS: positiveIntegerWithDefault(30000),
 })
 
