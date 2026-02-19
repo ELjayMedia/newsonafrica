@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "types/auth.ts",
+    "types/bookmarks.ts",
+    "types/comments.ts",
+    "types/components.d.ts",
+    "types/metrics.ts",
+    "types/supabase.ts",
+    "types/user-preferences.ts"
+  ],
+  "exclude": ["node_modules", ".next", "out"]
+}
