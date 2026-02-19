@@ -4,15 +4,6 @@ import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 import { logRequest, withCors } from "@/lib/api-utils"
 import { ENV } from "@/config/env"
 
-const fetchAllCategories = async () => []
-const fetchRecentPosts = async () => []
-
-// Cache policy: long (30 minutes)
-export const revalidate = 1800
-export const runtime = "nodejs"
-
-// --- Properly typed stubs (fixes your build error) ---
-
 type SitemapCategory = {
   slug: string
 }
@@ -26,13 +17,13 @@ const fetchAllCategories = async (): Promise<SitemapCategory[]> => {
   return []
 }
 
-const fetchRecentPosts = async (
-  limit: number = 100,
-): Promise<SitemapPost[]> => {
+const fetchRecentPosts = async (_limit: number = 100): Promise<SitemapPost[]> => {
   return []
 }
 
-// -----------------------------------------------------
+// Cache policy: long (30 minutes)
+export const revalidate = 1800
+export const runtime = "nodejs"
 
 export async function GET(request: Request) {
   logRequest(request)
@@ -43,10 +34,7 @@ export async function GET(request: Request) {
       : ""
 
   try {
-    const [categories, posts] = await Promise.all([
-      fetchAllCategories(),
-      fetchRecentPosts(100), // now valid
-    ])
+    const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
 
     const safeCategories = Array.isArray(categories) ? categories : []
     const safePosts = Array.isArray(posts) ? posts : []
@@ -59,27 +47,27 @@ export async function GET(request: Request) {
     <priority>1.0</priority>
   </url>
   ${safeCategories
-        .flatMap((category) =>
-          SUPPORTED_COUNTRIES.map(
-            (country) => `
+    .flatMap((category) =>
+      SUPPORTED_COUNTRIES.map(
+        (country) => `
   <url>
     <loc>${baseUrl}${getCategoryUrl(category.slug, country)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`,
-          ),
-        )
-        .join("")}
+      ),
+    )
+    .join("")}
   ${safePosts
-        .map(
-          (post) => `
+    .map(
+      (post) => `
   <url>
     <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,
-        )
-        .join("")}
+    )
+    .join("")}
 </urlset>`
 
     return withCors(
@@ -92,9 +80,6 @@ export async function GET(request: Request) {
     )
   } catch (error) {
     console.error("Error generating sitemap:", error)
-    return withCors(
-      request,
-      new NextResponse("Error generating sitemap", { status: 500 }),
-    )
+    return withCors(request, new NextResponse("Error generating sitemap", { status: 500 }))
   }
 }

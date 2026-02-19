@@ -21,7 +21,10 @@ jobs:
 
       # Enable pnpm via corepack (comes with Node 22)
       - name: Enable pnpm
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          pnpm --version
 
       # Install dependencies strictly
       - name: Install dependencies
