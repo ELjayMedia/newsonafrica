@@ -46,7 +46,12 @@ const DEFAULT_STATS: BookmarkStats = {
   total: 0,
   unread: 0,
   categories: {},
-  readStates: {},
+  readStates: {
+    unread: 0,
+    in_progress: 0,
+    read: 0,
+    unknown: 0,
+  },
   collections: {},
 }
 
@@ -85,7 +90,7 @@ export function buildBookmarkStats({
   counterRow = null,
 }: BookmarkStatsAggregates): BookmarkStats {
   const categories: Record<string, number> = {}
-  const readStates: Record<BookmarkReadStateKey, number> = {}
+  const readStates: Record<BookmarkReadStateKey, number> = { ...DEFAULT_STATS.readStates }
   const collections: Record<string, number> = counterRow
     ? parseCollectionCounts(counterRow.collectionUnreadCounts)
     : {}

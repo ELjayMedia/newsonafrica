@@ -87,9 +87,9 @@ const mapCategories = (categories: WordPressCategory[] | undefined, countryCode:
   return categories
     .filter((category): category is WordPressCategory => Boolean(category?.slug && category?.name))
     .map((category) => ({
-      name: decodeHtmlEntities(category.name),
-      slug: category.slug,
-      href: getCategoryUrl(category.slug, countryCode),
+      name: decodeHtmlEntities(category.name ?? ""),
+      slug: category.slug ?? "",
+      href: getCategoryUrl(category.slug ?? "", countryCode),
     }))
 }
 

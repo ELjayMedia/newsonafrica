@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { Database } from "@/types/supabase"
+import type { Database, Json } from "@/types/supabase"
 import {
   BOOKMARK_LIST_SELECT_COLUMNS,
   type BookmarkListPayload,
@@ -57,6 +57,10 @@ export interface ListBookmarksInput {
 interface ServiceMutationOptions {
   revalidate?: (tag: string) => void
   editionHints?: Iterable<string | null | undefined>
+}
+
+function toJsonObject(value: Record<string, unknown> | null | undefined): Json | null {
+  return value ? (value as Json) : null
 }
 
 export async function listBookmarksForUser(
@@ -147,7 +151,7 @@ export async function listBookmarksForUser(
 
   const { items: bookmarks, pagination } = derivePagination<BookmarkListRow>({
     limit,
-    rows: (rows ?? []) as BookmarkListRow[],
+    rows: (rows ?? []) as unknown as BookmarkListRow[],
     cursorEncoder: (row) => {
       const sortAlias = SORTABLE_COLUMNS[sortColumn]?.alias ?? sortColumn
       const sortValue =
@@ -234,7 +238,7 @@ export async function addBookmarkForUser(
       title: payload.title ?? "Untitled Post",
       slug: payload.slug ?? "",
       excerpt: payload.excerpt ?? "",
-      featured_image: payload.featuredImage ?? null,
+      featured_image: toJsonObject(payload.featuredImage),
       category: payload.category ?? null,
       tags: payload.tags ?? null,
       read_state: sanitizeReadState(payload.readState) ?? "unread",
@@ -246,8 +250,11 @@ export async function addBookmarkForUser(
   if (error) {
     throw new ActionError("Failed to add bookmark", { cause: error })
   }
+  if (!data || typeof data !== "object") {
+    throw new ActionError("Failed to add bookmark")
+  }
 
-  const inserted = data as BookmarkListRow
+  const inserted = data as unknown as BookmarkListRow
   try {
     await applyBookmarkCounterDelta(supabase, { userId, delta: buildAdditionCounterDelta(inserted) })
   } catch (error) {
@@ -291,7 +298,7 @@ export async function updateBookmarkForUser(
     throw new ActionError("Bookmark not found", { status: 404 })
   }
 
-  const existingRow = existing as BookmarkListRow
+  const existingRow = existing as unknown as BookmarkListRow
   const preparation = prepareBookmarkUpdatePayload(existingRow, updates ?? {})
   if (!preparation.hasWritableUpdate) {
     throw new ActionError("No bookmark updates provided", { status: 400 })
@@ -321,7 +328,7 @@ export async function updateBookmarkForUser(
     throw new ActionError("Failed to update bookmark", { cause: error })
   }
 
-  const updated = data as BookmarkListRow
+  const updated = data as unknown as BookmarkListRow
   const counterDelta = buildUpdateCounterDelta(existingRow, updated)
   if (counterDelta) {
     try {
@@ -374,7 +381,7 @@ export async function bulkRemoveBookmarksForUser(
     throw new ActionError(filteredPostIds.length === 1 ? "Failed to remove bookmark" : "Failed to remove bookmarks", { cause: error })
   }
 
-  const removedRows = (data ?? []) as BookmarkListRow[]
+  const removedRows = (data ?? []) as unknown as BookmarkListRow[]
   const removalDelta = buildRemovalCounterDelta(removedRows)
   if (removalDelta) {
     try {

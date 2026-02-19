@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { getSupabaseBrowserEnv, hasSupabaseBrowserEnv } from "@/config/supabase-env"
@@ -13,20 +13,7 @@ export function isSupabaseConfigured(): boolean {
 export function getSupabaseBrowserClient(): SupabaseClient<Database> {
   if (!browserClient) {
     const { supabaseUrl, supabaseAnonKey } = getSupabaseBrowserEnv()
-
-    browserClient = createClientComponentClient<Database>({
-      supabaseUrl,
-      supabaseKey: supabaseAnonKey,
-      options: {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-          flowType: "pkce",
-        },
-      },
-      isSingleton: true,
-    })
+    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
   }
 
   return browserClient

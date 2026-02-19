@@ -1,18 +1,30 @@
 import { collectionKeyForId } from "@/lib/bookmarks/collection-keys"
 import { isUnreadReadStateKey, resolveReadStateKey } from "@/lib/bookmarks/read-state"
-import type { BookmarkStats, BookmarkStatsDelta } from "@/types/bookmarks"
+import type {
+  BookmarkReadState,
+  BookmarkReadStateKey,
+  BookmarkStats,
+  BookmarkStatsDelta,
+} from "@/types/bookmarks"
 
 export interface BookmarkRecord {
   category?: string | null
-  readState?: string | null
+  readState?: BookmarkReadState | null
   collectionId?: string | null
 }
+
+const createEmptyReadStates = (): Record<BookmarkReadStateKey, number> => ({
+  unread: 0,
+  in_progress: 0,
+  read: 0,
+  unknown: 0,
+})
 
 export const DEFAULT_STATS: BookmarkStats = {
   total: 0,
   unread: 0,
   categories: {},
-  readStates: {},
+  readStates: createEmptyReadStates(),
   collections: {},
 }
 
@@ -20,7 +32,7 @@ export const EMPTY_STATS_DELTA: BookmarkStatsDelta = {
   total: 0,
   unread: 0,
   categories: {},
-  readStates: {},
+  readStates: createEmptyReadStates(),
   collections: {},
 }
 
@@ -64,7 +76,7 @@ export const applyStatsDelta = (stats: BookmarkStats, delta: BookmarkStatsDelta)
 
 export const deriveStatsFromBookmarks = (items: BookmarkRecord[]): BookmarkStats => {
   const categories: Record<string, number> = {}
-  const readStates: Record<string, number> = {}
+  const readStates: Record<BookmarkReadStateKey, number> = createEmptyReadStates()
   const collections: Record<string, number> = {}
   let unread = 0
 

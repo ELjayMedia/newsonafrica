@@ -108,7 +108,7 @@ export async function readSessionCookie(): Promise<{
   stale: boolean
 }> {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
     const secret = getSessionCookieSecret()
@@ -134,7 +134,7 @@ export async function writeSessionCookie(profile: SessionCookieProfile): Promise
   const value = encodePayload(payload, secret)
 
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     cookieStore.set({
       name: SESSION_COOKIE_NAME,
       value,
@@ -153,7 +153,7 @@ export async function writeSessionCookie(profile: SessionCookieProfile): Promise
 
 export async function clearSessionCookie(): Promise<void> {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     cookieStore.set({
       name: SESSION_COOKIE_NAME,
       value: "",

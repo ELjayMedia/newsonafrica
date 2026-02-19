@@ -13,7 +13,10 @@ export interface SupabaseConfig {
 }
 
 function createCookieAdapter() {
-  const cookieStore = cookies()
+  const cookieStore = cookies() as unknown as {
+    get: (name: string) => { value: string } | undefined
+    set: (options: Record<string, unknown>) => void
+  }
 
   return {
     get(name: string) {

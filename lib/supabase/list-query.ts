@@ -63,17 +63,18 @@ export async function executeListQuery<TResponse extends ResponseWithError>(
   table: keyof Database["public"]["Tables"] & string,
   factory: (builder: QueryBuilder) => Promise<TResponse>,
 ): Promise<TResponse> {
+  const untypedClient = client as any
   const candidates = getListViewCandidates(table)
 
   for (const relation of candidates) {
-    const result = await factory(client.from(relation) as QueryBuilder)
+    const result = await factory(untypedClient.from(relation) as QueryBuilder)
     const error = result.error ?? null
     if (!isRelationMissing(error)) {
       return result
     }
   }
 
-  return factory(client.from(table) as QueryBuilder)
+  return factory(untypedClient.from(table) as QueryBuilder)
 }
 
 export function resolveListSource(

@@ -30,7 +30,9 @@ class EnhancedCache {
     // Clean up old entries if cache is full
     if (this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value
-      this.cache.delete(oldestKey)
+      if (typeof oldestKey === "string") {
+        this.cache.delete(oldestKey)
+      }
     }
 
     this.cache.set(key, {
