@@ -211,8 +211,9 @@ export async function getFpTaggedPostsForCountry(
     console.log("[v0] No GraphQL results for FP tagged posts")
   } catch (error) {
     console.error("[v0] Failed to fetch FP tagged posts:", error)
-    return []
   }
+
+  return []
 }
 
 const getPostTimestamp = (post: HomePost): number => {
