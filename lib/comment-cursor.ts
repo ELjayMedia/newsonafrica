@@ -95,6 +95,10 @@ export function buildCursorConditions(
         `and(created_at.eq.${cursor.createdAt},id.gt.${cursor.id})`,
       ]
     case "popular": {
+      if (cursor.sort !== "popular") {
+        return []
+      }
+
       if (cursor.reactionCount == null) {
         return [
           `and(reactions_count.is.null,created_at.lt.${cursor.createdAt})`,

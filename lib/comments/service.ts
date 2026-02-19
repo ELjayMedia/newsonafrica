@@ -158,9 +158,11 @@ export async function listCommentsService(
 
   let totalCount: number | undefined
   if (params.page === 0) {
-    const { count } = await executeListQuery(supabase, "comments", (query) =>
-      applyBase(query.select("id", { count: "exact", head: true }), false),
+    const countQuery = applyBase(
+      supabase.from("comments").select("id", { count: "exact", head: true }),
+      false,
     )
+    const { count } = await countQuery
     totalCount = typeof count === "number" ? count : 0
   }
 
@@ -199,7 +201,12 @@ export async function createCommentService(
   if (error || !data) throw new Error(`Failed to create comment: ${error?.message ?? "unknown"}`)
 
   return {
-    comment: { ...(data as Comment), reactions: [], user_reaction: null, reactions_count: data.reactions_count ?? 0 },
+    comment: {
+      ...(data as unknown as Comment),
+      reactions: [],
+      user_reaction: null,
+      reactions_count: data.reactions_count ?? 0,
+    },
     cacheTag: cacheTags.comments(edition, params.wpPostId),
   }
 }
@@ -227,7 +234,7 @@ export async function updateCommentBodyService(
 
   if (error || !data) throw new Error(`Failed to update comment: ${error?.message ?? "unknown"}`)
 
-  const comment = data as Comment
+  const comment = data as unknown as Comment
   return {
     comment: { ...comment, reactions: [], user_reaction: null, reactions_count: comment.reactions_count ?? 0 },
     cacheTag: cacheTags.comments(comment.edition_code, comment.wp_post_id),
@@ -275,7 +282,7 @@ export async function listAdminCommentsService(
   if (resolvedStatus !== "all") query = query.eq("status", resolvedStatus)
   const { data, error } = await query
   if (error) throw new Error(error.message)
-  return (data ?? []) as Comment[]
+  return (data ?? []) as unknown as Comment[]
 }
 
 export async function adminUpdateCommentService(
@@ -285,7 +292,7 @@ export async function adminUpdateCommentService(
 ) {
   const { data, error } = await supabase.from("comments").update(updates).eq("id", id).select(COMMENT_SELECT).single()
   if (error || !data) throw new Error(error?.message ?? "Failed to update")
-  const comment = data as Comment
+  const comment = data as unknown as Comment
   return { comment, cacheTag: cacheTags.comments(comment.edition_code, comment.wp_post_id) }
 }
 

@@ -26,7 +26,7 @@ class Logger {
 
   setRequestContext(requestId: string, userId?: string, traceId?: string) {
     this.requestId = requestId
-    this.userId = userId
+    this.userId = userId ?? null
     this.traceId = traceId || randomUUID()
   }
 

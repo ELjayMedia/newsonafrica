@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type {
+  BookmarkUserCounterInsert,
   BookmarkUserCounterRow,
-  BookmarkUserCounterUpdate,
 } from "@/types/bookmarks"
 import type { Database, Json } from "@/types/supabase"
 
@@ -63,8 +63,9 @@ async function loadExistingCounters(
 
 function buildCounterPayload(
   current: BookmarkUserCounterRow | null,
+  userId: string,
   delta: BookmarkCounterDelta,
-): BookmarkUserCounterUpdate {
+): BookmarkUserCounterInsert {
   const existingTotals = {
     total: current?.total_count ?? 0,
     unread: current?.unread_count ?? 0,
@@ -91,7 +92,7 @@ function buildCounterPayload(
   const sanitizedCounts = sanitizeCollectionCounts(mergedCounts)
 
   return {
-    user_id: current?.user_id,
+    user_id: userId,
     total_count: nextTotal,
     unread_count: nextUnread,
     read_count: nextRead,
@@ -118,8 +119,7 @@ export async function applyBookmarkCounterDelta(
   }
 
   const existing = await loadExistingCounters(client, userId)
-  const payload = buildCounterPayload(existing, delta)
-  payload.user_id = userId
+  const payload = buildCounterPayload(existing, userId, delta)
 
   const { error } = await client
     .from("bookmark_user_counters")

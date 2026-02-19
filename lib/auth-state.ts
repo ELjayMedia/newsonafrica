@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase } from "@/lib/supabase/browser-helpers"
 
 export class AuthStateManager {
   private static instance: AuthStateManager

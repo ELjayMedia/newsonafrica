@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
@@ -10,28 +10,9 @@ export interface RouteClientResult {
   applyCookies<T extends NextResponse>(response: T): T
 }
 
-export function createSupabaseRouteClient(
-  request: NextRequest,
-): RouteClientResult | null {
+export function createSupabaseRouteClient(request: NextRequest): RouteClientResult | null {
   const baseResponse = NextResponse.next()
   const deletedCookies = new Set<string>()
-
-  const cookieStore = {
-    get: (name: string) => request.cookies.get(name),
-    getAll: () => request.cookies.getAll(),
-    set: (...args: Parameters<typeof baseResponse.cookies.set>) => {
-      const [firstArg] = args
-      const name = typeof firstArg === "string" ? firstArg : firstArg.name
-      deletedCookies.delete(name)
-      baseResponse.cookies.set(...args)
-    },
-    delete: (...args: Parameters<typeof baseResponse.cookies.delete>) => {
-      const [firstArg] = args
-      const name = typeof firstArg === "string" ? firstArg : firstArg.name
-      deletedCookies.add(name)
-      baseResponse.cookies.delete(...args)
-    },
-  }
 
   const config = getSupabaseConfig()
 
@@ -40,10 +21,19 @@ export function createSupabaseRouteClient(
     return null
   }
 
-  const supabase = createRouteHandlerClient<Database>(
-    { cookies: () => cookieStore as any },
-    { supabaseUrl: config.supabaseUrl, supabaseKey: config.supabaseKey },
-  )
+  const supabase = createServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          deletedCookies.delete(name)
+          baseResponse.cookies.set(name, value, options)
+        })
+      },
+    },
+  })
 
   const applyCookies = <T extends NextResponse>(response: T): T => {
     deletedCookies.forEach((name) => {

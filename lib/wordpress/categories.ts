@@ -70,7 +70,12 @@ export async function getPostsForCategories(
       { tags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
-    const nodes = gqlData?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    if (!gqlData.ok) {
+      normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
+      return results
+    }
+
+    const nodes = gqlData.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
     nodes.forEach((node) => {
       const slug = node.slug?.toLowerCase()
@@ -81,7 +86,7 @@ export async function getPostsForCategories(
       const category: WordPressCategory = {
         id: node.databaseId ?? 0,
         name: node.name ?? "",
-        slug: node.slug,
+        slug: node.slug ?? undefined,
         description: node.description ?? undefined,
         count: node.count ?? undefined,
       }

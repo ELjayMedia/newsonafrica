@@ -29,11 +29,11 @@ export interface CategoryPageNotFound {
 export type CategoryPageResult = CategoryPageSuccess | CategoryPageNotFound
 
 const toCategorySummary = (category: WordPressCategory, countryCode: string): CategorySummary => ({
-  name: decodeHtmlEntities(category.name),
-  slug: category.slug,
+  name: decodeHtmlEntities(category.name ?? ""),
+  slug: category.slug ?? "",
   description: category.description ?? undefined,
   totalPosts: category.count ?? undefined,
-  href: getCategoryUrl(category.slug, countryCode),
+  href: getCategoryUrl(category.slug ?? "", countryCode),
 })
 
 const collectRelatedCategories = (

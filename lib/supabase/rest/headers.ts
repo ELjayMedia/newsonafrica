@@ -5,8 +5,6 @@ function getSupabaseAnonKey(): string {
 }
 
 export function publicHeaders(): HeadersInit {
-  const { supabaseAnonKey } = getSupabaseBrowserEnv()
-
   return {
     apikey: getSupabaseAnonKey(),
     Accept: "application/json",

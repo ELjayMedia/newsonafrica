@@ -97,6 +97,16 @@ interface MutationOptions {
   optimisticUpdate?: () => void | (() => void)
 }
 
+function normalizeRollback(result: void | (() => void)): (() => void) | undefined {
+  return typeof result === "function" ? result : undefined
+}
+
+function toFeaturedImageRecord(
+  value: BookmarkDomainModel["featuredImage"],
+): Record<string, unknown> | null {
+  return value ? { ...value } : null
+}
+
 export function useBookmarks() {
   const context = useContext(BookmarksContext)
   if (!context) {
@@ -272,7 +282,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         let rollback: (() => void) | undefined
 
         if (options.optimisticUpdate) {
-          rollback = options.optimisticUpdate()
+          rollback = normalizeRollback(options.optimisticUpdate())
         }
 
         setIsLoading(true)
@@ -392,6 +402,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       if (!draft.postId || isBookmarked(draft.postId)) return
 
       const editionCode = draft.editionCode ?? null
+      const featuredImage = extractFeaturedImage(draft.featuredImage)
       const payload: AddBookmarkInput = {
         postId: draft.postId,
         editionCode,
@@ -399,7 +410,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         title: extractText(draft.title) || "Untitled Post",
         slug: typeof draft.slug === "string" ? draft.slug : "",
         excerpt: extractText(draft.excerpt),
-        featuredImage: extractFeaturedImage(draft.featuredImage) || null,
+        featuredImage: toFeaturedImageRecord(featuredImage),
         category: draft.category || null,
         tags: draft.tags || null,
         note: draft.note || null,
@@ -487,8 +498,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       if (Object.prototype.hasOwnProperty.call(updates, "readState")) sanitized.readState = updates.readState ?? null
       if (Object.prototype.hasOwnProperty.call(updates, "note")) sanitized.note = updates.note ?? null
       if (Object.prototype.hasOwnProperty.call(updates, "featuredImage")) {
-        const value = updates.featuredImage
-        sanitized.featuredImage = value && typeof value === "object" ? value : null
+        sanitized.featuredImage = toFeaturedImageRecord(updates.featuredImage ?? null)
       }
       if (Object.prototype.hasOwnProperty.call(updates, "collectionId")) sanitized.collectionId = updates.collectionId ?? null
 

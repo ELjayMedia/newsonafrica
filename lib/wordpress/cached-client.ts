@@ -1,4 +1,5 @@
 import { fetchWordPressGraphQL } from "./client"
+import type { WordPressGraphQLResult } from "./client"
 import { cacheWordPressContent } from "@/lib/server/unified-cache"
 
 /**
@@ -10,9 +11,9 @@ export async function fetchPostWithCache<T>(
   variables: Record<string, any> = {},
   options: {
     revalidate?: number
-    fallback?: T
+    fallback?: WordPressGraphQLResult<T>
   } = {},
-): Promise<T> {
+): Promise<WordPressGraphQLResult<T>> {
   const postId = variables.id || variables.slug || "unknown"
 
   const result = await cacheWordPressContent(
@@ -35,9 +36,9 @@ export async function fetchPostsWithCache<T>(
   variables: Record<string, any> = {},
   options: {
     revalidate?: number
-    fallback?: T
+    fallback?: WordPressGraphQLResult<T>
   } = {},
-): Promise<T> {
+): Promise<WordPressGraphQLResult<T>> {
   const cacheKey = `${editionCode}:posts:${JSON.stringify(variables)}`
 
   const result = await cacheWordPressContent(
