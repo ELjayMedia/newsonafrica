@@ -563,7 +563,19 @@ describe("article-data", () => {
 
   it("aggregates temporary failures when every country encounters an error", async () => {
     const errorNg = new Error("ng outage");
-    const errorZa = new Error("za outage");
+    const zaHttpFailure = {
+      ok: false as const,
+      kind: "http_error" as const,
+      message: "WordPress GraphQL request failed with status 503",
+      status: 503,
+      statusText: "Service Unavailable",
+      response: new Response(null, {
+        status: 503,
+        statusText: "Service Unavailable",
+      }),
+      error: new Error("WordPress GraphQL request failed with status 503"),
+    };
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation((country) => {
       if (country === "ng") {
@@ -571,26 +583,57 @@ describe("article-data", () => {
       }
 
       if (country === "za") {
-        return Promise.reject(errorZa);
+        return Promise.resolve(zaHttpFailure as any);
       }
 
       return Promise.resolve(graphqlSuccess({ posts: { nodes: [] } })) as any;
     });
 
-    const result = await loadArticleWithFallback("slug", ["ng", "za"]);
+    const result = await loadArticleWithFallback("slug", ["ng", "za"], false, {
+      requestedCountry: "african",
+      staleCacheServed: true,
+    });
 
     expect(result.status).toBe("temporary_error");
     expect(result.error).toBeInstanceOf(ArticleTemporarilyUnavailableError);
     expect(result.error.errors).toEqual(
-      expect.arrayContaining([errorNg, errorZa]),
+      expect.arrayContaining([errorNg, zaHttpFailure.error]),
     );
     expect(result.failures).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ country: "ng", error: errorNg }),
-        expect.objectContaining({ country: "za", error: errorZa }),
+        expect.objectContaining({
+          country: "za",
+          error: zaHttpFailure.error,
+          failure: expect.objectContaining({ kind: "http_error", status: 503 }),
+        }),
       ]),
     );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[article-data] fallback attempts exhausted with temporary failures",
+      expect.objectContaining({
+        slug: "slug",
+        requestedCountry: "african",
+        countryPriority: ["ng", "za"],
+        staleCacheServed: true,
+        attempts: [
+          {
+            country: "ng",
+            result: "temporary_error",
+            failureKind: null,
+            failureStatus: null,
+          },
+          {
+            country: "za",
+            result: "temporary_error",
+            failureKind: "http_error",
+            failureStatus: 503,
+          },
+        ],
+      }),
+    );
     expect(result).not.toHaveProperty("staleCanonicalCountry");
+    consoleErrorSpy.mockRestore();
   });
   it("returns temporary_error for 5xx even when a prior successful fetch exists", async () => {
     const cachedNode = {
