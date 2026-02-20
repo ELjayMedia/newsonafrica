@@ -6,6 +6,7 @@ describe("getGraphQLEndpoint", () => {
   beforeEach(() => {
     vi.resetModules()
     delete process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL
+    delete process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL
     process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   })
 
@@ -28,11 +29,18 @@ describe("getGraphQLEndpoint", () => {
     expect(getGraphQLEndpoint("sz")).toBe("https://newsonafrica.com/sz/graphql")
   })
 
-  it("returns a custom override when it includes the expected country segment", async () => {
-    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://example.com/custom/sz/graphql"
+  it("accepts country-subpath GraphQL URLs", async () => {
+    process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://newsonafrica.com/za/graphql"
     const { getGraphQLEndpoint } = await import("./wp-endpoints")
 
-    expect(getGraphQLEndpoint("sz")).toBe("https://example.com/custom/sz/graphql")
+    expect(getGraphQLEndpoint("za")).toBe("https://newsonafrica.com/za/graphql")
+  })
+
+  it("accepts dedicated-domain GraphQL URLs", async () => {
+    process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://za.example.com/graphql"
+    const { getGraphQLEndpoint } = await import("./wp-endpoints")
+
+    expect(getGraphQLEndpoint("za")).toBe("https://za.example.com/graphql")
   })
 
   it("falls back to the default endpoint when the override is not a GraphQL URL", async () => {
@@ -47,26 +55,8 @@ describe("getGraphQLEndpoint", () => {
       expect.objectContaining({
         country: "sz",
         graphqlOverride: "https://example.com/sz/wp-json",
-        defaultGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
-        reason: "does not look like a GraphQL endpoint",
-      }),
-    )
-  })
-
-  it("falls back to the default endpoint when the override is missing the country slug", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://example.com/graphql"
-
-    const { getGraphQLEndpoint } = await import("./wp-endpoints")
-
-    expect(getGraphQLEndpoint("sz")).toBe("https://newsonafrica.com/sz/graphql")
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Ignoring WP GraphQL override",
-      expect.objectContaining({
-        country: "sz",
-        graphqlOverride: "https://example.com/graphql",
-        defaultGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
-        reason: 'expected pathname to include "/sz/graphql"',
+        effectiveGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
+        reason: 'expected pathname to end with "/graphql" or match an allowlisted pattern',
       }),
     )
   })
@@ -91,7 +81,7 @@ describe("getWpEndpoints", () => {
 
   it("uses the default GraphQL endpoint when the override would have caused 404s", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://example.com/graphql"
+    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://example.com/graphql-v1"
 
     const { getWpEndpoints } = await import("./wp-endpoints")
 
@@ -100,9 +90,9 @@ describe("getWpEndpoints", () => {
       "Ignoring WP GraphQL override",
       expect.objectContaining({
         country: "sz",
-        graphqlOverride: "https://example.com/graphql",
-        defaultGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
-        reason: 'expected pathname to include "/sz/graphql"',
+        graphqlOverride: "https://example.com/graphql-v1",
+        effectiveGraphQLEndpoint: "https://newsonafrica.com/sz/graphql",
+        reason: 'expected pathname to end with "/graphql" or match an allowlisted pattern',
       }),
     )
   })
