@@ -40,6 +40,74 @@ export async function getFpTaggedPostsForCountry(
     return []
   } catch (error) {
     console.error("[v0] Failed to fetch FP tagged posts:", error)
-    return []
+  }
+
+  return []
+}
+
+const getPostTimestamp = (post: HomePost): number => {
+  const timestamp = new Date(post.date).getTime()
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
+export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<AggregatedHomeData> {
+  const fallback: AggregatedHomeData = {
+    heroPost: null,
+    secondaryPosts: [],
+    remainingPosts: [],
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      SUPPORTED_COUNTRY_EDITIONS.map((country) =>
+        getFpTaggedPostsForCountry(country.code, limitPerCountry),
+      ),
+    )
+
+    const aggregatedPosts: HomePost[] = []
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        aggregatedPosts.push(...result.value)
+      } else {
+        const failedCountry = SUPPORTED_COUNTRY_EDITIONS[index]
+        log.error("[v0] Failed to fetch aggregated latest posts", {
+          country: failedCountry?.code,
+          error: result.reason instanceof Error ? result.reason.message : result.reason,
+        })
+      }
+    })
+
+    if (aggregatedPosts.length === 0) {
+      return fallback
+    }
+
+    aggregatedPosts.sort((a, b) => getPostTimestamp(b) - getPostTimestamp(a))
+
+    const uniquePosts: HomePost[] = []
+    const seen = new Set<string>()
+
+    for (const post of aggregatedPosts) {
+      const key = post.globalRelayId ?? `${post.country ?? ""}:${post.slug}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        uniquePosts.push(post)
+      }
+    }
+
+    const heroPost = uniquePosts[0] ?? null
+    const secondaryPosts = uniquePosts.slice(1, 4)
+    const remainingPosts = uniquePosts.slice(4)
+
+    return {
+      heroPost,
+      secondaryPosts,
+      remainingPosts,
+    }
+  } catch (error) {
+    log.error("[v0] Aggregated latest posts request failed", {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return fallback
   }
 }

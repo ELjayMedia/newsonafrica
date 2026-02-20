@@ -51,10 +51,10 @@
   ],
   "exclude": [
     "node_modules",
-    ".next",
-    "out",
     "scripts",
     "@v0/scripts",
-    "supabase/functions/**"
+    ".next",
+    "out",
+    "supabase/functions"
   ]
 }
