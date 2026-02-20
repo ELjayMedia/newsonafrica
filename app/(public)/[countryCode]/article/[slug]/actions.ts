@@ -122,7 +122,9 @@ export async function fetchArticleWithFallbackAction({
   const editionCountry = normalizeCountryCode(edition.code)
   const normalizedSlug = normalizeSlug(slug)
   const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, false, {
+    requestedCountry: normalizeCountryCode(countryCode),
+  })
 
   if (resolvedArticle.status === "not_found") {
     throw new Error(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
