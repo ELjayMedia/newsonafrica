@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { Providers } from "../providers"
+import { AppChrome } from "../AppChrome"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 import type { UserPreferencesSnapshot } from "@/app/actions/preferences"
 
@@ -26,7 +27,7 @@ function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
 export default function AuthedLayout({ children }: AuthedLayoutProps) {
   return (
     <Providers initialAuthState={null} initialPreferences={null}>
-      {children}
+      <AppChrome>{children}</AppChrome>
     </Providers>
   )
 }
