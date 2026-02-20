@@ -119,21 +119,14 @@ const asLoadArticleResult = (
   countryCode: string,
   result: WordPressGraphQLResult<PostBySlugQueryResult>,
   slug: string,
-  preview: boolean,
+  _preview: boolean,
 ): LoadArticleResult => {
   if (!result.ok) {
     return { status: "temporary_error", error: result.error, failure: result }
   }
 
-  let node: PostFieldsFragment | null = null
-
-  if (preview && result.post) {
-    node = result.post
-  }
-
-  if (!node) {
-    node = result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
-  }
+  const node =
+    result.post ?? result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
 
   if (!node) {
     return { status: "not_found" }
