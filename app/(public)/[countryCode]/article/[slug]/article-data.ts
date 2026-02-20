@@ -119,12 +119,13 @@ const asLoadArticleResult = (
   countryCode: string,
   result: WordPressGraphQLResult<PostBySlugQueryResult>,
   slug: string,
-  preview: boolean,
+  _preview: boolean,
 ): LoadArticleResult => {
   if (!result.ok) {
     return { status: "temporary_error", error: result.error, failure: result }
   }
 
+<<<<<<< HEAD
   let node: PostFieldsFragment | null = null
 
   if (preview && result.data.post) {
@@ -134,6 +135,10 @@ const asLoadArticleResult = (
   if (!node) {
     node = result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
   }
+=======
+  const node =
+    result.post ?? result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
+>>>>>>> 55292a8c (Prefer post field in article load result resolution)
 
   if (!node) {
     return { status: "not_found" }

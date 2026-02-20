@@ -184,6 +184,75 @@ describe("article-data", () => {
     expect(result.version).toBe("2024-05-01t00-00-00z");
   });
 
+
+
+  it("prefers result.post for non-preview requests when posts nodes are empty", async () => {
+    const postNode = {
+      slug: "post-only-slug",
+      id: "gid://wordpress/Post:888",
+      databaseId: 888,
+      date: "2024-05-01T00:00:00Z",
+      title: "Post-only title",
+      excerpt: "Post-only excerpt",
+      content: "<p>Post-only content</p>",
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 5, name: "Reporter", slug: "reporter" } },
+    };
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({ post: postNode, posts: { nodes: [null] } }) as any,
+    );
+
+    const result = await loadArticle("ng", "post-only-slug", false);
+
+    expect(result.status).toBe("found");
+    expect(result.article.slug).toBe("post-only-slug");
+    expect(result.article.databaseId).toBe(888);
+    expect(result.article.title).toContain("Post-only title");
+  });
+
+  it("uses result.post over posts.nodes when both are present", async () => {
+    const preferredPostNode = {
+      slug: "post-preferred-slug",
+      id: "gid://wordpress/Post:1001",
+      databaseId: 1001,
+      date: "2024-05-01T00:00:00Z",
+      title: "Preferred post title",
+      excerpt: "Preferred post excerpt",
+      content: "<p>Preferred post body</p>",
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 9, name: "Reporter", slug: "reporter" } },
+    };
+
+    const fallbackPostsNode = {
+      slug: "posts-node-slug",
+      id: "gid://wordpress/Post:1002",
+      databaseId: 1002,
+      date: "2024-05-01T00:00:00Z",
+      title: "Fallback posts title",
+      excerpt: "Fallback posts excerpt",
+      content: "<p>Fallback posts body</p>",
+      categories: { nodes: [] },
+      tags: { nodes: [] },
+      author: { node: { databaseId: 10, name: "Reporter", slug: "reporter" } },
+    };
+
+    vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
+      graphqlSuccess({
+        post: preferredPostNode,
+        posts: { nodes: [fallbackPostsNode] },
+      }) as any,
+    );
+
+    const result = await loadArticle("ng", "post-preferred-slug", false);
+
+    expect(result.status).toBe("found");
+    expect(result.article.databaseId).toBe(1001);
+    expect(result.article.slug).toBe("post-preferred-slug");
+    expect(result.article.title).toContain("Preferred post title");
+  });
   it("returns null when GraphQL returns no nodes", async () => {
     vi.mocked(fetchWordPressGraphQL).mockResolvedValue(
       graphqlSuccess({ posts: { nodes: [] } }) as any,
