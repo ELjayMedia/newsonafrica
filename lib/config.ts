@@ -65,9 +65,9 @@ export const appConfig = {
       categoryPosts: 5,
     },
     timeouts: {
-      frontPage: 2500,
-      recent: 1200,
-      tag: 900,
+      frontPage: 12000,
+      recent: 8000,
+      tag: 8000,
     },
     concurrency: 4,
     editions: {
