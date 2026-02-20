@@ -15,9 +15,10 @@ interface AppChromeProps {
   children: ReactNode
 }
 
-export function AppChrome({ children }: AppChromeProps) {
+export async function AppChrome({ children }: AppChromeProps) {
+  const cookieStore = await cookies()
   const preferredCountry =
-    cookies().get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
+    cookieStore.get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
 
   return (
     <>
