@@ -275,6 +275,18 @@ type ArticleTemporaryFailure = {
   failure?: WordPressGraphQLFailure
 }
 
+type ArticleAttemptFailureSummary = {
+  country: string
+  result: "temporary_error" | "not_found" | "found"
+  failureKind: WordPressGraphQLFailure["kind"] | null
+  failureStatus: number | null
+}
+
+type LoadArticleWithFallbackContext = {
+  requestedCountry?: string
+  staleCacheServed?: boolean
+}
+
 export type ArticleFallbackTemporaryError = {
   status: "temporary_error"
   error: ArticleTemporarilyUnavailableError
@@ -309,6 +321,7 @@ export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
   preview = false,
+  context: LoadArticleWithFallbackContext = {},
 ): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
 
@@ -319,16 +332,34 @@ export async function loadArticleWithFallback(
   }
 
   const temporaryFailures: ArticleTemporaryFailure[] = []
+  const attempts: ArticleAttemptFailureSummary[] = []
+  const normalizedRequestedCountry = normalizeCountryCode(context.requestedCountry ?? primaryCountry)
+  const staleCacheServed = context.staleCacheServed ?? false
+
+  const recordAttempt = (
+    country: string,
+    result: "temporary_error" | "not_found" | "found",
+    failure?: WordPressGraphQLFailure,
+  ) => {
+    attempts.push({
+      country,
+      result,
+      failureKind: failure?.kind ?? null,
+      failureStatus: failure && "status" in failure ? failure.status : null,
+    })
+  }
 
   const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview)
 
   if (primaryArticle.status === "temporary_error") {
+    recordAttempt(primaryCountry, "temporary_error", primaryArticle.failure)
     temporaryFailures.push({
       country: primaryCountry,
       error: primaryArticle.error,
       failure: primaryArticle.failure,
     })
   } else if (primaryArticle.status === "found") {
+    recordAttempt(primaryCountry, "found")
     return {
       status: "found",
       article: primaryArticle.article,
@@ -337,18 +368,22 @@ export async function loadArticleWithFallback(
       canonicalCountry: primaryArticle.canonicalCountry,
       sourceCountry: primaryCountry,
     }
+  } else {
+    recordAttempt(primaryCountry, "not_found")
   }
 
   for (const fallbackCountry of fallbackCountries) {
     const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview)
 
     if (fallbackArticle.status === "temporary_error") {
+      recordAttempt(fallbackCountry, "temporary_error", fallbackArticle.failure)
       temporaryFailures.push({
         country: fallbackCountry,
         error: fallbackArticle.error,
         failure: fallbackArticle.failure,
       })
     } else if (fallbackArticle.status === "found") {
+      recordAttempt(fallbackCountry, "found")
       return {
         status: "found",
         article: fallbackArticle.article,
@@ -357,10 +392,20 @@ export async function loadArticleWithFallback(
         canonicalCountry: fallbackArticle.canonicalCountry,
         sourceCountry: fallbackCountry,
       }
+    } else {
+      recordAttempt(fallbackCountry, "not_found")
     }
   }
 
   if (temporaryFailures.length > 0 && !preview) {
+    console.error("[article-data] fallback attempts exhausted with temporary failures", {
+      slug: normalizedSlug,
+      requestedCountry: normalizedRequestedCountry,
+      countryPriority,
+      attempts,
+      staleCacheServed,
+    })
+
     const message = buildTemporaryFailureMessage(temporaryFailures)
     const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message)
     return {
