@@ -31,14 +31,21 @@ type ArticleCountryPriorityCacheEntry = {
 
 const articleCountryPriorityCache = new Map<string, ArticleCountryPriorityCacheEntry>()
 
+const CROSS_POST_ALL_EDITIONS_POLICY = "all_supported"
+
+const shouldIncludeAllSupportedEditions = (): boolean =>
+  process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK === "true" ||
+  process.env.ARTICLE_CROSS_POST_POLICY === CROSS_POST_ALL_EDITIONS_POLICY
+
 const computeEditionConfigSignature = (): string => {
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const editions = SUPPORTED_EDITIONS.map((edition) => ({
     code: normalizeCountryCode(edition.code),
     isCountryEdition: isCountryEdition(edition),
   }))
+  const includeAllSupportedEditions = shouldIncludeAllSupportedEditions()
 
-  return JSON.stringify({ defaultSite, editions })
+  return JSON.stringify({ defaultSite, editions, includeAllSupportedEditions })
 }
 
 export const resetArticleCountryPriorityCache = (): void => {
@@ -252,12 +259,20 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
 
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
+  const prioritized = [normalizedPrimary, defaultSite]
 
-  const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
-    normalizeCountryCode(edition.code),
-  )
+  if (normalizedPrimary === AFRICAN_ROUTE_ALIAS) {
+    prioritized.push(africanEdition)
+  } else if (normalizedPrimary === africanEdition) {
+    prioritized.push(AFRICAN_ROUTE_ALIAS)
+  }
 
-  const prioritized = [normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition]
+  if (shouldIncludeAllSupportedEditions()) {
+    const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
+      normalizeCountryCode(edition.code),
+    )
+    prioritized.push(...supportedCountryEditions, africanEdition)
+  }
 
   const supportedPriority = prioritized.filter(hasWordPressEndpoint)
 

@@ -58,16 +58,41 @@ describe("article-data", () => {
       | Record<string, unknown>
       | undefined;
 
-  it("returns only supported wordpress countries in the fallback priority", () => {
-    const priority = buildArticleCountryPriority("african-edition");
+  it("builds a minimal fallback chain for a country route", () => {
+    const priority = buildArticleCountryPriority("ng");
 
-    expect(priority).toEqual(
-      expect.arrayContaining(["sz", "za", "ng"]),
-    );
-    expect(priority).not.toContain("african-edition");
+    expect(priority).toEqual(["ng", "sz"]);
     expect(priority.every((code) => normalizeCountryCode(code) === code)).toBe(
       true,
     );
+  });
+
+  it("builds a minimal fallback chain for the african route alias", () => {
+    const priority = buildArticleCountryPriority("african");
+
+    expect(priority).toEqual(["sz"]);
+  });
+
+  it("includes all supported editions only when cross-country fallback feature is enabled", () => {
+    vi.stubEnv("FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK", "true");
+    resetArticleCountryPriorityCache();
+
+    const priority = buildArticleCountryPriority("ng");
+
+    expect(priority).toEqual(["ng", "sz", "za"]);
+    expect(new Set(priority).size).toBe(priority.length);
+    vi.unstubAllEnvs();
+  });
+
+  it("dedupes african fallback ordering when cross-post policy allows all editions", () => {
+    vi.stubEnv("ARTICLE_CROSS_POST_POLICY", "all_supported");
+    resetArticleCountryPriorityCache();
+
+    const priority = buildArticleCountryPriority("african");
+
+    expect(priority).toEqual(["sz", "za", "ng"]);
+    expect(new Set(priority).size).toBe(priority.length);
+    vi.unstubAllEnvs();
   });
 
   it("reuses the cached priority for repeated calls with the same edition", () => {
