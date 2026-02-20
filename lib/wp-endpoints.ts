@@ -10,6 +10,7 @@ const DEFAULT_SITE = ENV.NEXT_PUBLIC_DEFAULT_SITE
 
 const GRAPHQL_SUFFIX = "GRAPHQL"
 const REST_SUFFIX = "REST_BASE"
+const GRAPHQL_PATHNAME_ALLOWLIST: RegExp[] = []
 
 const trimTrailingSlashes = (value?: string | null): string | undefined => {
   if (!value) {
@@ -33,9 +34,19 @@ const getDefaultRestBase = (country: string): string => `${BASE_URL}/${country}/
 
 const looksLikeGraphQLEndpoint = (value?: string | null) => Boolean(value && value.toLowerCase().includes("/graphql"))
 
+const isGraphQlPathname = (pathname: string): boolean => {
+  const normalizedPath = pathname.toLowerCase().replace(/\/+$/, "")
+
+  if (normalizedPath.endsWith("/graphql")) {
+    return true
+  }
+
+  return GRAPHQL_PATHNAME_ALLOWLIST.some((pattern) => pattern.test(normalizedPath))
+}
+
 const getOverridePathname = (value: string): string | undefined => {
   try {
-    const pathname = new URL(value, BASE_URL).pathname
+    const pathname = new URL(value).pathname
     return pathname.replace(/\/+$/, "")
   } catch {
     return undefined
@@ -46,7 +57,7 @@ const warnGraphQlOverride = (country: string, override: string, fallback: string
   console.warn("Ignoring WP GraphQL override", {
     country,
     graphqlOverride: override,
-    defaultGraphQLEndpoint: fallback,
+    effectiveGraphQLEndpoint: fallback,
     reason,
   })
 }
@@ -72,16 +83,15 @@ export function getGraphQLEndpoint(country: string = DEFAULT_SITE): string {
   const specific = getEnvValue(buildEnvKey(normalized, GRAPHQL_SUFFIX))
 
   if (specific) {
-    if (!looksLikeGraphQLEndpoint(specific)) {
-      warnGraphQlOverride(normalized, specific, defaultGraphQl, "does not look like a GraphQL endpoint")
+    const pathname = getOverridePathname(specific)
+
+    if (!pathname) {
+      warnGraphQlOverride(normalized, specific, defaultGraphQl, "must be a valid absolute URL")
       return defaultGraphQl
     }
 
-    const pathname = getOverridePathname(specific)
-    const expectedSegment = `/${normalized}/graphql`
-
-    if (!pathname || !pathname.toLowerCase().includes(expectedSegment)) {
-      warnGraphQlOverride(normalized, specific, defaultGraphQl, `expected pathname to include "${expectedSegment}"`)
+    if (!isGraphQlPathname(pathname)) {
+      warnGraphQlOverride(normalized, specific, defaultGraphQl, 'expected pathname to end with "/graphql" or match an allowlisted pattern')
       return defaultGraphQl
     }
   }
