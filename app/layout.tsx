@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 
-import { AppChrome } from "@/app/AppChrome"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 import { validateRequiredEnv } from "@/lib/env"
@@ -41,9 +40,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />
         <SchemaOrg schemas={baseSchemas} />
       </head>
-      <body className="font-sans min-h-dvh">
-        <AppChrome>{children}</AppChrome>
-      </body>
+      <body className="font-sans">{children}</body>
     </html>
   )
 }
