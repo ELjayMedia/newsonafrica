@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { AggregatedHomeData, WordPressPost } from "@/lib/wordpress-api"
+import type { AggregatedHomeData, WordPressPost } from "@/lib/wordpress/service"
 import type { HomePost } from "@/types/home"
 
 const BASE_URL = "https://example.com"
@@ -68,7 +68,7 @@ describe("fetchAggregatedHome", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const aggregatedSpy = vi
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockResolvedValue(aggregatedWithContent)
@@ -84,7 +84,7 @@ describe("fetchAggregatedHome", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const aggregatedSpy = vi
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
@@ -104,7 +104,7 @@ describe("fetchAggregatedHome", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const aggregatedSpy = vi
       .spyOn(wordpressApi, "getAggregatedLatestHome")
       .mockRejectedValue(new Error("wp error"))
@@ -135,7 +135,7 @@ describe("fetchAggregatedHomeForCountry", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const hero = {
       id: "hero",
       slug: "lead-story",
@@ -251,7 +251,7 @@ describe("fetchAggregatedHomeForCountry", () => {
       },
     ]
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const frontPageSpy = vi.spyOn(wordpressApi, "getFrontPageSlicesForCountry").mockResolvedValue({
       hero: { heroPost: undefined, secondaryStories: [] },
       trending: { posts: [], hasNextPage: false, endCursor: null },
@@ -353,7 +353,7 @@ describe("fetchAggregatedHomeForCountry", () => {
 
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
 
     const delay = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -413,7 +413,7 @@ describe("fetchAggregatedHomeForCountry", () => {
     vi.resetModules()
     await setupServerMocks()
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
 
     vi
       .spyOn(wordpressApi, "getFrontPageSlicesForCountry")
@@ -570,9 +570,9 @@ describe("buildHomeContentProps", () => {
       return acc
     }, {})
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const aggregatedSpy = vi.spyOn(wordpressApi, "getAggregatedLatestHome")
-    const categoriesModule = await import("@/lib/wp-server/categories")
+    const categoriesModule = await import("@/lib/wordpress/service")
     const categoriesSpy = vi.spyOn(categoriesModule, "getPostsForCategories").mockResolvedValue({})
     const toWordPress = (post: HomePost): WordPressPost =>
       ({

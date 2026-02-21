@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render } from "@testing-library/react"
 
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import type { AggregatedHomeData } from "@/lib/wordpress-api"
+import type { AggregatedHomeData } from "@/lib/wordpress/service"
 import type { HomePost } from "@/types/home"
 
 vi.mock("@/config/env", () => ({
@@ -108,7 +108,7 @@ describe("HomePage", () => {
       return acc
     }, {})
 
-    const wordpressApi = await import("@/lib/wordpress-api")
+    const wordpressApi = await import("@/lib/wordpress/service")
     const fpSpy = vi
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockImplementation(async (countryCode: string) => countryPosts[countryCode] ?? [])

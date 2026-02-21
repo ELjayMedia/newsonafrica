@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import pLimit from "p-limit"
 
 import { enhancedCache } from "@/lib/cache/enhanced-cache"
-import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
+import { fetchPosts, resolveCountryCode } from "@/lib/wordpress/service"
 import { logRequest } from "@/lib/api-utils"
 
 export const runtime = "nodejs"

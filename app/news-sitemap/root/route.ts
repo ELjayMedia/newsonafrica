@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { siteConfig } from "@/config/site"
-import { fetchPosts } from "@/lib/wordpress-api"
+import { fetchPosts } from "@/lib/wordpress/service"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 import {

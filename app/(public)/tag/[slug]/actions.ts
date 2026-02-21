@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchTaggedPosts } from "@/lib/wp-server/tags"
+import { fetchTaggedPosts } from "@/lib/wordpress/service"
 
 interface FetchTaggedPostsPageActionInput {
   slug: string

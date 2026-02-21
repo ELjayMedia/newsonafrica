@@ -7,7 +7,7 @@ import {
   getLatestPostsForCountry,
   getPostsByCategoryForCountry,
   getRelatedPostsForCountry,
-} from "@/lib/wordpress-api"
+} from "@/lib/wordpress/service"
 
 import { DEFAULT_COUNTRY, mapPostsToHomePosts } from "@/lib/wordpress/shared"
 

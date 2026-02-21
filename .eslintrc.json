@@ -1,6 +1,11 @@
 {
-  "extends": ["next/core-web-vitals"],
-  "plugins": ["unused-imports", "@typescript-eslint"],
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "plugins": [
+    "unused-imports",
+    "@typescript-eslint"
+  ],
   "rules": {
     "react/no-unescaped-entities": "off",
     "@next/next/no-html-link-for-pages": "off",
@@ -69,6 +74,37 @@
       ],
       "rules": {
         "no-restricted-syntax": "off"
+      }
+    },
+    {
+      "files": [
+        "app/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/lib/wordpress-api",
+                  "@/lib/wp-server/*"
+                ],
+                "message": "Import WordPress read APIs from '@/lib/wordpress/service'."
+              },
+              {
+                "group": [
+                  "@/lib/wordpress/posts",
+                  "@/lib/wordpress/categories",
+                  "@/lib/wordpress/authors",
+                  "@/lib/wordpress/frontpage",
+                  "@/lib/wordpress/countries"
+                ],
+                "message": "App-layer WordPress reads must use '@/lib/wordpress/service'."
+              }
+            ]
+          }
+        ]
       }
     }
   ]

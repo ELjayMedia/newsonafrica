@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("@/lib/wordpress-api", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   getAuthorBySlug: vi.fn(),
 }))
 
@@ -11,7 +11,7 @@ vi.mock("@/lib/log", () => ({
 }))
 
 import { generateMetadata } from "./page"
-import { getAuthorBySlug } from "@/lib/wordpress-api"
+import { getAuthorBySlug } from "@/lib/wordpress/service"
 
 const buildPost = () => ({
   id: 10,

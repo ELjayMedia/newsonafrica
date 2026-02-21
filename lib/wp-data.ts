@@ -1,4 +1,4 @@
-import { type WordPressCategory, getLatestPostsForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress-api"
+import { type WordPressCategory, getLatestPostsForCountry, getPostsByCategoryForCountry } from "@/lib/wordpress/service"
 import { COUNTRIES } from "@/lib/wordpress/countries"
 import type { WordPressPost } from "@/types/wp"
 

@@ -4,7 +4,7 @@ const getPostsByCategoryForCountryMock = vi.fn()
 const mapWordPressPostsToPostListItemsMock = vi.fn()
 const fetchTaggedPostsMock = vi.fn()
 
-vi.mock("@/lib/wp-server/categories", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   getPostsByCategoryForCountry: getPostsByCategoryForCountryMock,
 }))
 
@@ -12,7 +12,7 @@ vi.mock("@/lib/data/post-list", () => ({
   mapWordPressPostsToPostListItems: mapWordPressPostsToPostListItemsMock,
 }))
 
-vi.mock("@/lib/wp-server/tags", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   fetchTaggedPosts: fetchTaggedPostsMock,
 }))
 

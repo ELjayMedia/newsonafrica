@@ -44,7 +44,7 @@ vi.mock('./ArticleClientContent', () => ({
   },
 }))
 
-vi.mock('@/lib/wordpress/posts', () => ({
+vi.mock('@/lib/wordpress/service', () => ({
   getRelatedPostsForCountry: (...args: unknown[]) => mockGetRelatedPostsForCountry(...args),
 }))
 

@@ -1,4 +1,3 @@
-/** @deprecated Import from `@/lib/wordpress/service` instead. */
 export {
   fetchAllCategories,
   fetchCategories,
@@ -9,4 +8,4 @@ export {
   getPostsByCategory,
   getPostsByCategoryForCountry,
   getPostsForCategories,
-} from "@/lib/wordpress/service"
+} from "@/lib/wordpress/categories"

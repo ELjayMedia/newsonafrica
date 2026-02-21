@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import * as wordpressApi from "@/lib/wordpress-api"
+import * as wordpressApi from "@/lib/wordpress/service"
 
 describe("getAggregatedLatestHome", () => {
   afterEach(() => {
