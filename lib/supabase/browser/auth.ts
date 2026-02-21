@@ -56,10 +56,6 @@ export interface ResetPasswordOptions {
   client?: SupabaseClient<Database>
 }
 
-export interface SocialLoginOptions {
-  client?: SupabaseClient<Database>
-}
-
 export async function getUserSession(
   client: SupabaseClient<Database> = getSupabaseBrowserClient(),
 ): Promise<AuthResponse & { profile: UserProfile | null }> {
