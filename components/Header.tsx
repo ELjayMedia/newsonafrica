@@ -1,7 +1,7 @@
 import type { HeaderCategory } from "@/components/HeaderClient"
 import { HeaderInteractive } from "@/components/HeaderInteractive"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
-import { getCategoriesForCountry } from "@/lib/wp-server/categories"
+import { getCategoriesForCountry } from "@/lib/wordpress/service"
 import type { WordPressCategory } from "@/types/wp"
 
 function mapCategoryToHeaderCategory(category: WordPressCategory): HeaderCategory | null {

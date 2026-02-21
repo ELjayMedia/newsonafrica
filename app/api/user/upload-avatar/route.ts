@@ -8,17 +8,12 @@ import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 import { getAuthTokenFromCookies } from "@/lib/cookies"
-import { updateUserProfile } from "@/lib/wordpress-api"
+import { updateMyProfile } from "@/lib/supabase/rest/profiles"
 
 export const runtime = "nodejs"
 
 // Cache policy: short (1 minute)
 export const revalidate = 60
-
-type UpdateUserProfileFn = (
-  token: string,
-  data: { avatar_url: string },
-) => Promise<unknown>
 
 export async function POST(request: Request) {
   logRequest(request)
@@ -54,10 +49,7 @@ export async function POST(request: Request) {
     // Update user profile with new avatar URL
     const avatarUrl = `/uploads/${filename}`
 
-    // NOTE: wordpress-api currently types updateUserProfile as 0-args.
-    // This cast fixes TypeScript while remaining runtime-safe (extra args are ignored in JS).
-    const update = updateUserProfile as unknown as UpdateUserProfileFn
-    await update(token, { avatar_url: avatarUrl })
+    await updateMyProfile({ accessToken: token, avatar_url: avatarUrl })
 
     revalidateByTag(CACHE_TAGS.USERS)
     revalidatePath("/profile")

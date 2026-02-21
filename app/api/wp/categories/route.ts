@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { fetchCategories } from "@/lib/wordpress-api"
+import { fetchCategories } from "@/lib/wordpress/service"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 export const runtime = "nodejs"

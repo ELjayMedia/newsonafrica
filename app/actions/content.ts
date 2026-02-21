@@ -1,10 +1,10 @@
 "use server"
 
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
-import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
-import { fetchTaggedPosts } from "@/lib/wp-server/tags"
+import { getPostsByCategoryForCountry } from "@/lib/wordpress/service"
+import { fetchTaggedPosts } from "@/lib/wordpress/service"
 import type { PostListItemData } from "@/lib/data/post-list"
-import type { FetchTaggedPostsInput, FetchTaggedPostsResult } from "@/lib/wp-server/tags"
+import type { FetchTaggedPostsInput, FetchTaggedPostsResult } from "@/lib/wordpress/service"
 
 export interface FetchCategoryPostsInput {
   countryCode: string

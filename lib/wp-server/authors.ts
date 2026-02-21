@@ -1,1 +1,2 @@
-export { getAuthorBySlug, fetchAuthorData, fetchAuthors } from "@/lib/wordpress/authors"
+/** @deprecated Import from `@/lib/wordpress/service` instead. */
+export { fetchAuthorData, fetchAuthors, getAuthorBySlug } from "@/lib/wordpress/service"

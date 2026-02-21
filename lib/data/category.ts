@@ -1,4 +1,4 @@
-import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
+import { getPostsByCategoryForCountry } from "@/lib/wordpress/service"
 import type { CategoryPostsResult, WordPressCategory } from "@/types/wp"
 import {
   mapWpPostsToPostListItems,

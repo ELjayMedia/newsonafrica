@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getPostsByCategoryForCountry } from "@/lib/wp-server/categories"
+import { getPostsByCategoryForCountry } from "@/lib/wordpress/service"
 import * as log from "@/lib/log"
 import { ENV } from "@/config/env"
 import { getCategoryPageData } from "@/lib/data/category"
@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/category/EmptyState"
 import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
 import { STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
-import { getAllCategories } from "@/lib/wordpress/categories"
+import { getAllCategories } from "@/lib/wordpress/service"
 import { cacheTags } from "@/lib/cache"
 
 interface Params {

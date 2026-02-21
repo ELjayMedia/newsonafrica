@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { getRelatedPosts } from "@/lib/wordpress-api"
+import { getRelatedPosts } from "@/lib/wordpress/service"
 import type { WordPressPost } from "@/types/wp"
 
 interface RelatedPost extends WordPressPost {

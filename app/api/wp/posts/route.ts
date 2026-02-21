@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
+import { fetchPosts, resolveCountryCode } from "@/lib/wordpress/service"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 
 export const runtime = "nodejs"

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
-import { fetchCategories, fetchRecentPosts, fetchTags } from "@/lib/wordpress-api"
+import { fetchCategories, fetchRecentPosts, fetchTags } from "@/lib/wordpress/service"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 export const runtime = "nodejs"

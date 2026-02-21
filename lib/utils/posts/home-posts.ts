@@ -1,5 +1,5 @@
 import type { HomePost } from "@/types/home"
-import type { AggregatedHomeData } from "@/lib/wordpress-api"
+import type { AggregatedHomeData } from "@/lib/wordpress/service"
 
 /**
  * Creates a unique key for a HomePost to use in deduplication

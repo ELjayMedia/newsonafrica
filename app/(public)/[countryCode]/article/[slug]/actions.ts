@@ -3,7 +3,7 @@
 import type { CommentSortOption } from "@/lib/supabase-schema"
 import { listCommentsService } from "@/lib/comments/service"
 import { createServerComponentSupabaseClient } from "@/lib/supabase/server-component-client"
-import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
+import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import type { WordPressPost } from "@/types/wp"
 
 import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"

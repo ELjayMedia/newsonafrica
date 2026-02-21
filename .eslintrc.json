@@ -78,6 +78,7 @@
     },
     {
       "files": [
+<<<<<<< HEAD
         "**/*.{ts,tsx}"
       ],
       "excludedFiles": [
@@ -91,6 +92,33 @@
           {
             "selector": "TSAsExpression > TSAnyKeyword",
             "message": "Avoid `as any` outside adapter directories. Move unsafe casts into lib/**/adapters and return typed outputs."
+=======
+        "app/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/lib/wordpress-api",
+                  "@/lib/wp-server/*"
+                ],
+                "message": "Import WordPress read APIs from '@/lib/wordpress/service'."
+              },
+              {
+                "group": [
+                  "@/lib/wordpress/posts",
+                  "@/lib/wordpress/categories",
+                  "@/lib/wordpress/authors",
+                  "@/lib/wordpress/frontpage",
+                  "@/lib/wordpress/countries"
+                ],
+                "message": "App-layer WordPress reads must use '@/lib/wordpress/service'."
+              }
+            ]
+>>>>>>> edc0b87e (Create canonical WordPress service and migrate callers)
           }
         ]
       }

@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation"
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
-import { getRelatedPostsForCountry } from "@/lib/wordpress/posts"
+import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 
 import {

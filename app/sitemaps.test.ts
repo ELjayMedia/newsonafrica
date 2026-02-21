@@ -10,7 +10,7 @@ const mockFetchTags = vi.fn()
 const mockFetchAuthors = vi.fn()
 const mockFetchCountries = vi.fn()
 
-vi.mock("@/lib/wordpress-api", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   fetchRecentPosts: mockFetchRecentPosts,
   fetchCategories: mockFetchCategories,
   fetchTags: mockFetchTags,

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from "vitest"
 
-vi.mock("@/lib/wordpress-api", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   fetchPosts: vi.fn(),
   resolveCountryCode: vi.fn(),
 }))
 
 import { hydrateBookmarkRequests, HYDRATE_CONCURRENCY } from "./route"
-import { fetchPosts, resolveCountryCode } from "@/lib/wordpress-api"
+import { fetchPosts, resolveCountryCode } from "@/lib/wordpress/service"
 
 type FetchPostsInput = { ids: string[]; perPage?: number; countryCode?: string }
 type FetchPostsOutput = Array<{ id: string; slug?: string; title?: string; excerpt?: { rendered?: string } | string }>
