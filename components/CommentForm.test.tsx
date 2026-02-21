@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CommentForm } from "@/components/CommentForm"
-import * as commentService from "@/lib/comment-service"
+import * as commentService from "@/lib/comments/client"
 
 const toastMock = vi.fn()
 

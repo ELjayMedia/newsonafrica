@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
 import { cacheTags } from "@/lib/cache"
+import { ApiRequestError, parseApiEnvelope } from "@/lib/comments/contracts"
 
 interface CommentRecord {
   id: string
@@ -398,6 +399,7 @@ describe("POST /api/comments", () => {
     )
 
     expect(response.status).toBe(200)
+    await expect(parseApiEnvelope<{ id: string }>(response.clone())).resolves.toEqual(expect.objectContaining({ id: "comment-id" }))
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         edition_code: "sz",
@@ -463,6 +465,8 @@ describe("POST /api/comments", () => {
     expect(response.status).toBe(429)
     expect(response.headers.get("retry-after")).toBeTruthy()
 
+    const responseClone = response.clone()
+
     const body = (await response.json()) as {
       success: boolean
       error: string
@@ -472,6 +476,8 @@ describe("POST /api/comments", () => {
     expect(body.success).toBe(false)
     expect(body.error).toContain("Rate limited")
     expect(body.meta?.rateLimit?.retryAfterSeconds).toBeTypeOf("number")
+
+    await expect(parseApiEnvelope(responseClone)).rejects.toBeInstanceOf(ApiRequestError)
     expect(body.meta?.rateLimit?.retryAfterSeconds).toBeGreaterThan(0)
     expect(onInsert).not.toHaveBeenCalled()
     expect(revalidateByTagMock).not.toHaveBeenCalled()
