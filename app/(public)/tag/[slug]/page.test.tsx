@@ -8,7 +8,7 @@ const fetchSingleTagMock = vi.fn()
 const fetchTaggedPostsMock = vi.fn()
 const notFoundMock = vi.fn()
 
-vi.mock("@/lib/wp-server/tags", () => ({
+vi.mock("@/lib/wordpress/service", () => ({
   fetchSingleTag: (...args: unknown[]) => fetchSingleTagMock(...args),
   fetchTaggedPosts: (...args: unknown[]) => fetchTaggedPostsMock(...args),
 }))

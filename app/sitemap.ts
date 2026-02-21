@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress-api"
+import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"

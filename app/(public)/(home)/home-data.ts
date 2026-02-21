@@ -27,7 +27,7 @@ import {
   type PaginatedPostsResult,
   type WordPressCategory,
   type WordPressPost,
-} from "@/lib/wordpress-api"
+} from "@/lib/wordpress/service"
 import type { HomePost } from "@/types/home"
 
 // Derive all constants from centralized config
@@ -182,7 +182,7 @@ export async function fetchAggregatedHomeForCountry(
   return fetchAggregatedForCountry(countryCode, limit)
 }
 
-export type { AggregatedHomeData } from "@/lib/wordpress-api"
+export type { AggregatedHomeData } from "@/lib/wordpress/service"
 
 // flattenAggregatedHome imported from @/lib/utils/posts
 
