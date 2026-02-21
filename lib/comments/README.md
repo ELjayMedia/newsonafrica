@@ -20,8 +20,8 @@ The moderation backend is **Supabase**, accessed through domain services in `lib
   - Handles visibility, status transitions, reaction aggregation, pagination/cursors, and cache tags.
 
 - **Persistence adapters**
-  - DAL modules provide persistence entrypoints and should resolve to Supabase comment adapters.
-  - Canonical DAL entrypoint is `lib/dal/comments.ts`.
+  - Comment persistence adapters live under `lib/supabase/rest/*` and are consumed by the comments domain service.
+  - Do not introduce `lib/dal/*` alias layers for comments.
 
 ## Allowed dependencies and data flow
 
