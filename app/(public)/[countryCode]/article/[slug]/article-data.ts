@@ -19,6 +19,16 @@ export const normalizeSlug = (value: string): string => value.toLowerCase()
 
 const SUPPORTED_WORDPRESS_COUNTRIES = new Set(Object.keys(COUNTRIES).map((code) => normalizeCountryCode(code)))
 
+const getWordPressGraphQlEnvKey = (countryCode: string): string =>
+  `NEXT_PUBLIC_WP_${normalizeCountryCode(countryCode).toUpperCase()}_GRAPHQL`
+
+const hasConfiguredWordPressGraphQlEndpoint = (countryCode: string): boolean => {
+  const envKey = getWordPressGraphQlEnvKey(countryCode)
+  const value = process.env[envKey]
+
+  return typeof value === "string" && value.trim().length > 0
+}
+
 const hasWordPressEndpoint = (countryCode: string): boolean =>
   SUPPORTED_WORDPRESS_COUNTRIES.has(normalizeCountryCode(countryCode))
 
@@ -274,7 +284,19 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
     prioritized.push(...supportedCountryEditions, africanEdition)
   }
 
-  const supportedPriority = prioritized.filter(hasWordPressEndpoint)
+  const supportedPriority = prioritized.filter((candidateCountry) => {
+    if (!hasWordPressEndpoint(candidateCountry)) {
+      return false
+    }
+
+    // Keep the requested country in the chain so misconfiguration still surfaces clearly for that route,
+    // but skip fallback countries that do not have an explicit endpoint in this environment.
+    if (candidateCountry === normalizedPrimary) {
+      return true
+    }
+
+    return hasConfiguredWordPressGraphQlEndpoint(candidateCountry)
+  })
 
   const priority = unique(supportedPriority)
   articleCountryPriorityCache.set(normalizedPrimary, { priority, signature })

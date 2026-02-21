@@ -59,12 +59,28 @@ describe("article-data", () => {
       | undefined;
 
   it("builds a minimal fallback chain for a country route", () => {
+    vi.stubEnv("NEXT_PUBLIC_WP_SZ_GRAPHQL", "https://newsonafrica.com/sz/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_NG_GRAPHQL", "https://newsonafrica.com/ng/graphql");
+    resetArticleCountryPriorityCache();
+
     const priority = buildArticleCountryPriority("ng");
 
     expect(priority).toEqual(["ng", "sz"]);
     expect(priority.every((code) => normalizeCountryCode(code) === code)).toBe(
       true,
     );
+    vi.unstubAllEnvs();
+  });
+
+  it("does not include fallback countries without an explicit GraphQL endpoint in this environment", () => {
+    vi.stubEnv("NEXT_PUBLIC_WP_NG_GRAPHQL", "https://newsonafrica.com/ng/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_SZ_GRAPHQL", "");
+    resetArticleCountryPriorityCache();
+
+    const priority = buildArticleCountryPriority("ng");
+
+    expect(priority).toEqual(["ng"]);
+    vi.unstubAllEnvs();
   });
 
   it("builds a minimal fallback chain for the african route alias", () => {
@@ -75,6 +91,9 @@ describe("article-data", () => {
 
   it("includes all supported editions only when cross-country fallback feature is enabled", () => {
     vi.stubEnv("FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK", "true");
+    vi.stubEnv("NEXT_PUBLIC_WP_NG_GRAPHQL", "https://newsonafrica.com/ng/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_SZ_GRAPHQL", "https://newsonafrica.com/sz/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_ZA_GRAPHQL", "https://newsonafrica.com/za/graphql");
     resetArticleCountryPriorityCache();
 
     const priority = buildArticleCountryPriority("ng");
@@ -86,6 +105,9 @@ describe("article-data", () => {
 
   it("dedupes african fallback ordering when cross-post policy allows all editions", () => {
     vi.stubEnv("ARTICLE_CROSS_POST_POLICY", "all_supported");
+    vi.stubEnv("NEXT_PUBLIC_WP_SZ_GRAPHQL", "https://newsonafrica.com/sz/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_ZA_GRAPHQL", "https://newsonafrica.com/za/graphql");
+    vi.stubEnv("NEXT_PUBLIC_WP_NG_GRAPHQL", "https://newsonafrica.com/ng/graphql");
     resetArticleCountryPriorityCache();
 
     const priority = buildArticleCountryPriority("african");
