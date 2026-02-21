@@ -1,7 +1,6 @@
 export type ApiEnvelope<T> = {
-  success?: boolean
-  data?: T
-  error?: string
+  data: T | null
+  error: string | null
   meta?: Record<string, unknown>
 }
 
@@ -26,25 +25,41 @@ export class ApiRequestError extends Error {
 }
 
 export async function parseApiEnvelope<T>(response: Response): Promise<T> {
-  const json = (await response.json().catch(() => null)) as ApiEnvelope<T> | T | null
+  const json = (await response.json().catch(() => null)) as
+    | ApiEnvelope<T>
+    | { success?: boolean; data?: T; error?: string; meta?: Record<string, unknown> }
+    | T
+    | null
+
+  const meta =
+    json && typeof json === "object" && "meta" in json && json.meta && typeof json.meta === "object"
+      ? (json.meta as Record<string, unknown>)
+      : undefined
+
+  const messageFromJson =
+    json && typeof json === "object" && "error" in json && typeof json.error === "string"
+      ? json.error
+      : undefined
+
   if (!response.ok) {
-    const meta =
-      json && typeof json === "object" && "meta" in json && json.meta && typeof json.meta === "object"
-        ? (json.meta as Record<string, unknown>)
-        : undefined
-    const message =
-      json && typeof json === "object" && "error" in json && typeof json.error === "string"
-        ? json.error
-        : `Request failed (${response.status})`
-    throw new ApiRequestError(message, response.status, meta)
+    throw new ApiRequestError(messageFromJson ?? `Request failed (${response.status})`, response.status, meta)
+  }
+
+  if (json && typeof json === "object" && "data" in json && "error" in json) {
+    const envelope = json as ApiEnvelope<T>
+    if (envelope.error) {
+      throw new ApiRequestError(envelope.error, response.status, envelope.meta)
+    }
+
+    return envelope.data as T
   }
 
   if (json && typeof json === "object" && "success" in json) {
-    const envelope = json as ApiEnvelope<T>
-    if (!envelope.success || envelope.data === undefined) {
-      throw new Error(envelope.error || "Request failed")
+    const legacyEnvelope = json as { success?: boolean; data?: T; error?: string }
+    if (!legacyEnvelope.success || legacyEnvelope.data === undefined) {
+      throw new ApiRequestError(legacyEnvelope.error || "Request failed", response.status, meta)
     }
-    return envelope.data
+    return legacyEnvelope.data
   }
 
   return json as T

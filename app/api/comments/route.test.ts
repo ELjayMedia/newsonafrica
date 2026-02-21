@@ -194,6 +194,7 @@ describe("GET /api/comments", () => {
     const response = await GET(request)
 
     expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toEqual({ data: null, error: "Supabase service unavailable" })
   })
 
   it("falls back to active comments for unauthenticated status=all requests", async () => {
@@ -289,10 +290,10 @@ describe("GET /api/comments", () => {
 
     expect(response.status).toBe(400)
 
-    const body = (await response.json()) as { success: boolean; error: string; errors?: Record<string, string[]> }
-    expect(body.success).toBe(false)
+    const body = (await response.json()) as { data: null; error: string; meta?: { validationErrors?: Record<string, string[]> } }
+    expect(body.data).toBeNull()
     expect(body.error).toBe("Invalid query parameters")
-    expect(body.errors).toEqual({ wp_post_id: ["WordPress post ID is required"] })
+    expect(body.meta?.validationErrors).toEqual({ wp_post_id: ["WordPress post ID is required"] })
   })
 })
 
@@ -468,12 +469,12 @@ describe("POST /api/comments", () => {
     const responseClone = response.clone()
 
     const body = (await response.json()) as {
-      success: boolean
+      data: null
       error: string
       meta?: { rateLimit?: { retryAfterSeconds?: number } }
     }
 
-    expect(body.success).toBe(false)
+    expect(body.data).toBeNull()
     expect(body.error).toContain("Rate limited")
     expect(body.meta?.rateLimit?.retryAfterSeconds).toBeTypeOf("number")
 

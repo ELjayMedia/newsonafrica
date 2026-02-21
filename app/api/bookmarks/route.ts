@@ -1,9 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 
-import { createSupabaseRouteClient } from "@/lib/supabase/route"
-import { revalidateByTag } from "@/lib/server-cache-utils"
-import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { ActionError } from "@/lib/supabase/action-result"
+import { revalidateByTag } from "@/lib/server-cache-utils"
 import {
   addBookmarkForUser,
   bulkRemoveBookmarksForUser,
@@ -22,6 +20,7 @@ import {
   sanitizeReadState,
   sanitizeStringArray,
 } from "@/lib/bookmarks/validators"
+import { makeRoute, routeData, routeError } from "@/lib/api/route-helpers"
 
 export const runtime = "nodejs"
 export const revalidate = 60
@@ -29,12 +28,8 @@ export const revalidate = 60
 const EDITION_COOKIE_KEYS = ["country", "preferredCountry"] as const
 
 type SortOrder = "asc" | "desc"
-
-// If you have a concrete union elsewhere, replace `string` with it.
-// We keep it compatible with whatever resolveSortColumn returns.
 type SortBy = ReturnType<typeof resolveSortColumn>
 
-// Cursor type used by your API/service (based on your decoded object)
 type CursorInput = {
   sortBy: SortBy
   sortOrder: SortOrder
@@ -42,21 +37,10 @@ type CursorInput = {
   id: string
 }
 
-function serviceUnavailable(request: NextRequest) {
-  return jsonWithCors(request, { error: "Supabase service unavailable" }, { status: 503 })
-}
+const USER_ROUTE = makeRoute({ auth: "user" })
 
-function toErrorResponse(request: NextRequest, error: unknown, fallbackMessage: string) {
-  const actionError = error instanceof ActionError ? error : new ActionError(fallbackMessage, { cause: error })
-  return jsonWithCors(request, { error: actionError.message || fallbackMessage }, { status: actionError.status ?? 500 })
-}
-
-function successResponse(
-  request: NextRequest,
-  respond: <T extends NextResponse>(response: T) => T,
-  payload: unknown,
-) {
-  return respond(jsonWithCors(request, { data: payload, error: null }))
+function toActionError(error: unknown, fallbackMessage: string) {
+  return error instanceof ActionError ? error : new ActionError(fallbackMessage, { cause: error })
 }
 
 function getRequestEditionPreferences(request: NextRequest): string[] {
@@ -105,80 +89,45 @@ function parseCursor(value: string | null, fallbackSortBy: SortBy): CursorInput 
   }
 }
 
-export async function GET(request: NextRequest) {
-  logRequest(request)
-  const routeClient = createSupabaseRouteClient(request)
-
-  if (!routeClient) return serviceUnavailable(request)
-
-  const { supabase, applyCookies } = routeClient
-  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
-
+export const GET = USER_ROUTE(async ({ request, supabase, session }) => {
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
-    }
-
     const { searchParams } = new URL(request.url)
 
     const sortBy = resolveSortColumn(searchParams.get("sortBy")) as SortBy
     const sortOrder: SortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc"
 
-    const listPayload = await listBookmarksForUser(supabase, user.id, {
+    const listPayload = await listBookmarksForUser(supabase!, session!.user.id, {
       limit: Math.max(Number.parseInt(searchParams.get("limit") || "20", 10), 1),
       search: searchParams.get("search"),
       category: searchParams.get("category"),
       readState: searchParams.get("readState") ?? searchParams.get("status"),
       sortOrder,
       sortBy,
-      // ✅ now correctly typed as CursorInput | null
       cursor: parseCursor(searchParams.get("cursor"), sortBy),
       postId: searchParams.get("postId") ?? searchParams.get("wpPostId") ?? searchParams.get("wp_post_id"),
       editionCode: searchParams.get("editionCode") ?? searchParams.get("edition_code") ?? searchParams.get("country"),
       collectionId: searchParams.get("collectionId") ?? searchParams.get("collection_id"),
     })
 
-    return respond(jsonWithCors(request, listPayload))
+    return routeData(listPayload)
   } catch (error) {
-    console.error("Error in bookmarks API:", error)
-    return respond(toErrorResponse(request, error, "Internal server error"))
+    const actionError = toActionError(error, "Internal server error")
+    return routeError(actionError.message || "Internal server error", { status: actionError.status ?? 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
-  logRequest(request)
-  const routeClient = createSupabaseRouteClient(request)
-
-  if (!routeClient) return serviceUnavailable(request)
-
-  const { supabase, applyCookies } = routeClient
-  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
-
+export const POST = USER_ROUTE(async ({ request, supabase, session }) => {
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
-    }
-
     const body = await request.json()
     const payload = extractMutationPayload(body)
 
     if (!payload) {
-      return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
+      return routeError("Invalid bookmark payload", { status: 400 })
     }
 
     const mutationPayload = await addBookmarkForUser(
-      supabase,
-      user.id,
+      supabase!,
+      session!.user.id,
       {
         postId: typeof payload.postId === "string" ? payload.postId.trim() : "",
         title: typeof payload.title === "string" ? payload.title : undefined,
@@ -195,96 +144,62 @@ export async function POST(request: NextRequest) {
       { revalidate: revalidateByTag, editionHints: getRequestEditionPreferences(request) },
     )
 
-    return successResponse(request, respond, mutationPayload)
+    return routeData(mutationPayload)
   } catch (error) {
-    console.error("Error in bookmarks API:", error)
-    return respond(toErrorResponse(request, error, "Failed to add bookmark"))
+    const actionError = toActionError(error, "Failed to add bookmark")
+    return routeError(actionError.message || "Failed to add bookmark", { status: actionError.status ?? 500 })
   }
-}
+})
 
-export async function PUT(request: NextRequest) {
-  logRequest(request)
-  const routeClient = createSupabaseRouteClient(request)
-
-  if (!routeClient) return serviceUnavailable(request)
-
-  const { supabase, applyCookies } = routeClient
-  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
-
+export const PUT = USER_ROUTE(async ({ request, supabase, session }) => {
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
-    }
-
     const body = await request.json()
     const payload = extractMutationPayload(body)
 
     if (!payload) {
-      return respond(jsonWithCors(request, { error: "Invalid bookmark payload" }, { status: 400 }))
+      return routeError("Invalid bookmark payload", { status: 400 })
     }
 
     const updates = buildBookmarkUpdateInput(payload.updates)
     if (!updates) {
-      return respond(jsonWithCors(request, { error: "Updates payload is required" }, { status: 400 }))
+      return routeError("Updates payload is required", { status: 400 })
     }
 
     const mutationPayload = await updateBookmarkForUser(
-      supabase,
-      user.id,
+      supabase!,
+      session!.user.id,
       typeof payload.postId === "string" ? payload.postId.trim() : "",
       updates,
       { revalidate: revalidateByTag, editionHints: getRequestEditionPreferences(request) },
     )
 
-    return successResponse(request, respond, mutationPayload)
+    return routeData(mutationPayload)
   } catch (error) {
-    console.error("Error in bookmarks API:", error)
-    return respond(toErrorResponse(request, error, "Failed to update bookmark"))
+    const actionError = toActionError(error, "Failed to update bookmark")
+    return routeError(actionError.message || "Failed to update bookmark", { status: actionError.status ?? 500 })
   }
-}
+})
 
-export async function DELETE(request: NextRequest) {
-  logRequest(request)
-  const routeClient = createSupabaseRouteClient(request)
-
-  if (!routeClient) return serviceUnavailable(request)
-
-  const { supabase, applyCookies } = routeClient
-  const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
-
+export const DELETE = USER_ROUTE(async ({ request, supabase, session }) => {
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return respond(jsonWithCors(request, { error: "Unauthorized" }, { status: 401 }))
-    }
-
     const { searchParams } = new URL(request.url)
     const postId = searchParams.get("postId")
     const postIds = searchParams.get("postIds")?.split(",").filter(Boolean)
 
     if (!postId && (!postIds || postIds.length === 0)) {
-      return respond(jsonWithCors(request, { error: "Post ID(s) required" }, { status: 400 }))
+      return routeError("Post ID(s) required", { status: 400 })
     }
 
     const ids = postIds?.length ? postIds : [postId ?? ""]
 
-    const mutationPayload = await bulkRemoveBookmarksForUser(supabase, user.id, ids, {
+    const mutationPayload = await bulkRemoveBookmarksForUser(supabase!, session!.user.id, ids, {
       revalidate: revalidateByTag,
       editionHints: getRequestEditionPreferences(request),
     })
 
-    return successResponse(request, respond, mutationPayload)
+    return routeData(mutationPayload)
   } catch (error) {
-    console.error("Error in bookmarks API:", error)
-    return respond(toErrorResponse(request, error, "Failed to remove bookmark(s)"))
+    const actionError = toActionError(error, "Failed to remove bookmark(s)")
+    return routeError(actionError.message || "Failed to remove bookmark(s)", { status: actionError.status ?? 500 })
   }
-}
+})

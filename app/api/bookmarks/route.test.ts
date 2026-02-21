@@ -26,7 +26,7 @@ describe("/api/bookmarks route transport", () => {
     vi.clearAllMocks()
     vi.mocked(createSupabaseRouteClient).mockReturnValue({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test double for a minimal Supabase client surface.
-      supabase: { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } }, error: null }) } } as any,
+      supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "user-1" } } }, error: null }) } } as any,
       applyCookies: applyCookiesMock,
     })
     serviceMocks.listBookmarksForUser.mockResolvedValue({
@@ -40,21 +40,46 @@ describe("/api/bookmarks route transport", () => {
     })
   })
 
-  it("GET delegates to shared service and returns payload", async () => {
-    const response = await GET(new NextRequest("https://example.com/api/bookmarks?limit=5"))
+  it("GET returns standard envelope", async () => {
+    const response = await GET(new NextRequest("https://example.com/api/bookmarks?limit=5"), undefined as never)
     expect(response.status).toBe(200)
-    expect(serviceMocks.listBookmarksForUser).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({ limit: 5 }))
+    await expect(response.json()).resolves.toEqual({
+      data: {
+        bookmarks: [],
+        stats: null,
+        pagination: { limit: 20, hasMore: false, nextCursor: null },
+      },
+      error: null,
+    })
+    expect(serviceMocks.listBookmarksForUser).toHaveBeenCalledWith(
+      expect.anything(),
+      "user-1",
+      expect.objectContaining({ limit: 5 }),
+    )
   })
 
-  it("POST unwraps payload and delegates to shared service", async () => {
+  it("POST returns standard envelope", async () => {
     const response = await POST(
       new NextRequest("https://example.com/api/bookmarks", {
         method: "POST",
         body: JSON.stringify({ action: { payload: { postId: "post-1" } } }),
       }),
+      undefined as never,
     )
 
     expect(response.status).toBe(200)
-    expect(serviceMocks.addBookmarkForUser).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({ postId: "post-1" }), expect.any(Object))
+    await expect(response.json()).resolves.toEqual({
+      data: {
+        added: [],
+        statsDelta: { total: 0, unread: 0, categories: {}, readStates: {}, collections: {} },
+      },
+      error: null,
+    })
+    expect(serviceMocks.addBookmarkForUser).toHaveBeenCalledWith(
+      expect.anything(),
+      "user-1",
+      expect.objectContaining({ postId: "post-1" }),
+      expect.any(Object),
+    )
   })
 })
