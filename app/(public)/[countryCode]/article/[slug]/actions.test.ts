@@ -37,7 +37,7 @@ vi.mock("@/lib/wordpress/posts", () => ({
   getRelatedPostsForCountry: (...args: unknown[]) => mockGetRelatedPostsForCountry(...args),
 }))
 
-vi.mock("@/lib/comment-service", () => ({
+vi.mock("@/lib/comments/client", () => ({
   fetchComments: vi.fn(),
 }))
 

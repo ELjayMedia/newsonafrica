@@ -6,7 +6,7 @@ import { CommentItem } from "@/components/CommentItem"
 const reportCommentMock = vi.fn()
 const toastMock = vi.fn()
 
-vi.mock("@/lib/comment-service", () => ({
+vi.mock("@/lib/comments/client", () => ({
   updateComment: vi.fn(),
   deleteComment: vi.fn(),
   reportComment: (...args: unknown[]) => reportCommentMock(...args),

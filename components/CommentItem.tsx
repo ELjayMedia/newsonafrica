@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useUser } from "@/contexts/UserContext"
 import { CommentForm } from "@/components/CommentForm"
-import { updateComment, deleteComment, reportComment } from "@/lib/comment-service"
+import { updateComment, deleteComment, reportComment } from "@/lib/comments/client"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
