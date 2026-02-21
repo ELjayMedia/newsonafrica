@@ -1,52 +1,53 @@
-// Admin comments moderation endpoint.
-// Canonical moderation backend: Supabase comments service via lib/comments/service.ts.
+import { type NextRequest } from "next/server"
 
-import { type NextRequest, NextResponse } from "next/server"
-import { REVALIDATION_SECRET } from "@/config/env"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { normalizeCommentModerationFilter, normalizeCommentStatus, type ModerationFilterStatus } from "@/lib/comments/moderation-status"
+import {
+  normalizeCommentModerationFilter,
+  normalizeCommentStatus,
+  type ModerationFilterStatus,
+} from "@/lib/comments/moderation-status"
 import { adminUpdateCommentService, listAdminCommentsService } from "@/lib/comments/service"
+import { makeRoute, routeData, routeError } from "@/lib/api/route-helpers"
 
-export async function GET(request: NextRequest) {
-  const adminToken = request.headers.get("x-admin-token")
-  if (adminToken !== REVALIDATION_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+const ADMIN_ROUTE = makeRoute({ auth: "admin", useSupabase: false, applyCookies: false })
 
+const toAdminCommentDto = (comment: {
+  id: string
+  wp_post_id: string
+  body: string
+  user_id: string
+  edition_code: string
+  status: string
+  created_at: string
+}) => ({
+  id: comment.id,
+  wp_post_id: Number(comment.wp_post_id),
+  content: comment.body,
+  created_by: comment.user_id,
+  edition: comment.edition_code,
+  status: comment.status,
+  created_at: comment.created_at,
+})
+
+export const GET = ADMIN_ROUTE(async ({ request }) => {
   const rawStatus = request.nextUrl.searchParams.get("status") || "all"
 
   let status: ModerationFilterStatus
   try {
     status = normalizeCommentModerationFilter(rawStatus)
   } catch {
-    return NextResponse.json({ error: "Invalid status filter" }, { status: 400 })
+    return routeError("Invalid status filter", { status: 400 })
   }
 
   try {
     const comments = await listAdminCommentsService(createAdminClient(), status)
-
-    return NextResponse.json(
-      comments.map((comment) => ({
-        id: comment.id,
-        wp_post_id: Number(comment.wp_post_id),
-        content: comment.body,
-        created_by: comment.user_id,
-        edition: comment.edition_code,
-        status: comment.status,
-        created_at: comment.created_at,
-      })),
-    )
+    return routeData(comments.map(toAdminCommentDto))
   } catch {
-    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 })
+    return routeError("Failed to fetch comments", { status: 500 })
   }
-}
+})
 
-export async function PATCH(request: NextRequest) {
-  const adminToken = request.headers.get("x-admin-token")
-  if (adminToken !== REVALIDATION_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+export const PATCH = ADMIN_ROUTE(async ({ request }) => {
   const commentId = request.nextUrl.searchParams.get("id")
   const body = await request.json()
 
@@ -55,18 +56,18 @@ export async function PATCH(request: NextRequest) {
     try {
       updates.status = normalizeCommentStatus(updates.status)
     } catch {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      return routeError("Invalid status", { status: 400 })
     }
   }
 
   if (!commentId) {
-    return NextResponse.json({ error: "Missing comment id" }, { status: 400 })
+    return routeError("Missing comment id", { status: 400 })
   }
 
   try {
     await adminUpdateCommentService(createAdminClient(), commentId, updates)
-    return NextResponse.json({ success: true })
+    return routeData({ success: true })
   } catch {
-    return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
+    return routeError("Failed to update comment", { status: 500 })
   }
-}
+})

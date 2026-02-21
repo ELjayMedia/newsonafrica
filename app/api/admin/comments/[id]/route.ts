@@ -1,28 +1,26 @@
-// Admin API: Update Single Comment (Service Role Only)
-// Canonical moderation backend: Supabase comments service via lib/comments/service.ts.
-
-import { type NextRequest, NextResponse } from "next/server"
-import { REVALIDATION_SECRET } from "@/config/env"
 import { revalidateTag } from "next/cache"
+
 import { createAdminClient } from "@/lib/supabase/admin"
 import { normalizeCommentStatus } from "@/lib/comments/moderation-status"
 import { adminUpdateCommentService } from "@/lib/comments/service"
+import { makeRoute, routeData, routeError } from "@/lib/api/route-helpers"
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const adminToken = request.headers.get("x-admin-token")
-  if (adminToken !== REVALIDATION_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+type AdminCommentRouteContext = {
+  params: { id: string }
+}
 
-  const body = await request.json()
+const ADMIN_ROUTE = makeRoute<AdminCommentRouteContext>({ auth: "admin", useSupabase: false, applyCookies: false })
+
+export const PATCH = ADMIN_ROUTE(async (_ctx, { params }) => {
   const { id } = params
 
+  const body = await _ctx.request.json()
   const updates = { ...body }
   if (typeof updates.status === "string") {
     try {
       updates.status = normalizeCommentStatus(updates.status)
     } catch {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      return routeError("Invalid status", { status: 400 })
     }
   }
 
@@ -30,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const result = await adminUpdateCommentService(createAdminClient(), id, updates)
     revalidateTag(result.cacheTag)
 
-    return NextResponse.json({
+    return routeData({
       id: result.comment.id,
       wp_post_id: Number(result.comment.wp_post_id),
       content: result.comment.body,
@@ -40,6 +38,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       created_at: result.comment.created_at,
     })
   } catch {
-    return NextResponse.json({ error: "Failed to update comment" }, { status: 500 })
+    return routeError("Failed to update comment", { status: 500 })
   }
-}
+})
