@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
+import { unstable_noStore as noStore } from "next/cache"
 import { draftMode } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
@@ -170,7 +171,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   if (!articleData) {
     if (isTemporaryError) {
       if (!preview && process.env.NODE_ENV === "production") {
-        throw resolvedArticle.error
+        noStore()
       }
 
       const errorDigest =
