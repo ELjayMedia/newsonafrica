@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/contexts/UserContext"
-import { addComment, ApiRequestError, createOptimisticComment } from "@/lib/comment-service"
+import { addComment, ApiRequestError, createOptimisticComment } from "@/lib/comments/client"
 import { renderRichTextComment } from "@/lib/comments/rich-text-renderer"
 import type { Comment } from "@/lib/supabase-schema"
 
