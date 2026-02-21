@@ -169,6 +169,10 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (isTemporaryError) {
+      if (!preview && process.env.NODE_ENV === "production") {
+        throw resolvedArticle.error
+      }
+
       const errorDigest =
         typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
           ? (resolvedArticle.error as { digest?: string }).digest
