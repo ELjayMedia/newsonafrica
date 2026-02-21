@@ -8,10 +8,11 @@
     "build": "next build",
     "check:no-s-framework": "node scripts/framework-guard.mjs",
     "dev": "next dev",
-    "lint": "next lint",
+    "lint": "pnpm check:dal-aliases && next lint",
     "start": "next start",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "check:dal-aliases": "node scripts/check-dal-aliases.mjs"
   },
   "dependencies": {
     "@edge-runtime/vm": "^5.0.0",
