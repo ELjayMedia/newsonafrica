@@ -312,18 +312,20 @@ describe('ArticlePage', () => {
   })
 
 
-  it('throws during production temporary errors so ISR can keep serving last good page', async () => {
+  it('renders temporary fallback in production without throwing server errors', async () => {
     vi.stubEnv('NODE_ENV', 'production')
-    const outage = new Error('Outage')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
-        throw outage
+        throw new Error('Outage')
       }
 
       return graphqlSuccess({}) as any
     })
 
-    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('Temporary WordPress failure')
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
+
+    expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
     vi.unstubAllEnvs()
   })
 
