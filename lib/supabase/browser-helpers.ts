@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { AuthError, Session, SupabaseClient, User } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
@@ -851,3 +852,6 @@ export function clearProfileCache(userId?: string): void {
     profileCache.clear()
   }
 }
+=======
+export * from "./browser"
+>>>>>>> ef0334d9 (Refactor browser helpers into focused supabase modules)
