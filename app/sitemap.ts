@@ -5,7 +5,6 @@ import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 
-export const dynamic = "force-dynamic"
 export const revalidate = 300
 
 type CategoryNode = { name?: string }

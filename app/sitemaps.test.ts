@@ -55,6 +55,15 @@ describe("sitemap fetch limits", () => {
     )
   })
 
+
+
+  it("uses ISR settings for the metadata sitemap route", async () => {
+    const sitemapModule = await import("@/app/sitemap")
+
+    expect(sitemapModule.revalidate).toBe(300)
+    expect("dynamic" in sitemapModule).toBe(false)
+  })
+
   it("limits the server sitemap to the recent post window", async () => {
     const { GET } = await import("@/app/server-sitemap.xml/route")
 

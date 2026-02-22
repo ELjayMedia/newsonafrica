@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
       return jsonWithCors(request, { message: "Invalid secret" }, { status: 401 })
     }
 
-    // Revalidate all sitemap paths
+    // Revalidate metadata sitemap route and XML sitemap index route
+    revalidatePath("/sitemap")
     revalidatePath("/sitemap.xml")
     revalidatePath("/sitemap-index.xml")
 
