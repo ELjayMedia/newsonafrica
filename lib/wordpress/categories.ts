@@ -7,7 +7,7 @@ import {
   POSTS_BY_CATEGORY_QUERY,
 } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { CategoryPostsResult } from "./types"
 import type { WordPressCategory } from "@/types/wp"
