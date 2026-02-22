@@ -1,5 +1,6 @@
 import "server-only"
-import { CACHE_DURATIONS, CACHE_TAGS } from "@/lib/cache/constants"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { appConfig } from "@/lib/config"
 import type { SupportedEdition } from "@/lib/editions"
 import pLimit from "p-limit"
@@ -444,12 +445,6 @@ async function buildHomeContentPropsForEditionUncached(
 }
 
 type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
-
-// Use centralized cache tags
-const cacheTags = {
-  home: CACHE_TAGS.HOME_COUNTRY,
-  edition: CACHE_TAGS.EDITION,
-}
 
 // createCachedFetcher imported from @/lib/utils/cache
 // Wrapper to use centralized config for revalidate time

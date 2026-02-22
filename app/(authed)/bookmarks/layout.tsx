@@ -6,7 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { BookmarksProvider } from "@/contexts/BookmarksContext"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import { ENV } from "@/config/env"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { getServerCountry } from "@/lib/utils/routing"
 import type { BookmarkListPayload } from "@/types/bookmarks"
 

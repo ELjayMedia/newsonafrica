@@ -23,7 +23,7 @@ const {
 } = articleData;
 import { fetchWordPressGraphQL } from "@/lib/wordpress/client";
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries";
-import { cacheTags } from "@/lib/cache";
+import { cacheTags } from "@/lib/cache/cacheTags";
 import { CACHE_DURATIONS } from "@/lib/cache/constants";
 
 describe("article-data", () => {
