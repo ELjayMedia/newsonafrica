@@ -1,128 +1,72 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("@/config/env", () => ({
-  ENV: {
-    NEXT_PUBLIC_SITE_URL: "https://example.com",
-    NEXT_PUBLIC_DEFAULT_SITE: "sz",
-    NEXT_PUBLIC_WP_SZ_GRAPHQL: undefined,
-    NEXT_PUBLIC_WP_ZA_GRAPHQL: undefined,
-    ANALYTICS_API_BASE_URL: "https://example.com/api/analytics",
-    WORDPRESS_REQUEST_TIMEOUT_MS: 30_000,
-  },
+const { mockCreateServerComponentSupabaseClient, mockListCommentsService } = vi.hoisted(() => ({
+  mockCreateServerComponentSupabaseClient: vi.fn(),
+  mockListCommentsService: vi.fn(),
 }))
 
-const {
-  mockResolveEdition,
-  mockBuildArticleCountryPriority,
-  mockLoadArticleWithFallback,
-  mockGetRelatedPostsForCountry,
-} = vi.hoisted(() => ({
-  mockResolveEdition: vi.fn(),
-  mockBuildArticleCountryPriority: vi.fn(),
-  mockLoadArticleWithFallback: vi.fn(),
-  mockGetRelatedPostsForCountry: vi.fn(),
-}))
-
-vi.mock("./article-data", async () => {
-  const actual = await vi.importActual<typeof import("./article-data")>("./article-data")
-  return {
-    ...actual,
-    resolveEdition: mockResolveEdition,
-    buildArticleCountryPriority: mockBuildArticleCountryPriority,
-    loadArticleWithFallback: mockLoadArticleWithFallback,
-  }
-})
-
-vi.mock("@/lib/wordpress/service", () => ({
-  getRelatedPostsForCountry: (...args: unknown[]) => mockGetRelatedPostsForCountry(...args),
-}))
-
-vi.mock("@/lib/comments/client", () => ({
-  fetchComments: vi.fn(),
+vi.mock("@/lib/comments/service", () => ({
+  listCommentsService: (...args: unknown[]) => mockListCommentsService(...args),
 }))
 
 vi.mock("@/lib/supabase/server-component-client", () => ({
-  createServerComponentSupabaseClient: vi.fn(),
+  createServerComponentSupabaseClient: () => mockCreateServerComponentSupabaseClient(),
 }))
 
-process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://supabase.local"
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "anon-key"
+import { fetchCommentsPageAction } from "./actions"
 
-import { fetchArticleWithFallbackAction } from "./actions"
-import { ARTICLE_NOT_FOUND_ERROR_MESSAGE } from "./constants"
-
-describe("fetchArticleWithFallbackAction", () => {
+describe("fetchCommentsPageAction", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("resolves article data, source country, and related posts using the fallback chain", async () => {
-    const edition = { code: "NG", type: "country" } as const
-    mockResolveEdition.mockReturnValue(edition)
-    mockBuildArticleCountryPriority.mockReturnValue(["ng", "za"])
-    mockLoadArticleWithFallback.mockResolvedValue({
-      status: "found",
-      article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
-      sourceCountry: "za",
-      tags: ["edition:za:post:42"],
-      canonicalCountry: "za",
-      version: "2024-05-01t00-00-00z",
-    })
-    const relatedPosts = [{ id: "r1" }]
-    mockGetRelatedPostsForCountry.mockResolvedValue(relatedPosts)
+  it("returns empty state when supabase client is unavailable", async () => {
+    mockCreateServerComponentSupabaseClient.mockReturnValue(null)
 
-    const result = await fetchArticleWithFallbackAction({ countryCode: "NG", slug: "Some-Slug" })
+    const result = await fetchCommentsPageAction({ postId: "123", editionCode: "ng" })
 
-    expect(mockResolveEdition).toHaveBeenCalledWith("NG")
-    expect(mockBuildArticleCountryPriority).toHaveBeenCalledWith("ng")
-    expect(mockLoadArticleWithFallback).toHaveBeenCalledWith("some-slug", ["ng", "za"])
-    expect(mockGetRelatedPostsForCountry).toHaveBeenCalledWith("za", 42, 6)
-    expect(result).toEqual({
-      article: { id: "gid://wordpress/Post:42", databaseId: 42, title: "Test" },
-      sourceCountry: "za",
-      relatedPosts,
-    })
+    expect(result).toEqual({ comments: [], hasMore: false, nextCursor: null, total: 0 })
+    expect(mockListCommentsService).not.toHaveBeenCalled()
   })
 
-  it("returns null article with temporary error details when refresh fails", async () => {
-    const edition = { code: "NG", type: "country" } as const
-    mockResolveEdition.mockReturnValue(edition)
-    mockBuildArticleCountryPriority.mockReturnValue(["ng"])
-    mockLoadArticleWithFallback.mockResolvedValue({
-      status: "temporary_error",
-      error: new Error("Temporary"),
-      failures: [{ country: "ng", error: new Error("Outage") }],
-    })
-
-    const result = await fetchArticleWithFallbackAction({ countryCode: "NG", slug: "Some-Slug" })
-
-    expect(mockGetRelatedPostsForCountry).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      article: null,
-      sourceCountry: "ng",
-      relatedPosts: [],
-      error: {
-        type: "temporary_error",
-        message: "Temporary",
+  it("returns paginated comments from the comments service", async () => {
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } } }),
       },
+    }
+    mockCreateServerComponentSupabaseClient.mockReturnValue(supabase)
+    mockListCommentsService.mockResolvedValue({
+      comments: [{ id: "c1", body: "Hello" }],
+      hasMore: true,
+      nextCursor: "cursor-2",
+      totalCount: 5,
     })
-  })
 
-  it("throws a consistent error when no edition is resolved", async () => {
-    mockResolveEdition.mockReturnValue(null)
+    const result = await fetchCommentsPageAction({
+      postId: "42",
+      editionCode: "ng",
+      page: 1,
+      pageSize: 20,
+      cursor: "cursor-1",
+    })
 
-    await expect(
-      fetchArticleWithFallbackAction({ countryCode: "unknown", slug: "missing" }),
-    ).rejects.toThrow(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
-  })
+    expect(mockListCommentsService).toHaveBeenCalledWith(supabase, {
+      wpPostId: "42",
+      editionCode: "ng",
+      page: 1,
+      limit: 20,
+      parentId: null,
+      status: "active",
+      cursor: "cursor-1",
+      session: { user: { id: "u1" } },
+    })
 
-  it("throws a consistent error when the article cannot be found", async () => {
-    mockResolveEdition.mockReturnValue({ code: "NG", type: "country" })
-    mockBuildArticleCountryPriority.mockReturnValue(["ng"])
-    mockLoadArticleWithFallback.mockResolvedValue({ status: "not_found" })
-
-    await expect(
-      fetchArticleWithFallbackAction({ countryCode: "NG", slug: "missing" }),
-    ).rejects.toThrow(ARTICLE_NOT_FOUND_ERROR_MESSAGE)
+    expect(result).toEqual({
+      comments: [{ id: "c1", body: "Hello" }],
+      hasMore: true,
+      nextCursor: "cursor-2",
+      total: 5,
+    })
   })
 })
