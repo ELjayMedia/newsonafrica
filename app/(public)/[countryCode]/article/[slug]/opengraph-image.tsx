@@ -10,7 +10,7 @@ import {
   buildArticleCountryPriority,
   loadArticleWithFallback,
   normalizeCountryCode,
-  normalizeSlug,
+  parseArticleSlugParam,
   resolveEdition,
 } from "./article-data"
 
@@ -71,7 +71,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
   const normalizedCountry = edition
     ? edition.code.toLowerCase()
     : normalizeCountryCode(countryCode || ENV.NEXT_PUBLIC_DEFAULT_SITE)
-  const normalizedSlug = normalizeSlug(slug)
+  const { normalizedSlug, stableId } = parseArticleSlugParam(slug)
 
   const badge = resolveCountryOgBadge(normalizedCountry)
   const [badgeImage, logoImage] = await Promise.all([
@@ -80,7 +80,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
   ])
 
   const countryPriority = buildArticleCountryPriority(normalizedCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority)
+  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, false, {}, stableId)
   const post = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 

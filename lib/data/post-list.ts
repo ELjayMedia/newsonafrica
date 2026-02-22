@@ -101,7 +101,7 @@ export function mapWordPressPostToPostListItem(post: WordPressPost, countryCode:
     slug,
     title: decodeHtmlEntities(post.title ?? ""),
     excerpt: sanitizeExcerpt(post.excerpt ?? ""),
-    href: getArticleUrl(slug, countryCode),
+    href: getArticleUrl(slug, countryCode, post.databaseId),
     publishedAt: post.date ?? undefined,
     image: post.featuredImage?.node
       ? {

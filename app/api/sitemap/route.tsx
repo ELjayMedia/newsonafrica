@@ -62,7 +62,11 @@ export async function GET(request: Request) {
     .map(
       (post) => `
   <url>
+<<<<<<< HEAD
     <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
+=======
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
+>>>>>>> c0256ba1 (Adopt stable ID canonical article URLs)
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,

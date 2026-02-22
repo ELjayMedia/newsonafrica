@@ -99,7 +99,7 @@ export const buildNewsUrlElement = (
       ? countryFromPost.trim().toLowerCase()
       : undefined) || fallbackCountry || DEFAULT_COUNTRY
 
-  const loc = `${baseUrl}${getArticleUrl(post.slug, countryCode)}`
+  const loc = `${baseUrl}${getArticleUrl(post.slug, countryCode, post.databaseId)}`
   const title = formatTitle(post.title)
   if (!title) {
     return ""

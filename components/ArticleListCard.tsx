@@ -176,7 +176,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
       featuredImage,
       author: post.author?.node?.name,
       categories,
-      link: getArticleUrl(post.slug ?? "", country),
+      link: getArticleUrl(post.slug ?? "", country, post.databaseId),
     }
   }
 
@@ -194,7 +194,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
         name: edge.node.name,
         slug: edge.node.slug,
       })) || [],
-    link: getArticleUrl(art.slug, country),
+    link: getArticleUrl(art.slug, country, art.databaseId),
   }
 }
 

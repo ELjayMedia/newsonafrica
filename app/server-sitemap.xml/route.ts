@@ -90,8 +90,13 @@ export async function GET() {
 
       sitemap += `
   <url>
+<<<<<<< HEAD
     <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
     <lastmod>${postDate}</lastmod>
+=======
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
+    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
+>>>>>>> c0256ba1 (Adopt stable ID canonical article URLs)
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     ${featuredUrl

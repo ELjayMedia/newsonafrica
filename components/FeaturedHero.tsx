@@ -14,6 +14,7 @@ export interface FeaturedHeroProps {
     slug: string
     date: string
     country?: string
+    databaseId?: number
     featuredImage?: {
       node?: {
         sourceUrl?: string
@@ -33,7 +34,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
   const imageUrl = post.featuredImage?.node?.sourceUrl || "/placeholder.svg"
 
   return (
-    <Link href={getArticleUrl(post.slug, post.country)} className="block group">
+    <Link href={getArticleUrl(post.slug, post.country, post.databaseId)} className="block group">
       <div className="grid md:grid-cols-2 gap-3 md:gap-4 bg-slate-50 shadow-none py-1">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image

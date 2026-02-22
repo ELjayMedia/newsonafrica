@@ -127,7 +127,7 @@ export function RelatedArticles({
 
   const ArticleCard = ({ post }: { post: RelatedPost }) => (
     <Link
-      href={getArticleUrl(post.slug, countryCode)}
+      href={getArticleUrl(post.slug, countryCode, post.databaseId)}
       className={cn("group block", layout === "carousel" ? "flex-shrink-0 w-72" : "")}
     >
       <article

@@ -103,7 +103,7 @@ export function SidebarContent({ data, country: providedCountry }: SidebarConten
                 return (
                   <Link
                     key={post.id ?? `${post.slug}-${index}`}
-                    href={getArticleUrl(post.slug, country)}
+                    href={getArticleUrl(post.slug, country, post.databaseId)}
                     className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
                   >
                     <div
@@ -149,7 +149,7 @@ export function SidebarContent({ data, country: providedCountry }: SidebarConten
               {personalizedPosts.map((post: any, index: number) => (
                 <Link
                   key={post.id ?? `${post.slug}-${index}`}
-                  href={getArticleUrl(post.slug, country)}
+                  href={getArticleUrl(post.slug, country, post.databaseId)}
                   className="flex items-start gap-3 group"
                 >
                   {post.featuredImage?.node?.sourceUrl ? (
