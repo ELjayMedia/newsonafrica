@@ -1,5 +1,3 @@
-"use client"
-
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Bookmark, BookmarkCheck, Copy, Mail, Share2, Link as LinkIcon } from "lucide-react"
