@@ -125,7 +125,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   if (isTemporaryError) {
     console.warn("[article-page] metadata fallback used due to temporary article fetch failure", {
       error: resolvedArticle.error,
-      slug: normalizedSlug,
+      slug: parsedSlug,
       countryPriority,
       preview,
     })
