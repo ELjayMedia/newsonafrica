@@ -13,6 +13,14 @@ export interface EditionEndpoints {
 
 const BASE_URL = "https://newsonafrica.com"
 
+type EndpointEnvKey =
+  | "NEXT_PUBLIC_WP_SZ_GRAPHQL"
+  | "NEXT_PUBLIC_WP_ZA_GRAPHQL"
+  | "NEXT_PUBLIC_WP_NG_GRAPHQL"
+  | "NEXT_PUBLIC_WP_SZ_REST_BASE"
+  | "NEXT_PUBLIC_WP_ZA_REST_BASE"
+  | "NEXT_PUBLIC_WP_NG_REST_BASE"
+
 const trimTrailingSlashes = (value: string): string => value.replace(/\/+$/, "")
 
 const defaultGraphqlEndpoint = (edition: EditionCode): string => `${BASE_URL}/${edition}/graphql`
@@ -23,7 +31,7 @@ const ENDPOINT_SCHEMA = z.string().url()
 const logInvalidEndpoint = (params: {
   edition: EditionCode
   type: keyof EditionEndpoints
-  envKey: string
+  envKey: EndpointEnvKey
   providedValue?: string
   fallback: string
   issues: z.ZodIssue[]
@@ -43,13 +51,13 @@ const logInvalidEndpoint = (params: {
 const resolveEndpoint = (params: {
   edition: EditionCode
   type: keyof EditionEndpoints
-  envKey: keyof typeof ENV
+  envKey: EndpointEnvKey
   fallback: string
 }): string => {
   const { edition, type, envKey, fallback } = params
   const rawValue = ENV[envKey]
 
-  if (!rawValue) {
+  if (typeof rawValue !== "string" || !rawValue) {
     return fallback
   }
 
@@ -75,13 +83,13 @@ const createEditionEndpoints = (edition: EditionCode): EditionEndpoints => ({
   graphql: resolveEndpoint({
     edition,
     type: "graphql",
-    envKey: `NEXT_PUBLIC_WP_${edition.toUpperCase()}_GRAPHQL` as keyof typeof ENV,
+    envKey: `NEXT_PUBLIC_WP_${edition.toUpperCase()}_GRAPHQL` as EndpointEnvKey,
     fallback: defaultGraphqlEndpoint(edition),
   }),
   rest: resolveEndpoint({
     edition,
     type: "rest",
-    envKey: `NEXT_PUBLIC_WP_${edition.toUpperCase()}_REST_BASE` as keyof typeof ENV,
+    envKey: `NEXT_PUBLIC_WP_${edition.toUpperCase()}_REST_BASE` as EndpointEnvKey,
     fallback: defaultRestEndpoint(edition),
   }),
 })
