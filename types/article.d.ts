@@ -1,5 +1,6 @@
 export interface Article {
   id: string
+  databaseId?: number
   slug: string
   title: string
   content: string

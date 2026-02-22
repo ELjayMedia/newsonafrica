@@ -11,6 +11,7 @@ type CategoryEntity = { slug?: string }
 type PostEntity = {
   slug: string
   country?: string
+  databaseId?: number
   date?: string
   modified?: string
   title?: string
@@ -89,7 +90,7 @@ export async function GET() {
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

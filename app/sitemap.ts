@@ -15,6 +15,7 @@ type FeaturedImage = { node?: FeaturedImageNode }
 type PostEntity = {
   slug: string
   country?: string
+  databaseId?: number
   date?: string
   modified?: string
   title?: string
@@ -137,7 +138,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           (typeof post.featuredImage?.node?.altText === "string" && post.featuredImage.node.altText) || title
 
         return {
-          url: `${baseUrl}${getArticleUrl(post.slug, post.country)}`,
+          url: `${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}`,
           lastModified: postDate,
           changeFrequency: isRecent ? "daily" : "weekly",
           priority: isRecent ? 0.9 : 0.7,

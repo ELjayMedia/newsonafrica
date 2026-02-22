@@ -9,6 +9,7 @@ interface SecondaryStoryPost {
   slug: string
   date: string
   country?: string
+  databaseId?: number
   featuredImage?: {
     node?: {
       sourceUrl?: string
@@ -37,7 +38,7 @@ export function SecondaryStories({ posts, layout = "vertical" }: SecondaryStorie
       {items.map((post) => (
         <ArticleCard
           key={post.id}
-          href={getArticleUrl(post.slug, post.country)}
+          href={getArticleUrl(post.slug, post.country, post.databaseId)}
           headline={post.title}
           timestamp={post.date}
           layout={isHorizontal ? "horizontal" : "vertical"}

@@ -6,7 +6,7 @@ import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
 import { COUNTRIES } from "@/lib/wordpress/service"
 import type { WordPressPost } from "@/types/wp"
-import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
+import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
@@ -95,11 +95,42 @@ export const resolveEdition = (countryCode: string): SupportedEdition | null => 
 
 export const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "")
 
+
+export type ParsedArticleSlug = {
+  normalizedSlug: string
+  stableId: number | null
+}
+
+export const parseArticleSlugParam = (value: string): ParsedArticleSlug => {
+  const normalizedSlug = normalizeSlug(value)
+  const parts = normalizedSlug.split("-")
+  const candidate = parts.at(-1)
+  const stableId = candidate && /^\d+$/.test(candidate) ? Number.parseInt(candidate, 10) : null
+
+  return {
+    normalizedSlug,
+    stableId: stableId != null && Number.isFinite(stableId) ? stableId : null,
+  }
+}
+
+export const buildCanonicalArticleSlug = (slug: string, databaseId?: number | null): string => {
+  const normalized = normalizeSlug(slug)
+  if (typeof databaseId === "number" && Number.isFinite(databaseId)) {
+    return `${normalized}-${databaseId}`
+  }
+
+  return normalized
+}
+
 type PostBySlugQueryResult = {
   post?: PostFieldsFragment | null
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
+}
+
+type PostByDatabaseIdQueryResult = {
+  post?: PostFieldsFragment | null
 }
 
 type CachedArticlePayload = {
@@ -157,7 +188,7 @@ const asLoadArticleResult = (
   return { status: "found", article, tags, version, canonicalCountry }
 }
 
-export async function loadArticle(countryCode: string, slug: string, preview = false): Promise<LoadArticleResult> {
+const loadArticleBySlug = async (countryCode: string, slug: string, preview = false): Promise<LoadArticleResult> => {
   if (!hasWordPressEndpoint(countryCode)) {
     return { status: "not_found" }
   }
@@ -178,6 +209,65 @@ export async function loadArticle(countryCode: string, slug: string, preview = f
   } catch (error) {
     return { status: "temporary_error", error }
   }
+}
+
+const loadArticleByDatabaseId = async (countryCode: string, databaseId: number, preview = false): Promise<LoadArticleResult> => {
+  if (!hasWordPressEndpoint(countryCode)) {
+    return { status: "not_found" }
+  }
+
+  const requestTags = [cacheTags.post(countryCode, databaseId)]
+  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: requestTags }
+
+  try {
+    const gqlResult = await fetchWordPressGraphQL<PostByDatabaseIdQueryResult>(
+      countryCode,
+      POST_BY_DATABASE_ID_QUERY,
+      { id: databaseId, asPreview: preview },
+      fetchOptions,
+    )
+
+    const node = gqlResult.ok ? gqlResult.post ?? null : null
+
+    if (!gqlResult.ok) {
+      return { status: "temporary_error", error: gqlResult.error, failure: gqlResult }
+    }
+
+    if (!node) {
+      return { status: "not_found" }
+    }
+
+    const article = mapGraphqlPostToWordPressPost(node, countryCode)
+    const resolvedSlug = normalizeSlug(article.slug ?? "") || String(databaseId)
+    const tags = buildArticleCacheTags(countryCode, resolvedSlug, article)
+    const version = resolveArticleVersion(article)
+
+    return {
+      status: "found",
+      article,
+      tags,
+      version,
+      canonicalCountry: normalizeCountryCode(countryCode),
+    }
+  } catch (error) {
+    return { status: "temporary_error", error }
+  }
+}
+
+export async function loadArticle(
+  countryCode: string,
+  slug: string,
+  preview = false,
+  stableId?: number | null,
+): Promise<LoadArticleResult> {
+  if (typeof stableId === "number" && Number.isFinite(stableId)) {
+    const byId = await loadArticleByDatabaseId(countryCode, stableId, preview)
+    if (byId.status === "found" || byId.status === "temporary_error") {
+      return byId
+    }
+  }
+
+  return loadArticleBySlug(countryCode, slug, preview)
 }
 
 const unique = (values: string[]): string[] => {
@@ -359,6 +449,7 @@ export async function loadArticleWithFallback(
   countryPriority: string[],
   preview = false,
   context: LoadArticleWithFallbackContext = {},
+  stableId?: number | null,
 ): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
 
@@ -386,7 +477,7 @@ export async function loadArticleWithFallback(
     })
   }
 
-  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview)
+  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview, stableId)
 
   if (primaryArticle.status === "temporary_error") {
     recordAttempt(primaryCountry, "temporary_error", primaryArticle.failure)
@@ -410,7 +501,7 @@ export async function loadArticleWithFallback(
   }
 
   for (const fallbackCountry of fallbackCountries) {
-    const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview)
+    const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview, stableId)
 
     if (fallbackArticle.status === "temporary_error") {
       recordAttempt(fallbackCountry, "temporary_error", fallbackArticle.failure)

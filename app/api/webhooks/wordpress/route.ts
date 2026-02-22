@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
               categories: categorySlugs,
               author: stripHtml(author),
               published_at: publishedAt,
-              url_path: getArticleUrl(post.slug, resolvedCountry),
+              url_path: getArticleUrl(post.slug, resolvedCountry, Number.parseInt(postId, 10)),
               featured_image_url: featuredImageUrl,
             })
 
