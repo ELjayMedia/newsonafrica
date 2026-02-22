@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { NextRequest, NextResponse } from "next/server"
 import { REVALIDATION_SECRET, WORDPRESS_WEBHOOK_SECRET } from "@/config/env"
 import { isValidCountry } from "@/lib/countries"
@@ -80,6 +80,10 @@ export async function POST(request: NextRequest) {
     })
 
     Array.from(tags).forEach((tag) => revalidateTag(tag))
+
+    revalidatePath("/sitemap")
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/sitemap-index.xml")
 
     return NextResponse.json(
       {
