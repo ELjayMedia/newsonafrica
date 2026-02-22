@@ -434,13 +434,14 @@ export async function loadArticleWithFallback(
     }
   }
 
-  if (temporaryFailures.length > 0 && !preview) {
+  if (temporaryFailures.length > 0) {
     console.error("[article-data] fallback attempts exhausted with temporary failures", {
       slug: normalizedSlug,
       requestedCountry: normalizedRequestedCountry,
       countryPriority,
       attempts,
       staleCacheServed,
+      preview,
     })
 
     const message = buildTemporaryFailureMessage(temporaryFailures)
