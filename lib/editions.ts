@@ -1,5 +1,8 @@
-import { getWpEndpoints } from "@/config/wp"
 import { SITE_BASE_URL } from "@/lib/site-url"
+import {
+  type EditionCode,
+  WORDPRESS_EDITIONS_REGISTRY,
+} from "@/lib/wordpress/editions-registry"
 
 export type EditionType = "country" | "african"
 
@@ -22,7 +25,11 @@ export interface AfricanEdition extends BaseEdition {
 
 export type SupportedEdition = CountryEdition | AfricanEdition
 
-const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint">> = [
+type CountryDefinition = Omit<CountryEdition, "type" | "apiEndpoint"> & {
+  code: EditionCode
+}
+
+const COUNTRY_DEFINITIONS: CountryDefinition[] = [
   {
     code: "sz",
     name: "Eswatini",
@@ -49,7 +56,7 @@ const COUNTRY_DEFINITIONS: Array<Omit<CountryEdition, "type" | "apiEndpoint">> =
 export const SUPPORTED_COUNTRIES: CountryEdition[] = COUNTRY_DEFINITIONS.map((country) => ({
   ...country,
   type: "country",
-  apiEndpoint: getWpEndpoints(country.code).graphql,
+  apiEndpoint: WORDPRESS_EDITIONS_REGISTRY[country.code].graphql,
 }))
 
 export const AFRICAN_EDITION: AfricanEdition = {
