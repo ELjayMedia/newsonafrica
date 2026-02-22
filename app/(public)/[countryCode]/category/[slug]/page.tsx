@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/category/ErrorState"
 import { LoadMoreClient } from "@/components/category/LoadMoreClient"
 import { STATIC_GENERATION_LIMITS } from "@/lib/cache/isr-config"
 import { getAllCategories } from "@/lib/wordpress/service"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 
 interface Params {
   countryCode: string

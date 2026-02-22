@@ -1,62 +1,90 @@
 import { revalidateTag } from "next/cache"
 import { NextRequest, NextResponse } from "next/server"
-import { ENV } from "@/config/env"
+import { REVALIDATION_SECRET, WORDPRESS_WEBHOOK_SECRET } from "@/config/env"
 import { isValidCountry } from "@/lib/countries"
+import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
+import { cacheTags } from "@/lib/cache/cacheTags"
 
-/**
- * POST /api/revalidate
- *
- * Webhook endpoint for WordPress to trigger ISR revalidation
- * Revalidates cached articles and edition pages by tag
- *
- * Body:
- * {
- *   "secret": "WORDPRESS_WEBHOOK_SECRET",
- *   "countryCode": "sz",
- *   "slug": "article-slug"
- * }
- */
+type RevalidatePayload = {
+  secret?: unknown
+  country?: unknown
+  countryCode?: unknown
+  slug?: unknown
+  postId?: unknown
+  categories?: unknown
+  tags?: unknown
+}
+
+const normalizeString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return normalized || null
+}
+
+const normalizeCountry = (value: unknown): string => {
+  const country = normalizeString(value)
+  return country && isValidCountry(country) ? country : DEFAULT_COUNTRY
+}
+
+const normalizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  const items = new Set<string>()
+  for (const item of value) {
+    const normalized = normalizeString(item)
+    if (normalized) {
+      items.add(normalized)
+    }
+  }
+
+  return Array.from(items)
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Verify secret from header or body
     const headerSecret = request.headers.get("X-Revalidate-Secret")
-    const body = (await request.json()) as Record<string, unknown>
+    const body = (await request.json()) as RevalidatePayload
     const bodySecret = typeof body.secret === "string" ? body.secret : undefined
 
+    const expectedSecret = REVALIDATION_SECRET || WORDPRESS_WEBHOOK_SECRET
     const providedSecret = headerSecret || bodySecret
-    if (!providedSecret || providedSecret !== ENV.WORDPRESS_WEBHOOK_SECRET) {
+
+    if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Extract and validate country code
-    const countryCode = String(body.countryCode || "").trim().toLowerCase()
-    if (!isValidCountry(countryCode)) {
-      return NextResponse.json(
-        { error: `Invalid country code: ${countryCode}` },
-        { status: 400 },
-      )
+    const countryCode = normalizeCountry(body.countryCode ?? body.country)
+    const slug = normalizeString(body.slug)
+    const postId = body.postId != null ? String(body.postId).trim() : null
+
+    const tags = new Set<string>([cacheTags.edition(countryCode), cacheTags.home(countryCode)])
+
+    if (slug) {
+      tags.add(cacheTags.post(countryCode, postId || slug))
+      tags.add(cacheTags.postSlug(countryCode, slug))
+    } else if (postId) {
+      tags.add(cacheTags.post(countryCode, postId))
     }
 
-    // Extract and validate slug
-    const slug = String(body.slug || "").trim().toLowerCase()
-    if (!slug) {
-      return NextResponse.json({ error: "Missing slug" }, { status: 400 })
-    }
+    normalizeStringArray(body.categories).forEach((category) => {
+      tags.add(cacheTags.category(countryCode, category))
+    })
 
-    // Revalidate tags
-    const tags = [
-      `article-${slug}-${countryCode}`,
-      `country-${countryCode}`,
-    ]
+    normalizeStringArray(body.tags).forEach((tag) => {
+      tags.add(cacheTags.tag(countryCode, tag))
+    })
 
-    for (const tag of tags) {
-      revalidateTag(tag)
-    }
+    Array.from(tags).forEach((tag) => revalidateTag(tag))
 
     return NextResponse.json(
       {
         revalidated: true,
-        tags,
+        tags: Array.from(tags),
         timestamp: new Date().toISOString(),
       },
       { status: 200 },
@@ -66,4 +94,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Revalidation failed" }, { status: 500 })
   }
 }
-

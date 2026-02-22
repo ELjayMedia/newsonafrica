@@ -1,5 +1,5 @@
 import { ENV } from "@/config/env"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"

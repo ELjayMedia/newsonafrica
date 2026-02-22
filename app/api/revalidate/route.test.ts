@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
-vi.mock("@/lib/api-utils", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api-utils")>("@/lib/api-utils")
-  return {
-    ...actual,
-    applyRateLimit: vi.fn().mockResolvedValue(null),
-    logRequest: vi.fn(),
-  }
-})
-
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
+}))
+
+vi.mock("@/config/env", () => ({
+  ENV: {
+    NEXT_PUBLIC_DEFAULT_SITE: "sz",
+    NEXT_PUBLIC_SITE_URL: "https://newsonafrica.com",
+  },
+  REVALIDATION_SECRET: "test-secret",
+  WORDPRESS_WEBHOOK_SECRET: "",
 }))
 
 import { revalidateTag } from "next/cache"
@@ -31,11 +31,9 @@ const createRequest = (body: Record<string, unknown>) =>
 describe("/api/revalidate", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.REVALIDATION_SECRET = SECRET
-    process.env.NEXT_PUBLIC_DEFAULT_SITE = "sz"
   })
 
-  it("revalidates article caches and related taxonomies", async () => {
+  it("revalidates canonical article, edition, home and taxonomy tags", async () => {
     const request = createRequest({
       secret: SECRET,
       slug: "My-Story",
@@ -43,40 +41,35 @@ describe("/api/revalidate", () => {
       country: "ng",
       categories: ["Politics", "politics"],
       tags: ["Breaking", "finance"],
-      sections: ["news"],
     })
 
     await POST(request)
 
-    const tagCalls = vi.mocked(revalidateTag).mock.calls.flat()
-    expect(tagCalls).toEqual(
-      expect.arrayContaining([
-        cacheTags.edition("ng"),
-        cacheTags.home("ng"),
-        cacheTags.post("ng", "77"),
-        cacheTags.category("ng", "politics"),
-        cacheTags.tag("ng", "breaking"),
-        cacheTags.tag("ng", "finance"),
-      ]),
-    )
+    expect(vi.mocked(revalidateTag).mock.calls.map(([value]) => value)).toEqual([
+      cacheTags.edition("ng"),
+      cacheTags.home("ng"),
+      cacheTags.post("ng", "77"),
+      cacheTags.postSlug("ng", "my-story"),
+      cacheTags.category("ng", "politics"),
+      cacheTags.tag("ng", "breaking"),
+      cacheTags.tag("ng", "finance"),
+    ])
   })
 
-  it("uses the default country when none is provided and revalidates explicit paths and sections", async () => {
+  it("falls back to default country and slug-based post id", async () => {
     const request = createRequest({
       secret: SECRET,
       slug: "latest-update",
-      sections: ["frontpage", "FrontPage"],
+      sections: ["frontpage"],
     })
 
     await POST(request)
 
-    const tagCalls = vi.mocked(revalidateTag).mock.calls.flat()
-    expect(tagCalls).toEqual(
-      expect.arrayContaining([
-        cacheTags.edition(DEFAULT_COUNTRY),
-        cacheTags.home(DEFAULT_COUNTRY),
-        cacheTags.post(DEFAULT_COUNTRY, "latest-update"),
-      ]),
-    )
+    expect(vi.mocked(revalidateTag).mock.calls.map(([value]) => value)).toEqual([
+      cacheTags.edition(DEFAULT_COUNTRY),
+      cacheTags.home(DEFAULT_COUNTRY),
+      cacheTags.post(DEFAULT_COUNTRY, "latest-update"),
+      cacheTags.postSlug(DEFAULT_COUNTRY, "latest-update"),
+    ])
   })
 })

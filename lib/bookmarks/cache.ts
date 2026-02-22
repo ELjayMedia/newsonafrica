@@ -1,4 +1,4 @@
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 
 export interface BookmarkCacheInvalidationInput {
   userId: string
