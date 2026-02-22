@@ -51,6 +51,7 @@ describe("/api/webhooks/wordpress", () => {
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.edition("ng"))
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.home("ng"))
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.post("ng", "77"))
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.postSlug("ng", "my-story"))
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.category("ng", "politics"))
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.tag("ng", "breaking"))
     expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.home("all"))

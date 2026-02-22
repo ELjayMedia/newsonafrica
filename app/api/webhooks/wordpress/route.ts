@@ -278,6 +278,7 @@ export async function POST(request: NextRequest) {
             if (postIdentifier) {
               tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
             }
+            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
 
             categorySlugs.forEach((slug) => {
               tagsToRevalidate.add(cacheTags.category(country, slug))
@@ -323,6 +324,7 @@ export async function POST(request: NextRequest) {
             if (postIdentifier) {
               tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
             }
+            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
 
             categorySlugs.forEach((slug) => {
               tagsToRevalidate.add(cacheTags.category(country, slug))
