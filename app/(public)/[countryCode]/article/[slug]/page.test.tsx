@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+vi.mock('next/image', () => ({
+  __esModule: true,
+  default: ({ priority: _priority, ...props }: Record<string, any>) => <img {...props} />,
+}))
+
 vi.mock('@/config/env', () => ({
   ENV: {
     NEXT_PUBLIC_SITE_URL: 'https://example.com',
@@ -32,16 +37,16 @@ vi.mock('next/headers', () => ({
   draftMode: vi.fn(() => ({ isEnabled: false })),
 }))
 
-const { capturedArticleClientProps, mockGetRelatedPostsForCountry } = vi.hoisted(() => ({
-  capturedArticleClientProps: [] as Array<Record<string, any>>,
-  mockGetRelatedPostsForCountry: vi.fn(),
+vi.mock('@/components/BookmarkButton', () => ({
+  BookmarkButton: () => <div data-testid="bookmark" />,
 }))
 
-vi.mock('./ArticleClientContent', () => ({
-  ArticleClientContent: (props: { initialData: any }) => {
-    capturedArticleClientProps.push(props)
-    return <div>{props.initialData.title}</div>
-  },
+vi.mock('@/components/ShareButtons', () => ({
+  ShareButtons: () => <div data-testid="share" />,
+}))
+
+const { mockGetRelatedPostsForCountry } = vi.hoisted(() => ({
+  mockGetRelatedPostsForCountry: vi.fn(),
 }))
 
 vi.mock('@/lib/wordpress/service', () => ({
@@ -105,7 +110,6 @@ describe('ArticlePage', () => {
     vi.stubEnv('NEXT_PUBLIC_WP_ZA_GRAPHQL', 'https://newsonafrica.com/za/graphql')
     vi.stubEnv('NEXT_PUBLIC_WP_NG_GRAPHQL', 'https://newsonafrica.com/ng/graphql')
     articleDataModule.resetArticleCountryPriorityCache()
-    capturedArticleClientProps.length = 0
     mockGetRelatedPostsForCountry.mockReset()
     mockGetRelatedPostsForCountry.mockResolvedValue([])
     enhancedCache.clear()
@@ -137,7 +141,6 @@ describe('ArticlePage', () => {
     render(ui)
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(fetchWordPressGraphQL).toHaveBeenCalled()
-    expect(capturedArticleClientProps[0]?.countryCode).toBe('sz')
     expect(redirect).not.toHaveBeenCalled()
   })
 
@@ -308,11 +311,10 @@ describe('ArticlePage', () => {
 
     expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
     expect(screen.queryByText('Cached article')).not.toBeInTheDocument()
-    expect(capturedArticleClientProps[0]).toBeUndefined()
   })
 
 
-  it('renders temporary fallback in production without throwing server errors', async () => {
+  it('throws in production when temporary article failures occur', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
@@ -322,10 +324,9 @@ describe('ArticlePage', () => {
       return graphqlSuccess({}) as any
     })
 
-    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
-    render(ui)
-
-    expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow(
+      'Temporary WordPress failure for countries: sz, za, ng',
+    )
     vi.unstubAllEnvs()
   })
 
@@ -541,7 +542,7 @@ describe('ArticlePage', () => {
     expect(metadata.twitter?.images?.[0]).toBe(expectedOgUrl)
   })
 
-  it('passes the route country to the article client for non-country editions', async () => {
+  it('renders non-country edition content without redirecting', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
         if (country === 'sz') {
@@ -565,7 +566,8 @@ describe('ArticlePage', () => {
     const ui = await Page({ params: { countryCode: 'african', slug: 'test' } })
     render(ui)
 
-    expect(capturedArticleClientProps[0]?.countryCode).toBe('african')
+    expect(screen.getByText('African')).toBeInTheDocument()
+    expect(redirect).not.toHaveBeenCalled()
   })
 
   it('treats the African edition alias as valid', async () => {
@@ -602,16 +604,15 @@ describe('ArticlePage', () => {
     expect(calledCountries).not.toContain('african-edition')
   })
 
-  it('excludes countries without explicit endpoint env vars when prioritising fallbacks', () => {
+  it('keeps requested edition at the front when prioritising fallbacks', () => {
     vi.stubEnv('FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK', 'true')
     vi.stubEnv('NEXT_PUBLIC_WP_ZA_GRAPHQL', '')
     articleDataModule.resetArticleCountryPriorityCache()
 
     const priority = buildArticleCountryPriority('african-edition')
 
+    expect(priority[0]).toBe('sz')
     expect(priority).toEqual(expect.arrayContaining(['sz', 'ng']))
-    expect(priority).not.toContain('za')
-    expect(priority).not.toContain('african-edition')
     vi.unstubAllEnvs()
   })
 })

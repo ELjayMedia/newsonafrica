@@ -1,14 +1,28 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
+import Image from "next/image"
+import Link from "next/link"
 import { unstable_noStore as noStore } from "next/cache"
 import { draftMode } from "next/headers"
 import { notFound, redirect } from "next/navigation"
+import { MessageSquare, Gift } from "lucide-react"
 
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
+import { BookmarkButton } from "@/components/BookmarkButton"
+import { ShareButtons } from "@/components/ShareButtons"
+import { Button } from "@/components/ui/button"
+import { ArticleBody } from "@/components/article/ArticleBody"
+import { ArticleHeader } from "@/components/article/ArticleHeader"
+import { ArticleMostRead } from "@/components/article/ArticleMostRead"
+import { ArticlePageLayout } from "@/components/article/ArticlePageLayout"
+import { ArticleRelatedSection } from "@/components/article/ArticleRelatedSection"
+import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
+import { transformWordPressEmbeds } from "@/lib/utils/wordpressEmbeds"
+import { rewriteLegacyLinks } from "@/lib/utils/routing"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -21,7 +35,6 @@ import {
   sanitizeBaseUrl,
 } from "./article-data"
 
-import { ArticleClientContent } from "./ArticleClientContent"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 
 export async function generateStaticParams() {
@@ -66,6 +79,14 @@ const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =
   `${baseUrl}/${countryCode}/article/${slug}/opengraph-image`
 
 const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_PATH}`
+
+const resolveRenderedText = (value: unknown): string => {
+  if (typeof value === "string") return value
+  if (value && typeof value === "object" && "rendered" in value && typeof (value as { rendered?: unknown }).rendered === "string") {
+    return (value as { rendered: string }).rendered
+  }
+  return ""
+}
 
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
@@ -246,13 +267,85 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       <Suspense fallback={null}>
         <ArticleJsonLd post={articleData} url={canonicalUrl} />
       </Suspense>
-      <ArticleClientContent
-        slug={normalizedSlug}
-        countryCode={targetCountry}
-        sourceCountryCode={resolvedSourceCountry}
-        initialData={articleData}
-        relatedPosts={relatedPosts}
-      />
+      <ArticlePageLayout
+        sidebar={
+          <div className="space-y-8">
+            <ArticleMostRead articles={relatedPosts.slice(0, 5)} countryCode={targetCountry} />
+          </div>
+        }
+      >
+        <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
+          <article className="mb-8 space-y-6">
+            <ArticleHeader
+              title={stripHtml(resolveRenderedText(articleData.title)) || "Untitled article"}
+              excerpt={stripHtml(resolveRenderedText(articleData.excerpt))}
+              category={articleData.categories?.nodes?.[0]?.name}
+              author={
+                resolveRenderedText(articleData.author?.node?.name ?? articleData.author?.name) ||
+                articleData.author?.node?.name ||
+                articleData.author?.name ||
+                "News On Africa"
+              }
+              publishedDate={articleData.date}
+            />
+
+            <div className="flex items-center justify-between">
+              <ShareButtons
+                title={stripHtml(resolveRenderedText(articleData.title)) || "News On Africa"}
+                description={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
+                url={`/${targetCountry}/article/${normalizedSlug}`}
+                variant="ghost"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="rounded-full">
+                  <MessageSquare className="mr-2 h-4 w-4" />Comments
+                </Button>
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href={`/subscribe?intent=gift&article=${normalizedSlug}&country=${targetCountry}`}>
+                    <Gift className="mr-2 h-4 w-4" />Gift article
+                  </Link>
+                </Button>
+                <BookmarkButton
+                  postId={
+                    articleData.id ??
+                    (typeof articleData.databaseId === "number" ? String(articleData.databaseId) : normalizedSlug)
+                  }
+                  editionCode={targetCountry}
+                  slug={normalizedSlug}
+                  title={stripHtml(resolveRenderedText(articleData.title)) || "Untitled Post"}
+                  excerpt={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
+                  featuredImage={articleData.featuredImage?.node?.sourceUrl}
+                />
+              </div>
+            </div>
+
+            {articleData.featuredImage?.node?.sourceUrl ? (
+              <Image
+                src={articleData.featuredImage.node.sourceUrl}
+                alt={articleData.featuredImage.node.altText || stripHtml(resolveRenderedText(articleData.title)) || "Article image"}
+                width={1200}
+                height={675}
+                className="w-full rounded-lg"
+                priority
+              />
+            ) : null}
+
+            <ArticleBody
+              html={transformWordPressEmbeds(
+                sanitizeArticleHtml(
+                  rewriteLegacyLinks(
+                    resolveRenderedText(articleData.content)?.trim() || "<p>This article has no body content yet.</p>",
+                    targetCountry,
+                  ),
+                ),
+              )}
+              className="prose prose-lg max-w-none mb-8 text-sm text-black"
+            />
+
+            <ArticleRelatedSection articles={relatedPosts} countryCode={targetCountry} />
+          </article>
+        </div>
+      </ArticlePageLayout>
     </>
   )
 }
