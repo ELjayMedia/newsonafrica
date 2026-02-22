@@ -70,7 +70,7 @@ export async function GET(request: Request) {
         .map(
           (post) => `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,

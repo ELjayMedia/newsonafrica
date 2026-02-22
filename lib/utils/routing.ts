@@ -121,9 +121,15 @@ export function getServerCountry(): string {
 /**
  * Generate country-specific article URL
  */
-export function getArticleUrl(slug: string, countryCode?: string): string {
+export function getArticleUrl(slug: string, countryCode?: string, databaseId?: number | null): string {
   const country = countryCode || getCurrentCountry()
-  return `/${country}/article/${slug}`
+  const normalizedSlug = slug.toLowerCase()
+  const canonicalSlug =
+    typeof databaseId === "number" && Number.isFinite(databaseId)
+      ? `${normalizedSlug}-${databaseId}`
+      : normalizedSlug
+
+  return `/${country}/article/${canonicalSlug}`
 }
 
 /**

@@ -49,7 +49,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
       </div>
 
       <ArticleCard
-        href={getArticleUrl(mainPost?.slug ?? "", mainPost?.country)}
+        href={getArticleUrl(mainPost?.slug ?? "", mainPost?.country, mainPost?.databaseId)}
         headline={mainPost?.title ?? ""}
         excerpt={sanitizedMainExcerpt}
         timestamp={mainPost?.date}
@@ -70,7 +70,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
         {secondaryPosts.slice(0, 3).map((post, index) => (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country)}
+            href={getArticleUrl(post.slug, post.country, post.databaseId)}
             headline={post.title}
             timestamp={post.date}
             layout="horizontal"
@@ -107,7 +107,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
   return (
     <>
       <ArticleCard
-        href={getArticleUrl(mainPost.slug ?? "", mainPost.country)}
+        href={getArticleUrl(mainPost.slug ?? "", mainPost.country, mainPost.databaseId)}
         headline={mainPost.title}
         excerpt={sanitizedMainExcerpt}
         timestamp={mainPost.date}
@@ -127,7 +127,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         {secondaryPosts.map((post, index) => (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country)}
+            href={getArticleUrl(post.slug, post.country, post.databaseId)}
             headline={post.title}
             timestamp={post.date}
             layout="horizontal"
@@ -169,7 +169,7 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
         return (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country)}
+            href={getArticleUrl(post.slug, post.country, post.databaseId)}
             headline={post.title}
             excerpt={sanitizedExcerpt}
             timestamp={post.date}
