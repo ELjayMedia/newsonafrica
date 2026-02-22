@@ -8,6 +8,12 @@ export const runtime = "nodejs"
 // Cache policy: short (1 minute)
 export const revalidate = 60
 
+const DEPRECATION_HEADERS = {
+  Deprecation: "true",
+  Sunset: "Tue, 30 Jun 2026 23:59:59 GMT",
+  Link: '</docs/wordpress-service-migration>; rel="deprecation"; type="text/markdown"',
+} as const
+
 type CountriesQueryResult = {
   countries?: {
     nodes?: Array<{
@@ -49,5 +55,5 @@ export async function GET(req: NextRequest) {
     })
     .filter((row): row is CountryRow => Boolean(row))
 
-  return jsonWithCors(req, data)
+  return jsonWithCors(req, data, { headers: DEPRECATION_HEADERS })
 }
