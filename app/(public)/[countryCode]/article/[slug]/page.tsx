@@ -9,6 +9,7 @@ import { MessageSquare, Gift } from "lucide-react"
 
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
+import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
@@ -346,7 +347,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
             ) : null}
 
             <ArticleBody
-              html={resolveRenderedText(articleData.content)?.trim() || "<p>This article has no body content yet.</p>"}
+              html={sanitizeArticleHtml(resolveRenderedText(articleData.content)?.trim() || "<p>This article has no body content yet.</p>")}
               className="prose prose-lg max-w-none mb-8 text-sm text-black"
             />
 
