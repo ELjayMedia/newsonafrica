@@ -1,7 +1,7 @@
 // ✅ Unified WP post mappers + list adapters (resolved merge)
 
 // --- External helpers & types
-import { rewriteLegacyLinks } from "@/lib/utils/routing"
+import { normalizeWordPressPostContent } from "@/lib/wordpress/normalize-post-content"
 
 // Low-level normalized WordPress types
 import type {
@@ -149,7 +149,7 @@ export const mapGraphqlPostToWordPressPost = (
     excerpt: post.excerpt ?? "",
     content:
       typeof rawContent === "string" && rawContent.length > 0
-        ? rewriteLegacyLinks(rawContent, countryCode)
+        ? normalizeWordPressPostContent(rawContent, countryCode)
         : undefined,
     uri: post.uri ?? undefined,
     link: post.link ?? undefined,
