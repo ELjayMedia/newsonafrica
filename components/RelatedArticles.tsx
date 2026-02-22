@@ -10,6 +10,7 @@ interface RelatedPost {
   id: string
   title: string
   slug: string
+  databaseId?: number
   date: string
   excerpt?: string
   featuredImage?: {

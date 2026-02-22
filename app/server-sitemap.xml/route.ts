@@ -11,6 +11,7 @@ type CategoryEntity = { slug?: string }
 type PostEntity = {
   slug: string
   country?: string
+  databaseId?: number
   date?: string
   modified?: string
   title?: string
