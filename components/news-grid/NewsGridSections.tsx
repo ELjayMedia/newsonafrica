@@ -13,6 +13,7 @@ export interface NewsGridPost {
   date: string
   type?: string
   country?: string
+  databaseId?: number
   featuredImage?: {
     node?: {
       sourceUrl?: string

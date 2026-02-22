@@ -9,6 +9,7 @@ interface SecondaryStoryPost {
   slug: string
   date: string
   country?: string
+  databaseId?: number
   featuredImage?: {
     node?: {
       sourceUrl?: string

@@ -11,6 +11,7 @@ type SitemapCategory = {
 type SitemapPost = {
   slug: string
   country?: string
+  databaseId?: number
 }
 
 const fetchAllCategories = async (): Promise<SitemapCategory[]> => {
