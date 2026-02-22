@@ -4,7 +4,7 @@ import { appConfig } from "@/lib/config"
 import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 

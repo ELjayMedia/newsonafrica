@@ -1,6 +1,6 @@
 import { stripHtml } from "@/lib/search"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { POSTS_QUERY } from "@/lib/wordpress/queries"
 import {
   fetchWordPressGraphQL,
