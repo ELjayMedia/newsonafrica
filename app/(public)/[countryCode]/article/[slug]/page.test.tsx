@@ -314,7 +314,7 @@ describe('ArticlePage', () => {
   })
 
 
-  it('throws in production when temporary article failures occur', async () => {
+  it('renders fallback markup in production when temporary article failures occur', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
       if (query === POST_BY_SLUG_QUERY) {
@@ -324,9 +324,33 @@ describe('ArticlePage', () => {
       return graphqlSuccess({}) as any
     })
 
-    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow(
-      'Temporary WordPress failure for countries: sz, za, ng',
-    )
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
+
+    expect(screen.getAllByText('Temporarily unavailable').length).toBeGreaterThan(0)
+    expect(notFound).not.toHaveBeenCalled()
+    vi.unstubAllEnvs()
+  })
+
+  it('returns safe metadata in production when temporary errors occur', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.mocked(fetchWordPressGraphQL).mockRejectedValue(new Error('Outage'))
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ countryCode: 'sz', slug: 'test' }),
+    })
+
+    const baseUrl = ENV.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const dynamicUrl = `${baseUrl}/sz/article/test/opengraph-image`
+    const fallbackUrl = `${baseUrl}/news-placeholder.png`
+
+    expect(metadata.title).toBe('Article temporarily unavailable - News On Africa')
+    expect(metadata.description).toBe('We hit a temporary issue loading this story. Please try again in a moment.')
+    expect(metadata.openGraph?.images?.[0]?.url).toBe(dynamicUrl)
+    expect(metadata.openGraph?.images?.[1]?.url).toBe(fallbackUrl)
+    expect(metadata.twitter?.images?.[0]).toBe(dynamicUrl)
+    expect(metadata.twitter?.images?.[1]).toBe(fallbackUrl)
+
     vi.unstubAllEnvs()
   })
 

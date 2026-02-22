@@ -121,10 +121,14 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const isTemporaryError = resolvedArticle.status === "temporary_error"
-  const shouldRenderTemporaryShell = preview || process.env.NODE_ENV !== "production"
 
-  if (isTemporaryError && !shouldRenderTemporaryShell) {
-    throw resolvedArticle.error
+  if (isTemporaryError) {
+    console.warn("[article-page] metadata fallback used due to temporary article fetch failure", {
+      error: resolvedArticle.error,
+      slug: normalizedSlug,
+      countryPriority,
+      preview,
+    })
   }
 
   const title =
@@ -195,25 +199,35 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (!articleData) {
     if (isTemporaryError) {
-      if (!preview && process.env.NODE_ENV === "production") {
-        throw resolvedArticle.error
-      }
-
       noStore()
+
+      console.warn("[article-page] rendering fallback due to temporary article fetch failure", {
+        error: resolvedArticle.error,
+        slug: normalizedSlug,
+        countryPriority,
+        preview,
+      })
 
       const errorDigest =
         typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
           ? (resolvedArticle.error as { digest?: string }).digest
           : undefined
       const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
+      const staleArticle = resolvedArticle.staleArticle ?? null
 
-      return <ArticleServerFallback digest={errorDigest} failureCountries={failureCountries} />
+      return (
+        <ArticleServerFallback
+          staleArticle={staleArticle}
+          digest={errorDigest}
+          failureCountries={failureCountries}
+        />
+      )
     }
 
     notFound()
   }
 
-  if (isTemporaryError && process.env.NODE_ENV !== "production") {
+  if (isTemporaryError) {
     console.warn("Serving stale article content due to temporary failure", {
       error: resolvedArticle.error,
       slug: normalizedSlug,
