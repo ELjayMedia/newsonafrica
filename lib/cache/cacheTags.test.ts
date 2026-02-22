@@ -18,4 +18,14 @@ describe("cacheTags", () => {
     expect(cacheTags.home(undefined)).toBe("home:african-edition")
     expect(cacheTags.edition(null)).toBe("edition:african-edition")
   })
+
+
+  it("emits exact canonical namespace strings", () => {
+    expect(cacheTags.edition("ng")).toBe("edition:ng")
+    expect(cacheTags.home("all")).toBe("home:all")
+    expect(cacheTags.post("ng", "77")).toBe("edition:ng:post:77")
+    expect(cacheTags.postSlug("ng", "my-story")).toBe("edition:ng:post-slug:my-story")
+    expect(cacheTags.category("ng", "politics")).toBe("edition:ng:category:politics")
+    expect(cacheTags.tag("ng", "breaking")).toBe("edition:ng:tag:breaking")
+  })
 })

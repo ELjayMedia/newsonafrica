@@ -55,7 +55,7 @@ vi.mock('@/lib/wordpress/service', () => ({
 
 import Page, { generateMetadata } from './page'
 import { fetchWordPressGraphQL } from '@/lib/wordpress/client'
-import { cacheTags } from '@/lib/cache'
+import { cacheTags } from '@/lib/cache/cacheTags'
 import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
 import { draftMode } from 'next/headers'
