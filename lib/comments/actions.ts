@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { AFRICAN_EDITION } from "@/lib/editions"
 import { normalizeEditionCode, type CommentAction } from "./validators"
 

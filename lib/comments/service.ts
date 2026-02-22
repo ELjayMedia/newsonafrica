@@ -6,7 +6,7 @@ import type { Comment, CommentReactionType } from "@/lib/supabase-schema"
 import type { Database } from "@/types/supabase"
 import { normalizeEditionCode, type CommentAction, type CommentStatus } from "./validators"
 import { AFRICAN_EDITION } from "@/lib/editions"
-import { cacheTags } from "@/lib/cache"
+import { cacheTags } from "@/lib/cache/cacheTags"
 
 const COMMENT_SELECT =
   "id, wp_post_id, edition_code, user_id, body, parent_id, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, replies_count, reactions_count, is_rich_text, profile:profiles(username, avatar_url)"
