@@ -102,6 +102,11 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
   const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
   const isTemporaryError = resolvedArticle.status === "temporary_error"
+  const shouldRenderTemporaryShell = preview || process.env.NODE_ENV !== "production"
+
+  if (isTemporaryError && !shouldRenderTemporaryShell) {
+    throw resolvedArticle.error
+  }
 
   const title =
     stripHtml(article?.title ?? "") ||
@@ -171,8 +176,10 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   if (!articleData) {
     if (isTemporaryError) {
       if (!preview && process.env.NODE_ENV === "production") {
-        noStore()
+        throw resolvedArticle.error
       }
+
+      noStore()
 
       const errorDigest =
         typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
