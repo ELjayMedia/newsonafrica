@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 import { ENV } from "@/config/env"
 import {
   type EditionCode,
@@ -16,6 +18,8 @@ const GRAPHQL_SUFFIX = "GRAPHQL"
 const REST_SUFFIX = "REST_BASE"
 const DEPRECATION_WARNING =
   "[DEPRECATION] Dynamic WP endpoint env lookups are deprecated; use lib/wordpress/editions-registry.ts explicit edition entries instead."
+
+const URL_SCHEMA = z.string().url()
 
 const trimTrailingSlashes = (value?: string | null): string | undefined => {
   if (!value) {
@@ -47,7 +51,46 @@ const getRegistryEndpoints = (country: string): WordPressEndpoints | undefined =
     return undefined
   }
 
-  return WORDPRESS_EDITIONS_REGISTRY[country as EditionCode]
+  const registryEntry = WORDPRESS_EDITIONS_REGISTRY[country as EditionCode]
+  const defaultEndpoints = {
+    graphql: getDefaultGraphQLEndpoint(country),
+    rest: getDefaultRestBase(country),
+  }
+
+  const graphql = URL_SCHEMA.safeParse(registryEntry.graphql)
+  const rest = URL_SCHEMA.safeParse(registryEntry.rest)
+
+  if (graphql.success && rest.success) {
+    return {
+      graphql: graphql.data,
+      rest: rest.data,
+    }
+  }
+
+  if (!graphql.success) {
+    console.error("[wp-endpoints] Invalid registry graphql endpoint; using default", {
+      country,
+      endpointType: "graphql",
+      fallback: defaultEndpoints.graphql,
+      invalidValue: registryEntry.graphql,
+      issues: graphql.error.issues.map((issue) => issue.message),
+    })
+  }
+
+  if (!rest.success) {
+    console.error("[wp-endpoints] Invalid registry rest endpoint; using default", {
+      country,
+      endpointType: "rest",
+      fallback: defaultEndpoints.rest,
+      invalidValue: registryEntry.rest,
+      issues: rest.error.issues.map((issue) => issue.message),
+    })
+  }
+
+  return {
+    graphql: graphql.success ? graphql.data : defaultEndpoints.graphql,
+    rest: rest.success ? rest.data : defaultEndpoints.rest,
+  }
 }
 
 const getDynamicFallbackEndpoints = (country: string): WordPressEndpoints => {

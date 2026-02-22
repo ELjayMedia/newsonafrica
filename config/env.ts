@@ -7,12 +7,12 @@ import { z } from "zod"
 export const ENV_SCHEMA = z
   .object({
     NEXT_PUBLIC_SITE_URL: z.string().url().default("https://newsonafrica.com"),
-    NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().url().optional(),
-    NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().url().optional(),
-    NEXT_PUBLIC_WP_NG_GRAPHQL: z.string().url().optional(),
-    NEXT_PUBLIC_WP_SZ_REST_BASE: z.string().url().optional(),
-    NEXT_PUBLIC_WP_ZA_REST_BASE: z.string().url().optional(),
-    NEXT_PUBLIC_WP_NG_REST_BASE: z.string().url().optional(),
+    NEXT_PUBLIC_WP_SZ_GRAPHQL: z.string().optional(),
+    NEXT_PUBLIC_WP_ZA_GRAPHQL: z.string().optional(),
+    NEXT_PUBLIC_WP_NG_GRAPHQL: z.string().optional(),
+    NEXT_PUBLIC_WP_SZ_REST_BASE: z.string().optional(),
+    NEXT_PUBLIC_WP_ZA_REST_BASE: z.string().optional(),
+    NEXT_PUBLIC_WP_NG_REST_BASE: z.string().optional(),
     NEXT_PUBLIC_DEFAULT_SITE: z.enum(["sz", "za", "ng"]).default("sz"),
     WORDPRESS_WEBHOOK_SECRET: z.string().optional(),
     REVALIDATION_SECRET: z.string().optional(),
