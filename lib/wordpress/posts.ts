@@ -25,7 +25,7 @@ import type {
   PostSummaryFieldsFragment,
   RelatedPostsQuery,
 } from "@/types/wpgraphql"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
 import { DEFAULT_COUNTRY, mapGraphqlTagNode } from "./shared"
 import type { PaginatedPostsResult } from "./types"

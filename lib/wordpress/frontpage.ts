@@ -9,7 +9,7 @@ import type { HomePost } from "@/types/home"
 import { FP_TAG_SLUG, mapGraphqlNodeToHomePost } from "./shared"
 import type { AggregatedHomeData, FrontPageSlicesResult } from "./types"
 import type { WordPressPost } from "@/types/wp"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 type FrontPageSlicesQueryResult = {

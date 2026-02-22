@@ -3,7 +3,7 @@ import { cacheTags } from "../cache/cacheTags"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import type { AuthorDataQuery, AuthorsQuery } from "@/types/wpgraphql"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { DEFAULT_COUNTRY } from "./shared"
 import type { WordPressAuthor, WordPressPost } from "@/types/wp"
 

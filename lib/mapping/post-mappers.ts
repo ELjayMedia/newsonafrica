@@ -1,21 +1,4 @@
-// ✅ Unified WP post mappers + list adapters (resolved merge)
-
-// --- External helpers & types
-import { normalizeWordPressPostContent } from "@/lib/wordpress/normalize-post-content"
-
-// Low-level normalized WordPress types
-import type {
-  WordPressPost,
-  WordPressAuthor,
-  WordPressMedia,
-  WordPressCategoryConnection,
-  WordPressTagConnection,
-} from "@/types/wp"
-
-// GraphQL fragments (shape for GQL nodes)
-import type { PostFieldsFragment, PostSummaryFieldsFragment } from "@/types/wpgraphql"
-
-// High-level list view mapping + types
+import type { WordPressPost } from "@/types/wp"
 import {
   mapWordPressPostToPostListItem,
   mapWordPressPostsToPostListItems,
@@ -23,10 +6,14 @@ import {
   type PostListAuthor,
   type PostListCategory,
 } from "@/lib/data/post-list"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.shared"
 
-// Re-export list types for convenience
+export { mapGraphqlPostToWordPressPost }
+export type { GraphqlPostNode } from "@/lib/mapping/post-mappers.shared"
+
 export type { PostListItemData, PostListAuthor, PostListCategory }
 
+<<<<<<< HEAD
 // ------------------------------
 // Shared helpers
 // ------------------------------
@@ -164,6 +151,8 @@ export const mapGraphqlPostToWordPressPost = (
 // ------------------------------
 // High-level adapters for list UI (kept from Branch A)
 // ------------------------------
+=======
+>>>>>>> db212794 (Split post mappers into shared and server modules)
 export function mapWpPostToPostListItem(post: WordPressPost, countryCode: string): PostListItemData {
   return mapWordPressPostToPostListItem(post, countryCode)
 }

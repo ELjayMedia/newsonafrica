@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 vi.mock("server-only", () => ({}))
 
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { mapGraphqlPostToWordPressPost as mapGraphqlPostToWordPressPostServer } from "@/lib/mapping/post-mappers.server"
 
 const countryCode = "za"
 
@@ -35,9 +36,7 @@ describe("mapGraphqlPostToWordPressPost", () => {
       },
     },
     categories: {
-      nodes: [
-        { databaseId: 3, id: "Y2F0ZWdvcnk6Mw==", name: "Category", slug: "category" },
-      ],
+      nodes: [{ databaseId: 3, id: "Y2F0ZWdvcnk6Mw==", name: "Category", slug: "category" }],
     },
     tags: {
       nodes: [{ databaseId: 5, id: "dGFnOjU=", name: "Tag", slug: "tag" }],
@@ -47,7 +46,7 @@ describe("mapGraphqlPostToWordPressPost", () => {
     },
   }
 
-  it("normalizes GraphQL summary posts into WordPressPost shape", () => {
+  it("maps GraphQL summary posts into WordPressPost shape", () => {
     const result = mapGraphqlPostToWordPressPost(baseGraphqlPost as any, countryCode)
 
     expect(result).toMatchObject({
@@ -56,18 +55,6 @@ describe("mapGraphqlPostToWordPressPost", () => {
       slug: "rendered-title",
       title: "Rendered title",
       excerpt: "Rendered excerpt",
-      featuredImage: {
-        node: {
-          sourceUrl: "https://example.com/img.jpg",
-          altText: "Alt text",
-          caption: "Image caption",
-        },
-      },
-      author: {
-        databaseId: 7,
-        name: "Author Name",
-        slug: "author-name",
-      },
     })
     expect(result.categories?.nodes?.[0]?.slug).toBe("category")
     expect(result.tags?.nodes?.[0]?.slug).toBe("tag")
@@ -75,7 +62,19 @@ describe("mapGraphqlPostToWordPressPost", () => {
     expect(result.content).toBeUndefined()
   })
 
-  it("normalizes rendered content in a stable and safe way", () => {
+  it("shared mapper keeps rendered content untouched", () => {
+    const detailedGraphqlPost = {
+      ...baseGraphqlPost,
+      content: '<p><a href="/post/local-story">Local story</a></p><script>alert("xss")</script>',
+    }
+
+    const result = mapGraphqlPostToWordPressPost(detailedGraphqlPost as any, countryCode)
+
+    expect(result.content).toContain('href="/post/local-story"')
+    expect(result.content).toContain("<script")
+  })
+
+  it("server mapper normalizes rendered content", () => {
     const detailedGraphqlPost = {
       ...baseGraphqlPost,
       content:
@@ -84,21 +83,10 @@ describe("mapGraphqlPostToWordPressPost", () => {
         '<div class="wp-block-embed__wrapper">https://youtu.be/dQw4w9WgXcQ?t=43</div>',
     }
 
-    const result = mapGraphqlPostToWordPressPost(detailedGraphqlPost as any, countryCode)
+    const result = mapGraphqlPostToWordPressPostServer(detailedGraphqlPost as any, countryCode)
 
     expect(result.content).toContain('href="/za/article/local-story"')
     expect(result.content).not.toContain("<script")
     expect(result.content).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ?start=43")
-  })
-
-  it("returns deterministic output for unsupported embeds", () => {
-    const detailedGraphqlPost = {
-      ...baseGraphqlPost,
-      content: '<div class="wp-block-embed__wrapper">https://example.com/video/123</div>',
-    }
-
-    const result = mapGraphqlPostToWordPressPost(detailedGraphqlPost as any, countryCode)
-
-    expect(result.content).toBe('<div class="wp-block-embed__wrapper">https://example.com/video/123</div>')
   })
 })
