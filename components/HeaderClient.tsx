@@ -52,8 +52,8 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
       >
         <div className="w-full md:mx-auto -mb-4">
           {/* Top Bar */}
-          <div className="px-4 pt-3 pb-2 flex flex-wrap items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="px-3 sm:px-4 pt-3 pb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between sm:justify-start gap-2">
               <Link href={homeHref} className="flex items-center">
                 <Image
                   src="https://lh3.googleusercontent.com/p/AF1QipOAL_nQ75pQyMwVRXrjsAIJf9yTGlCcI2ChLSvm=s680-w680-h510-rw"
@@ -67,7 +67,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
               <CountrySwitcherClient />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 sm:gap-4">
               <div className="hidden sm:block">
                 <SearchBox
                   placeholder="Search"
@@ -105,7 +105,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm ml-4">
+              <div className="flex items-center gap-2 text-sm sm:ml-2 md:ml-4">
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
                 <div className="hidden md:flex flex-col items-start text-gray-600 text-sm">
                   <span>{currentDate}</span>
@@ -117,14 +117,14 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           {/* Navigation */}
           <nav className="mt-4 md:mt-0 bg-white">
             <div className="overflow-x-auto">
-              <ul className="flex whitespace-nowrap px-4 border-t border-gray-200 font-light">
+              <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-gray-200 font-light">
                 {sortedCategories.map((category) => {
                   const url = getCategoryUrl(category.slug, countryCode)
                   return (
                     <li key={category.slug}>
                       <Link
                         href={url}
-                        className={`block px-3 py-3 text-sm font-semibold transition-colors duration-200 ${
+                        className={`block px-3 py-3 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
                           pathname === url
                             ? "text-blue-600 border-b-2 border-blue-600"
                             : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"

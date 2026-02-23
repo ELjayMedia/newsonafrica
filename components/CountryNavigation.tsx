@@ -27,17 +27,17 @@ export function CountryNavigation() {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">
           {displayedCountries.map((country) => (
             <Link
               key={country.code}
               href={`/${country.code}`}
-              className="group flex flex-col items-center p-3 rounded-lg border hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+              className="group flex flex-col items-center p-2.5 sm:p-3 rounded-lg border hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
             >
-              <span className="text-2xl mb-1" role="img" aria-label={`${country.name} flag`}>
+              <span className="text-xl sm:text-2xl mb-1" role="img" aria-label={`${country.name} flag`}>
                 {country.flag}
               </span>
-              <span className="text-xs font-medium text-center group-hover:text-primary transition-colors">
+              <span className="text-[11px] sm:text-xs font-medium text-center leading-tight group-hover:text-primary transition-colors">
                 {country.name}
               </span>
             </Link>
@@ -86,7 +86,7 @@ export function CountrySpotlight({ countryPosts = {} }: { countryPosts?: Country
       </div>
       <p className="text-sm text-muted-foreground">Discover the latest stories from across the African continent</p>
 
-      <div className="flex overflow-x-auto gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
+      <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 scroll-smooth snap-x snap-mandatory">
         {spotlightCountries.map(([countryCode, posts]) => {
           const country = COUNTRIES[countryCode]
           if (!country || !posts || posts.length === 0) return null
@@ -94,7 +94,7 @@ export function CountrySpotlight({ countryPosts = {} }: { countryPosts?: Country
           return (
             <Card
               key={countryCode}
-              className="flex-none w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[300px] overflow-hidden hover:shadow-lg transition-shadow snap-start"
+              className="flex-none w-[85%] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-16px)] lg:w-[300px] overflow-hidden hover:shadow-lg transition-shadow snap-start"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
