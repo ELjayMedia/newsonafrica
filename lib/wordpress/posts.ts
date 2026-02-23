@@ -9,11 +9,13 @@ import {
   POSTS_QUERY,
   RELATED_POSTS_BY_TAGS_QUERY,
   RELATED_POSTS_QUERY,
+  RELATED_POSTS_WITH_CATEGORIES_QUERY,
   TAG_BY_SLUG_QUERY,
   TAGGED_POSTS_QUERY,
   TAGS_QUERY,
 } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
+import { unstable_cache } from "next/cache"
 import { COUNTRIES } from "./countries"
 import { AFRICAN_EDITION } from "../editions"
 import type { WordPressPost } from "@/types/wp"
@@ -85,6 +87,47 @@ type PostBySlugQueryResult = {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
 }
+
+type RelatedPostsWithCategoriesQueryResult = {
+  post?: {
+    categories?: {
+      nodes?: ({
+        databaseId?: number | null
+        posts?: {
+          nodes?: (PostSummaryFieldsFragment | null)[] | null
+        } | null
+      } | null)[] | null
+    } | null
+  } | null
+}
+
+const getCachedRelatedCategoryIds = (
+  countryCode: string,
+  numericPostId: number,
+  tags: string[],
+) =>
+  unstable_cache(
+    async () => {
+      const gqlPost = await fetchWordPressGraphQL<PostCategoriesQuery>(
+        countryCode,
+        POST_CATEGORIES_QUERY,
+        { id: numericPostId },
+        { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
+      )
+
+      if (!gqlPost?.post) {
+        return [] as string[]
+      }
+
+      return (
+        gqlPost.post.categories?.nodes
+          ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
+          .map((c) => String(c.databaseId)) ?? []
+      )
+    },
+    ["related-post-category-ids", countryCode, String(numericPostId)],
+    { tags, revalidate: CACHE_DURATIONS.SHORT },
+  )()
 
 export async function getLatestPostsForCountry(
   countryCode: string,
@@ -159,7 +202,7 @@ export async function getRelatedPostsForCountry(
   countryCode: string,
   postId: number | string,
   limit = 6,
-) {
+): Promise<WordPressPost[]> {
   const postCacheKey = String(postId)
   const numericPostId = typeof postId === "number" ? postId : Number(postId)
 
@@ -172,39 +215,59 @@ export async function getRelatedPostsForCountry(
     cacheTags.post(countryCode, postCacheKey),
   ]
 
-  const gqlPost = await fetchWordPressGraphQL<PostCategoriesQuery>(
+  const relatedWithCategories = await fetchWordPressGraphQL<RelatedPostsWithCategoriesQueryResult>(
     countryCode,
-    POST_CATEGORIES_QUERY,
-    { id: numericPostId },
+    RELATED_POSTS_WITH_CATEGORIES_QUERY,
+    { id: numericPostId, exclude: numericPostId, first: limit },
     { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
-  if (gqlPost?.post) {
-    const catIds =
-      gqlPost.post.categories?.nodes
-        ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
-        .map((c) => String(c.databaseId)) ?? []
-    if (catIds.length > 0) {
-      const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
-        countryCode,
-        RELATED_POSTS_QUERY,
-        {
-          catIds,
-          exclude: numericPostId,
-          first: limit,
-        },
-        {
-          tags,
-          revalidate: CACHE_DURATIONS.SHORT,
-          timeout: RELATED_POSTS_TIMEOUT_MS,
-        },
-      )
-      if (gqlData?.posts) {
-        const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-        const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
-        return posts.filter((p) => p.databaseId !== numericPostId)
+
+  if (relatedWithCategories.ok !== false && relatedWithCategories?.post?.categories?.nodes) {
+    const seenPostIds = new Set<number>()
+    const relatedNodes: PostSummaryFieldsFragment[] = []
+
+    for (const category of relatedWithCategories.post.categories.nodes) {
+      const nodes = category?.posts?.nodes?.filter((post): post is PostSummaryFieldsFragment => Boolean(post)) ?? []
+      for (const node of nodes) {
+        if (node.databaseId === numericPostId || seenPostIds.has(node.databaseId)) {
+          continue
+        }
+        seenPostIds.add(node.databaseId)
+        relatedNodes.push(node)
       }
     }
+
+    if (relatedNodes.length > 0) {
+      return relatedNodes
+        .slice(0, limit)
+        .map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
+        .filter((post) => post.databaseId !== numericPostId)
+    }
   }
+
+  const catIds = await getCachedRelatedCategoryIds(countryCode, numericPostId, tags)
+  if (catIds.length > 0) {
+    const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
+      countryCode,
+      RELATED_POSTS_QUERY,
+      {
+        catIds,
+        exclude: numericPostId,
+        first: limit,
+      },
+      {
+        tags,
+        revalidate: CACHE_DURATIONS.SHORT,
+        timeout: RELATED_POSTS_TIMEOUT_MS,
+      },
+    )
+    if (gqlData?.posts) {
+      const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+      const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
+      return posts.filter((p) => p.databaseId !== numericPostId)
+    }
+  }
+
   return []
 }
 
