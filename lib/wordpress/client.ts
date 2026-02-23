@@ -417,7 +417,6 @@ export function fetchWordPressGraphQL<T>(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       })
-      removeMemoizedEntry()
       throw error
     })
 
