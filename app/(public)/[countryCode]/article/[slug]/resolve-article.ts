@@ -38,6 +38,7 @@ export type ResolveArticleResult = {
   targetCountry: string
   canonicalSlug: string
   canonicalUrl: string
+  articleVersion: string | null
   failureMetadata: ResolveArticleFailureMetadata | null
 }
 
@@ -67,6 +68,7 @@ export const resolveArticle = cache(async ({
       targetCountry: routeCountryAlias,
       canonicalSlug: parsedSlug,
       canonicalUrl,
+      articleVersion: null,
       failureMetadata: null,
     }
   }
@@ -90,6 +92,7 @@ export const resolveArticle = cache(async ({
     : routeCountryAlias
 
   const articleData = resolvedArticle.status === "found" ? resolvedArticle.article : null
+  const articleVersion = resolvedArticle.status === "found" ? resolvedArticle.version : null
   const canonicalSlug = buildCanonicalArticleSlug(articleData?.slug ?? parsedSlug, articleData?.databaseId)
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
 
@@ -107,6 +110,7 @@ export const resolveArticle = cache(async ({
     targetCountry,
     canonicalSlug,
     canonicalUrl,
+    articleVersion,
     failureMetadata:
       resolvedArticle.status === "temporary_error"
         ? {
