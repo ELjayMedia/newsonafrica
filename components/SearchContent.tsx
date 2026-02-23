@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select"
 import { SUPPORTED_COUNTRIES } from "@/lib/editions"
 import { highlightSearchTerms } from "@/lib/search"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getCanonicalArticlePath } from "@/lib/utils/routing"
 import type { SearchRecord } from "@/types/search"
 
 const PAN_AFRICAN_CODE = "all"
@@ -728,7 +728,7 @@ function SearchResultHit({ hit, query, fallbackCountry, showHighlights }: Search
     parsed.country ||
     (fallbackCountry !== PAN_AFRICAN_CODE ? fallbackCountry : undefined)
   const slug = parsed.slug || hit.objectID
-  const href = getArticleUrl(slug, resolvedCountry)
+  const href = getCanonicalArticlePath({ slug }, resolvedCountry)
 
   const publishedLabel = hit.published_at
     ? formatDistanceToNow(new Date(hit.published_at), { addSuffix: true })

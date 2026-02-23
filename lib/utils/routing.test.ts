@@ -20,7 +20,7 @@ let DEFAULT_COUNTRY: typeof import('./routing').DEFAULT_COUNTRY
 
 beforeAll(async () => {
   vi.resetModules()
-  vi.stubEnv('NEXT_PUBLIC_DEFAULT_SITE', 'ZA')
+  vi.stubEnv('NEXT_PUBLIC_DEFAULT_SITE', 'za')
   const routingModule = await vi.importActual<typeof import('./routing')>('./routing')
   convertLegacyUrl = routingModule.convertLegacyUrl
   rewriteLegacyLinks = routingModule.rewriteLegacyLinks
@@ -133,6 +133,14 @@ describe('URL generators', () => {
 
   it('builds article URL for provided country', () => {
     expect(getArticleUrl('story', country)).toBe(`/${country}/article/story`)
+  })
+
+  it('normalizes african-edition routes to african for article URLs', () => {
+    expect(getArticleUrl('story', 'african-edition')).toBe('/african/article/story')
+  })
+
+  it('includes databaseId in canonical article URLs', () => {
+    expect(getCanonicalArticlePath({ slug: 'Story', databaseId: 77 }, 'ZA')).toBe('/za/article/story-77')
   })
 
   it('builds category URL for provided country', () => {
