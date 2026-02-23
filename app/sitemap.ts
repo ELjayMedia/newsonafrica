@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
-import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { buildArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 
 export const revalidate = 300
 
@@ -138,7 +138,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           (typeof post.featuredImage?.node?.altText === "string" && post.featuredImage.node.altText) || title
 
         return {
-          url: `${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}`,
+          url: buildArticleUrl(baseUrl, { slug: post.slug, countryCode: post.country, databaseId: post.databaseId }),
           lastModified: postDate,
           changeFrequency: isRecent ? "daily" : "weekly",
           priority: isRecent ? 0.9 : 0.7,

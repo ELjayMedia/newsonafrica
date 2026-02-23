@@ -11,6 +11,8 @@ import {
 let convertLegacyUrl: typeof import('./routing').convertLegacyUrl
 let rewriteLegacyLinks: typeof import('./routing').rewriteLegacyLinks
 let getArticleUrl: typeof import('./routing').getArticleUrl
+let buildArticlePath: typeof import('./routing').buildArticlePath
+let buildArticleUrl: typeof import('./routing').buildArticleUrl
 let getCategoryUrl: typeof import('./routing').getCategoryUrl
 let getCurrentCountry: typeof import('./routing').getCurrentCountry
 let resolveCountryForLayout: typeof import('./routing').resolveCountryForLayout
@@ -23,6 +25,8 @@ beforeAll(async () => {
   convertLegacyUrl = routingModule.convertLegacyUrl
   rewriteLegacyLinks = routingModule.rewriteLegacyLinks
   getArticleUrl = routingModule.getArticleUrl
+  buildArticlePath = routingModule.buildArticlePath
+  buildArticleUrl = routingModule.buildArticleUrl
   getCategoryUrl = routingModule.getCategoryUrl
   getCurrentCountry = routingModule.getCurrentCountry
   resolveCountryForLayout = routingModule.resolveCountryForLayout
@@ -119,6 +123,14 @@ describe('convertLegacyUrl', () => {
 })
 
 describe('URL generators', () => {
+  it('builds canonical article path and absolute URL consistently', () => {
+    const path = buildArticlePath({ slug: 'Story', countryCode: 'ZA', databaseId: 55 })
+    expect(path).toBe('/za/article/story-55')
+    expect(getArticleUrl('Story', 'ZA', 55)).toBe(path)
+    expect(buildArticleUrl('https://example.com/', { slug: 'Story', countryCode: 'ZA', databaseId: 55 }))
+      .toBe('https://example.com/za/article/story-55')
+  })
+
   it('builds article URL for provided country', () => {
     expect(getArticleUrl('story', country)).toBe(`/${country}/article/story`)
   })

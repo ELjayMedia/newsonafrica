@@ -8,6 +8,11 @@ import {
   SUPPORTED_EDITIONS as SUPPORTED_EDITION_DEFINITIONS,
 } from "@/lib/editions"
 import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
+import {
+  buildArticlePath as buildCoreArticlePath,
+  buildArticleUrl as buildCoreArticleUrl,
+  type BuildArticleRouteArgs,
+} from "@/lib/routing/article-route"
 
 const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
 
@@ -122,14 +127,19 @@ export function getServerCountry(): string {
  * Generate country-specific article URL
  */
 export function getArticleUrl(slug: string, countryCode?: string, databaseId?: number | null): string {
-  const country = countryCode || getCurrentCountry()
-  const normalizedSlug = slug.toLowerCase()
-  const canonicalSlug =
-    typeof databaseId === "number" && Number.isFinite(databaseId)
-      ? `${normalizedSlug}-${databaseId}`
-      : normalizedSlug
+  return buildArticlePath({ slug, countryCode, databaseId })
+}
 
-  return `/${country}/article/${canonicalSlug}`
+type BuildArticleArgs = Omit<BuildArticleRouteArgs, "countryCode"> & { countryCode?: string }
+
+export function buildArticlePath({ slug, countryCode, databaseId }: BuildArticleArgs): string {
+  const resolvedCountry = normalizeCountry(countryCode) || getCurrentCountry()
+  return buildCoreArticlePath({ slug, countryCode: resolvedCountry, databaseId })
+}
+
+export function buildArticleUrl(baseUrl: string, args: BuildArticleArgs): string {
+  const resolvedCountry = normalizeCountry(args.countryCode) || getCurrentCountry()
+  return buildCoreArticleUrl(baseUrl, { ...args, countryCode: resolvedCountry })
 }
 
 /**
@@ -182,7 +192,7 @@ export function convertLegacyUrl(url: string, countryCode?: string): string {
       const parsed = new URL(url)
       if (isLegacyPostUrl(parsed.pathname)) {
         const slug = parsed.pathname.replace("/post/", "")
-        const newPath = getArticleUrl(slug, countryCode)
+        const newPath = buildArticlePath({ slug, countryCode })
         return `${parsed.origin}${newPath}${parsed.search}${parsed.hash}`
       }
       return url
@@ -195,7 +205,7 @@ export function convertLegacyUrl(url: string, countryCode?: string): string {
   const [path, rest = ""] = url.split(/(?=[?#])/)
   if (isLegacyPostUrl(path)) {
     const slug = path.replace("/post/", "")
-    return getArticleUrl(slug, countryCode) + rest
+    return buildArticlePath({ slug, countryCode }) + rest
   }
   return url
 }
@@ -210,6 +220,6 @@ export function rewriteLegacyLinks(html: string, countryCode?: string): string {
   const country = countryCode || getCurrentCountry()
   const regex = /href=(['"])(?:https?:\/\/[^'" ]+)?\/post\/([^'"?#]+)([^'"]*)\1/g
   return html.replace(regex, (_match, quote, slug, rest) => {
-    return `href=${quote}${getArticleUrl(slug, country)}${rest}${quote}`
+    return `href=${quote}${buildArticlePath({ slug, countryCode: country })}${rest}${quote}`
   })
 }
