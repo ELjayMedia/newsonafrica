@@ -5,6 +5,7 @@ import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEd
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
 import { COUNTRIES } from "@/lib/wordpress/service"
+import { buildArticlePath, normalizeArticleCountrySegment } from "@/lib/routing/article-route"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -66,22 +67,9 @@ export const resetArticleCountryPriorityCache = (): void => {
   articleCountryPriorityCache.clear()
 }
 
-export const AFRICAN_ROUTE_ALIAS = "african"
+export const AFRICAN_ROUTE_ALIAS = normalizeArticleCountrySegment(AFRICAN_EDITION.code)
 
-export const normalizeRouteCountry = (country: string): string => {
-  const normalized = normalizeCountryCode(country)
-
-  if (normalized === AFRICAN_ROUTE_ALIAS) {
-    return AFRICAN_ROUTE_ALIAS
-  }
-
-  const normalizedAfricanCode = normalizeCountryCode(AFRICAN_EDITION.code)
-  if (normalized === normalizedAfricanCode) {
-    return AFRICAN_ROUTE_ALIAS
-  }
-
-  return normalized
-}
+export const normalizeRouteCountry = (country: string): string => normalizeArticleCountrySegment(country)
 
 export const resolveEdition = (countryCode: string): SupportedEdition | null => {
   const normalized = normalizeCountryCode(countryCode)
@@ -114,12 +102,13 @@ export const parseArticleSlugParam = (value: string): ParsedArticleSlug => {
 }
 
 export const buildCanonicalArticleSlug = (slug: string, databaseId?: number | null): string => {
-  const normalized = normalizeSlug(slug)
-  if (typeof databaseId === "number" && Number.isFinite(databaseId)) {
-    return `${normalized}-${databaseId}`
-  }
+  const canonicalPath = buildArticlePath({
+    countryCode: AFRICAN_ROUTE_ALIAS,
+    slug,
+    databaseId,
+  })
 
-  return normalized
+  return canonicalPath.split("/").at(-1) ?? normalizeSlug(slug)
 }
 
 type PostBySlugQueryResult = {
