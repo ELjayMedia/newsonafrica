@@ -78,6 +78,7 @@ describe("sitemap fetch limits", () => {
   })
 
 
+<<<<<<< HEAD
 
   it("matches article canonical redirect path format for metadata sitemap links", async () => {
     const { default: buildMetadataSitemap } = await import("@/app/sitemap")
@@ -92,6 +93,8 @@ describe("sitemap fetch limits", () => {
 
     expect(articleEntry?.url).toBe(`https://example.com${expectedPath}`)
   })
+=======
+>>>>>>> c7ce2cdb (refactor article links to canonical path input)
   it("builds canonical metadata sitemap links with databaseId suffix", async () => {
     const { default: buildMetadataSitemap } = await import("@/app/sitemap")
 

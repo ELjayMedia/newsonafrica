@@ -3,11 +3,15 @@ import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/li
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
 =======
 import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 >>>>>>> f01319a1 (test sitemap links against canonical article path format)
+=======
+import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+>>>>>>> c7ce2cdb (refactor article links to canonical path input)
 
 export const revalidate = 300
 
