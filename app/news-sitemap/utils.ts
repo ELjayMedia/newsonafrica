@@ -1,5 +1,5 @@
 import type { WordPressPost } from "@/types/wp"
-import { DEFAULT_COUNTRY, getArticleUrl } from "@/lib/utils/routing"
+import { DEFAULT_COUNTRY, getCanonicalArticlePath } from "@/lib/utils/routing"
 
 export const CACHE_CONTROL_HEADER = "public, max-age=3600, s-maxage=3600"
 export const XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -99,7 +99,7 @@ export const buildNewsUrlElement = (
       ? countryFromPost.trim().toLowerCase()
       : undefined) || fallbackCountry || DEFAULT_COUNTRY
 
-  const loc = `${baseUrl}${getArticleUrl(post.slug, countryCode, post.databaseId)}`
+  const loc = `${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, countryCode)}`
   const title = formatTitle(post.title)
   if (!title) {
     return ""

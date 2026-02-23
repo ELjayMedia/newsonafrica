@@ -10,6 +10,11 @@ import {
 import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
 import { buildArticlePath } from "@/lib/routing/article-route"
 
+export type ArticlePathInput = {
+  slug: string
+  databaseId?: number | null
+}
+
 const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
 
 const FALLBACK_COUNTRY = "sz"
@@ -123,9 +128,17 @@ export function getServerCountry(): string {
  * Generate country-specific article URL
  */
 export function getArticleUrl(slug: string, countryCode?: string, databaseId?: number | null): string {
+  return getCanonicalArticlePath({ slug, databaseId }, countryCode)
+}
+
+export function getCanonicalArticlePath(article: ArticlePathInput, countryCode?: string): string {
   const country = countryCode || getCurrentCountry()
 
-  return buildArticlePath({ countryCode: country, slug, databaseId })
+  return buildArticlePath({
+    countryCode: country,
+    slug: article.slug,
+    databaseId: article.databaseId,
+  })
 }
 
 /**
