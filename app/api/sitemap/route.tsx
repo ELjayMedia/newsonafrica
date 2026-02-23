@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { buildArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { logRequest, withCors } from "@/lib/api-utils"
 import { ENV } from "@/config/env"
 
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         .map(
           (post) => `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
+    <loc>${buildArticleUrl(baseUrl, { slug: post.slug, countryCode: post.country, databaseId: post.databaseId })}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,

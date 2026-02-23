@@ -9,6 +9,7 @@ import { MessageSquare, Gift } from "lucide-react"
 
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
+import { buildArticlePath, buildArticleUrl } from "@/lib/utils/routing"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
@@ -75,7 +76,7 @@ const resolveRelatedPostId = (
 }
 
 const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =>
-  `${baseUrl}/${countryCode}/article/${slug}/opengraph-image`
+  `${buildArticleUrl(baseUrl, { countryCode, slug })}/opengraph-image`
 
 const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_PATH}`
 
@@ -157,7 +158,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
     : routeCountryAlias
 
   const canonicalSlug = buildCanonicalArticleSlug(article?.slug ?? parsedSlug, article?.databaseId)
-  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
+  const canonicalUrl = buildArticleUrl(baseUrl, { countryCode: targetCountry, slug: canonicalSlug })
   const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, canonicalSlug)
 
   return {
@@ -253,7 +254,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const canonicalSlug = buildCanonicalArticleSlug(articleData.slug ?? normalizedSlug, articleData.databaseId)
 
   if (targetCountry !== routeCountry || canonicalSlug !== normalizedSlug) {
-    redirect(`/${targetCountry}/article/${canonicalSlug}`)
+    redirect(buildArticlePath({ countryCode: targetCountry, slug: canonicalSlug }))
   }
 
   const relatedCountry = resolvedSourceCountry ?? editionCountry
@@ -261,7 +262,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
 
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
-  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
+  const canonicalUrl = buildArticleUrl(baseUrl, { countryCode: targetCountry, slug: canonicalSlug })
 
   if (relatedPostId !== null) {
     try {
@@ -309,7 +310,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               <ShareButtons
                 title={stripHtml(resolveRenderedText(articleData.title)) || "News On Africa"}
                 description={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
-                url={`/${targetCountry}/article/${canonicalSlug}`}
+                url={buildArticlePath({ countryCode: targetCountry, slug: canonicalSlug })}
                 variant="ghost"
               />
               <div className="flex flex-wrap gap-2">

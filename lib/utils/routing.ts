@@ -122,7 +122,17 @@ export function getServerCountry(): string {
  * Generate country-specific article URL
  */
 export function getArticleUrl(slug: string, countryCode?: string, databaseId?: number | null): string {
-  const country = countryCode || getCurrentCountry()
+  return buildArticlePath({ slug, countryCode, databaseId })
+}
+
+interface BuildArticleRouteArgs {
+  slug: string
+  countryCode?: string
+  databaseId?: number | null
+}
+
+export function buildArticlePath({ slug, countryCode, databaseId }: BuildArticleRouteArgs): string {
+  const country = normalizeCountry(countryCode) || getCurrentCountry()
   const normalizedSlug = slug.toLowerCase()
   const canonicalSlug =
     typeof databaseId === "number" && Number.isFinite(databaseId)
@@ -130,6 +140,11 @@ export function getArticleUrl(slug: string, countryCode?: string, databaseId?: n
       : normalizedSlug
 
   return `/${country}/article/${canonicalSlug}`
+}
+
+export function buildArticleUrl(baseUrl: string, args: BuildArticleRouteArgs): string {
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "")
+  return `${normalizedBaseUrl}${buildArticlePath(args)}`
 }
 
 /**
@@ -182,7 +197,7 @@ export function convertLegacyUrl(url: string, countryCode?: string): string {
       const parsed = new URL(url)
       if (isLegacyPostUrl(parsed.pathname)) {
         const slug = parsed.pathname.replace("/post/", "")
-        const newPath = getArticleUrl(slug, countryCode)
+        const newPath = buildArticlePath({ slug, countryCode })
         return `${parsed.origin}${newPath}${parsed.search}${parsed.hash}`
       }
       return url
@@ -195,7 +210,7 @@ export function convertLegacyUrl(url: string, countryCode?: string): string {
   const [path, rest = ""] = url.split(/(?=[?#])/)
   if (isLegacyPostUrl(path)) {
     const slug = path.replace("/post/", "")
-    return getArticleUrl(slug, countryCode) + rest
+    return buildArticlePath({ slug, countryCode }) + rest
   }
   return url
 }
@@ -210,6 +225,6 @@ export function rewriteLegacyLinks(html: string, countryCode?: string): string {
   const country = countryCode || getCurrentCountry()
   const regex = /href=(['"])(?:https?:\/\/[^'" ]+)?\/post\/([^'"?#]+)([^'"]*)\1/g
   return html.replace(regex, (_match, quote, slug, rest) => {
-    return `href=${quote}${getArticleUrl(slug, country)}${rest}${quote}`
+    return `href=${quote}${buildArticlePath({ slug, countryCode: country })}${rest}${quote}`
   })
 }
