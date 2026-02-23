@@ -217,6 +217,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
+  const articleExcerpt = stripHtml(resolveRenderedText(articleData.excerpt))
+  const shouldPrioritizeFeaturedImage = !articleExcerpt
 
   return (
     <>
@@ -287,8 +289,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 alt={articleData.featuredImage.node.altText || stripHtml(resolveRenderedText(articleData.title)) || "Article image"}
                 width={1200}
                 height={675}
+                sizes="(min-width: 1280px) 784px, (min-width: 1024px) calc((100vw - 6rem) * 0.6667), 100vw"
                 className="w-full rounded-lg"
-                priority
+                priority={shouldPrioritizeFeaturedImage}
               />
             ) : null}
 
