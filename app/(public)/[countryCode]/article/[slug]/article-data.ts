@@ -433,6 +433,8 @@ export class ArticleTemporarilyUnavailableError extends AggregateError {
 const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
   `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
 
+const FALLBACK_COUNTRY_CONCURRENCY = 3
+
 export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
@@ -489,37 +491,67 @@ export async function loadArticleWithFallback(
     recordAttempt(primaryCountry, "not_found")
   }
 
-  for (const fallbackCountry of fallbackCountries) {
-    const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview, stableId)
+  let foundFallback:
+    | ({ status: "found"; sourceCountry: string } & LoadedArticle)
+    | null = null
 
-    if (fallbackArticle.status === "temporary_error") {
-      recordAttempt(fallbackCountry, "temporary_error", fallbackArticle.failure)
-      temporaryFailures.push({
-        country: fallbackCountry,
-        error: fallbackArticle.error,
-        failure: fallbackArticle.failure,
-      })
-    } else if (fallbackArticle.status === "found") {
-      recordAttempt(fallbackCountry, "found")
-      return {
-        status: "found",
-        article: fallbackArticle.article,
-        tags: fallbackArticle.tags,
-        version: fallbackArticle.version,
-        canonicalCountry: fallbackArticle.canonicalCountry,
-        sourceCountry: fallbackCountry,
+  if (fallbackCountries.length > 0) {
+    let nextFallbackIndex = 0
+
+    const runFallbackLoader = async (): Promise<void> => {
+      while (foundFallback == null) {
+        const index = nextFallbackIndex
+        nextFallbackIndex += 1
+
+        const fallbackCountry = fallbackCountries[index]
+        if (!fallbackCountry) {
+          return
+        }
+
+        const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview, stableId)
+
+        if (fallbackArticle.status === "temporary_error") {
+          recordAttempt(fallbackCountry, "temporary_error", fallbackArticle.failure)
+          temporaryFailures.push({
+            country: fallbackCountry,
+            error: fallbackArticle.error,
+            failure: fallbackArticle.failure,
+          })
+        } else if (fallbackArticle.status === "found") {
+          recordAttempt(fallbackCountry, "found")
+          foundFallback = {
+            status: "found",
+            article: fallbackArticle.article,
+            tags: fallbackArticle.tags,
+            version: fallbackArticle.version,
+            canonicalCountry: fallbackArticle.canonicalCountry,
+            sourceCountry: fallbackCountry,
+          }
+          return
+        } else {
+          recordAttempt(fallbackCountry, "not_found")
+        }
       }
-    } else {
-      recordAttempt(fallbackCountry, "not_found")
     }
+
+    const workerCount = Math.min(FALLBACK_COUNTRY_CONCURRENCY, fallbackCountries.length)
+    await Promise.all(Array.from({ length: workerCount }, () => runFallbackLoader()))
   }
+
+  if (foundFallback) {
+    return foundFallback
+  }
+
+  const orderedAttempts = attempts.sort(
+    (left, right) => countryPriority.indexOf(left.country) - countryPriority.indexOf(right.country),
+  )
 
   if (temporaryFailures.length > 0) {
     console.error("[article-data] fallback attempts exhausted with temporary failures", {
       slug: normalizedSlug,
       requestedCountry: normalizedRequestedCountry,
       countryPriority,
-      attempts,
+      attempts: orderedAttempts,
       staleCacheServed,
       preview,
     })
