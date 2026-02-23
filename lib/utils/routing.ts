@@ -8,6 +8,7 @@ import {
   SUPPORTED_EDITIONS as SUPPORTED_EDITION_DEFINITIONS,
 } from "@/lib/editions"
 import { DEFAULT_SITE_COUNTRY } from "@/lib/constants/country"
+import { buildArticlePath } from "@/lib/routing/article-route"
 
 const normalizeCountry = (value?: string | null) => value?.toLowerCase() ?? undefined
 
@@ -139,7 +140,7 @@ export function buildArticlePath({ slug, countryCode, databaseId }: BuildArticle
       ? `${normalizedSlug}-${databaseId}`
       : normalizedSlug
 
-  return `/${country}/article/${canonicalSlug}`
+  return buildArticlePath({ countryCode: country, slug, databaseId })
 }
 
 export function buildArticleUrl(baseUrl: string, args: BuildArticleRouteArgs): string {
