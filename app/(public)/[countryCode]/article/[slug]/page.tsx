@@ -10,7 +10,6 @@ import { MessageSquare, Gift } from "lucide-react"
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
-import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ShareButtons } from "@/components/ShareButtons"
@@ -29,6 +28,7 @@ import {
 
 import { ArticleServerFallback } from "./ArticleServerFallback"
 import { resolveArticle } from "./resolve-article"
+import { RelatedRail } from "./RelatedRail"
 
 export async function generateStaticParams() {
   return []
@@ -206,25 +206,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   const relatedCountry = resolved.resolvedSourceCountry ?? routeCountry
   const relatedPostId = resolveRelatedPostId(articleData)
-  let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
 
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
-
-  if (relatedPostId !== null) {
-    try {
-      relatedPosts = await getRelatedPostsForCountry(relatedCountry, relatedPostId, 6)
-    } catch (relatedError) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("Failed to load related posts for article", {
-          relatedError,
-          relatedCountry,
-          relatedPostId,
-        })
-      }
-      relatedPosts = []
-    }
-  }
 
   return (
     <>
@@ -233,9 +217,15 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       </Suspense>
       <ArticlePageLayout
         sidebar={
-          <div className="space-y-8">
-            <ArticleMostRead articles={relatedPosts.slice(0, 5)} countryCode={targetCountry} />
-          </div>
+          <Suspense fallback={null}>
+            <RelatedRail countryCode={relatedCountry} postId={relatedPostId}>
+              {(relatedPosts) => (
+                <div className="space-y-8">
+                  <ArticleMostRead articles={relatedPosts.slice(0, 5)} countryCode={targetCountry} />
+                </div>
+              )}
+            </RelatedRail>
+          </Suspense>
         }
       >
         <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
@@ -299,7 +289,13 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               className="prose prose-lg max-w-none mb-8 text-sm text-black"
             />
 
-            <ArticleRelatedSection articles={relatedPosts} countryCode={targetCountry} />
+            <Suspense fallback={null}>
+              <RelatedRail countryCode={relatedCountry} postId={relatedPostId}>
+                {(relatedPosts) => (
+                  <ArticleRelatedSection articles={relatedPosts} countryCode={targetCountry} />
+                )}
+              </RelatedRail>
+            </Suspense>
           </article>
         </div>
       </ArticlePageLayout>
