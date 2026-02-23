@@ -306,6 +306,31 @@ export const RELATED_POSTS_QUERY = gql`
   }
 `
 
+export const RELATED_POSTS_WITH_CATEGORIES_QUERY = gql`
+  ${POST_SUMMARY_FIELDS_FRAGMENT}
+  query RelatedPostsWithCategories($id: ID!, $exclude: ID!, $first: Int!) {
+    post(id: $id, idType: DATABASE_ID) {
+      categories {
+        nodes {
+          databaseId
+          posts(
+            first: $first
+            where: {
+              status: PUBLISH
+              orderby: { field: DATE, order: DESC }
+              notIn: [$exclude]
+            }
+          ) {
+            nodes {
+              ...PostSummaryFields
+            }
+          }
+        }
+      }
+    }
+  }
+`
+
 export const FEATURED_POSTS_QUERY = gql`
   ${POST_SUMMARY_FIELDS_FRAGMENT}
   query FeaturedPosts($tag: String!, $first: Int!) {
