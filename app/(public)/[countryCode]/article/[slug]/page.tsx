@@ -9,7 +9,6 @@ import { MessageSquare, Gift } from "lucide-react"
 
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
-import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { BookmarkButton } from "@/components/BookmarkButton"
 import { ShareButtons } from "@/components/ShareButtons"
@@ -27,6 +26,7 @@ import {
 } from "./article-data"
 
 import { ArticleServerFallback } from "./ArticleServerFallback"
+import { formatArticleBodyCached } from "./article-content-formatter"
 import { resolveArticle } from "./resolve-article"
 import { RelatedRail } from "./RelatedRail"
 
@@ -207,6 +207,14 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const relatedCountry = resolved.resolvedSourceCountry ?? routeCountry
   const relatedPostId = resolveRelatedPostId(articleData)
 
+  const formattedBody = await formatArticleBodyCached({
+    country: targetCountry,
+    canonicalSlug,
+    version: resolved.articleVersion,
+    html: resolveRenderedText(articleData.content),
+    preview,
+  })
+
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
 
@@ -285,7 +293,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
             ) : null}
 
             <ArticleBody
-              html={sanitizeArticleHtml(resolveRenderedText(articleData.content)?.trim() || "<p>This article has no body content yet.</p>")}
+              html={formattedBody.sanitizedHtml}
+              blocks={formattedBody.blocks}
               className="prose prose-lg max-w-none mb-8 text-sm text-black"
             />
 
