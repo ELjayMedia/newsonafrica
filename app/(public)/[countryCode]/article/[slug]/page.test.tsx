@@ -3,7 +3,9 @@ import { render, screen } from '@testing-library/react'
 
 vi.mock('next/image', () => ({
   __esModule: true,
-  default: ({ priority: _priority, ...props }: Record<string, any>) => <img {...props} />,
+  default: ({ priority, ...props }: Record<string, any>) => (
+    <img data-priority={priority ? 'true' : 'false'} {...props} />
+  ),
 }))
 
 vi.mock('@/config/env', () => ({
@@ -142,6 +144,59 @@ describe('ArticlePage', () => {
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(fetchWordPressGraphQL).toHaveBeenCalled()
     expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('sets featured image sizes and keeps it as priority when no excerpt precedes it', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [createArticleNode({ excerpt: '' })] } }) as any
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
+
+    const featuredImage = screen.getByAltText('Feature image')
+    expect(featuredImage).toHaveAttribute(
+      'sizes',
+      '(min-width: 1280px) 784px, (min-width: 1024px) calc((100vw - 6rem) * 0.6667), 100vw',
+    )
+    expect(featuredImage).toHaveAttribute('data-priority', 'true')
+  })
+
+  it('does not prioritize the featured image when excerpt content is present', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
+      if (query === POST_BY_SLUG_QUERY) {
+        return graphqlSuccess({
+          posts: { nodes: [createArticleNode({ excerpt: '<p>Lead excerpt</p>' })] },
+        }) as any
+      }
+
+      if (query === POST_CATEGORIES_QUERY) {
+        return graphqlSuccess({ post: { categories: { nodes: [] } } }) as any
+      }
+
+      if (query === RELATED_POSTS_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [] } }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    const ui = await Page({ params: { countryCode: 'sz', slug: 'test' } })
+    render(ui)
+
+    expect(screen.getByAltText('Feature image')).toHaveAttribute('data-priority', 'false')
   })
 
   it('passes the database ID to related post lookup when available', async () => {
