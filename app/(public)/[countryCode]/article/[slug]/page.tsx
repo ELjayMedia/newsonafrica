@@ -10,7 +10,6 @@ import { MessageSquare, Gift } from "lucide-react"
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { sanitizeArticleHtml } from "@/lib/utils/sanitize-article-html"
-import { isCountryEdition } from "@/lib/editions"
 import { getRelatedPostsForCountry } from "@/lib/wordpress/service"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { BookmarkButton } from "@/components/BookmarkButton"
@@ -24,17 +23,12 @@ import { ArticleRelatedSection } from "@/components/article/ArticleRelatedSectio
 
 import {
   PLACEHOLDER_IMAGE_PATH,
-  buildArticleCountryPriority,
-  loadArticleWithFallback,
-  buildCanonicalArticleSlug,
-  normalizeCountryCode,
   normalizeRouteCountry,
-  parseArticleSlugParam,
-  resolveEdition,
   sanitizeBaseUrl,
 } from "./article-data"
 
 import { ArticleServerFallback } from "./ArticleServerFallback"
+import { resolveArticle } from "./resolve-article"
 
 export async function generateStaticParams() {
   return []
@@ -90,11 +84,11 @@ const resolveRenderedText = (value: unknown): string => {
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
   const routeCountryAlias = normalizeRouteCountry(countryCode)
-  const edition = resolveEdition(countryCode)
-  const { normalizedSlug: parsedSlug, stableId } = parseArticleSlugParam(slug)
+  const parsedSlug = slug.toLowerCase()
   const { isEnabled: preview } = await draftMode()
+  const resolved = await resolveArticle({ countryCode, slug, preview })
 
-  if (!edition) {
+  if (resolved.status === "not_found" && !resolved.articleData && !resolved.resolvedSourceCountry) {
     const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
     const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountryAlias, parsedSlug)
     const placeholderImage = buildPlaceholderUrl(baseUrl)
@@ -113,22 +107,18 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
     }
   }
 
-  const editionCountry = normalizeCountryCode(edition.code)
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const placeholderImage = buildPlaceholderUrl(baseUrl)
-
-  const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(parsedSlug, countryPriority, preview, {}, stableId)
-  const article = resolvedArticle.status === "found" ? resolvedArticle.article : null
+  const article = resolved.articleData
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
-  const isTemporaryError = resolvedArticle.status === "temporary_error"
+  const isTemporaryError = resolved.status === "temporary_error"
 
   if (isTemporaryError) {
     console.warn("[article-page] metadata fallback used due to temporary article fetch failure", {
-      error: resolvedArticle.error,
-      slug: parsedSlug,
-      countryPriority,
-      preview,
+      error: resolved.failureMetadata?.error,
+      slug: resolved.failureMetadata?.parsedSlug,
+      countryPriority: resolved.failureMetadata?.countryPriority,
+      preview: resolved.failureMetadata?.preview ?? preview,
     })
   }
 
@@ -142,23 +132,8 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
       ? "We hit a temporary issue loading this story. Please try again in a moment."
       : "Latest stories from News On Africa.")
 
-  const resolvedSourceCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.sourceCountry ?? editionCountry)
-      : editionCountry
-
-  const resolvedCanonicalCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
-      : editionCountry
-
-  const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
-    : routeCountryAlias
-
-  const canonicalSlug = buildCanonicalArticleSlug(article?.slug ?? parsedSlug, article?.databaseId)
-  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
-  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, targetCountry, canonicalSlug)
+  const canonicalUrl = resolved.canonicalUrl
+  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, resolved.targetCountry, resolved.canonicalSlug)
 
   return {
     title: `${title} - News On Africa`,
@@ -182,45 +157,31 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 
 export default async function ArticlePage({ params }: RouteParamsPromise) {
   const { countryCode, slug } = await params
-  const edition = resolveEdition(countryCode)
-  const { isEnabled: preview } = await draftMode()
-
-  if (!edition) notFound()
-
-  const editionCountry = normalizeCountryCode(edition.code)
   const routeCountry = normalizeRouteCountry(countryCode)
-  const { normalizedSlug, stableId } = parseArticleSlugParam(slug)
-  const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, preview, {}, stableId)
+  const { isEnabled: preview } = await draftMode()
+  const resolved = await resolveArticle({ countryCode, slug, preview })
 
-  if (resolvedArticle.status === "not_found") notFound()
+  if (resolved.status === "not_found") notFound()
 
-  const isTemporaryError = resolvedArticle.status === "temporary_error"
-  const articleData = resolvedArticle.status === "found" ? resolvedArticle.article : null
+  const isTemporaryError = resolved.status === "temporary_error"
+  const articleData = resolved.articleData
 
   if (!articleData) {
     if (isTemporaryError) {
       noStore()
 
       console.warn("[article-page] rendering fallback due to temporary article fetch failure", {
-        error: resolvedArticle.error,
-        slug: normalizedSlug,
-        countryPriority,
-        preview,
+        error: resolved.failureMetadata?.error,
+        slug: resolved.failureMetadata?.parsedSlug,
+        countryPriority: resolved.failureMetadata?.countryPriority,
+        preview: resolved.failureMetadata?.preview ?? preview,
       })
-
-      const errorDigest =
-        typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
-          ? (resolvedArticle.error as { digest?: string }).digest
-          : undefined
-      const failureCountries = resolvedArticle.failures?.map(({ country }) => country)
-      const staleArticle = resolvedArticle.staleArticle ?? null
 
       return (
         <ArticleServerFallback
-          staleArticle={staleArticle}
-          digest={errorDigest}
-          failureCountries={failureCountries}
+          staleArticle={resolved.failureMetadata?.staleArticle ?? null}
+          digest={resolved.failureMetadata?.errorDigest}
+          failureCountries={resolved.failureMetadata?.failureCountries}
         />
       )
     }
@@ -230,33 +191,20 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
 
   if (isTemporaryError) {
     console.warn("Serving stale article content due to temporary failure", {
-      error: resolvedArticle.error,
-      slug: normalizedSlug,
-      countryPriority,
+      error: resolved.failureMetadata?.error,
+      slug: resolved.failureMetadata?.parsedSlug,
+      countryPriority: resolved.failureMetadata?.countryPriority,
     })
   }
 
-  const resolvedSourceCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.sourceCountry ?? editionCountry)
-      : editionCountry
+  const targetCountry = resolved.targetCountry
+  const canonicalSlug = resolved.canonicalSlug
 
-  const resolvedCanonicalCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
-      : editionCountry
-
-  const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
-    : routeCountry
-
-  const canonicalSlug = buildCanonicalArticleSlug(articleData.slug ?? normalizedSlug, articleData.databaseId)
-
-  if (targetCountry !== routeCountry || canonicalSlug !== normalizedSlug) {
+  if (targetCountry !== routeCountry || canonicalSlug !== slug.toLowerCase()) {
     redirect(`/${targetCountry}/article/${canonicalSlug}`)
   }
 
-  const relatedCountry = resolvedSourceCountry ?? editionCountry
+  const relatedCountry = resolved.resolvedSourceCountry ?? routeCountry
   const relatedPostId = resolveRelatedPostId(articleData)
   let relatedPosts: Awaited<ReturnType<typeof getRelatedPostsForCountry>> = []
 
@@ -324,7 +272,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 <BookmarkButton
                   postId={
                     articleData.id ??
-                    (typeof articleData.databaseId === "number" ? String(articleData.databaseId) : normalizedSlug)
+                    (typeof articleData.databaseId === "number" ? String(articleData.databaseId) : canonicalSlug)
                   }
                   editionCode={targetCountry}
                   slug={canonicalSlug}
