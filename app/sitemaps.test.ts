@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
+import { buildArticlePath } from "@/lib/routing/article-route"
 
 const mockFetchRecentPosts = vi.fn()
 const mockFetchCategories = vi.fn()
@@ -58,7 +59,6 @@ describe("sitemap fetch limits", () => {
   })
 
 
-
   it("uses ISR settings for the metadata sitemap route", async () => {
     const sitemapModule = await import("@/app/sitemap")
 
@@ -78,6 +78,20 @@ describe("sitemap fetch limits", () => {
   })
 
 
+
+  it("matches article canonical redirect path format for metadata sitemap links", async () => {
+    const { default: buildMetadataSitemap } = await import("@/app/sitemap")
+
+    const entries = await buildMetadataSitemap()
+    const articleEntry = entries.find((entry) => entry.url.includes("/article/"))
+    const expectedPath = buildArticlePath({
+      countryCode: "za",
+      slug: "sample-post",
+      databaseId: 123,
+    })
+
+    expect(articleEntry?.url).toBe(`https://example.com${expectedPath}`)
+  })
   it("builds canonical metadata sitemap links with databaseId suffix", async () => {
     const { default: buildMetadataSitemap } = await import("@/app/sitemap")
 
