@@ -123,6 +123,14 @@ describe('URL generators', () => {
     expect(getArticleUrl('story', country)).toBe(`/${country}/article/story`)
   })
 
+  it('normalizes african-edition routes to african for article URLs', () => {
+    expect(getArticleUrl('story', 'african-edition')).toBe('/african/article/story')
+  })
+
+  it('includes databaseId in canonical article URLs', () => {
+    expect(getArticleUrl('Story', 'ZA', 77)).toBe('/za/article/story-77')
+  })
+
   it('builds category URL for provided country', () => {
     expect(getCategoryUrl('news', country)).toBe(`/${country}/category/news`)
   })
