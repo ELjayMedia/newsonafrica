@@ -227,7 +227,11 @@ export async function getRelatedPostsForCountry(
     const relatedNodes: PostSummaryFieldsFragment[] = []
 
     for (const category of relatedWithCategories.post.categories.nodes) {
-      const nodes = category?.posts?.nodes?.filter((post): post is PostSummaryFieldsFragment => Boolean(post)) ?? []
+      const nodes =
+        category?.posts?.nodes?.filter(
+          (post): post is PostSummaryFieldsFragment & { databaseId: number } =>
+            post != null && typeof post.databaseId === "number",
+        ) ?? []
       for (const node of nodes) {
         if (node.databaseId === numericPostId || seenPostIds.has(node.databaseId)) {
           continue
