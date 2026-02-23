@@ -35,7 +35,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
 
   return (
     <Link href={getArticleUrl(post.slug, post.country, post.databaseId)} className="block group">
-      <div className="grid md:grid-cols-2 gap-3 md:gap-4 bg-slate-50 shadow-none py-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 bg-slate-50 shadow-none py-1">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}
@@ -49,7 +49,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
             blurDataURL={blurDataURL}
           />
         </div>
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col justify-center px-1 sm:px-0">
           <h1
             className={cn(
               "text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-blue-600 transition-colors duration-200",
@@ -58,7 +58,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
           >
             {post.title}
           </h1>
-          <div className="text-gray-600 text-xs md:text-sm line-clamp-3" style={{ marginBottom: "1vw" }}>
+          <div className="text-gray-600 text-xs md:text-sm line-clamp-3 mb-2 md:mb-3">
             {post.excerpt.replace(/<[^>]*>/g, "")}
           </div>
           <div className="flex items-center justify-between text-sm text-gray-500">
