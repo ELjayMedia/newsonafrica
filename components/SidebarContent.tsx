@@ -6,7 +6,7 @@ import Image from "next/image"
 import { Clock, TrendingUp } from "lucide-react"
 
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { getArticleUrl, getCurrentCountry } from "@/lib/utils/routing"
+import { getCanonicalArticlePath, getCurrentCountry } from "@/lib/utils/routing"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import type { SidebarContentPayload } from "@/types/sidebar"
 
@@ -103,7 +103,7 @@ export function SidebarContent({ data, country: providedCountry }: SidebarConten
                 return (
                   <Link
                     key={post.id ?? `${post.slug}-${index}`}
-                    href={getArticleUrl(post.slug, country, post.databaseId)}
+                    href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, country)}
                     className="flex items-start gap-3 group transition-all hover:bg-gray-50 p-2.5 -mx-2.5 rounded-lg"
                   >
                     <div
@@ -149,7 +149,7 @@ export function SidebarContent({ data, country: providedCountry }: SidebarConten
               {personalizedPosts.map((post: any, index: number) => (
                 <Link
                   key={post.id ?? `${post.slug}-${index}`}
-                  href={getArticleUrl(post.slug, country, post.databaseId)}
+                  href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, country)}
                   className="flex items-start gap-3 group"
                 >
                   {post.featuredImage?.node?.sourceUrl ? (

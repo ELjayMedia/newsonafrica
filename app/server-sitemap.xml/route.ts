@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
 
 type SlugEntity = { slug?: string }
 type CountryEntity = { code?: string }
@@ -90,7 +90,7 @@ export async function GET() {
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
+    <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

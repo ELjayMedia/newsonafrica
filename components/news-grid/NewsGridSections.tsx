@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { ArticleCard } from "@/components/ArticleCard"
 import { cn } from "@/lib/utils"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
 import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 
 export interface NewsGridPost {
@@ -50,7 +50,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
       </div>
 
       <ArticleCard
-        href={getArticleUrl(mainPost?.slug ?? "", mainPost?.country, mainPost?.databaseId)}
+        href={getCanonicalArticlePath({ slug: mainPost?.slug ?? "", databaseId: mainPost?.databaseId }, mainPost?.country)}
         headline={mainPost?.title ?? ""}
         excerpt={sanitizedMainExcerpt}
         timestamp={mainPost?.date}
@@ -71,7 +71,7 @@ export function SportCategorySection({ sportCategoryPosts, blurURLs }: SportCate
         {secondaryPosts.slice(0, 3).map((post, index) => (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country, post.databaseId)}
+            href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}
             headline={post.title}
             timestamp={post.date}
             layout="horizontal"
@@ -108,7 +108,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
   return (
     <>
       <ArticleCard
-        href={getArticleUrl(mainPost.slug ?? "", mainPost.country, mainPost.databaseId)}
+        href={getCanonicalArticlePath({ slug: mainPost.slug ?? "", databaseId: mainPost.databaseId }, mainPost.country)}
         headline={mainPost.title}
         excerpt={sanitizedMainExcerpt}
         timestamp={mainPost.date}
@@ -128,7 +128,7 @@ export function RegularCategorySection({ mainPost, secondaryPosts, blurURLs }: R
         {secondaryPosts.map((post, index) => (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country, post.databaseId)}
+            href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}
             headline={post.title}
             timestamp={post.date}
             layout="horizontal"
@@ -170,7 +170,7 @@ export function AuthorNewsList({ posts, blurPlaceholder, className }: AuthorNews
         return (
           <ArticleCard
             key={post.id}
-            href={getArticleUrl(post.slug, post.country, post.databaseId)}
+            href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}
             headline={post.title}
             excerpt={sanitizedExcerpt}
             timestamp={post.date}
