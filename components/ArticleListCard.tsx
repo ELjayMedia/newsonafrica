@@ -8,7 +8,7 @@ import { cn, formatDate, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { getArticleUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import { getCanonicalArticlePath, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import type { Article } from "@/types/article"
 import type { WordPressPost } from "@/types/wp"
 import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
@@ -176,7 +176,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
       featuredImage,
       author: post.author?.node?.name,
       categories,
-      link: getArticleUrl(post.slug ?? "", country, post.databaseId),
+      link: getCanonicalArticlePath({ slug: post.slug ?? "", databaseId: post.databaseId }, country),
     }
   }
 
@@ -194,7 +194,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
         name: edge.node.name,
         slug: edge.node.slug,
       })) || [],
-    link: getArticleUrl(art.slug, country, art.databaseId),
+    link: getCanonicalArticlePath({ slug: art.slug, databaseId: art.databaseId }, country),
   }
 }
 

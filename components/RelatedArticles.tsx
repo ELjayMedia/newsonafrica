@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Clock, TrendingUp } from "lucide-react"
 import { cn, motionSafe } from "@/lib/utils"
-import { getArticleUrl } from "@/lib/utils/routing"
+import { getCanonicalArticlePath } from "@/lib/utils/routing"
 interface RelatedPost {
   id: string
   title: string
@@ -128,7 +128,7 @@ export function RelatedArticles({
 
   const ArticleCard = ({ post }: { post: RelatedPost }) => (
     <Link
-      href={getArticleUrl(post.slug, countryCode, post.databaseId)}
+      href={getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, countryCode)}
       className={cn("group block", layout === "carousel" ? "flex-shrink-0 w-72" : "")}
     >
       <article

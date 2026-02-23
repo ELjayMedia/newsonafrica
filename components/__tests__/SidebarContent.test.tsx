@@ -4,11 +4,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest"
 import { SidebarContent } from "../SidebarContent"
 
 const getCurrentCountry = vi.fn(() => "sz")
-const getArticleUrl = vi.fn((slug: string, country?: string) => `/${country || "sz"}/${slug}`)
+const getCanonicalArticlePath = vi.fn((article: { slug: string; databaseId?: number | null }, country?: string) => `/${country || "sz"}/${article.slug}${article.databaseId ? `-${article.databaseId}` : ""}`)
 
 vi.mock("@/lib/utils/routing", () => ({
   getCurrentCountry: () => getCurrentCountry(),
-  getArticleUrl: (slug: string, country?: string) => getArticleUrl(slug, country),
+  getCanonicalArticlePath: (article: { slug: string; databaseId?: number | null }, country?: string) =>
+    getCanonicalArticlePath(article, country),
 }))
 
 vi.mock("@/contexts/UserPreferencesClient", () => ({
@@ -97,6 +98,6 @@ describe("SidebarContent", () => {
       />,
     )
 
-    expect(getArticleUrl).toHaveBeenCalledWith("regional", "ng")
+    expect(getCanonicalArticlePath).toHaveBeenCalledWith({ slug: "regional", databaseId: undefined }, "ng")
   })
 })

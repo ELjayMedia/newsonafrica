@@ -11,6 +11,7 @@ import {
 let convertLegacyUrl: typeof import('./routing').convertLegacyUrl
 let rewriteLegacyLinks: typeof import('./routing').rewriteLegacyLinks
 let getArticleUrl: typeof import('./routing').getArticleUrl
+let getCanonicalArticlePath: typeof import('./routing').getCanonicalArticlePath
 let getCategoryUrl: typeof import('./routing').getCategoryUrl
 let getCurrentCountry: typeof import('./routing').getCurrentCountry
 let resolveCountryForLayout: typeof import('./routing').resolveCountryForLayout
@@ -18,11 +19,12 @@ let DEFAULT_COUNTRY: typeof import('./routing').DEFAULT_COUNTRY
 
 beforeAll(async () => {
   vi.resetModules()
-  vi.stubEnv('NEXT_PUBLIC_DEFAULT_SITE', 'ZA')
+  vi.stubEnv('NEXT_PUBLIC_DEFAULT_SITE', 'za')
   const routingModule = await vi.importActual<typeof import('./routing')>('./routing')
   convertLegacyUrl = routingModule.convertLegacyUrl
   rewriteLegacyLinks = routingModule.rewriteLegacyLinks
   getArticleUrl = routingModule.getArticleUrl
+  getCanonicalArticlePath = routingModule.getCanonicalArticlePath
   getCategoryUrl = routingModule.getCategoryUrl
   getCurrentCountry = routingModule.getCurrentCountry
   resolveCountryForLayout = routingModule.resolveCountryForLayout
@@ -128,7 +130,7 @@ describe('URL generators', () => {
   })
 
   it('includes databaseId in canonical article URLs', () => {
-    expect(getArticleUrl('Story', 'ZA', 77)).toBe('/za/article/story-77')
+    expect(getCanonicalArticlePath({ slug: 'Story', databaseId: 77 }, 'ZA')).toBe('/za/article/story-77')
   })
 
   it('builds category URL for provided country', () => {

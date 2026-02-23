@@ -2,8 +2,12 @@ import type { MetadataRoute } from "next"
 import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
+<<<<<<< HEAD
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
+=======
+import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+>>>>>>> f01319a1 (test sitemap links against canonical article path format)
 
 export const revalidate = 300
 
@@ -111,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           (typeof post.featuredImage?.node?.altText === "string" && post.featuredImage.node.altText) || title
 
         return {
-          url: `${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}`,
+          url: `${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}`,
           lastModified: postDate,
           changeFrequency: isRecent ? "daily" : "weekly",
           priority: isRecent ? 0.9 : 0.7,
