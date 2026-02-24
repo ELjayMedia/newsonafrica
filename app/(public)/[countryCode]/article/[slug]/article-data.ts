@@ -1,88 +1,24 @@
 import { ENV } from "@/config/env"
-import { cacheTags } from "@/lib/cache/cacheTags"
-import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
-import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
-import { COUNTRIES } from "@/lib/wordpress/service"
 import { buildArticlePath, normalizeArticleCountrySegment } from "@/lib/routing/article-route"
-import type { WordPressPost } from "@/types/wp"
-import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
-import type { PostFieldsFragment } from "@/types/wpgraphql"
 
-const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
-
-const ARTICLE_CACHE_KEY_PREFIX = "article"
+export const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
-
 export const normalizeSlug = (value: string): string => value.toLowerCase()
-
-const SUPPORTED_WORDPRESS_COUNTRIES = new Set(Object.keys(COUNTRIES).map((code) => normalizeCountryCode(code)))
-
-const getWordPressGraphQlEnvKey = (countryCode: string): string =>
-  `NEXT_PUBLIC_WP_${normalizeCountryCode(countryCode).toUpperCase()}_GRAPHQL`
-
-const hasConfiguredWordPressGraphQlEndpoint = (countryCode: string): boolean => {
-  const envKey = getWordPressGraphQlEnvKey(countryCode)
-  const value = process.env[envKey]
-
-  return typeof value === "string" && value.trim().length > 0
-}
-
-const hasWordPressEndpoint = (countryCode: string): boolean =>
-  SUPPORTED_WORDPRESS_COUNTRIES.has(normalizeCountryCode(countryCode))
 
 const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
 
-type ArticleCountryPriorityCacheEntry = {
-  priority: string[]
-  signature: string
-}
-
-const articleCountryPriorityCache = new Map<string, ArticleCountryPriorityCacheEntry>()
-
-const CROSS_POST_ALL_EDITIONS_POLICY = "all_supported"
-
-const shouldIncludeAllSupportedEditions = (): boolean =>
-  process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK === "true" ||
-  process.env.ARTICLE_CROSS_POST_POLICY === CROSS_POST_ALL_EDITIONS_POLICY
-
-const computeEditionConfigSignature = (): string => {
-  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
-  const editions = SUPPORTED_EDITIONS.map((edition) => ({
-    code: normalizeCountryCode(edition.code),
-    isCountryEdition: isCountryEdition(edition),
-  }))
-  const includeAllSupportedEditions = shouldIncludeAllSupportedEditions()
-
-  return JSON.stringify({ defaultSite, editions, includeAllSupportedEditions })
-}
-
-export const resetArticleCountryPriorityCache = (): void => {
-  if (process.env.NODE_ENV === "production") {
-    return
-  }
-
-  articleCountryPriorityCache.clear()
-}
-
 export const AFRICAN_ROUTE_ALIAS = normalizeArticleCountrySegment(AFRICAN_EDITION.code)
-
 export const normalizeRouteCountry = (country: string): string => normalizeArticleCountrySegment(country)
 
 export const resolveEdition = (countryCode: string): SupportedEdition | null => {
   const normalized = normalizeCountryCode(countryCode)
-
-  if (normalized === AFRICAN_ROUTE_ALIAS) {
-    return AFRICAN_EDITION
-  }
-
+  if (normalized === AFRICAN_ROUTE_ALIAS) return AFRICAN_EDITION
   return SUPPORTED_EDITION_LOOKUP.get(normalized) ?? null
 }
 
 export const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "")
-
 
 export type ParsedArticleSlug = {
   normalizedSlug: string
@@ -111,6 +47,7 @@ export const buildCanonicalArticleSlug = (slug: string, databaseId?: number | nu
   return canonicalPath.split("/").at(-1) ?? normalizeSlug(slug)
 }
 
+<<<<<<< HEAD
 type PostBySlugQueryResult = {
   post?: PostFieldsFragment | null
   posts?: {
@@ -349,235 +286,12 @@ const buildCachedArticlePayload = (
   }
 }
 
+=======
+>>>>>>> f9432432 (refactor article rendering data flow to server-only wordpress path)
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
-  const signature = computeEditionConfigSignature()
-
-  const cached = articleCountryPriorityCache.get(normalizedPrimary)
-  if (cached?.signature === signature) {
-    return cached.priority
-  }
-
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
-  const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
-  const prioritized = [normalizedPrimary, defaultSite]
+  const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) => normalizeCountryCode(edition.code))
 
-  if (normalizedPrimary === AFRICAN_ROUTE_ALIAS) {
-    prioritized.push(africanEdition)
-  } else if (normalizedPrimary === africanEdition) {
-    prioritized.push(AFRICAN_ROUTE_ALIAS)
-  }
-
-  if (shouldIncludeAllSupportedEditions()) {
-    const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
-      normalizeCountryCode(edition.code),
-    )
-    prioritized.push(...supportedCountryEditions, africanEdition)
-  }
-
-  const supportedPriority = prioritized.filter((candidateCountry) => {
-    if (!hasWordPressEndpoint(candidateCountry)) {
-      return false
-    }
-
-    // Keep the requested country in the chain so misconfiguration still surfaces clearly for that route,
-    // but skip fallback countries that do not have an explicit endpoint in this environment.
-    if (candidateCountry === normalizedPrimary) {
-      return true
-    }
-
-    return hasConfiguredWordPressGraphQlEndpoint(candidateCountry)
-  })
-
-  const priority = unique(supportedPriority)
-  articleCountryPriorityCache.set(normalizedPrimary, { priority, signature })
-
-  return priority
+  return Array.from(new Set([normalizedPrimary, defaultSite, ...supportedCountryEditions]))
 }
-
-export type ArticleFallbackNotFound = { status: "not_found" }
-
-type ArticleTemporaryFailure = {
-  country: string
-  error: unknown
-  failure?: WordPressGraphQLFailure
-}
-
-type ArticleAttemptFailureSummary = {
-  country: string
-  result: "temporary_error" | "not_found" | "found"
-  failureKind: WordPressGraphQLFailure["kind"] | null
-  failureStatus: number | null
-}
-
-type LoadArticleWithFallbackContext = {
-  requestedCountry?: string
-  staleCacheServed?: boolean
-}
-
-export type ArticleFallbackTemporaryError = {
-  status: "temporary_error"
-  error: ArticleTemporarilyUnavailableError
-  failures: ArticleTemporaryFailure[]
-  staleArticle?: WordPressPost | null
-  staleSourceCountry?: string | null
-  staleCanonicalCountry?: string | null
-}
-
-export type ArticleLoadResult =
-  | ({ status: "found"; sourceCountry: string } & LoadedArticle)
-  | ArticleFallbackNotFound
-  | ArticleFallbackTemporaryError
-
-export class ArticleTemporarilyUnavailableError extends AggregateError {
-  public readonly failures: ArticleTemporaryFailure[]
-
-  constructor(failures: ArticleTemporaryFailure[], message: string) {
-    super(
-      failures.map(({ error, failure }) => failure?.error ?? error),
-      message,
-    )
-    this.name = "ArticleTemporarilyUnavailableError"
-    this.failures = failures
-  }
-}
-
-const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
-  `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
-
-const FALLBACK_COUNTRY_CONCURRENCY = 3
-
-export async function loadArticleWithFallback(
-  slug: string,
-  countryPriority: string[],
-  preview = false,
-  context: LoadArticleWithFallbackContext = {},
-  stableId?: number | null,
-): Promise<ArticleLoadResult> {
-  const normalizedSlug = normalizeSlug(slug)
-
-  const [primaryCountry, ...fallbackCountries] = countryPriority
-
-  if (!primaryCountry) {
-    return { status: "not_found" }
-  }
-
-  const temporaryFailures: ArticleTemporaryFailure[] = []
-  const attempts: ArticleAttemptFailureSummary[] = []
-  const normalizedRequestedCountry = normalizeCountryCode(context.requestedCountry ?? primaryCountry)
-  const staleCacheServed = context.staleCacheServed ?? false
-
-  const recordAttempt = (
-    country: string,
-    result: "temporary_error" | "not_found" | "found",
-    failure?: WordPressGraphQLFailure,
-  ) => {
-    attempts.push({
-      country,
-      result,
-      failureKind: failure?.kind ?? null,
-      failureStatus: failure && "status" in failure ? failure.status : null,
-    })
-  }
-
-  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview, stableId)
-
-  if (primaryArticle.status === "temporary_error") {
-    recordAttempt(primaryCountry, "temporary_error", primaryArticle.failure)
-    temporaryFailures.push({
-      country: primaryCountry,
-      error: primaryArticle.error,
-      failure: primaryArticle.failure,
-    })
-  } else if (primaryArticle.status === "found") {
-    recordAttempt(primaryCountry, "found")
-    return {
-      status: "found",
-      article: primaryArticle.article,
-      tags: primaryArticle.tags,
-      version: primaryArticle.version,
-      canonicalCountry: primaryArticle.canonicalCountry,
-      sourceCountry: primaryCountry,
-    }
-  } else {
-    recordAttempt(primaryCountry, "not_found")
-  }
-
-  let foundFallback:
-    | ({ status: "found"; sourceCountry: string } & LoadedArticle)
-    | null = null
-
-  if (fallbackCountries.length > 0) {
-    let nextFallbackIndex = 0
-
-    const runFallbackLoader = async (): Promise<void> => {
-      while (foundFallback == null) {
-        const index = nextFallbackIndex
-        nextFallbackIndex += 1
-
-        const fallbackCountry = fallbackCountries[index]
-        if (!fallbackCountry) {
-          return
-        }
-
-        const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview, stableId)
-
-        if (fallbackArticle.status === "temporary_error") {
-          recordAttempt(fallbackCountry, "temporary_error", fallbackArticle.failure)
-          temporaryFailures.push({
-            country: fallbackCountry,
-            error: fallbackArticle.error,
-            failure: fallbackArticle.failure,
-          })
-        } else if (fallbackArticle.status === "found") {
-          recordAttempt(fallbackCountry, "found")
-          foundFallback = {
-            status: "found",
-            article: fallbackArticle.article,
-            tags: fallbackArticle.tags,
-            version: fallbackArticle.version,
-            canonicalCountry: fallbackArticle.canonicalCountry,
-            sourceCountry: fallbackCountry,
-          }
-          return
-        } else {
-          recordAttempt(fallbackCountry, "not_found")
-        }
-      }
-    }
-
-    const workerCount = Math.min(FALLBACK_COUNTRY_CONCURRENCY, fallbackCountries.length)
-    await Promise.all(Array.from({ length: workerCount }, () => runFallbackLoader()))
-  }
-
-  if (foundFallback) {
-    return foundFallback
-  }
-
-  const orderedAttempts = attempts.sort(
-    (left, right) => countryPriority.indexOf(left.country) - countryPriority.indexOf(right.country),
-  )
-
-  if (temporaryFailures.length > 0) {
-    console.error("[article-data] fallback attempts exhausted with temporary failures", {
-      slug: normalizedSlug,
-      requestedCountry: normalizedRequestedCountry,
-      countryPriority,
-      attempts: orderedAttempts,
-      staleCacheServed,
-      preview,
-    })
-
-    const message = buildTemporaryFailureMessage(temporaryFailures)
-    const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message)
-    return {
-      status: "temporary_error",
-      error,
-      failures: temporaryFailures,
-    }
-  }
-
-  return { status: "not_found" }
-}
-
-export { PLACEHOLDER_IMAGE_PATH }

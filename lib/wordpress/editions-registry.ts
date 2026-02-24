@@ -48,6 +48,21 @@ const logInvalidEndpoint = (params: {
   })
 }
 
+
+const warnMissingOptionalEndpoint = (edition: EditionCode, envKey: EndpointEnvKey, fallback: string) => {
+  if (edition === "sz") {
+    return
+  }
+
+  if (!ENV[envKey]) {
+    console.warn("[wp-editions-registry] Optional edition endpoint missing; using fallback", {
+      edition,
+      envKey,
+      fallback,
+    })
+  }
+}
+
 const resolveEndpoint = (params: {
   edition: EditionCode
   type: keyof EditionEndpoints
@@ -58,6 +73,7 @@ const resolveEndpoint = (params: {
   const rawValue = ENV[envKey]
 
   if (typeof rawValue !== "string" || !rawValue) {
+    warnMissingOptionalEndpoint(edition, envKey, fallback)
     return fallback
   }
 

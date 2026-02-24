@@ -275,10 +275,13 @@ export async function POST(request: NextRequest) {
           for (const country of revalidationCountries) {
             tagsToRevalidate.add(cacheTags.edition(country))
             tagsToRevalidate.add(cacheTags.home(country))
+            tagsToRevalidate.add(`wp:${country}:latest`)
             if (postIdentifier) {
               tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
+              tagsToRevalidate.add(`wp:${country}:post:id:${postIdentifier}`)
             }
             tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
+            tagsToRevalidate.add(`wp:${country}:post:slug:${String(post.slug).toLowerCase()}`)
 
             categorySlugs.forEach((slug) => {
               tagsToRevalidate.add(cacheTags.category(country, slug))
@@ -321,10 +324,13 @@ export async function POST(request: NextRequest) {
           for (const country of revalidationCountries) {
             tagsToRevalidate.add(cacheTags.edition(country))
             tagsToRevalidate.add(cacheTags.home(country))
+            tagsToRevalidate.add(`wp:${country}:latest`)
             if (postIdentifier) {
               tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
+              tagsToRevalidate.add(`wp:${country}:post:id:${postIdentifier}`)
             }
             tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
+            tagsToRevalidate.add(`wp:${country}:post:slug:${String(post.slug).toLowerCase()}`)
 
             categorySlugs.forEach((slug) => {
               tagsToRevalidate.add(cacheTags.category(country, slug))

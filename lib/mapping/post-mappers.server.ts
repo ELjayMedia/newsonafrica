@@ -1,6 +1,6 @@
 import "server-only"
 
-import { normalizeWordPressPostContent } from "@/lib/wordpress/normalize-post-content"
+import { normalizePostContent } from "@/lib/wordpress/normalize"
 import {
   mapGraphqlPostToWordPressPost as mapGraphqlPostToWordPressPostShared,
   type GraphqlPostNode,
@@ -11,5 +11,5 @@ export const mapGraphqlPostToWordPressPost = (
   countryCode?: string,
 ) =>
   mapGraphqlPostToWordPressPostShared(post, countryCode, {
-    normalizeContent: normalizeWordPressPostContent,
+    normalizeContent: normalizePostContent,
   })
