@@ -6,9 +6,9 @@ import { ENV } from "@/config/env"
 import { resolveCountryOgBadge } from "@/lib/og/country-badge"
 import { stripHtml } from "@/lib/search"
 
+import { getArticleBySlug } from "@/lib/wordpress/article-data"
+
 import {
-  buildArticleCountryPriority,
-  loadArticleWithFallback,
   normalizeCountryCode,
   parseArticleSlugParam,
   resolveEdition,
@@ -71,7 +71,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
   const normalizedCountry = edition
     ? edition.code.toLowerCase()
     : normalizeCountryCode(countryCode || ENV.NEXT_PUBLIC_DEFAULT_SITE)
-  const { normalizedSlug, stableId } = parseArticleSlugParam(slug)
+  const { normalizedSlug } = parseArticleSlugParam(slug)
 
   const badge = resolveCountryOgBadge(normalizedCountry)
   const [badgeImage, logoImage] = await Promise.all([
@@ -79,8 +79,7 @@ export default async function Image({ params }: { params: RouteParams }): Promis
     loadPublicAsset("/news-on-africa-logo.png"),
   ])
 
-  const countryPriority = buildArticleCountryPriority(normalizedCountry)
-  const resolvedArticle = await loadArticleWithFallback(normalizedSlug, countryPriority, false, {}, stableId)
+  const resolvedArticle = await getArticleBySlug({ countryCode: normalizedCountry, slug: normalizedSlug, preview: false })
   const post = resolvedArticle.status === "found" ? resolvedArticle.article : null
   const headline = formatHeadline(stripHtml(post?.title ?? ""), stripHtml(post?.excerpt ?? ""))
 

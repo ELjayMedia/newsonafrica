@@ -1,14 +1,13 @@
 import { cache } from "react"
 import { draftMode } from "next/headers"
 
-import { isCountryEdition } from "@/lib/editions"
 import { ENV } from "@/config/env"
+import { isCountryEdition } from "@/lib/editions"
+import { getArticleBySlug } from "@/lib/wordpress/article-data"
 import type { WordPressPost } from "@/types/wp"
 
 import {
-  buildArticleCountryPriority,
   buildCanonicalArticleSlug,
-  loadArticleWithFallback,
   normalizeCountryCode,
   normalizeRouteCountry,
   parseArticleSlugParam,
@@ -73,53 +72,36 @@ export const resolveArticle = cache(async ({
     }
   }
 
-  const editionCountry = normalizeCountryCode(edition.code)
-  const countryPriority = buildArticleCountryPriority(editionCountry)
-  const resolvedArticle = await loadArticleWithFallback(parsedSlug, countryPriority, resolvedPreview, {}, stableId)
+  const loaded = await getArticleBySlug({ countryCode: normalizeCountryCode(edition.code), slug: parsedSlug, preview: resolvedPreview })
 
-  const resolvedSourceCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.sourceCountry ?? editionCountry)
-      : editionCountry
-
-  const resolvedCanonicalCountry =
-    resolvedArticle.status === "found"
-      ? (resolvedArticle.canonicalCountry ?? resolvedSourceCountry ?? editionCountry)
-      : editionCountry
+  const resolvedSourceCountry = loaded.sourceCountryCode ?? normalizeCountryCode(edition.code)
+  const resolvedCanonicalCountry = loaded.canonicalCountryCode ?? resolvedSourceCountry
 
   const targetCountry = isCountryEdition(edition)
-    ? normalizeRouteCountry(resolvedCanonicalCountry ?? editionCountry)
+    ? normalizeRouteCountry(resolvedCanonicalCountry)
     : routeCountryAlias
 
-  const articleData = resolvedArticle.status === "found" ? resolvedArticle.article : null
-  const articleVersion = resolvedArticle.status === "found" ? resolvedArticle.version : null
+  const articleData = loaded.status === "found" ? loaded.article : null
   const canonicalSlug = buildCanonicalArticleSlug(articleData?.slug ?? parsedSlug, articleData?.databaseId)
   const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
 
-  const errorDigest =
-    resolvedArticle.status === "temporary_error" &&
-    typeof (resolvedArticle.error as { digest?: unknown })?.digest === "string"
-      ? (resolvedArticle.error as { digest?: string }).digest
-      : undefined
-
   return {
-    status: resolvedArticle.status,
+    status: loaded.status,
     articleData,
     resolvedSourceCountry,
     resolvedCanonicalCountry,
     targetCountry,
     canonicalSlug,
     canonicalUrl,
-    articleVersion,
+    articleVersion: loaded.version,
     failureMetadata:
-      resolvedArticle.status === "temporary_error"
+      loaded.status === "temporary_error"
         ? {
             isTemporaryError: true,
-            error: resolvedArticle.error,
-            errorDigest,
-            failureCountries: resolvedArticle.failures?.map(({ country }) => country),
-            staleArticle: resolvedArticle.staleArticle ?? null,
-            countryPriority,
+            error: loaded.failures?.[0]?.error,
+            failureCountries: loaded.failures?.map((failure) => failure.country),
+            staleArticle: null,
+            countryPriority: [resolvedSourceCountry],
             parsedSlug,
             stableId,
             preview: resolvedPreview,
