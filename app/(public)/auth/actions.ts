@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
+import { toSessionCookieProfile } from "@/lib/auth/session-cookie-profile"
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/supabase"
@@ -134,14 +135,7 @@ export async function signInWithPasswordAction(
 
     if (userId) {
       try {
-        await writeSessionCookie({
-          userId,
-          username: user?.email ?? null,
-          avatar_url: null,
-          role: (user as { role?: string | null })?.role ?? null,
-          created_at: (user as { created_at?: string | null })?.created_at ?? null,
-          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
-        })
+        await writeSessionCookie(toSessionCookieProfile(user))
       } catch (cookieError) {
         console.error("Failed to prime session cookie after password sign-in", cookieError)
       }
@@ -210,14 +204,7 @@ export async function signUpWithPasswordAction(
 
     if (userId) {
       try {
-        await writeSessionCookie({
-          userId,
-          username: user?.email ?? null,
-          avatar_url: null,
-          role: (user as { role?: string | null })?.role ?? null,
-          created_at: (user as { created_at?: string | null })?.created_at ?? null,
-          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
-        })
+        await writeSessionCookie(toSessionCookieProfile(user))
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
       }
