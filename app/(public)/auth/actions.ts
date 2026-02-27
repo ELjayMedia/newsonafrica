@@ -50,6 +50,10 @@ function normalizePassword(value: FormDataEntryValue | null): string | null {
   return password.length > 0 ? password : null
 }
 
+function normalizeOptionalString(value: unknown): string | null {
+  return typeof value === "string" ? value : null
+}
+
 function getSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL
   if (configured) {
@@ -131,6 +135,11 @@ export async function signInWithPasswordAction(
 
     const user = data.user
     const userId = user?.id
+    const cookieUser = user as {
+      role?: string | null
+      created_at?: string | null
+      updated_at?: string | null
+    } | null
 
     if (userId) {
       try {
@@ -138,9 +147,9 @@ export async function signInWithPasswordAction(
           userId,
           username: user?.email ?? null,
           avatar_url: null,
-          role: (user as { role?: string | null })?.role ?? null,
-          created_at: (user as { created_at?: string | null })?.created_at ?? null,
-          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
+          role: normalizeOptionalString(cookieUser?.role ?? null),
+          created_at: normalizeOptionalString(cookieUser?.created_at ?? null),
+          updated_at: normalizeOptionalString(cookieUser?.updated_at ?? null),
         })
       } catch (cookieError) {
         console.error("Failed to prime session cookie after password sign-in", cookieError)
@@ -207,6 +216,11 @@ export async function signUpWithPasswordAction(
 
     const user = data.user
     const userId = user?.id
+    const cookieUser = user as {
+      role?: string | null
+      created_at?: string | null
+      updated_at?: string | null
+    } | null
 
     if (userId) {
       try {
@@ -214,9 +228,9 @@ export async function signUpWithPasswordAction(
           userId,
           username: user?.email ?? null,
           avatar_url: null,
-          role: (user as { role?: string | null })?.role ?? null,
-          created_at: (user as { created_at?: string | null })?.created_at ?? null,
-          updated_at: (user as { updated_at?: string | null })?.updated_at ?? null,
+          role: normalizeOptionalString(cookieUser?.role ?? null),
+          created_at: normalizeOptionalString(cookieUser?.created_at ?? null),
+          updated_at: normalizeOptionalString(cookieUser?.updated_at ?? null),
         })
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
