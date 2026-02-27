@@ -1,5 +1,18 @@
 # News on Africa
 
+## Accessing this repository in v0
+
+If v0 shows **"GitHub authentication required to access this repository"**, reconnect your GitHub account in v0 and make sure it has access to this repo:
+
+1. In v0, open **Settings → GitHub** and click **Connect/Reconnect**.
+2. Authorize either:
+   - **All repositories**, or
+   - **Only selected repositories** and explicitly include this repo.
+3. If your organization enforces SSO, complete SSO authorization for the OAuth app.
+4. Retry the import in v0 after re-authenticating.
+
+If it still fails, remove the GitHub integration from v0 and connect again so the OAuth grant is regenerated.
+
 ## Supabase setup
 
 1. Copy `.env.example` to `.env.local` (or your deployment environment secret manager).
