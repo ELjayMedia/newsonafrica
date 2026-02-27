@@ -103,9 +103,13 @@ const nextConfig = {
 }
 
 // Only apply bundle analyzer when ANALYZE env var is set
+let config = nextConfig
 if (process.env.ANALYZE === "true") {
-  const withAnalyzer = require("@next/bundle-analyzer")
-  module.exports = withAnalyzer({ enabled: true })(nextConfig)
-} else {
-  module.exports = nextConfig
+  try {
+    const withAnalyzer = require("@next/bundle-analyzer")
+    config = withAnalyzer({ enabled: true })(nextConfig)
+  } catch (error) {
+    console.warn("@next/bundle-analyzer not available, skipping analyzer")
+  }
 }
+module.exports = config
