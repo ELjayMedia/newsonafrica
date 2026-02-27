@@ -50,6 +50,7 @@ function normalizePassword(value: FormDataEntryValue | null): string | null {
   return password.length > 0 ? password : null
 }
 
+
 function getSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL
   if (configured) {
