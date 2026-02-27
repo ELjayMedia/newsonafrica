@@ -1,5 +1,3 @@
-const withAnalyzer = require("@next/bundle-analyzer")
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -103,4 +101,11 @@ const nextConfig = {
   },
   serverExternalPackages: ["sharp"],
 }
-module.exports = withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
+
+// Only apply bundle analyzer when ANALYZE env var is set
+if (process.env.ANALYZE) {
+  const withAnalyzer = require("@next/bundle-analyzer")
+  module.exports = withAnalyzer({ enabled: true })(nextConfig)
+} else {
+  module.exports = nextConfig
+}
