@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-import { createSupabaseRouteClient } from "@/lib/supabase/route"
-
+import { toSessionCookieProfile } from "@/lib/auth/session-cookie-profile"
 import { writeSessionCookie } from "@/lib/auth/session-cookie"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 
 function serviceUnavailable() {
   return NextResponse.json({ error: "Supabase service unavailable" }, { status: 503 })
@@ -75,14 +75,16 @@ export async function GET(request: NextRequest) {
             .eq("id", data.session.user.id)
             .maybeSingle()
 
-          await writeSessionCookie({
-            userId: data.session.user.id,
-            username: profileSummary?.username ?? null,
-            avatar_url: profileSummary?.avatar_url ?? null,
-            role: profileSummary?.role ?? null,
-            created_at: profileSummary?.created_at ?? null,
-            updated_at: profileSummary?.updated_at ?? null,
-          })
+          await writeSessionCookie(
+            toSessionCookieProfile({
+              userId: data.session.user.id,
+              username: profileSummary?.username ?? null,
+              avatar_url: profileSummary?.avatar_url ?? null,
+              role: profileSummary?.role ?? null,
+              created_at: profileSummary?.created_at ?? null,
+              updated_at: profileSummary?.updated_at ?? null,
+            }),
+          )
         } catch (cookieError) {
           console.error("Failed to persist session cookie after callback", cookieError)
         }
