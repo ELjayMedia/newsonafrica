@@ -2,34 +2,21 @@ import { NextResponse } from "next/server"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { logRequest, withCors } from "@/lib/api-utils"
 import { ENV } from "@/config/env"
+import { fetchCategories, fetchRecentPosts } from "@/lib/wordpress/service"
 
 // Cache policy: long (30 minutes)
 export const revalidate = 1800
 export const runtime = "nodejs"
 
-// --- Properly typed stubs (fixes your build error) ---
-
 type SitemapCategory = {
-  slug: string
+  slug?: string
 }
 
 type SitemapPost = {
-  slug: string
+  slug?: string
   country?: string
   databaseId?: number
 }
-
-const fetchAllCategories = async (): Promise<SitemapCategory[]> => {
-  return []
-}
-
-const fetchRecentPosts = async (
-  limit: number = 100,
-): Promise<SitemapPost[]> => {
-  return []
-}
-
-// -----------------------------------------------------
 
 export async function GET(request: Request) {
   logRequest(request)
@@ -41,12 +28,12 @@ export async function GET(request: Request) {
 
   try {
     const [categories, posts] = await Promise.all([
-      fetchAllCategories(),
-      fetchRecentPosts(100), // now valid
+      fetchCategories(),
+      fetchRecentPosts(100),
     ])
 
-    const safeCategories = Array.isArray(categories) ? categories : []
-    const safePosts = Array.isArray(posts) ? posts : []
+    const safeCategories = (Array.isArray(categories) ? categories : []) as SitemapCategory[]
+    const safePosts = (Array.isArray(posts) ? posts : []) as SitemapPost[]
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -58,23 +45,35 @@ export async function GET(request: Request) {
   ${safeCategories
         .flatMap((category) =>
           SUPPORTED_COUNTRIES.map(
-            (country) => `
+            (country) => {
+              if (!category.slug) {
+                return ""
+              }
+
+              return `
   <url>
     <loc>${baseUrl}${getCategoryUrl(category.slug, country)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`,
+  </url>`
+            },
           ),
         )
         .join("")}
   ${safePosts
         .map(
-          (post) => `
+          (post) => {
+            if (!post.slug) {
+              return ""
+            }
+
+            return `
   <url>
     <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>`,
+  </url>`
+          },
         )
         .join("")}
 </urlset>`
