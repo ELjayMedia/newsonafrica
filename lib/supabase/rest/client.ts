@@ -1,9 +1,15 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
 const NORMALIZED_SUPABASE_URL = SUPABASE_URL.trim().replace(/\/+$/, "")
 
-export const REST_BASE_URL = `${NORMALIZED_SUPABASE_URL}/rest/v1`
+export const REST_BASE_URL = NORMALIZED_SUPABASE_URL
+  ? `${NORMALIZED_SUPABASE_URL}/rest/v1`
+  : ""
 
 export function buildRestUrl(path: string, params?: URLSearchParams): string {
+  if (!REST_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to build Supabase REST URLs")
+  }
+
   const normalizedPath = path.replace(/^\/+/, "")
   const baseUrl = `${REST_BASE_URL}/${normalizedPath}`
 
