@@ -1,35 +1,23 @@
 import { NextResponse } from "next/server"
-import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import { logRequest, withCors } from "@/lib/api-utils"
-import { ENV } from "@/config/env"
 
-// Cache policy: long (30 minutes)
+import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
+import { fetchAllCategories, fetchRecentPosts } from "@/lib/wordpress/service"
+import { ENV } from "@/config/env"
+import { logRequest, withCors } from "@/lib/api-utils"
+import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+
 export const revalidate = 1800
 export const runtime = "nodejs"
 
-// --- Properly typed stubs (fixes your build error) ---
-
 type SitemapCategory = {
-  slug: string
+  slug?: string | null
 }
 
 type SitemapPost = {
-  slug: string
-  country?: string
-  databaseId?: number
+  slug?: string | null
+  country?: string | null
+  databaseId?: number | null
 }
-
-const fetchAllCategories = async (): Promise<SitemapCategory[]> => {
-  return []
-}
-
-const fetchRecentPosts = async (
-  limit: number = 100,
-): Promise<SitemapPost[]> => {
-  return []
-}
-
-// -----------------------------------------------------
 
 export async function GET(request: Request) {
   logRequest(request)
@@ -41,12 +29,17 @@ export async function GET(request: Request) {
 
   try {
     const [categories, posts] = await Promise.all([
-      fetchAllCategories(),
-      fetchRecentPosts(100), // now valid
+      fetchAllCategories() as Promise<SitemapCategory[]>,
+      fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT) as Promise<SitemapPost[]>,
     ])
 
-    const safeCategories = Array.isArray(categories) ? categories : []
-    const safePosts = Array.isArray(posts) ? posts : []
+    const safeCategories = (Array.isArray(categories) ? categories : []).filter(
+      (category): category is SitemapCategory & { slug: string } => typeof category?.slug === "string" && category.slug.length > 0,
+    )
+
+    const safePosts = (Array.isArray(posts) ? posts : []).filter(
+      (post): post is SitemapPost & { slug: string } => typeof post?.slug === "string" && post.slug.length > 0,
+    )
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -56,27 +49,27 @@ export async function GET(request: Request) {
     <priority>1.0</priority>
   </url>
   ${safeCategories
-        .flatMap((category) =>
-          SUPPORTED_COUNTRIES.map(
-            (country) => `
+    .flatMap((category) =>
+      SUPPORTED_COUNTRIES.map(
+        (country) => `
   <url>
     <loc>${baseUrl}${getCategoryUrl(category.slug, country)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`,
-          ),
-        )
-        .join("")}
+      ),
+    )
+    .join("")}
   ${safePosts
-        .map(
-          (post) => `
+    .map(
+      (post) => `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, post.country ?? undefined, post.databaseId ?? undefined)}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`,
-        )
-        .join("")}
+    )
+    .join("")}
 </urlset>`
 
     return withCors(
