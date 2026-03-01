@@ -450,6 +450,15 @@ export const POST_BY_SLUG_QUERY = gql`
   }
 `
 
+export const POST_BY_SLUG_DIRECT_QUERY = gql`
+  ${POST_FIELDS_FRAGMENT}
+  query PostBySlugDirect($slug: ID!, $asPreview: Boolean = false) {
+    post(id: $slug, idType: SLUG, asPreview: $asPreview) {
+      ...PostFields
+    }
+  }
+`
+
 export const POST_BY_DATABASE_ID_QUERY = gql`
   ${POST_FIELDS_FRAGMENT}
   query PostByDatabaseId($id: ID!, $asPreview: Boolean = false) {

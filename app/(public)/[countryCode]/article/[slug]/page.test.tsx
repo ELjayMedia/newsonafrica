@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('server-only', () => ({}))
 import { render, screen } from '@testing-library/react'
 
 vi.mock('next/image', () => ({
@@ -67,7 +69,7 @@ import { ENV } from '@/config/env'
 import { notFound, redirect } from 'next/navigation'
 import { draftMode } from 'next/headers'
 import {
-  POST_BY_SLUG_QUERY,
+  POST_BY_SLUG_DIRECT_QUERY,
   POST_CATEGORIES_QUERY,
   RELATED_POSTS_QUERY,
 } from '@/lib/wordpress/queries'
@@ -123,9 +125,24 @@ describe('ArticlePage', () => {
     ...(data && typeof data === 'object' ? (data as Record<string, unknown>) : {}),
   })
 
+
+  it('redirects slug-only URLs to canonical slug with database id', async () => {
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
+        return graphqlSuccess({ post: createArticleNode({ slug: 'test', databaseId: 77 }) }) as any
+      }
+
+      return graphqlSuccess({}) as any
+    })
+
+    await expect(Page({ params: { countryCode: 'sz', slug: 'test' } })).rejects.toThrow('NEXT_REDIRECT')
+
+    expect(redirect).toHaveBeenCalledWith('/sz/article/test-77')
+  })
+
   it('renders post content', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'Hello' })] } }) as any
       }
 
@@ -148,7 +165,7 @@ describe('ArticlePage', () => {
 
   it('sets featured image sizes and keeps it as priority when no excerpt precedes it', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({ posts: { nodes: [createArticleNode({ excerpt: '' })] } }) as any
       }
 
@@ -176,7 +193,7 @@ describe('ArticlePage', () => {
 
   it('does not prioritize the featured image when excerpt content is present', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({
           posts: { nodes: [createArticleNode({ excerpt: '<p>Lead excerpt</p>' })] },
         }) as any
@@ -201,7 +218,7 @@ describe('ArticlePage', () => {
 
   it('passes the database ID to related post lookup when available', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({
           posts: { nodes: [createArticleNode({ databaseId: 42, id: 'gid://wordpress/Post:42' })] },
         }) as any
@@ -227,7 +244,7 @@ describe('ArticlePage', () => {
     const base64Id = Buffer.from('gid://wordpress/Post:42').toString('base64')
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({
           posts: { nodes: [createArticleNode({ databaseId: undefined, id: base64Id })] },
         }) as any
@@ -251,7 +268,7 @@ describe('ArticlePage', () => {
 
   it('calls notFound when the article cannot be resolved via GraphQL', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
@@ -277,7 +294,7 @@ describe('ArticlePage', () => {
     articleDataModule.resetArticleCountryPriorityCache()
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         if (country === 'sz') {
           return graphqlSuccess({ posts: { nodes: [] } }) as any
         }
@@ -329,7 +346,7 @@ describe('ArticlePage', () => {
   it('renders the fallback markup when wordpress fails without stale content', async () => {
     const failure = new Error('Network down')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         throw failure
       }
 
@@ -348,7 +365,7 @@ describe('ArticlePage', () => {
 
   it('renders temporary unavailable fallback when requests temporarily fail', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({
           posts: { nodes: [createArticleNode({ title: 'Cached article' })] },
         }) as any
@@ -372,7 +389,7 @@ describe('ArticlePage', () => {
   it('renders fallback markup in production when temporary article failures occur', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         throw new Error('Outage')
       }
 
@@ -468,7 +485,7 @@ describe('ArticlePage', () => {
 
   it('generates metadata that prefers the dynamic OG image', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({
           posts: {
             nodes: [
@@ -511,7 +528,7 @@ describe('ArticlePage', () => {
 
   it('falls back to the placeholder image when the article is missing', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         return graphqlSuccess({ posts: { nodes: [] } }) as any
       }
 
@@ -547,7 +564,7 @@ describe('ArticlePage', () => {
     articleDataModule.resetArticleCountryPriorityCache()
 
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         if (country === 'sz') {
           return graphqlSuccess({ posts: { nodes: [] } }) as any
         }
@@ -588,7 +605,7 @@ describe('ArticlePage', () => {
 
   it('uses the requested country path for african edition URLs', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         if (country === 'sz') {
           return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'African Edition' })] } }) as any
         }
@@ -623,7 +640,7 @@ describe('ArticlePage', () => {
 
   it('renders non-country edition content without redirecting', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         if (country === 'sz') {
           return graphqlSuccess({ posts: { nodes: [createArticleNode({ title: 'African' })] } }) as any
         }
@@ -651,7 +668,7 @@ describe('ArticlePage', () => {
 
   it('treats the African edition alias as valid', async () => {
     vi.mocked(fetchWordPressGraphQL).mockImplementation(async (country, query) => {
-      if (query === POST_BY_SLUG_QUERY) {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
         if (country === 'sz') {
           return graphqlSuccess({
             posts: { nodes: [createArticleNode({ title: 'African story', slug: 'african-story' })] },

@@ -3,7 +3,7 @@ import "server-only"
 import { ENV } from "@/config/env"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
-import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
+import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_DIRECT_QUERY } from "@/lib/wordpress/queries"
 import { type EditionCode, WORDPRESS_EDITIONS_REGISTRY } from "@/lib/wordpress/editions-registry"
 import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
 import type { WordPressPost } from "@/types/wp"
@@ -11,10 +11,7 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const EDITION_CODES: EditionCode[] = ["sz", "za", "ng"]
 
-type PostBySlugQueryResult = {
-  post?: PostFieldsFragment | null
-  posts?: { nodes?: (PostFieldsFragment | null)[] | null } | null
-}
+type PostByDirectSlugQueryResult = { post?: PostFieldsFragment | null }
 
 type PostByDatabaseIdQueryResult = { post?: PostFieldsFragment | null }
 
@@ -60,7 +57,7 @@ const queryArticle = async (
   const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: [`wp:${countryCode}:latest`] }
 
   try {
-    let result: WordPressGraphQLResult<PostBySlugQueryResult | PostByDatabaseIdQueryResult>
+    let result: WordPressGraphQLResult<PostByDirectSlugQueryResult | PostByDatabaseIdQueryResult>
 
     if (typeof stableId === "number") {
       result = await fetchWordPressGraphQL<PostByDatabaseIdQueryResult>(
@@ -70,21 +67,23 @@ const queryArticle = async (
         fetchOptions,
       )
     } else {
-      result = await fetchWordPressGraphQL<PostBySlugQueryResult>(
+      result = await fetchWordPressGraphQL<PostByDirectSlugQueryResult>(
         countryCode,
-        POST_BY_SLUG_QUERY,
+        POST_BY_SLUG_DIRECT_QUERY,
         { slug, asPreview: preview },
         fetchOptions,
       )
     }
 
     if (!result.ok) {
+      if (result.kind === "graphql_error") {
+        return { status: "not_found" }
+      }
+
       return { status: "temporary_error", error: result.error, failure: result }
     }
 
-    const node = "posts" in result
-      ? (result.post ?? result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null)
-      : (result.post ?? null)
+    const node = result.post ?? null
 
     if (!node) return { status: "not_found" }
 
