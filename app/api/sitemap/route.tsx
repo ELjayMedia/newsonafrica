@@ -8,14 +8,16 @@ import { ENV } from "@/config/env"
 =======
 
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
-import { fetchAllCategories, fetchRecentPosts } from "@/lib/wordpress/service"
+import { fetchCategories, fetchRecentPosts } from "@/lib/wordpress/service"
 import { ENV } from "@/config/env"
 import { logRequest, withCors } from "@/lib/api-utils"
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
+import type { WordPressCategory, WordPressPost } from "@/types/wp"
 
 export const revalidate = 1800
 export const runtime = "nodejs"
 
+<<<<<<< HEAD
 >>>>>>> 6375c06c (Resolve sitemap route merge inconsistencies)
 type SitemapCategory = {
   slug?: string | null
@@ -26,6 +28,10 @@ type SitemapPost = {
   country?: string | null
   databaseId?: number | null
 }
+=======
+type SitemapCategory = Pick<WordPressCategory, "slug">
+type SitemapPost = Pick<WordPressPost, "slug" | "databaseId"> & { country?: string | null }
+>>>>>>> 5d957f30 (Update sitemap route to use default category fetch)
 
 <<<<<<< HEAD
 const fetchAllCategories = async (): Promise<SitemapCategory[]> => {
@@ -55,8 +61,8 @@ export async function GET(request: Request) {
     const [categories, posts] = await Promise.all([fetchAllCategories(), fetchRecentPosts(100)])
 =======
     const [categories, posts] = await Promise.all([
-      fetchAllCategories() as Promise<SitemapCategory[]>,
-      fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT) as Promise<SitemapPost[]>,
+      fetchCategories(),
+      fetchRecentPosts(SITEMAP_RECENT_POST_LIMIT),
     ])
 >>>>>>> 6375c06c (Resolve sitemap route merge inconsistencies)
 
