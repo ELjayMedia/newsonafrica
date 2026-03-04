@@ -54,3 +54,5 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
 
   return Array.from(new Set([normalizedPrimary, defaultSite, ...supportedCountryEditions]))
 }
+
+export const resetArticleCountryPriorityCache = (): void => {}
