@@ -1,4 +1,10 @@
-const withAnalyzer = require("@next/bundle-analyzer")
+let withAnalyzer = (config) => config
+
+try {
+  withAnalyzer = require("@next/bundle-analyzer")
+} catch (e) {
+  // @next/bundle-analyzer is optional and only needed when ANALYZE env var is set
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -103,4 +109,6 @@ const nextConfig = {
   },
   serverExternalPackages: ["sharp"],
 }
-module.exports = withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
+module.exports = typeof withAnalyzer === "function" && withAnalyzer.name !== "identity" 
+  ? withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
+  : nextConfig
