@@ -1,4 +1,4 @@
-let withAnalyzer = (config) => config
+let withAnalyzer = (options) => (config) => config
 
 try {
   withAnalyzer = require("@next/bundle-analyzer")
@@ -109,6 +109,4 @@ const nextConfig = {
   },
   serverExternalPackages: ["sharp"],
 }
-module.exports = typeof withAnalyzer === "function" && withAnalyzer.name !== "identity" 
-  ? withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
-  : nextConfig
+module.exports = withAnalyzer({ enabled: !!process.env.ANALYZE })(nextConfig)
