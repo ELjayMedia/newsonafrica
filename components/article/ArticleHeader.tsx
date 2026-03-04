@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bookmark, BookmarkCheck, Copy, Mail, Share2, Link as LinkIcon } from "lucide-react"
+import { Bookmark, BookmarkCheck, Share2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -42,7 +42,7 @@ export function ArticleHeader({
   return (
     <div className={cn("space-y-6 border-b border-border pb-6", className)}>
       {/* Metadata */}
-      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
         {publishedDate && <time>{formatDate(publishedDate)}</time>}
         {readingTime && <span className="flex items-center gap-1">~ {readingTime} min read</span>}
         {wordCount && <span>{wordCount.toLocaleString()} words</span>}
@@ -55,7 +55,7 @@ export function ArticleHeader({
       <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">{title}</h1>
 
       {/* Excerpt */}
-      {excerpt && <p className="text-lg leading-relaxed text-muted-foreground md:text-xl">{excerpt}</p>}
+      {excerpt && <p className="text-lg font-normal leading-relaxed text-muted-foreground md:text-xl">{excerpt}</p>}
 
       {/* Author and Actions */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">

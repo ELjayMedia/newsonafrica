@@ -47,19 +47,19 @@ export interface ArticleCardProps {
 const FALLBACK_IMAGE = "/placeholder.svg?height=360&width=640&text=News+Article"
 const VARIANT_STYLES: Record<ArticleCardVariant, { headline: string; excerpt: string; content: string; category: string }> = {
   featured: {
-    headline: "text-lg font-semibold leading-tight md:text-xl",
+    headline: "text-lg font-bold leading-tight md:text-xl",
     excerpt: "text-sm text-muted-foreground/90 md:text-base",
     content: "gap-4 p-4 md:p-5",
     category: "text-[11px]",
   },
   default: {
-    headline: "text-base font-semibold leading-snug md:text-lg",
+    headline: "text-base font-bold leading-snug md:text-lg",
     excerpt: "text-sm text-muted-foreground/90",
     content: "gap-3 p-4",
     category: "text-[10px]",
   },
   compact: {
-    headline: "text-sm font-semibold leading-snug md:text-base",
+    headline: "text-sm font-bold leading-snug md:text-base",
     excerpt: "text-xs text-muted-foreground/80",
     content: "gap-2.5 p-3 md:p-4",
     category: "text-[10px]",
@@ -229,7 +229,7 @@ export function ArticleCard({
           </div>
 
           {(metadata || displayTimestamp) && (
-            <div className="mt-auto flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="mt-auto flex items-center gap-2 text-xs font-medium text-muted-foreground">
               {metadata ? <div className="flex items-center gap-1">{metadata}</div> : null}
               {metadata && displayTimestamp ? <span className="text-muted-foreground/60">•</span> : null}
               {displayTimestamp ? (
