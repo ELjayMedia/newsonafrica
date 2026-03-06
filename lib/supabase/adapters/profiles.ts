@@ -10,9 +10,11 @@ function toSerializable<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-export function mapProfileRowToAuthProfile(profile: AuthProfile | null | undefined): AuthProfile | null {
+export function mapProfileRowToAuthProfile<T extends Partial<AuthProfile> | null | undefined>(
+  profile: T,
+): (T extends null | undefined ? null : Partial<AuthProfile>) {
   if (!profile) {
-    return null
+    return null as any
   }
 
   const country = typeof profile.country === "string" ? profile.country.toLowerCase() : null
@@ -20,5 +22,5 @@ export function mapProfileRowToAuthProfile(profile: AuthProfile | null | undefin
   return toSerializable({
     ...profile,
     country,
-  })
+  }) as any
 }
