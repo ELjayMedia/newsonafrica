@@ -218,6 +218,7 @@ export async function signUpWithPasswordAction(
         avatar_url: null,
         role: user.role ?? null,
         created_at: user.created_at ?? null,
+        updated_at: user.updated_at ?? null,
       })
     } catch (cookieError) {
       console.error("Failed to prime session cookie after sign-up", cookieError)

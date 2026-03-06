@@ -1,4 +1,10 @@
-const withAnalyzer = require("@next/bundle-analyzer")
+let withAnalyzer = (options) => (config) => config
+
+try {
+  withAnalyzer = require("@next/bundle-analyzer")
+} catch (e) {
+  // @next/bundle-analyzer is optional and only needed when ANALYZE env var is set
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
