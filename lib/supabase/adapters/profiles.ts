@@ -12,7 +12,7 @@ function toSerializable<T>(value: T): T {
 
 export function mapProfileRowToAuthProfile<T extends Partial<AuthProfile> | null | undefined>(
   profile: T,
-): (T extends null | undefined ? null : Partial<AuthProfile>) {
+): T extends null | undefined ? null : T {
   if (!profile) {
     return null as any
   }
