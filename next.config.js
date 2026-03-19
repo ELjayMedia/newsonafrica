@@ -95,8 +95,6 @@ const nextConfig = {
     return config
   },
   experimental: {
-    scrollRestoration: true,
-    largePageDataBytes: 12800000,
     optimizePackageImports: ["lucide-react", "date-fns", "lodash-es"],
   },
   serverExternalPackages: ["sharp"],
