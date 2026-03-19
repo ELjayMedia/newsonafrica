@@ -51,7 +51,6 @@ function normalizePassword(value: FormDataEntryValue | null): string | null {
   return password.length > 0 ? password : null
 }
 
-
 function getSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL
   if (configured) {
@@ -201,23 +200,6 @@ export async function signUpWithPasswordAction(
     }
 
     const user = data.user
-<<<<<<< HEAD
-
-    if (!user) {
-      return createErrorState("Auth succeeded but no user was returned.")
-    }
-
-    try {
-      await writeSessionCookie({
-        userId: user.id,
-        username: user.email ?? null,
-        avatar_url: null,
-        role: user.role ?? null,
-        created_at: user.created_at ?? null,
-      })
-    } catch (cookieError) {
-      console.error("Failed to prime session cookie after sign-up", cookieError)
-=======
     const userId = user?.id
 
     if (userId) {
@@ -226,7 +208,6 @@ export async function signUpWithPasswordAction(
       } catch (cookieError) {
         console.error("Failed to prime session cookie after sign-up", cookieError)
       }
->>>>>>> 233e2c25 (Normalize auth session cookie profile fields)
     }
 
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
@@ -310,6 +291,65 @@ export async function sendMagicLinkAction(
     return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
   } catch (error) {
     console.error("Failed to send magic link", error)
+
+    if (error instanceof Error && error.message.startsWith("Missing ")) {
+      return createErrorState(error.message)
+    }
+
+    return createErrorState(DEFAULT_ERROR_MESSAGE)
+  }
+}
+
+export async function updatePasswordAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  try {
+    const password = normalizePassword(formData.get("password"))
+    const confirmPassword = normalizePassword(formData.get("confirmPassword"))
+    const redirectTo = getRedirectPath(formData.get("redirectTo")) ?? "/"
+
+    if (!password) {
+      return createErrorState("Password is required.")
+    }
+
+    if (!confirmPassword) {
+      return createErrorState("Please confirm your password.")
+    }
+
+    if (password !== confirmPassword) {
+      return createErrorState("Passwords do not match.")
+    }
+
+    const supabase = createSupabaseClient()
+
+    if (!supabase) {
+      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+    }
+
+    const { data, error } = await supabase.auth.updateUser({ password })
+
+    if (error) {
+      return createErrorState(error.message)
+    }
+
+    const user = data.user
+
+    if (user) {
+      try {
+        await writeSessionCookie(toSessionCookieProfile(user))
+      } catch (cookieError) {
+        console.error("Failed to refresh session cookie after password update", cookieError)
+      }
+    }
+
+    if (redirectTo !== "/") {
+      redirect(redirectTo)
+    }
+
+    return createSuccessState("Your password has been updated.")
+  } catch (error) {
+    console.error("Failed to update password", error)
 
     if (error instanceof Error && error.message.startsWith("Missing ")) {
       return createErrorState(error.message)

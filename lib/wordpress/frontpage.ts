@@ -1,17 +1,17 @@
-<<<<<<< HEAD
-import * as log from "../log"
-import { CACHE_DURATIONS } from "../cache/constants"
-import { cacheTags } from "../cache/cacheTags"
 import { appConfig } from "@/lib/config"
-import { FRONT_PAGE_SLICES_QUERY, FP_TAGGED_POSTS_QUERY } from "@/lib/wordpress/queries"
-import { fetchWordPressGraphQL } from "./client"
-import type { PostSummaryFieldsFragment, FpTaggedPostsQuery } from "@/types/wpgraphql"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import type { HomePost } from "@/types/home"
+import type { FpTaggedPostsQuery, PostSummaryFieldsFragment } from "@/types/wpgraphql"
+
+import * as log from "../log"
+import { cacheTags } from "../cache/cacheTags"
+import { CACHE_DURATIONS } from "../cache/constants"
+import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 import { FP_TAG_SLUG, mapGraphqlNodeToHomePost } from "./shared"
+import { fetchWordPressGraphQL } from "./client"
+import { FP_TAGGED_POSTS_QUERY, FRONT_PAGE_SLICES_QUERY } from "./queries"
 import type { AggregatedHomeData, FrontPageSlicesResult } from "./types"
 import type { WordPressPost } from "@/types/wp"
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
-import { SUPPORTED_COUNTRIES as SUPPORTED_COUNTRY_EDITIONS } from "../editions"
 
 type FrontPageSlicesQueryResult = {
   hero?: {
@@ -144,12 +144,12 @@ export async function getFrontPageSlicesForCountry(
     )
 
     if (gqlData) {
-      const heroNodes =
-        gqlData.hero?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
+      const data = "data" in gqlData ? gqlData.data : gqlData
+      const heroNodes = data.hero?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
       const heroPosts = heroNodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
 
       const latestEdges =
-        gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostSummaryFieldsFragment } =>
+        data.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostSummaryFieldsFragment } =>
           Boolean(edge?.node),
         ) ?? []
 
@@ -164,7 +164,7 @@ export async function getFrontPageSlicesForCountry(
           trendingLimit,
           latestLimit,
           cursors,
-          pageInfo: gqlData.latest?.pageInfo ?? null,
+          pageInfo: data.latest?.pageInfo ?? null,
         })
       }
     }
@@ -177,8 +177,6 @@ export async function getFrontPageSlicesForCountry(
   return createEmptyFrontPageSlices()
 }
 
-=======
->>>>>>> 987b4de4 (feat: update frontpage.ts to improve FP tagged posts fetching logic)
 export async function getFpTaggedPostsForCountry(
   countryCode: string,
   limit = 8,
@@ -208,9 +206,8 @@ export async function getFpTaggedPostsForCountry(
       },
     )
 
-    const nodes = gqlData?.posts?.nodes?.filter(
-      (node): node is NonNullable<typeof node> => Boolean(node),
-    )
+    const data = "data" in gqlData ? gqlData.data : gqlData
+    const nodes = data?.posts?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
 
     if (nodes && nodes.length > 0) {
       console.log("[v0] Found", nodes.length, "FP tagged posts via GraphQL")
@@ -225,7 +222,6 @@ export async function getFpTaggedPostsForCountry(
 
   return []
 }
-<<<<<<< HEAD
 
 const getPostTimestamp = (post: HomePost): number => {
   const timestamp = new Date(post.date).getTime()
@@ -241,9 +237,7 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
 
   try {
     const results = await Promise.allSettled(
-      SUPPORTED_COUNTRY_EDITIONS.map((country) =>
-        getFpTaggedPostsForCountry(country.code, limitPerCountry),
-      ),
+      SUPPORTED_COUNTRY_EDITIONS.map((country) => getFpTaggedPostsForCountry(country.code, limitPerCountry)),
     )
 
     const aggregatedPosts: HomePost[] = []
@@ -293,5 +287,3 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
     return fallback
   }
 }
-=======
->>>>>>> 8f44050d (feat: update frontpage.ts to improve FP tagged posts fetching logic)
