@@ -37,6 +37,10 @@ export async function AppChrome({ children }: AppChromeProps) {
       <div className="mx-auto w-full max-w-[980px]">{children}</div>
 
       <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
+      <div className="mx-auto w-full max-w-[980px]">{children}</div>
+
+      <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
+
         <Link href="/privacy-policy" className="hover:underline">
           Privacy Policy
         </Link>

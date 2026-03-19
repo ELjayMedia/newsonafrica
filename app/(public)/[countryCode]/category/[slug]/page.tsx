@@ -211,15 +211,12 @@ export async function generateStaticParams() {
 
   for (const edition of editions) {
     try {
-      const categories = (await getAllCategories(edition)) as CategoryLike[]
-
-      categories
-        .slice(0, STATIC_GENERATION_LIMITS.CATEGORIES)
-        .forEach((cat: CategoryLike) => {
-          if (cat.slug) {
-            params.push({ countryCode: edition, slug: cat.slug })
-          }
-        })
+      const categories = await getAllCategories(edition)
+      categories.slice(0, STATIC_GENERATION_LIMITS.CATEGORIES).forEach((cat: import('@/types/wp').WordPressCategory) => {
+        if (cat.slug) {
+          params.push({ countryCode: edition, slug: cat.slug })
+        }
+      })
     } catch (error) {
       console.error(
         `Failed to generate static params for ${edition} categories`,

@@ -23,6 +23,182 @@ export const sanitizeBaseUrl = (value: string): string => value.replace(/\/$/, "
 export type ParsedArticleSlug = {
   normalizedSlug: string
   stableId: number | null
+type PostBySlugQueryResult = {
+  post?: PostFieldsFragment | null
+  posts?: {
+    nodes?: (PostFieldsFragment | null)[] | null
+  } | null
+}
+
+type PostByDatabaseIdQueryResult = {
+  post?: PostFieldsFragment | null
+}
+
+type CachedArticlePayload = {
+  article: WordPressPost
+  sourceCountry: string
+  canonicalCountry: string | null
+  version: string | null
+  tags: string[]
+  cachedAt: number
+}
+
+type CachedArticleResolution = CachedArticlePayload & {
+  cacheCountry: string
+}
+
+type CachedArticleReadResult = {
+  payload: CachedArticlePayload
+  isStale: boolean
+}
+
+export interface LoadedArticle {
+  article: WordPressPost
+  tags: string[]
+  version: string | null
+  canonicalCountry: string | null
+}
+
+export type LoadArticleResult =
+  | ({ status: "found" } & LoadedArticle)
+  | { status: "not_found" }
+  | { status: "temporary_error"; error: unknown; failure?: WordPressGraphQLFailure }
+
+const asLoadArticleResult = (
+  countryCode: string,
+  result: WordPressGraphQLResult<PostBySlugQueryResult>,
+  slug: string,
+  _preview: boolean,
+): LoadArticleResult => {
+  if (!result.ok) {
+    return { status: "temporary_error", error: result.error, failure: result }
+  }
+
+  let node: PostFieldsFragment | null = null
+
+  if (preview && result.data.post) {
+    node = result.data.post
+  }
+
+  if (!node) {
+    node = result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
+  }
+
+  if (!node) {
+    return { status: "not_found" }
+  }
+
+  const article = mapGraphqlPostToWordPressPost(node, countryCode)
+  const tags = buildArticleCacheTags(countryCode, slug, article)
+  const version = resolveArticleVersion(article)
+  const canonicalCountry = normalizeCountryCode(countryCode)
+
+  return { status: "found", article, tags, version, canonicalCountry }
+}
+
+const loadArticleBySlug = async (countryCode: string, slug: string, preview = false): Promise<LoadArticleResult> => {
+  if (!hasWordPressEndpoint(countryCode)) {
+    return { status: "not_found" }
+  }
+
+  const slugTag = cacheTags.postSlug(countryCode, slug)
+  const requestTags = [slugTag]
+  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: requestTags }
+
+  try {
+    const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
+      countryCode,
+      POST_BY_SLUG_QUERY,
+      { slug, asPreview: preview },
+      fetchOptions,
+    )
+
+    return asLoadArticleResult(countryCode, gqlResult, slug, preview)
+  } catch (error) {
+    return { status: "temporary_error", error }
+  }
+}
+
+const loadArticleByDatabaseId = async (countryCode: string, databaseId: number, preview = false): Promise<LoadArticleResult> => {
+  if (!hasWordPressEndpoint(countryCode)) {
+    return { status: "not_found" }
+  }
+
+  const requestTags = [cacheTags.post(countryCode, databaseId)]
+  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: requestTags }
+
+  try {
+    const gqlResult = await fetchWordPressGraphQL<PostByDatabaseIdQueryResult>(
+      countryCode,
+      POST_BY_DATABASE_ID_QUERY,
+      { id: databaseId, asPreview: preview },
+      fetchOptions,
+    )
+
+    const node = gqlResult.ok ? gqlResult.post ?? null : null
+
+    if (!gqlResult.ok) {
+      return { status: "temporary_error", error: gqlResult.error, failure: gqlResult }
+    }
+
+    if (!node) {
+      return { status: "not_found" }
+    }
+
+    const article = mapGraphqlPostToWordPressPost(node, countryCode)
+    const resolvedSlug = normalizeSlug(article.slug ?? "") || String(databaseId)
+    const tags = buildArticleCacheTags(countryCode, resolvedSlug, article)
+    const version = resolveArticleVersion(article)
+
+    return {
+      status: "found",
+      article,
+      tags,
+      version,
+      canonicalCountry: normalizeCountryCode(countryCode),
+    }
+  } catch (error) {
+    return { status: "temporary_error", error }
+  }
+}
+
+export async function loadArticle(
+  countryCode: string,
+  slug: string,
+  preview = false,
+  stableId?: number | null,
+): Promise<LoadArticleResult> {
+  if (typeof stableId === "number" && Number.isFinite(stableId)) {
+    const byId = await loadArticleByDatabaseId(countryCode, stableId, preview)
+    if (byId.status === "found" || byId.status === "temporary_error") {
+      return byId
+    }
+  }
+
+  return loadArticleBySlug(countryCode, slug, preview)
+}
+
+const unique = (values: string[]): string[] => {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const value of values) {
+    const normalized = normalizeCountryCode(value)
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      result.push(normalized)
+    }
+  }
+
+  return result
+}
+
+const DEFAULT_ARTICLE_CACHE_VERSION = "latest"
+
+const sanitizeCacheKeySegment = (value: string): string => {
+  const sanitized = value.toLowerCase().replace(/[^a-z0-9_-]+/gi, "-")
+  return sanitized.length > 0 ? sanitized : DEFAULT_ARTICLE_CACHE_VERSION
+
 }
 
 export const parseArticleSlugParam = (value: string): ParsedArticleSlug => {

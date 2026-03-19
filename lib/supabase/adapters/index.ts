@@ -1,0 +1,1 @@
+export { asRecord } from "./json"

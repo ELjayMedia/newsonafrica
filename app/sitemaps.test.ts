@@ -92,6 +92,7 @@ describe("sitemap fetch limits", () => {
 
     expect(articleEntry?.url).toBe(`https://example.com${expectedPath}`)
   })
+
   it("builds canonical metadata sitemap links with databaseId suffix", async () => {
     const { default: buildMetadataSitemap } = await import("@/app/sitemap")
 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import * as log from "../log"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { cacheTags } from "../cache/cacheTags"
@@ -176,12 +177,18 @@ export async function getFrontPageSlicesForCountry(
   return createEmptyFrontPageSlices()
 }
 
+=======
+>>>>>>> 987b4de4 (feat: update frontpage.ts to improve FP tagged posts fetching logic)
 export async function getFpTaggedPostsForCountry(
   countryCode: string,
   limit = 8,
   request?: { timeout?: number; signal?: AbortSignal },
 ): Promise<HomePost[]> {
-  const tags = [cacheTags.home(countryCode), cacheTags.edition(countryCode), cacheTags.tag(countryCode, FP_TAG_SLUG)]
+  const tags = [
+    cacheTags.home(countryCode),
+    cacheTags.edition(countryCode),
+    cacheTags.tag(countryCode, FP_TAG_SLUG),
+  ]
 
   try {
     console.log("[v0] Fetching FP tagged posts for:", countryCode)
@@ -201,19 +208,24 @@ export async function getFpTaggedPostsForCountry(
       },
     )
 
-    const nodes = gqlData?.posts?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node))
+    const nodes = gqlData?.posts?.nodes?.filter(
+      (node): node is NonNullable<typeof node> => Boolean(node),
+    )
+
     if (nodes && nodes.length > 0) {
       console.log("[v0] Found", nodes.length, "FP tagged posts via GraphQL")
       return nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
     }
 
     console.log("[v0] No GraphQL results for FP tagged posts")
+    return []
   } catch (error) {
     console.error("[v0] Failed to fetch FP tagged posts:", error)
   }
 
   return []
 }
+<<<<<<< HEAD
 
 const getPostTimestamp = (post: HomePost): number => {
   const timestamp = new Date(post.date).getTime()
@@ -281,3 +293,5 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
     return fallback
   }
 }
+=======
+>>>>>>> 8f44050d (feat: update frontpage.ts to improve FP tagged posts fetching logic)

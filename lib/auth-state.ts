@@ -34,7 +34,7 @@ export class AuthStateManager {
 
   private async ensureUserProfile(user: any) {
     try {
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+      const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle()
 
       if (!profile) {
         const email = user.email

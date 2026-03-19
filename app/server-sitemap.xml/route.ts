@@ -3,6 +3,10 @@ import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountr
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
+import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
+import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
+import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
+
 
 type SlugEntity = { slug?: string }
 type CountryEntity = { code?: string }
@@ -91,7 +95,13 @@ export async function GET() {
       sitemap += `
   <url>
     <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
+    <lastmod>${postDate}</lastmod>
+
+    <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
+
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
+
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     ${featuredUrl

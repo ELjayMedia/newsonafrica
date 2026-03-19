@@ -108,12 +108,12 @@ export async function fetchPendingComments(
       { tags, revalidate: CACHE_DURATIONS.NONE },
     )
 
-    if (!data) {
-      log.error("[v0] Pending comments query returned no data", { countryCode })
+    if (!data.ok) {
+      log.error("[v0] Pending comments query failed", { countryCode, response: data })
       return []
     }
 
-    const nodes = data.comments?.nodes ?? []
+    const nodes = data.data?.comments?.nodes ?? []
 
     return nodes
       .map((node) => mapGraphqlCommentToWordPressComment(node))
@@ -141,7 +141,16 @@ export async function approveComment(
       { revalidate: COMMENTS_MUTATION_REVALIDATE },
     )
 
-    const comment = data?.updateComment?.comment
+    if (!data.ok) {
+      log.error("[v0] Approve comment mutation failed", {
+        countryCode,
+        commentId,
+        response: data,
+      })
+      throw new Error(`Failed to approve comment ${commentId}`)
+    }
+
+    const comment = data.data?.updateComment?.comment
     const mapped = mapGraphqlCommentToWordPressComment(comment)
 
     if (!mapped) {
@@ -177,7 +186,16 @@ export async function deleteComment(
       { revalidate: COMMENTS_MUTATION_REVALIDATE },
     )
 
-    const comment = mapGraphqlCommentToWordPressComment(data?.deleteComment?.comment)
+    if (!data.ok) {
+      log.error("[v0] Delete comment mutation failed", {
+        countryCode,
+        commentId,
+        response: data,
+      })
+      throw new Error(`Failed to delete comment ${commentId}`)
+    }
+
+    const comment = mapGraphqlCommentToWordPressComment(data.data?.deleteComment?.comment)
 
     if (!comment) {
       log.error("[v0] Delete comment mutation did not return comment", {
