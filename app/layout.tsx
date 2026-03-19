@@ -4,8 +4,6 @@ import type { Metadata } from "next"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 
-import "./globals.css"
-
 export const metadata: Metadata = {
   title: "News On Africa",
   description: "Your trusted source for news across Africa",
