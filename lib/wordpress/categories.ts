@@ -298,8 +298,8 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
     tags,
     revalidate: CACHE_DURATIONS.SHORT,
   })
-  if (!data.ok || !data.posts || !data.categories) return null
-  const catNode = data.categories.nodes?.[0] ?? null
+  if (!data.ok || !data.data?.posts || !data.data?.categories) return null
+  const catNode = data.data.categories.nodes?.[0] ?? null
   const category = catNode
     ? {
         id: catNode.databaseId ?? 0,
@@ -309,13 +309,13 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
         count: catNode.count ?? undefined,
       }
     : null
-  const nodes = data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+  const nodes = data.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     category,
     posts: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
     pageInfo: {
-      ...data.posts.pageInfo,
-      endCursor: data.posts.pageInfo.endCursor ?? null,
+      ...data.data.posts.pageInfo,
+      endCursor: data.data.posts.pageInfo.endCursor ?? null,
     },
   }
 }
