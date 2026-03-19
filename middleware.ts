@@ -1,10 +1,8 @@
-import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getCategoryUrl, DEFAULT_COUNTRY, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { AFRICAN_EDITION } from "@/lib/editions"
 import { getLegacyPostRoute } from "@/lib/legacy-routes"
-import type { Database } from "@/types/supabase"
 
 // Legacy routes that should be redirected to their category equivalents
 const LEGACY_CATEGORY_SLUGS: Record<string, string> = {
@@ -116,26 +114,8 @@ export async function middleware(request: NextRequest) {
     response = NextResponse.next()
   }
 
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => response!.cookies.set(name, value, options))
-          },
-        },
-      })
-      await supabase.auth.getSession()
-    }
-  } catch (error) {
-    console.warn("Supabase middleware session refresh skipped", error)
-  }
+  // Supabase auth session refresh is skipped in middleware for performance
+  // Session validation will occur on individual route handlers
 
   return response
 }
