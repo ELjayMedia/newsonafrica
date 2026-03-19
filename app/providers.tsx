@@ -96,19 +96,17 @@ function useClientBootstrap(
       setPreferences(
         mapUserPreferencesRowToSnapshot({
           userId: session.user.id,
-          preferences: {
+          contentRow: {
             theme: userPrefs?.theme ?? DEFAULT_USER_PREFERENCES.theme,
             language: userPrefs?.language ?? DEFAULT_USER_PREFERENCES.language,
-            emailNotifications: userPrefs?.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
-            pushNotifications: userPrefs?.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
+            email_notifications: userPrefs?.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
+            push_notifications: userPrefs?.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
             sections: userPrefs?.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
-            blockedTopics: userPrefs?.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
+            blocked_topics: userPrefs?.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
             countries: userPrefs?.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
-            commentSort: DEFAULT_USER_PREFERENCES.commentSort,
-            bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
-            lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
           },
           profilePreferences: parseProfilePreferences(profile?.preferences),
+          defaultSections: userPrefs?.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
         }),
       )
     } catch (error) {

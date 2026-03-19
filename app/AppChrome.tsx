@@ -8,7 +8,6 @@ import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { TopBar } from "@/components/TopBar"
 import { Toaster } from "@/components/ui/toaster"
-import { Sidebar } from "@/components/Sidebar"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 interface AppChromeProps {
@@ -17,8 +16,7 @@ interface AppChromeProps {
 
 export async function AppChrome({ children }: AppChromeProps) {
   const cookieStore = await cookies()
-  const preferredCountry =
-    cookieStore.get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
+  const preferredCountry = cookieStore.get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
 
   return (
     <>
@@ -34,13 +32,11 @@ export async function AppChrome({ children }: AppChromeProps) {
         <TopBar />
       </Suspense>
 
-      <div className="mx-auto w-full max-w-[980px]">{children}</div>
+      <div className="mx-auto w-full max-w-[980px]" data-preferred-country={preferredCountry}>
+        {children}
+      </div>
 
       <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
-      <div className="mx-auto w-full max-w-[980px]">{children}</div>
-
-      <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
-
         <Link href="/privacy-policy" className="hover:underline">
           Privacy Policy
         </Link>

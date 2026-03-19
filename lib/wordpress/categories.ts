@@ -75,7 +75,7 @@ export async function getPostsForCategories(
       return results
     }
 
-    const nodes = gqlData.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    const nodes = gqlData.data?.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
     nodes.forEach((node) => {
       const slug = node.slug?.toLowerCase()
@@ -135,8 +135,8 @@ export async function getPostsByCategoryForCountry(
       revalidate: CACHE_DURATIONS.SHORT,
     })
 
-    if (gqlData.ok && gqlData.posts && gqlData.categories) {
-      const catNode = gqlData.categories.nodes?.[0] ?? null
+    if (gqlData.ok && gqlData.data?.posts && gqlData.data?.categories) {
+      const catNode = gqlData.data.categories.nodes?.[0] ?? null
       const category = catNode
         ? {
             id: catNode.databaseId ?? 0,
@@ -146,13 +146,13 @@ export async function getPostsByCategoryForCountry(
             count: catNode.count ?? undefined,
           }
         : null
-      const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+      const nodes = gqlData.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
       const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
       return {
         category,
         posts,
-        hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-        endCursor: gqlData.posts.pageInfo.endCursor ?? null,
+        hasNextPage: gqlData.data.posts.pageInfo.hasNextPage,
+        endCursor: gqlData.data.posts.pageInfo.endCursor ?? null,
       }
     }
   } catch (error) {
@@ -170,8 +170,8 @@ export async function getCategoriesForCountry(countryCode: string) {
       tags,
       revalidate: CACHE_DURATIONS.SHORT,
     })
-    if (gqlData.ok && gqlData.categories?.nodes) {
-      const nodes = gqlData.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
+    if (gqlData.ok && gqlData.data?.categories?.nodes) {
+      const nodes = gqlData.data.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
         Boolean(node && typeof node.databaseId === "number"),
       )
 
