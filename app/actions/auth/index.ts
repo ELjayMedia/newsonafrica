@@ -31,6 +31,18 @@ interface OAuthOptions {
   redirectTo?: string
 }
 
+
+function normalizeProfileCountry<T extends { country: string | null } | null>(profile: T): T {
+  if (!profile) {
+    return profile
+  }
+
+  return {
+    ...profile,
+    country: typeof profile.country === "string" ? profile.country.toLowerCase() : null,
+  } as T
+}
+
 const getSiteUrl = () => {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL
   if (configuredUrl) {
@@ -55,14 +67,14 @@ async function fetchProfile(supabase: SupabaseServerClient, userId: string): Pro
     throw new ActionError("Failed to load profile", { cause: error })
   }
 
-  return mapProfileRowToAuthProfile(data)
+  return normalizeProfileCountry(data)
 }
 
 function serializeAuthState(state: AuthStatePayload): AuthStatePayload {
   return {
     session: JSON.parse(JSON.stringify(state.session)),
     user: JSON.parse(JSON.stringify(state.user)),
-    profile: mapProfileRowToAuthProfile(state.profile),
+    profile: normalizeProfileCountry(state.profile),
   }
 }
 
@@ -299,7 +311,7 @@ export async function getProfile(): Promise<ActionResult<ProfileAuthRow | null>>
     }
 
     const profile = await fetchProfile(supabase, session.user.id)
-    return mapProfileRowToAuthProfile(profile)
+    return normalizeProfileCountry(profile)
   })
 }
 

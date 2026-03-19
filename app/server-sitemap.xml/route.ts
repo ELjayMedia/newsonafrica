@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server"
-import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress/service"
+
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
-import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
-import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
-import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
-
+import { fetchAuthors, fetchCategories, fetchCountries, fetchRecentPosts, fetchTags } from "@/lib/wordpress/service"
 
 type SlugEntity = { slug?: string }
 type CountryEntity = { code?: string }
@@ -27,7 +24,7 @@ function escapeXml(input: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&apos;")
 }
 
@@ -68,9 +65,9 @@ export async function GET() {
   let tags: SlugEntity[] = []
   let authors: SlugEntity[] = []
   try {
-    const [t, a] = await Promise.all([fetchTags(), fetchAuthors()])
-    tags = t as unknown as SlugEntity[]
-    authors = a as unknown as SlugEntity[]
+    const [fetchedTags, fetchedAuthors] = await Promise.all([fetchTags(), fetchAuthors()])
+    tags = fetchedTags as unknown as SlugEntity[]
+    authors = fetchedAuthors as unknown as SlugEntity[]
   } catch (error) {
     console.error("Error fetching tags/authors for server sitemap:", error)
     return NextResponse.json({ error: "Failed to fetch tags or authors" }, { status: 502 })
@@ -82,45 +79,33 @@ export async function GET() {
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 `
 
-    // Posts
-    posts.forEach((post: PostEntity) => {
-      const lastmod =
-        safeIsoDate(post.modified) ??
-        safeIsoDate(post.date) ??
-        undefined
-
+    posts.forEach((post) => {
+      const lastmod = safeIsoDate(post.modified) ?? safeIsoDate(post.date)
       const featuredUrl = post.featuredImage?.node?.sourceUrl
       const title = typeof post.title === "string" ? post.title : ""
 
       sitemap += `
   <url>
     <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
-    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
-    <lastmod>${postDate}</lastmod>
-
-    <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
-
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
-
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     ${featuredUrl
-          ? `
+      ? `
     <image:image>
       <image:loc>${featuredUrl}</image:loc>
       <image:title>${escapeXml(title)}</image:title>
     </image:image>`
-          : ""
-        }
+      : ""
+    }
   </url>`
     })
 
-    // Categories per country
-    countries.forEach((c: CountryEntity) => {
-      const code = c.code
+    countries.forEach((country) => {
+      const code = country.code
       if (!code) return
 
-      categories.forEach((category: CategoryEntity) => {
+      categories.forEach((category) => {
         const catSlug = category.slug
         if (!catSlug) return
 
@@ -134,8 +119,7 @@ export async function GET() {
       })
     })
 
-    // Tags
-    tags.forEach((tag: SlugEntity) => {
+    tags.forEach((tag) => {
       const slug = tag.slug
       if (!slug) return
 
@@ -148,8 +132,7 @@ export async function GET() {
   </url>`
     })
 
-    // Authors
-    authors.forEach((author: SlugEntity) => {
+    authors.forEach((author) => {
       const slug = author.slug
       if (!slug) return
 

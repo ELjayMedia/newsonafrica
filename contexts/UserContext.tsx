@@ -26,6 +26,7 @@ import {
   updateProfile as updateProfileAction,
   type AuthStatePayload,
   type Profile,
+  type ProfileAuthRow,
 } from "@/app/actions/auth"
 import type { Database } from "@/types/supabase"
 import type { ActionResult } from "@/lib/supabase/action-result"
@@ -39,6 +40,22 @@ const PUBLIC_ROUTES = ["/", "/auth", "/sport", "/entertainment", "/search", "/po
 /**
  * User context type definition
  */
+function toContextProfile(profile: ProfileAuthRow | Profile | null): Profile | null {
+  if (!profile) {
+    return null
+  }
+
+  return {
+    website: null,
+    bio: null,
+    location: null,
+    interests: null,
+    is_admin: null,
+    onboarded: null,
+    ...profile,
+  }
+}
+
 interface UserContextType {
   user: User | null
   profile: Profile | null
@@ -90,7 +107,7 @@ interface UserProviderProps {
 export function UserProvider({ children, initialState = null }: UserProviderProps) {
   const initialSession = initialState?.session ?? null
   const initialUser = initialState?.user ?? null
-  const initialProfile = initialState?.profile ?? null
+  const initialProfile = toContextProfile(initialState?.profile ?? null)
   const [user, setUser] = useState<User | null>(initialUser)
   const [profile, setProfile] = useState<Profile | null>(initialProfile)
   const [session, setSession] = useState<Session | null>(initialSession)
@@ -107,7 +124,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
     async (next: AuthStatePayload | null) => {
       const nextSession = (next?.session ?? null) as Session | null
       const nextUser = (next?.user ?? null) as User | null
-      const nextProfile = next?.profile ?? null
+      const nextProfile = toContextProfile(next?.profile ?? null)
 
       setSession(nextSession)
       setUser(nextUser)

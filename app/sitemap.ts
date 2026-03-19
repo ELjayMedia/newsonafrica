@@ -1,13 +1,9 @@
 import type { MetadataRoute } from "next"
-import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress/service"
+
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
 import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
-
-import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
-
+import { fetchAuthors, fetchCategories, fetchRecentPosts, fetchTags } from "@/lib/wordpress/service"
 
 export const revalidate = 300
 
@@ -91,9 +87,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const postPages: MetadataRoute.Sitemap = posts.map((post) => {
       const postDate = safeDate(post.modified || post.date)
       const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000
+      const title = typeof post.title === "string" ? post.title : undefined
+      const keywords = post.categories?.nodes?.map((cat) => cat.name).filter(Boolean).join(", ") || ""
 
       return {
-        url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
+        url: `${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}`,
         lastModified: postDate,
         changeFrequency: isRecent ? "daily" : "weekly",
         priority: isRecent ? 0.9 : 0.7,
@@ -104,16 +102,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 language: "en",
               },
               publicationDate: postDate,
-              title: post.title,
-              keywords: post.categories?.nodes?.map((cat) => cat.name).join(", ") || "",
+              title,
+              keywords,
             }
           : undefined,
         images: post.featuredImage?.node?.sourceUrl
           ? [
               {
                 url: post.featuredImage.node.sourceUrl,
-                title: post.title,
-                alt: post.featuredImage.node.altText || post.title,
+                title,
+                alt: post.featuredImage.node.altText || title,
               },
             ]
           : undefined,
@@ -121,8 +119,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
 
     const categoryPages: MetadataRoute.Sitemap = categories
-      .filter((category: CategoryEntity) => !!category?.slug)
-      .flatMap((category: CategoryEntity) =>
+      .filter((category) => !!category?.slug)
+      .flatMap((category) =>
         SUPPORTED_COUNTRIES.map((country) => ({
           url: `${baseUrl}${getCategoryUrl(category.slug as string, country)}`,
           lastModified: new Date(),
@@ -132,8 +130,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       )
 
     const tagPages: MetadataRoute.Sitemap = tags
-      .filter((tag: SlugEntity) => !!tag?.slug)
-      .map((tag: SlugEntity) => ({
+      .filter((tag) => !!tag?.slug)
+      .map((tag) => ({
         url: `${baseUrl}/tag/${tag.slug}`,
         lastModified: new Date(),
         changeFrequency: "weekly",
@@ -141,8 +139,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }))
 
     const authorPages: MetadataRoute.Sitemap = authors
-      .filter((author: SlugEntity) => !!author?.slug)
-      .map((author: SlugEntity) => ({
+      .filter((author) => !!author?.slug)
+      .map((author) => ({
         url: `${baseUrl}/author/${author.slug}`,
         lastModified: new Date(),
         changeFrequency: "weekly",

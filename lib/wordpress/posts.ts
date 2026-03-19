@@ -115,12 +115,12 @@ const getCachedRelatedCategoryIds = (
         { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
       )
 
-      if (!gqlPost?.post) {
+      if (!gqlPost.ok || !gqlPost.data?.post) {
         return [] as string[]
       }
 
       return (
-        gqlPost.post.categories?.nodes
+        gqlPost.data.post.categories?.nodes
           ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
           .map((c) => String(c.databaseId)) ?? []
       )
@@ -163,23 +163,16 @@ export async function getLatestPostsForCountry(
         },
       )
 
-      if (!gqlData.ok) {
-        console.error("[v0] Failed to fetch latest posts:", gqlData)
+      if (!gqlData.ok || !gqlData.data?.posts) {
         break
       }
 
-      const data = gqlData.data
-
-      if (!data?.posts) {
-        break
-      }
-
-      const nodes = data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+      const nodes = gqlData.data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
       if (nodes.length > 0) {
         posts.push(...nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode)))
       }
 
-      lastPageInfo = data.posts.pageInfo ?? null
+      lastPageInfo = gqlData.data.posts.pageInfo ?? null
 
       if (!lastPageInfo?.hasNextPage || !lastPageInfo.endCursor || nodes.length === 0) {
         break
@@ -228,50 +221,12 @@ export async function getRelatedPostsForCountry(
     { id: numericPostId, exclude: numericPostId, first: limit },
     { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
-  if (!gqlPost.ok) {
-    console.error("[v0] Failed to fetch post categories for related posts:", gqlPost)
-    return []
-  }
 
-  const postData = gqlPost.data
-
-  if (postData?.post) {
-    const catIds =
-      postData.post.categories?.nodes
-        ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
-        .map((c) => String(c.databaseId)) ?? []
-    if (catIds.length > 0) {
-      const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
-        countryCode,
-        RELATED_POSTS_QUERY,
-        {
-          catIds,
-          exclude: numericPostId,
-          first: limit,
-        },
-        {
-          tags,
-          revalidate: CACHE_DURATIONS.SHORT,
-          timeout: RELATED_POSTS_TIMEOUT_MS,
-        },
-      )
-      if (!gqlData.ok) {
-        console.error("[v0] Failed to fetch related posts:", gqlData)
-        return []
-      }
-
-      const relatedData = gqlData.data
-
-      if (relatedData?.posts) {
-        const nodes = relatedData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-        const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
-        return posts.filter((p) => p.databaseId !== numericPostId)
-
-  if (relatedWithCategories.ok !== false && relatedWithCategories?.post?.categories?.nodes) {
+  if (relatedWithCategories.ok && relatedWithCategories.data?.post?.categories?.nodes) {
     const seenPostIds = new Set<number>()
     const relatedNodes: PostSummaryFieldsFragment[] = []
 
-    for (const category of relatedWithCategories.post.categories.nodes) {
+    for (const category of relatedWithCategories.data.post.categories.nodes) {
       const nodes =
         category?.posts?.nodes?.filter(
           (post): post is PostSummaryFieldsFragment & { databaseId: number } =>
@@ -310,8 +265,8 @@ export async function getRelatedPostsForCountry(
         timeout: RELATED_POSTS_TIMEOUT_MS,
       },
     )
-    if (gqlData?.posts) {
-      const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+    if (gqlData.ok && gqlData.data?.posts) {
+      const nodes = gqlData.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
       const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
       return posts.filter((p) => p.databaseId !== numericPostId)
     }
@@ -350,12 +305,7 @@ export const getRelatedPosts = async (
       },
     )
 
-    if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch related posts by tags:", gqlData)
-      return []
-    }
-
-    const nodes = gqlData.data?.posts?.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+    const nodes = gqlData.ok ? (gqlData.data?.posts?.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []) : []
     return nodes
       .map((node) => mapGraphqlPostToWordPressPost(node, country))
       .filter((post) => post.databaseId !== Number(postId) && post.id !== postId)
@@ -614,28 +564,11 @@ export const fetchTaggedPosts = async ({
       { tags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
-    if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch tagged posts via GraphQL", {
-        slug,
-        countryCode,
-        error: gqlData,
-      })
-      return {
-        nodes: [],
-        pageInfo: {
-          hasNextPage: false,
-          endCursor: null,
-        },
-      }
-    }
-
-    const data = gqlData.data
-
-    if (data?.posts) {
+    if (gqlData.ok && gqlData.data?.posts) {
       const nodes =
-        data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+        gqlData.data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
       const mappedNodes = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
-      const pageInfo = data.posts.pageInfo
+      const pageInfo = gqlData.data.posts.pageInfo
       return {
         nodes: mappedNodes,
         pageInfo: {
@@ -754,17 +687,10 @@ export const fetchPosts = async (
     { tags: cacheTagList, revalidate: CACHE_DURATIONS.SHORT },
   )
 
-  if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch posts:", gqlData)
-    return { data: [], total: 0 }
-  }
-
-  const data = gqlData.data
-
   const nodes =
-    data?.posts?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
+    gqlData.ok ? (gqlData.data?.posts?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []) : []
   const mapped = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
-  const total = data?.posts?.pageInfo?.offsetPagination?.total ?? mapped.length
+  const total = gqlData.ok ? (gqlData.data?.posts?.pageInfo?.offsetPagination?.total ?? mapped.length) : mapped.length
 
   return { data: mapped, total }
 }
@@ -779,12 +705,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
       { tags, revalidate: CACHE_DURATIONS.SHORT },
     )
 
-    if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch tags during build:", gqlData)
-      return []
-    }
-
-    const nodes = gqlData.data?.tags?.nodes ?? []
+    const nodes = gqlData.ok ? (gqlData.data?.tags?.nodes ?? []) : []
     return nodes
       .map((node) => mapGraphqlTagNode(node))
       .filter((tag): tag is WordPressTag => Boolean(tag))
@@ -803,12 +724,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
     { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
-  if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch tag by slug:", gqlData)
-    return null
-  }
-
-  return mapGraphqlTagNode(gqlData.data?.tag) ?? null
+  return gqlData.ok ? (mapGraphqlTagNode(gqlData.data?.tag) ?? null) : null
 }
 
 export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
@@ -820,12 +736,7 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
     { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
-  if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch all tags:", gqlData)
-    return []
-  }
-
-  const nodes = gqlData.data?.tags?.nodes ?? []
+  const nodes = gqlData.ok ? (gqlData.data?.tags?.nodes ?? []) : []
   return nodes
     .map((node) => mapGraphqlTagNode(node))
     .filter((tag): tag is WordPressTag => Boolean(tag))
@@ -846,12 +757,7 @@ export async function fetchPost({
     { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
 
-  if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch post by slug:", gqlData)
-    return null
-  }
-
-  const node = gqlData.data?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value))
+  const node = gqlData.ok ? gqlData.data?.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) : undefined
   return node ? mapGraphqlPostToWordPressPost(node, countryCode) : null
 }
 
@@ -915,12 +821,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     },
     { tags, revalidate: CACHE_DURATIONS.SHORT },
   )
-  if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch featured posts:", gqlData)
-    return []
-  }
-
-  if (gqlData.data?.posts) {
+  if (gqlData.ok && gqlData.data?.posts) {
     const nodes = gqlData.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
     return nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
   }
