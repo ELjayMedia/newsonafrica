@@ -258,15 +258,3 @@ export const fetchCategories = async (countryCode = DEFAULT_COUNTRY) => {
     return []
   }
 }
-/** @deprecated Import from `@/lib/wordpress/service` instead. */
-export {
-  fetchAllCategories,
-  fetchCategories,
-  fetchCategoryPosts,
-  getAllCategories,
-  getCategories,
-  getCategoriesForCountry,
-  getPostsByCategory,
-  getPostsByCategoryForCountry,
-  getPostsForCategories,
-} from "@/lib/wordpress/service"
