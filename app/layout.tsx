@@ -3,11 +3,8 @@ import type { Metadata } from "next"
 
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
-import { validateRequiredEnv } from "@/lib/env"
 
 import "./globals.css"
-
-validateRequiredEnv()
 
 export const metadata: Metadata = {
   title: "News On Africa",
