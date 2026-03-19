@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 
-import "@/app/globals.css"
+import "@/styles/globals.css"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
 
