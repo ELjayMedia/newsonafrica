@@ -34,11 +34,6 @@ export async function AppChrome({ children }: AppChromeProps) {
         <TopBar />
       </Suspense>
 
-<<<<<<< HEAD
-      <div className="mx-auto w-full max-w-[980px]">{children}</div>
-
-      <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
-=======
       <div className="mx-auto w-full max-w-full md:max-w-[980px]">
         <div className="lg:flex lg:items-start lg:gap-4">
           <main className="flex-1">{children}</main>
@@ -52,7 +47,6 @@ export async function AppChrome({ children }: AppChromeProps) {
       </div>
 
       <footer className="text-center text-sm text-gray-500 mt-3 mb-16 md:mb-2">
->>>>>>> 31396c6f (Add desktop sidebar to AppChrome across app layouts)
         <Link href="/privacy-policy" className="hover:underline">
           Privacy Policy
         </Link>

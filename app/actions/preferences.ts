@@ -3,7 +3,7 @@
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError } from "@/lib/supabase/action-result"
-import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
+import { parseProfilePreferences, sanitizeProfilePreferences } from "@/lib/preferences/profile-preferences"
 import {
   mapProfilePreferencesToStored,
   mapUserPreferencesRowToSnapshot,

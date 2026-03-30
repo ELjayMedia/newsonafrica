@@ -10,14 +10,9 @@ import { mapProfileRowToAuthProfile } from "@/lib/supabase/adapters/profiles"
 import type { Database } from "@/types/supabase"
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
-export type ProfileAuthRow = Pick<
-  Profile,
-  "id" | "username" | "handle" | "avatar_url" | "email" | "full_name" | "role" | "preferences" | "country" | "created_at" | "updated_at"
->
+export type ProfileAuthRow = Profile
 
 const PROFILE_AUTH_SELECT_COLUMNS =
-  "id, username, handle, avatar_url, email, full_name, role, preferences, country, created_at, updated_at"
-const PROFILE_FULL_SELECT_COLUMNS =
   "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
 export interface AuthStatePayload {
@@ -49,7 +44,7 @@ async function fetchProfile(supabase: SupabaseServerClient, userId: string): Pro
     .from("profiles")
     .select(PROFILE_AUTH_SELECT_COLUMNS)
     .eq("id", userId)
-    .maybeSingle<ProfileAuthRow>()
+    .maybeSingle<Profile>()
 
   if (error) {
     throw new ActionError("Failed to load profile", { cause: error })
@@ -320,7 +315,7 @@ export async function updateProfile(
       .from("profiles")
       .update(payload as never)
       .eq("id", session.user.id)
-      .select(PROFILE_FULL_SELECT_COLUMNS)
+      .select(PROFILE_AUTH_SELECT_COLUMNS)
       .single<Profile>()
 
     if (error || !data) {

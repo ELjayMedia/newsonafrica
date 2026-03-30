@@ -51,15 +51,6 @@
   ],
   "exclude": [
     "node_modules",
-<<<<<<< HEAD
-    "scripts",
-    "@v0/scripts",
-    ".next",
-    "out",
-    "supabase/functions"
-  ]
-}
-=======
     ".next",
     "out",
     "scripts",
@@ -67,4 +58,3 @@
     "supabase/functions/**"
   ]
 }
->>>>>>> 2d834299 (feat: update tsconfig.json compilerOptions and include paths)
