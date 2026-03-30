@@ -1,0 +1,25 @@
+query Search_Posts($first: Int!, $after: String, $search: String!) {
+  posts(
+    first: $first
+    after: $after
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      search: $search
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      databaseId
+      id
+      slug
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      date
+      uri
+    }
+  }
+}

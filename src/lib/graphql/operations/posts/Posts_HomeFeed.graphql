@@ -1,0 +1,23 @@
+query Posts_HomeFeed($first: Int!, $after: String) {
+  posts(
+    first: $first
+    after: $after
+    where: { status: PUBLISH, orderby: { field: DATE, order: DESC } }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+}

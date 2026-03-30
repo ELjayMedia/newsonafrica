@@ -1,0 +1,14 @@
+query Posts_BySlug($slug: ID!, $asPreview: Boolean = false) {
+  post(id: $slug, idType: SLUG, asPreview: $asPreview) {
+    databaseId
+    id
+    slug
+    date
+    modified
+    title(format: RENDERED)
+    excerpt(format: RENDERED)
+    content(format: RENDERED)
+    uri
+    link
+  }
+}

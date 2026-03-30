@@ -1,0 +1,22 @@
+query Taxonomy_Categories($first: Int = 100) {
+  categories(first: $first, where: { hideEmpty: true }) {
+    nodes {
+      databaseId
+      name
+      slug
+      description
+      count
+      parentDatabaseId
+      children {
+        nodes {
+          databaseId
+          name
+          slug
+          description
+          count
+          parentDatabaseId
+        }
+      }
+    }
+  }
+}

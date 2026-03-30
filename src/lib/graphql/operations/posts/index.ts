@@ -1,0 +1,5 @@
+export { default as Posts_HomeFeed } from "./Posts_HomeFeed.graphql"
+export { default as Posts_BySlug } from "./Posts_BySlug.graphql"
+export { default as Posts_ByDatabaseId } from "./Posts_ByDatabaseId.graphql"
+export { default as Posts_ByTag } from "./Posts_ByTag.graphql"
+export { default as Posts_Related } from "./Posts_Related.graphql"

@@ -1,0 +1,20 @@
+query Posts_Related($catIds: [ID!], $exclude: ID!, $first: Int!) {
+  posts(
+    first: $first
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      notIn: [$exclude]
+      categoryIn: $catIds
+    }
+  ) {
+    nodes {
+      databaseId
+      id
+      slug
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      date
+    }
+  }
+}

@@ -1,0 +1,24 @@
+query Posts_ByTag($tagSlugs: [String!]!, $first: Int!, $after: String) {
+  posts(
+    first: $first
+    after: $after
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      tagSlugIn: $tagSlugs
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      databaseId
+      id
+      slug
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      date
+    }
+  }
+}
