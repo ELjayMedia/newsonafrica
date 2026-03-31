@@ -1,0 +1,9 @@
+query Taxonomy_TagBySlug($slug: ID!) {
+  tag(id: $slug, idType: SLUG) {
+    databaseId
+    id
+    name
+    slug
+    count
+  }
+}

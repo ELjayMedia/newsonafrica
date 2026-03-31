@@ -1,0 +1,17 @@
+query Authors_List($first: Int!) {
+  users(
+    first: $first
+    where: { orderby: { field: DISPLAY_NAME, order: ASC }, hasPublishedPosts: true }
+  ) {
+    nodes {
+      id
+      databaseId
+      name
+      slug
+      description
+      avatar {
+        url
+      }
+    }
+  }
+}
