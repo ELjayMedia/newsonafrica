@@ -1,12 +1,9 @@
 import type { NextRequest } from "next/server"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
-import { KV_CACHE_KEYS } from "@/lib/cache/constants"
 import { cacheTags } from "@/lib/cache/cacheTags"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { kvCache } from "@/lib/cache/kv"
-import { deleteLegacyPostRoute, setLegacyPostRoute } from "@/lib/legacy-routes"
 import { syncPostToIndex, deletePostFromIndex } from "@/lib/supabase/search"
 import { stripHtml } from "@/lib/search"
 
@@ -234,14 +231,6 @@ export async function POST(request: NextRequest) {
           const resolvedCountry = deriveCountryFromPost(post)
           const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
 
-          if (resolvedCountry && primaryCategorySlug) {
-            await setLegacyPostRoute({
-              slug: post.slug,
-              country: resolvedCountry,
-              primaryCategory: primaryCategorySlug,
-            })
-          }
-
           if (resolvedCountry && postId) {
             const title = post?.title?.rendered || post?.title || "Untitled"
             const excerpt = post?.excerpt?.rendered || post?.excerpt || ""
@@ -295,8 +284,6 @@ export async function POST(request: NextRequest) {
           // Revalidate home page to show latest posts
           tagsToRevalidate.add(cacheTags.home("all"))
 
-          await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
-
           tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
 
           console.log(`Revalidated post: ${post.slug}`)
@@ -312,8 +299,6 @@ export async function POST(request: NextRequest) {
           const postIdentifier = postId ?? post.slug
           const resolvedCountry = deriveCountryFromPost(post)
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
-
-          await deleteLegacyPostRoute(post.slug)
 
           if (resolvedCountry && postId) {
             await deletePostFromIndex(resolvedCountry, Number.parseInt(postId, 10))
@@ -341,8 +326,6 @@ export async function POST(request: NextRequest) {
             })
           }
           tagsToRevalidate.add(cacheTags.home("all"))
-
-          await kvCache.delete(KV_CACHE_KEYS.HOME_FEED)
 
           tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
 

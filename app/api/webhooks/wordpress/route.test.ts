@@ -8,14 +8,7 @@ vi.mock("@/lib/server-cache-utils", () => ({
   revalidateByTag: revalidateByTagMock,
 }))
 
-vi.mock("@/lib/cache/kv", () => ({
-  kvCache: { delete: vi.fn().mockResolvedValue(undefined) },
-}))
 
-vi.mock("@/lib/legacy-routes", () => ({
-  setLegacyPostRoute: vi.fn().mockResolvedValue(undefined),
-  deleteLegacyPostRoute: vi.fn().mockResolvedValue(undefined),
-}))
 
 vi.mock("@/lib/supabase/search", () => ({
   syncPostToIndex: vi.fn().mockResolvedValue(undefined),
