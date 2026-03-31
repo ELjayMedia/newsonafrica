@@ -63,7 +63,12 @@ export const getFpTagForCountry = async (
       countryCode,
       TAG_BY_SLUG_QUERY,
       { slug },
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      {
+        tags,
+        revalidate: CACHE_DURATIONS.NONE,
+        operationName: "TagBySlug",
+        routeContext: { route: "/[countryCode]", surface: "home_feed" },
+      },
     )
 
     if (!gqlResult.ok) {

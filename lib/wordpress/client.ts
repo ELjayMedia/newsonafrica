@@ -2,6 +2,12 @@ import { cache } from "react"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { fetchWithRetry, type FetchWithRetryOptions } from "@/lib/utils/fetchWithRetry"
+import {
+  extractGraphQLOperationName,
+  getOperationValidationSchemas,
+  type GraphQLRouteContext,
+  type GraphQLValidationError,
+} from "@/src/lib/graphql/schemas"
 
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]
@@ -11,6 +17,8 @@ export interface FetchWordPressGraphQLOptions {
   authHeaders?: Record<string, string>
   transport?: "post" | "get"
   persistedQueryId?: string
+  routeContext?: GraphQLRouteContext
+  operationName?: string
 }
 
 const MAX_GET_URL_LENGTH = 2000
@@ -127,7 +135,7 @@ export class WordPressGraphQLResponseError extends Error {
 
 export type WordPressGraphQLSuccess<T> = { ok: true; data: T }
 
-export type WordPressGraphQLFailureKind = "http_error" | "graphql_error" | "invalid_payload"
+export type WordPressGraphQLFailureKind = "http_error" | "graphql_error" | "invalid_payload" | "validation_error"
 
 export interface WordPressGraphQLFailureBase {
   ok: false
@@ -173,10 +181,30 @@ export interface WordPressGraphQLInvalidPayloadFailure extends WordPressGraphQLF
   error: WordPressGraphQLInvalidPayloadError
 }
 
+export class WordPressGraphQLValidationError extends Error {
+  public readonly validation: GraphQLValidationError
+
+  constructor(validation: GraphQLValidationError) {
+    super(validation.message)
+    this.name = "WordPressGraphQLValidationError"
+    this.validation = validation
+  }
+}
+
+export interface WordPressGraphQLValidationFailure extends WordPressGraphQLFailureBase {
+  kind: "validation_error"
+  operationName: string
+  routeContext: GraphQLRouteContext
+  phase: "variables" | "response"
+  issues: GraphQLValidationError["issues"]
+  error: WordPressGraphQLValidationError
+}
+
 export type WordPressGraphQLFailure =
   | WordPressGraphQLHTTPFailure
   | WordPressGraphQLResponseFailure
   | WordPressGraphQLInvalidPayloadFailure
+  | WordPressGraphQLValidationFailure
 
 export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | (WordPressGraphQLFailure & Partial<T>)
 
@@ -240,12 +268,49 @@ const buildInvalidPayloadFailureResult = (
   }
 }
 
+const buildValidationFailureResult = (
+  validation: GraphQLValidationError,
+): WordPressGraphQLValidationFailure => {
+  const error = new WordPressGraphQLValidationError(validation)
+
+  return {
+    ok: false,
+    kind: "validation_error",
+    message: validation.message,
+    operationName: validation.operationName,
+    routeContext: validation.routeContext,
+    phase: validation.phase,
+    issues: validation.issues,
+    error,
+  }
+}
+
 export function fetchWordPressGraphQL<T>(
   countryCode: string,
   query: string,
   variables?: Record<string, string | number | string[] | readonly string[] | boolean>,
   options: FetchWordPressGraphQLOptions = {},
 ): Promise<WordPressGraphQLResult<T>> {
+  const operationName = options.operationName ?? extractGraphQLOperationName(query)
+  const routeContext = options.routeContext ?? { route: "unknown", surface: "unknown" }
+  const operationSchemas = getOperationValidationSchemas(operationName)
+
+  if (operationSchemas && variables) {
+    const validatedVariables = operationSchemas.variables.safeParse(variables)
+    if (!validatedVariables.success) {
+      return Promise.resolve(
+        buildValidationFailureResult({
+          kind: "validation_error",
+          operationName,
+          routeContext,
+          phase: "variables",
+          message: `GraphQL variables validation failed for ${operationName}`,
+          issues: validatedVariables.error.issues,
+        }),
+      )
+    }
+  }
+
   const base = getGraphQLEndpoint(countryCode)
 
   if (!base || base === "") {
@@ -400,6 +465,21 @@ export function fetchWordPressGraphQL<T>(
         console.error("[v0] GraphQL errors:", json.errors)
         removeMemoizedEntry()
         return buildGraphQLFailureResult(json.errors)
+      }
+
+      if (operationSchemas) {
+        const validatedResponse = operationSchemas.response.safeParse((json.data ?? null) as T)
+        if (!validatedResponse.success) {
+          removeMemoizedEntry()
+          return buildValidationFailureResult({
+            kind: "validation_error",
+            operationName,
+            routeContext,
+            phase: "response",
+            message: `GraphQL response validation failed for ${operationName}`,
+            issues: validatedResponse.error.issues,
+          })
+        }
       }
 
       return buildSuccessResult<T>((json.data ?? null) as T)

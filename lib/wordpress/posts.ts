@@ -224,7 +224,13 @@ export async function getRelatedPostsForCountry(
     countryCode,
     RELATED_POSTS_WITH_CATEGORIES_QUERY,
     { id: numericPostId, exclude: numericPostId, first: limit },
-    { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+      timeout: RELATED_POSTS_TIMEOUT_MS,
+      operationName: "RelatedPostsWithCategories",
+      routeContext: { route: "/[countryCode]/article/[slug]", surface: "related_articles" },
+    },
   )
 
   if (relatedWithCategories.ok !== false && relatedWithCategories.data?.post?.categories?.nodes) {
@@ -268,6 +274,8 @@ export async function getRelatedPostsForCountry(
         tags,
         revalidate: CACHE_DURATIONS.SHORT,
         timeout: RELATED_POSTS_TIMEOUT_MS,
+        operationName: "RelatedPosts",
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "related_articles" },
       },
     )
 
@@ -308,6 +316,8 @@ export const getRelatedPosts = async (
         tags: relatedTags,
         revalidate: CACHE_DURATIONS.SHORT,
         timeout: RELATED_POSTS_TIMEOUT_MS,
+        operationName: "RelatedPostsByTags",
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "related_articles" },
       },
     )
 
@@ -572,7 +582,12 @@ export const fetchTaggedPosts = async ({
         first,
         ...(after ? { after } : {}),
       },
-      { tags, revalidate: CACHE_DURATIONS.SHORT },
+      {
+        tags,
+        revalidate: CACHE_DURATIONS.SHORT,
+        operationName: "TaggedPosts",
+        routeContext: { route: "/tag/[slug]", surface: "tag_feed" },
+      },
     )
 
     if (!gqlData.ok) {
@@ -707,7 +722,12 @@ export const fetchPosts = async (
     countryCode,
     POSTS_QUERY,
     variables,
-    { tags: cacheTagList, revalidate: CACHE_DURATIONS.SHORT },
+    {
+      tags: cacheTagList,
+      revalidate: CACHE_DURATIONS.SHORT,
+      operationName: "Posts",
+      routeContext: { route: "/search", surface: "search_results" },
+    },
   )
 
   if (!gqlData.ok) {
@@ -756,7 +776,12 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
     countryCode,
     TAG_BY_SLUG_QUERY,
     { slug },
-    { tags, revalidate: CACHE_DURATIONS.SHORT },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+      operationName: "TagBySlug",
+      routeContext: { route: "/tag/[slug]", surface: "tag_feed" },
+    },
   )
 
   if (!gqlData.ok) {
@@ -799,7 +824,12 @@ export async function fetchPost({
     countryCode,
     POST_BY_SLUG_QUERY,
     { slug },
-    { tags, revalidate: CACHE_DURATIONS.SHORT },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+      operationName: "PostBySlug",
+      routeContext: { route: "/[countryCode]/article/[slug]", surface: "article_detail" },
+    },
   )
 
   if (!gqlData.ok) {
@@ -869,7 +899,12 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
       tag: "featured",
       first: limit,
     },
-    { tags, revalidate: CACHE_DURATIONS.SHORT },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.SHORT,
+      operationName: "FeaturedPosts",
+      routeContext: { route: "/[countryCode]", surface: "breaking_news_banner" },
+    },
   )
   if (!gqlData.ok) {
     console.error("[v0] Failed to fetch featured posts:", gqlData)

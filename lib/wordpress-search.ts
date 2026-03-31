@@ -123,7 +123,11 @@ export async function searchWordPressPosts(
       country,
       POSTS_QUERY,
       variables as Record<string, string | number | boolean | string[]>,
-      { revalidate: CACHE_DURATIONS.NONE },
+      {
+        revalidate: CACHE_DURATIONS.NONE,
+        operationName: "Posts",
+        routeContext: { route: "/search", surface: "search_results" },
+      },
     )
 
     if (!isGraphQlSuccess(gqlResult) || !gqlResult.data?.posts) {
