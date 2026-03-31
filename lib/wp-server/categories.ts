@@ -133,7 +133,12 @@ export async function getPostsByCategoryForCountry(
       countryCode,
       POSTS_BY_CATEGORY_QUERY,
       variables,
-      { tags, revalidate: CACHE_DURATIONS.NONE },
+      {
+        tags,
+        revalidate: CACHE_DURATIONS.NONE,
+        operationName: "PostsByCategory",
+        routeContext: { route: "/[countryCode]/category/[slug]", surface: "category_feed" },
+      },
     )
 
     if (!result.ok) {
@@ -215,7 +220,12 @@ export async function fetchCategoryPosts(
     countryCode,
     CATEGORY_POSTS_QUERY,
     variables,
-    { tags, revalidate: CACHE_DURATIONS.NONE },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.NONE,
+      operationName: "CategoryPosts",
+      routeContext: { route: "/[countryCode]/category/[slug]", surface: "category_feed" },
+    },
   )
 
   if (!result.ok) {

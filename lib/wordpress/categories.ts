@@ -134,6 +134,8 @@ export async function getPostsByCategoryForCountry(
     const gqlData = await fetchWordPressGraphQL<PostsByCategoryQuery>(countryCode, POSTS_BY_CATEGORY_QUERY, variables, {
       tags,
       revalidate: CACHE_DURATIONS.SHORT,
+      operationName: "PostsByCategory",
+      routeContext: { route: "/[countryCode]/category/[slug]", surface: "category_feed" },
     })
 
     if (gqlData.ok && gqlData.data.posts && gqlData.data.categories) {
@@ -297,6 +299,8 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
   const data = await fetchWordPressGraphQL<CategoryPostsQuery>(countryCode, CATEGORY_POSTS_QUERY, variables, {
     tags,
     revalidate: CACHE_DURATIONS.SHORT,
+    operationName: "CategoryPosts",
+    routeContext: { route: "/[countryCode]/category/[slug]", surface: "category_feed" },
   })
   if (!data.ok || !data.data.posts || !data.data.categories) return null
   const catNode = data.data.categories.nodes?.[0] ?? null

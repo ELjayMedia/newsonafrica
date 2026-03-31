@@ -182,7 +182,17 @@ export async function loadArticle(countryCode: string, slug: string, preview = f
 
   const slugTag = cacheTags.postSlug(countryCode, slug)
   const requestTags = [slugTag]
-  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: requestTags }
+  const fetchOptions = preview
+    ? {
+        revalidate: CACHE_DURATIONS.NONE,
+        operationName: "PostBySlug" as const,
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "article_detail" },
+      }
+    : {
+        tags: requestTags,
+        operationName: "PostBySlug" as const,
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "article_detail" },
+      }
 
   try {
     const gqlResult = await fetchWordPressGraphQL<PostBySlugQueryResult>(
@@ -407,4 +417,3 @@ export async function loadArticleWithFallback(
 
   return { status: "not_found" }
 }
-

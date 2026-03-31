@@ -129,7 +129,12 @@ export async function fetchAuthorData(
     countryCode,
     AUTHOR_DATA_QUERY,
     variables,
-    { tags, revalidate: CACHE_DURATIONS.NONE },
+    {
+      tags,
+      revalidate: CACHE_DURATIONS.NONE,
+      operationName: "AuthorData",
+      routeContext: { route: "/author/[slug]", surface: "author_profile" },
+    },
   )
   if (!data.ok || !data.data.user) return null
   const author = mapGraphqlAuthorToWordPressAuthor(data.data.user, slug)

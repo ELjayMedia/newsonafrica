@@ -139,6 +139,8 @@ export async function getFrontPageSlicesForCountry(
         revalidate: CACHE_DURATIONS.SHORT,
         timeout: request?.timeout,
         signal: request?.signal,
+        operationName: "FrontPageSlices",
+        routeContext: { route: "/[countryCode]", surface: "home_feed" },
       },
     )
 
