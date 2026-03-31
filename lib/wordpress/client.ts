@@ -125,7 +125,7 @@ export class WordPressGraphQLResponseError extends Error {
   }
 }
 
-export type WordPressGraphQLSuccess<T> = { ok: true; data: T }
+export type WordPressGraphQLSuccess<T> = { ok: true; data: T } & (T extends object ? T : {})
 
 export type WordPressGraphQLFailureKind = "http_error" | "graphql_error" | "invalid_payload"
 
@@ -181,7 +181,11 @@ export type WordPressGraphQLFailure =
 export type WordPressGraphQLResult<T> = WordPressGraphQLSuccess<T> | (WordPressGraphQLFailure & Partial<T>)
 
 function buildSuccessResult<T>(data: T): WordPressGraphQLSuccess<T> {
-  return { ok: true, data }
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return { ok: true, data, ...(data as object) } as WordPressGraphQLSuccess<T>
+  }
+
+  return { ok: true, data } as WordPressGraphQLSuccess<T>
 }
 
 const buildHTTPFailureResult = (response: Response): WordPressGraphQLHTTPFailure => {

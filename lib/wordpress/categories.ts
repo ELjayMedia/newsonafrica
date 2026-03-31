@@ -75,7 +75,8 @@ export async function getPostsForCategories(
       return results
     }
 
-    const nodes = gqlData.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    const nodes =
+      gqlData.data.categories?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
     nodes.forEach((node) => {
       const slug = node.slug?.toLowerCase()
@@ -135,8 +136,8 @@ export async function getPostsByCategoryForCountry(
       revalidate: CACHE_DURATIONS.SHORT,
     })
 
-    if (gqlData.ok && gqlData.posts && gqlData.categories) {
-      const catNode = gqlData.categories.nodes?.[0] ?? null
+    if (gqlData.ok && gqlData.data.posts && gqlData.data.categories) {
+      const catNode = gqlData.data.categories.nodes?.[0] ?? null
       const category = catNode
         ? {
             id: catNode.databaseId ?? 0,
@@ -146,13 +147,13 @@ export async function getPostsByCategoryForCountry(
             count: catNode.count ?? undefined,
           }
         : null
-      const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+      const nodes = gqlData.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
       const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
       return {
         category,
         posts,
-        hasNextPage: gqlData.posts.pageInfo.hasNextPage,
-        endCursor: gqlData.posts.pageInfo.endCursor ?? null,
+        hasNextPage: gqlData.data.posts.pageInfo.hasNextPage,
+        endCursor: gqlData.data.posts.pageInfo.endCursor ?? null,
       }
     }
   } catch (error) {
@@ -170,8 +171,8 @@ export async function getCategoriesForCountry(countryCode: string) {
       tags,
       revalidate: CACHE_DURATIONS.SHORT,
     })
-    if (gqlData.ok && gqlData.categories?.nodes) {
-      const nodes = gqlData.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
+    if (gqlData.ok && gqlData.data.categories?.nodes) {
+      const nodes = gqlData.data.categories.nodes.filter((node): node is CategoryNodeWithHierarchy =>
         Boolean(node && typeof node.databaseId === "number"),
       )
 
@@ -298,8 +299,8 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
     tags,
     revalidate: CACHE_DURATIONS.SHORT,
   })
-  if (!data.ok || !data.posts || !data.categories) return null
-  const catNode = data.categories.nodes?.[0] ?? null
+  if (!data.ok || !data.data.posts || !data.data.categories) return null
+  const catNode = data.data.categories.nodes?.[0] ?? null
   const category = catNode
     ? {
         id: catNode.databaseId ?? 0,
@@ -309,13 +310,13 @@ export async function fetchCategoryPosts(slug: string, cursor: string | null = n
         count: catNode.count ?? undefined,
       }
     : null
-  const nodes = data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+  const nodes = data.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     category,
     posts: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
     pageInfo: {
-      ...data.posts.pageInfo,
-      endCursor: data.posts.pageInfo.endCursor ?? null,
+      ...data.data.posts.pageInfo,
+      endCursor: data.data.posts.pageInfo.endCursor ?? null,
     },
   }
 }
