@@ -12,7 +12,7 @@ interface FetchTaggedPostsPageActionInput {
 export async function fetchTaggedPostsPageAction({
   slug,
   after = null,
-  first = 10,
+  first = 12,
   countryCode,
 }: FetchTaggedPostsPageActionInput) {
   return fetchTaggedPosts({ slug, after, first, countryCode })

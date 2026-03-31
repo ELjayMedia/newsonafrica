@@ -17,6 +17,7 @@ import type {
   CategoriesQuery,
   PostsByCategoryQuery,
 } from "@/types/wpgraphql"
+import { normalizeCursorPageInfo } from "@/src/lib/graphql/types"
 
 type CategoriesQueryNode = NonNullable<NonNullable<CategoriesQuery["categories"]>["nodes"]>[number]
 
@@ -100,8 +101,7 @@ export async function getPostsForCategories(
       results[slug] = {
         category,
         posts,
-        hasNextPage: node.posts?.pageInfo?.hasNextPage ?? false,
-        endCursor: node.posts?.pageInfo?.endCursor ?? null,
+        ...normalizeCursorPageInfo(node.posts?.pageInfo),
       }
     })
   } catch (error) {
@@ -152,8 +152,7 @@ export async function getPostsByCategoryForCountry(
       return {
         category,
         posts,
-        hasNextPage: gqlData.data.posts.pageInfo.hasNextPage,
-        endCursor: gqlData.data.posts.pageInfo.endCursor ?? null,
+        ...normalizeCursorPageInfo(gqlData.data.posts.pageInfo),
       }
     }
   } catch (error) {

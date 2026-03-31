@@ -21,7 +21,7 @@ export function LoadMoreClient({
   slug,
   initialCursor,
   hasNextPage,
-  pageSize = 10,
+  pageSize = 15,
   className,
 }: LoadMoreClientProps) {
   const [posts, setPosts] = useState<PostListItemData[]>([])

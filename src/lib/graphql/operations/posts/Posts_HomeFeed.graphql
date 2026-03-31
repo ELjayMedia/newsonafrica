@@ -3,7 +3,8 @@
 query Posts_HomeFeed(
   $heroFirst: Int!
   $heroTagSlugs: [String!]
-  $latestFirst: Int!
+  $first: Int!
+  $after: String
 ) {
   hero: posts(
     first: $heroFirst
@@ -18,7 +19,8 @@ query Posts_HomeFeed(
     }
   }
   latest: posts(
-    first: $latestFirst
+    first: $first
+    after: $after
     where: {
       status: PUBLISH
       orderby: { field: DATE, order: DESC }

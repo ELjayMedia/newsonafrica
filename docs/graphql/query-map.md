@@ -7,12 +7,12 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Item | Details |
 | --- | --- |
 | Query operation name | `FrontPageSlices` (`FRONT_PAGE_SLICES_QUERY`) |
-| Required variables and types | `heroFirst: Int!`, `latestFirst: Int!`; optional `heroTagSlugs: [String!]` |
+| Required variables and types | `heroFirst: Int!`, `first: Int!`; optional `heroTagSlugs: [String!]`, `after: String` |
 | Expected return shape (UI fields only) | `hero.nodes[] { databaseId, slug, date, modified, title, excerpt, uri, link, featuredImage.node{sourceUrl,altText,caption,mediaDetails{width,height}}, categories.nodes{databaseId,name,slug}, tags.nodes{databaseId,name,slug}, author.node{databaseId,name,slug,description,avatar{url}} }`; `latest.pageInfo { endCursor, hasNextPage }`; `latest.edges[] { cursor, node{...PostSummaryFields} }` |
 | Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/page.tsx`; data loader: `app/(public)/(home)/home-data.ts` |
 | Data freshness target | **ISR 300s** (`revalidate = 300` on route; query fetch uses short-lived GraphQL cache) |
 
-> Notes: home aggregation also uses `LatestPosts` and `FpTaggedPosts` as fallback candidates via the same home data pipeline.
+> Notes: home aggregation also uses `LatestPosts` and `FpTaggedPosts` as fallback candidates via the same home data pipeline. Default home feed page size is **12 posts** for incremental slices.
 
 ## `article_detail`
 
@@ -33,6 +33,8 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `categories.nodes[0] { databaseId,name,slug,description,count }`; `posts.pageInfo { endCursor, hasNextPage }`; `posts.nodes[] { ...PostSummaryFields }` |
 | Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wp-server/categories.ts` |
 | Data freshness target | **ISR 300s page + data calls configured as no-store/SSR-style (`revalidate: 0`)** |
+
+> Notes: default category feed page size is **15 posts** per page.
 
 ## `tag_feed`
 

@@ -244,7 +244,7 @@ export default async function CountryCategoryPage({
   const { countryCode, slug } = await params
 
   try {
-    const result = await getCategoryPageData(countryCode, slug, 20)
+    const result = await getCategoryPageData(countryCode, slug, 15)
 
     if (result.kind === "not-found") {
       return notFound()
@@ -268,6 +268,7 @@ export default async function CountryCategoryPage({
                 slug={slug}
                 initialCursor={result.pageInfo.endCursor}
                 hasNextPage={result.pageInfo.hasNextPage}
+                pageSize={15}
               />
             )}
           </div>

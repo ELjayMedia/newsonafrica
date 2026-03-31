@@ -132,7 +132,7 @@ export async function getFrontPageSlicesForCountry(
       {
         heroFirst: heroLimit,
         heroTagSlugs: FRONT_PAGE_HERO_TAGS,
-        latestFirst: totalLatest,
+        first: totalLatest,
       },
       {
         tags,

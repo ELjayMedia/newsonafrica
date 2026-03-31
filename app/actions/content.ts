@@ -5,6 +5,7 @@ import { getPostsByCategoryForCountry } from "@/lib/wordpress/service"
 import { fetchTaggedPosts } from "@/lib/wordpress/service"
 import type { PostListItemData } from "@/lib/data/post-list"
 import type { FetchTaggedPostsInput, FetchTaggedPostsResult } from "@/lib/wordpress/service"
+import { normalizeCursorPageInfo } from "@/src/lib/graphql/types"
 
 export interface FetchCategoryPostsInput {
   countryCode: string
@@ -31,10 +32,10 @@ export async function fetchCategoryPostsAction({
 
   return {
     posts: mapWordPressPostsToPostListItems(result.posts, countryCode),
-    pageInfo: {
+    pageInfo: normalizeCursorPageInfo({
       hasNextPage: result.hasNextPage,
-      endCursor: result.endCursor ?? null,
-    },
+      endCursor: result.endCursor,
+    }),
   }
 }
 
