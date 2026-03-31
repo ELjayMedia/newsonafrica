@@ -44,7 +44,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
-      <header className="bg-white mx-auto max-w-[980px] shadow-md z-10 fixed top-0 left-0 right-0 md:sticky md:top-0">
+      <header className="bg-white mx-auto max-w-[980px] shadow-md z-10">
         <div className="w-full md:mx-auto -mb-4">
           {/* Top Bar */}
           <div className="px-3 sm:px-4 pt-3 pb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
