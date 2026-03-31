@@ -2,42 +2,52 @@
 
 This document defines the single cache strategy entry for every GraphQL query surface listed in `docs/graphql/query-map.md`, including App Router cache tags and webhook-driven invalidation behavior.
 
+> Tag names in this document must match `lib/cache/cacheTags.ts`.
+> For canonical tag format and full vocabulary, see `docs/cache-invalidation.md`.
+
 ## Strategy entries
 
-| Strategy ID | Query-map surface | Operations covered | Rendering mode | Revalidation interval | App Router cache tags |
+| Strategy ID | Query-map surface | Operations covered | Rendering mode | Revalidation interval | App Router cache tags (canonical examples) |
 | --- | --- | --- | --- | --- | --- |
-| `cs_home_feed` | `home_feed` | `FrontPageSlices`, `LatestPosts`, `FpTaggedPosts` | ISR | `300s` | `home`, `frontpage`, `country:{countryCode}`, `post:list:latest` |
-| `cs_article_detail` | `article_detail` | `PostBySlug` | ISR | `300s` + on-demand | `post:{slug}`, `post:id:{databaseId}`, `category:{slug}`, `author:{slug}` |
-| `cs_category_feed` | `category_feed` | `PostsByCategory`, `CategoryPosts` | ISR | `300s` + on-demand | `category:{slug}`, `post:list:category:{slug}` |
-| `cs_tag_feed` | `tag_feed` | `TaggedPosts`, `TagBySlug` | ISR | `300s` + on-demand | `tag:{slug}`, `post:list:tag:{slug}` |
-| `cs_search_results` | `search_results` | `Posts` (`POSTS_QUERY` search flow) | SSR | `0s` (`no-store`) | No long-lived tags (`search:{normalizedQuery}` optional request-scoped key only) |
-| `cs_related_articles` | `related_articles` | `RelatedPostsWithCategories`, `RelatedPosts`, `RelatedPostsByTags` | SSR (cached fetch) | `60s` | `post:{slug}`, `post:id:{databaseId}`, `category:{slug}`, `tag:{slug}` |
-| `cs_author_profile` | `author_profile` | `AuthorData` | ISR | `3600s` + on-demand | `author:{slug}`, `post:list:author:{slug}` |
-| `cs_breaking_news_banner` | `breaking_news_banner` | `FeaturedPosts` | ISR | `60s` | `breaking`, `tag:{slug}`, `post:list:featured` |
+| `cs_home_feed` | `home_feed` | `FrontPageSlices`, `LatestPosts`, `FpTaggedPosts` | ISR | `300s` | `home:{edition}`, `edition:{edition}`, optional `home:all` aggregate |
+| `cs_article_detail` | `article_detail` | `PostBySlug` | ISR | `300s` + on-demand | `edition:{edition}:post-slug:{slug}`, `edition:{edition}:post:{id}`, `edition:{edition}:category:{slug}`, `edition:{edition}:author:{slug}` |
+| `cs_category_feed` | `category_feed` | `PostsByCategory`, `CategoryPosts` | ISR | `300s` + on-demand | `edition:{edition}:category:{slug}`, `edition:{edition}`, optional `edition:{edition}:categories` |
+| `cs_tag_feed` | `tag_feed` | `TaggedPosts`, `TagBySlug` | ISR | `300s` + on-demand | `edition:{edition}:tag:{slug}`, `edition:{edition}`, optional `edition:{edition}:tags` |
+| `cs_search_results` | `search_results` | `Posts` (`POSTS_QUERY` search flow) | SSR | `0s` (`no-store`) | No long-lived tags (`no-store`) |
+| `cs_related_articles` | `related_articles` | `RelatedPostsWithCategories`, `RelatedPosts`, `RelatedPostsByTags` | SSR (cached fetch) | `60s` | `edition:{edition}:post-slug:{slug}`, `edition:{edition}:post:{id}`, `edition:{edition}:category:{slug}`, `edition:{edition}:tag:{slug}` |
+| `cs_author_profile` | `author_profile` | `AuthorData` | ISR | `3600s` + on-demand | `edition:{edition}:author:{slug}`, `edition:{edition}` |
+| `cs_breaking_news_banner` | `breaking_news_banner` | `FeaturedPosts` | ISR | `60s` | `edition:{edition}:tag:featured`, plus `edition:{edition}` |
 
 ## Cache tag taxonomy (App Router)
 
 Use these tags consistently in server-side `fetch` wrappers (`next: { tags: [...] }`) and in route-level invalidation handlers.
 
+- **Edition/home domain**
+  - `edition:{edition}`
+  - `home:{edition}`
+  - `home:all` (aggregate home only when explicitly needed)
 - **Post domain**
-  - `post:{slug}` (canonical per-article tag)
-  - `post:id:{databaseId}` (stable ID fallback)
-  - `post:list:latest`
-  - `post:list:category:{slug}`
-  - `post:list:tag:{slug}`
-  - `post:list:author:{slug}`
-  - `post:list:featured`
+  - `edition:{edition}:posts`
+  - `edition:{edition}:post:{id}`
+  - `edition:{edition}:post-slug:{slug}`
 - **Taxonomy domain**
-  - `category:{slug}`
-  - `tag:{slug}`
+  - `edition:{edition}:categories`
+  - `edition:{edition}:category:{slug}`
+  - `edition:{edition}:tags`
+  - `edition:{edition}:tag:{slug}`
 - **Author domain**
-  - `author:{slug}`
-- **Home/frontpage domain**
-  - `home`
-  - `frontpage`
-  - `country:{countryCode}`
-- **Breaking domain**
-  - `breaking`
+  - `edition:{edition}:author:{slug}`
+- **Comments domain**
+  - `edition:{edition}:comments:{postId}`
+- **Bookmarks domain**
+  - `edition:{edition}:bookmarks`
+  - `bm:user:{userId}`
+  - `bm:collection:{collectionId}`
+
+## Legacy/alias tags
+
+- No legacy string aliases are intentionally revalidated in the current webhook/tagging flow.
+- Older examples such as `post:{slug}`, `country:{countryCode}`, and `frontpage` should be treated as historical and replaced with `cacheTags` outputs.
 
 ## Webhook-triggered invalidation flow (WordPress → Next.js)
 
@@ -49,7 +59,7 @@ On `publish_post`, `post_updated`, `future_to_publish`, taxonomy assignment chan
 - Post identifiers (`databaseId`, `slug`, `uri`)
 - Taxonomy slugs (`categories[]`, `tags[]`)
 - Author slug
-- Country/site scope (if multi-country content segmentation is enabled)
+- Edition/site scope
 
 ### 2) Next.js verifies webhook and resolves impacted tags
 
@@ -58,12 +68,14 @@ On `publish_post`, `post_updated`, `future_to_publish`, taxonomy assignment chan
 1. Verify HMAC signature and timestamp replay window.
 2. Parse payload.
 3. Build a deterministic tag set, for example:
-   - `post:{slug}`
-   - `post:id:{databaseId}`
-   - `category:{categorySlug}` for each category
-   - `tag:{tagSlug}` for each tag
-   - `author:{authorSlug}`
-   - `home`, `frontpage`, `country:{countryCode}`, `breaking` where relevant
+   - `edition:{edition}`
+   - `home:{edition}`
+   - `home:all` (when aggregate home is affected)
+   - `edition:{edition}:post-slug:{slug}`
+   - `edition:{edition}:post:{id}`
+   - `edition:{edition}:category:{categorySlug}` for each category
+   - `edition:{edition}:tag:{tagSlug}` for each tag
+   - `edition:{edition}:author:{authorSlug}`
 
 ### 3) Next.js triggers invalidation
 
