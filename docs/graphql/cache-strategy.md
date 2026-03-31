@@ -2,6 +2,15 @@
 
 This document defines the single cache strategy entry for every GraphQL query surface listed in `docs/graphql/query-map.md`, including App Router cache tags and webhook-driven invalidation behavior.
 
+## Namespace alignment requirement
+
+Cache strategy rows are keyed by query-map surfaces, which must remain aligned with both GraphQL namespaces:
+
+- Source operation docs/files in `src/lib/graphql/operations/**` (for example `Posts_BySlug`)
+- Runtime/query constants in `lib/wordpress/queries.ts` (for example `PostBySlug` / `POST_BY_SLUG_QUERY`)
+
+If either namespace changes for a surface, update `docs/graphql/query-map.md` mapping and this strategy map in the **same PR**.
+
 ## Strategy entries
 
 | Strategy ID | Query-map surface | Operations covered | Rendering mode | Revalidation interval | App Router cache tags |
@@ -84,4 +93,5 @@ After invalidation:
 
 - Every query-map surface must reference exactly one `Strategy ID` from this file.
 - If a new query surface is added to `query-map.md`, add one new strategy row first, then link it from the query map.
+- If a new query is added, update both the source operation documentation (`src/lib/graphql/operations/**`) and the runtime mapping entry (`lib/wordpress/queries.ts`) in the same PR.
 - Revalidation intervals are upper bounds; webhook-triggered tag invalidation always takes precedence over passive TTL expiry.
