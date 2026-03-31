@@ -111,6 +111,23 @@ const config = {
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
       },
+      fontSize: {
+        // Display sizes - for hero sections and large headings
+        "display-2xl": ["clamp(3rem, 8vw, 4.5rem)", { lineHeight: "1.1", letterSpacing: "-0.025em", fontWeight: "800" }],
+        "display-xl": ["clamp(2.25rem, 6vw, 3.75rem)", { lineHeight: "1.1", letterSpacing: "-0.025em", fontWeight: "700" }],
+        "display-lg": ["clamp(1.875rem, 5vw, 3rem)", { lineHeight: "1.2", letterSpacing: "-0.025em", fontWeight: "700" }],
+        // Heading sizes - for page and section titles
+        "heading-lg": ["1.5rem", { lineHeight: "1.4", letterSpacing: "-0.015em", fontWeight: "600" }],
+        "heading-md": ["1.25rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "600" }],
+        "heading-sm": ["1.125rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "600" }],
+        // Body sizes - for main content
+        "body-lg": ["1rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
+        "body-md": ["0.9375rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
+        "body-sm": ["0.875rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
+        // UI sizes - for labels, captions, badges
+        "ui-md": ["0.875rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "500" }],
+        "ui-sm": ["0.75rem", { lineHeight: "1.4", letterSpacing: "0.025em", fontWeight: "500" }],
+      },
       typography: ({ theme }) => ({
         DEFAULT: {
           css: {

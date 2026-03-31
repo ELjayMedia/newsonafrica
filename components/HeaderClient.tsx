@@ -79,7 +79,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://twitter.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    className="text-muted-foreground hover:text-foreground transition-colors duration-200"
                     aria-label="Twitter"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -90,7 +90,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://facebook.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    className="text-muted-foreground hover:text-foreground transition-colors duration-200"
                     aria-label="Facebook"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -102,7 +102,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
 
               <div className="flex items-center gap-2 text-sm sm:ml-2 md:ml-4">
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
-                <div className="hidden md:flex flex-col items-start text-gray-600 text-sm">
+                <div className="hidden md:flex flex-col items-start text-muted-foreground text-sm">
                   <span>{currentDate}</span>
                 </div>
               </div>
@@ -110,19 +110,19 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-4 md:mt-0 bg-white">
+          <nav className="mt-4 md:mt-0 bg-background">
             <div className="overflow-x-auto">
-              <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-gray-200 font-light">
+              <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-border">
                 {sortedCategories.map((category) => {
                   const url = getCategoryUrl(category.slug, countryCode)
                   return (
                     <li key={category.slug}>
                       <Link
                         href={url}
-                        className={`block px-3 py-3 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
+                        className={`block px-3 py-3 text-ui-sm font-semibold transition-colors duration-200 ${
                           pathname === url
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-700 hover:text-blue-600 hover:border-b-2 hover:border-blue-600"
+                            ? "text-primary border-b-2 border-primary"
+                            : "text-muted-foreground hover:text-primary hover:border-b-2 hover:border-primary"
                         }`}
                       >
                         {category.name.toUpperCase()}

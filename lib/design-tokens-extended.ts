@@ -152,24 +152,25 @@ export const BREAKPOINTS = {
 // ============================================================================
 
 // Article Card Variants (existing pattern to formalize)
+// Uses semantic typography classes for consistency
 export const ARTICLE_VARIANTS = {
   featured: {
-    headline: 'text-lg font-semibold leading-tight md:text-xl',
-    excerpt: 'text-sm text-muted-foreground/90 md:text-base',
+    headline: 'heading-md md:heading-lg font-semibold leading-snug',
+    excerpt: 'body-sm text-muted-foreground/90 md:body-md',
     content: 'gap-4 p-4 md:p-5',
-    category: 'text-[11px]',
+    category: 'text-ui-sm font-semibold uppercase tracking-wide',
   },
   default: {
-    headline: 'text-base font-semibold leading-snug md:text-lg',
-    excerpt: 'text-sm text-muted-foreground/90',
+    headline: 'body-lg md:heading-md font-semibold leading-snug',
+    excerpt: 'body-sm text-muted-foreground/90',
     content: 'gap-3 p-4',
-    category: 'text-[10px]',
+    category: 'text-ui-sm font-semibold uppercase tracking-wide',
   },
   compact: {
-    headline: 'text-sm font-semibold leading-snug md:text-base',
-    excerpt: 'text-xs text-muted-foreground/80',
+    headline: 'body-sm md:body-lg font-semibold leading-snug',
+    excerpt: 'text-ui-sm text-muted-foreground/80',
     content: 'gap-2.5 p-3 md:p-4',
-    category: 'text-[10px]',
+    category: 'text-ui-sm font-semibold uppercase tracking-wide',
   },
 } as const
 
@@ -324,3 +325,104 @@ export function getButtonSize(size: ButtonSize = 'md'): string {
 export function getArticleVariant(variant: ArticleVariant = 'default'): typeof ARTICLE_VARIANTS[ArticleVariant] {
   return ARTICLE_VARIANTS[variant]
 }
+
+// ============================================================================
+// DESIGN SYSTEM USAGE GUIDE
+// ============================================================================
+/**
+ * TYPOGRAPHY HIERARCHY
+ * 
+ * Display Sizes (Hero/Landing):
+ * - Use: display-2xl, display-xl, display-lg
+ * - Example: <Heading size="2xl">Main Hero Title</Heading>
+ * 
+ * Heading Sizes (Page/Section Titles):
+ * - Use: heading-lg (h1), heading-md (h2), heading-sm (h3)
+ * - Semantic: Always use correct heading level for accessibility
+ * - Example: <Heading level="h1" size="lg">Page Title</Heading>
+ * 
+ * Body Text (Content):
+ * - Use: body-lg, body-md, body-sm
+ * - Line height: 1.6 (relaxed) for comfortable reading
+ * - Example: <Text size="base">Article content here</Text>
+ * 
+ * UI Text (Labels, Captions):
+ * - Use: ui-md, ui-sm
+ * - Font weight: 500 (medium) for emphasis
+ * - Example: <Text size="xs" weight="semibold">Label</Text>
+ * 
+ * COLOR USAGE
+ * 
+ * Primary Colors:
+ * - Primary: Green (142.1 76.2% 36.3%) - CTAs, active states
+ * - Destructive: Red (0 84.2% 60.2%) - Warnings, delete actions
+ * - Success: Green shades - Positive feedback
+ * 
+ * Semantic Colors:
+ * - text-foreground: Main text (dark on light)
+ * - text-muted-foreground: Secondary text, disabled states
+ * - bg-card: Card backgrounds
+ * - bg-muted: Disabled, secondary backgrounds
+ * 
+ * NEVER use hard-coded colors:
+ * ❌ DON'T: bg-gray-100, text-blue-600, border-gray-300
+ * ✅ DO: bg-muted, text-primary, border-border
+ * 
+ * SPACING & LAYOUT
+ * 
+ * Spacing Scale (8px base):
+ * - xs: 8px (0.5rem)
+ * - sm: 12px (0.75rem)
+ * - md: 16px (1rem)
+ * - lg: 24px (1.5rem)
+ * - xl: 32px (2rem)
+ * 
+ * Use gap for flex layouts, p-* for padding:
+ * ❌ DON'T: <div style={{ marginRight: '12px' }}>
+ * ✅ DO: <div className="gap-3"> or <div className="mr-3">
+ * 
+ * Border Radius:
+ * - sm: calc(var(--radius) - 4px) ≈ 2px
+ * - md: calc(var(--radius) - 2px) ≈ 4px
+ * - lg: var(--radius) ≈ 6px
+ * - full: 9999px (for pills/circles)
+ * 
+ * RESPONSIVE DESIGN
+ * 
+ * Mobile-first approach:
+ * 1. Define base styles for mobile
+ * 2. Add breakpoint prefixes for larger screens
+ * 3. Common breakpoints: sm:640px, md:768px, lg:1024px, xl:1280px
+ * 
+ * Example:
+ * ❌ DON'T: text-lg sm:text-base (backwards)
+ * ✅ DO: text-sm md:text-base lg:text-lg (progressive enhancement)
+ * 
+ * COMPONENT PATTERNS
+ * 
+ * Article Cards:
+ * - Use getArticleVariant('featured'|'default'|'compact')
+ * - Variants provide consistent headline, excerpt, and content spacing
+ * - Don't create custom type styles for articles
+ * 
+ * Form Elements:
+ * - Heading + Text patterns for labels/descriptions
+ * - Use focus-ring utility for consistent focus states
+ * - Button sizes: sm, default, lg, xl (use BUTTON_SIZES)
+ * 
+ * Accessibility (A11Y)
+ * - Always use semantic HTML: <h1>, <h2>, etc.
+ * - Include aria-labels for icons
+ * - Use focus-ring utility on interactive elements
+ * - Test with keyboard navigation
+ * - Use sr-only class for screen reader text
+ * 
+ * TESTING CHANGES
+ * 
+ * When modifying styles:
+ * 1. Check mobile (320px), tablet (768px), desktop (1280px)
+ * 2. Test color contrast on light/dark backgrounds
+ * 3. Verify text is readable at all sizes
+ * 4. Check hover/focus states work correctly
+ * 5. Ensure no hard-coded colors remain
+ */

@@ -6,6 +6,8 @@ import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import { cn, motionSafe } from "@/lib/utils"
 import { generateBlurDataURL } from "@/lib/utils/lazy-load"
 import { getArticleUrl } from "@/lib/utils/routing"
+import { Heading } from "@/components/ui/Heading"
+import { Text } from "@/components/ui/Text"
 
 export interface FeaturedHeroProps {
   post: {
@@ -35,7 +37,7 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
 
   return (
     <Link href={getArticleUrl(post.slug, post.country, post.databaseId)} className="block group">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 bg-slate-50 shadow-none py-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 bg-background shadow-none py-1">
         <div className="relative aspect-[16/9] md:aspect-auto md:h-full w-full overflow-hidden rounded-lg">
           <Image
             src={imageUrl || "/placeholder.svg"}
@@ -50,22 +52,25 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
           />
         </div>
         <div className="flex flex-col justify-center px-1 sm:px-0">
-          <h1
+          <Heading 
+            level="h1"
             className={cn(
-              "text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-blue-600 transition-colors duration-200",
+              "mb-2 md:mb-3 group-hover:text-primary transition-colors duration-200",
               motionSafe.transition,
             )}
           >
             {post.title}
-          </h1>
-          <div className="text-gray-600 text-xs md:text-sm line-clamp-3 mb-2 md:mb-3">
+          </Heading>
+          <Text 
+            size="sm"
+            color="muted"
+            className="line-clamp-3 mb-2 md:mb-3"
+          >
             {post.excerpt.replace(/<[^>]*>/g, "")}
-          </div>
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
-              <span>{formattedDate}</span>
-            </div>
+          </Text>
+          <div className="flex items-center gap-1 text-ui-sm text-muted-foreground">
+            <Clock className="h-4 w-4" aria-hidden="true" />
+            <span>{formattedDate}</span>
           </div>
         </div>
       </div>

@@ -33,18 +33,18 @@ const CardTitle = React.forwardRef<
   }
 >(({ className, size = "default", ...props }, ref) => {
   const sizeClasses = {
-    sm: "text-lg font-semibold leading-none tracking-tight",
-    default: "text-2xl font-semibold leading-none tracking-tight",
-    lg: "text-3xl font-bold leading-none tracking-tight",
+    sm: "heading-sm font-semibold leading-snug",
+    default: "heading-md font-semibold leading-snug tracking-tight",
+    lg: "heading-lg font-bold leading-snug tracking-tight",
   }
 
-  return <div ref={ref} className={cn(sizeClasses[size], className)} {...props} />
+  return <div ref={ref} className={cn(sizeClasses[size], "text-foreground", className)} {...props} />
 })
 CardTitle.displayName = "CardTitle"
 
 const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("text-sm text-muted-foreground text-pretty", className)} {...props} />
+    <div ref={ref} className={cn("body-sm text-muted-foreground text-pretty", className)} {...props} />
   ),
 )
 CardDescription.displayName = "CardDescription"

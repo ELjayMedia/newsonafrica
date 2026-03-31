@@ -7,6 +7,7 @@ import { Bookmark, BookmarkCheck, Clock, Heart, Share2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from "@/lib/utils"
+import { DESIGN_TOKENS } from "@/lib/design-tokens-extended"
 
 export type ArticleCardLayout = "vertical" | "horizontal"
 export type ArticleCardVariant = "default" | "featured" | "compact"
@@ -45,26 +46,6 @@ export interface ArticleCardProps {
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg?height=360&width=640&text=News+Article"
-const VARIANT_STYLES: Record<ArticleCardVariant, { headline: string; excerpt: string; content: string; category: string }> = {
-  featured: {
-    headline: "text-lg font-bold leading-tight md:text-xl",
-    excerpt: "text-sm text-muted-foreground/90 md:text-base",
-    content: "gap-4 p-4 md:p-5",
-    category: "text-[11px]",
-  },
-  default: {
-    headline: "text-base font-bold leading-snug md:text-lg",
-    excerpt: "text-sm text-muted-foreground/90",
-    content: "gap-3 p-4",
-    category: "text-[10px]",
-  },
-  compact: {
-    headline: "text-sm font-bold leading-snug md:text-base",
-    excerpt: "text-xs text-muted-foreground/80",
-    content: "gap-2.5 p-3 md:p-4",
-    category: "text-[10px]",
-  },
-}
 
 function getTimestampParts(timestamp?: string | Date) {
   if (!timestamp) return { display: undefined as string | undefined, iso: undefined as string | undefined }
@@ -113,8 +94,7 @@ export function ArticleCard({
   isLiked,
 }: ArticleCardProps) {
   const { display: displayTimestamp, iso } = getTimestampParts(timestamp)
-  const { headline: headlineStyles, excerpt: excerptStyles, content: contentStyles, category: categoryStyles } =
-    VARIANT_STYLES[variant]
+  const variantConfig = DESIGN_TOKENS.ARTICLE_VARIANTS[variant]
 
   const isHorizontal = layout === "horizontal"
   const hasActions = Boolean(onShare || onSave || onLike)
@@ -157,20 +137,20 @@ export function ArticleCard({
         <div
           className={cn(
             "flex flex-1 flex-col",
-            contentStyles,
+            variantConfig.content,
             contentClassName
           )}
         >
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-2">
               {category ? (
-                <Badge className={cn("w-fit uppercase tracking-wide", categoryStyles, categoryClassName)}>{category}</Badge>
+                <Badge className={cn("w-fit uppercase tracking-wide", variantConfig.category, categoryClassName)}>{category}</Badge>
               ) : null}
 
               <h3
                 className={cn(
                   "text-foreground transition-colors duration-200 group-hover:text-primary",
-                  headlineStyles,
+                  variantConfig.headline,
                   headlineClassName
                 )}
               >
@@ -178,7 +158,7 @@ export function ArticleCard({
               </h3>
 
               {showExcerpt && excerpt ? (
-                <p className={cn("line-clamp-3", excerptStyles, excerptClassName)}>{excerpt}</p>
+                <p className={cn("truncate-3", variantConfig.excerpt, excerptClassName)}>{excerpt}</p>
               ) : null}
             </div>
 
