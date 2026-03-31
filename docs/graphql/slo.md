@@ -2,6 +2,8 @@
 
 This document defines the service-level objectives (SLOs) for GraphQL operations and how to operationalize the telemetry emitted by `src/lib/graphql/metrics.ts`.
 
+See also: [GraphQL architecture](./architecture.md) for telemetry layer boundaries and cross-layer sync expectations.
+
 ## Telemetry model
 
 The telemetry layer is operation-name keyed and captures the following metrics:

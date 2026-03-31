@@ -2,6 +2,8 @@
 
 This map ties each UI surface to its primary GraphQL operation, variable contract, UI-consumed response fields, owning Next.js entrypoint, and freshness target.
 
+See also: [GraphQL architecture](./architecture.md) for layer boundaries and required sync steps when operation shapes change.
+
 ## Namespace mapping (source operation ↔ runtime constant)
 
 Use both naming namespaces explicitly:

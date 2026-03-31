@@ -2,6 +2,8 @@
 
 This document defines the single cache strategy entry for every GraphQL query surface listed in `docs/graphql/query-map.md`, including App Router cache tags and webhook-driven invalidation behavior.
 
+See also: [GraphQL architecture](./architecture.md) for source-vs-runtime ownership and contract sync requirements.
+
 ## Namespace alignment requirement
 
 Cache strategy rows are keyed by query-map surfaces, which must remain aligned with both GraphQL namespaces:
