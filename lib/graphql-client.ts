@@ -1,5 +1,5 @@
-import { ENV } from "@/config/env"
 import { isValidCountry, type CountryCode } from "@/lib/countries"
+import { GraphQLClientError, requestGraphQL } from "@/src/lib/graphql/client"
 
 export interface GraphQLError {
   message: string
@@ -36,33 +36,28 @@ export async function fetchGraphQL<T = unknown>(
     ...(options?.tags || []),
   ]
 
-  const response = await fetch(endpoint, {
+  const json = await requestGraphQL<T>(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query, variables }),
+    body: { query, variables },
+    operationName: undefined,
     next: {
       tags,
       revalidate: options?.revalidate ?? 3600, // 1 hour default
     },
+    logger: (metadata) => {
+      const logLevel = metadata.status === "error" ? console.error : console.info
+      logLevel("[graphql-client]", metadata)
+    },
   })
 
-  if (!response.ok) {
-    throw new Error(`WPGraphQL request failed: ${response.status} ${response.statusText}`)
-  }
-
-  const json = (await response.json()) as GraphQLResponse<T>
-
-  if (json.errors?.length) {
-    const errorMessages = json.errors
-      .map((e) => `${e.message}${e.path ? ` at ${e.path.join(".")}` : ""}`)
-      .join("; ")
-    throw new Error(`GraphQL error: ${errorMessages}`)
-  }
-
   if (!json.data) {
-    throw new Error("GraphQL response missing data")
+    throw new GraphQLClientError("validation", "GraphQL response missing data", {
+      endpoint,
+      operationName: "UnknownOperation",
+      attempt: 1,
+      maxAttempts: 1,
+      durationMs: 0,
+    })
   }
 
   return json.data
