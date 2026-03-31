@@ -2,10 +2,7 @@
 
 This document defines the single cache strategy entry for every GraphQL query surface listed in `docs/graphql/query-map.md`, including App Router cache tags and webhook-driven invalidation behavior.
 
-Canonical tag formats and event-level invalidation requirements live in `docs/cache-invalidation.md`:
-
-- [Canonical tag schema](../cache-invalidation.md#canonical-tag-schema)
-- [Canonical invalidation triggers/events](../cache-invalidation.md#canonical-invalidation-triggersevents)
+See also: [GraphQL architecture](./architecture.md) for source-vs-runtime ownership and contract sync requirements.
 
 ## Namespace alignment requirement
 
