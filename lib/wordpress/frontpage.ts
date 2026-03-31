@@ -142,13 +142,13 @@ export async function getFrontPageSlicesForCountry(
       },
     )
 
-    if (gqlData) {
+    if (gqlData.ok) {
       const heroNodes =
-        gqlData.hero?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
+        gqlData.data.hero?.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
       const heroPosts = heroNodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
 
       const latestEdges =
-        gqlData.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostSummaryFieldsFragment } =>
+        gqlData.data.latest?.edges?.filter((edge): edge is { cursor?: string | null; node: PostSummaryFieldsFragment } =>
           Boolean(edge?.node),
         ) ?? []
 
@@ -163,7 +163,7 @@ export async function getFrontPageSlicesForCountry(
           trendingLimit,
           latestLimit,
           cursors,
-          pageInfo: gqlData.latest?.pageInfo ?? null,
+          pageInfo: gqlData.data.latest?.pageInfo ?? null,
         })
       }
     }
@@ -205,7 +205,12 @@ export async function getFpTaggedPostsForCountry(
       },
     )
 
-    const nodes = gqlData?.posts?.nodes?.filter(
+    if (!gqlData.ok) {
+      console.log("[v0] GraphQL failed for FP tagged posts")
+      return []
+    }
+
+    const nodes = gqlData.data.posts?.nodes?.filter(
       (node): node is NonNullable<typeof node> => Boolean(node),
     )
 

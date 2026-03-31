@@ -115,12 +115,12 @@ const getCachedRelatedCategoryIds = (
         { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
       )
 
-      if (!gqlPost?.post) {
+      if (!gqlPost.ok || !gqlPost.data.post) {
         return [] as string[]
       }
 
       return (
-        gqlPost.post.categories?.nodes
+        gqlPost.data.post.categories?.nodes
           ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
           .map((c) => String(c.databaseId)) ?? []
       )
