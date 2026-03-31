@@ -217,10 +217,7 @@ export async function getRelatedPostsForCountry(
     return []
   }
 
-  const tags = [
-    cacheTags.edition(countryCode),
-    cacheTags.post(countryCode, postCacheKey),
-  ]
+  const tags = [cacheTags.edition(countryCode), cacheTags.post(countryCode, postCacheKey)]
 
   const relatedWithCategories = await fetchWordPressGraphQL<RelatedPostsWithCategoriesQueryResult>(
     countryCode,
@@ -228,64 +225,19 @@ export async function getRelatedPostsForCountry(
     { id: numericPostId, exclude: numericPostId, first: limit },
     { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
   )
-<<<<<<< HEAD
-  if (!gqlPost.ok) {
-    console.error("[v0] Failed to fetch post categories for related posts:", gqlPost)
-    return []
-  }
 
-  const postData = gqlPost.data
-
-  if (postData?.post) {
-    const catIds =
-      postData.post.categories?.nodes
-        ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
-        .map((c) => String(c.databaseId)) ?? []
-    if (catIds.length > 0) {
-      const gqlData = await fetchWordPressGraphQL<RelatedPostsQuery>(
-        countryCode,
-        RELATED_POSTS_QUERY,
-        {
-          catIds,
-          exclude: numericPostId,
-          first: limit,
-        },
-        {
-          tags,
-          revalidate: CACHE_DURATIONS.SHORT,
-          timeout: RELATED_POSTS_TIMEOUT_MS,
-        },
-      )
-      if (!gqlData.ok) {
-        console.error("[v0] Failed to fetch related posts:", gqlData)
-        return []
-      }
-
-      const relatedData = gqlData.data
-
-      if (relatedData?.posts) {
-        const nodes = relatedData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
-        const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
-        return posts.filter((p) => p.databaseId !== numericPostId)
-=======
-
-  if (relatedWithCategories.ok !== false && relatedWithCategories?.post?.categories?.nodes) {
+  if (relatedWithCategories.ok !== false && relatedWithCategories.data?.post?.categories?.nodes) {
     const seenPostIds = new Set<number>()
     const relatedNodes: PostSummaryFieldsFragment[] = []
 
-    for (const category of relatedWithCategories.post.categories.nodes) {
-      const nodes =
-        category?.posts?.nodes?.filter(
-          (post): post is PostSummaryFieldsFragment & { databaseId: number } =>
-            post != null && typeof post.databaseId === "number",
-        ) ?? []
+    for (const category of relatedWithCategories.data.post.categories.nodes) {
+      const nodes = category?.posts?.nodes?.filter((post): post is PostSummaryFieldsFragment => Boolean(post)) ?? []
       for (const node of nodes) {
         if (node.databaseId === numericPostId || seenPostIds.has(node.databaseId)) {
           continue
         }
         seenPostIds.add(node.databaseId)
         relatedNodes.push(node)
->>>>>>> de786089 (Improve related post retrieval with single-query primary path)
       }
     }
 
@@ -313,8 +265,9 @@ export async function getRelatedPostsForCountry(
         timeout: RELATED_POSTS_TIMEOUT_MS,
       },
     )
-    if (gqlData?.posts) {
-      const nodes = gqlData.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+
+    if (gqlData.ok && gqlData.data?.posts) {
+      const nodes = gqlData.data.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
       const posts = nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode))
       return posts.filter((p) => p.databaseId !== numericPostId)
     }
@@ -366,7 +319,6 @@ export const getRelatedPosts = async (
 
   const posts = await getRelatedPostsForCountry(country, postId, limit)
   return posts.filter((p) => p.databaseId !== Number(postId) && p.id !== postId)
-}
 }
 
 const resolveRenderedText = (value: unknown): string => {

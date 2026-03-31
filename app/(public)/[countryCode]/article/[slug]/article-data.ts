@@ -1,20 +1,79 @@
 import { ENV } from "@/config/env"
+import { cacheTags } from "@/lib/cache"
+import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEdition } from "@/lib/editions"
 import { buildArticlePath, normalizeArticleCountrySegment } from "@/lib/routing/article-route"
+import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
+import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
+import { COUNTRIES } from "@/lib/wordpress/countries"
+import type { WordPressPost } from "@/types/wp"
+import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
+import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 export const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
+const ARTICLE_CACHE_KEY_PREFIX = "article"
+
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
+
 export const normalizeSlug = (value: string): string => value.toLowerCase()
+
+const SUPPORTED_WORDPRESS_COUNTRIES = new Set(Object.keys(COUNTRIES).map((code) => normalizeCountryCode(code)))
+
+const hasWordPressEndpoint = (countryCode: string): boolean =>
+  SUPPORTED_WORDPRESS_COUNTRIES.has(normalizeCountryCode(countryCode))
 
 const SUPPORTED_EDITION_LOOKUP = new Map(SUPPORTED_EDITIONS.map((edition) => [edition.code.toLowerCase(), edition]))
 
+type ArticleCountryPriorityCacheEntry = {
+  priority: string[]
+  signature: string
+}
+
+const articleCountryPriorityCache = new Map<string, ArticleCountryPriorityCacheEntry>()
+
+const computeEditionConfigSignature = (): string => {
+  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
+  const editions = SUPPORTED_EDITIONS.map((edition) => ({
+    code: normalizeCountryCode(edition.code),
+    isCountryEdition: isCountryEdition(edition),
+  }))
+
+  return JSON.stringify({ defaultSite, editions })
+}
+
+export const resetArticleCountryPriorityCache = (): void => {
+  if (process.env.NODE_ENV === "production") {
+    return
+  }
+
+  articleCountryPriorityCache.clear()
+}
+
 export const AFRICAN_ROUTE_ALIAS = normalizeArticleCountrySegment(AFRICAN_EDITION.code)
-export const normalizeRouteCountry = (country: string): string => normalizeArticleCountrySegment(country)
+
+export const normalizeRouteCountry = (country: string): string => {
+  const normalized = normalizeCountryCode(country)
+
+  if (normalized === AFRICAN_ROUTE_ALIAS) {
+    return AFRICAN_ROUTE_ALIAS
+  }
+
+  const normalizedAfricanCode = normalizeCountryCode(AFRICAN_EDITION.code)
+  if (normalized === normalizedAfricanCode) {
+    return AFRICAN_ROUTE_ALIAS
+  }
+
+  return normalized
+}
 
 export const resolveEdition = (countryCode: string): SupportedEdition | null => {
   const normalized = normalizeCountryCode(countryCode)
-  if (normalized === AFRICAN_ROUTE_ALIAS) return AFRICAN_EDITION
+
+  if (normalized === AFRICAN_ROUTE_ALIAS) {
+    return AFRICAN_EDITION
+  }
+
   return SUPPORTED_EDITION_LOOKUP.get(normalized) ?? null
 }
 
@@ -47,16 +106,11 @@ export const buildCanonicalArticleSlug = (slug: string, databaseId?: number | nu
   return canonicalPath.split("/").at(-1) ?? normalizeSlug(slug)
 }
 
-<<<<<<< HEAD
 type PostBySlugQueryResult = {
   post?: PostFieldsFragment | null
   posts?: {
     nodes?: (PostFieldsFragment | null)[] | null
   } | null
-}
-
-type PostByDatabaseIdQueryResult = {
-  post?: PostFieldsFragment | null
 }
 
 type CachedArticlePayload = {
@@ -93,13 +147,12 @@ const asLoadArticleResult = (
   countryCode: string,
   result: WordPressGraphQLResult<PostBySlugQueryResult>,
   slug: string,
-  _preview: boolean,
+  preview: boolean,
 ): LoadArticleResult => {
   if (!result.ok) {
     return { status: "temporary_error", error: result.error, failure: result }
   }
 
-<<<<<<< HEAD
   let node: PostFieldsFragment | null = null
 
   if (preview && result.data.post) {
@@ -109,10 +162,6 @@ const asLoadArticleResult = (
   if (!node) {
     node = result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
   }
-=======
-  const node =
-    result.post ?? result.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
->>>>>>> 55292a8c (Prefer post field in article load result resolution)
 
   if (!node) {
     return { status: "not_found" }
@@ -126,7 +175,7 @@ const asLoadArticleResult = (
   return { status: "found", article, tags, version, canonicalCountry }
 }
 
-const loadArticleBySlug = async (countryCode: string, slug: string, preview = false): Promise<LoadArticleResult> => {
+export async function loadArticle(countryCode: string, slug: string, preview = false): Promise<LoadArticleResult> {
   if (!hasWordPressEndpoint(countryCode)) {
     return { status: "not_found" }
   }
@@ -147,65 +196,6 @@ const loadArticleBySlug = async (countryCode: string, slug: string, preview = fa
   } catch (error) {
     return { status: "temporary_error", error }
   }
-}
-
-const loadArticleByDatabaseId = async (countryCode: string, databaseId: number, preview = false): Promise<LoadArticleResult> => {
-  if (!hasWordPressEndpoint(countryCode)) {
-    return { status: "not_found" }
-  }
-
-  const requestTags = [cacheTags.post(countryCode, databaseId)]
-  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: requestTags }
-
-  try {
-    const gqlResult = await fetchWordPressGraphQL<PostByDatabaseIdQueryResult>(
-      countryCode,
-      POST_BY_DATABASE_ID_QUERY,
-      { id: databaseId, asPreview: preview },
-      fetchOptions,
-    )
-
-    const node = gqlResult.ok ? gqlResult.post ?? null : null
-
-    if (!gqlResult.ok) {
-      return { status: "temporary_error", error: gqlResult.error, failure: gqlResult }
-    }
-
-    if (!node) {
-      return { status: "not_found" }
-    }
-
-    const article = mapGraphqlPostToWordPressPost(node, countryCode)
-    const resolvedSlug = normalizeSlug(article.slug ?? "") || String(databaseId)
-    const tags = buildArticleCacheTags(countryCode, resolvedSlug, article)
-    const version = resolveArticleVersion(article)
-
-    return {
-      status: "found",
-      article,
-      tags,
-      version,
-      canonicalCountry: normalizeCountryCode(countryCode),
-    }
-  } catch (error) {
-    return { status: "temporary_error", error }
-  }
-}
-
-export async function loadArticle(
-  countryCode: string,
-  slug: string,
-  preview = false,
-  stableId?: number | null,
-): Promise<LoadArticleResult> {
-  if (typeof stableId === "number" && Number.isFinite(stableId)) {
-    const byId = await loadArticleByDatabaseId(countryCode, stableId, preview)
-    if (byId.status === "found" || byId.status === "temporary_error") {
-      return byId
-    }
-  }
-
-  return loadArticleBySlug(countryCode, slug, preview)
 }
 
 const unique = (values: string[]): string[] => {
@@ -286,14 +276,135 @@ const buildCachedArticlePayload = (
   }
 }
 
-=======
->>>>>>> f9432432 (refactor article rendering data flow to server-only wordpress path)
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
   const normalizedPrimary = normalizeCountryCode(countryCode)
-  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
-  const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) => normalizeCountryCode(edition.code))
+  const signature = computeEditionConfigSignature()
 
-  return Array.from(new Set([normalizedPrimary, defaultSite, ...supportedCountryEditions]))
+  const cached = articleCountryPriorityCache.get(normalizedPrimary)
+  if (cached?.signature === signature) {
+    return cached.priority
+  }
+
+  const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
+  const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
+
+  const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
+    normalizeCountryCode(edition.code),
+  )
+
+  const prioritized = [normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition]
+
+  const supportedPriority = prioritized.filter(hasWordPressEndpoint)
+
+  const priority = unique(supportedPriority)
+  articleCountryPriorityCache.set(normalizedPrimary, { priority, signature })
+
+  return priority
 }
 
-export const resetArticleCountryPriorityCache = (): void => {}
+export type ArticleFallbackNotFound = { status: "not_found" }
+
+type ArticleTemporaryFailure = {
+  country: string
+  error: unknown
+  failure?: WordPressGraphQLFailure
+}
+
+export type ArticleFallbackTemporaryError = {
+  status: "temporary_error"
+  error: ArticleTemporarilyUnavailableError
+  failures: ArticleTemporaryFailure[]
+  staleArticle?: WordPressPost | null
+  staleSourceCountry?: string | null
+  staleCanonicalCountry?: string | null
+}
+
+export type ArticleLoadResult =
+  | ({ status: "found"; sourceCountry: string } & LoadedArticle)
+  | ArticleFallbackNotFound
+  | ArticleFallbackTemporaryError
+
+export class ArticleTemporarilyUnavailableError extends AggregateError {
+  public readonly failures: ArticleTemporaryFailure[]
+
+  constructor(failures: ArticleTemporaryFailure[], message: string) {
+    super(
+      failures.map(({ error, failure }) => failure?.error ?? error),
+      message,
+    )
+    this.name = "ArticleTemporarilyUnavailableError"
+    this.failures = failures
+  }
+}
+
+const buildTemporaryFailureMessage = (failures: ArticleTemporaryFailure[]): string =>
+  `Temporary WordPress failure for countries: ${failures.map(({ country }) => country).join(", ")}`
+
+export async function loadArticleWithFallback(
+  slug: string,
+  countryPriority: string[],
+  preview = false,
+): Promise<ArticleLoadResult> {
+  const normalizedSlug = normalizeSlug(slug)
+
+  const [primaryCountry, ...fallbackCountries] = countryPriority
+
+  if (!primaryCountry) {
+    return { status: "not_found" }
+  }
+
+  const temporaryFailures: ArticleTemporaryFailure[] = []
+
+  const primaryArticle = await loadArticle(primaryCountry, normalizedSlug, preview)
+
+  if (primaryArticle.status === "temporary_error") {
+    temporaryFailures.push({
+      country: primaryCountry,
+      error: primaryArticle.error,
+      failure: primaryArticle.failure,
+    })
+  } else if (primaryArticle.status === "found") {
+    return {
+      status: "found",
+      article: primaryArticle.article,
+      tags: primaryArticle.tags,
+      version: primaryArticle.version,
+      canonicalCountry: primaryArticle.canonicalCountry,
+      sourceCountry: primaryCountry,
+    }
+  }
+
+  for (const fallbackCountry of fallbackCountries) {
+    const fallbackArticle = await loadArticle(fallbackCountry, normalizedSlug, preview)
+
+    if (fallbackArticle.status === "temporary_error") {
+      temporaryFailures.push({
+        country: fallbackCountry,
+        error: fallbackArticle.error,
+        failure: fallbackArticle.failure,
+      })
+    } else if (fallbackArticle.status === "found") {
+      return {
+        status: "found",
+        article: fallbackArticle.article,
+        tags: fallbackArticle.tags,
+        version: fallbackArticle.version,
+        canonicalCountry: fallbackArticle.canonicalCountry,
+        sourceCountry: fallbackCountry,
+      }
+    }
+  }
+
+  if (temporaryFailures.length > 0 && !preview) {
+    const message = buildTemporaryFailureMessage(temporaryFailures)
+    const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message)
+    return {
+      status: "temporary_error",
+      error,
+      failures: temporaryFailures,
+    }
+  }
+
+  return { status: "not_found" }
+}
+

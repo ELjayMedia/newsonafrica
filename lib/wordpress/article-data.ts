@@ -83,7 +83,7 @@ const queryArticle = async (
       return { status: "temporary_error", error: result.error, failure: result }
     }
 
-    const node = result.post ?? null
+    const node = result.data?.post ?? null
 
     if (!node) return { status: "not_found" }
 

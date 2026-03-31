@@ -92,7 +92,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
   const initialUser = initialState?.user ?? null
   const initialProfile = initialState?.profile ?? null
   const [user, setUser] = useState<User | null>(initialUser)
-  const [profile, setProfile] = useState<Profile | null>(initialProfile)
+  const [profile, setProfile] = useState<Profile | null>(initialProfile as Profile | null)
   const [session, setSession] = useState<Session | null>(initialSession)
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser))
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
@@ -107,7 +107,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
     async (next: AuthStatePayload | null) => {
       const nextSession = (next?.session ?? null) as Session | null
       const nextUser = (next?.user ?? null) as User | null
-      const nextProfile = next?.profile ?? null
+      const nextProfile = (next?.profile ?? null) as Profile | null
 
       setSession(nextSession)
       setUser(nextUser)

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   CATEGORY_POSTS_BATCH_QUERY,
   CATEGORY_POSTS_QUERY,
@@ -259,17 +258,3 @@ export const fetchCategories = async (countryCode = DEFAULT_COUNTRY) => {
     return []
   }
 }
-=======
-/** @deprecated Import from `@/lib/wordpress/service` instead. */
-export {
-  fetchAllCategories,
-  fetchCategories,
-  fetchCategoryPosts,
-  getAllCategories,
-  getCategories,
-  getCategoriesForCountry,
-  getPostsByCategory,
-  getPostsByCategoryForCountry,
-  getPostsForCategories,
-} from "@/lib/wordpress/service"
->>>>>>> edc0b87e (Create canonical WordPress service and migrate callers)

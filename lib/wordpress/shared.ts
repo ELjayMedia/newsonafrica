@@ -4,12 +4,8 @@ import { appConfig } from "@/lib/config"
 import { TAG_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import { fetchWordPressGraphQL } from "./client"
 import { decodeHtmlEntities } from "../utils/decodeHtmlEntities"
-<<<<<<< HEAD
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { normalizeGraphqlPostNode } from "@/lib/wordpress/adapters/graphql-post"
-=======
-import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
->>>>>>> db212794 (Split post mappers into shared and server modules)
 import type { HomePost } from "@/types/home"
 import type { WordPressPost, WordPressTag } from "@/types/wp"
 
