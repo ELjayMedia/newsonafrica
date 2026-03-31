@@ -115,12 +115,12 @@ const getCachedRelatedCategoryIds = (
         { tags, revalidate: CACHE_DURATIONS.SHORT, timeout: RELATED_POSTS_TIMEOUT_MS },
       )
 
-      if (!gqlPost?.post) {
+      if (!gqlPost.ok || !gqlPost.data.post) {
         return [] as string[]
       }
 
       return (
-        gqlPost.post.categories?.nodes
+        gqlPost.data.post.categories?.nodes
           ?.filter((c): c is NonNullable<typeof c> => typeof c?.databaseId === "number")
           .map((c) => String(c.databaseId)) ?? []
       )
@@ -233,6 +233,10 @@ export async function getRelatedPostsForCountry(
     for (const category of relatedWithCategories.data.post.categories.nodes) {
       const nodes = category?.posts?.nodes?.filter((post): post is PostSummaryFieldsFragment => Boolean(post)) ?? []
       for (const node of nodes) {
+        if (typeof node.databaseId !== "number") {
+          continue
+        }
+
         if (node.databaseId === numericPostId || seenPostIds.has(node.databaseId)) {
           continue
         }
