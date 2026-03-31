@@ -93,7 +93,7 @@ export const fetchAuthors = async (countryCode = DEFAULT_COUNTRY): Promise<WordP
   }
 
   const nodes =
-    data.users?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+    data.data?.users?.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
 
   return nodes.map((node) => mapGraphqlAuthorToWordPressAuthor(node, node.slug ?? ""))
 }
@@ -131,16 +131,16 @@ export async function fetchAuthorData(
     variables,
     { tags, revalidate: CACHE_DURATIONS.NONE },
   )
-  if (!data.ok || !data.user) return null
-  const author = mapGraphqlAuthorToWordPressAuthor(data.user, slug)
-  const nodes = data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
+  if (!data.ok || !data.data?.user) return null
+  const author = mapGraphqlAuthorToWordPressAuthor(data.data.user, slug)
+  const nodes = data.data.user.posts.nodes?.filter((p): p is NonNullable<typeof p> => Boolean(p)) ?? []
   return {
     author,
     posts: {
       nodes: nodes.map((p) => mapGraphqlPostToWordPressPost(p, countryCode)),
       pageInfo: {
-        ...data.user.posts.pageInfo,
-        endCursor: data.user.posts.pageInfo.endCursor ?? null,
+        ...data.data.user.posts.pageInfo,
+        endCursor: data.data.user.posts.pageInfo.endCursor ?? null,
       },
     },
   }

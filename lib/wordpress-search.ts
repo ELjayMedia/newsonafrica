@@ -126,7 +126,7 @@ export async function searchWordPressPosts(
       { revalidate: CACHE_DURATIONS.NONE },
     )
 
-    if (!isGraphQlSuccess(gqlResult) || !gqlResult.posts) {
+    if (!isGraphQlSuccess(gqlResult) || !gqlResult.data?.posts) {
       if (isGraphQlFailure(gqlResult)) {
         console.error("WordPress GraphQL search failed", gqlResult.error)
       }
@@ -135,18 +135,18 @@ export async function searchWordPressPosts(
     }
 
     const nodes =
-      gqlResult.posts.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
+      gqlResult.data.posts.nodes?.filter((node): node is PostSummaryFieldsFragment => Boolean(node)) ?? []
     const mapped = nodes.map((node) => mapGraphqlPostToWordPressPost(node, country))
 
-    const totalFromGraphql = gqlResult.posts.pageInfo?.offsetPagination?.total
+    const totalFromGraphql = gqlResult.data.posts.pageInfo?.offsetPagination?.total
     const total =
       typeof totalFromGraphql === "number" && totalFromGraphql >= 0
         ? totalFromGraphql
         : mapped.length + (page - 1) * perPage
     const totalPages = total > 0 ? Math.max(1, Math.ceil(total / perPage)) : 0
     const hasMore =
-      typeof gqlResult.posts.pageInfo?.hasNextPage === "boolean"
-        ? gqlResult.posts.pageInfo.hasNextPage
+      typeof gqlResult.data.posts.pageInfo?.hasNextPage === "boolean"
+        ? gqlResult.data.posts.pageInfo.hasNextPage
         : page < Math.max(1, totalPages)
 
     const suggestions = Array.from(new Set(mapped.map((post) => sanitizeTitle(post.title)))).slice(0, 10)
