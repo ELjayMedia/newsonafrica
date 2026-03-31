@@ -34,7 +34,9 @@ export async function AppChrome({ children }: AppChromeProps) {
         <TopBar />
       </Suspense>
 
-      <div className="mx-auto w-full max-w-[980px]">{children}</div>
+      <div className="pt-[120px] md:pt-[180px]">
+        <div className="mx-auto w-full max-w-[980px]">{children}</div>
+      </div>
 
       <footer className="mt-3 mb-16 text-center text-sm text-gray-500 md:mb-2">
         <Link href="/privacy-policy" className="hover:underline">
