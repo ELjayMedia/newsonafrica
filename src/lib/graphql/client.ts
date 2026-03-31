@@ -47,7 +47,7 @@ interface GraphQLRequestLoggerMetadata {
   category?: GraphQLClientErrorCategory
 }
 
-export interface GraphQLRequestOptions extends RequestInit {
+export interface GraphQLRequestOptions extends Omit<RequestInit, "body"> {
   timeoutMs?: number
   maxAttempts?: number
   backoffMs?: number
