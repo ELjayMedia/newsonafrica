@@ -2,6 +2,31 @@
 
 This map ties each UI surface to its primary GraphQL operation, variable contract, UI-consumed response fields, owning Next.js entrypoint, and freshness target.
 
+## Namespace mapping (source operation ↔ runtime constant)
+
+Use both naming namespaces explicitly:
+
+- **Source operation files:** `src/lib/graphql/operations/**` (for example `Posts_BySlug`)
+- **Runtime/query constants:** `lib/wordpress/queries.ts` (for example `PostBySlug` via `POST_BY_SLUG_QUERY`)
+
+| Query-map surface | Source operation name (`src/lib/graphql/operations/**`) | Runtime operation name (`lib/wordpress/queries.ts`) | Runtime constant export |
+| --- | --- | --- | --- |
+| `home_feed` | `Posts_FrontPageSlices`, `Posts_LatestPosts`, `Posts_FpTaggedPosts` | `FrontPageSlices`, `LatestPosts`, `FpTaggedPosts` | `FRONT_PAGE_SLICES_QUERY`, `LATEST_POSTS_QUERY`, `FP_TAGGED_POSTS_QUERY` |
+| `article_detail` | `Posts_BySlug` | `PostBySlug` | `POST_BY_SLUG_QUERY` |
+| `category_feed` | `Taxonomy_PostsByCategory`, `Taxonomy_CategoryPosts` | `PostsByCategory`, `CategoryPosts` | `POSTS_BY_CATEGORY_QUERY`, `CATEGORY_POSTS_QUERY` |
+| `tag_feed` | `Taxonomy_TaggedPosts`, `Taxonomy_TagBySlug` | `TaggedPosts`, `TagBySlug` | `TAGGED_POSTS_QUERY`, `TAG_BY_SLUG_QUERY` |
+| `search_results` | `Search_Posts` | `Posts` | `POSTS_QUERY` |
+| `related_articles` | `Posts_RelatedPostsWithCategories`, `Posts_RelatedPosts`, `Posts_RelatedPostsByTags` | `RelatedPostsWithCategories`, `RelatedPosts`, `RelatedPostsByTags` | `RELATED_POSTS_WITH_CATEGORIES_QUERY`, `RELATED_POSTS_QUERY`, `RELATED_POSTS_BY_TAGS_QUERY` |
+| `author_profile` | `Authors_AuthorData` | `AuthorData` | `AUTHOR_DATA_QUERY` |
+| `breaking_news_banner` | `Posts_FeaturedPosts` | `FeaturedPosts` | `FEATURED_POSTS_QUERY` |
+
+### Contributor rule
+
+When adding a new query surface or operation, **update both namespaces in the same PR**:
+
+1. Add/update the source operation entry/documentation (`src/lib/graphql/operations/**` references).
+2. Add/update the runtime mapping entry in this file for `lib/wordpress/queries.ts`.
+
 ## `home_feed`
 
 | Item | Details |
