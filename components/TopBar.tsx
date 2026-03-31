@@ -49,36 +49,35 @@ export function TopBar() {
   }, [user, pathname])
 
   return (
-    <div className="bg-black text-white hidden md:block">
-      <div className="mx-auto max-w-[980px] px-4 py-2 flex justify-between items-center">
-        <div className="text-sm">
+    <div className="bg-black text-white">
+      <div className="mx-auto max-w-[980px] px-3 sm:px-4 py-2 flex justify-between items-center text-xs sm:text-sm">
+        <div className="hidden sm:block">
           {showWelcome && user ? (
             <span className="text-green-400 font-medium">
               Welcome back, {profile?.full_name || profile?.username || user.email?.split("@")[0]}!
             </span>
           ) : (
             <span>
-              <span className="hidden sm:inline">Stay informed. </span>
-              Subscribe for full access.
+              Stay informed. Subscribe for full access.
             </span>
           )}
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
           {loading ? (
-            <div className="h-8 w-24 bg-gray-700 rounded-full"></div>
+            <div className="h-8 w-20 sm:w-24 bg-gray-700 rounded-full"></div>
           ) : (
             <>
               <Button
                 asChild
                 variant="outline"
                 size="sm"
-                className="bg-green-500 text-black border-green-500 hover:bg-green-600 hover:text-black hover:border-green-600 rounded-full no-underline"
+                className="bg-green-500 text-black border-green-500 hover:bg-green-600 hover:text-black hover:border-green-600 rounded-full no-underline text-xs sm:text-sm px-2 sm:px-4"
               >
                 <Link href="/subscribe">Subscribe</Link>
               </Button>
 
               {user ? (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <Button
                     asChild
                     variant="ghost"
@@ -91,19 +90,21 @@ export function TopBar() {
                     </Link>
                   </Button>
 
-                  <ProfileDropdown />
+                  <div className="hidden sm:block">
+                    <ProfileDropdown />
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <Button
                     asChild
                     variant="ghost"
                     size="sm"
-                    className="text-white hover:bg-white/20 rounded-full flex items-center gap-1.5 no-underline"
+                    className="text-white hover:bg-white/20 rounded-full flex items-center gap-1 sm:gap-1.5 no-underline text-xs sm:text-sm px-2 sm:px-3"
                   >
                     <Link href={authSignInHref}>
                       <LogIn className="h-4 w-4" />
-                      <span>Sign In</span>
+                      <span className="hidden sm:inline">Sign In</span>
                     </Link>
                   </Button>
                 </div>
