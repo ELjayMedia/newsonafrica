@@ -1,3 +1,4 @@
+import type { GraphQLTelemetryEvent } from "./metrics"
 import { extractGraphQLOperationName } from "./schemas"
 
 export type GraphQLClientErrorCategory = "network" | "graphql" | "validation" | "timeout"
@@ -36,7 +37,7 @@ interface GraphQLRequestBody {
   persistedQueryId?: string
 }
 
-interface GraphQLRequestLoggerMetadata {
+export interface GraphQLRequestLoggerMetadata {
   operationName: string
   endpoint: string
   attempt: number
@@ -54,6 +55,7 @@ export interface GraphQLRequestOptions extends Omit<RequestInit, "body"> {
   maxBackoffMs?: number
   operationName?: string
   logger?: (metadata: GraphQLRequestLoggerMetadata) => void
+  telemetryRecorder?: (event: GraphQLTelemetryEvent) => void
   body: GraphQLRequestBody
 }
 
@@ -92,6 +94,18 @@ const isAbortError = (error: unknown): boolean => {
 }
 
 const isRetriableResponse = (response: Response): boolean => TRANSIENT_STATUS_CODES.has(response.status)
+
+const estimatePayloadSize = (payload: unknown): number | undefined => {
+  if (payload == null) {
+    return undefined
+  }
+
+  try {
+    return new TextEncoder().encode(JSON.stringify(payload)).byteLength
+  } catch {
+    return undefined
+  }
+}
 
 const createContext = (
   endpoint: string,
@@ -152,6 +166,7 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
     maxBackoffMs = 2_000,
     operationName: explicitOperationName,
     logger,
+    telemetryRecorder,
     body,
     ...init
   } = options
@@ -179,6 +194,8 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
       const durationMs = Date.now() - startedAt
 
       if (!response.ok) {
+        const contentLengthHeader = response.headers.get("content-length")
+        const responsePayloadEstimate = contentLengthHeader ? Number(contentLengthHeader) : undefined
         const responseError = new GraphQLClientError(
           "network",
           `GraphQL request failed with status ${response.status}`,
@@ -196,6 +213,17 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
             statusCode: response.status,
             category: responseError.category,
           })
+          telemetryRecorder?.({
+            operationName,
+            endpoint: sanitizedEndpoint,
+            attempt,
+            maxAttempts,
+            durationMs,
+            status: "retry",
+            statusCode: response.status,
+            category: responseError.category,
+            payloadSizeEstimateBytes: Number.isFinite(responsePayloadEstimate) ? responsePayloadEstimate : undefined,
+          })
           const exponentialBackoff = Math.min(maxBackoffMs, backoffMs * 2 ** (attempt - 1))
           await wait(exponentialBackoff)
           continue
@@ -210,6 +238,18 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
           status: "error",
           statusCode: response.status,
           category: responseError.category,
+        })
+        telemetryRecorder?.({
+          operationName,
+          endpoint: sanitizedEndpoint,
+          attempt,
+          maxAttempts,
+          durationMs,
+          status: "error",
+          statusCode: response.status,
+          category: responseError.category,
+          payloadSizeEstimateBytes: Number.isFinite(responsePayloadEstimate) ? responsePayloadEstimate : undefined,
+          retryCount: attempt - 1,
         })
 
         throw responseError
@@ -236,6 +276,17 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
           statusCode: response.status,
           category: validationError.category,
         })
+        telemetryRecorder?.({
+          operationName,
+          endpoint: sanitizedEndpoint,
+          attempt,
+          maxAttempts,
+          durationMs,
+          status: "error",
+          statusCode: response.status,
+          category: validationError.category,
+          retryCount: attempt - 1,
+        })
 
         throw validationError
       }
@@ -256,6 +307,18 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
           status: "error",
           statusCode: response.status,
           category: validationError.category,
+        })
+        telemetryRecorder?.({
+          operationName,
+          endpoint: sanitizedEndpoint,
+          attempt,
+          maxAttempts,
+          durationMs,
+          status: "error",
+          statusCode: response.status,
+          category: validationError.category,
+          payloadSizeEstimateBytes: estimatePayloadSize(json),
+          retryCount: attempt - 1,
         })
 
         throw validationError
@@ -281,6 +344,18 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
           statusCode: response.status,
           category: graphQLError.category,
         })
+        telemetryRecorder?.({
+          operationName,
+          endpoint: sanitizedEndpoint,
+          attempt,
+          maxAttempts,
+          durationMs,
+          status: "error",
+          statusCode: response.status,
+          category: graphQLError.category,
+          payloadSizeEstimateBytes: estimatePayloadSize(payload),
+          retryCount: attempt - 1,
+        })
 
         throw graphQLError
       }
@@ -293,6 +368,17 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
         durationMs,
         status: "success",
         statusCode: response.status,
+      })
+      telemetryRecorder?.({
+        operationName,
+        endpoint: sanitizedEndpoint,
+        attempt,
+        maxAttempts,
+        durationMs,
+        status: "success",
+        statusCode: response.status,
+        payloadSizeEstimateBytes: estimatePayloadSize(payload),
+        retryCount: attempt - 1,
       })
 
       return payload
@@ -323,11 +409,30 @@ export async function requestGraphQL<TData>(endpoint: string, options: GraphQLRe
             status: "error",
             category: normalizedError.category,
           })
+          telemetryRecorder?.({
+            operationName,
+            endpoint: sanitizedEndpoint,
+            attempt,
+            maxAttempts,
+            durationMs,
+            status: "error",
+            category: normalizedError.category,
+            retryCount: attempt - 1,
+          })
         }
         throw normalizedError
       }
 
       logger?.({
+        operationName,
+        endpoint: sanitizedEndpoint,
+        attempt,
+        maxAttempts,
+        durationMs,
+        status: "retry",
+        category: normalizedError.category,
+      })
+      telemetryRecorder?.({
         operationName,
         endpoint: sanitizedEndpoint,
         attempt,
