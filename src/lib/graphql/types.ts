@@ -16,7 +16,7 @@ type ConnectionPageInfo = {
 }
 
 type ConnectionLike<TNode> = {
-  nodes?: Nullable<TNode>[] | null
+  nodes?: readonly Nullable<TNode>[] | null
   pageInfo?: ConnectionPageInfo | null
 }
 
