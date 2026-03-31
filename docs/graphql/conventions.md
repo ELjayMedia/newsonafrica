@@ -2,6 +2,19 @@
 
 This project stores GraphQL operation documents in `src/lib/graphql/operations/`, grouped by business domain, and reusable field fragments in `src/lib/graphql/fragments/`.
 
+## Two naming namespaces (must stay in sync)
+
+We intentionally use **two distinct namespaces** for GraphQL operations:
+
+1. **Source operation namespace** (GraphQL document names in `src/lib/graphql/operations/**`)
+   - Format: `<Domain>_<Purpose>`
+   - Example: `Posts_BySlug`
+2. **Runtime/query constant namespace** (TypeScript exports in `lib/wordpress/queries.ts`)
+   - Format: `<Name>_QUERY` constant wrapping a `query <Name>(...)` document
+   - Example: `POST_BY_SLUG_QUERY` wrapping `query PostBySlug(...)`
+
+Treat these as separate but linked surfaces: source operation docs define canonical operation intent, while runtime constants define importable application contracts.
+
 ## Folder layout
 
 - `src/lib/graphql/operations/posts/` for post-centric operations.
@@ -38,4 +51,6 @@ Before adding a new operation:
 - Keep one operation per `.graphql` file.
 - Add the new file to that domain's `index.graphql` barrel.
 - Use the same name in filename and `query`/`mutation` declaration.
+- Add/update the runtime constant in `lib/wordpress/queries.ts` and keep the runtime/query-map name aligned with the source operation intent.
+- Update `docs/graphql/query-map.md` with the source-to-runtime mapping entry in the same PR.
 - If a field set repeats in 2 or more operations, extract and reuse a fragment (for example `PostCardFields` for list/card UIs and `PostDetailFields` for full article/detail UIs).
