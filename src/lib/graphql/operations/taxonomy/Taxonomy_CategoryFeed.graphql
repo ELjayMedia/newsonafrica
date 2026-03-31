@@ -1,0 +1,36 @@
+query Taxonomy_CategoryFeed($slug: String!, $after: String, $first: Int!) {
+  categories(where: { slug: [$slug] }) {
+    nodes {
+      databaseId
+      name
+      slug
+      description
+      count
+    }
+  }
+  posts(
+    first: $first
+    after: $after
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      categoryName: $slug
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+}

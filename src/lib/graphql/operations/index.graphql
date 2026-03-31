@@ -1,0 +1,4 @@
+#import "./posts/index.graphql"
+#import "./taxonomy/index.graphql"
+#import "./authors/index.graphql"
+#import "./search/index.graphql"

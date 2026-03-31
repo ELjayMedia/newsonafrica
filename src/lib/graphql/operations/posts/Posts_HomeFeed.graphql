@@ -1,0 +1,52 @@
+query Posts_HomeFeed(
+  $heroFirst: Int!
+  $heroTagSlugs: [String!]
+  $latestFirst: Int!
+) {
+  hero: posts(
+    first: $heroFirst
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      tagSlugIn: $heroTagSlugs
+    }
+  ) {
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+  latest: posts(
+    first: $latestFirst
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    edges {
+      cursor
+      node {
+        databaseId
+        id
+        slug
+        date
+        modified
+        title(format: RENDERED)
+        excerpt(format: RENDERED)
+        uri
+        link
+      }
+    }
+  }
+}

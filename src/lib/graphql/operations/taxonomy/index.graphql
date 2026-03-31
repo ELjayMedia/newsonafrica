@@ -1,0 +1,6 @@
+#import "./Taxonomy_CategoryFeed.graphql"
+#import "./Taxonomy_CategoryFeedBatch.graphql"
+#import "./Taxonomy_TagFeed.graphql"
+#import "./Taxonomy_TagBySlug.graphql"
+#import "./Taxonomy_Categories.graphql"
+#import "./Taxonomy_Tags.graphql"

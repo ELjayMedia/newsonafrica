@@ -1,0 +1,23 @@
+query Posts_RelatedByTags($tagSlugs: [String!]!, $exclude: ID!, $first: Int!) {
+  posts(
+    first: $first
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      tagSlugIn: $tagSlugs
+      notIn: [$exclude]
+    }
+  ) {
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+}

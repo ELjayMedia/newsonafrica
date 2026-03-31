@@ -1,0 +1,11 @@
+query Taxonomy_Tags($first: Int!, $hideEmpty: Boolean) {
+  tags(first: $first, where: { hideEmpty: $hideEmpty }) {
+    nodes {
+      databaseId
+      id
+      name
+      slug
+      count
+    }
+  }
+}

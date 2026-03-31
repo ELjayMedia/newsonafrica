@@ -1,0 +1,34 @@
+query Taxonomy_CategoryFeedBatch($slugs: [String!]!, $first: Int!) {
+  categories(where: { slug: $slugs }) {
+    nodes {
+      databaseId
+      name
+      slug
+      description
+      count
+      posts(
+        first: $first
+        where: {
+          status: PUBLISH
+          orderby: { field: DATE, order: DESC }
+        }
+      ) {
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+        nodes {
+          databaseId
+          id
+          slug
+          date
+          modified
+          title(format: RENDERED)
+          excerpt(format: RENDERED)
+          uri
+          link
+        }
+      }
+    }
+  }
+}

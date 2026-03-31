@@ -1,0 +1,38 @@
+query Search_Posts(
+  $first: Int!
+  $after: String
+  $search: String
+  $offset: Int
+  $orderField: PostObjectsConnectionOrderbyEnum = DATE
+  $orderDirection: OrderEnum = DESC
+) {
+  posts(
+    first: $first
+    after: $after
+    where: {
+      status: PUBLISH
+      orderby: { field: $orderField, order: $orderDirection }
+      search: $search
+      offsetPagination: { offset: $offset, size: $first }
+    }
+  ) {
+    pageInfo {
+      endCursor
+      hasNextPage
+      offsetPagination {
+        total
+      }
+    }
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+}

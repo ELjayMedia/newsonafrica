@@ -1,0 +1,7 @@
+#import "./Posts_HomeFeed.graphql"
+#import "./Posts_BySlug.graphql"
+#import "./Posts_ByDatabaseId.graphql"
+#import "./Posts_LatestFeed.graphql"
+#import "./Posts_FeaturedByTag.graphql"
+#import "./Posts_RelatedByCategories.graphql"
+#import "./Posts_RelatedByTags.graphql"

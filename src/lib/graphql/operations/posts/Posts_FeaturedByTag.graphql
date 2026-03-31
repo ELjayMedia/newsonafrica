@@ -1,0 +1,22 @@
+query Posts_FeaturedByTag($tag: String!, $first: Int!) {
+  posts(
+    first: $first
+    where: {
+      status: PUBLISH
+      orderby: { field: DATE, order: DESC }
+      tagSlugIn: [$tag]
+    }
+  ) {
+    nodes {
+      databaseId
+      id
+      slug
+      date
+      modified
+      title(format: RENDERED)
+      excerpt(format: RENDERED)
+      uri
+      link
+    }
+  }
+}
