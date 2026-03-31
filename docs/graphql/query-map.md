@@ -11,6 +11,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `hero.nodes[] { databaseId, slug, date, modified, title, excerpt, uri, link, featuredImage.node{sourceUrl,altText,caption,mediaDetails{width,height}}, categories.nodes{databaseId,name,slug}, tags.nodes{databaseId,name,slug}, author.node{databaseId,name,slug,description,avatar{url}} }`; `latest.pageInfo { endCursor, hasNextPage }`; `latest.edges[] { cursor, node{...PostSummaryFields} }` |
 | Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/page.tsx`; data loader: `app/(public)/(home)/home-data.ts` |
 | Data freshness target | **ISR 300s** (`revalidate = 300` on route; query fetch uses short-lived GraphQL cache) |
+| Cache strategy entry | `cs_home_feed` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Hide hero/trending slices that fail shape checks, keep previously cached stories when available, otherwise show `NewsGridSkeleton` for latest feed until retry succeeds. |
 
 > Notes: home aggregation also uses `LatestPosts` and `FpTaggedPosts` as fallback candidates via the same home data pipeline. Default home feed page size is **12 posts** for incremental slices.
@@ -24,6 +25,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `post` and/or fallback `posts.nodes[0]` with `PostFields` = `PostSummaryFields` + `content`; UI reads slug/title/excerpt/content/date/modified/featuredImage/categories/tags/author |
 | Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/article/[slug]/page.tsx`; resolver: `app/(public)/[countryCode]/article/[slug]/article-data.ts` |
 | Data freshness target | **Tagged ISR (default 300s + on-demand revalidation by post slug tag)** |
+| Cache strategy entry | `cs_article_detail` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Render route-level not-found/empty article state; hide related rails and metadata blocks sourced from invalid payloads; show retry CTA via page refresh prompt. |
 
 ## `category_feed`
@@ -35,6 +37,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `categories.nodes[0] { databaseId,name,slug,description,count }`; `posts.pageInfo { endCursor, hasNextPage }`; `posts.nodes[] { ...PostSummaryFields }` |
 | Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wp-server/categories.ts` |
 | Data freshness target | **ISR 300s page + data calls configured as no-store/SSR-style (`revalidate: 0`)** |
+| Cache strategy entry | `cs_category_feed` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Keep category header if taxonomy node is valid; hide malformed cards; otherwise show category skeleton and “Try again” CTA for pagination fetches. |
 
 > Notes: default category feed page size is **15 posts** per page.
@@ -48,6 +51,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `posts.pageInfo { endCursor, hasNextPage }`; `posts.nodes[] { ...PostSummaryFields }`; `tag { databaseId,id,name,slug,count }` |
 | Owning route/component path in Next.js | Route: `app/(public)/tag/[slug]/page.tsx`; client pagination action: `app/(public)/tag/[slug]/actions.ts` |
 | Data freshness target | **ISR 300s route + query cache ~short TTL (60s)** |
+| Cache strategy entry | `cs_tag_feed` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Hide invalid tag meta chip/count; keep validated posts list only; if list validation fails, show `TagPageSkeleton` and retry CTA in pagination control area. |
 
 ## `search_results`
@@ -59,6 +63,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `posts.pageInfo { hasNextPage, offsetPagination { total } }`; `posts.nodes[] { ...PostSummaryFields }` |
 | Owning route/component path in Next.js | Route: `app/(public)/search/page.tsx` → API: `app/api/search/route.ts` → GraphQL adapter: `lib/wordpress-search.ts` |
 | Data freshness target | **SSR / client-driven fetch with no cache (`revalidate: 0`)** |
+| Cache strategy entry | `cs_search_results` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Return empty result set to client with recoverable error metadata, render search empty/error panel with explicit retry action instead of broken cards. |
 
 ## `related_articles`
@@ -70,6 +75,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | Related nodes use `...PostSummaryFields`; primary query reads `post.categories.nodes[].posts.nodes[]`; fallback reads `posts.nodes[]` |
 | Owning route/component path in Next.js | Server component rail: `app/(public)/[countryCode]/article/[slug]/RelatedRail.tsx`; article page placements: `app/(public)/[countryCode]/article/[slug]/page.tsx` |
 | Data freshness target | **Server fetch, short revalidation (~60s) with article/category cache tags** |
+| Cache strategy entry | `cs_related_articles` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Hide related rail block entirely when primary + fallback operations fail validation; never block article rendering; optional retry CTA appears only in debug/admin surfaces. |
 
 ## `author_profile`
@@ -81,6 +87,7 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `user { id,databaseId,name,slug,description,avatar{url}, posts{ pageInfo{endCursor,hasNextPage}, nodes[]{ ...PostSummaryFields } } }` |
 | Owning route/component path in Next.js | Route: `app/(public)/author/[slug]/page.tsx`; renderer: `app/(public)/author/[slug]/AuthorContent.tsx` |
 | Data freshness target | **ISR 3600s page; underlying author query currently no-store (`revalidate: 0`)** |
+| Cache strategy entry | `cs_author_profile` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Show author page skeleton for first paint failures; if only posts connection fails, keep author bio/header and hide post grid with retry CTA below header. |
 
 ## `breaking_news_banner`
@@ -92,4 +99,5 @@ This map ties each UI surface to its primary GraphQL operation, variable contrac
 | Expected return shape (UI fields only) | `posts.nodes[] { ...PostSummaryFields }` (typically title, slug/uri, date, featured image for compact banner cards) |
 | Owning route/component path in Next.js | **Not currently wired to a dedicated banner component**; query helper exists in `lib/wordpress/posts.ts` (`getFeaturedPosts`) |
 | Data freshness target | **Short ISR-style query cache (~60s) once connected to UI** |
+| Cache strategy entry | `cs_breaking_news_banner` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Hide banner strip completely and fall back to normal headline modules; no blocking UI; retry is deferred to next background refresh cycle. |
