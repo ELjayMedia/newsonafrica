@@ -30,7 +30,7 @@ export async function Header({ countryCode }: HeaderProps = {}) {
   const categories = await getCategoriesForCountry(resolvedCountry)
   const normalizedCategories = categories
     .map((category: WordPressCategory) => mapCategoryToHeaderCategory(category))
-    .filter((category): category is HeaderCategory => Boolean(category))
+    .filter((category: HeaderCategory | null): category is HeaderCategory => Boolean(category))
 
   return <HeaderInteractive categories={normalizedCategories} countryCode={resolvedCountry} />
 }

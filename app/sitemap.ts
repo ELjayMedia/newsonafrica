@@ -2,16 +2,8 @@ import type { MetadataRoute } from "next"
 import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { getArticleUrl, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
-=======
-import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
->>>>>>> f01319a1 (test sitemap links against canonical article path format)
-=======
-import { getCanonicalArticlePath, getCategoryUrl, SUPPORTED_COUNTRIES } from "@/lib/utils/routing"
->>>>>>> c7ce2cdb (refactor article links to canonical path input)
 
 export const revalidate = 300
 
@@ -96,7 +88,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const postDate = safeDate(post.modified || post.date)
       const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000
 
-<<<<<<< HEAD
       return {
         url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
         lastModified: postDate,
@@ -107,35 +98,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               publication: {
                 name: "News On Africa",
                 language: "en",
-=======
-        const keywords =
-          post.categories?.nodes
-            ?.map((cat: CategoryNode) => cat.name)
-            .filter((n): n is string => typeof n === "string" && n.length > 0)
-            .join(", ") ?? ""
-
-        const imageUrl = post.featuredImage?.node?.sourceUrl
-        const imageAlt =
-          (typeof post.featuredImage?.node?.altText === "string" && post.featuredImage.node.altText) || title
-
-        return {
-          url: `${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}`,
-          lastModified: postDate,
-          changeFrequency: isRecent ? "daily" : "weekly",
-          priority: isRecent ? 0.9 : 0.7,
-
-          // Extra fields are fine at runtime, but TS typing for MetadataRoute.Sitemap is strict.
-          // If you *must* keep `news`/`images`, either:
-          // 1) move these to /server-sitemap.xml route (recommended), OR
-          // 2) cast this object to `any` at the end.
-          ...(isRecent
-            ? ({
-              news: {
-                publication: { name: "News On Africa", language: "en" },
-                publicationDate: postDate,
-                title,
-                keywords,
->>>>>>> c0256ba1 (Adopt stable ID canonical article URLs)
               },
               publicationDate: postDate,
               title: post.title,

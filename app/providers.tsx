@@ -9,7 +9,6 @@ import { ThemeProviderWrapper } from "./ThemeProviderWrapper"
 import { UserProvider } from "@/contexts/UserContext"
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesClient"
 import { parseProfilePreferences } from "@/lib/preferences/profile-preferences"
-import { mapUserPreferencesRowToSnapshot } from "@/lib/supabase/adapters/user-preferences"
 import { createClient } from "@/lib/supabase/browser-client"
 import { DEFAULT_USER_PREFERENCES } from "@/types/user-preferences"
 
@@ -63,7 +62,11 @@ function useClientBootstrap(
 
       if (!session?.user) {
         setAuthState(null)
-        setPreferences(mapUserPreferencesRowToSnapshot({ userId: null }))
+        setPreferences({
+          userId: null,
+          preferences: { ...DEFAULT_USER_PREFERENCES },
+          profilePreferences: {},
+        })
         return
       }
 
@@ -93,24 +96,22 @@ function useClientBootstrap(
         console.error("[v0] Bootstrap preferences error:", prefsError)
       }
 
-      setPreferences(
-        mapUserPreferencesRowToSnapshot({
-          userId: session.user.id,
-          preferences: {
-            theme: userPrefs?.theme ?? DEFAULT_USER_PREFERENCES.theme,
-            language: userPrefs?.language ?? DEFAULT_USER_PREFERENCES.language,
-            emailNotifications: userPrefs?.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
-            pushNotifications: userPrefs?.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
-            sections: userPrefs?.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
-            blockedTopics: userPrefs?.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
-            countries: userPrefs?.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
-            commentSort: DEFAULT_USER_PREFERENCES.commentSort,
-            bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
-            lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
-          },
-          profilePreferences: parseProfilePreferences(profile?.preferences),
-        }),
-      )
+      setPreferences({
+        userId: session.user.id,
+        preferences: {
+          theme: userPrefs?.theme ?? DEFAULT_USER_PREFERENCES.theme,
+          language: userPrefs?.language ?? DEFAULT_USER_PREFERENCES.language,
+          emailNotifications: userPrefs?.email_notifications ?? DEFAULT_USER_PREFERENCES.emailNotifications,
+          pushNotifications: userPrefs?.push_notifications ?? DEFAULT_USER_PREFERENCES.pushNotifications,
+          sections: userPrefs?.sections ?? [...DEFAULT_USER_PREFERENCES.sections],
+          blockedTopics: userPrefs?.blocked_topics ?? [...DEFAULT_USER_PREFERENCES.blockedTopics],
+          countries: userPrefs?.countries ?? [...DEFAULT_USER_PREFERENCES.countries],
+          commentSort: DEFAULT_USER_PREFERENCES.commentSort,
+          bookmarkSort: DEFAULT_USER_PREFERENCES.bookmarkSort,
+          lastSubscriptionPlan: DEFAULT_USER_PREFERENCES.lastSubscriptionPlan,
+        },
+        profilePreferences: parseProfilePreferences(profile?.preferences),
+      })
     } catch (error) {
       console.error("[v0] Bootstrap error:", error)
     } finally {

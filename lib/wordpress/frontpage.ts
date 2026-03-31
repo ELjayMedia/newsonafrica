@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import * as log from "../log"
 import { CACHE_DURATIONS } from "../cache/constants"
 import { cacheTags } from "../cache/cacheTags"
@@ -177,8 +176,6 @@ export async function getFrontPageSlicesForCountry(
   return createEmptyFrontPageSlices()
 }
 
-=======
->>>>>>> 987b4de4 (feat: update frontpage.ts to improve FP tagged posts fetching logic)
 export async function getFpTaggedPostsForCountry(
   countryCode: string,
   limit = 8,
@@ -225,7 +222,6 @@ export async function getFpTaggedPostsForCountry(
 
   return []
 }
-<<<<<<< HEAD
 
 const getPostTimestamp = (post: HomePost): number => {
   const timestamp = new Date(post.date).getTime()
@@ -293,5 +289,3 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
     return fallback
   }
 }
-=======
->>>>>>> 8f44050d (feat: update frontpage.ts to improve FP tagged posts fetching logic)

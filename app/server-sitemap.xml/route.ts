@@ -2,16 +2,8 @@ import { NextResponse } from "next/server"
 import { fetchRecentPosts, fetchCategories, fetchTags, fetchAuthors, fetchCountries } from "@/lib/wordpress/service"
 import { siteConfig } from "@/config/site"
 import { SITEMAP_RECENT_POST_LIMIT } from "@/config/sitemap"
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 import { toSitemapCountry } from "@/lib/wordpress/adapters/sitemap-post"
-=======
-import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
->>>>>>> f01319a1 (test sitemap links against canonical article path format)
-=======
-import { getCanonicalArticlePath, getCategoryUrl } from "@/lib/utils/routing"
->>>>>>> c7ce2cdb (refactor article links to canonical path input)
 
 type SlugEntity = { slug?: string }
 type CountryEntity = { code?: string }
@@ -99,21 +91,8 @@ export async function GET() {
 
       sitemap += `
   <url>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
-    <lastmod>${postDate}</lastmod>
-=======
-    <loc>${baseUrl}${getArticleUrl(post.slug, post.country, post.databaseId)}</loc>
-=======
-    <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
->>>>>>> f01319a1 (test sitemap links against canonical article path format)
-=======
-    <loc>${baseUrl}${getCanonicalArticlePath({ slug: post.slug, databaseId: post.databaseId }, post.country)}</loc>
->>>>>>> c7ce2cdb (refactor article links to canonical path input)
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
->>>>>>> c0256ba1 (Adopt stable ID canonical article URLs)
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     ${featuredUrl
