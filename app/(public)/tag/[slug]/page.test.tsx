@@ -69,7 +69,7 @@ describe("TagPage", () => {
     expect(fetchTaggedPostsMock).toHaveBeenCalledWith({
       slug: "tech",
       countryCode: DEFAULT_COUNTRY,
-      first: 10,
+      first: 12,
     })
 
     expect(result).toBeDefined()

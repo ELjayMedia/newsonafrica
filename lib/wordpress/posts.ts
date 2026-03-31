@@ -33,6 +33,7 @@ import { DEFAULT_COUNTRY, mapGraphqlTagNode } from "./shared"
 import type { PaginatedPostsResult } from "./types"
 import type { WordPressTag } from "@/types/wp"
 import type { HomePost } from "@/types/home"
+import { normalizeCursorConnection } from "@/src/lib/graphql/types"
 
 const toErrorDetails = (error: unknown) => {
   if (error instanceof Error) {
@@ -592,16 +593,11 @@ export const fetchTaggedPosts = async ({
     const data = gqlData.data
 
     if (data?.posts) {
-      const nodes =
-        data.posts.nodes?.filter((node): node is NonNullable<typeof node> => Boolean(node)) ?? []
+      const { nodes, pageInfo } = normalizeCursorConnection(data.posts)
       const mappedNodes = nodes.map((node) => mapGraphqlPostToWordPressPost(node, countryCode))
-      const pageInfo = data.posts.pageInfo
       return {
         nodes: mappedNodes,
-        pageInfo: {
-          hasNextPage: pageInfo?.hasNextPage ?? false,
-          endCursor: pageInfo?.endCursor ?? null,
-        },
+        pageInfo,
       }
     }
   } catch (error) {

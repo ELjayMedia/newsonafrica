@@ -149,7 +149,8 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
   query FrontPageSlices(
     $heroFirst: Int!
     $heroTagSlugs: [String!]
-    $latestFirst: Int!
+    $first: Int!
+    $after: String
   ) {
     hero: posts(
       first: $heroFirst
@@ -164,7 +165,8 @@ export const FRONT_PAGE_SLICES_QUERY = gql`
       }
     }
     latest: posts(
-      first: $latestFirst
+      first: $first
+      after: $after
       where: {
         status: PUBLISH
         orderby: { field: DATE, order: DESC }

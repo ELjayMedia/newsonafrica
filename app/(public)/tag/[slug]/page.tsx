@@ -56,7 +56,7 @@ async function TagWrapper({ slug }: { slug: string }) {
 
   const safeTag = normalizeTagForClient(tag, slug)
 
-  const initialData = await fetchTaggedPosts({ slug, countryCode: DEFAULT_COUNTRY, first: 10 })
+  const initialData = await fetchTaggedPosts({ slug, countryCode: DEFAULT_COUNTRY, first: 12 })
 
   return <TagFeedClient slug={slug} initialData={initialData} tag={safeTag} countryCode={DEFAULT_COUNTRY} />
 }

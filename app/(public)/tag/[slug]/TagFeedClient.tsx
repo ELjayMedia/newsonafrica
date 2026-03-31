@@ -9,6 +9,7 @@ import { PostList } from "@/components/posts/PostList"
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
 import type { FetchTaggedPostsResult, WordPressPost } from "@/types/wp"
 import { fetchTaggedPostsPageAction } from "./actions"
+import { EMPTY_CURSOR_PAGE_INFO } from "@/src/lib/graphql/types"
 
 interface TagFeedClientProps {
   slug: string
@@ -33,7 +34,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
     initialData ? [initialData] : [],
   )
   const [pageInfo, setPageInfo] = useState<FetchTaggedPostsResult["pageInfo"]>(() =>
-    initialData?.pageInfo ?? { hasNextPage: false, endCursor: null },
+    initialData?.pageInfo ?? EMPTY_CURSOR_PAGE_INFO,
   )
   const [isLoading, setIsLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -74,7 +75,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
       void fetchTaggedPostsPageAction({
         slug,
         after: pageInfo.endCursor ?? null,
-        first: 10,
+        first: 12,
         countryCode,
       })
         .then((data) => {
@@ -83,7 +84,7 @@ export function TagFeedClient({ slug, tag, initialData, countryCode }: TagFeedCl
           }
 
           setPages((previous) => [...previous, data])
-          setPageInfo(data.pageInfo ?? { hasNextPage: false, endCursor: null })
+          setPageInfo(data.pageInfo ?? EMPTY_CURSOR_PAGE_INFO)
         })
         .catch((err) => {
           const message = err instanceof Error ? err.message : "Failed to load more posts"

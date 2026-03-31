@@ -56,7 +56,7 @@ describe("CountryCategoryPage", () => {
     ).rejects.toBe(notFoundError)
 
     expect(notFoundMock).toHaveBeenCalledTimes(1)
-    expect(mocks.getCategoryPageData).toHaveBeenCalledWith("ng", "politics", 20)
+    expect(mocks.getCategoryPageData).toHaveBeenCalledWith("ng", "politics", 15)
   })
 
   it("renders the page when data is available", async () => {
