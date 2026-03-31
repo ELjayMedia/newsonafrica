@@ -1,6 +1,6 @@
 # GraphQL operation naming conventions
 
-This project stores GraphQL operation documents in `src/lib/graphql/operations/`, grouped by business domain.
+This project stores GraphQL operation documents in `src/lib/graphql/operations/`, grouped by business domain, and reusable field fragments in `src/lib/graphql/fragments/`.
 
 ## Folder layout
 
@@ -8,6 +8,7 @@ This project stores GraphQL operation documents in `src/lib/graphql/operations/`
 - `src/lib/graphql/operations/taxonomy/` for category/tag/taxonomy operations.
 - `src/lib/graphql/operations/authors/` for author/profile operations.
 - `src/lib/graphql/operations/search/` for search-focused operations.
+- `src/lib/graphql/fragments/` for reusable fragments shared across operations.
 
 Each operation lives in its own `.graphql` file, and each domain contains an `index.graphql` barrel file that imports every operation in that domain.
 
@@ -37,3 +38,4 @@ Before adding a new operation:
 - Keep one operation per `.graphql` file.
 - Add the new file to that domain's `index.graphql` barrel.
 - Use the same name in filename and `query`/`mutation` declaration.
+- If a field set repeats in 2 or more operations, extract and reuse a fragment (for example `PostCardFields` for list/card UIs and `PostDetailFields` for full article/detail UIs).

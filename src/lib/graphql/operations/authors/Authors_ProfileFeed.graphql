@@ -1,28 +1,16 @@
+#import "../../fragments/AuthorBadgeFields.graphql"
+#import "../../fragments/PostCardFields.graphql"
+
 query Authors_ProfileFeed($slug: String!, $after: String, $first: Int!) {
   user(id: $slug, idType: SLUG) {
-    id
-    databaseId
-    name
-    slug
-    description
-    avatar {
-      url
-    }
+    ...AuthorBadgeFields
     posts(first: $first, after: $after, where: { orderby: { field: DATE, order: DESC } }) {
       pageInfo {
         endCursor
         hasNextPage
       }
       nodes {
-        databaseId
-        id
-        slug
-        date
-        modified
-        title(format: RENDERED)
-        excerpt(format: RENDERED)
-        uri
-        link
+        ...PostCardFields
       }
     }
   }

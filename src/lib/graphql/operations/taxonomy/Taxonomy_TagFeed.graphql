@@ -1,3 +1,5 @@
+#import "../../fragments/PostCardFields.graphql"
+
 query Taxonomy_TagFeed($tagSlugs: [String!]!, $first: Int!, $after: String) {
   posts(
     first: $first
@@ -13,15 +15,7 @@ query Taxonomy_TagFeed($tagSlugs: [String!]!, $first: Int!, $after: String) {
       hasNextPage
     }
     nodes {
-      databaseId
-      id
-      slug
-      date
-      modified
-      title(format: RENDERED)
-      excerpt(format: RENDERED)
-      uri
-      link
+      ...PostCardFields
     }
   }
 }

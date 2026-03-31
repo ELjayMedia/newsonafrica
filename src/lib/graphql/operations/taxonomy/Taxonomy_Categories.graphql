@@ -1,20 +1,12 @@
+#import "../../fragments/CategoryChipFields.graphql"
+
 query Taxonomy_Categories($first: Int = 100) {
   categories(first: $first, where: { hideEmpty: true }) {
     nodes {
-      databaseId
-      name
-      slug
-      description
-      count
-      parentDatabaseId
+      ...CategoryChipFields
       children {
         nodes {
-          databaseId
-          name
-          slug
-          description
-          count
-          parentDatabaseId
+          ...CategoryChipFields
         }
       }
     }

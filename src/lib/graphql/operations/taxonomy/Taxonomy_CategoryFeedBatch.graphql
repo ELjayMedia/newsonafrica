@@ -1,11 +1,10 @@
+#import "../../fragments/CategoryChipFields.graphql"
+#import "../../fragments/PostCardFields.graphql"
+
 query Taxonomy_CategoryFeedBatch($slugs: [String!]!, $first: Int!) {
   categories(where: { slug: $slugs }) {
     nodes {
-      databaseId
-      name
-      slug
-      description
-      count
+      ...CategoryChipFields
       posts(
         first: $first
         where: {
@@ -18,15 +17,7 @@ query Taxonomy_CategoryFeedBatch($slugs: [String!]!, $first: Int!) {
           hasNextPage
         }
         nodes {
-          databaseId
-          id
-          slug
-          date
-          modified
-          title(format: RENDERED)
-          excerpt(format: RENDERED)
-          uri
-          link
+          ...PostCardFields
         }
       }
     }

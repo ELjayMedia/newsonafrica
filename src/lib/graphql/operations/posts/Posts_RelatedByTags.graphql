@@ -1,3 +1,5 @@
+#import "../../fragments/PostCardFields.graphql"
+
 query Posts_RelatedByTags($tagSlugs: [String!]!, $exclude: ID!, $first: Int!) {
   posts(
     first: $first
@@ -9,15 +11,7 @@ query Posts_RelatedByTags($tagSlugs: [String!]!, $exclude: ID!, $first: Int!) {
     }
   ) {
     nodes {
-      databaseId
-      id
-      slug
-      date
-      modified
-      title(format: RENDERED)
-      excerpt(format: RENDERED)
-      uri
-      link
+      ...PostCardFields
     }
   }
 }
