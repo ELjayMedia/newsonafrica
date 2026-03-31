@@ -1,0 +1,10 @@
+fragment AuthorBadgeFields on User {
+  id
+  databaseId
+  name
+  slug
+  description
+  avatar {
+    url
+  }
+}

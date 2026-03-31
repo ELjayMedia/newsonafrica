@@ -1,0 +1,8 @@
+fragment CategoryChipFields on Category {
+  databaseId
+  name
+  slug
+  description
+  count
+  parentDatabaseId
+}

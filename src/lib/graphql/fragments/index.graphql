@@ -1,0 +1,5 @@
+#import "./PostCardFields.graphql"
+#import "./PostDetailFields.graphql"
+#import "./AuthorBadgeFields.graphql"
+#import "./ImageFields.graphql"
+#import "./CategoryChipFields.graphql"

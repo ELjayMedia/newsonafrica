@@ -1,3 +1,5 @@
+#import "../../fragments/PostCardFields.graphql"
+
 query Search_Posts(
   $first: Int!
   $after: String
@@ -24,15 +26,7 @@ query Search_Posts(
       }
     }
     nodes {
-      databaseId
-      id
-      slug
-      date
-      modified
-      title(format: RENDERED)
-      excerpt(format: RENDERED)
-      uri
-      link
+      ...PostCardFields
     }
   }
 }

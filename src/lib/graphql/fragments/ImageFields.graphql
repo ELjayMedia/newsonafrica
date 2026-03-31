@@ -1,0 +1,9 @@
+fragment ImageFields on MediaItem {
+  id
+  sourceUrl
+  altText
+  mediaDetails {
+    width
+    height
+  }
+}

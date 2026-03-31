@@ -1,0 +1,6 @@
+#import "./PostCardFields.graphql"
+
+fragment PostDetailFields on Post {
+  ...PostCardFields
+  content(format: RENDERED)
+}

@@ -1,3 +1,4 @@
+#import "../fragments/index.graphql"
 #import "./posts/index.graphql"
 #import "./taxonomy/index.graphql"
 #import "./authors/index.graphql"

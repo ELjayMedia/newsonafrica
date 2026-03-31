@@ -1,0 +1,11 @@
+fragment PostCardFields on Post {
+  databaseId
+  id
+  slug
+  date
+  modified
+  title(format: RENDERED)
+  excerpt(format: RENDERED)
+  uri
+  link
+}
