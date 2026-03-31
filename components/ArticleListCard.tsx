@@ -246,7 +246,7 @@ export function ArticleListCard({
   if (layout === "minimal") {
     return (
       <Link href={data.link} className={cn("block", className)}>
-        <article className="py-2 border-b border-gray-100 last:border-b-0">
+        <article className="py-2 border-b border-border last:border-b-0">
           <div className="flex gap-2">
             <div className="w-16 h-12 flex-shrink-0 relative rounded overflow-hidden">
               <Image
@@ -260,14 +260,14 @@ export function ArticleListCard({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1">{data.title}</h3>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
+              <h3 className="text-sm font-medium line-clamp-2 leading-tight mb-1 text-foreground">{data.title}</h3>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" aria-hidden="true" />
                 <span>{relativeDate ?? formatDate(data.date)}</span>
                 {primaryCategory && (
                   <>
                     <span>•</span>
-                    <span className="text-blue-600">{primaryCategory.name}</span>
+                    <span className="text-primary font-medium">{primaryCategory.name}</span>
                   </>
                 )}
               </div>
@@ -281,7 +281,7 @@ export function ArticleListCard({
   if (layout === "horizontal") {
     return (
       <Link href={data.link} className={cn("block", className)}>
-        <article className="flex h-full flex-row overflow-hidden rounded-lg bg-white transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/50">
+        <article className="flex h-full flex-row overflow-hidden rounded-lg bg-card transition-colors hover:bg-muted/50">
           <div className="relative aspect-[4/3] w-28 flex-shrink-0 sm:w-36 md:w-48 lg:w-56">
             {hasImage ? (
               <Image
@@ -293,22 +293,22 @@ export function ArticleListCard({
                 loading={priority ? "eager" : "lazy"}
               />
             ) : (
-              <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                <span className="text-gray-600 dark:text-gray-300 text-sm">No image</span>
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm">No image</span>
               </div>
             )}
           </div>
           <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
             <div>
-              <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900">{data.title}</h3>
+              <h3 className="heading-md font-semibold mb-2 line-clamp-2 text-foreground">{data.title}</h3>
               {resolvedShowExcerpt && sanitizedExcerpt ? (
-                <p className="text-gray-600 dark:text-gray-400 line-clamp-3">{sanitizedExcerpt}</p>
+                <p className="body-sm text-muted-foreground line-clamp-3">{sanitizedExcerpt}</p>
               ) : null}
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-300">{relativeDate ?? formatDate(data.date)}</span>
+              <span className="text-ui-sm text-muted-foreground">{relativeDate ?? formatDate(data.date)}</span>
               {data.author && (
-                <span className="text-sm text-gray-500 dark:text-gray-300">by {data.author}</span>
+                <span className="text-ui-sm text-muted-foreground">by {data.author}</span>
               )}
             </div>
           </div>
@@ -322,7 +322,7 @@ export function ArticleListCard({
       <Link href={data.link} className={cn("group block h-full", className)}>
         <article
           className={cn(
-            "flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200",
+            "flex flex-col h-full bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200",
             motionSafe.transition,
           )}
         >
@@ -344,20 +344,20 @@ export function ArticleListCard({
             </div>
           )}
           <div className="p-3 flex-1 flex flex-col">
-            {eyebrow && <div className="text-sm font-bold text-red-600 mb-1">{eyebrow}</div>}
+            {eyebrow && <div className="text-ui-sm font-bold text-destructive mb-1">{eyebrow}</div>}
             <h3
               className={cn(
-                "font-bold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-200",
+                "font-bold text-sm leading-tight text-foreground group-hover:text-primary transition-colors duration-200",
                 motionSafe.transition,
               )}
             >
               {data.title}
             </h3>
             {resolvedShowExcerpt && sanitizedExcerpt && (
-              <p className="text-xs text-gray-600 line-clamp-2 mt-1">{sanitizedExcerpt}</p>
+              <p className="text-ui-sm text-muted-foreground line-clamp-2 mt-1">{sanitizedExcerpt}</p>
             )}
-            <div className="flex items-center gap-1 text-gray-500 text-xs mt-auto pt-2">
-              <Clock className="h-3 w-3" />
+            <div className="flex items-center gap-1 text-muted-foreground text-ui-sm mt-auto pt-2">
+              <Clock className="h-3 w-3" aria-hidden="true" />
               <time>{shortDate ?? formatDate(data.date)}</time>
             </div>
           </div>
@@ -394,21 +394,21 @@ export function ArticleListCard({
             </div>
             <div className="flex-1 min-w-0">
               {primaryCategory && (
-                <Badge variant="secondary" className="mb-1 text-xs">
+                <Badge variant="secondary" className="mb-1 text-ui-sm font-semibold">
                   {primaryCategory.name}
                 </Badge>
               )}
               <Link href={data.link} className="block">
                 <h3
                   className={cn(
-                    "font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors",
+                    "font-semibold text-body-sm line-clamp-2 text-foreground group-hover:text-primary transition-colors",
                     motionSafe.transition,
                   )}
                 >
                   {data.title}
                 </h3>
               </Link>
-              <p className="text-xs text-muted-foreground mt-1">{formatDate(data.date)}</p>
+              <p className="text-ui-sm text-muted-foreground mt-1">{formatDate(data.date)}</p>
             </div>
           </div>
         </CardContent>
@@ -439,7 +439,7 @@ export function ArticleListCard({
             }}
           />
           {primaryCategory && (
-            <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-xs">
+            <Badge className="absolute top-3 left-3 bg-primary/90 hover:bg-primary text-ui-sm font-semibold">
               {primaryCategory.name}
             </Badge>
           )}
@@ -448,14 +448,14 @@ export function ArticleListCard({
           <Link href={data.link} className="block">
             <h2
               className={cn(
-                "text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors",
+                "heading-md font-bold mb-2 line-clamp-2 text-foreground group-hover:text-primary transition-colors",
                 motionSafe.transition,
               )}
             >
               {data.title}
             </h2>
           </Link>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-ui-sm text-muted-foreground">
             <span>{formatDate(data.date)}</span>
             {data.author && <span>By {data.author}</span>}
           </div>
@@ -489,14 +489,14 @@ export function ArticleListCard({
         <Link href={data.link} className="block">
           <h3
             className={cn(
-              "font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors text-sm",
+              "font-semibold mb-1 line-clamp-2 text-foreground group-hover:text-primary transition-colors body-sm",
               motionSafe.transition,
             )}
           >
             {data.title}
           </h3>
         </Link>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-ui-sm text-muted-foreground">
           <span>{formatDate(data.date)}</span>
           {data.author && <span>By {data.author}</span>}
         </div>

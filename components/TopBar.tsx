@@ -53,7 +53,7 @@ export function TopBar() {
       <div className="mx-auto max-w-[980px] px-3 sm:px-4 py-2 flex justify-between items-center text-xs sm:text-sm">
         <div className="hidden sm:block">
           {showWelcome && user ? (
-            <span className="text-green-400 font-medium">
+            <span className="text-success font-medium">
               Welcome back, {profile?.full_name || profile?.username || user.email?.split("@")[0]}!
             </span>
           ) : (
@@ -64,14 +64,14 @@ export function TopBar() {
         </div>
         <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
           {loading ? (
-            <div className="h-8 w-20 sm:w-24 bg-gray-700 rounded-full"></div>
+            <div className="h-8 w-20 sm:w-24 bg-muted rounded-full"></div>
           ) : (
             <>
               <Button
                 asChild
-                variant="outline"
+                variant="default"
                 size="sm"
-                className="bg-green-500 text-black border-green-500 hover:bg-green-600 hover:text-black hover:border-green-600 rounded-full no-underline text-xs sm:text-sm px-2 sm:px-4"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full no-underline text-xs sm:text-sm px-3 sm:px-4"
               >
                 <Link href="/subscribe">Subscribe</Link>
               </Button>
