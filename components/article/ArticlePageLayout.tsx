@@ -10,15 +10,15 @@ interface ArticlePageLayoutProps {
 export function ArticlePageLayout({ children, sidebar, className }: ArticlePageLayoutProps) {
   return (
     <article className={cn("min-h-screen bg-background", className)}>
-      <div className="mx-auto max-w-7xl px-4 py-8 md:py-12 lg:px-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-12">
+      <div className="mx-auto w-full max-w-screen-xl py-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px] lg:gap-10">
           {/* Main content */}
-          <div className="lg:col-span-2">{children}</div>
+          <div className="lg:border-r lg:border-border lg:pr-8">{children}</div>
 
           {/* Sidebar - sticky on desktop */}
           {sidebar && (
-            <aside className="lg:col-span-1">
-              <div className="sticky top-8 space-y-8">{sidebar}</div>
+            <aside>
+              <div className="sticky top-0 space-y-6">{sidebar}</div>
             </aside>
           )}
         </div>

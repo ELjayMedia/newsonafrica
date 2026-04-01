@@ -8,6 +8,7 @@ type ArticleBodyProps = {
   html: string
   blocks?: ArticleBlock[]
   className?: string
+  tags?: string[]
   /**
    * Render prop invoked after every Nth paragraph based on `adFrequency`.
    * Returning null will skip rendering the ad placeholder.
@@ -20,7 +21,14 @@ type ArticleBodyProps = {
   adFrequency?: number
 }
 
-export function ArticleBody({ html, blocks: preParsedBlocks, className, renderAd, adFrequency = 0 }: ArticleBodyProps) {
+export function ArticleBody({
+  html,
+  blocks: preParsedBlocks,
+  className,
+  tags = [],
+  renderAd,
+  adFrequency = 3,
+}: ArticleBodyProps) {
   const blocks = preParsedBlocks ?? parseHtmlToBlocks(html)
 
   let paragraphCount = 0
@@ -32,8 +40,8 @@ export function ArticleBody({ html, blocks: preParsedBlocks, className, renderAd
     if (block.type === "paragraph") {
       paragraphCount += 1
 
-      if (renderAd && adFrequency > 0 && paragraphCount % adFrequency === 0) {
-        const ad = renderAd({ paragraphIndex: paragraphCount, blockIndex: index })
+      if (adFrequency > 0 && paragraphCount % adFrequency === 0) {
+        const ad = renderAd?.({ paragraphIndex: paragraphCount, blockIndex: index })
 
         if (ad) {
           content.push(
@@ -41,12 +49,44 @@ export function ArticleBody({ html, blocks: preParsedBlocks, className, renderAd
               {ad}
             </div>,
           )
+        } else {
+          content.push(
+            <div
+              key={`subscribe-${paragraphCount}-${index}`}
+              className="my-8 flex items-center justify-between gap-3 border border-red-200 bg-red-50 px-4 py-3"
+            >
+              <p className="text-sm font-medium text-red-900">Get breaking African business updates in your inbox.</p>
+              <button
+                type="button"
+                className="text-sm font-semibold text-[#e2001a] transition-colors hover:text-red-700"
+              >
+                Subscribe ›
+              </button>
+            </div>,
+          )
         }
       }
     }
   })
 
-  return <div className={cn("flex flex-col", className)}>{content}</div>
+  return (
+    <div className={cn("flex flex-col", className)}>
+      {content}
+      {tags.length > 0 && (
+        <div className="mt-8 flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <button
+              type="button"
+              key={tag}
+              className="rounded-full border border-border bg-muted px-3 py-1 text-xs transition-colors hover:bg-[#e2001a] hover:text-white"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function renderBlock(block: ArticleBlock, index: number): ReactNode {
@@ -55,7 +95,7 @@ function renderBlock(block: ArticleBlock, index: number): ReactNode {
       return (
         <p
           key={`paragraph-${index}`}
-          className="mb-6 text-lg leading-relaxed text-foreground last:mb-0 [&>a]:text-primary [&>a]:font-medium [&>a]:underline-offset-4 [&>a]:transition-colors [&>a]:hover:underline [&>strong]:font-semibold [&>em]:italic [&>img]:my-8 [&>img]:rounded-xl [&>img]:shadow-lg [&>code]:rounded [&>code]:bg-muted [&>code]:px-2 [&>code]:py-1 [&>code]:text-sm"
+          className="mb-6 text-base leading-7 text-foreground last:mb-0 [&>a]:text-primary [&>a]:font-medium [&>a]:underline-offset-4 [&>a]:transition-colors [&>a]:hover:underline [&>strong]:font-semibold [&>em]:italic [&>img]:my-8 [&>img]:rounded-xl [&>img]:shadow-lg [&>code]:rounded [&>code]:bg-muted [&>code]:px-2 [&>code]:py-1 [&>code]:text-sm"
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
       )
