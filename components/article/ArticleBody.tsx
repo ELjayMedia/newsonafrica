@@ -49,21 +49,6 @@ export function ArticleBody({
               {ad}
             </div>,
           )
-        } else {
-          content.push(
-            <div
-              key={`subscribe-${paragraphCount}-${index}`}
-              className="my-8 flex items-center justify-between gap-3 border border-red-200 bg-red-50 px-4 py-3"
-            >
-              <p className="text-sm font-medium text-red-900">Get breaking African business updates in your inbox.</p>
-              <button
-                type="button"
-                className="text-sm font-semibold text-[#e2001a] transition-colors hover:text-red-700"
-              >
-                Subscribe ›
-              </button>
-            </div>,
-          )
         }
       }
     }
