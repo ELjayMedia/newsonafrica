@@ -8,6 +8,10 @@ vi.mock("@/lib/auth/session-cookie", () => ({
   writeSessionCookie: vi.fn(),
 }))
 
+vi.mock("@/lib/auth/session-cookie-profile", () => ({
+  toSessionCookieProfile: vi.fn((user: unknown) => user),
+}))
+
 describe("signInWithPasswordAction", () => {
   const originalEnv = process.env
 
@@ -33,6 +37,8 @@ describe("signInWithPasswordAction", () => {
     const result = await signInWithPasswordAction(initialAuthFormState, formData)
 
     expect(result.status).toBe("error")
-    expect(result.message).toBe("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.")
+    expect(result.message).toBe(
+      "Authentication is temporarily unavailable. Please try again later.",
+    )
   })
 })

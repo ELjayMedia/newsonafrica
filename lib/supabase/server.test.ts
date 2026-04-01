@@ -42,7 +42,7 @@ describe("supabase server utilities", () => {
     const { getSupabaseConfig, createServerClient } = await import("./server")
 
     expect(getSupabaseConfig()).toBeNull()
-    expect(createServerClient()).toBeNull()
+    expect(await createServerClient()).toBeNull()
     expect(createSupabaseServerClientMock).not.toHaveBeenCalled()
 
     consoleErrorSpy.mockRestore()
@@ -53,18 +53,18 @@ describe("supabase server utilities", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key"
 
     const cookieStoreMock = {
-      get: vi.fn(),
+      getAll: vi.fn().mockReturnValue([]),
       set: vi.fn(),
     }
 
-    cookiesMock.mockReturnValue(cookieStoreMock)
+    cookiesMock.mockResolvedValue(cookieStoreMock)
 
     const supabaseClient = { auth: {} }
     createSupabaseServerClientMock.mockReturnValue(supabaseClient)
 
     const { createServerClient } = await import("./server")
 
-    const client = createServerClient()
+    const client = await createServerClient()
 
     expect(client).toBe(supabaseClient)
     expect(createSupabaseServerClientMock).toHaveBeenCalledWith(
