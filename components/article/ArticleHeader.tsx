@@ -1,6 +1,5 @@
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bookmark, BookmarkCheck, Share2 } from "lucide-react"
+import { Facebook, MessageCircle, Twitter } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -9,8 +8,10 @@ interface ArticleHeaderProps {
   excerpt?: string
   category?: string
   author?: string
+  source?: string
   publishedDate?: string | Date
   readingTime?: number
+  commentCount?: number
   wordCount?: number
   showTimeAgo?: boolean
   onShare?: () => void
@@ -24,13 +25,11 @@ export function ArticleHeader({
   excerpt,
   category,
   author,
+  source,
   publishedDate,
   readingTime,
-  wordCount,
+  commentCount = 0,
   showTimeAgo = true,
-  onShare,
-  onBookmark,
-  isBookmarked = false,
   className,
 }: ArticleHeaderProps) {
   const formatDate = (date: string | Date) => {
@@ -40,58 +39,54 @@ export function ArticleHeader({
   }
 
   return (
-    <div className={cn("space-y-6 border-b border-border pb-6", className)}>
-      {/* Metadata */}
-      <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
-        {publishedDate && <time>{formatDate(publishedDate)}</time>}
-        {readingTime && <span className="flex items-center gap-1">~ {readingTime} min read</span>}
-        {wordCount && <span>{wordCount.toLocaleString()} words</span>}
-      </div>
-
-      {/* Category */}
-      {category && <Badge variant="outline">{category}</Badge>}
+    <div className={cn("space-y-4 border-b border-border pb-4", className)}>
+      {category && <p className="text-xs font-bold uppercase tracking-wider text-[#e2001a]">{category}</p>}
 
       {/* Title */}
-      <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">{title}</h1>
+      <h1 className="font-sans text-2xl font-bold leading-snug md:text-3xl">{title}</h1>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          {author && <span>By {author}</span>}
+          {source && (
+            <>
+              {author && <span>·</span>}
+              <span>{source}</span>
+            </>
+          )}
+          {publishedDate && (
+            <>
+              {(author || source) && <span>·</span>}
+              <time>{formatDate(publishedDate)}</time>
+            </>
+          )}
+          {readingTime && (
+            <>
+              <span>·</span>
+              <span>{readingTime} min read</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on Facebook">
+            <Facebook className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on Twitter">
+            <Twitter className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on WhatsApp">
+            <span className="text-xs font-bold">WA</span>
+          </Button>
+          <Button variant="ghost" className="h-8 gap-1 rounded-md px-2 text-xs" aria-label="View comments">
+            <MessageCircle className="h-4 w-4" />
+            <span className="text-xs">{commentCount}</span>
+          </Button>
+        </div>
+      </div>
 
       {/* Excerpt */}
       {excerpt && <p className="text-lg font-normal leading-relaxed text-muted-foreground md:text-xl">{excerpt}</p>}
-
-      {/* Author and Actions */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        {author && <p className="text-sm font-medium text-foreground">By {author}</p>}
-
-        {/* Share and Bookmark Buttons */}
-        <div className="flex items-center gap-2">
-          {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} className="gap-2">
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-          )}
-
-          {onBookmark && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBookmark}
-              className={cn("gap-2", isBookmarked && "bg-primary/10")}
-            >
-              {isBookmarked ? (
-                <>
-                  <BookmarkCheck className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saved</span>
-                </>
-              ) : (
-                <>
-                  <Bookmark className="h-4 w-4" />
-                  <span className="hidden sm:inline">Save</span>
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
