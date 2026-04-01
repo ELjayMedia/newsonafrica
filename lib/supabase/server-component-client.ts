@@ -6,8 +6,8 @@ import type { SessionCookieProfile } from "@/lib/auth/session-cookie"
 
 export type SupabaseServerComponentClient = SupabaseClient<Database>
 
-export function createServerComponentSupabaseClient(): SupabaseServerComponentClient | null {
-  const client = createServerClient()
+export async function createServerComponentSupabaseClient(): Promise<SupabaseServerComponentClient | null> {
+  const client = await createServerClient()
 
   if (!client) {
     console.warn(SUPABASE_UNAVAILABLE_ERROR)
@@ -43,7 +43,7 @@ async function fetchProfileSummary(
 }
 
 export async function getServerUserSession(): Promise<ServerUserSession> {
-  const supabase = createServerComponentSupabaseClient()
+  const supabase = await createServerComponentSupabaseClient()
 
   if (!supabase) {
     return { session: null, user: null, profile: null }

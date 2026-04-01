@@ -93,8 +93,8 @@ function getAuthCallbackUrl(nextPath: string | null): string {
   return callbackUrl.toString()
 }
 
-function createSupabaseClient(): SupabaseServerClient | null {
-  const client = createServerClient()
+async function createSupabaseClient(): Promise<SupabaseServerClient | null> {
+  const client = await createServerClient()
 
   if (!client) {
     console.warn(SUPABASE_UNAVAILABLE_ERROR)
@@ -107,21 +107,23 @@ export async function signInWithPasswordAction(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const email = normalizeEmail(formData.get("email"))
+  const password = normalizePassword(formData.get("password"))
+  const redirectTo = getRedirectPath(formData.get("redirectTo")) ?? "/"
+
+  if (!email || !password) {
+    return createErrorState("Email and password are required.")
+  }
+
+  const supabase = await createSupabaseClient()
+
+  if (!supabase) {
+    return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
+  }
+
+  let signInSucceeded = false
+
   try {
-    const email = normalizeEmail(formData.get("email"))
-    const password = normalizePassword(formData.get("password"))
-    const redirectTo = getRedirectPath(formData.get("redirectTo")) ?? "/"
-
-    if (!email || !password) {
-      return createErrorState("Email and password are required.")
-    }
-
-    const supabase = createSupabaseClient()
-
-    if (!supabase) {
-      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
-    }
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -142,7 +144,7 @@ export async function signInWithPasswordAction(
       }
     }
 
-    redirect(redirectTo)
+    signInSucceeded = true
   } catch (error) {
     console.error("Failed to sign in", error)
 
@@ -151,6 +153,10 @@ export async function signInWithPasswordAction(
     }
 
     return createErrorState(DEFAULT_ERROR_MESSAGE)
+  }
+
+  if (signInSucceeded) {
+    redirect(redirectTo)
   }
 
   return createSuccessState("Signed in successfully.")
@@ -182,7 +188,7 @@ export async function signUpWithPasswordAction(
       return createErrorState("Passwords do not match.")
     }
 
-    const supabase = createSupabaseClient()
+    const supabase = await createSupabaseClient()
 
     if (!supabase) {
       return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
@@ -242,7 +248,7 @@ export async function resetPasswordAction(
       return createErrorState("Email is required.")
     }
 
-    const supabase = createSupabaseClient()
+    const supabase = await createSupabaseClient()
 
     if (!supabase) {
       return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
@@ -280,7 +286,7 @@ export async function sendMagicLinkAction(
       return createErrorState("Email is required.")
     }
 
-    const supabase = createSupabaseClient()
+    const supabase = await createSupabaseClient()
 
     if (!supabase) {
       return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)

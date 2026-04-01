@@ -12,25 +12,6 @@ export interface SupabaseConfig {
   supabaseKey: string
 }
 
-function createCookieAdapter() {
-  const cookieStore = cookies() as unknown as {
-    get: (name: string) => { value: string } | undefined
-    set: (options: Record<string, unknown>) => void
-  }
-
-  return {
-    get(name: string) {
-      return cookieStore.get(name)?.value
-    },
-    set(name: string, value: string, options?: Record<string, unknown>) {
-      cookieStore.set({ name, value, ...(options ?? {}) })
-    },
-    remove(name: string, options?: Record<string, unknown>) {
-      cookieStore.set({ name, value: "", ...(options ?? {}) })
-    },
-  }
-}
-
 export function getSupabaseConfig(): SupabaseConfig | null {
   const env = getSupabaseBrowserEnvOrNull()
 
@@ -44,7 +25,7 @@ export function getSupabaseConfig(): SupabaseConfig | null {
   }
 }
 
-export function createServerClient(): SupabaseClient<Database> | null {
+export async function createServerClient(): Promise<SupabaseClient<Database> | null> {
   const config = getSupabaseConfig()
 
   if (!config) {
@@ -53,8 +34,23 @@ export function createServerClient(): SupabaseClient<Database> | null {
   }
 
   try {
+    const cookieStore = await cookies()
+
     return createSupabaseServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
-      cookies: createCookieAdapter(),
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            )
+          } catch {
+            // setAll can throw in Server Components — safe to ignore
+          }
+        },
+      },
     })
   } catch (error) {
     console.error("Failed to create Supabase server client", error)

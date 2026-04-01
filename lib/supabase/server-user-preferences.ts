@@ -11,7 +11,7 @@ const EMPTY_PREFERENCES: ServerUserPreferences = {
 
 export async function getServerUserPreferences(): Promise<ServerUserPreferences> {
   try {
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     if (!supabase) {
       console.warn(SUPABASE_UNAVAILABLE_ERROR)

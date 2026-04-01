@@ -13,7 +13,7 @@ import type { BookmarkListPayload } from "@/types/bookmarks"
 export const dynamic = "force-dynamic"
 
 export default async function BookmarksLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   if (!supabase) {
     console.warn(SUPABASE_UNAVAILABLE_ERROR)
