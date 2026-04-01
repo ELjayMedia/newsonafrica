@@ -25,10 +25,13 @@ export interface SessionCookiePayload extends SessionCookieProfile {
 }
 
 function getSessionCookieSecret(): string | null {
-  const secret = process.env.SESSION_COOKIE_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const secret = process.env.SESSION_COOKIE_SECRET
 
   if (!secret) {
-    console.warn("SESSION_COOKIE_SECRET is not configured. Session cookie signing is disabled.")
+    console.warn(
+      "SESSION_COOKIE_SECRET is not configured. Session cookie signing is disabled. " +
+      "Set a dedicated SESSION_COOKIE_SECRET environment variable for secure cookie signing."
+    )
     return null
   }
 

@@ -87,7 +87,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
 
   const resetGlobalMessage = () => setGlobalMessage(null)
 
-  const signInFormMessage = signInState.status !== "idle" ? signInState.message : null
+  const signInFormMessage = signInState.status === "error" ? signInState.message : null
   const signUpFormMessage =
     signUpState.status === "error" && signUpState.message ? signUpState.message : null
   const signInMagicMessage =

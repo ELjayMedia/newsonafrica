@@ -159,7 +159,8 @@ export async function signInWithPasswordAction(
     redirect(redirectTo)
   }
 
-  return createSuccessState("Signed in successfully.")
+  // Unreachable — redirect() throws. Kept as a fallback for type safety.
+  return createErrorState(DEFAULT_ERROR_MESSAGE)
 }
 
 export async function signUpWithPasswordAction(
