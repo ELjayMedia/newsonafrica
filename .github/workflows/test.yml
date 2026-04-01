@@ -12,19 +12,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Setup Node + pnpm cache
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      # Enable pnpm via corepack (comes with Node 22)
+      # Enable pnpm via corepack BEFORE setup-node so the cache step can find it
       - name: Enable pnpm
         run: |
           corepack enable
           corepack prepare pnpm@9.15.4 --activate
           pnpm --version
+
+      # Setup Node + pnpm cache (pnpm must be available before this step)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       # Install dependencies strictly
       - name: Install dependencies

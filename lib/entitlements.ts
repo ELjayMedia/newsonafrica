@@ -22,7 +22,7 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
  * Get user's active subscription if any
  */
 export async function getUserActiveSubscription(userId: string): Promise<SubscriptionRow | null> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   if (!supabase) return null
 
   try {

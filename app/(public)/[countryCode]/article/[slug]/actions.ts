@@ -23,7 +23,7 @@ export async function fetchCommentsPageAction({
 }: FetchCommentsPageActionInput) {
   void sortOption
 
-  const supabase = createServerComponentSupabaseClient()
+  const supabase = await createServerComponentSupabaseClient()
   if (!supabase) {
     return { comments: [], hasMore: false, nextCursor: null, total: 0 }
   }
