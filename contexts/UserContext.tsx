@@ -27,6 +27,7 @@ import {
   type AuthStatePayload,
   type Profile,
 } from "@/app/actions/auth"
+import { clearSessionCookieClient } from "@/lib/auth/session-cookie-client"
 import type { Database } from "@/types/supabase"
 import type { ActionResult } from "@/lib/supabase/action-result"
 
@@ -299,6 +300,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
                 return
               }
 
+              await clearSessionCookieClient()
               await applyAuthState(null)
               router.refresh()
 
@@ -436,7 +438,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
 
       // If this is a public route, allow access
       const pathname = typeof window !== "undefined" ? window.location.pathname : null
-      if (pathname && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return true
+      if (pathname && PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))) return true
 
       // Otherwise redirect to auth page with return URL
       if (typeof window !== "undefined") {

@@ -3,6 +3,7 @@
 import type { Session, User } from "@supabase/supabase-js"
 
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
+import { clearSessionCookie } from "@/lib/auth/session-cookie"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
@@ -182,6 +183,8 @@ export async function signOut(): Promise<ActionResult<{ success: true }>> {
     if (error) {
       throw new ActionError(error.message, { cause: error })
     }
+
+    await clearSessionCookie()
 
     return { success: true }
   })

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
             .from("profiles")
             .select("username")
             .eq("username", username)
-            .single()
+            .maybeSingle()
 
           if (existingUser) {
             username = `${username}_${Math.floor(Math.random() * 10000)}`
