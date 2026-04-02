@@ -78,7 +78,6 @@
     },
     {
       "files": [
-<<<<<<< HEAD
         "**/*.{ts,tsx}"
       ],
       "excludedFiles": [
@@ -92,7 +91,12 @@
           {
             "selector": "TSAsExpression > TSAnyKeyword",
             "message": "Avoid `as any` outside adapter directories. Move unsafe casts into lib/**/adapters and return typed outputs."
-=======
+          }
+        ]
+      }
+    },
+    {
+      "files": [
         "app/**/*.{ts,tsx}"
       ],
       "rules": {
@@ -118,7 +122,6 @@
                 "message": "App-layer WordPress reads must use '@/lib/wordpress/service'."
               }
             ]
->>>>>>> edc0b87e (Create canonical WordPress service and migrate callers)
           }
         ]
       }
