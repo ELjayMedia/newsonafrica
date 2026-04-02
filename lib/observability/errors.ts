@@ -12,7 +12,7 @@ export interface ErrorContext {
 
 class ErrorTracker {
   captureException(error: Error, context?: ErrorContext) {
-    logger.error("Exception caught", error, context as any)
+    logger.error("Exception caught", error, context as unknown as Record<string, unknown>)
 
     // Forward to Sentry/error tracking service
     if (process.env.NODE_ENV === "production" && process.env.SENTRY_DSN) {
@@ -21,7 +21,7 @@ class ErrorTracker {
   }
 
   captureMessage(message: string, level: "info" | "warning" | "error" = "error", context?: ErrorContext) {
-    logger.error(message, undefined, context as any)
+    logger.error(message, undefined, context as unknown as Record<string, unknown>)
 
     if (process.env.NODE_ENV === "production" && process.env.SENTRY_DSN) {
       this.sendMessageToSentry(message, level, context)

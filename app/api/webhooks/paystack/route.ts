@@ -13,6 +13,7 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import type { Database } from "@/types/supabase"
+import { untypedFrom, untypedFromSchema } from "@/lib/supabase/adapters/untyped-query"
 
 type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"]
 type SubscriptionUpdate = Database["public"]["Tables"]["subscriptions"]["Update"]
@@ -67,8 +68,7 @@ interface TransferData {
 }
 
 async function getUserIdByEmail(client: SupabaseClient<Database>, email: string) {
-  const { data, error } = await (client as any)
-    .from("users", { schema: "auth" })
+  const { data, error } = await untypedFromSchema(client, "users", { schema: "auth" })
     .select("id")
     .eq("email", email)
     .single()
@@ -158,7 +158,7 @@ export async function handleChargeSuccess(
 ) {
   console.log("Processing successful charge:", data.reference)
   const userId = await getUserIdByEmail(client, data.customer.email)
-  const { error: txnError } = await (client as any).from("transactions").insert({
+  const { error: txnError } = await untypedFrom(client, "transactions").insert({
     id: data.reference,
     user_id: userId,
     amount: data.amount / 100,
@@ -227,10 +227,10 @@ export async function handlePaymentFailed(
 ) {
   console.log("Processing failed payment:", data.reference)
   const _userId = await getUserIdByEmail(client, data.customer.email)
-  const { error } = await (client as any).from("transactions").update({ status: "failed" }).eq("id", data.reference)
+  const { error } = await untypedFrom(client, "transactions").update({ status: "failed" }).eq("id", data.reference)
   if (error) throw new Error("Failed to update transaction")
   const update = buildPaymentFailureUpdate(data as unknown as Record<string, any>)
-  const paymentId = (data as any)?.invoice_code || data.reference
+  const paymentId = (data as unknown as Record<string, unknown>)?.invoice_code || data.reference
   if (paymentId) {
     const { error: subscriptionError } = await client
       .from("subscriptions")
@@ -265,7 +265,7 @@ export async function handleTransferSuccess(
   client: SupabaseClient<Database> = createAdminClient(),
 ) {
   console.log("Processing successful transfer:", data.reference)
-  const { error } = await (client as any).from("transfers").insert({
+  const { error } = await untypedFrom(client, "transfers").insert({
     id: data.reference,
     amount: data.amount / 100,
     status: "success",
@@ -279,8 +279,7 @@ export async function handleTransferFailed(
   client: SupabaseClient<Database> = createAdminClient(),
 ) {
   console.log("Processing failed transfer:", data.reference)
-  const { error } = await (client as any)
-    .from("transfers")
+  const { error } = await untypedFrom(client, "transfers")
     .update({ status: "failed", metadata: data })
     .eq("id", data.reference)
   if (error) throw new Error("Failed to update transfer")

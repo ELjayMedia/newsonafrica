@@ -28,7 +28,7 @@ type CountryRow = { id: number; slug: string }
 const isSuccessResult = <T,>(
   result: unknown,
 ): result is { ok: true; data: T } => {
-  return Boolean(result && typeof result === "object" && (result as any).ok === true && "data" in (result as any))
+  return Boolean(result && typeof result === "object" && (result as Record<string, unknown>).ok === true && "data" in (result as Record<string, unknown>))
 }
 
 export async function GET(req: NextRequest) {

@@ -51,7 +51,7 @@ class Logger {
         name: contextOrError.name,
         message: contextOrError.message,
         stack: contextOrError.stack,
-        code: (contextOrError as any).code,
+        code: (contextOrError as { code?: string }).code,
       }
     } else if (contextOrError) {
       entry.context = contextOrError
@@ -67,7 +67,7 @@ class Logger {
     }
   }
 
-  private forwardToExternalServices(entry: LogEntry) {
+  private forwardToExternalServices(_entry: LogEntry) {
     // Placeholder for Sentry, DataDog, etc.
     // Will be implemented when SENTRY_DSN is configured
   }

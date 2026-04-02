@@ -49,8 +49,8 @@ export function SocialShare({ url, title, description, className = "" }: SocialS
   }
 
   const handleTwitterShare = () => {
-    if (typeof window !== "undefined" && (window as any).fbq) {
-      ;(window as any).fbq("track", "Share", { platform: "twitter" })
+    if (typeof window !== "undefined" && (window as unknown as Record<string, unknown>).fbq) {
+      ;(window as unknown as { fbq: (...args: unknown[]) => void }).fbq("track", "Share", { platform: "twitter" })
     }
     window.open(shareLinks.twitter, "_blank", "width=550,height=420")
   }

@@ -112,7 +112,7 @@ export function getServerCountry(): string {
   try {
     // Dynamically import to avoid bundling on client
     const { cookies } = require("next/headers") as typeof import("next/headers")
-    const store = cookies() as any
+    const store = cookies() as unknown as { get(name: string): { value?: string } | undefined }
     const raw = store.get("country")?.value ?? store.get("preferredCountry")?.value
     const saved = matchSupportedEdition(raw)
     if (saved) {

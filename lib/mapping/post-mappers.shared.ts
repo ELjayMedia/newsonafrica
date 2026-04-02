@@ -28,7 +28,7 @@ function decodeGlobalId(id: string): number {
 const resolveRelayId = (
   post: GraphqlPostNode | { globalRelayId?: unknown; id?: unknown },
 ): string | undefined => {
-  const candidate = (post as any)?.globalRelayId ?? (post as any)?.id
+  const candidate = (post as Record<string, unknown>)?.globalRelayId ?? (post as Record<string, unknown>)?.id
   if (typeof candidate === "string" && candidate.length > 0) {
     return candidate
   }
@@ -75,14 +75,14 @@ const mapGraphqlAuthor = (post: GraphqlPostNode): WordPressAuthor | undefined =>
     databaseId,
     name,
     slug,
-    description: (node as any).description ?? undefined,
+    description: (node as Record<string, unknown>).description as string | undefined,
     avatar,
     node: {
       id: resolvedNodeId,
       databaseId,
       name,
       slug,
-      description: (node as any).description ?? undefined,
+      description: (node as Record<string, unknown>).description as string | undefined,
       avatar,
     },
   }
@@ -106,8 +106,8 @@ const mapGraphqlCategories = (post: GraphqlPostNode): WordPressCategoryConnectio
             undefined,
           name: cat.name ?? undefined,
           slug: cat.slug ?? undefined,
-          description: (cat as any).description ?? undefined,
-          count: (cat as any).count ?? undefined,
+          description: (cat as Record<string, unknown>).description as string | undefined,
+          count: (cat as Record<string, unknown>).count as number | undefined,
         }
       }) ?? [],
 })
@@ -156,8 +156,8 @@ export const mapGraphqlPostToWordPressPost = (
           ? normalizeContent(rawContent, countryCode)
           : rawContent
         : undefined,
-    uri: (post as any).uri ?? undefined,
-    link: (post as any).link ?? undefined,
+    uri: (post as Record<string, unknown>).uri as string | undefined,
+    link: (post as Record<string, unknown>).link as string | undefined,
     featuredImage: mapGraphqlFeaturedImage(post),
     author: mapGraphqlAuthor(post),
     categories: mapGraphqlCategories(post),

@@ -74,8 +74,8 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): MetricsEventP
     id,
     startTime,
     value,
-    label: label as any,
-    name: name as any,
+    label: label as "web-vital" | "custom",
+    name: name as string,
     ...(attribution ? { attribution } : {}),
     ...(typeof data.page === "string" ? { page: data.page } : {}),
     ...(typeof data.href === "string" ? { href: data.href } : {}),
@@ -88,7 +88,7 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
   const event =
     typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
 
-  if (!event || !ACCEPTED_EVENTS.has(event as any)) return null
+  if (!event || !ACCEPTED_EVENTS.has(event as "web-vitals" | "cache")) return null
 
   if (event === "web-vitals") {
     const payload = normalizeWebVitalsPayload(data)

@@ -8,7 +8,6 @@ import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { TopBar } from "@/components/TopBar"
 import { Toaster } from "@/components/ui/toaster"
-import { Sidebar } from "@/components/Sidebar"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 interface AppChromeProps {
@@ -17,7 +16,7 @@ interface AppChromeProps {
 
 export async function AppChrome({ children }: AppChromeProps) {
   const cookieStore = await cookies()
-  const preferredCountry =
+  const _preferredCountry =
     cookieStore.get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
 
   return (

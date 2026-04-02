@@ -1,4 +1,5 @@
 import { createAdminClient } from "./supabase/admin"
+import { untypedFrom, untypedRpc } from "./supabase/adapters/untyped-query"
 
 export type Migration = {
   id: string
@@ -369,12 +370,10 @@ export const migrations: Migration[] = [
 // Function to apply a single migration
 export async function applyMigration(migration: Migration, userId?: string) {
   const supabase = createAdminClient()
-  const untypedSupabase = supabase as any
 
   try {
     // Check if migration has already been applied
-    const { data: existingMigration, error: checkError } = await untypedSupabase
-       .from("migrations")
+    const { data: existingMigration, error: checkError } = await untypedFrom(supabase, "migrations")
       .select("id")
       .eq("id", migration.id)
       .maybeSingle()
@@ -391,7 +390,7 @@ export async function applyMigration(migration: Migration, userId?: string) {
     }
 
     // Apply the migration
-    const { error: sqlError } = await untypedSupabase.rpc("exec_sql", { sql: migration.sql })
+    const { error: sqlError } = await untypedRpc(supabase, "exec_sql", { sql: migration.sql })
 
     if (sqlError) {
       console.error(`Error applying migration ${migration.id}:`, sqlError)
@@ -399,7 +398,7 @@ export async function applyMigration(migration: Migration, userId?: string) {
     }
 
     // Record the migration
-    const { error: recordError } = await untypedSupabase.from("migrations").insert({
+    const { error: recordError } = await untypedFrom(supabase, "migrations").insert({
       id: migration.id,
       name: migration.name,
       applied_by: userId,
@@ -421,19 +420,18 @@ export async function applyMigration(migration: Migration, userId?: string) {
 // Function to apply all pending migrations
 export async function applyPendingMigrations(userId?: string) {
   const supabase = createAdminClient()
-  const untypedSupabase = supabase as any
-  const results: Record<string, { success: boolean; skipped: boolean; error?: any }> = {}
+  const results: Record<string, { success: boolean; skipped: boolean; error?: unknown }> = {}
 
   try {
     // Check if migrations table exists
-    const { error: tableCheckError } = await untypedSupabase.from("migrations").select("id").limit(1)
+    const { error: tableCheckError } = await untypedFrom(supabase, "migrations").select("id").limit(1)
 
     // If migrations table doesn't exist, apply the first migration manually
     if (tableCheckError && tableCheckError.code === "PGRST116") {
       console.log("Migrations table doesn't exist, applying initial migration")
 
       const initialMigration = migrations[0]
-      const { error: sqlError } = await untypedSupabase.rpc("exec_sql", { sql: initialMigration.sql })
+      const { error: sqlError } = await untypedRpc(supabase, "exec_sql", { sql: initialMigration.sql })
 
       if (sqlError) {
         console.error(`Error applying initial migration:`, sqlError)
@@ -442,7 +440,7 @@ export async function applyPendingMigrations(userId?: string) {
       }
 
       // Record the migration
-      const { error: recordError } = await untypedSupabase.from("migrations").insert({
+      const { error: recordError } = await untypedFrom(supabase, "migrations").insert({
         id: initialMigration.id,
         name: initialMigration.name,
         applied_by: userId,
@@ -458,7 +456,7 @@ export async function applyPendingMigrations(userId?: string) {
     }
 
     // Get list of applied migrations
-    const { data: appliedMigrations, error: fetchError } = await untypedSupabase.from("migrations").select("id")
+    const { data: appliedMigrations, error: fetchError } = await untypedFrom(supabase, "migrations").select("id")
 
     if (fetchError) {
       console.error("Error fetching applied migrations:", fetchError)
@@ -493,11 +491,10 @@ export async function applyPendingMigrations(userId?: string) {
 // Function to get migration status
 export async function getMigrationStatus() {
   const supabase = createAdminClient()
-  const untypedSupabase = supabase as any
 
   try {
     // Check if migrations table exists
-    const { error: tableCheckError } = await untypedSupabase.from("migrations").select("id").limit(1)
+    const { error: tableCheckError } = await untypedFrom(supabase, "migrations").select("id").limit(1)
 
     // If migrations table doesn't exist, return empty list
     if (tableCheckError && tableCheckError.code === "PGRST116") {
@@ -511,8 +508,7 @@ export async function getMigrationStatus() {
     }
 
     // Get list of applied migrations
-    const { data: appliedMigrations, error: fetchError } = await untypedSupabase
-       .from("migrations")
+    const { data: appliedMigrations, error: fetchError } = await untypedFrom(supabase, "migrations")
       .select("id, name, applied_at, applied_by")
       .order("applied_at", { ascending: true })
 
@@ -540,11 +536,10 @@ export async function getMigrationStatus() {
 // Function to create the exec_sql function if it doesn't exist
 export async function createExecSqlFunction() {
   const supabase = createAdminClient()
-  const untypedSupabase = supabase as any
 
   try {
     // Create the exec_sql function
-    const { error } = await untypedSupabase.rpc("exec_sql", {
+    const { error } = await untypedRpc(supabase, "exec_sql", {
       sql: `
         CREATE OR REPLACE FUNCTION exec_sql(sql text)
         RETURNS void AS $$
@@ -558,7 +553,7 @@ export async function createExecSqlFunction() {
     if (error) {
       // If the function doesn't exist yet, create it directly
       if (error.message.includes("function exec_sql(text) does not exist")) {
-        const { error: directError } = await untypedSupabase.from("_rpc").select("*").eq("name", "exec_sql")
+        const { error: directError } = await untypedFrom(supabase, "_rpc").select("*").eq("name", "exec_sql")
 
         if (directError) {
           console.error("Error creating exec_sql function:", directError)

@@ -31,7 +31,7 @@ export async function verifyPaystackTransaction(reference: string): Promise<Pays
     return {
       status: false,
       message: error instanceof Error ? error.message : "Unknown error during verification",
-      data: null as any,
+      data: null as unknown as PaystackVerifyResponse["data"],
     }
   }
 }

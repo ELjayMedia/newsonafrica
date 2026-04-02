@@ -5,7 +5,7 @@ import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEd
 import { buildArticlePath, normalizeArticleCountrySegment } from "@/lib/routing/article-route"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
-import { COUNTRIES } from "@/lib/wordpress/countries"
+import { COUNTRIES } from "@/lib/wordpress/service"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -122,11 +122,11 @@ type CachedArticlePayload = {
   cachedAt: number
 }
 
-type CachedArticleResolution = CachedArticlePayload & {
+type _CachedArticleResolution = CachedArticlePayload & {
   cacheCountry: string
 }
 
-type CachedArticleReadResult = {
+type _CachedArticleReadResult = {
   payload: CachedArticlePayload
   isStale: boolean
 }
@@ -247,7 +247,7 @@ const resolveArticleVersion = (article: WordPressPost): string | null => {
   return sanitizeCacheKeySegment(rawVersion.trim().toLowerCase())
 }
 
-const buildArticleCacheKey = (country: string, slug: string, version?: string | null): string => {
+const _buildArticleCacheKey = (country: string, slug: string, version?: string | null): string => {
   const cacheVersion = resolveCacheVersionSegment(version)
   return `${ARTICLE_CACHE_KEY_PREFIX}:${normalizeCountryCode(country)}:${normalizeSlug(slug)}:${cacheVersion}`
 }
@@ -263,7 +263,7 @@ const buildArticleCacheTags = (country: string, slug: string, article: WordPress
   return tags
 }
 
-const buildCachedArticlePayload = (
+const _buildCachedArticlePayload = (
   country: string,
   slug: string,
   payload: Partial<CachedArticlePayload> & { article: WordPressPost },

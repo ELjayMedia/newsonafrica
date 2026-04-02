@@ -55,7 +55,7 @@ export function createCachedFetcher<T>(
 
     try {
       return await cachedFn(baseUrl)
-    } catch (error) {
+    } catch (_error) {
       return fn(baseUrl)
     }
   }

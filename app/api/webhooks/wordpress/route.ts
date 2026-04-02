@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
           const postIdentifier = postId ?? post.slug
 
           const resolvedCountry = deriveCountryFromPost(post)
-          const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
+          const _primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
 
           if (resolvedCountry && postId) {
             const title = post?.title?.rendered || post?.title || "Untitled"

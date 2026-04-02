@@ -10,7 +10,7 @@ interface AuthedLayoutProps {
 }
 
 // These can be used by individual pages that need server-side auth
-function createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
+function _createDefaultPreferencesSnapshot(): UserPreferencesSnapshot {
   return {
     userId: null,
     preferences: {

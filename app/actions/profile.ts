@@ -18,7 +18,7 @@ export type ProfileDetailsRow = Pick<
 const PROFILE_DETAILS_SELECT_COLUMNS =
   "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
-function toSerializable<T>(value: T): T {
+function _toSerializable<T>(value: T): T {
   if (value === null || value === undefined) {
     return value
   }

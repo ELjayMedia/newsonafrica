@@ -12,13 +12,13 @@ const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW = 60 * 1000
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-const jsonWithNoStore = (request: NextRequest, data: any, init?: ResponseInit) => {
+const _jsonWithNoStore = (request: NextRequest, data: any, init?: ResponseInit) => {
   const response = jsonWithCors(request, data, init)
   response.headers.set("Cache-Control", "no-store")
   return response
 }
 
-const FALLBACK_RECORDS: any[] = [
+const _FALLBACK_RECORDS: any[] = [
   {
     objectID: "sz:welcome-to-news-on-africa",
     title: "Welcome to News On Africa",

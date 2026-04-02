@@ -15,7 +15,7 @@ class AlertManager {
   private alertCounts = new Map<string, number>()
 
   trigger(alert: Alert) {
-    logger.error(`[ALERT] ${alert.title}`, undefined, alert as any)
+    logger.error(`[ALERT] ${alert.title}`, undefined, alert as unknown as Record<string, unknown>)
 
     // Send to alert service (PagerDuty, Slack, etc.)
     if (process.env.NODE_ENV === "production") {

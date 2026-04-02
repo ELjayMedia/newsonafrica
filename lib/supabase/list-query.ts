@@ -1,6 +1,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/supabase"
+import { untypedFrom } from "./adapters/untyped-query"
 
 const DEFAULT_VIEW_CANDIDATES: Record<string, readonly string[]> = {
   bookmarks: ["bookmarks_view", "bookmark_list_view", "bookmarks_list_view"],
@@ -63,18 +64,17 @@ export async function executeListQuery<TResponse extends ResponseWithError>(
   table: keyof Database["public"]["Tables"] & string,
   factory: (builder: QueryBuilder) => Promise<TResponse>,
 ): Promise<TResponse> {
-  const untypedClient = client as any
   const candidates = getListViewCandidates(table)
 
   for (const relation of candidates) {
-    const result = await factory(untypedClient.from(relation) as QueryBuilder)
+    const result = await factory(untypedFrom(client, relation) as QueryBuilder)
     const error = result.error ?? null
     if (!isRelationMissing(error)) {
       return result
     }
   }
 
-  return factory(untypedClient.from(table) as QueryBuilder)
+  return factory(untypedFrom(client, table) as QueryBuilder)
 }
 
 export function resolveListSource(

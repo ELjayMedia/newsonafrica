@@ -96,7 +96,7 @@ function extractCountrySlug(value: unknown): string | undefined {
 }
 
 function inferArticleCountry(article: Article | WordPressPost) {
-  const source = article as any
+  const source = article as unknown as Record<string, unknown>
   const potentialSources: unknown[] = [
     source?.country,
     source?.countryCode,
@@ -121,7 +121,7 @@ function inferArticleCountry(article: Article | WordPressPost) {
 }
 
 function extractImageUrl(article: Article | WordPressPost): string | null {
-  const source = article as any
+  const source = article as unknown as Record<string, unknown>
 
   // Try multiple possible image sources
   const imageSources = [
@@ -157,7 +157,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
   const country = inferArticleCountry(article)
   const featuredImage = extractImageUrl(article)
 
-  if ("categories" in article && Array.isArray((article as any).categories?.nodes)) {
+  if ("categories" in article && Array.isArray((article as unknown as Record<string, { nodes?: unknown[] }>).categories?.nodes)) {
     const post = article as WordPressPost
     const categories =
       post.categories?.nodes

@@ -1,5 +1,3 @@
-import { type NextRequest } from "next/server"
-
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
   normalizeCommentModerationFilter,

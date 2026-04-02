@@ -9,8 +9,8 @@ const MAX_LIMIT = 50
 
 const extractPosts = (payload: unknown): unknown[] => {
   if (Array.isArray(payload)) return payload
-  if (payload && typeof payload === "object" && Array.isArray((payload as any).posts)) {
-    return (payload as any).posts
+  if (payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).posts)) {
+    return (payload as Record<string, unknown>).posts as unknown[]
   }
   return []
 }
@@ -31,7 +31,7 @@ const resolveRenderedText = (value: unknown): string => {
 const normalizeFeaturedImage = (item: any): HomePost["featuredImage"] | undefined => {
   const candidate = item?.featuredImage || item?.featured_image
   if (candidate && typeof candidate === "object") {
-    const node = (candidate as any).node || candidate
+    const node = (candidate as Record<string, unknown>).node || candidate
     if (node && typeof node === "object") {
       const sourceUrl =
         typeof node.sourceUrl === "string"

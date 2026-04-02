@@ -444,7 +444,7 @@ async function buildHomeContentPropsForEditionUncached(
   }
 }
 
-type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
+type _HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
 
 // createCachedFetcher imported from @/lib/utils/cache
 // Wrapper to use centralized config for revalidate time
@@ -548,7 +548,7 @@ async function getFpTaggedPostsForCountry(
   })
 }
 
-async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
+async function _getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
   return wpGetCategoriesForCountry(countryCode)
 }
 

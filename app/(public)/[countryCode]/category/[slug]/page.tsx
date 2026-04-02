@@ -28,7 +28,7 @@ type CategoryPostsResult = Awaited<ReturnType<typeof getPostsByCategoryForCountr
 
 const categoryPostsMemo = new Map<string, Promise<CategoryPostsResult>>()
 
-type CategoryLike = { slug?: string | null }
+type _CategoryLike = { slug?: string | null }
 
 const getRenderedText = (value: unknown): string | null => {
   if (typeof value === "string") {
