@@ -109,7 +109,7 @@ const config = {
         xl: "calc(var(--radius) + 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        sans: ["Funnel Sans", "system-ui", "sans-serif"],
       },
       fontSize: {
         // Display sizes - for hero sections and large headings
