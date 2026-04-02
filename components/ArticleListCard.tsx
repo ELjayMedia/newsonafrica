@@ -95,7 +95,7 @@ function extractCountrySlug(value: unknown): string | undefined {
   return undefined
 }
 
-type Indexable = Record<string, unknown> & { [k: string]: Indexable | unknown }
+type Indexable = Record<string, any>
 
 function inferArticleCountry(article: Article | WordPressPost) {
   const source = article as unknown as Indexable
