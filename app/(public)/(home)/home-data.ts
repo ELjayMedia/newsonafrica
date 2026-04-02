@@ -195,7 +195,7 @@ type HomeContentInitialData = {
   categoryPosts?: Record<string, HomePost[]>
 }
 
-type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
+type Category = Awaited<ReturnType<typeof _getCategoriesForCountry>>[number]
 type CountryPosts = Record<string, HomePost[]>
 
 // DEFAULT_TAGS_BY_COUNTRY is now derived from appConfig at the top of the file
