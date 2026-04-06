@@ -95,20 +95,27 @@ function extractCountrySlug(value: unknown): string | undefined {
   return undefined
 }
 
-type Indexable = Record<string, unknown> & { [k: string]: Indexable | unknown }
+function get(obj: unknown, ...keys: string[]): unknown {
+  let current: unknown = obj
+  for (const key of keys) {
+    if (current == null || typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current
+}
 
 function inferArticleCountry(article: Article | WordPressPost) {
-  const source = article as unknown as Indexable
+  const source: unknown = article
   const potentialSources: unknown[] = [
-    source?.country,
-    source?.countryCode,
-    source?.country_code,
-    source?.edition?.country,
-    source?.edition?.code,
-    source?.edition?.slug,
-    source?.countries,
-    source?.countries?.nodes,
-    source?.countries?.edges,
+    get(source, "country"),
+    get(source, "countryCode"),
+    get(source, "country_code"),
+    get(source, "edition", "country"),
+    get(source, "edition", "code"),
+    get(source, "edition", "slug"),
+    get(source, "countries"),
+    get(source, "countries", "nodes"),
+    get(source, "countries", "edges"),
   ]
 
   for (const candidate of potentialSources) {
@@ -123,18 +130,18 @@ function inferArticleCountry(article: Article | WordPressPost) {
 }
 
 function extractImageUrl(article: Article | WordPressPost): string | null {
-  const source = article as unknown as Indexable
+  const source: unknown = article
 
   // Try multiple possible image sources
   const imageSources = [
-    source?.featuredImage?.node?.sourceUrl,
-    source?.featured_image_url,
-    source?.featuredImage?.sourceUrl,
-    source?.featured_image?.url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.full?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.large?.source_url,
-    source?._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.sizes?.medium?.source_url,
+    get(source, "featuredImage", "node", "sourceUrl"),
+    get(source, "featured_image_url"),
+    get(source, "featuredImage", "sourceUrl"),
+    get(source, "featured_image", "url"),
+    get(get(source, "_embedded", "wp:featuredmedia"), "0", "source_url"),
+    get(get(source, "_embedded", "wp:featuredmedia"), "0", "media_details", "sizes", "full", "source_url"),
+    get(get(source, "_embedded", "wp:featuredmedia"), "0", "media_details", "sizes", "large", "source_url"),
+    get(get(source, "_embedded", "wp:featuredmedia"), "0", "media_details", "sizes", "medium", "source_url"),
   ]
 
   for (const imageUrl of imageSources) {
@@ -159,7 +166,7 @@ function normalizeArticleData(article: Article | WordPressPost) {
   const country = inferArticleCountry(article)
   const featuredImage = extractImageUrl(article)
 
-  if ("categories" in article && Array.isArray((article as unknown as Indexable).categories?.nodes)) {
+  if ("categories" in article && Array.isArray(get(article, "categories", "nodes"))) {
     const post = article as WordPressPost
     const categories =
       post.categories?.nodes
