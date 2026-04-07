@@ -11,13 +11,10 @@ import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
 import { ArticleJsonLd } from "@/components/ArticleJsonLd"
 import { BookmarkButton } from "@/components/BookmarkButton"
-import { ShareButtons } from "@/components/ShareButtons"
 import { Button } from "@/components/ui/button"
 import { ArticleBody } from "@/components/article/ArticleBody"
 import { ArticleHeader } from "@/components/article/ArticleHeader"
-import { ArticleMostRead } from "@/components/article/ArticleMostRead"
 import { ArticlePageLayout } from "@/components/article/ArticlePageLayout"
-import { ArticleRelatedSection } from "@/components/article/ArticleRelatedSection"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -29,7 +26,6 @@ import { ArticleComments } from "./ArticleComments"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 import { formatArticleBodyCached } from "./article-content-formatter"
 import { resolveArticle } from "./resolve-article"
-import { RelatedRail } from "./RelatedRail"
 
 export async function generateStaticParams() {
   return []
@@ -41,33 +37,6 @@ export const revalidate = 300
 
 type RouteParams = { params: { countryCode: string; slug: string } }
 type RouteParamsPromise = { params: Promise<RouteParams["params"]> }
-
-const resolveRelatedPostId = (
-  article:
-    | {
-      databaseId?: number | null
-      id?: unknown
-    }
-    | null
-    | undefined,
-) => {
-  if (typeof article?.databaseId === "number" && Number.isFinite(article.databaseId)) {
-    return article.databaseId
-  }
-
-  const relayId = article?.id
-  if (typeof relayId !== "string") return null
-
-  let decodedRelayId: string
-  try {
-    decodedRelayId = Buffer.from(relayId, "base64").toString("utf8")
-  } catch {
-    return null
-  }
-
-  const decodedId = Number(decodedRelayId.split(":").pop())
-  return Number.isFinite(decodedId) ? decodedId : null
-}
 
 const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =>
   `${baseUrl}/${countryCode}/article/${slug}/opengraph-image`
@@ -205,9 +174,6 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     redirect(`/${targetCountry}/article/${canonicalSlug}`)
   }
 
-  const relatedCountry = resolved.resolvedSourceCountry ?? routeCountry
-  const relatedPostId = resolveRelatedPostId(articleData)
-
   const formattedBody = await formatArticleBodyCached({
     country: targetCountry,
     canonicalSlug,
@@ -226,19 +192,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       <Suspense fallback={null}>
         <ArticleJsonLd post={articleData} url={canonicalUrl} />
       </Suspense>
-      <ArticlePageLayout
-        sidebar={
-          <Suspense fallback={null}>
-            <RelatedRail countryCode={relatedCountry} postId={relatedPostId}>
-              {(relatedPosts) => (
-                <div className="space-y-8">
-                  <ArticleMostRead articles={relatedPosts.slice(0, 5)} countryCode={targetCountry} />
-                </div>
-              )}
-            </RelatedRail>
-          </Suspense>
-        }
-      >
+      <ArticlePageLayout>
         <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
           <article className="mb-8 space-y-6">
             <ArticleHeader
@@ -254,13 +208,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               publishedDate={articleData.date}
             />
 
-            <div className="flex items-center justify-between">
-              <ShareButtons
-                title={stripHtml(resolveRenderedText(articleData.title)) || "News On Africa"}
-                description={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
-                url={`/${targetCountry}/article/${canonicalSlug}`}
-                variant="ghost"
-              />
+            <div className="flex items-center justify-end">
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline" className="rounded-full">
                   <a href="#comments-section">
@@ -316,13 +264,6 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               />
             </Suspense>
 
-            <Suspense fallback={null}>
-              <RelatedRail countryCode={relatedCountry} postId={relatedPostId}>
-                {(relatedPosts) => (
-                  <ArticleRelatedSection articles={relatedPosts} countryCode={targetCountry} />
-                )}
-              </RelatedRail>
-            </Suspense>
           </article>
         </div>
       </ArticlePageLayout>
