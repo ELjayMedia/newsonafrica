@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Facebook, MessageCircle, Twitter } from "lucide-react"
+import { MessageCircle } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -69,15 +69,6 @@ export function ArticleHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on Facebook">
-            <Facebook className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on Twitter">
-            <Twitter className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" aria-label="Share on WhatsApp">
-            <span className="text-xs font-bold">WA</span>
-          </Button>
           <Button variant="ghost" className="h-8 gap-1 rounded-md px-2 text-xs" aria-label="View comments">
             <MessageCircle className="h-4 w-4" />
             <span className="text-xs">{commentCount}</span>
