@@ -25,6 +25,7 @@ import {
   sanitizeBaseUrl,
 } from "./article-data"
 
+import { ArticleComments } from "./ArticleComments"
 import { ArticleServerFallback } from "./ArticleServerFallback"
 import { formatArticleBodyCached } from "./article-content-formatter"
 import { resolveArticle } from "./resolve-article"
@@ -261,8 +262,10 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 variant="ghost"
               />
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" className="rounded-full">
-                  <MessageSquare className="mr-2 h-4 w-4" />Comments
+                <Button asChild variant="outline" className="rounded-full">
+                  <a href="#comments-section">
+                    <MessageSquare className="mr-2 h-4 w-4" />Comments
+                  </a>
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
                   <Link href={`/subscribe?intent=gift&article=${canonicalSlug}&country=${targetCountry}`}>
@@ -271,8 +274,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 </Button>
                 <BookmarkButton
                   postId={
-                    articleData.id ??
-                    (typeof articleData.databaseId === "number" ? String(articleData.databaseId) : canonicalSlug)
+                    typeof articleData.databaseId === "number"
+                      ? String(articleData.databaseId)
+                      : (articleData.id ?? canonicalSlug)
                   }
                   editionCode={targetCountry}
                   slug={canonicalSlug}
@@ -300,6 +304,17 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               blocks={formattedBody.blocks}
               className="prose prose-lg max-w-none mb-8 text-sm text-black"
             />
+
+            <Suspense fallback={null}>
+              <ArticleComments
+                postId={
+                  typeof articleData.databaseId === "number"
+                    ? String(articleData.databaseId)
+                    : (articleData.id ?? canonicalSlug)
+                }
+                countryCode={targetCountry}
+              />
+            </Suspense>
 
             <Suspense fallback={null}>
               <RelatedRail countryCode={relatedCountry} postId={relatedPostId}>
