@@ -1,8 +1,14 @@
 "use client"
 
-import { useCallback } from "react"
-import { CommentList } from "@/components/CommentList"
-import { CommentForm } from "@/components/CommentForm"
+import dynamic from "next/dynamic"
+
+const CommentList = dynamic(() => import("@/components/CommentList").then((m) => ({ default: m.CommentList })), {
+  ssr: false,
+})
+
+const CommentForm = dynamic(() => import("@/components/CommentForm").then((m) => ({ default: m.CommentForm })), {
+  ssr: false,
+})
 
 interface ArticleCommentsProps {
   postId: string
@@ -10,17 +16,12 @@ interface ArticleCommentsProps {
 }
 
 export function ArticleComments({ postId, countryCode }: ArticleCommentsProps) {
-  const handleCommentAdded = useCallback(() => {
-    // CommentList handles refresh via real-time sync;
-    // no explicit action needed here.
-  }, [])
-
   return (
     <section id="comments-section" aria-label="Comments" className="mt-8 space-y-6">
       <CommentForm
         postId={postId}
         editionCode={countryCode}
-        onCommentAdded={handleCommentAdded}
+        onCommentAdded={() => {}}
         placeholder="Share your thoughts on this article..."
       />
 
