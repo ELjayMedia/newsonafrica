@@ -9,7 +9,7 @@
 
 - `NEXT_PUBLIC_SUPABASE_URL`
   - Used in both client and server runtime to initialize Supabase clients.
-  - For this project, default URL is `https://anhjovxdgwepobsgudya.supabase.co`.
+  - Format: `https://<your-project-ref>.supabase.co`. Retrieve your project URL from the Supabase dashboard (Project settings → API).
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - Public key used by browser/client runtime and non-privileged server calls.
   - Scope is limited by your Row Level Security (RLS) policies.
@@ -23,7 +23,7 @@ The Supabase Data API endpoint is derived from `NEXT_PUBLIC_SUPABASE_URL` by app
 
 Example:
 
-- Project URL: `https://anhjovxdgwepobsgudya.supabase.co`
-- Data API endpoint: `https://anhjovxdgwepobsgudya.supabase.co/rest/v1`
+- Project URL: `https://your-project-ref.supabase.co`
+- Data API endpoint: `https://your-project-ref.supabase.co/rest/v1`
 
 Use the anon key for client-safe Data API access and the service role key only for trusted server-side operations.

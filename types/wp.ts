@@ -84,6 +84,11 @@ export interface WordPressPost {
   featuredImage?: WordPressMedia
   categories?: WordPressCategoryConnection
   tags?: WordPressTagConnection
+  /**
+   * Comment count exposed by some WPGraphQL queries (optional).
+   * Used by popularity-boost heuristics in related-post ranking.
+   */
+  commentCount?: number | null
 }
 
 export interface WordPressPagination {

@@ -1,12 +1,12 @@
 # GraphQL operation naming conventions
 
-This project stores GraphQL operation documents in `src/lib/graphql/operations/`, grouped by business domain, and reusable field fragments in `src/lib/graphql/fragments/`.
+This project stores GraphQL operation documents in `lib/graphql/operations/`, grouped by business domain, and reusable field fragments in `lib/graphql/fragments/`.
 
 ## Two naming namespaces (must stay in sync)
 
 We intentionally use **two distinct namespaces** for GraphQL operations:
 
-1. **Source operation namespace** (GraphQL document names in `src/lib/graphql/operations/**`)
+1. **Source operation namespace** (GraphQL document names in `lib/graphql/operations/**`)
    - Format: `<Domain>_<Purpose>`
    - Example: `Posts_BySlug`
 2. **Runtime/query constant namespace** (TypeScript exports in `lib/wordpress/queries.ts`)
@@ -17,11 +17,11 @@ Treat these as separate but linked surfaces: source operation docs define canoni
 
 ## Folder layout
 
-- `src/lib/graphql/operations/posts/` for post-centric operations.
-- `src/lib/graphql/operations/taxonomy/` for category/tag/taxonomy operations.
-- `src/lib/graphql/operations/authors/` for author/profile operations.
-- `src/lib/graphql/operations/search/` for search-focused operations.
-- `src/lib/graphql/fragments/` for reusable fragments shared across operations.
+- `lib/graphql/operations/posts/` for post-centric operations.
+- `lib/graphql/operations/taxonomy/` for category/tag/taxonomy operations.
+- `lib/graphql/operations/authors/` for author/profile operations.
+- `lib/graphql/operations/search/` for search-focused operations.
+- `lib/graphql/fragments/` for reusable fragments shared across operations.
 
 Each operation lives in its own `.graphql` file, and each domain contains an `index.graphql` barrel file that imports every operation in that domain.
 

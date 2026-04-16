@@ -7,7 +7,7 @@ import {
   getOperationValidationSchemas,
   type GraphQLRouteContext,
   type GraphQLValidationError,
-} from "@/src/lib/graphql/schemas"
+} from "@/lib/graphql/schemas"
 
 export interface FetchWordPressGraphQLOptions {
   tags?: readonly string[]

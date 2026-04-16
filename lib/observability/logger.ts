@@ -47,11 +47,12 @@ class Logger {
     }
 
     if (contextOrError instanceof Error) {
+      const rawCode = (contextOrError as { code?: unknown }).code
       entry.error = {
         name: contextOrError.name,
         message: contextOrError.message,
         stack: contextOrError.stack,
-        code: (contextOrError as any).code,
+        ...(typeof rawCode === "string" ? { code: rawCode } : {}),
       }
     } else if (contextOrError) {
       entry.context = contextOrError

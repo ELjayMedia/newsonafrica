@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
 import {
   createCacheAwareFunction,
-  fetchWithTimeout,
   withRetry,
   createThrottledQueue,
   defaults,
-} from "@/lib/wp-server"
+} from "@/lib/wordpress/service/internal/common"
+import { fetchWithTimeout } from "@/lib/utils/fetchWithTimeout"
 
 const cacheStores = new Map<string, Map<string, unknown>>()
 let lastCacheOptions: { keyParts: readonly string[]; options: { revalidate?: number; tags?: string[] | undefined } } | null =

@@ -8,10 +8,10 @@ See also: [GraphQL architecture](./architecture.md) for layer boundaries and req
 
 Use both naming namespaces explicitly:
 
-- **Source operation files:** `src/lib/graphql/operations/**` (for example `Posts_BySlug`)
+- **Source operation files:** `lib/graphql/operations/**` (for example `Posts_BySlug`)
 - **Runtime/query constants:** `lib/wordpress/queries.ts` (for example `PostBySlug` via `POST_BY_SLUG_QUERY`)
 
-| Query-map surface | Source operation name (`src/lib/graphql/operations/**`) | Runtime operation name (`lib/wordpress/queries.ts`) | Runtime constant export |
+| Query-map surface | Source operation name (`lib/graphql/operations/**`) | Runtime operation name (`lib/wordpress/queries.ts`) | Runtime constant export |
 | --- | --- | --- | --- |
 | `home_feed` | `Posts_FrontPageSlices`, `Posts_LatestPosts`, `Posts_FpTaggedPosts` | `FrontPageSlices`, `LatestPosts`, `FpTaggedPosts` | `FRONT_PAGE_SLICES_QUERY`, `LATEST_POSTS_QUERY`, `FP_TAGGED_POSTS_QUERY` |
 | `article_detail` | `Posts_BySlug` | `PostBySlug` | `POST_BY_SLUG_QUERY` |
@@ -26,7 +26,7 @@ Use both naming namespaces explicitly:
 
 When adding a new query surface or operation, **update both namespaces in the same PR**:
 
-1. Add/update the source operation entry/documentation (`src/lib/graphql/operations/**` references).
+1. Add/update the source operation entry/documentation (`lib/graphql/operations/**` references).
 2. Add/update the runtime mapping entry in this file for `lib/wordpress/queries.ts`.
 
 ## `home_feed`
@@ -62,7 +62,7 @@ When adding a new query surface or operation, **update both namespaces in the sa
 | Query operation name | `PostsByCategory` (`POSTS_BY_CATEGORY_QUERY`) for page feed; `CategoryPosts` (`CATEGORY_POSTS_QUERY`) for cursor pagination helper |
 | Required variables and types | `PostsByCategory`: `category: String!`, `first: Int!`, optional `after: String`; `CategoryPosts`: `slug: String!`, `first: Int!`, optional `after: String` |
 | Expected return shape (UI fields only) | `categories.nodes[0] { databaseId,name,slug,description,count }`; `posts.pageInfo { endCursor, hasNextPage }`; `posts.nodes[] { ...PostSummaryFields }` |
-| Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wp-server/categories.ts` |
+| Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wordpress/service/categories.ts` |
 | Data freshness target | **ISR 300s page + data calls configured as no-store/SSR-style (`revalidate: 0`)** |
 | Cache strategy entry | `cs_category_feed` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Keep category header if taxonomy node is valid; hide malformed cards; otherwise show category skeleton and “Try again” CTA for pagination fetches. |

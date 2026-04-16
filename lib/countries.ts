@@ -1,15 +1,19 @@
-/** 
- * Country codes supported by News on Africa
+/**
+ * Country codes supported by News on Africa.
+ *
+ * Add a new edition in exactly one place: append the code to
+ * `SUPPORTED_COUNTRY_CODES` below. The `CountryCode` type, `isValidCountry`
+ * guard, and all downstream consumers will update automatically.
  */
-export type CountryCode = "sz" | "za" | "ng"
+export const SUPPORTED_COUNTRY_CODES = ["sz", "za", "ng"] as const
 
-const SUPPORTED_CODES: CountryCode[] = ["sz", "za", "ng"]
+export type CountryCode = (typeof SUPPORTED_COUNTRY_CODES)[number]
 
 /**
  * Type guard to validate country code
  */
 export function isValidCountry(code: string): code is CountryCode {
-  return SUPPORTED_CODES.includes(code as CountryCode)
+  return (SUPPORTED_COUNTRY_CODES as readonly string[]).includes(code)
 }
 
 /**

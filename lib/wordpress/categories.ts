@@ -17,7 +17,7 @@ import type {
   CategoriesQuery,
   PostsByCategoryQuery,
 } from "@/types/wpgraphql"
-import { normalizeCursorPageInfo } from "@/src/lib/graphql/types"
+import { normalizeCursorPageInfo } from "@/lib/graphql/types"
 
 type CategoriesQueryNode = NonNullable<NonNullable<CategoriesQuery["categories"]>["nodes"]>[number]
 
