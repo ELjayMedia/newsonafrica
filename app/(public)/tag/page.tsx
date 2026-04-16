@@ -1,4 +1,5 @@
 import { fetchAllTags } from "@/lib/wordpress/service"
+import { safeActionWithFallback } from "@/lib/safe-action"
 import Link from "next/link"
 import type { Metadata } from "next"
 
@@ -18,7 +19,11 @@ type TagListItem = {
 }
 
 export default async function TagsPage() {
-  const tags = (await fetchAllTags().catch(() => [])) as TagListItem[]
+  const tags = await safeActionWithFallback(
+    { name: "tagsPage.fetchAllTags" },
+    () => fetchAllTags() as Promise<TagListItem[]>,
+    [] as TagListItem[],
+  )
 
   return (
     <div className="container mx-auto px-4 py-8">

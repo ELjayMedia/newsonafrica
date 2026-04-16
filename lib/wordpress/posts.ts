@@ -33,7 +33,7 @@ import { DEFAULT_COUNTRY, mapGraphqlTagNode } from "./shared"
 import type { PaginatedPostsResult } from "./types"
 import type { WordPressTag } from "@/types/wp"
 import type { HomePost } from "@/types/home"
-import { normalizeCursorConnection } from "@/src/lib/graphql/types"
+import { normalizeCursorConnection } from "@/lib/graphql/types"
 
 const toErrorDetails = (error: unknown) => {
   if (error instanceof Error) {

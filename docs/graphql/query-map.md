@@ -8,10 +8,10 @@ See also: [GraphQL architecture](./architecture.md) for layer boundaries and req
 
 Use both naming namespaces explicitly:
 
-- **Source operation files:** `src/lib/graphql/operations/**` (for example `Posts_BySlug`)
+- **Source operation files:** `lib/graphql/operations/**` (for example `Posts_BySlug`)
 - **Runtime/query constants:** `lib/wordpress/queries.ts` (for example `PostBySlug` via `POST_BY_SLUG_QUERY`)
 
-| Query-map surface | Source operation name (`src/lib/graphql/operations/**`) | Runtime operation name (`lib/wordpress/queries.ts`) | Runtime constant export |
+| Query-map surface | Source operation name (`lib/graphql/operations/**`) | Runtime operation name (`lib/wordpress/queries.ts`) | Runtime constant export |
 | --- | --- | --- | --- |
 | `home_feed` | `Posts_FrontPageSlices`, `Posts_LatestPosts`, `Posts_FpTaggedPosts` | `FrontPageSlices`, `LatestPosts`, `FpTaggedPosts` | `FRONT_PAGE_SLICES_QUERY`, `LATEST_POSTS_QUERY`, `FP_TAGGED_POSTS_QUERY` |
 | `article_detail` | `Posts_BySlug` | `PostBySlug` | `POST_BY_SLUG_QUERY` |
@@ -26,7 +26,7 @@ Use both naming namespaces explicitly:
 
 When adding a new query surface or operation, **update both namespaces in the same PR**:
 
-1. Add/update the source operation entry/documentation (`src/lib/graphql/operations/**` references).
+1. Add/update the source operation entry/documentation (`lib/graphql/operations/**` references).
 2. Add/update the runtime mapping entry in this file for `lib/wordpress/queries.ts`.
 
 ## `home_feed`

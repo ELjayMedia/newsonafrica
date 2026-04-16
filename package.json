@@ -11,6 +11,8 @@
     "lint": "pnpm check:dal-aliases && next lint",
     "start": "next start",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "check:dal-aliases": "node scripts/check-dal-aliases.mjs"
   },
@@ -80,7 +82,7 @@
     "@graphql-codegen/cli": "^5.0.2",
     "@graphql-codegen/typescript": "^4.0.9",
     "@graphql-codegen/typescript-operations": "^4.2.1",
-
+    "@playwright/test": "1.57.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -90,6 +92,7 @@
     "@vitest/browser-playwright": "^4.0.16",
     "@vitest/browser-preview": "^4.0.16",
     "@vitest/browser-webdriverio": "^4.0.16",
+    "@vitest/coverage-v8": "1.6.1",
     "eslint": "^9.9.0",
     "eslint-config-next": "15.5.3",
     "eslint-plugin-unused-imports": "^4.3.0",

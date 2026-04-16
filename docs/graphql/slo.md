@@ -1,6 +1,6 @@
 # GraphQL telemetry SLOs and weekly review
 
-This document defines the service-level objectives (SLOs) for GraphQL operations and how to operationalize the telemetry emitted by `src/lib/graphql/metrics.ts`.
+This document defines the service-level objectives (SLOs) for GraphQL operations and how to operationalize the telemetry emitted by `lib/graphql/metrics.ts`.
 
 See also: [GraphQL architecture](./architecture.md) for telemetry layer boundaries and cross-layer sync expectations.
 

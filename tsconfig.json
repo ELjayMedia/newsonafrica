@@ -55,6 +55,8 @@
     "out",
     "scripts",
     "@v0/scripts",
-    "supabase/functions/**"
+    "supabase/functions/**",
+    "e2e/**",
+    "playwright.config.ts"
   ]
 }

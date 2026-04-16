@@ -4,13 +4,13 @@ This note defines the boundary between **GraphQL source documents + compile-time
 
 ## Layer boundaries
 
-### `src/lib/graphql/*` (document and schema-facing layer)
+### `lib/graphql/*` (document and schema-facing layer)
 
 Use this layer for artifacts that describe or support the GraphQL operation contract itself:
 
-- **Typed operation documents** in `src/lib/graphql/operations/**`.
-- **Shared fragments** in `src/lib/graphql/fragments/**`.
-- **Telemetry helpers** in `src/lib/graphql/metrics.ts` (operation-name keyed telemetry primitives).
+- **Typed operation documents** in `lib/graphql/operations/**`.
+- **Shared fragments** in `lib/graphql/fragments/**`.
+- **Telemetry helpers** in `lib/graphql/metrics.ts` (operation-name keyed telemetry primitives).
 
 In short: this layer owns operation shape, field selection, variable contracts, and telemetry instrumentation primitives.
 
@@ -27,13 +27,13 @@ In short: this layer owns *how* operations run in production and *how* responses
 ## Which layer to edit for common tasks
 
 - **Add a new page query**
-  - Primary edits: `src/lib/graphql/operations/**` (+ fragments when needed).
+  - Primary edits: `lib/graphql/operations/**` (+ fragments when needed).
   - Follow-up runtime wiring: `lib/wordpress/queries.ts` and relevant service wrapper in `lib/wordpress/**`.
 - **Change cache policy** (TTL, tag set, invalidation ownership)
   - Primary edits: `lib/wordpress/**` runtime fetch/service code.
   - Required docs sync: `docs/graphql/cache-strategy.md` and the linked surface row in `docs/graphql/query-map.md`.
 - **Change telemetry behavior**
-  - Metric model/helper changes: `src/lib/graphql/metrics.ts`.
+  - Metric model/helper changes: `lib/graphql/metrics.ts`.
   - Call-site/runtime emission changes: `lib/wordpress/**` where execution events are recorded.
   - SLO/ops expectation updates: `docs/graphql/slo.md`.
 

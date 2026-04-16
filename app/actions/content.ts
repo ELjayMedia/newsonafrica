@@ -5,7 +5,7 @@ import { getPostsByCategoryForCountry } from "@/lib/wordpress/service"
 import { fetchTaggedPosts } from "@/lib/wordpress/service"
 import type { PostListItemData } from "@/lib/data/post-list"
 import type { FetchTaggedPostsInput, FetchTaggedPostsResult } from "@/lib/wordpress/service"
-import { normalizeCursorPageInfo } from "@/src/lib/graphql/types"
+import { normalizeCursorPageInfo } from "@/lib/graphql/types"
 
 export interface FetchCategoryPostsInput {
   countryCode: string

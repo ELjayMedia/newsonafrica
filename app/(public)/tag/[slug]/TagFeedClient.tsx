@@ -9,7 +9,7 @@ import { PostList } from "@/components/posts/PostList"
 import { mapWordPressPostsToPostListItems } from "@/lib/data/post-list"
 import type { FetchTaggedPostsResult, WordPressPost } from "@/types/wp"
 import { fetchTaggedPostsPageAction } from "./actions"
-import { EMPTY_CURSOR_PAGE_INFO } from "@/src/lib/graphql/types"
+import { EMPTY_CURSOR_PAGE_INFO } from "@/lib/graphql/types"
 
 interface TagFeedClientProps {
   slug: string

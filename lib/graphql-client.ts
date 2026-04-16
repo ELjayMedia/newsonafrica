@@ -1,5 +1,5 @@
 import { isValidCountry, type CountryCode } from "@/lib/countries"
-import { GraphQLClientError, requestGraphQL } from "@/src/lib/graphql/client"
+import { GraphQLClientError, requestGraphQL } from "@/lib/graphql/client"
 
 export interface GraphQLError {
   message: string

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 import { fetchCategories, fetchRecentPosts, fetchTags } from "@/lib/wordpress/service"
+import { safeActionWithFallback } from "@/lib/safe-action"
 import { getArticleUrl, getCategoryUrl } from "@/lib/utils/routing"
 
 export const runtime = "nodejs"
@@ -29,15 +30,23 @@ type SitemapPost = {
 }
 
 export default async function SitemapPage() {
-  const [categories, tags, recentPosts] = (await Promise.allSettled([
-    fetchCategories().catch(() => [] as SitemapCategory[]),
-    fetchTags().catch(() => [] as SitemapTag[]),
-    fetchRecentPosts(50).catch(() => [] as SitemapPost[]),
-  ]).then((results) => [
-    results[0].status === "fulfilled" ? (results[0].value as SitemapCategory[]) : ([] as SitemapCategory[]),
-    results[1].status === "fulfilled" ? (results[1].value as SitemapTag[]) : ([] as SitemapTag[]),
-    results[2].status === "fulfilled" ? (results[2].value as SitemapPost[]) : ([] as SitemapPost[]),
-  ])) as [SitemapCategory[], SitemapTag[], SitemapPost[]]
+  const [categories, tags, recentPosts] = await Promise.all([
+    safeActionWithFallback(
+      { name: "sitemap.fetchCategories" },
+      () => fetchCategories() as Promise<SitemapCategory[]>,
+      [] as SitemapCategory[],
+    ),
+    safeActionWithFallback(
+      { name: "sitemap.fetchTags" },
+      () => fetchTags() as Promise<SitemapTag[]>,
+      [] as SitemapTag[],
+    ),
+    safeActionWithFallback(
+      { name: "sitemap.fetchRecentPosts", meta: { limit: 50 } },
+      () => fetchRecentPosts(50) as Promise<SitemapPost[]>,
+      [] as SitemapPost[],
+    ),
+  ])
 
   return (
     <div className="container mx-auto px-4 py-8">
