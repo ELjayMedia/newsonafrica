@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useFormState, useFormStatus } from "react-dom"
 
 import { sendMagicLinkAction, signInWithPasswordAction, signUpWithPasswordAction, initialAuthFormState } from "./actions"
@@ -32,6 +32,8 @@ interface StatusMessage {
 
 export default function AuthPageClient({ searchParams, defaultView }: AuthPageClientProps) {
   const urlParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
 
   const tabParam = urlParams?.get("tab")
   const initialView: AuthView = (() => {
@@ -49,7 +51,10 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
   const redirectParam = searchParams?.redirectTo ?? searchParams?.returnTo
   const redirectTo = useMemo(() => {
     if (!redirectParam) return "/"
-    return redirectParam.startsWith("/") ? redirectParam : "/"
+    if (!redirectParam.startsWith("/")) return "/"
+    // Reject protocol-relative paths that browsers may resolve to a different host.
+    if (redirectParam.startsWith("//") || redirectParam.startsWith("/\\")) return "/"
+    return redirectParam
   }, [redirectParam])
 
   const [activeView, setActiveView] = useState<AuthView>(initialView)
@@ -65,14 +70,22 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
   }, [initialView])
 
   useEffect(() => {
-    if (searchParams?.error) {
-      setGlobalMessage({
-        kind: "error",
-        title: "We couldn't complete your sign in",
-        description: "Please try again or request a new magic link.",
-      })
-    }
-  }, [searchParams?.error])
+    if (!searchParams?.error) return
+
+    setGlobalMessage({
+      kind: "error",
+      title: "We couldn't complete your sign in",
+      description: "Please try again or request a new magic link.",
+    })
+
+    // Strip the `error` query param so the banner doesn't reappear on refresh
+    // or soft-navigation back to this page. Preserve any other params.
+    if (!urlParams || !pathname) return
+    const params = new URLSearchParams(urlParams.toString())
+    params.delete("error")
+    const query = params.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams?.error, urlParams])
   useEffect(() => {
     if (signUpState.status === "success") {
       setActiveView("sign_in")

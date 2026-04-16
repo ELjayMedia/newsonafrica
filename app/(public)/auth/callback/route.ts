@@ -9,6 +9,16 @@ function serviceUnavailable() {
   return NextResponse.json({ error: "Supabase service unavailable" }, { status: 503 })
 }
 
+// Only allow same-origin relative paths. Rejects absolute URLs and
+// protocol-relative values like `//evil.com` or `/\evil.com` that browsers
+// may resolve to a different host in a Location header.
+function sanitizeNextPath(raw: string | null): string {
+  if (!raw || raw.length === 0) return "/"
+  if (!raw.startsWith("/")) return "/"
+  if (raw.startsWith("//") || raw.startsWith("/\\")) return "/"
+  return raw
+}
+
 export async function GET(request: NextRequest) {
   const routeClient = createSupabaseRouteClient(request)
 
@@ -20,7 +30,7 @@ export async function GET(request: NextRequest) {
   const respond = <T extends NextResponse>(response: T): T => applyCookies(response)
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
-  const next = requestUrl.searchParams.get("next") ?? "/"
+  const next = sanitizeNextPath(requestUrl.searchParams.get("next"))
 
   if (code) {
     try {
