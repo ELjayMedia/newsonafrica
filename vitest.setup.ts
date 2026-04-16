@@ -3,6 +3,12 @@ import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
 
+// The `server-only` package intentionally throws at import time outside of a
+// Server Component. In tests we run server-scoped modules under jsdom, so
+// stub it to a no-op — the boundary is still enforced by the Next.js bundler
+// in app/production builds.
+vi.mock('server-only', () => ({}))
+
 vi.mock('isomorphic-dompurify', () => ({
   default: {
     sanitize: (html: string) =>

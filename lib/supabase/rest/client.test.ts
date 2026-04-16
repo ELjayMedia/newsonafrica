@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const ORIGINAL_ENV = process.env
 const SUPABASE_URL_WITHOUT_TRAILING_SLASH =
-  "https://anhjovxdgwepobsgudya.supabase.co"
+  "https://test-project-ref.supabase.co"
 const SUPABASE_URL_WITH_TRAILING_SLASH =
-  "https://anhjovxdgwepobsgudya.supabase.co/"
+  "https://test-project-ref.supabase.co/"
 
 describe("supabase rest client URL normalization", () => {
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe("supabase rest client URL normalization", () => {
     const { REST_BASE_URL } = await import("./client")
 
     expect(REST_BASE_URL).toBe(
-      "https://anhjovxdgwepobsgudya.supabase.co/rest/v1",
+      "https://test-project-ref.supabase.co/rest/v1",
     )
   })
 
@@ -32,7 +32,7 @@ describe("supabase rest client URL normalization", () => {
     const { REST_BASE_URL } = await import("./client")
 
     expect(REST_BASE_URL).toBe(
-      "https://anhjovxdgwepobsgudya.supabase.co/rest/v1",
+      "https://test-project-ref.supabase.co/rest/v1",
     )
   })
 
@@ -47,7 +47,7 @@ describe("supabase rest client URL normalization", () => {
     const urlWithTrailingSlash = buildWithTrailingSlash("comments")
 
     expect(urlWithoutTrailingSlash).toBe(
-      "https://anhjovxdgwepobsgudya.supabase.co/rest/v1/comments",
+      "https://test-project-ref.supabase.co/rest/v1/comments",
     )
     expect(urlWithTrailingSlash).toBe(urlWithoutTrailingSlash)
   })

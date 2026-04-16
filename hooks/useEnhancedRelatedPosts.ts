@@ -81,7 +81,7 @@ export function useEnhancedRelatedPosts({
       if (!enablePopularityBoost) return false
 
       // Simple heuristic: posts with comments or recent posts in trending categories
-      const hasComments = (post as any).commentCount > 5
+      const hasComments = (post.commentCount ?? 0) > 5
       const postTimestamp = post.date ? new Date(post.date).getTime() : Number.NEGATIVE_INFINITY
       const isRecent = Date.now() - postTimestamp < 7 * 24 * 60 * 60 * 1000 // 7 days
       const trendingCategories = ["politics", "business", "sports", "entertainment"]

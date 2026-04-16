@@ -62,7 +62,7 @@ When adding a new query surface or operation, **update both namespaces in the sa
 | Query operation name | `PostsByCategory` (`POSTS_BY_CATEGORY_QUERY`) for page feed; `CategoryPosts` (`CATEGORY_POSTS_QUERY`) for cursor pagination helper |
 | Required variables and types | `PostsByCategory`: `category: String!`, `first: Int!`, optional `after: String`; `CategoryPosts`: `slug: String!`, `first: Int!`, optional `after: String` |
 | Expected return shape (UI fields only) | `categories.nodes[0] { databaseId,name,slug,description,count }`; `posts.pageInfo { endCursor, hasNextPage }`; `posts.nodes[] { ...PostSummaryFields }` |
-| Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wp-server/categories.ts` |
+| Owning route/component path in Next.js | Route: `app/(public)/[countryCode]/category/[slug]/page.tsx`; data layer: `lib/data/category.ts` and `lib/wordpress/service/categories.ts` |
 | Data freshness target | **ISR 300s page + data calls configured as no-store/SSR-style (`revalidate: 0`)** |
 | Cache strategy entry | `cs_category_feed` in `docs/graphql/cache-strategy.md` |
 | Fallback UI behavior on validation failure | Keep category header if taxonomy node is valid; hide malformed cards; otherwise show category skeleton and “Try again” CTA for pagination fetches. |
