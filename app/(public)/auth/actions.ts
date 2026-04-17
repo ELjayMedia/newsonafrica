@@ -75,6 +75,13 @@ function getRedirectPath(value: FormDataEntryValue | null): string | null {
     return null
   }
 
+  // Reject protocol-relative paths up-front. `new URL("//evil.com", origin)`
+  // resolves to a different host, which would pass through pathname extraction
+  // on some parsers.
+  if (value.startsWith("//") || value.startsWith("/\\")) {
+    return null
+  }
+
   try {
     const url = new URL(value, getSiteUrl())
     return url.pathname + url.search + url.hash
@@ -167,6 +174,8 @@ export async function signUpWithPasswordAction(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  let signUpRedirectPath: string | null = null
+
   try {
     const email = normalizeEmail(formData.get("email"))
     const password = normalizePassword(formData.get("password"))
@@ -213,20 +222,21 @@ export async function signUpWithPasswordAction(
       return createErrorState("Auth succeeded but no user was returned.")
     }
 
+    // Only prime the session cookie when Supabase actually returned a session.
+    // If email confirmation is required, data.session is null and the user is
+    // not yet authenticated — writing the cookie would leave the app in a
+    // half-signed-in state until they click the confirmation link.
+    if (!data.session) {
+      return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
+    }
+
     try {
-      await writeSessionCookie({
-        userId: user.id,
-        username: user.email ?? null,
-        avatar_url: null,
-        role: user.role ?? null,
-        created_at: user.created_at ?? null,
-        updated_at: user.updated_at ?? null,
-      })
+      await writeSessionCookie(toSessionCookieProfile(user))
     } catch (cookieError) {
       console.error("Failed to prime session cookie after sign-up", cookieError)
     }
 
-    return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
+    signUpRedirectPath = redirectTo ?? "/"
   } catch (error) {
     console.error("Failed to sign up", error)
 
@@ -236,6 +246,13 @@ export async function signUpWithPasswordAction(
 
     return createErrorState(DEFAULT_ERROR_MESSAGE)
   }
+
+  if (signUpRedirectPath) {
+    redirect(signUpRedirectPath)
+  }
+
+  // Unreachable — redirect() throws. Kept as a fallback for type safety.
+  return createErrorState(DEFAULT_ERROR_MESSAGE)
 }
 
 export async function resetPasswordAction(

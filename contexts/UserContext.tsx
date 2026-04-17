@@ -305,7 +305,17 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
               router.refresh()
 
               if (redirectTo) {
-                router.push(redirectTo)
+                // (#12) Encode the current path as a redirectTo so the user
+                // lands back here after signing in again.
+                const currentPath =
+                  typeof window !== "undefined"
+                    ? `${window.location.pathname}${window.location.search}`
+                    : "/"
+                const returnParam =
+                  currentPath && currentPath !== "/" && currentPath !== redirectTo
+                    ? `?redirectTo=${encodeURIComponent(currentPath)}`
+                    : ""
+                router.push(`${redirectTo}${returnParam}`)
               }
 
               resolve()

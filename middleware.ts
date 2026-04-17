@@ -102,7 +102,10 @@ export async function middleware(request: NextRequest) {
           },
         },
       })
-      await supabase.auth.getSession()
+      // Use getUser() (not getSession()) so the Supabase Auth server is contacted
+      // and expired access tokens are refreshed — required for the SSR cookie
+      // sync pattern. getSession() only decodes the cookie locally.
+      await supabase.auth.getUser()
     }
   } catch (error) {
     console.warn("Supabase middleware session refresh skipped", error)
