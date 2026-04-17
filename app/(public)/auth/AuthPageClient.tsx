@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useFormState, useFormStatus } from "react-dom"
 
-import { sendMagicLinkAction, signInWithPasswordAction, signUpWithPasswordAction, initialAuthFormState } from "./actions"
+import { sendMagicLinkAction, initialAuthFormState } from "./actions"
 import { signInWithOAuth } from "@/app/actions/auth"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useUser } from "@/contexts/UserContext"
 import { cn } from "@/lib/utils"
 
 type AuthView = "sign_in" | "sign_up"
@@ -58,11 +59,17 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
     return redirectParam
   }, [redirectParam])
 
+  const { signIn, signUp } = useUser()
+
   const [activeView, setActiveView] = useState<AuthView>(initialView)
   const [globalMessage, setGlobalMessage] = useState<StatusMessage | null>(null)
 
-  const [signInState, signInAction] = useFormState(signInWithPasswordAction, initialAuthFormState)
-  const [signUpState, signUpAction] = useFormState(signUpWithPasswordAction, initialAuthFormState)
+  // Per-form error and pending state
+  const [signInError, setSignInError] = useState<string | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(false)
+  const [signUpError, setSignUpError] = useState<string | null>(null)
+  const [isSigningUp, setIsSigningUp] = useState(false)
+
   const [magicLinkState, magicLinkAction] = useFormState(sendMagicLinkAction, initialAuthFormState)
 
   // (#10) Client-side password mismatch check
@@ -96,6 +103,77 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
     }
   }, [])
 
+  const handleSignIn = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      setSignInError(null)
+      const data = new FormData(e.currentTarget)
+      const email = (data.get("email") as string).trim().toLowerCase()
+      const password = (data.get("password") as string).trim()
+      if (!email || !password) {
+        setSignInError("Email and password are required.")
+        return
+      }
+      setIsSigningIn(true)
+      try {
+        await signIn(email, password)
+        router.push(redirectTo)
+      } catch (err) {
+        setSignInError(err instanceof Error ? err.message : "Sign in failed.")
+      } finally {
+        setIsSigningIn(false)
+      }
+    },
+    [signIn, router, redirectTo],
+  )
+
+  const handleSignUp = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      setSignUpError(null)
+      const data = new FormData(e.currentTarget)
+      const email = (data.get("email") as string).trim().toLowerCase()
+      const username = (data.get("username") as string).trim().toLowerCase()
+      const password = (data.get("password") as string).trim()
+      const confirmPassword = (data.get("confirmPassword") as string).trim()
+      if (!email) {
+        setSignUpError("Email is required.")
+        return
+      }
+      if (!username) {
+        setSignUpError("Username is required.")
+        return
+      }
+      if (!password) {
+        setSignUpError("Password is required.")
+        return
+      }
+      if (password !== confirmPassword) {
+        setSignUpError("Passwords do not match.")
+        return
+      }
+      setIsSigningUp(true)
+      try {
+        const payload = await signUp(email, password, username)
+        if (payload?.session) {
+          router.push(redirectTo)
+        } else {
+          setActiveView("sign_in")
+          setGlobalMessage({
+            kind: "success",
+            title: "Check your email",
+            description: "We've sent a confirmation link to finish setting up your account.",
+          })
+        }
+      } catch (err) {
+        setSignUpError(err instanceof Error ? err.message : "Sign up failed.")
+      } finally {
+        setIsSigningUp(false)
+      }
+    },
+    [signUp, router, redirectTo],
+  )
+
   useEffect(() => {
     setActiveView(initialView)
   }, [initialView])
@@ -116,28 +194,15 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }, [pathname, router, searchParams?.error, urlParams])
 
-  useEffect(() => {
-    if (signUpState.status === "success") {
-      setActiveView("sign_in")
-      setGlobalMessage({
-        kind: "success",
-        title: "Check your email",
-        description:
-          signUpState.message ?? "We've sent a confirmation link to finish setting up your account.",
-      })
-    }
-  }, [signUpState])
-
   // (#5) Only clear error-type banners on tab switch or form submit;
   // preserve success banners (e.g. "Check your email") so the user
   // can still see them after navigating between tabs.
   const clearErrors = useCallback(() => {
     setGlobalMessage((prev) => (prev?.kind === "error" ? null : prev))
+    setSignInError(null)
+    setSignUpError(null)
   }, [])
 
-  const signInFormMessage = signInState.status === "error" ? signInState.message : null
-  const signUpFormMessage =
-    signUpState.status === "error" && signUpState.message ? signUpState.message : null
   const magicLinkMessage =
     magicLinkState.status !== "idle" && magicLinkState.message ? magicLinkState.message : null
 
@@ -221,7 +286,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
           </TabsList>
 
           <TabsContent value="sign_in" className="space-y-8">
-            <form className="space-y-6" action={signInAction} onSubmit={clearErrors}>
+            <form className="space-y-6" onSubmit={handleSignIn}>
               <div className="space-y-4">
                 <div className="space-y-2 text-left">
                   <Label htmlFor="signin-email">Email</Label>
@@ -247,14 +312,13 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                   />
                 </div>
               </div>
-              <input type="hidden" name="redirectTo" value={redirectTo} />
-              {signInFormMessage ? (
+              {signInError ? (
                 <Alert variant="destructive">
                   <AlertTitle>Sign in failed</AlertTitle>
-                  <AlertDescription>{signInFormMessage}</AlertDescription>
+                  <AlertDescription>{signInError}</AlertDescription>
                 </Alert>
               ) : null}
-              <SubmitButton pendingLabel="Signing in...">Sign in</SubmitButton>
+              <SubmitButton pending={isSigningIn} pendingLabel="Signing in...">Sign in</SubmitButton>
             </form>
 
             {/* (#11) Shared magic-link form */}
@@ -271,7 +335,7 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
           </TabsContent>
 
           <TabsContent value="sign_up" className="space-y-8">
-            <form className="space-y-6" action={signUpAction} onSubmit={clearErrors}>
+            <form className="space-y-6" onSubmit={handleSignUp}>
               <div className="space-y-4">
                 <div className="space-y-2 text-left">
                   <Label htmlFor="signup-email">Email</Label>
@@ -281,6 +345,18 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                     autoComplete="email"
                     placeholder="you@example.com"
                     name="email"
+                    className="w-full rounded-full px-4 py-3"
+                    required
+                  />
+                </div>
+                <div className="space-y-2 text-left">
+                  <Label htmlFor="signup-username">Username</Label>
+                  <Input
+                    id="signup-username"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="yourhandle"
+                    name="username"
                     className="w-full rounded-full px-4 py-3"
                     required
                   />
@@ -316,14 +392,13 @@ export default function AuthPageClient({ searchParams, defaultView }: AuthPageCl
                   ) : null}
                 </div>
               </div>
-              <input type="hidden" name="redirectTo" value={redirectTo} />
-              {signUpFormMessage ? (
+              {signUpError ? (
                 <Alert variant="destructive">
                   <AlertTitle>Unable to create account</AlertTitle>
-                  <AlertDescription>{signUpFormMessage}</AlertDescription>
+                  <AlertDescription>{signUpError}</AlertDescription>
                 </Alert>
               ) : null}
-              <SubmitButton pendingLabel="Creating account...">Create account</SubmitButton>
+              <SubmitButton pending={isSigningUp} pendingLabel="Creating account...">Create account</SubmitButton>
             </form>
 
             <MagicLinkSection
@@ -348,12 +423,15 @@ function SubmitButton({
   children,
   pendingLabel,
   variant,
+  pending: pendingProp,
 }: {
   children: React.ReactNode
   pendingLabel: string
   variant?: React.ComponentProps<typeof Button>["variant"]
+  pending?: boolean
 }) {
-  const { pending } = useFormStatus()
+  const { pending: formPending } = useFormStatus()
+  const pending = pendingProp ?? formPending
 
   return (
     <Button type="submit" className="w-full" size="xl" variant={variant} disabled={pending} aria-busy={pending}>
