@@ -1,10 +1,7 @@
 "use server"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { redirect } from "next/navigation"
 
-import { toSessionCookieProfile } from "@/lib/auth/session-cookie-profile"
-import { writeSessionCookie } from "@/lib/auth/session-cookie"
 import { SUPABASE_UNAVAILABLE_ERROR, createServerClient } from "@/lib/supabase/server"
 import type { Database } from "@/types/supabase"
 
@@ -42,16 +39,6 @@ function normalizeEmail(value: FormDataEntryValue | null): string | null {
   return email.length > 0 ? email : null
 }
 
-function normalizePassword(value: FormDataEntryValue | null): string | null {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const password = value.trim()
-  return password.length > 0 ? password : null
-}
-
-
 function getSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL
   if (configured) {
@@ -75,9 +62,7 @@ function getRedirectPath(value: FormDataEntryValue | null): string | null {
     return null
   }
 
-  // Reject protocol-relative paths up-front. `new URL("//evil.com", origin)`
-  // resolves to a different host, which would pass through pathname extraction
-  // on some parsers.
+  // Reject protocol-relative paths up-front.
   if (value.startsWith("//") || value.startsWith("/\\")) {
     return null
   }
@@ -108,151 +93,6 @@ async function createSupabaseClient(): Promise<SupabaseServerClient | null> {
   }
 
   return client
-}
-
-export async function signInWithPasswordAction(
-  _prevState: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  const email = normalizeEmail(formData.get("email"))
-  const password = normalizePassword(formData.get("password"))
-  const redirectTo = getRedirectPath(formData.get("redirectTo")) ?? "/"
-
-  if (!email || !password) {
-    return createErrorState("Email and password are required.")
-  }
-
-  const supabase = await createSupabaseClient()
-
-  if (!supabase) {
-    return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
-  }
-
-  let signInSucceeded = false
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      return createErrorState(error.message)
-    }
-
-    const user = data.user
-    const userId = user?.id
-
-    if (userId) {
-      try {
-        await writeSessionCookie(toSessionCookieProfile(user))
-      } catch (cookieError) {
-        console.error("Failed to prime session cookie after password sign-in", cookieError)
-      }
-    }
-
-    signInSucceeded = true
-  } catch (error) {
-    console.error("Failed to sign in", error)
-
-    if (error instanceof Error && error.message.startsWith("Missing ")) {
-      return createErrorState(error.message)
-    }
-
-    return createErrorState(DEFAULT_ERROR_MESSAGE)
-  }
-
-  if (signInSucceeded) {
-    redirect(redirectTo)
-  }
-
-  // Unreachable — redirect() throws. Kept as a fallback for type safety.
-  return createErrorState(DEFAULT_ERROR_MESSAGE)
-}
-
-export async function signUpWithPasswordAction(
-  _prevState: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  let signUpRedirectPath: string | null = null
-
-  try {
-    const email = normalizeEmail(formData.get("email"))
-    const password = normalizePassword(formData.get("password"))
-    const confirmPassword = normalizePassword(formData.get("confirmPassword"))
-    const redirectTo = getRedirectPath(formData.get("redirectTo"))
-
-    if (!email) {
-      return createErrorState("Email is required.")
-    }
-
-    if (!password) {
-      return createErrorState("Password is required.")
-    }
-
-    if (!confirmPassword) {
-      return createErrorState("Please confirm your password.")
-    }
-
-    if (password !== confirmPassword) {
-      return createErrorState("Passwords do not match.")
-    }
-
-    const supabase = await createSupabaseClient()
-
-    if (!supabase) {
-      return createErrorState(AUTH_SERVICE_UNAVAILABLE_MESSAGE)
-    }
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: getAuthCallbackUrl(redirectTo),
-      },
-    })
-
-    if (error) {
-      return createErrorState(error.message)
-    }
-
-    const user = data.user
-
-    if (!user) {
-      return createErrorState("Auth succeeded but no user was returned.")
-    }
-
-    // Only prime the session cookie when Supabase actually returned a session.
-    // If email confirmation is required, data.session is null and the user is
-    // not yet authenticated — writing the cookie would leave the app in a
-    // half-signed-in state until they click the confirmation link.
-    if (!data.session) {
-      return createSuccessState(DEFAULT_SUCCESS_MESSAGE)
-    }
-
-    try {
-      await writeSessionCookie(toSessionCookieProfile(user))
-    } catch (cookieError) {
-      console.error("Failed to prime session cookie after sign-up", cookieError)
-    }
-
-    signUpRedirectPath = redirectTo ?? "/"
-  } catch (error) {
-    console.error("Failed to sign up", error)
-
-    if (error instanceof Error && error.message.startsWith("Missing ")) {
-      return createErrorState(error.message)
-    }
-
-    return createErrorState(DEFAULT_ERROR_MESSAGE)
-  }
-
-  if (signUpRedirectPath) {
-    redirect(signUpRedirectPath)
-  }
-
-  // Unreachable — redirect() throws. Kept as a fallback for type safety.
-  return createErrorState(DEFAULT_ERROR_MESSAGE)
 }
 
 export async function resetPasswordAction(

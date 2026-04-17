@@ -47,8 +47,8 @@ interface UserContextType {
   loading: boolean
   isRefreshingSession: boolean
   isAuthenticated: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, username: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<AuthStatePayload | null>
+  signUp: (email: string, password: string, username: string) => Promise<AuthStatePayload | null>
   signOut: (redirectTo?: string) => Promise<void>
   updateProfile: (
     updates: Partial<Database["public"]["Tables"]["profiles"]["Update"]>,
@@ -95,7 +95,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
   const [user, setUser] = useState<User | null>(initialUser)
   const [profile, setProfile] = useState<Profile | null>(initialProfile as Profile | null)
   const [session, setSession] = useState<Session | null>(initialSession)
-  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser))
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser && initialSession))
   const [isRefreshingSession, setIsRefreshingSession] = useState(false)
   const [loadingState, setLoadingState] = useState(false)
   const router = useRouter()
@@ -113,7 +113,7 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
       setSession(nextSession)
       setUser(nextUser)
       setProfile(nextProfile)
-      setIsAuthenticated(!!nextUser)
+      setIsAuthenticated(!!nextSession)
       if (typeof window === "undefined") {
         return
       }
@@ -268,8 +268,8 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
    * Sign in with email and password
    */
   const signIn = useCallback(
-    async (email: string, password: string) => {
-      await runAuthAction(() => signInAction({ email, password }))
+    (email: string, password: string): Promise<AuthStatePayload | null> => {
+      return runAuthAction(() => signInAction({ email, password }))
     },
     [runAuthAction],
   )
@@ -278,8 +278,8 @@ export function UserProvider({ children, initialState = null }: UserProviderProp
    * Sign up with email, password and username
    */
   const signUp = useCallback(
-    async (email: string, password: string, username: string) => {
-      await runAuthAction(() => signUpAction({ email, password, username }))
+    (email: string, password: string, username: string): Promise<AuthStatePayload | null> => {
+      return runAuthAction(() => signUpAction({ email, password, username }))
     },
     [runAuthAction],
   )

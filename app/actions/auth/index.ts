@@ -3,7 +3,8 @@
 import type { Session, User } from "@supabase/supabase-js"
 
 import { withSupabaseSession, type SupabaseServerClient } from "@/app/actions/supabase"
-import { clearSessionCookie } from "@/lib/auth/session-cookie"
+import { clearSessionCookie, writeSessionCookie } from "@/lib/auth/session-cookie"
+import { toSessionCookieProfile } from "@/lib/auth/session-cookie-profile"
 import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { ActionError, type ActionResult } from "@/lib/supabase/action-result"
@@ -100,6 +101,12 @@ export async function signIn(params: { email: string; password: string }): Promi
 
     const profile = await fetchProfile(supabase, data.user.id)
 
+    try {
+      await writeSessionCookie(toSessionCookieProfile({ id: data.user.id, ...profile }))
+    } catch (cookieError) {
+      console.error("Failed to prime session cookie after sign-in", cookieError)
+    }
+
     return serializeAuthState({
       session: data.session,
       user: data.user,
@@ -167,6 +174,14 @@ export async function signUp(params: {
     }
 
     const profile = await fetchProfile(supabase, data.user.id)
+
+    if (data.session) {
+      try {
+        await writeSessionCookie(toSessionCookieProfile({ id: data.user.id, ...profile }))
+      } catch (cookieError) {
+        console.error("Failed to prime session cookie after sign-up", cookieError)
+      }
+    }
 
     return serializeAuthState({
       session: data.session ?? null,
