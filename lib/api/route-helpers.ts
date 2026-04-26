@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { timingSafeEqual } from "crypto"
 import type { Session, SupabaseClient } from "@supabase/supabase-js"
 
 import { REVALIDATION_SECRET } from "@/config/env"
@@ -105,8 +106,13 @@ export function makeRoute<TContext = unknown>(opts: RouteOptions = {}) {
         }
 
         if (auth === "admin") {
-          const adminToken = request.headers.get("x-admin-token")
-          if (adminToken !== REVALIDATION_SECRET) {
+          const adminToken = request.headers.get("x-admin-token") ?? ""
+          const secret = REVALIDATION_SECRET ?? ""
+          const tokenBuf = Buffer.from(adminToken)
+          const secretBuf = Buffer.from(secret)
+          const valid =
+            tokenBuf.length === secretBuf.length && timingSafeEqual(tokenBuf, secretBuf)
+          if (!valid) {
             return withCorsNoStore(request, routeError("Unauthorized", { status: 401 }))
           }
         }

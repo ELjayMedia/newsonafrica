@@ -23,17 +23,34 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(self)" },
           {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains; preload",
           },
           {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
+            // next.js requires 'unsafe-inline' for its own hydration scripts/styles.
+            // frame-ancestors, base-uri, and form-action provide meaningful protection
+            // without needing a nonce-based setup.
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paystack.co",
+              "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self' https://checkout.paystack.com",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests",
+            ].join("; "),
           },
         ],
       },
@@ -50,18 +67,6 @@ const nextConfig = {
   },
   images: {
     unoptimized: false,
-    domains: [
-      "newsonafrica.com",
-      "news-on-africa.com",
-      "secure.gravatar.com",
-      "i0.wp.com",
-      "i1.wp.com",
-      "i2.wp.com",
-      "blob.v0.dev",
-      "cdn-lfdfp.nitrocdn.com",
-      "via.placeholder.com",
-      "lh3.googleusercontent.com",
-    ],
     remotePatterns: [
       { protocol: "https", hostname: "newsonafrica.com", pathname: "**" },
       { protocol: "https", hostname: "news-on-africa.com", pathname: "**" },
@@ -71,9 +76,7 @@ const nextConfig = {
       { protocol: "https", hostname: "i1.wp.com", pathname: "**" },
       { protocol: "https", hostname: "i2.wp.com", pathname: "**" },
       { protocol: "https", hostname: "*.wordpress.com", pathname: "**" },
-      { protocol: "https", hostname: "blob.v0.dev", pathname: "**" },
       { protocol: "https", hostname: "cdn-lfdfp.nitrocdn.com", pathname: "**" },
-      { protocol: "https", hostname: "via.placeholder.com", pathname: "**" },
       { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "**" },
     ],
     formats: ["image/avif", "image/webp"],

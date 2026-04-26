@@ -9,56 +9,54 @@ export const runtime = "nodejs"
 export const revalidate = 0
 
 const RATE_LIMIT = 50
-const RATE_LIMIT_WINDOW = 60 * 1000
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_WINDOW_SECONDS = 60
 
-const jsonWithNoStore = (request: NextRequest, data: any, init?: ResponseInit) => {
-  const response = jsonWithCors(request, data, init)
-  response.headers.set("Cache-Control", "no-store")
-  return response
-}
-
-const FALLBACK_RECORDS: any[] = [
-  {
-    objectID: "sz:welcome-to-news-on-africa",
-    title: "Welcome to News On Africa",
-    excerpt: "Your premier source for African news, politics, business, and culture.",
-    categories: [],
-    country: "sz",
-    published_at: new Date().toISOString(),
-  },
-  {
-    objectID: "sz:search-service-info",
-    title: "Search Service Information",
-    excerpt: "Our search is powered by our GraphQL API and provides comprehensive coverage of African news.",
-    categories: [],
-    country: "sz",
-    published_at: new Date().toISOString(),
-  },
-]
+// In-process fallback used when Vercel KV is not configured.
+const fallbackMap = new Map<string, { count: number; resetAt: number }>()
 
 const getRateLimitKey = (request: NextRequest): string => {
   const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
-  return `search:${ip}`
+  return `search-rl:${ip}`
 }
 
-const checkRateLimit = (request: NextRequest): { limited: boolean; retryAfter?: number } => {
+async function checkRateLimit(request: NextRequest): Promise<{ limited: boolean; retryAfter?: number }> {
   if (process.env.NODE_ENV === "development") {
     return { limited: false }
   }
 
   const key = getRateLimitKey(request)
+
+  // Distributed rate limiting via Vercel KV — works correctly across all
+  // serverless function instances.
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    try {
+      const { kv } = await import("@vercel/kv")
+      const count = await kv.incr(key)
+      if (count === 1) {
+        await kv.expire(key, RATE_LIMIT_WINDOW_SECONDS)
+      }
+      if (count > RATE_LIMIT) {
+        const ttl = await kv.ttl(key)
+        return { limited: true, retryAfter: ttl > 0 ? ttl : RATE_LIMIT_WINDOW_SECONDS }
+      }
+      return { limited: false }
+    } catch (err) {
+      console.warn("KV rate limit check failed, falling back to in-process", err)
+    }
+  }
+
+  // Fallback: single-instance in-process map.
   const now = Date.now()
-  const entry = rateLimitMap.get(key)
+  const entry = fallbackMap.get(key)
 
   if (!entry) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    fallbackMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_SECONDS * 1000 })
     return { limited: false }
   }
 
   if (now > entry.resetAt) {
     entry.count = 1
-    entry.resetAt = now + RATE_LIMIT_WINDOW
+    entry.resetAt = now + RATE_LIMIT_WINDOW_SECONDS * 1000
     return { limited: false }
   }
 
@@ -94,7 +92,7 @@ export async function GET(request: NextRequest) {
   logRequest(request)
   const startTime = Date.now()
 
-  const rateLimitCheck = checkRateLimit(request)
+  const rateLimitCheck = await checkRateLimit(request)
   if (rateLimitCheck.limited) {
     return respondWithSearch(
       request,
