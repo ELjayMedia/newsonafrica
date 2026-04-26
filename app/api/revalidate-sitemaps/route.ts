@@ -11,9 +11,8 @@ export const revalidate = 60
 export async function GET(request: NextRequest) {
   logRequest(request)
   try {
-    const secret = request.nextUrl.searchParams.get("secret")
+    const secret = request.headers.get("X-Revalidate-Secret")
 
-    // Check for valid secret
     if (secret !== process.env.REVALIDATION_SECRET) {
       return jsonWithCors(request, { message: "Invalid secret" }, { status: 401 })
     }

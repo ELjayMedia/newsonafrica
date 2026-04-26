@@ -4,6 +4,7 @@ import { CACHE_TAGS } from "@/lib/cache/constants"
 import { revalidateByTag } from "@/lib/server-cache-utils"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createSupabaseRouteClient } from "@/lib/supabase/route"
 import type { Database } from "@/types/supabase"
 import { buildSubscriptionUpsert } from "@/supabase/functions/_shared/paystack"
 
@@ -11,30 +12,42 @@ type SubscriptionInsert = Database["public"]["Tables"]["subscriptions"]["Insert"
 
 export const runtime = "nodejs"
 
-// Cache policy: short (1 minute)
-export const revalidate = 60
+export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   logRequest(request)
   const searchParams = request.nextUrl.searchParams
   const reference = searchParams.get("reference")
 
-  console.log("Verifying transaction with reference:", reference)
-
   if (!reference) {
-    console.error("Missing reference parameter")
     return jsonWithCors(request, { status: false, error: "Transaction reference is required" }, { status: 400 })
   }
 
-  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
+  // Require an authenticated session — only the paying user should be able to
+  // record their own subscription.
+  const routeClient = createSupabaseRouteClient(request)
+  if (!routeClient) {
+    return jsonWithCors(request, { status: false, error: "Service unavailable" }, { status: 503 })
+  }
 
+  const {
+    data: { session },
+  } = await routeClient.supabase.auth.getSession()
+
+  if (!session?.user) {
+    return jsonWithCors(request, { status: false, error: "Unauthorized" }, { status: 401 })
+  }
+
+  const authenticatedUserId = session.user.id
+  const authenticatedEmail = session.user.email?.toLowerCase()
+
+  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
   if (!paystackSecretKey) {
     console.error("PAYSTACK_SECRET_KEY is not defined")
     return jsonWithCors(request, { status: false, error: "Payment configuration error" }, { status: 500 })
   }
 
   try {
-    console.log("Making request to Paystack API")
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       method: "GET",
       headers: {
@@ -44,7 +57,6 @@ export async function GET(request: NextRequest) {
     })
 
     const data = await response.json()
-    console.log("Paystack API response status:", response.status)
 
     if (!response.ok) {
       console.error("Paystack API error:", data)
@@ -55,47 +67,46 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Store subscription information in database
     if (data.status && data.data.status === "success") {
       try {
-        const supabase = createAdminClient()
         const customer = data.data.customer || {}
         const metadata = data.data.metadata || {}
-        let userId: string | null = metadata.user_id || null
 
-        if (!userId && customer.email) {
-          const { data: profileMatch } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("email", customer.email)
-            .maybeSingle()
-            .returns<{ id: string }>()
+        // Bind the subscription to the authenticated user.  If the payment
+        // metadata already carries a user_id, confirm it matches the session
+        // to prevent one user from claiming another's payment.
+        const metadataUserId: string | null = metadata.user_id || null
+        const customerEmail: string | null = customer.email?.toLowerCase() ?? null
 
-          if (profileMatch?.id) {
-            userId = profileMatch.id
-          }
-        }
+        const ownershipByUserId = !metadataUserId || metadataUserId === authenticatedUserId
+        const ownershipByEmail = !customerEmail || customerEmail === authenticatedEmail
 
-        if (userId) {
-          const record = buildSubscriptionUpsert(data.data, userId)
-          await supabase
-            .from("subscriptions")
-            .upsert(record as SubscriptionInsert, { onConflict: "id" })
-            .select()
-            .returns<SubscriptionInsert>()
-
-          revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
-          revalidatePath("/subscriptions")
-        } else {
-          console.warn("Unable to map Paystack transaction to a Supabase user", {
-            reference: data.data.reference,
-            email: customer.email,
+        if (!ownershipByUserId && !ownershipByEmail) {
+          console.warn("Transaction ownership mismatch", {
+            reference,
+            metadataUserId,
+            authenticatedUserId,
           })
+          return jsonWithCors(
+            request,
+            { status: false, error: "Transaction does not belong to this account" },
+            { status: 403 },
+          )
         }
+
+        const supabase = createAdminClient()
+        const record = buildSubscriptionUpsert(data.data, authenticatedUserId)
+
+        await supabase
+          .from("subscriptions")
+          .upsert(record as SubscriptionInsert, { onConflict: "id" })
+          .select()
+          .returns<SubscriptionInsert>()
+
+        revalidateByTag(CACHE_TAGS.SUBSCRIPTIONS)
+        revalidatePath("/subscriptions")
       } catch (dbError) {
         console.error("Error storing subscription:", dbError)
-        // We still return success to the client since the payment was successful
-        // But log the error for server-side investigation
       }
     }
 

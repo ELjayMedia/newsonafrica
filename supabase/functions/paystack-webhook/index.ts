@@ -9,13 +9,29 @@ import {
 
 type SupabaseClient = ReturnType<typeof createClient>
 
-async function verifySignature(req: Request, secret: string) {
+async function verifySignature(req: Request, secret: string): Promise<{ payload: string; hash: string }> {
   const text = await req.text()
   const encoder = new TextEncoder()
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-512" }, false, ["sign"])
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(text))
   const hash = Array.from(new Uint8Array(signature)).map((b) => b.toString(16).padStart(2, "0")).join("")
   return { payload: text, hash }
+}
+
+// Constant-time string comparison — prevents timing oracle on the HMAC value.
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return result === 0
+}
+
+// SHA-256 hex digest of a string — used as the idempotency key.
+async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
 function extractMetadataUserId(data: Record<string, any>) {
@@ -146,22 +162,39 @@ export async function handlePaystackWebhook(request: Request) {
     return new Response("Server misconfigured", { status: 500 })
   }
 
-  const sigHeader = request.headers.get("x-paystack-signature") || ""
+  const sigHeader = request.headers.get("x-paystack-signature") ?? ""
   const { payload, hash } = await verifySignature(request.clone(), secret)
-  if (hash !== sigHeader) {
+
+  if (!timingSafeStringEqual(hash, sigHeader)) {
     return new Response(JSON.stringify({ error: "Invalid signature" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     })
   }
 
-  const event = JSON.parse(payload)
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
 
+  // Idempotency: reject replayed payloads by hashing the raw body.
+  const payloadHash = await sha256Hex(payload)
+  const { error: insertError } = await supabase
+    .from("webhook_events")
+    .insert({ source: "paystack", payload_hash: payloadHash })
+
+  if (insertError) {
+    // Unique constraint violation means this payload was already processed.
+    if (insertError.code === "23505") {
+      console.info("Duplicate Paystack webhook payload — skipping", payloadHash)
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    console.error("Failed to record webhook event", insertError)
+  }
+
+  const event = JSON.parse(payload)
   await processEvent(supabase, event)
 
   return new Response(JSON.stringify({ received: true }), {

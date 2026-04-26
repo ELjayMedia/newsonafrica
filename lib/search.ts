@@ -72,11 +72,15 @@ export function highlightSearchTerms(text: string, query: string): string {
 
   const sortedTerms = [...normalizedTerms].sort((a, b) => b.length - a.length)
 
+  // Strip any HTML from the input before injecting <mark> tags so the result
+  // is safe to render via dangerouslySetInnerHTML.
+  const safeText = stripHtml(text)
+
   return sortedTerms.reduce((acc, term) => {
     const pattern = new RegExp(`(${escapeRegExp(term)})`, "gi")
     return acc.replace(
       pattern,
       '<mark class="bg-yellow-200 dark:bg-yellow-800 px-1 rounded font-medium">$1</mark>',
     )
-  }, text)
+  }, safeText)
 }

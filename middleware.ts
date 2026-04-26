@@ -77,10 +77,21 @@ export async function middleware(request: NextRequest) {
     response = NextResponse.redirect(new URL(redirectUrl, request.url))
   } else if (pathname.startsWith("/api/")) {
     response = NextResponse.next()
-    response.headers.set("Access-Control-Allow-Origin", "*")
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-    response.headers.set("Access-Control-Max-Age", "86400")
+
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? [process.env.NEXT_PUBLIC_SITE_URL, "https://news-on-africa.com"].filter(Boolean)
+        : [process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"]
+
+    const origin = request.headers.get("origin") ?? ""
+
+    if (allowedOrigins.includes(origin)) {
+      response.headers.set("Access-Control-Allow-Origin", origin)
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+      response.headers.set("Access-Control-Max-Age", "86400")
+      response.headers.set("Vary", "Origin")
+    }
   }
 
   if (!response) {
