@@ -143,7 +143,7 @@ export async function writeSessionCookie(profile: SessionCookieProfile): Promise
       value,
       httpOnly: true,
       sameSite: "lax",
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
     })
@@ -162,7 +162,7 @@ export async function clearSessionCookie(): Promise<void> {
       value: "",
       httpOnly: true,
       sameSite: "lax",
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 0,
     })

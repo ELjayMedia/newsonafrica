@@ -125,7 +125,10 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-// Only run middleware on specific paths
+// Run on all routes except Next.js internals and static files so Supabase
+// session tokens are refreshed on every navigation.
 export const config = {
-  matcher: ["/", "/post/:path*", "/news", "/business", "/sport", "/entertainment", "/api/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
+  ],
 }
