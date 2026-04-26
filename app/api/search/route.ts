@@ -11,7 +11,7 @@ export const revalidate = 0
 const RATE_LIMIT = 50
 const RATE_LIMIT_WINDOW_SECONDS = 60
 
-// In-process fallback used when Vercel KV is not configured.
+// In-process rate limiting storage.
 const fallbackMap = new Map<string, { count: number; resetAt: number }>()
 
 const getRateLimitKey = (request: NextRequest): string => {
@@ -26,26 +26,7 @@ async function checkRateLimit(request: NextRequest): Promise<{ limited: boolean;
 
   const key = getRateLimitKey(request)
 
-  // Distributed rate limiting via Vercel KV — works correctly across all
-  // serverless function instances.
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    try {
-      const { kv } = await import("@vercel/kv")
-      const count = await kv.incr(key)
-      if (count === 1) {
-        await kv.expire(key, RATE_LIMIT_WINDOW_SECONDS)
-      }
-      if (count > RATE_LIMIT) {
-        const ttl = await kv.ttl(key)
-        return { limited: true, retryAfter: ttl > 0 ? ttl : RATE_LIMIT_WINDOW_SECONDS }
-      }
-      return { limited: false }
-    } catch (err) {
-      console.warn("KV rate limit check failed, falling back to in-process", err)
-    }
-  }
-
-  // Fallback: single-instance in-process map.
+  // In-process rate limiting using a simple map.
   const now = Date.now()
   const entry = fallbackMap.get(key)
 
