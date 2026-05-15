@@ -38,6 +38,10 @@ import { sanitizeExcerpt } from "@/lib/utils/text/sanitizeExcerpt"
 type SortOption = "newest" | "oldest" | "title" | "unread"
 type FilterOption = "all" | "unread" | "read"
 
+function bookmarkPostIdKey(postId: string | number): string {
+  return String(postId)
+}
+
 export default function BookmarksContent() {
   const {
     bookmarks,
@@ -118,7 +122,7 @@ export default function BookmarksContent() {
     if (selectedBookmarks.length === filteredBookmarks.length) {
       setSelectedBookmarks([])
     } else {
-      setSelectedBookmarks(filteredBookmarks.map((b) => b.postId))
+      setSelectedBookmarks(filteredBookmarks.map((b) => bookmarkPostIdKey(b.postId)))
     }
   }, [selectedBookmarks, filteredBookmarks])
 
@@ -322,6 +326,7 @@ export default function BookmarksContent() {
         ) : (
           filteredBookmarks.map((bookmark) => {
             const sanitizedExcerpt = sanitizeExcerpt(bookmark.excerpt)
+            const bookmarkPostId = bookmarkPostIdKey(bookmark.postId)
 
             // ✅ FIX: slug must be a string for getArticleUrl()
             const slug = bookmark.slug ?? ""
@@ -332,13 +337,13 @@ export default function BookmarksContent() {
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-4">
                     <Checkbox
-                      checked={selectedBookmarks.includes(bookmark.postId)}
+                      checked={selectedBookmarks.includes(bookmarkPostId)}
                       onCheckedChange={(checked) => {
                         const isChecked = Boolean(checked)
                         if (isChecked) {
-                          setSelectedBookmarks((prev) => [...prev, bookmark.postId])
+                          setSelectedBookmarks((prev) => [...prev, bookmarkPostId])
                         } else {
-                          setSelectedBookmarks((prev) => prev.filter((id) => id !== bookmark.postId))
+                          setSelectedBookmarks((prev) => prev.filter((id) => id !== bookmarkPostId))
                         }
                       }}
                     />
@@ -409,9 +414,9 @@ export default function BookmarksContent() {
                             <DropdownMenuItem
                               onClick={() => {
                                 if (bookmark.readState === "read") {
-                                  markAsUnread(bookmark.postId)
+                                  markAsUnread(bookmarkPostId)
                                 } else {
-                                  markAsRead(bookmark.postId)
+                                  markAsRead(bookmarkPostId)
                                 }
                               }}
                             >
@@ -421,7 +426,7 @@ export default function BookmarksContent() {
 
                             <DropdownMenuItem
                               onClick={() => {
-                                setNoteBookmarkId(bookmark.postId)
+                                setNoteBookmarkId(bookmarkPostId)
                                 setNoteText(bookmark.note || "")
                                 setNoteDialogOpen(true)
                               }}
@@ -432,7 +437,7 @@ export default function BookmarksContent() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem onClick={() => removeBookmark(bookmark.postId)} className="text-red-600">
+                            <DropdownMenuItem onClick={() => removeBookmark(bookmarkPostId)} className="text-red-600">
                               <Trash2 className="h-4 w-4 mr-2" />
                               Remove
                             </DropdownMenuItem>
