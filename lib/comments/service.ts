@@ -17,6 +17,20 @@ function isValidStatus(status: string): status is CommentStatus {
   return COMMENT_STATUSES.includes(status as CommentStatus)
 }
 
+function parseWpPostId(value: string, fieldName = "Post ID"): number {
+  const normalized = value.trim()
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error(`${fieldName} must be a numeric WordPress post ID`)
+  }
+
+  const parsed = Number(normalized)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${fieldName} must be a valid WordPress post ID`)
+  }
+
+  return parsed
+}
+
 async function isModerator(supabase: SupabaseClient<Database>, session: Session | null): Promise<boolean> {
   if (!session?.user) return false
   const { data } = await supabase.from("profiles").select("is_admin").eq("id", session.user.id).single()
@@ -127,11 +141,12 @@ export async function listCommentsService(
     throw new Error("Invalid cursor")
   }
 
+  const wpPostId = parseWpPostId(params.wpPostId)
   const moderator = await isModerator(supabase, params.session)
   const cursorConditions = buildCursorConditions("newest", decodedCursor)
 
   const applyBase = (query: any, includeCursor: boolean) => {
-    let built = query.eq("wp_post_id", params.wpPostId).eq("edition_code", params.editionCode)
+    let built = query.eq("wp_post_id", wpPostId).eq("edition_code", params.editionCode)
     built = params.parentId === null ? built.is("parent_id", null) : params.parentId ? built.eq("parent_id", params.parentId) : built
     built = applyVisibility(built, params.status, params.session, moderator)
 
@@ -184,10 +199,11 @@ export async function createCommentService(
   params: { wpPostId: string; editionCode: string | null; userId: string; body: string; parentId: string | null; isRichText: boolean },
 ) {
   const edition = normalizeEditionCode(params.editionCode) ?? AFRICAN_EDITION.code
+  const wpPostId = parseWpPostId(params.wpPostId)
   const { data, error } = await supabase
     .from("comments")
     .insert({
-      wp_post_id: params.wpPostId,
+      wp_post_id: wpPostId,
       edition_code: edition,
       user_id: params.userId,
       body: params.body,
@@ -207,7 +223,7 @@ export async function createCommentService(
       user_reaction: null,
       reactions_count: data.reactions_count ?? 0,
     },
-    cacheTag: cacheTags.comments(edition, params.wpPostId),
+    cacheTag: cacheTags.comments(edition, String(wpPostId)),
   }
 }
 
@@ -237,7 +253,7 @@ export async function updateCommentBodyService(
   const comment = data as unknown as Comment
   return {
     comment: { ...comment, reactions: [], user_reaction: null, reactions_count: comment.reactions_count ?? 0 },
-    cacheTag: cacheTags.comments(comment.edition_code, comment.wp_post_id),
+    cacheTag: cacheTags.comments(comment.edition_code, String(comment.wp_post_id)),
   }
 }
 
@@ -249,7 +265,7 @@ export async function applyCommentActionService(
     .from("comments")
     .select("id, user_id, wp_post_id, edition_code")
     .eq("id", params.id)
-    .single<{ id: string; user_id: string; wp_post_id: string; edition_code: string | null }>()
+    .single<{ id: string; user_id: string; wp_post_id: number; edition_code: string | null }>()
 
   if (!comment) throw new Error("Comment not found")
 
@@ -270,7 +286,7 @@ export async function applyCommentActionService(
   const { error } = await supabase.from("comments").update(updates).eq("id", params.id)
   if (error) throw new Error(`Failed to ${params.action} comment: ${error.message}`)
 
-  return { cacheTag: cacheTags.comments(comment.edition_code, comment.wp_post_id) }
+  return { cacheTag: cacheTags.comments(comment.edition_code, String(comment.wp_post_id)) }
 }
 
 export async function listAdminCommentsService(
@@ -293,7 +309,7 @@ export async function adminUpdateCommentService(
   const { data, error } = await supabase.from("comments").update(updates).eq("id", id).select(COMMENT_SELECT).single()
   if (error || !data) throw new Error(error?.message ?? "Failed to update")
   const comment = data as unknown as Comment
-  return { comment, cacheTag: cacheTags.comments(comment.edition_code, comment.wp_post_id) }
+  return { comment, cacheTag: cacheTags.comments(comment.edition_code, String(comment.wp_post_id)) }
 }
 
 // Migration note: canonical comment-domain entrypoints live in this file.
