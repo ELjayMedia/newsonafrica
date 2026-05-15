@@ -63,6 +63,25 @@ function toJsonObject(value: Record<string, unknown> | null | undefined): Json |
   return value ? (value as Json) : null
 }
 
+function parseWpPostId(value: string, fieldName = "Post ID"): number {
+  const normalized = value.trim()
+  if (!/^\d+$/.test(normalized)) {
+    throw new ActionError(`${fieldName} must be a numeric WordPress post ID`, { status: 400 })
+  }
+
+  const parsed = Number(normalized)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new ActionError(`${fieldName} must be a valid WordPress post ID`, { status: 400 })
+  }
+
+  return parsed
+}
+
+function parseWpPostIds(values: string[]): number[] {
+  const parsed = values.map((value) => parseWpPostId(value))
+  return [...new Set(parsed)]
+}
+
 export async function listBookmarksForUser(
   supabase: BookmarkSupabaseClient,
   userId: string,
@@ -80,16 +99,19 @@ export async function listBookmarksForUser(
     const searchTerm = typeof input.search === "string" ? input.search.trim() : ""
     if (searchTerm) {
       const escapedSearch = searchTerm.replace(/,/g, "\\,")
-      builder = builder.or(
-        [
-          `title.ilike.%${escapedSearch}%`,
-          `excerpt.ilike.%${escapedSearch}%`,
-          `note.ilike.%${escapedSearch}%`,
-          `wp_post_id.ilike.%${escapedSearch}%`,
-          `edition_code.ilike.%${escapedSearch}%`,
-          `collection_id.ilike.%${escapedSearch}%`,
-        ].join(","),
-      )
+      const searchFilters = [
+        `title.ilike.%${escapedSearch}%`,
+        `excerpt.ilike.%${escapedSearch}%`,
+        `note.ilike.%${escapedSearch}%`,
+        `edition_code.ilike.%${escapedSearch}%`,
+        `collection_id.ilike.%${escapedSearch}%`,
+      ]
+
+      if (/^\d+$/.test(searchTerm)) {
+        searchFilters.push(`wp_post_id.eq.${Number(searchTerm)}`)
+      }
+
+      builder = builder.or(searchFilters.join(","))
     }
 
     if (input.category && input.category !== "all") {
@@ -97,7 +119,7 @@ export async function listBookmarksForUser(
     }
 
     if (input.postId && input.postId.trim().length) {
-      builder = builder.eq("wp_post_id", input.postId.trim())
+      builder = builder.eq("wp_post_id", parseWpPostId(input.postId))
     }
 
     if (input.editionCode && input.editionCode !== "all") {
@@ -203,7 +225,7 @@ export async function addBookmarkForUser(
     throw new ActionError("Post ID is required", { status: 400 })
   }
 
-  const postId = payload.postId.trim()
+  const postId = parseWpPostId(payload.postId)
   const editionCodeInput = sanitizeEditionCode(payload.editionCode) ?? null
 
   const { data: existing } = await supabase
@@ -283,11 +305,13 @@ export async function updateBookmarkForUser(
     throw new ActionError("Post ID is required", { status: 400 })
   }
 
+  const parsedPostId = parseWpPostId(postId)
+
   const { data: existing, error: existingError } = await supabase
     .from("bookmarks")
     .select(BOOKMARK_LIST_SELECT_COLUMNS)
     .eq("user_id", userId)
-    .eq("wp_post_id", postId)
+    .eq("wp_post_id", parsedPostId)
     .maybeSingle()
 
   if (existingError) {
@@ -320,7 +344,7 @@ export async function updateBookmarkForUser(
     .from("bookmarks")
     .update(preparation.dbUpdates)
     .eq("user_id", userId)
-    .eq("wp_post_id", postId)
+    .eq("wp_post_id", parsedPostId)
     .select(BOOKMARK_LIST_SELECT_COLUMNS)
     .single()
 
@@ -372,8 +396,10 @@ export async function bulkRemoveBookmarksForUser(
     throw new ActionError("Post IDs are required", { status: 400 })
   }
 
+  const parsedPostIds = parseWpPostIds(filteredPostIds)
+
   let query = supabase.from("bookmarks").delete().eq("user_id", userId)
-  query = filteredPostIds.length === 1 ? query.eq("wp_post_id", filteredPostIds[0]) : query.in("wp_post_id", filteredPostIds)
+  query = parsedPostIds.length === 1 ? query.eq("wp_post_id", parsedPostIds[0]) : query.in("wp_post_id", parsedPostIds)
 
   const { data, error } = await query.select(BOOKMARK_LIST_SELECT_COLUMNS)
 
