@@ -107,6 +107,10 @@ function toFeaturedImageRecord(
   return value ? { ...value } : null
 }
 
+function bookmarkPostIdKey(postId: Bookmark["postId"] | string): string {
+  return String(postId)
+}
+
 export function useBookmarks() {
   const context = useContext(BookmarksContext)
   if (!context) {
@@ -148,7 +152,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
   useEffect(() => {
     cacheRef.current.clear()
     bookmarks.forEach((bookmark) => {
-      cacheRef.current.set(bookmark.postId, bookmark)
+      cacheRef.current.set(bookmarkPostIdKey(bookmark.postId), bookmark)
     })
   }, [bookmarks])
 
@@ -165,12 +169,12 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
       if (!postId) return false
       return cacheRef.current.has(postId)
     },
-    [bookmarks],
+    [],
   )
 
   const getBookmark = useCallback(
     (postId: string) => cacheRef.current.get(postId),
-    [bookmarks],
+    [],
   )
 
   const applyListPayload = useCallback(
@@ -202,7 +206,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       const removalSet = new Set(removals.map((row) => getRowPostId(row)))
       let nextBookmarks = bookmarksRef.current.filter(
-        (bookmark) => !removalSet.has(bookmark.postId),
+        (bookmark) => !removalSet.has(bookmarkPostIdKey(bookmark.postId)),
       )
 
       const changeMap = new Map<string, Bookmark>()
@@ -222,11 +226,11 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
 
       if (changeMap.size > 0) {
         nextBookmarks = nextBookmarks.map((bookmark) =>
-          changeMap.get(bookmark.postId) ?? bookmark,
+          changeMap.get(bookmarkPostIdKey(bookmark.postId)) ?? bookmark,
         )
 
         const existingPostIds = new Set(
-          nextBookmarks.map((bookmark) => bookmark.postId),
+          nextBookmarks.map((bookmark) => bookmarkPostIdKey(bookmark.postId)),
         )
         const newEntries: Bookmark[] = []
         for (const postId of additionSet) {
@@ -463,7 +467,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
         const previousBookmarks = bookmarksRef.current
         const previousStats = statsRef.current
 
-        const nextBookmarks = previousBookmarks.filter((b) => b.postId !== postId)
+        const nextBookmarks = previousBookmarks.filter((b) => bookmarkPostIdKey(b.postId) !== postId)
         setBookmarks(nextBookmarks)
         setStats(deriveStatsFromBookmarks(nextBookmarks))
 
@@ -511,7 +515,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            bookmark.postId === postId ? { ...bookmark, ...updates } : bookmark,
+            bookmarkPostIdKey(bookmark.postId) === postId ? { ...bookmark, ...updates } : bookmark,
           )
 
           setBookmarks(nextBookmarks)
@@ -543,7 +547,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.filter(
-            (bookmark) => !postIds.includes(bookmark.postId),
+            (bookmark) => !postIds.includes(bookmarkPostIdKey(bookmark.postId)),
           )
           setBookmarks(nextBookmarks)
           setStats(deriveStatsFromBookmarks(nextBookmarks))
@@ -604,7 +608,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            (bookmark.postId) === postId
+            bookmarkPostIdKey(bookmark.postId) === postId
               ? { ...bookmark, readState: "read" as const }
               : bookmark,
           )
@@ -635,7 +639,7 @@ export function BookmarksProvider({ children, initialData = null }: BookmarksPro
           const previousStats = statsRef.current
 
           const nextBookmarks = previousBookmarks.map((bookmark) =>
-            (bookmark.postId) === postId
+            bookmarkPostIdKey(bookmark.postId) === postId
               ? { ...bookmark, readState: "unread" as const }
               : bookmark,
           )
