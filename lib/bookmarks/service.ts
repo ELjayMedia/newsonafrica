@@ -93,7 +93,7 @@ export async function listBookmarksForUser(
   const cursor = input.cursor ?? null
   const ascending = sortOrder === "asc"
 
-  const { data: rows, error } = await executeListQuery(supabase, "bookmarks", (query) => {
+  const { data: rows, error } = await executeListQuery(supabase, "bookmarks", async (query) => {
     let builder = query.select(BOOKMARK_LIST_SELECT_COLUMNS).eq("user_id", userId)
 
     const searchTerm = typeof input.search === "string" ? input.search.trim() : ""
@@ -180,253 +180,111 @@ export async function listBookmarksForUser(
         (row as Record<string, unknown>)[sortAlias] ??
         (row as Record<string, unknown>)[sortColumn] ??
         null
-      try {
-        return JSON.stringify({ sortBy: sortColumn, sortOrder, value: sortValue, id: row.id ?? null })
-      } catch {
-        return null
+      return {
+        sortBy: sortColumn,
+        sortOrder,
+        value: typeof sortValue === "string" || typeof sortValue === "number" ? sortValue : null,
+        id: row.id,
       }
     },
   })
 
-  let stats = null
-  const shouldFetchStats = input.includeStatsOnCursor ? true : !cursor
-  if (shouldFetchStats) {
-    try {
-      stats = bookmarks.length ? await fetchBookmarkStats(supabase, userId) : getDefaultBookmarkStats()
-    } catch {
-      stats = getDefaultBookmarkStats()
-    }
+  let stats = input.includeStatsOnCursor || !cursor ? await fetchBookmarkStats(supabase, userId) : null
+  if (!stats) {
+    stats = getDefaultBookmarkStats()
   }
 
-  return { bookmarks, stats, pagination }
-}
-
-interface AddBookmarkInput {
-  postId: string
-  title?: string
-  slug?: string
-  excerpt?: string
-  featuredImage?: Record<string, unknown> | null
-  category?: string | null
-  tags?: string[] | null
-  note?: string | null
-  readState?: string | null
-  editionCode?: string | null
-  collectionId?: string | null
+  return {
+    bookmarks,
+    stats,
+    pagination,
+  }
 }
 
 export async function addBookmarkForUser(
   supabase: BookmarkSupabaseClient,
   userId: string,
-  payload: AddBookmarkInput,
+  input: {
+    postId: string
+    title?: string | null
+    slug?: string | null
+    excerpt?: string | null
+    featuredImage?: Record<string, unknown> | null
+    category?: string | null
+    tags?: string[] | null
+    note?: string | null
+    readState?: string | null
+    editionCode?: string | null
+    collectionId?: string | null
+  },
   options: ServiceMutationOptions = {},
 ): Promise<BookmarkMutationPayload> {
-  if (!payload.postId?.trim()) {
-    throw new ActionError("Post ID is required", { status: 400 })
-  }
+  const postId = parseWpPostId(input.postId)
+  const editionCode = sanitizeEditionCode(input.editionCode) ?? "sz"
+  const collectionId = await ensureBookmarkCollectionAssignment(supabase, userId, {
+    editionCode,
+    collectionId: sanitizeCollectionId(input.collectionId),
+  })
 
-  const postId = parseWpPostId(payload.postId)
-  const editionCodeInput = sanitizeEditionCode(payload.editionCode) ?? null
-
-  const { data: existing } = await supabase
-    .from("bookmarks")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("wp_post_id", postId)
-    .maybeSingle()
-
-  if (existing) {
-    throw new ActionError("Bookmark already exists", { status: 409 })
-  }
-
-  let resolvedCollectionId: string | null = null
-  try {
-    resolvedCollectionId = await ensureBookmarkCollectionAssignment(supabase, {
-      userId,
-      collectionId: sanitizeCollectionId(payload.collectionId) ?? null,
-      editionCode: editionCodeInput,
-    })
-  } catch (error) {
-    throw new ActionError("Failed to resolve bookmark collection", { cause: error })
+  const insertPayload: Database["public"]["Tables"]["bookmarks"]["Insert"] = {
+    user_id: userId,
+    wp_post_id: postId,
+    title: input.title ?? null,
+    slug: input.slug ?? null,
+    excerpt: input.excerpt ?? null,
+    featured_image: toJsonObject(input.featuredImage),
+    category: input.category ?? null,
+    tags: input.tags ?? null,
+    note: input.note ?? null,
+    read_state: sanitizeReadState(input.readState) ?? "unread",
+    edition_code: editionCode,
+    collection_id: collectionId,
   }
 
   const { data, error } = await supabase
     .from("bookmarks")
-    .insert({
-      user_id: userId,
-      wp_post_id: postId,
-      edition_code: editionCodeInput,
-      collection_id: resolvedCollectionId,
-      title: payload.title ?? "Untitled Post",
-      slug: payload.slug ?? "",
-      excerpt: payload.excerpt ?? "",
-      featured_image: toJsonObject(payload.featuredImage),
-      category: payload.category ?? null,
-      tags: payload.tags ?? null,
-      read_state: sanitizeReadState(payload.readState) ?? "unread",
-      note: payload.note ?? null,
-    })
+    .upsert(insertPayload, { onConflict: "user_id,wp_post_id,edition_code" })
     .select(BOOKMARK_LIST_SELECT_COLUMNS)
     .single()
 
   if (error) {
     throw new ActionError("Failed to add bookmark", { cause: error })
   }
-  if (!data || typeof data !== "object") {
-    throw new ActionError("Failed to add bookmark")
-  }
 
-  const inserted = data as unknown as BookmarkListRow
-  try {
-    await applyBookmarkCounterDelta(supabase, { userId, delta: buildAdditionCounterDelta(inserted) })
-  } catch (error) {
-    throw new ActionError("Failed to update bookmark counters", { cause: error })
-  }
+  const row = data as unknown as BookmarkListRow
+  await applyBookmarkCounterDelta(supabase, userId, buildAdditionCounterDelta(row))
+  invalidateBookmarksCache(options.revalidate, { userId, postId: input.postId, editionCodes: [editionCode, ...(options.editionHints ?? [])] })
 
-  if (options.revalidate) {
-    invalidateBookmarksCache(options.revalidate, {
-      userId,
-      editions: [inserted.editionCode ?? editionCodeInput, ...(options.editionHints ?? [])],
-      collections: [inserted.collectionId ?? resolvedCollectionId ?? null],
-    })
-  }
-
-  return { added: [inserted], statsDelta: computeStatsDelta({ next: inserted }) }
-}
-
-export async function updateBookmarkForUser(
-  supabase: BookmarkSupabaseClient,
-  userId: string,
-  postId: string,
-  updates: BookmarkUpdateInput,
-  options: ServiceMutationOptions = {},
-): Promise<BookmarkMutationPayload> {
-  if (!postId?.trim()) {
-    throw new ActionError("Post ID is required", { status: 400 })
-  }
-
-  const parsedPostId = parseWpPostId(postId)
-
-  const { data: existing, error: existingError } = await supabase
-    .from("bookmarks")
-    .select(BOOKMARK_LIST_SELECT_COLUMNS)
-    .eq("user_id", userId)
-    .eq("wp_post_id", parsedPostId)
-    .maybeSingle()
-
-  if (existingError) {
-    throw new ActionError("Failed to load bookmark", { cause: existingError })
-  }
-
-  if (!existing) {
-    throw new ActionError("Bookmark not found", { status: 404 })
-  }
-
-  const existingRow = existing as unknown as BookmarkListRow
-  const preparation = prepareBookmarkUpdatePayload(existingRow, updates ?? {})
-  if (!preparation.hasWritableUpdate) {
-    throw new ActionError("No bookmark updates provided", { status: 400 })
-  }
-
-  if (preparation.shouldResolveCollection) {
-    try {
-      preparation.dbUpdates.collection_id = await ensureBookmarkCollectionAssignment(supabase, {
-        userId,
-        collectionId: preparation.targetCollectionId,
-        editionCode: preparation.targetEditionCode,
-      })
-    } catch (error) {
-      throw new ActionError("Failed to resolve bookmark collection", { cause: error })
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("bookmarks")
-    .update(preparation.dbUpdates)
-    .eq("user_id", userId)
-    .eq("wp_post_id", parsedPostId)
-    .select(BOOKMARK_LIST_SELECT_COLUMNS)
-    .single()
-
-  if (error) {
-    throw new ActionError("Failed to update bookmark", { cause: error })
-  }
-
-  const updated = data as unknown as BookmarkListRow
-  const counterDelta = buildUpdateCounterDelta(existingRow, updated)
-  if (counterDelta) {
-    try {
-      await applyBookmarkCounterDelta(supabase, { userId, delta: counterDelta })
-    } catch (counterError) {
-      throw new ActionError("Failed to update bookmark counters", { cause: counterError })
-    }
-  }
-
-  if (options.revalidate) {
-    invalidateBookmarksCache(options.revalidate, {
-      userId,
-      editions: [existingRow.editionCode ?? null, updated.editionCode ?? preparation.targetEditionCode ?? null, ...(options.editionHints ?? [])],
-      collections: [existingRow.collectionId ?? null, updated.collectionId ?? preparation.targetCollectionId ?? null],
-    })
-  }
-
-  return {
-    updated: [updated],
-    statsDelta: computeStatsDelta({ previous: existingRow, next: updated }),
-  }
+  return computeStatsDelta({ added: [row] })
 }
 
 export async function removeBookmarkForUser(
   supabase: BookmarkSupabaseClient,
   userId: string,
-  postId: string,
+  postIdValue: string,
   options: ServiceMutationOptions = {},
 ): Promise<BookmarkMutationPayload> {
-  return bulkRemoveBookmarksForUser(supabase, userId, [postId], options)
-}
+  const postId = parseWpPostId(postIdValue)
+  const { data: existingRows, error: selectError } = await supabase
+    .from("bookmarks")
+    .select(BOOKMARK_LIST_SELECT_COLUMNS)
+    .eq("user_id", userId)
+    .eq("wp_post_id", postId)
 
-export async function bulkRemoveBookmarksForUser(
-  supabase: BookmarkSupabaseClient,
-  userId: string,
-  postIds: string[],
-  options: ServiceMutationOptions = {},
-): Promise<BookmarkMutationPayload> {
-  const filteredPostIds = postIds.map((id) => id.trim()).filter(Boolean)
-  if (!filteredPostIds.length) {
-    throw new ActionError("Post IDs are required", { status: 400 })
+  if (selectError) {
+    throw new ActionError("Failed to lookup bookmark", { cause: selectError })
   }
 
-  const parsedPostIds = parseWpPostIds(filteredPostIds)
+  const existing = (existingRows ?? []) as unknown as BookmarkListRow[]
 
-  let query = supabase.from("bookmarks").delete().eq("user_id", userId)
-  query = parsedPostIds.length === 1 ? query.eq("wp_post_id", parsedPostIds[0]) : query.in("wp_post_id", parsedPostIds)
-
-  const { data, error } = await query.select(BOOKMARK_LIST_SELECT_COLUMNS)
+  const { error } = await supabase.from("bookmarks").delete().eq("user_id", userId).eq("wp_post_id", postId)
 
   if (error) {
-    throw new ActionError(filteredPostIds.length === 1 ? "Failed to remove bookmark" : "Failed to remove bookmarks", { cause: error })
+    throw new ActionError("Failed to remove bookmark", { cause: error })
   }
 
-  const removedRows = (data ?? []) as unknown as BookmarkListRow[]
-  const removalDelta = buildRemovalCounterDelta(removedRows)
-  if (removalDelta) {
-    try {
-      await applyBookmarkCounterDelta(supabase, { userId, delta: removalDelta })
-    } catch (counterError) {
-      throw new ActionError("Failed to update bookmark counters", { cause: counterError })
-    }
-  }
+  await applyBookmarkCounterDelta(supabase, userId, buildRemovalCounterDelta(existing))
+  invalidateBookmarksCache(options.revalidate, { userId, postId: postIdValue, editionCodes: [...new Set(existing.map((row) => row.editionCode))] })
 
-  if (options.revalidate) {
-    invalidateBookmarksCache(options.revalidate, {
-      userId,
-      editions: [...removedRows.map((row) => row.editionCode ?? null), ...(options.editionHints ?? [])],
-      collections: removedRows.map((row) => row.collectionId ?? null),
-    })
-  }
-
-  return {
-    removed: removedRows,
-    statsDelta: combineStatsDeltas(removedRows.map((row) => computeStatsDelta({ previous: row }))),
-  }
+  return computeStatsDelta({ removed: existing })
 }
