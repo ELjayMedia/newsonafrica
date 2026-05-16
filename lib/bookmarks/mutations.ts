@@ -163,7 +163,9 @@ export function prepareBookmarkUpdatePayload(
   })
 
   assignField("readState", (value) => {
-    dbUpdates.read_state = value ?? null
+    if (value) {
+      dbUpdates.read_state = value
+    }
   })
 
   assignField("note", (value) => {
