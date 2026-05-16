@@ -2,7 +2,7 @@ import type { Database } from "@/types/supabase"
 
 export type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
 
-type BookmarkPostId = BookmarkTableRow["wp_post_id"]
+type BookmarkDbPostId = BookmarkTableRow["wp_post_id"]
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 export type BookmarkReadStateKey = BookmarkReadState | "unknown"
@@ -31,7 +31,7 @@ export type BookmarkHydrationMap = Record<string, BookmarkHydrationMetadata>
 export interface BookmarkDomainModel {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkPostId
+  postId: string
   editionCode?: BookmarkTableRow["edition_code"]
   collectionId?: BookmarkTableRow["collection_id"]
   title: string
@@ -46,9 +46,9 @@ export interface BookmarkDomainModel {
 }
 
 export interface BookmarkApiPayload {
-  postId?: string
-  wpPostId?: string
-  wp_post_id?: string
+  postId?: string | number
+  wpPostId?: string | number
+  wp_post_id?: string | number
   editionCode?: string | null
   edition_code?: string | null
   country?: string | null
@@ -70,7 +70,7 @@ export interface BookmarkApiPayload {
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkPostId
+  postId: BookmarkDbPostId
   editionCode: BookmarkTableRow["edition_code"]
   collectionId: BookmarkTableRow["collection_id"]
   title: BookmarkTableRow["title"]
