@@ -136,7 +136,9 @@ export function prepareBookmarkUpdatePayload(
 
   assignField("editionCode", (value) => {
     targetEditionCode = value ?? null
-    dbUpdates.edition_code = targetEditionCode
+    if (targetEditionCode) {
+      dbUpdates.edition_code = targetEditionCode
+    }
     shouldResolveCollection = true
   })
 
