@@ -226,7 +226,7 @@ export async function addBookmarkForUser(
   }
 
   const postId = parseWpPostId(payload.postId)
-  const editionCodeInput = sanitizeEditionCode(payload.editionCode) ?? null
+  const editionCodeInput = sanitizeEditionCode(payload.editionCode) ?? "sz"
 
   const { data: existing } = await supabase
     .from("bookmarks")
