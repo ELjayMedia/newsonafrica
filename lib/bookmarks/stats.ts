@@ -36,10 +36,20 @@ export interface CollectionAggregateRow extends ReadStateAggregateFields {
 }
 
 export interface CounterAggregateRow {
-  totalCount: number | null
-  unreadCount: number | null
-  readCount: number | null
-  collectionUnreadCounts: Record<string, unknown> | null
+  totalCount?: number | null
+  total_count?: number | null
+  unreadCount?: number | null
+  unread_count?: number | null
+  readCount?: number | null
+  read_count?: number | null
+  collectionUnreadCounts?: Record<string, unknown> | null
+  collection_unread_counts?: Record<string, unknown> | null
+}
+
+interface BookmarkStatsSourceRow extends ReadStateAggregateFields {
+  category?: string | null
+  collectionId?: string | null
+  collection_id?: string | null
 }
 
 const DEFAULT_STATS: BookmarkStats = {
@@ -79,8 +89,54 @@ function extractReadState(row: ReadStateAggregateFields): BookmarkReadState | nu
   return (row.readState ?? row.read_state ?? null) as BookmarkReadState | null
 }
 
-function extractCollectionId(row: CollectionAggregateRow): string | null {
+function extractCollectionId(row: CollectionAggregateRow | BookmarkStatsSourceRow): string | null {
   return row.collectionId ?? row.collection_id ?? null
+}
+
+function normalizeCounterRow(row: CounterAggregateRow | null): CounterAggregateRow | null {
+  if (!row) return null
+
+  return {
+    totalCount: row.totalCount ?? row.total_count ?? null,
+    unreadCount: row.unreadCount ?? row.unread_count ?? null,
+    readCount: row.readCount ?? row.read_count ?? null,
+    collectionUnreadCounts: row.collectionUnreadCounts ?? row.collection_unread_counts ?? null,
+  }
+}
+
+function buildAggregatesFromBookmarks(rows: BookmarkStatsSourceRow[]): BookmarkStatsAggregates {
+  const statusMap = new Map<BookmarkReadStateKey, StatusAggregateRow>()
+  const categoryMap = new Map<string, CategoryAggregateRow>()
+  const collectionMap = new Map<string, CollectionAggregateRow>()
+
+  for (const row of rows) {
+    const state = extractReadState(row)
+    const stateKey = resolveReadStateKey(state)
+    const currentStatus = statusMap.get(stateKey) ?? { readState: state, count: 0 }
+    currentStatus.count = Number(currentStatus.count ?? 0) + 1
+    statusMap.set(stateKey, currentStatus)
+
+    if (row.category) {
+      const currentCategory = categoryMap.get(row.category) ?? { category: row.category, count: 0 }
+      currentCategory.count = Number(currentCategory.count ?? 0) + 1
+      categoryMap.set(row.category, currentCategory)
+    }
+
+    const collectionKey = `${collectionKeyForId(extractCollectionId(row))}:${stateKey}`
+    const currentCollection = collectionMap.get(collectionKey) ?? {
+      collectionId: extractCollectionId(row),
+      readState: state,
+      count: 0,
+    }
+    currentCollection.count = Number(currentCollection.count ?? 0) + 1
+    collectionMap.set(collectionKey, currentCollection)
+  }
+
+  return {
+    statusRows: [...statusMap.values()],
+    categoryRows: [...categoryMap.values()],
+    collectionRows: [...collectionMap.values()],
+  }
 }
 
 export function buildBookmarkStats({
@@ -89,10 +145,11 @@ export function buildBookmarkStats({
   collectionRows = [],
   counterRow = null,
 }: BookmarkStatsAggregates): BookmarkStats {
+  const normalizedCounterRow = normalizeCounterRow(counterRow)
   const categories: Record<string, number> = {}
   const readStates: Record<BookmarkReadStateKey, number> = { ...DEFAULT_STATS.readStates }
-  const collections: Record<string, number> = counterRow
-    ? parseCollectionCounts(counterRow.collectionUnreadCounts)
+  const collections: Record<string, number> = normalizedCounterRow
+    ? parseCollectionCounts(normalizedCounterRow.collectionUnreadCounts ?? null)
     : {}
   let totalFromStatuses = 0
   let unreadFromStatuses = 0
@@ -111,7 +168,7 @@ export function buildBookmarkStats({
     categories[row.category] = count
   }
 
-  if (!counterRow || !Object.keys(collections).length) {
+  if (!normalizedCounterRow || !Object.keys(collections).length) {
     for (const row of collectionRows) {
       const count = Number(row.count ?? 0)
       if (!count) continue
@@ -122,8 +179,8 @@ export function buildBookmarkStats({
     }
   }
 
-  const total = typeof counterRow?.totalCount === "number" ? counterRow.totalCount : totalFromStatuses
-  const unread = typeof counterRow?.unreadCount === "number" ? counterRow.unreadCount : unreadFromStatuses
+  const total = typeof normalizedCounterRow?.totalCount === "number" ? normalizedCounterRow.totalCount : totalFromStatuses
+  const unread = typeof normalizedCounterRow?.unreadCount === "number" ? normalizedCounterRow.unreadCount : unreadFromStatuses
 
   return {
     total,
@@ -138,34 +195,20 @@ export async function fetchBookmarkStats(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<BookmarkStats> {
-  const [statusResult, categoryResult, collectionResult, counterResult] = await Promise.all([
-    executeListQuery(supabase, "bookmarks", (query) =>
+  const [bookmarksResult, counterResult] = await Promise.all([
+    executeListQuery(supabase, "bookmarks", async (query) =>
       query
-        .select("read_state, count:count(*)", { head: false })
-        .eq("user_id", userId)
-        .group("read_state"),
+        .select("read_state, category, collection_id")
+        .eq("user_id", userId),
     ),
-    executeListQuery(supabase, "bookmarks", (query) =>
-      query
-        .select("category, count:count(*)", { head: false })
-        .eq("user_id", userId)
-        .not("category", "is", null)
-        .group("category"),
-    ),
-    executeListQuery(supabase, "bookmarks", (query) =>
-      query
-        .select("collection_id, read_state, count:count(*)", { head: false })
-        .eq("user_id", userId)
-        .group("collection_id, read_state"),
-    ),
-    executeListQuery(supabase, "bookmark_user_counters", (query) =>
+    executeListQuery(supabase, "bookmark_user_counters", async (query) =>
       query
         .select(
           [
-            "total_count:totalCount",
-            "unread_count:unreadCount",
-            "read_count:readCount",
-            "collection_unread_counts:collectionUnreadCounts",
+            "total_count",
+            "unread_count",
+            "read_count",
+            "collection_unread_counts",
           ].join(", "),
         )
         .eq("user_id", userId)
@@ -173,28 +216,21 @@ export async function fetchBookmarkStats(
     ),
   ])
 
-  if (statusResult.error) {
-    throw statusResult.error
-  }
-
-  if (categoryResult.error) {
-    throw categoryResult.error
-  }
-
-  if (collectionResult.error) {
-    throw collectionResult.error
+  if (bookmarksResult.error) {
+    throw bookmarksResult.error
   }
 
   if (counterResult.error) {
     throw counterResult.error
   }
 
-  const statusRows = (statusResult.data ?? []) as StatusAggregateRow[]
-  const categoryRows = (categoryResult.data ?? []) as CategoryAggregateRow[]
-  const collectionRows = (collectionResult.data ?? []) as CollectionAggregateRow[]
+  const sourceRows = (bookmarksResult.data ?? []) as BookmarkStatsSourceRow[]
   const counterRow = (counterResult.data ?? null) as CounterAggregateRow | null
 
-  return buildBookmarkStats({ statusRows, categoryRows, collectionRows, counterRow })
+  return buildBookmarkStats({
+    ...buildAggregatesFromBookmarks(sourceRows),
+    counterRow,
+  })
 }
 
 export function getDefaultBookmarkStats(): BookmarkStats {
