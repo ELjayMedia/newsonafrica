@@ -17,7 +17,7 @@ export type { Bookmark, BookmarkHydrationMap }
 export const formatBookmarkRow = (row: BookmarkListRow, metadata?: BookmarkHydrationMap[string]): Bookmark =>
   dbRowToDomainBookmark(row, metadata)
 
-export const getRowPostId = (row: BookmarkListRow): string => row.postId
+export const getRowPostId = (row: BookmarkListRow): string => String(row.postId)
 
 export { buildHydrationPayload, extractFeaturedImage, extractText, apiPayloadToDomainBookmarkDraft }
 

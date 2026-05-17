@@ -12,11 +12,25 @@ interface CreateCommentParams {
   parentId: string | null
 }
 
+function parseWpPostId(value: string): number {
+  const normalized = value.trim()
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error("Post ID must be a numeric WordPress post ID")
+  }
+
+  const parsed = Number(normalized)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error("Post ID must be a valid WordPress post ID")
+  }
+
+  return parsed
+}
+
 export async function createComment(supabase: SupabaseClient<Database>, params: CreateCommentParams) {
   const { wpPostId, editionCode, userId, body, parentId } = params
 
   const newComment: Database["public"]["Tables"]["comments"]["Insert"] = {
-    wp_post_id: wpPostId,
+    wp_post_id: parseWpPostId(wpPostId),
     edition_code: editionCode,
     user_id: userId,
     body,

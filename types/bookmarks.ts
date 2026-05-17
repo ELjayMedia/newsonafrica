@@ -2,7 +2,7 @@ import type { Database } from "@/types/supabase"
 
 export type BookmarkTableRow = Database["public"]["Tables"]["bookmarks"]["Row"]
 
-type BookmarkPostId = BookmarkTableRow["wp_post_id"]
+type BookmarkDbPostId = BookmarkTableRow["wp_post_id"]
 
 export type BookmarkReadState = NonNullable<BookmarkTableRow["read_state"]>
 export type BookmarkReadStateKey = BookmarkReadState | "unknown"
@@ -31,24 +31,24 @@ export type BookmarkHydrationMap = Record<string, BookmarkHydrationMetadata>
 export interface BookmarkDomainModel {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkPostId
-  editionCode?: BookmarkTableRow["edition_code"]
-  collectionId?: BookmarkTableRow["collection_id"]
+  postId: string
+  editionCode?: BookmarkTableRow["edition_code"] | null
+  collectionId?: BookmarkTableRow["collection_id"] | null
   title: string
-  slug?: BookmarkTableRow["slug"]
-  excerpt?: BookmarkTableRow["excerpt"]
+  slug?: BookmarkTableRow["slug"] | null
+  excerpt?: BookmarkTableRow["excerpt"] | null
   createdAt: BookmarkTableRow["created_at"]
   featuredImage: BookmarkFeaturedImageValue
-  category?: BookmarkTableRow["category"]
-  tags?: BookmarkTableRow["tags"]
+  category?: BookmarkTableRow["category"] | null
+  tags?: BookmarkTableRow["tags"] | null
   readState?: BookmarkReadState
-  note?: BookmarkTableRow["note"]
+  note?: BookmarkTableRow["note"] | null
 }
 
 export interface BookmarkApiPayload {
-  postId?: string
-  wpPostId?: string
-  wp_post_id?: string
+  postId?: string | number
+  wpPostId?: string | number
+  wp_post_id?: string | number
   editionCode?: string | null
   edition_code?: string | null
   country?: string | null
@@ -70,17 +70,17 @@ export interface BookmarkApiPayload {
 export interface BookmarkRow {
   id: BookmarkTableRow["id"]
   userId: BookmarkTableRow["user_id"]
-  postId: BookmarkPostId
-  editionCode: BookmarkTableRow["edition_code"]
-  collectionId: BookmarkTableRow["collection_id"]
+  postId: BookmarkDbPostId
+  editionCode: BookmarkTableRow["edition_code"] | null
+  collectionId: BookmarkTableRow["collection_id"] | null
   title: BookmarkTableRow["title"]
-  slug: BookmarkTableRow["slug"]
-  excerpt: BookmarkTableRow["excerpt"]
+  slug: BookmarkTableRow["slug"] | null
+  excerpt: BookmarkTableRow["excerpt"] | null
   featuredImage: Record<string, unknown> | null
-  category: BookmarkTableRow["category"]
-  tags: BookmarkTableRow["tags"]
-  readState: BookmarkTableRow["read_state"]
-  note: BookmarkTableRow["note"]
+  category: BookmarkTableRow["category"] | null
+  tags: BookmarkTableRow["tags"] | null
+  readState: BookmarkTableRow["read_state"] | null
+  note: BookmarkTableRow["note"] | null
   createdAt: BookmarkTableRow["created_at"]
 }
 

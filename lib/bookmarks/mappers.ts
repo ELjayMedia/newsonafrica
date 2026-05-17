@@ -20,6 +20,15 @@ function featuredImageToRecord(value: BookmarkFeaturedImageValue): Record<string
   return value ? { ...value } : null
 }
 
+function parsePostId(value: string | number): number {
+  const parsed = typeof value === "number" ? value : Number.parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function stringifyPostId(value: string | number | null | undefined): string {
+  return value == null ? "" : String(value)
+}
+
 export const extractText = (value: BookmarkTextValue): string => {
   if (!value) return ""
   if (typeof value === "string") return value
@@ -101,7 +110,7 @@ export const dbRowToDomainBookmark = (
   return {
     id: row.id,
     userId: row.userId,
-    postId: row.postId,
+    postId: stringifyPostId(row.postId),
     editionCode: normalizedEditionCode,
     collectionId: row.collectionId || undefined,
     title,
@@ -119,7 +128,7 @@ export const dbRowToDomainBookmark = (
 export const domainBookmarkToDbRow = (bookmark: BookmarkDomainModel): BookmarkRow => ({
   id: bookmark.id,
   userId: bookmark.userId,
-  postId: bookmark.postId,
+  postId: parsePostId(bookmark.postId),
   editionCode: bookmark.editionCode ?? null,
   collectionId: bookmark.collectionId ?? null,
   title: bookmark.title,
@@ -134,12 +143,12 @@ export const domainBookmarkToDbRow = (bookmark: BookmarkDomainModel): BookmarkRo
 })
 
 export const apiPayloadToDomainBookmarkDraft = (payload: BookmarkApiPayload): Omit<BookmarkDomainModel, "id" | "userId" | "createdAt" | "readState"> => {
-  const postId = payload.postId || payload.wpPostId || payload.wp_post_id || ""
+  const postId = payload.postId ?? payload.wpPostId ?? payload.wp_post_id ?? ""
   const editionSource = payload.editionCode ?? payload.edition_code ?? payload.country
   const collectionId = payload.collectionId ?? payload.collection_id
 
   return {
-    postId,
+    postId: stringifyPostId(postId),
     editionCode: editionSource ?? undefined,
     collectionId: collectionId ?? undefined,
     title: extractText(payload.title) || "Untitled Post",
@@ -174,7 +183,7 @@ export const buildHydrationPayload = (bookmarks: BookmarkListRow[]) => {
     if (!grouped.has(edition)) {
       grouped.set(edition, new Set())
     }
-    grouped.get(edition)?.add(bookmark.postId)
+    grouped.get(edition)?.add(stringifyPostId(bookmark.postId))
   })
 
   return Array.from(grouped.entries()).map(([country, ids]) => ({

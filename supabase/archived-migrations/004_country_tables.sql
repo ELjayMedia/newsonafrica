@@ -1,3 +1,11 @@
+-- Archived from supabase/migrations/004_country_tables.sql.
+--
+-- This legacy numeric migration has already been applied to the Supabase project.
+-- It is kept here for historical reference, but removed from the active
+-- supabase/migrations directory because Supabase for Git treats the file version
+-- `004` as a new preview-branch migration and fails with:
+-- duplicate key value violates unique constraint "schema_migrations_pkey".
+--
 -- Ensure pgcrypto extension for gen_random_uuid
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

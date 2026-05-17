@@ -5,7 +5,7 @@ export type CommentInsert = Database["public"]["Tables"]["comments"]["Insert"]
 export type CommentUpdate = Database["public"]["Tables"]["comments"]["Update"]
 export type CommentStatus = Database["public"]["Enums"]["comment_status"]
 export type CommentReactionRow = Database["public"]["Tables"]["comment_reactions"]["Row"]
-export type CommentReactionType = Database["public"]["Enums"]["comment_reaction_type"]
+export type CommentReactionType = "like" | "love" | "insightful" | "funny" | "sad" | "angry" | (string & {})
 
 export type CommentListRow = Pick<
   CommentRow,
