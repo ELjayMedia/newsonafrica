@@ -7,7 +7,7 @@ import { buildCursorConditions, encodeCommentCursor, type CommentCursor } from "
 const COMMENT_LIST_SELECT_COLUMNS =
   "id, wp_post_id, edition_code, user_id, body, parent_id, status, created_at, reported_by, report_reason, reviewed_at, reviewed_by, replies_count, reactions_count, profile:profiles(username, avatar_url)"
 
-type CommentStatus = "active" | "pending" | "flagged" | "deleted" | "all"
+type CommentStatus = "active" | "pending" | "flagged" | "deleted" | "hidden" | "approved" | "spam" | "all"
 
 interface ListCommentsParams {
   wpPostId: string
@@ -17,6 +17,20 @@ interface ListCommentsParams {
   status: CommentStatus
   session: Session | null
   decodedCursor: CommentCursor | null
+}
+
+function parseWpPostId(value: string): number {
+  const normalized = value.trim()
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error("Post ID must be a numeric WordPress post ID")
+  }
+
+  const parsed = Number(normalized)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error("Post ID must be a valid WordPress post ID")
+  }
+
+  return parsed
 }
 
 function applyOrFilters(query: any, statusConditions: string[], cursorConditions: string[]) {
@@ -47,6 +61,7 @@ function applyOrFilters(query: any, statusConditions: string[], cursorConditions
 
 export async function listComments(supabase: SupabaseClient<Database>, params: ListCommentsParams) {
   const { wpPostId, editionCode, limit, parentId, status, session, decodedCursor } = params
+  const parsedPostId = parseWpPostId(wpPostId)
 
   const simpleStatusFilters: Array<{ column: string; value: string }> = []
   const statusOrConditions: string[] = []
@@ -100,13 +115,13 @@ export async function listComments(supabase: SupabaseClient<Database>, params: L
   }
 
   const buildBaseQuery = (builder: any, { includeCursor }: { includeCursor: boolean }) => {
-    let updated = builder.eq("wp_post_id", wpPostId).eq("edition_code", editionCode)
+    let updated = builder.eq("wp_post_id", parsedPostId).eq("edition_code", editionCode)
     updated = applyParentFilter(updated)
     updated = applySimpleStatusFilters(updated)
     return applyOrFilters(updated, statusOrConditions, includeCursor ? cursorConditions : [])
   }
 
-  const { data: commentsData, error } = (await executeListQuery(supabase, "comments", (query) => {
+  const { data: commentsData, error } = (await executeListQuery(supabase, "comments", async (query) => {
     const baseQuery = buildBaseQuery(query.select(COMMENT_LIST_SELECT_COLUMNS), {
       includeCursor: true,
     })
@@ -155,6 +170,7 @@ export async function countCommentsIfFirstPage(
   if (params.page !== 0) return undefined
 
   const { wpPostId, editionCode, parentId, status, session } = params
+  const parsedPostId = parseWpPostId(wpPostId)
 
   const simpleStatusFilters: Array<{ column: string; value: string }> = []
   const statusOrConditions: string[] = []
@@ -211,7 +227,7 @@ export async function countCommentsIfFirstPage(
   }
 
   let countQuery = supabase.from("comments").select("id", { count: "exact", head: true })
-  countQuery = countQuery.eq("wp_post_id", wpPostId).eq("edition_code", editionCode)
+  countQuery = countQuery.eq("wp_post_id", parsedPostId).eq("edition_code", editionCode)
   countQuery = applyParentFilter(countQuery)
   countQuery = applySimpleStatusFilters(countQuery)
   countQuery = applyOrFilters(countQuery, statusOrConditions)
