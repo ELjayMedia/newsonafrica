@@ -3,10 +3,17 @@ import type { Database } from "@/types/supabase"
 export type CanonicalCommentStatus = Database["public"]["Enums"]["comment_status"]
 export type ModerationFilterStatus = CanonicalCommentStatus | "all"
 
-export const CANONICAL_COMMENT_STATUSES: CanonicalCommentStatus[] = ["pending", "active", "flagged", "deleted"]
+export const CANONICAL_COMMENT_STATUSES: CanonicalCommentStatus[] = [
+  "pending",
+  "active",
+  "flagged",
+  "hidden",
+  "deleted",
+  "approved",
+  "spam",
+]
 
 const LEGACY_TO_CANONICAL_STATUS: Record<string, CanonicalCommentStatus> = {
-  approved: "active",
   rejected: "deleted",
 }
 
@@ -15,7 +22,10 @@ export const COMMENT_STATUS_LABELS: Record<ModerationFilterStatus, string> = {
   pending: "Pending",
   active: "Active",
   flagged: "Flagged",
+  hidden: "Hidden",
   deleted: "Deleted",
+  approved: "Approved",
+  spam: "Spam",
 }
 
 export function normalizeCommentStatus(status: string): CanonicalCommentStatus {
