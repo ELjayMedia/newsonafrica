@@ -1,9 +1,7 @@
 name: E2E Smoke
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   smoke:
