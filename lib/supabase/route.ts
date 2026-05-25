@@ -10,6 +10,16 @@ export interface RouteClientResult {
   applyCookies<T extends NextResponse>(response: T): T
 }
 
+function getBearerAuthorization(request: NextRequest): string | null {
+  const authorization = request.headers.get("authorization")
+  if (!authorization?.toLowerCase().startsWith("bearer ")) {
+    return null
+  }
+
+  const token = authorization.slice("bearer ".length).trim()
+  return token ? `Bearer ${token}` : null
+}
+
 export function createSupabaseRouteClient(request: NextRequest): RouteClientResult | null {
   const baseResponse = NextResponse.next()
   const deletedCookies = new Set<string>()
@@ -21,7 +31,18 @@ export function createSupabaseRouteClient(request: NextRequest): RouteClientResu
     return null
   }
 
+  const bearerAuthorization = getBearerAuthorization(request)
+
   const supabase = createServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
+    ...(bearerAuthorization
+      ? {
+          global: {
+            headers: {
+              Authorization: bearerAuthorization,
+            },
+          },
+        }
+      : {}),
     cookies: {
       getAll() {
         return request.cookies.getAll()
