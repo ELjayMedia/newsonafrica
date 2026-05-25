@@ -54,13 +54,24 @@ const updateCursor = async (
   status: "running" | "completed" | "failed",
   errorMessage?: string,
 ) => {
-  await supabase.from("content_sync_cursor").upsert({
+  const payload: {
+    edition_code: string
+    sync_status: string
+    error_message: string | null
+    updated_at: string
+    last_synced_at?: string
+  } = {
     edition_code: editionCode,
-    last_synced_at: status === "completed" ? new Date().toISOString() : null,
     sync_status: status,
     error_message: errorMessage ?? null,
     updated_at: new Date().toISOString(),
-  })
+  }
+
+  if (status === "completed") {
+    payload.last_synced_at = new Date().toISOString()
+  }
+
+  await supabase.from("content_sync_cursor").upsert(payload)
 }
 
 export async function POST(request: NextRequest) {
