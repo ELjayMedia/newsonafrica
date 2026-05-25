@@ -1,34 +1,14 @@
--- Enforce edition-aware row level security on bookmarks
-
--- Drop existing policies to redefine them with edition constraints
-DROP POLICY IF EXISTS "Bookmarks are readable by owner" ON public.bookmarks;
-DROP POLICY IF EXISTS "Bookmarks are manageable by owner" ON public.bookmarks;
-
--- Backfill bookmark country data so it aligns with the caller's edition
-UPDATE public.bookmarks AS b
-SET country = COALESCE(p.country_pref, 'african-edition')
-FROM public.profiles AS p
-WHERE b.user_id = p.id
-  AND COALESCE(b.country, '') IS DISTINCT FROM COALESCE(p.country_pref, 'african-edition');
-
--- Default any remaining NULL countries to the primary edition
-UPDATE public.bookmarks
-SET country = 'african-edition'
-WHERE country IS NULL;
-
--- Bookmarks remain readable by their owner when editions align
-CREATE POLICY IF NOT EXISTS "Bookmarks are readable by owner" ON public.bookmarks
-  FOR SELECT USING (
-    auth.uid() = user_id
-    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
-  );
-
--- Bookmarks remain manageable by their owner when editions align
-CREATE POLICY IF NOT EXISTS "Bookmarks are manageable by owner" ON public.bookmarks
-  USING (
-    auth.uid() = user_id
-    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
-  ) WITH CHECK (
-    auth.uid() = user_id
-    AND COALESCE(country, 'african-edition') = COALESCE(current_setting('request.jwt.claims.country', true), 'african-edition')
-  );
+-- This migration is intentionally left as a no-op for fresh Supabase branch replay.
+--
+-- Historical context:
+-- The original migration assumed public.bookmarks and profile country fields
+-- already existed. In the ordered active migration history, those schema objects
+-- are created/aligned later, so Supabase preview branches failed while replaying
+-- this file with:
+--
+--   ERROR: relation "public.bookmarks" does not exist
+--
+-- Current production bookmark access is handled by the newer consolidated
+-- bookmark policies/functions, so this stale early migration should not run as
+-- part of fresh branch setup.
+select 1;
