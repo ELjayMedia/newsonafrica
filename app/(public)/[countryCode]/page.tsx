@@ -3,7 +3,10 @@ import { notFound } from "next/navigation"
 
 import { ENV } from "@/config/env"
 import { HomeContent } from "@/components/HomeContent"
-import { buildHomeContentPropsForEdition } from "../(home)/home-data"
+import {
+  buildHomeContentPropsForEdition,
+  type HomeContentServerProps,
+} from "../(home)/home-data"
 import { resolveEdition } from "./article/[slug]/article-data"
 import { getSiteBaseUrl } from "@/lib/site-url"
 import { isAfricanEdition } from "@/lib/editions"
@@ -36,6 +39,21 @@ const fallbackMetadata = (countryCode: string, canonicalBase: string): Metadata 
     },
   }
 }
+
+const emptyHomeContentProps = (countryCode: string): HomeContentServerProps => ({
+  initialPosts: [],
+  featuredPosts: [],
+  countryPosts: {
+    [countryCode]: [],
+  },
+  initialData: {
+    taggedPosts: [],
+    featuredPosts: [],
+    categories: [],
+    recentPosts: [],
+    categoryPosts: {},
+  },
+})
 
 export async function generateMetadata({ params }: { params: Promise<{ countryCode: string }> }): Promise<Metadata> {
   const { countryCode } = await params
@@ -85,15 +103,17 @@ export default async function CountryPage({ params }: Props) {
   }
 
   const baseUrl = getSiteBaseUrl()
-  const { initialPosts, featuredPosts, countryPosts, initialData } =
-    await buildHomeContentPropsForEdition(baseUrl, edition)
+  let homeContentProps: HomeContentServerProps
 
-  return (
-    <HomeContent
-      initialPosts={initialPosts}
-      featuredPosts={featuredPosts}
-      countryPosts={countryPosts}
-      initialData={initialData}
-    />
-  )
+  try {
+    homeContentProps = await buildHomeContentPropsForEdition(baseUrl, edition)
+  } catch (error) {
+    console.error("[country-page] Failed to build country edition content; rendering empty state", {
+      countryCode,
+      error,
+    })
+    homeContentProps = emptyHomeContentProps(edition.code)
+  }
+
+  return <HomeContent {...homeContentProps} />
 }
