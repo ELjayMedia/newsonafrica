@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { stripHtml } from "@/lib/search"
 import { createAdminClient } from "@/lib/supabase/admin"
+import type { Database } from "@/types/supabase"
 import { isEditionCode } from "@/lib/wordpress/editions-registry"
 import { searchWordPressPosts } from "@/lib/wordpress-search"
 
@@ -19,6 +20,8 @@ type SyncError = {
   slug?: string
   message: string
 }
+
+type ContentIndexInsert = Database["public"]["Tables"]["content_index"]["Insert"]
 
 const MAX_LIMIT = 100
 
@@ -125,27 +128,29 @@ export async function POST(request: NextRequest) {
       const title = stripHtml(post.title || "Untitled")
       const excerpt = stripHtml(post.excerpt || "")
       const contentPlain = stripHtml(post.content || "").slice(0, 5000)
-      const categories = post.categories?.nodes?.map((category) => category?.name).filter(Boolean) || []
-      const tags = post.tags?.nodes?.map((tag) => tag?.name).filter(Boolean) || []
+      const categories = post.categories?.nodes?.map((category) => category?.name).filter((name): name is string => Boolean(name)) || []
+      const tags = post.tags?.nodes?.map((tag) => tag?.name).filter((name): name is string => Boolean(name)) || []
       const author = post.author?.node?.name || ""
       const publishedAt = post.date || new Date().toISOString()
       const featuredImageUrl = post.featuredImage?.node?.sourceUrl || null
 
+      const contentIndexPayload: ContentIndexInsert = {
+        edition_code: country,
+        wp_post_id: wpPostId,
+        slug: post.slug,
+        title,
+        excerpt,
+        content_plain: contentPlain,
+        tags,
+        categories,
+        author,
+        published_at: publishedAt,
+        url_path: `/${country}/article/${post.slug}`,
+        featured_image_url: featuredImageUrl,
+      }
+
       const { error } = await supabase.from("content_index").upsert(
-        {
-          edition_code: country,
-          wp_post_id: wpPostId,
-          slug: post.slug,
-          title,
-          excerpt,
-          content_plain: contentPlain,
-          tags,
-          categories,
-          author,
-          published_at: publishedAt,
-          url_path: `/${country}/article/${post.slug}`,
-          featured_image_url: featuredImageUrl,
-        },
+        [contentIndexPayload],
         { onConflict: "edition_code,wp_post_id" },
       )
 
