@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
         continue
       }
 
+      const safeSlug = post.slug || `post-${wpPostId}`
       const title = stripHtml(post.title || "Untitled")
       const excerpt = stripHtml(post.excerpt || "")
       const contentPlain = stripHtml(post.content || "").slice(0, 5000)
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
       const contentIndexPayload: ContentIndexInsert = {
         edition_code: country,
         wp_post_id: wpPostId,
-        slug: post.slug,
+        slug: safeSlug,
         title,
         excerpt,
         content_plain: contentPlain,
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
         categories,
         author,
         published_at: publishedAt,
-        url_path: `/${country}/article/${post.slug}`,
+        url_path: `/${country}/article/${safeSlug}`,
         featured_image_url: featuredImageUrl,
       }
 
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
       )
 
       if (error) {
-        errors.push({ wpPostId, slug: post.slug, message: error.message })
+        errors.push({ wpPostId, slug: safeSlug, message: error.message })
       } else {
         synced += 1
       }
