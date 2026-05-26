@@ -22,10 +22,10 @@ test.describe("smoke: auth entry point", () => {
   test("/auth exposes both sign-in and sign-up affordances", async ({ page }) => {
     await page.goto("/auth")
 
-    // The AuthPageClient renders shadcn Tabs with sign-in / sign-up triggers.
-    // We match case-insensitively to tolerate label tweaks.
-    const signIn = page.getByRole("tab", { name: /sign in/i }).or(page.getByText(/sign in/i).first())
-    const signUp = page.getByRole("tab", { name: /sign up/i }).or(page.getByText(/sign up/i).first())
+    // Scope to tab triggers only so the global navigation Sign In link does
+    // not collide with the auth form controls in Playwright strict mode.
+    const signIn = page.getByRole("tab", { name: /^sign in$/i })
+    const signUp = page.getByRole("tab", { name: /^sign up$/i })
 
     await expect(signIn).toBeVisible()
     await expect(signUp).toBeVisible()
