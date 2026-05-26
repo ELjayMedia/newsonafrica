@@ -8,21 +8,6 @@ export const runtime = "edge"
 
 type AcceptedEvent = MetricsEventPayload["event"]
 
-const isAcceptedEvent = (value: string): value is AcceptedEvent => value === "web-vitals" || value === "cache"
-
-const WEB_VITAL_LABELS = new Set<WebVitalsMetricPayload["label"]>(["web-vital", "custom"])
-const WEB_VITAL_NAMES = new Set<WebVitalsMetricPayload["name"]>([
-  "CLS",
-  "FCP",
-  "FID",
-  "INP",
-  "LCP",
-  "TTFB",
-  "Next.js-hydration",
-  "Next.js-route-change-to-render",
-  "Next.js-render",
-])
-
 type NormalizedPayload = MetricsEventPayload & {
   forwardedFor?: string
   userAgent?: string
@@ -36,12 +21,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function isAcceptedEvent(value: unknown): value is AcceptedEvent {
+  return value === "web-vitals" || value === "cache"
+}
+
 function isWebVitalLabel(value: unknown): value is WebVitalsMetricPayload["label"] {
-  return typeof value === "string" && WEB_VITAL_LABELS.has(value as WebVitalsMetricPayload["label"])
+  return value === "web-vital" || value === "custom"
 }
 
 function isWebVitalName(value: unknown): value is WebVitalsMetricPayload["name"] {
-  return typeof value === "string" && WEB_VITAL_NAMES.has(value as WebVitalsMetricPayload["name"])
+  return typeof value === "string"
 }
 
 function normalizeForwardedFor(request: NextRequest): string | undefined {
@@ -105,7 +94,7 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
 
   const rawEvent = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
 
-  if (!rawEvent || !isAcceptedEvent(rawEvent)) return null
+  if (!isAcceptedEvent(rawEvent)) return null
 
   if (rawEvent === "web-vitals") {
     const payload = normalizeWebVitalsPayload(data)
@@ -144,7 +133,28 @@ export async function POST(request: NextRequest) {
     return badRequest(request, "Unsupported metrics payload")
   }
 
-  const { userAgent, forwardedFor, ...eventPayload } = normalized
+  const userAgent = normalized.userAgent
+  const forwardedFor = normalized.forwardedFor
+  const eventPayload: MetricsEventPayload =
+    normalized.event === "web-vitals"
+      ? {
+          event: normalized.event,
+          id: normalized.id,
+          startTime: normalized.startTime,
+          value: normalized.value,
+          label: normalized.label,
+          name: normalized.name,
+          ...(normalized.attribution ? { attribution: normalized.attribution } : {}),
+          ...(normalized.page ? { page: normalized.page } : {}),
+          ...(normalized.href ? { href: normalized.href } : {}),
+        }
+      : {
+          event: normalized.event,
+          cacheKey: normalized.cacheKey,
+          status: normalized.status,
+          ...(normalized.cacheName ? { cacheName: normalized.cacheName } : {}),
+          ...(normalized.metadata ? { metadata: normalized.metadata } : {}),
+        }
 
   try {
     const envelope: MetricsEnvelope = await sendToMetricsSink(eventPayload, {
