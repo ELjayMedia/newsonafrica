@@ -1,4 +1,4 @@
-import type { AuthError, SupabaseClient, User } from "@supabase/supabase-js"
+import type { AuthError, SupabaseClient } from "@supabase/supabase-js"
 
 import { clearSessionCookieClient } from "@/lib/auth/session-cookie-client"
 import type { Database } from "@/types/supabase"
