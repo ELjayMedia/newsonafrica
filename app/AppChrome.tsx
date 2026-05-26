@@ -1,6 +1,5 @@
 import { Suspense, type ReactNode } from "react"
 import Link from "next/link"
-import { cookies } from "next/headers"
 
 import { ClientDynamicComponents } from "@/app/ClientDynamicComponents"
 import { BottomNavigation } from "@/components/BottomNavigation"
@@ -8,18 +7,12 @@ import { PreferredCountrySync } from "@/components/PreferredCountrySync"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { TopBar } from "@/components/TopBar"
 import { Toaster } from "@/components/ui/toaster"
-import { Sidebar } from "@/components/Sidebar"
-import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 
 interface AppChromeProps {
   children: ReactNode
 }
 
-export async function AppChrome({ children }: AppChromeProps) {
-  const cookieStore = await cookies()
-  const preferredCountry =
-    cookieStore.get("preferredCountry")?.value?.toLowerCase() ?? DEFAULT_COUNTRY
-
+export function AppChrome({ children }: AppChromeProps) {
   return (
     <>
       <PreferredCountrySync />
