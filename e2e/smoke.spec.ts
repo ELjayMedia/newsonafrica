@@ -21,7 +21,7 @@ test.describe("smoke: critical user journeys", () => {
 
   test("global header is visible on home", async ({ page }) => {
     await page.goto("/")
-    await expect(page.locator("header")).toBeVisible()
+    await expect(page.getByRole("banner")).toBeVisible()
   })
 
   test("subscribe page reachable from navigation", async ({ page }) => {
