@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { Virtuoso } from "react-virtuoso"
-import { CommentForm } from "@/components/CommentForm"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
 import { MessageSquare, ArrowUpDown } from "lucide-react"
@@ -78,172 +77,122 @@ export function CommentList({
     postId,
     upsertComment,
     removeComment,
+    onStatusChange: refreshComments,
   })
 
-  // Handle optimistic updates
-  const handleCommentAdded = useCallback(
-    (optimisticComment?: Comment) => {
-      if (optimisticComment?.isOptimistic) {
-        addOptimisticComment(optimisticComment)
-      } else {
-        void loadComments({ append: false })
-        clearOptimisticComments()
-      }
-    },
-    [addOptimisticComment, clearOptimisticComments, loadComments],
-  )
-
-  // Handle comment failure
-  const handleCommentFailed = useCallback((commentId: string) => {
-    rollbackOptimisticComment(commentId)
-  }, [rollbackOptimisticComment])
-
-  // Check if user is rate limited
-  const isRateLimited = useCallback(() => {
-    if (!lastCommentTime.current) return false
-
-    const timeSinceLastComment = Date.now() - lastCommentTime.current
-    return timeSinceLastComment < RATE_LIMIT_MS
-  }, [])
-
-  // Calculate time remaining for rate limit
-  const getRateLimitTimeRemaining = useCallback(() => {
-    if (!lastCommentTime.current) return 0
-
-    const timeSinceLastComment = Date.now() - lastCommentTime.current
-    return Math.max(0, Math.ceil((RATE_LIMIT_MS - timeSinceLastComment) / 1000))
-  }, [])
-
-  // Handle sort change
-  useEffect(() => {
-    setSortOption(preferences.commentSort)
-  }, [preferences.commentSort])
-
-  const handleSortChange = (option: CommentSortOption) => {
-    setSortOption(option)
-    void setCommentSortPreference(option)
+  const handleSortChange = async (newSort: CommentSortOption) => {
+    setSortOption(newSort)
+    await setCommentSortPreference(newSort)
+    await loadComments(newSort, true)
   }
 
-  // Get sort option display text
-  const getSortOptionText = (option: CommentSortOption) => {
-    switch (option) {
-      case "newest":
-        return "Newest First"
-      case "oldest":
-        return "Oldest First"
-      case "popular":
-        return "Most Popular"
-      default:
-        return "Sort"
+  const canComment = () => {
+    const now = Date.now()
+    if (lastCommentTime.current && now - lastCommentTime.current < RATE_LIMIT_MS) {
+      return false
     }
+    lastCommentTime.current = now
+    return true
   }
 
-  // Handle retry
-  const handleRetry = () => {
-    refreshComments()
+  const sortOptions: { value: CommentSortOption; label: string }[] = [
+    { value: "newest", label: "Newest" },
+    { value: "oldest", label: "Oldest" },
+    { value: "most_liked", label: "Most Liked" },
+  ]
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <p className="font-medium">Unable to load comments</p>
+        <p className="mt-1 text-sm">{error}</p>
+        <Button variant="outline" size="sm" onClick={() => loadComments(sortOption, true)} className="mt-3">
+          Try Again
+        </Button>
+      </div>
+    )
   }
 
   return (
-    <div id="comments" className="mt-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center">
-          <MessageSquare className="mr-2 h-5 w-5" />
-          Comments {totalComments > 0 && `(${totalComments})`}
-        </h3>
+    <section className="mt-8" aria-labelledby="comments-heading">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 id="comments-heading" className="flex items-center gap-2 text-xl font-semibold">
+          <MessageSquare className="h-5 w-5" />
+          Comments ({totalComments})
+        </h2>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto">
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              {getSortOptionText(sortOption)}
+            <Button variant="outline" size="sm" className="gap-2">
+              <ArrowUpDown className="h-4 w-4" />
+              Sort
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleSortChange("newest")}>Newest First</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSortChange("oldest")}>Oldest First</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSortChange("popular")}>Most Popular</DropdownMenuItem>
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => handleSortChange(option.value)}
+                className={sortOption === option.value ? "font-semibold" : ""}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       {isInitialLoad ? (
-        <div className="space-y-3 mt-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex space-x-4">
-              <div className="rounded-full bg-gray-200 h-10 w-10"></div>
-              <div className="flex-1 space-y-2 py-1">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                </div>
-              </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="animate-pulse rounded-lg border p-4">
+              <div className="mb-2 h-4 w-1/4 rounded bg-gray-200" />
+              <div className="mb-2 h-3 w-full rounded bg-gray-200" />
+              <div className="h-3 w-3/4 rounded bg-gray-200" />
             </div>
           ))}
         </div>
-      ) : error ? (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md">
-          <p>{error}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={handleRetry}>
-            Try Again
-          </Button>
-        </div>
       ) : totalRenderableComments === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p>No comments yet. Be the first to comment!</p>
+        <div className="rounded-lg border border-dashed p-8 text-center text-gray-500">
+          <MessageSquare className="mx-auto mb-3 h-8 w-8 text-gray-400" />
+          <p>No comments yet. Be the first to share your thoughts.</p>
         </div>
       ) : (
-        <div className="mt-4">
-          <Virtuoso
-            totalCount={totalRenderableComments}
-            itemContent={(index) => {
-              const comment = getCommentAtIndex(index)
+        <Virtuoso
+          useWindowScroll
+          data={renderedComments}
+          endReached={() => {
+            if (paginationRef.current.hasMore && !isLoadingMore) {
+              loadMoreComments()
+            }
+          }}
+          itemContent={(index) => {
+            const comment = getCommentAtIndex(index)
+            if (!comment) return null
 
-              if (!comment) {
-                return (
-                  <div className="py-4">
-                    <p className="text-sm text-gray-500">Unable to load this comment.</p>
-                  </div>
-                )
-              }
-
-              return (
-                <CommentItem
-                  comment={comment}
-                  postId={postId}
-                  editionCode={editionCode}
-                  onCommentUpdated={refreshComments}
-                  onReplyAdded={handleCommentAdded}
-                  onReplyFailed={handleCommentFailed}
-                  isRateLimited={isRateLimited}
-                  rateLimitTimeRemaining={getRateLimitTimeRemaining}
-                  isFailed={failedCommentSet.has(comment.id)}
-                />
-              )
-            }}
-            computeItemKey={(index) => {
-              const comment = getCommentAtIndex(index)
-              return comment ? comment.id : `missing-${index}`
-            }}
-            endReached={loadMoreComments}
-            useWindowScroll
-            components={{
-              Footer: () =>
-                paginationRef.current.hasMore ? (
-                  <div className="flex justify-center py-4" aria-live="polite">
-                    {isLoadingMore ? (
-                      <p className="text-gray-500">Loading more comments...</p>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={loadMoreComments} disabled={isFetching}>
-                        Load More Comments
-                      </Button>
-                    )}
-                  </div>
-                ) : null,
-            }}
-          />
-        </div>
+            return (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                isFailed={failedCommentSet.has(comment.id)}
+                onRetry={() => {
+                  if (!canComment()) return
+                  addOptimisticComment(comment)
+                }}
+                onRemove={() => {
+                  rollbackOptimisticComment(comment.id)
+                }}
+              />
+            )
+          }}
+        />
       )}
-    </div>
+
+      {isLoadingMore && <p className="mt-4 text-center text-sm text-gray-500">Loading more comments…</p>}
+
+      <div className="sr-only" aria-live="polite">
+        {clearOptimisticComments ? "" : ""}
+      </div>
+    </section>
   )
 }
