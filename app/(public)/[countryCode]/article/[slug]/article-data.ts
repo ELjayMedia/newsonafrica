@@ -5,7 +5,7 @@ import { AFRICAN_EDITION, SUPPORTED_EDITIONS, isCountryEdition, type SupportedEd
 import { buildArticlePath, normalizeArticleCountrySegment } from "@/lib/routing/article-route"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers"
 import { fetchWordPressGraphQL, type WordPressGraphQLFailure, type WordPressGraphQLResult } from "@/lib/wordpress/client"
-import { COUNTRIES } from "@/lib/wordpress/countries"
+import { COUNTRIES } from "@/lib/wordpress/service"
 import type { WordPressPost } from "@/types/wp"
 import { POST_BY_SLUG_QUERY } from "@/lib/wordpress/queries"
 import type { PostFieldsFragment } from "@/types/wpgraphql"
@@ -113,24 +113,6 @@ type PostBySlugQueryResult = {
   } | null
 }
 
-type CachedArticlePayload = {
-  article: WordPressPost
-  sourceCountry: string
-  canonicalCountry: string | null
-  version: string | null
-  tags: string[]
-  cachedAt: number
-}
-
-type CachedArticleResolution = CachedArticlePayload & {
-  cacheCountry: string
-}
-
-type CachedArticleReadResult = {
-  payload: CachedArticlePayload
-  isStale: boolean
-}
-
 export interface LoadedArticle {
   article: WordPressPost
   tags: string[]
@@ -230,9 +212,6 @@ const sanitizeCacheKeySegment = (value: string): string => {
   return sanitized.length > 0 ? sanitized : DEFAULT_ARTICLE_CACHE_VERSION
 }
 
-const resolveCacheVersionSegment = (version: string | null | undefined): string =>
-  version ? sanitizeCacheKeySegment(version) : DEFAULT_ARTICLE_CACHE_VERSION
-
 const resolveArticleVersion = (article: WordPressPost): string | null => {
   const rawVersion =
     article?.modified?.toString() ??
@@ -247,11 +226,6 @@ const resolveArticleVersion = (article: WordPressPost): string | null => {
   return sanitizeCacheKeySegment(rawVersion.trim().toLowerCase())
 }
 
-const buildArticleCacheKey = (country: string, slug: string, version?: string | null): string => {
-  const cacheVersion = resolveCacheVersionSegment(version)
-  return `${ARTICLE_CACHE_KEY_PREFIX}:${normalizeCountryCode(country)}:${normalizeSlug(slug)}:${cacheVersion}`
-}
-
 const buildArticleCacheTags = (country: string, slug: string, article: WordPressPost): string[] => {
   const slugTag = cacheTags.postSlug(country, slug)
   const tags = [slugTag]
@@ -261,29 +235,6 @@ const buildArticleCacheTags = (country: string, slug: string, article: WordPress
   }
 
   return tags
-}
-
-const buildCachedArticlePayload = (
-  country: string,
-  slug: string,
-  payload: Partial<CachedArticlePayload> & { article: WordPressPost },
-  fallbackSourceCountry: string,
-): CachedArticlePayload => {
-  const normalizedSourceCountry = normalizeCountryCode(payload.sourceCountry ?? fallbackSourceCountry)
-  const canonicalCountry =
-    payload.canonicalCountry != null ? normalizeCountryCode(payload.canonicalCountry) : normalizedSourceCountry
-  const version = payload.version ?? resolveArticleVersion(payload.article)
-  const tags =
-    payload.tags && payload.tags.length > 0 ? payload.tags : buildArticleCacheTags(country, slug, payload.article)
-
-  return {
-    article: payload.article,
-    sourceCountry: normalizedSourceCountry,
-    canonicalCountry,
-    version,
-    tags,
-    cachedAt: payload.cachedAt ?? Date.now(),
-  }
 }
 
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
@@ -356,7 +307,6 @@ export async function loadArticleWithFallback(
   preview = false,
 ): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
-
   const [primaryCountry, ...fallbackCountries] = countryPriority
 
   if (!primaryCountry) {
