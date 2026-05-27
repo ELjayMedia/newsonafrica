@@ -1,16 +1,24 @@
 import type { NextRequest } from "next/server"
 
-import type { CacheMetricPayload, MetricsEventPayload } from "@/types/metrics"
+import type { CacheMetricPayload, MetricsEventPayload, WebVitalsMetricPayload } from "@/types/metrics"
 
 type NormalizedPayload = MetricsEventPayload & {
   forwardedFor?: string
   userAgent?: string
 }
 
-const ACCEPTED_EVENTS = new Set(["web-vitals", "cache"] as const)
+type AcceptedEvent = MetricsEventPayload["event"]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function isAcceptedEvent(value: unknown): value is AcceptedEvent {
+  return value === "web-vitals" || value === "cache"
+}
+
+function isWebVitalLabel(value: unknown): value is WebVitalsMetricPayload["label"] {
+  return value === "web-vital" || value === "custom"
 }
 
 function normalizeForwardedFor(request: NextRequest): string | undefined {
@@ -40,11 +48,11 @@ function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayloa
   }
 }
 
-function normalizeWebVitalsPayload(data: Record<string, unknown>): MetricsEventPayload | null {
+function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetricPayload | null {
   const id = typeof data.id === "string" ? data.id : undefined
   const startTime = typeof data.startTime === "number" ? data.startTime : undefined
   const value = typeof data.value === "number" ? data.value : undefined
-  const label = data.label === "web-vital" || data.label === "custom" ? data.label : undefined
+  const label = isWebVitalLabel(data.label) ? data.label : undefined
   const name = typeof data.name === "string" ? data.name : undefined
 
   if (!id || typeof startTime !== "number" || typeof value !== "number" || !label || !name) {
@@ -58,19 +66,19 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): MetricsEventP
     id,
     startTime,
     value,
-    label: label as MetricsEventPayload extends infer _T ? never : never,
-    name: name as MetricsEventPayload extends infer _T ? never : never,
+    label,
+    name,
     ...(attribution ? { attribution } : {}),
     ...(typeof data.page === "string" ? { page: data.page } : {}),
     ...(typeof data.href === "string" ? { href: data.href } : {}),
-  } as MetricsEventPayload
+  }
 }
 
 export function normalizeMetricsPayload(request: NextRequest, data: unknown): NormalizedPayload | null {
   if (!isRecord(data)) return null
 
   const event = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
-  if (!event || !ACCEPTED_EVENTS.has(event as "web-vitals" | "cache")) return null
+  if (!isAcceptedEvent(event)) return null
 
   const payload = event === "web-vitals" ? normalizeWebVitalsPayload(data) : normalizeCachePayload(data)
   if (!payload) return null
