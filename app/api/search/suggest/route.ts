@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { getSearchSuggestions } from "@/lib/supabase/search"
+import { getSearchSuggestions } from "@/lib/wordpress-search"
 
-import { normalizeBaseSearchParams } from "../shared"
+import { DEFAULT_COUNTRY, normalizeBaseSearchParams } from "../shared"
+import { executeWordPressSearchForScope } from "../wordpress-fallback"
 
 export const runtime = "edge"
 export const revalidate = 30
@@ -23,15 +24,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const edition = normalizedParams.scope.type === "country" ? normalizedParams.scope.country : undefined
+    if (normalizedParams.scope.type === "panAfrican") {
+      const result = await executeWordPressSearchForScope(normalizedParams.query, normalizedParams.scope, 1, 10)
+      const response = jsonWithCors(request, {
+        suggestions: result.suggestions,
+        performance: {
+          responseTime: Date.now() - startTime,
+          source: "graphql",
+          ...result.performance,
+        },
+      })
+      response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
+      return response
+    }
 
-    const suggestions = await getSearchSuggestions(normalizedParams.query, edition, 10)
+    const country = normalizedParams.scope.type === "country" ? normalizedParams.scope.country : DEFAULT_COUNTRY
+    const suggestions = await getSearchSuggestions(normalizedParams.query, 10, country)
 
     const response = jsonWithCors(request, {
       suggestions,
       performance: {
         responseTime: Date.now() - startTime,
-        source: "supabase-fts",
+        source: "graphql",
       },
     })
     response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
