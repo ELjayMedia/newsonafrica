@@ -31,11 +31,18 @@ export function useCommentsRealtimeSync({
         (payload: RealtimePostgresChangesPayload<Comment>) => {
           if (payload.eventType === "DELETE" && payload.old?.id) {
             removeComment(payload.old.id)
+            void onStatusChange?.()
             return
           }
 
           if ((payload.eventType === "INSERT" || payload.eventType === "UPDATE") && payload.new) {
-            upsertComment(payload.new)
+            if (payload.new.status === "active") {
+              upsertComment(payload.new)
+            } else if (payload.new.id) {
+              removeComment(payload.new.id)
+            }
+
+            void onStatusChange?.()
           }
 
           if (payload.eventType === "UPDATE" && onStatusChange) {
