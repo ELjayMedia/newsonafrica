@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase/browser-helpers"
@@ -10,16 +10,33 @@ interface UseCommentsRealtimeSyncOptions {
   postId: string
   upsertComment: (comment: Comment) => void
   removeComment: (commentId: string) => void
-  onStatusChange?: () => void | Promise<void>
+  onRefreshNeeded?: () => void | Promise<void>
 }
+
+const REALTIME_REFRESH_DEBOUNCE_MS = 750
 
 export function useCommentsRealtimeSync({
   postId,
   upsertComment,
   removeComment,
-  onStatusChange,
+  onRefreshNeeded,
 }: UseCommentsRealtimeSyncOptions) {
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
+    const scheduleRefresh = () => {
+      if (!onRefreshNeeded) return
+
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+      }
+
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null
+        void onRefreshNeeded()
+      }, REALTIME_REFRESH_DEBOUNCE_MS)
+    }
+
     const channel = supabase
       .channel(`comments-${postId}`)
       .on(
@@ -28,7 +45,6 @@ export function useCommentsRealtimeSync({
         (payload: RealtimePostgresChangesPayload<Comment>) => {
           if (payload.eventType === "DELETE" && payload.old?.id) {
             removeComment(payload.old.id)
-            void onStatusChange?.()
             return
           }
 
@@ -39,14 +55,18 @@ export function useCommentsRealtimeSync({
               removeComment(payload.new.id)
             }
 
-            void onStatusChange?.()
+            scheduleRefresh()
           }
         },
       )
       .subscribe()
 
     return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
       supabase.removeChannel(channel)
     }
-  }, [postId, removeComment, upsertComment, onStatusChange])
+  }, [postId, removeComment, upsertComment, onRefreshNeeded])
 }
