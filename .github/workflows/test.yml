@@ -8,25 +8,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
 
-      # Enable pnpm via corepack BEFORE setup-node so the cache step can find it
+      # Enable the repository-pinned pnpm before setup-node so the cache step can find it.
       - name: Enable pnpm
         run: |
           corepack enable
           corepack prepare pnpm@9.15.4 --activate
           pnpm --version
 
-      # Setup Node + pnpm cache (pnpm must be available before this step)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      # Install dependencies strictly
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -36,24 +35,16 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
-      - name: Test (with coverage)
-        run: pnpm run test:coverage
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
 
       - name: Upload coverage report
-        if: always()
+        if: always() && hashFiles('coverage/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage
-          if-no-files-found: warn
-
-      - name: Analyze bundle
-        run: pnpm run analyze
-
-      - name: Upload bundle analyzer report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-analyzer
-          path: .next/analyze
           if-no-files-found: warn
