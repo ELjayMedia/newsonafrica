@@ -5,7 +5,6 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase/browser-helpers"
 import type { Comment } from "@/lib/supabase-schema"
-import type { CommentStatus } from "@/types/comments"
 
 interface UseCommentsRealtimeSyncOptions {
   postId: string
@@ -13,8 +12,6 @@ interface UseCommentsRealtimeSyncOptions {
   removeComment: (commentId: string) => void
   onStatusChange?: () => void | Promise<void>
 }
-
-const getCommentStatus = (value: Partial<Comment> | null | undefined): CommentStatus | undefined => value?.status
 
 export function useCommentsRealtimeSync({
   postId,
@@ -44,15 +41,6 @@ export function useCommentsRealtimeSync({
 
             void onStatusChange?.()
           }
-
-          if (payload.eventType === "UPDATE" && onStatusChange) {
-            const previousStatus = getCommentStatus(payload.old)
-            const nextStatus = getCommentStatus(payload.new)
-
-            if (previousStatus && nextStatus && previousStatus !== nextStatus) {
-              void onStatusChange()
-            }
-          }
         },
       )
       .subscribe()
@@ -60,5 +48,5 @@ export function useCommentsRealtimeSync({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [postId, removeComment, onStatusChange, upsertComment])
+  }, [postId, removeComment, upsertComment, onStatusChange])
 }
