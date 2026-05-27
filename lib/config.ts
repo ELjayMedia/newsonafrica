@@ -66,8 +66,8 @@ export const appConfig = {
     },
     timeouts: {
       frontPage: 12000,
-      recent: 8000,
-      tag: 8000,
+      recent: 1200,
+      tag: 900,
     },
     concurrency: 4,
     editions: {
