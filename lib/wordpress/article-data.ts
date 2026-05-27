@@ -2,6 +2,7 @@ import "server-only"
 
 import { ENV } from "@/config/env"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
+import { cacheTags } from "@/lib/cache/cacheTags"
 import { mapGraphqlPostToWordPressPost } from "@/lib/mapping/post-mappers.server"
 import { POST_BY_DATABASE_ID_QUERY, POST_BY_SLUG_DIRECT_QUERY } from "@/lib/wordpress/queries"
 import { type EditionCode, WORDPRESS_EDITIONS_REGISTRY } from "@/lib/wordpress/editions-registry"
@@ -11,7 +12,10 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 const EDITION_CODES: EditionCode[] = ["sz", "za", "ng"]
 
-type PostByDirectSlugQueryResult = { post?: PostFieldsFragment | null }
+type PostByDirectSlugQueryResult = {
+  post?: PostFieldsFragment | null
+  posts?: { nodes?: (PostFieldsFragment | null)[] | null } | null
+}
 
 type PostByDatabaseIdQueryResult = { post?: PostFieldsFragment | null }
 
@@ -48,13 +52,33 @@ const resolveVersion = (article: WordPressPost): string | null => {
   return raw ? String(raw) : null
 }
 
+const resolvePostNode = (result: PostByDirectSlugQueryResult | PostByDatabaseIdQueryResult | null | undefined) => {
+  if (!result) return null
+
+  return (
+    result.post ??
+    ("posts" in result ? result.posts?.nodes?.find((node): node is PostFieldsFragment => Boolean(node)) : null) ??
+    null
+  )
+}
+
 const queryArticle = async (
   countryCode: EditionCode,
   slug: string,
   preview: boolean,
   stableId?: number | null,
 ): Promise<LoadArticleResult> => {
-  const fetchOptions = preview ? { revalidate: CACHE_DURATIONS.NONE } : { tags: [`wp:${countryCode}:latest`] }
+  const fetchOptions = preview
+    ? {
+        revalidate: CACHE_DURATIONS.NONE,
+        operationName: "PostBySlug" as const,
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "article_detail" },
+      }
+    : {
+        tags: [cacheTags.postSlug(countryCode, slug)],
+        operationName: "PostBySlug" as const,
+        routeContext: { route: "/[countryCode]/article/[slug]", surface: "article_detail" },
+      }
 
   try {
     let result: WordPressGraphQLResult<PostByDirectSlugQueryResult | PostByDatabaseIdQueryResult>
@@ -83,7 +107,7 @@ const queryArticle = async (
       return { status: "temporary_error", error: result.error, failure: result }
     }
 
-    const node = result.data?.post ?? null
+    const node = resolvePostNode(result.data)
 
     if (!node) return { status: "not_found" }
 
@@ -96,7 +120,10 @@ const queryArticle = async (
 
 const getFallbackCountries = (primary: EditionCode): EditionCode[] => {
   const configured: EditionCode[] = EDITION_CODES.filter((code) => Boolean(WORDPRESS_EDITIONS_REGISTRY[code]?.graphql))
-  const priority = [primary, ENV.NEXT_PUBLIC_DEFAULT_SITE as EditionCode, ...configured]
+  const includeCrossCountry = process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK === "true"
+  const priority = includeCrossCountry
+    ? [primary, ENV.NEXT_PUBLIC_DEFAULT_SITE as EditionCode, ...configured]
+    : [primary, ENV.NEXT_PUBLIC_DEFAULT_SITE as EditionCode]
   return Array.from(new Set(priority)).filter((code): code is EditionCode => EDITION_CODES.includes(code))
 }
 
