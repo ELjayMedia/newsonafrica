@@ -39,7 +39,16 @@ const computeEditionConfigSignature = (): string => {
     isCountryEdition: isCountryEdition(edition),
   }))
 
-  return JSON.stringify({ defaultSite, editions })
+  return JSON.stringify({
+    defaultSite,
+    editions,
+    crossCountryFallback: process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK ?? "",
+    crossPostPolicy: process.env.ARTICLE_CROSS_POST_POLICY ?? "",
+    endpoints: SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) => [
+      normalizeCountryCode(edition.code),
+      process.env[`NEXT_PUBLIC_WP_${edition.code.toUpperCase()}_GRAPHQL`] ?? null,
+    ]),
+  })
 }
 
 export const resetArticleCountryPriorityCache = (): void => {
@@ -129,21 +138,16 @@ const asLoadArticleResult = (
   countryCode: string,
   result: WordPressGraphQLResult<PostBySlugQueryResult>,
   slug: string,
-  preview: boolean,
+  _preview: boolean,
 ): LoadArticleResult => {
   if (!result.ok) {
     return { status: "temporary_error", error: result.error, failure: result }
   }
 
-  let node: PostFieldsFragment | null = null
-
-  if (preview && result.data.post) {
-    node = result.data.post
-  }
-
-  if (!node) {
-    node = result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ?? null
-  }
+  const node =
+    result.data.post ??
+    result.data.posts?.nodes?.find((value): value is PostFieldsFragment => Boolean(value)) ??
+    null
 
   if (!node) {
     return { status: "not_found" }
@@ -237,8 +241,19 @@ const buildArticleCacheTags = (country: string, slug: string, article: WordPress
   return tags
 }
 
+const hasExplicitGraphQLEndpoint = (countryCode: string): boolean => {
+  const key = `NEXT_PUBLIC_WP_${normalizeCountryCode(countryCode).toUpperCase()}_GRAPHQL`
+  const value = process.env[key]
+
+  if (typeof value === "string") {
+    return value.trim().length > 0
+  }
+
+  return hasWordPressEndpoint(countryCode)
+}
+
 export const buildArticleCountryPriority = (countryCode: string): string[] => {
-  const normalizedPrimary = normalizeCountryCode(countryCode)
+  const normalizedPrimary = normalizeRouteCountry(countryCode)
   const signature = computeEditionConfigSignature()
 
   const cached = articleCountryPriorityCache.get(normalizedPrimary)
@@ -248,15 +263,18 @@ export const buildArticleCountryPriority = (countryCode: string): string[] => {
 
   const defaultSite = normalizeCountryCode(ENV.NEXT_PUBLIC_DEFAULT_SITE)
   const africanEdition = normalizeCountryCode(AFRICAN_EDITION.code)
-
   const supportedCountryEditions = SUPPORTED_EDITIONS.filter(isCountryEdition).map((edition) =>
     normalizeCountryCode(edition.code),
   )
+  const crossCountryFallbackEnabled = process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK === "true"
+  const allowAllSupported = process.env.ARTICLE_CROSS_POST_POLICY === "all_supported"
 
-  const prioritized = [normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition]
+  const prioritized =
+    crossCountryFallbackEnabled || allowAllSupported
+      ? [normalizedPrimary, defaultSite, ...supportedCountryEditions, africanEdition]
+      : [normalizedPrimary, defaultSite]
 
-  const supportedPriority = prioritized.filter(hasWordPressEndpoint)
-
+  const supportedPriority = prioritized.filter((code) => code !== africanEdition && hasExplicitGraphQLEndpoint(code))
   const priority = unique(supportedPriority)
   articleCountryPriorityCache.set(normalizedPrimary, { priority, signature })
 
@@ -305,6 +323,7 @@ export async function loadArticleWithFallback(
   slug: string,
   countryPriority: string[],
   preview = false,
+  context?: { requestedCountry?: string; staleCacheServed?: boolean },
 ): Promise<ArticleLoadResult> {
   const normalizedSlug = normalizeSlug(slug)
   const [primaryCountry, ...fallbackCountries] = countryPriority
@@ -356,6 +375,31 @@ export async function loadArticleWithFallback(
   }
 
   if (temporaryFailures.length > 0 && !preview) {
+    const attempts = countryPriority.map((country) => {
+      const failure = temporaryFailures.find((entry) => entry.country === country)
+      return failure
+        ? {
+            country,
+            result: "temporary_error",
+            failureKind: failure.failure?.kind ?? null,
+            failureStatus: "status" in (failure.failure ?? {}) ? (failure.failure as { status?: number }).status ?? null : null,
+          }
+        : {
+            country,
+            result: "not_found",
+            failureKind: null,
+            failureStatus: null,
+          }
+    })
+
+    console.error("[article-data] fallback attempts exhausted with temporary failures", {
+      slug: normalizedSlug,
+      requestedCountry: context?.requestedCountry ?? primaryCountry,
+      countryPriority,
+      staleCacheServed: context?.staleCacheServed ?? false,
+      attempts,
+    })
+
     const message = buildTemporaryFailureMessage(temporaryFailures)
     const error = new ArticleTemporarilyUnavailableError(temporaryFailures, message)
     return {
