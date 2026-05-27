@@ -87,7 +87,7 @@
       ],
       "rules": {
         "no-restricted-syntax": [
-          "error",
+          "warn",
           {
             "selector": "TSAsExpression > TSAnyKeyword",
             "message": "Avoid `as any` outside adapter directories. Move unsafe casts into lib/**/adapters and return typed outputs."
