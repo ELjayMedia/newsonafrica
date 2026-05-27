@@ -83,7 +83,6 @@ export function CommentList({
   const handleSortChange = async (newSort: CommentSortOption) => {
     setSortOption(newSort)
     await setCommentSortPreference(newSort)
-    await loadComments(newSort, true)
   }
 
   const canComment = () => {
@@ -106,7 +105,7 @@ export function CommentList({
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
         <p className="font-medium">Unable to load comments</p>
         <p className="mt-1 text-sm">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => loadComments(sortOption, true)} className="mt-3">
+        <Button variant="outline" size="sm" onClick={() => loadComments({ append: false })} className="mt-3">
           Try Again
         </Button>
       </div>
