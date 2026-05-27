@@ -2,16 +2,14 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { sendToMetricsSink } from "@/lib/metrics/sink"
-import type { MetricsEnvelope, MetricsEventPayload } from "@/types/metrics"
+import type { MetricsContext, MetricsEnvelope, MetricsEventPayload } from "@/types/metrics"
 
 export const runtime = "edge"
 
-type MetricExtras = {
+type NormalizedPayload = MetricsEventPayload & {
   forwardedFor?: string
   userAgent?: string
 }
-
-type NormalizedPayload = MetricsEventPayload & MetricExtras
 
 function badRequest(request: NextRequest, message: string) {
   return jsonWithCors(request, { error: message }, { status: 400 })
@@ -37,11 +35,14 @@ function normalizePayload(request: NextRequest, data: unknown): NormalizedPayloa
   const event = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : ""
   if (event !== "web-vitals" && event !== "cache") return null
 
+  const userAgent = request.headers.get("user-agent") ?? undefined
+  const forwardedFor = normalizeForwardedFor(request)
+
   return {
     ...data,
     event,
-    userAgent: request.headers.get("user-agent") ?? undefined,
-    forwardedFor: normalizeForwardedFor(request),
+    ...(userAgent ? { userAgent } : {}),
+    ...(forwardedFor ? { forwardedFor } : {}),
   } as NormalizedPayload
 }
 
@@ -62,13 +63,17 @@ export async function POST(request: NextRequest) {
   }
 
   const { userAgent, forwardedFor, ...eventPayload } = normalized
+  const metricsContext: MetricsContext = {
+    source: "client",
+    ...(userAgent ? { userAgent } : {}),
+    ...(forwardedFor ? { forwardedFor } : {}),
+  }
 
   try {
-    const envelope: MetricsEnvelope = await sendToMetricsSink(eventPayload as MetricsEventPayload, {
-      source: "client",
-      userAgent,
-      forwardedFor,
-    })
+    const envelope: MetricsEnvelope = await sendToMetricsSink(
+      eventPayload as MetricsEventPayload,
+      metricsContext,
+    )
 
     return jsonWithCors(request, { ok: true, received: envelope.event }, { status: 202 })
   } catch (error) {
