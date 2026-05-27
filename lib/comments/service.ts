@@ -2,7 +2,7 @@ import type { PostgrestError, Session, SupabaseClient } from "@supabase/supabase
 
 import { executeListQuery } from "@/lib/supabase/list-query"
 import { buildCursorConditions, decodeCommentCursor, encodeCommentCursor } from "@/lib/comment-cursor"
-import type { Comment, CommentReactionType } from "@/lib/supabase-schema"
+import type { Comment, CommentReactionType, CommentSortOption } from "@/lib/supabase-schema"
 import type { Database } from "@/types/supabase"
 import { normalizeEditionCode, type CommentAction, type CommentStatus } from "./validators"
 import { AFRICAN_EDITION } from "@/lib/editions"
@@ -60,6 +60,36 @@ function applyVisibility(
   }
 
   return query.eq("status", status).eq("user_id", session.user.id)
+}
+
+function applyCommentSort(query: any, sortOption: CommentSortOption): any {
+  if (sortOption === "oldest") {
+    return query.order("created_at", { ascending: true }).order("id", { ascending: true })
+  }
+
+  if (sortOption === "popular") {
+    return query
+      .order("reactions_count", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+  }
+
+  return query.order("created_at", { ascending: false }).order("id", { ascending: false })
+}
+
+function encodeNextCursor(sortOption: CommentSortOption, comment: Comment | undefined): string | null {
+  if (!comment?.created_at || !comment.id) return null
+
+  if (sortOption === "popular") {
+    return encodeCommentCursor({
+      sort: "popular",
+      reactionCount: typeof comment.reactions_count === "number" ? comment.reactions_count : null,
+      createdAt: String(comment.created_at),
+      id: String(comment.id),
+    })
+  }
+
+  return encodeCommentCursor({ sort: sortOption, createdAt: String(comment.created_at), id: String(comment.id) })
 }
 
 async function attachReactionAggregation(
@@ -132,18 +162,20 @@ export async function listCommentsService(
     page: number
     parentId?: string | null
     status: CommentStatus
+    sortOption?: CommentSortOption
     cursor?: string
     session: Session | null
   },
 ) {
+  const sortOption = params.sortOption ?? "newest"
   const decodedCursor = params.cursor ? decodeCommentCursor(params.cursor) : null
-  if (params.cursor && (!decodedCursor || decodedCursor.sort !== "newest")) {
+  if (params.cursor && (!decodedCursor || decodedCursor.sort !== sortOption)) {
     throw new Error("Invalid cursor")
   }
 
   const wpPostId = parseWpPostId(params.wpPostId)
   const moderator = await isModerator(supabase, params.session)
-  const cursorConditions = buildCursorConditions("newest", decodedCursor)
+  const cursorConditions = buildCursorConditions(sortOption, decodedCursor)
 
   const applyBase = (query: any, includeCursor: boolean) => {
     let built = query.eq("wp_post_id", wpPostId).eq("edition_code", params.editionCode)
@@ -158,10 +190,7 @@ export async function listCommentsService(
   }
 
   const { data, error } = (await executeListQuery(supabase, "comments", (query) =>
-    applyBase(query.select(COMMENT_SELECT), true)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(params.limit + 1),
+    applyCommentSort(applyBase(query.select(COMMENT_SELECT), true), sortOption).limit(params.limit + 1),
   )) as { data: Comment[] | null; error: PostgrestError | null }
 
   if (error) throw new Error(`Failed to fetch comments: ${error.message}`)
@@ -187,10 +216,7 @@ export async function listCommentsService(
     comments: withReactions,
     hasMore,
     totalCount,
-    nextCursor:
-      hasMore && last?.created_at && last?.id
-        ? encodeCommentCursor({ sort: "newest", createdAt: String(last.created_at), id: String(last.id) })
-        : null,
+    nextCursor: hasMore ? encodeNextCursor(sortOption, last) : null,
   }
 }
 

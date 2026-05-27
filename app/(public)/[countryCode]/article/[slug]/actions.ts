@@ -21,8 +21,6 @@ export async function fetchCommentsPageAction({
   sortOption = "newest",
   cursor = null,
 }: FetchCommentsPageActionInput) {
-  void sortOption
-
   const supabase = await createServerComponentSupabaseClient()
   if (!supabase) {
     return { comments: [], hasMore: false, nextCursor: null, total: 0 }
@@ -39,6 +37,7 @@ export async function fetchCommentsPageAction({
     limit: pageSize,
     parentId: null,
     status: "active",
+    sortOption,
     cursor: cursor ?? undefined,
     session,
   })

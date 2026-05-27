@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useCommentsQuery } from "@/hooks/useCommentsQuery"
-import { useOptimisticComments } from "@/hooks/useOptimisticComments"
 import { useCommentsRealtimeSync } from "@/hooks/useCommentsRealtimeSync"
 
 interface CommentListProps {
@@ -21,31 +20,17 @@ interface CommentListProps {
   initialTotal?: number
 }
 
-export function CommentList({
-  postId,
-  editionCode,
-  initialComments = [],
-  initialCursor = null,
-  initialHasMore = false,
-  initialTotal,
-}: CommentListProps) {
+const sortOptions: { value: CommentSortOption; label: string }[] = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "popular", label: "Most liked" },
+]
+
+export function CommentList({ postId, editionCode, initialComments = [], initialCursor = null, initialHasMore = false, initialTotal }: CommentListProps) {
   const paginationRef = useRef({ cursor: initialCursor, hasMore: initialHasMore })
   const { preferences, setCommentSortPreference } = useUserPreferences()
   const [sortOption, setSortOption] = useState<CommentSortOption>(preferences.commentSort)
-  const {
-    comments,
-    loading,
-    isPending,
-    error,
-    totalComments,
-    pagination,
-    hasHydratedInitial,
-    loadComments,
-    loadMoreComments,
-    refreshComments,
-    upsertComment,
-    removeComment,
-  } = useCommentsQuery({
+  const { comments, loading, error, totalComments, pagination, hasHydratedInitial, loadMoreComments, refreshComments, upsertComment, removeComment } = useCommentsQuery({
     postId,
     editionCode,
     sortOption,
@@ -54,59 +39,28 @@ export function CommentList({
     initialHasMore,
     initialTotal,
   })
-  const { renderedComments, failedCommentSet, addOptimisticComment, clearOptimisticComments, rollbackOptimisticComment } =
-    useOptimisticComments(comments)
 
-  const isFetching = loading || isPending
-  const isInitialLoad = isFetching && !hasHydratedInitial.current
-  const isLoadingMore = isFetching && !isInitialLoad
+  const isInitialLoad = loading && !hasHydratedInitial.current
+  const isLoadingMore = loading && !isInitialLoad
 
   useEffect(() => {
     paginationRef.current = pagination
   }, [pagination])
 
-  const totalRenderableComments = renderedComments.length
-
-  const getCommentAtIndex = useCallback((index: number): Comment | undefined => renderedComments[index], [renderedComments])
-
-  // For rate limiting
-  const lastCommentTime = useRef<number | null>(null)
-  const RATE_LIMIT_MS = 10000 // 10 seconds
-
-  useCommentsRealtimeSync({
-    postId,
-    upsertComment,
-    removeComment,
-    onStatusChange: refreshComments,
-  })
+  useCommentsRealtimeSync({ postId, upsertComment, removeComment })
 
   const handleSortChange = async (newSort: CommentSortOption) => {
+    if (newSort === sortOption) return
     setSortOption(newSort)
     await setCommentSortPreference(newSort)
-    await loadComments(newSort, true)
   }
-
-  const canComment = () => {
-    const now = Date.now()
-    if (lastCommentTime.current && now - lastCommentTime.current < RATE_LIMIT_MS) {
-      return false
-    }
-    lastCommentTime.current = now
-    return true
-  }
-
-  const sortOptions: { value: CommentSortOption; label: string }[] = [
-    { value: "newest", label: "Newest" },
-    { value: "oldest", label: "Oldest" },
-    { value: "most_liked", label: "Most Liked" },
-  ]
 
   if (error) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
         <p className="font-medium">Unable to load comments</p>
         <p className="mt-1 text-sm">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => loadComments(sortOption, true)} className="mt-3">
+        <Button variant="outline" size="sm" onClick={refreshComments} className="mt-3">
           Try Again
         </Button>
       </div>
@@ -130,11 +84,7 @@ export function CommentList({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {sortOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => handleSortChange(option.value)}
-                className={sortOption === option.value ? "font-semibold" : ""}
-              >
+              <DropdownMenuItem key={option.value} onClick={() => handleSortChange(option.value)} className={sortOption === option.value ? "font-semibold" : ""}>
                 {option.label}
               </DropdownMenuItem>
             ))}
@@ -152,7 +102,7 @@ export function CommentList({
             </div>
           ))}
         </div>
-      ) : totalRenderableComments === 0 ? (
+      ) : comments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-gray-500">
           <MessageSquare className="mx-auto mb-3 h-8 w-8 text-gray-400" />
           <p>No comments yet. Be the first to share your thoughts.</p>
@@ -160,39 +110,17 @@ export function CommentList({
       ) : (
         <Virtuoso
           useWindowScroll
-          data={renderedComments}
+          data={comments}
           endReached={() => {
-            if (paginationRef.current.hasMore && !isLoadingMore) {
-              loadMoreComments()
-            }
+            if (paginationRef.current.hasMore && !isLoadingMore) loadMoreComments()
           }}
-          itemContent={(index) => {
-            const comment = getCommentAtIndex(index)
-            if (!comment) return null
-
-            return (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                isFailed={failedCommentSet.has(comment.id)}
-                onRetry={() => {
-                  if (!canComment()) return
-                  addOptimisticComment(comment)
-                }}
-                onRemove={() => {
-                  rollbackOptimisticComment(comment.id)
-                }}
-              />
-            )
-          }}
+          itemContent={(_, comment) => (
+            <CommentItem key={comment.id} comment={comment} postId={postId} editionCode={editionCode} onCommentUpdated={refreshComments} />
+          )}
         />
       )}
 
       {isLoadingMore && <p className="mt-4 text-center text-sm text-gray-500">Loading more comments…</p>}
-
-      <div className="sr-only" aria-live="polite">
-        {clearOptimisticComments ? "" : ""}
-      </div>
     </section>
   )
 }

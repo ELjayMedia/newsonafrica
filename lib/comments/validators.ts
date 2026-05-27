@@ -1,14 +1,17 @@
+import type { CommentSortOption } from "@/lib/supabase-schema"
 import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
 import { validateRichTextFormatting } from "@/lib/comments/rich-text"
 
 export const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
 export const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
+export const COMMENT_SORT_OPTIONS = ["newest", "oldest", "popular"] as const
 export type CommentStatus = (typeof COMMENT_STATUSES)[number]
 export type CommentAction = (typeof COMMENT_ACTIONS)[number]
 
 const STATUS_SET = new Set(COMMENT_STATUSES)
 const ACTION_SET = new Set(COMMENT_ACTIONS)
+const SORT_SET = new Set<CommentSortOption>(COMMENT_SORT_OPTIONS)
 const SUPPORTED_EDITION_CODES = new Set(SUPPORTED_EDITIONS.map((e) => e.code.toLowerCase()))
 
 export function normalizeEditionCode(value: unknown): string | null {
@@ -23,6 +26,11 @@ function parseParentId(value: string | null): string | null | undefined {
   const trimmed = value.trim()
   if (trimmed.length === 0 || trimmed.toLowerCase() === "null") return null
   return trimmed
+}
+
+function normalizeCommentSortOption(value: string | null): CommentSortOption {
+  const normalized = value?.trim()
+  return normalized && SORT_SET.has(normalized as CommentSortOption) ? (normalized as CommentSortOption) : "newest"
 }
 
 export function validateGetCommentsParams(searchParams: URLSearchParams) {
@@ -63,9 +71,11 @@ export function validateGetCommentsParams(searchParams: URLSearchParams) {
   const status = rawStatus ? rawStatus.trim() : "active"
   if (status && !STATUS_SET.has(status as CommentStatus)) addValidationError(errors, "status", "Invalid status value")
 
+  const sortOption = normalizeCommentSortOption(searchParams.get("sort") ?? searchParams.get("sortOption"))
+
   if (hasValidationErrors(errors) || !wpPostId) throw new ValidationError("Invalid query parameters", errors)
 
-  return { wpPostId, editionCode, page, limit, parentId, cursor, status: status as CommentStatus }
+  return { wpPostId, editionCode, page, limit, parentId, cursor, status: status as CommentStatus, sortOption }
 }
 
 export function validateCommentBodyFormatting(body: string, isRichText: boolean): string | null {

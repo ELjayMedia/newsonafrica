@@ -10,15 +10,9 @@ interface UseCommentsRealtimeSyncOptions {
   postId: string
   upsertComment: (comment: Comment) => void
   removeComment: (commentId: string) => void
-  onStatusChange?: () => void | Promise<void>
 }
 
-export function useCommentsRealtimeSync({
-  postId,
-  upsertComment,
-  removeComment,
-  onStatusChange,
-}: UseCommentsRealtimeSyncOptions) {
+export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }: UseCommentsRealtimeSyncOptions) {
   useEffect(() => {
     const channel = supabase
       .channel(`comments-${postId}`)
@@ -28,7 +22,6 @@ export function useCommentsRealtimeSync({
         (payload: RealtimePostgresChangesPayload<Comment>) => {
           if (payload.eventType === "DELETE" && payload.old?.id) {
             removeComment(payload.old.id)
-            void onStatusChange?.()
             return
           }
 
@@ -38,8 +31,6 @@ export function useCommentsRealtimeSync({
             } else if (payload.new.id) {
               removeComment(payload.new.id)
             }
-
-            void onStatusChange?.()
           }
         },
       )
@@ -48,5 +39,5 @@ export function useCommentsRealtimeSync({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [postId, removeComment, upsertComment, onStatusChange])
+  }, [postId, removeComment, upsertComment])
 }
