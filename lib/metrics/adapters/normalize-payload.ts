@@ -2,12 +2,13 @@ import type { NextRequest } from "next/server"
 
 import type { CacheMetricPayload, MetricsEventPayload, WebVitalsMetricPayload } from "@/types/metrics"
 
-type NormalizedPayload = MetricsEventPayload & {
+type AcceptedEvent = MetricsEventPayload["event"]
+
+export type NormalizedMetricsPayload = {
+  eventPayload: MetricsEventPayload
   forwardedFor?: string
   userAgent?: string
 }
-
-type AcceptedEvent = MetricsEventPayload["event"]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -74,17 +75,17 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
   }
 }
 
-export function normalizeMetricsPayload(request: NextRequest, data: unknown): NormalizedPayload | null {
+export function normalizeMetricsPayload(request: NextRequest, data: unknown): NormalizedMetricsPayload | null {
   if (!isRecord(data)) return null
 
   const event = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
   if (!isAcceptedEvent(event)) return null
 
-  const payload = event === "web-vitals" ? normalizeWebVitalsPayload(data) : normalizeCachePayload(data)
-  if (!payload) return null
+  const eventPayload = event === "web-vitals" ? normalizeWebVitalsPayload(data) : normalizeCachePayload(data)
+  if (!eventPayload) return null
 
   return {
-    ...payload,
+    eventPayload,
     userAgent: request.headers.get("user-agent") ?? undefined,
     forwardedFor: normalizeForwardedFor(request),
   }
