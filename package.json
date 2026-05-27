@@ -8,7 +8,7 @@
     "build": "next build",
     "check:no-s-framework": "node scripts/framework-guard.mjs",
     "dev": "next dev",
-    "lint": "pnpm check:dal-aliases && next lint",
+    "lint": "pnpm check:dal-aliases && ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js,.jsx,.ts,.tsx",
     "start": "next start",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
