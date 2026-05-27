@@ -9,9 +9,16 @@ vi.mock("./client", () => ({
 import { fetchWordPressGraphQL } from "./client"
 import { fetchAuthors, fetchAuthorData, getAuthorBySlug } from "./authors"
 import { CACHE_DURATIONS } from "../cache/constants"
+import { cacheTags } from "../cache/cacheTags"
 import { AUTHOR_DATA_QUERY, AUTHORS_QUERY } from "@/lib/wordpress/queries"
 
 const mockFetchFromWpGraphQL = vi.mocked(fetchWordPressGraphQL)
+
+const graphqlSuccess = <T,>(data: T) => ({
+  ok: true as const,
+  data,
+  ...(data && typeof data === "object" ? (data as Record<string, unknown>) : {}),
+})
 
 describe("wordpress authors GraphQL helpers", () => {
   beforeEach(() => {
@@ -23,21 +30,23 @@ describe("wordpress authors GraphQL helpers", () => {
   })
 
   it("maps author lists from GraphQL", async () => {
-    mockFetchFromWpGraphQL.mockResolvedValueOnce({
-      users: {
-        nodes: [
-          {
-            id: Buffer.from("user:42").toString("base64"),
-            databaseId: null,
-            name: "Jane Doe",
-            slug: "jane-doe",
-            description: "  Investigative journalist  ",
-            avatar: { url: "https://example.com/avatar.jpg" },
-          },
-          null,
-        ],
-      },
-    } as any)
+    mockFetchFromWpGraphQL.mockResolvedValueOnce(
+      graphqlSuccess({
+        users: {
+          nodes: [
+            {
+              id: Buffer.from("user:42").toString("base64"),
+              databaseId: null,
+              name: "Jane Doe",
+              slug: "jane-doe",
+              description: "  Investigative journalist  ",
+              avatar: { url: "https://example.com/avatar.jpg" },
+            },
+            null,
+          ],
+        },
+      }) as any,
+    )
 
     const authors = await fetchAuthors("za")
 
@@ -47,7 +56,7 @@ describe("wordpress authors GraphQL helpers", () => {
       { first: 100 },
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.NONE,
-        tags: ["country:za", "section:authors"],
+        tags: [cacheTags.edition("za")],
       }),
     )
     expect(authors).toHaveLength(1)
@@ -71,30 +80,34 @@ describe("wordpress authors GraphQL helpers", () => {
       modified: "2024-01-02T00:00:00Z",
     }
 
-    mockFetchFromWpGraphQL.mockResolvedValueOnce({
-      user: {
-        id: Buffer.from("user:7").toString("base64"),
-        databaseId: null,
-        name: "John Doe",
-        slug: "john-doe",
-        description: "  Reporter  ",
-        avatar: { url: "https://example.com/john.jpg" },
-        posts: {
-          nodes: [postNode, null],
-          pageInfo: { endCursor: undefined, hasNextPage: true },
+    mockFetchFromWpGraphQL.mockResolvedValueOnce(
+      graphqlSuccess({
+        user: {
+          id: Buffer.from("user:7").toString("base64"),
+          databaseId: null,
+          name: "John Doe",
+          slug: "john-doe",
+          description: "  Reporter  ",
+          avatar: { url: "https://example.com/john.jpg" },
+          posts: {
+            nodes: [postNode, null],
+            pageInfo: { endCursor: undefined, hasNextPage: true },
+          },
         },
-      },
-    } as any)
+      }) as any,
+    )
 
     const result = await fetchAuthorData("john-doe", null, "ng", 5)
 
     expect(mockFetchFromWpGraphQL).toHaveBeenCalledWith(
       "ng",
       AUTHOR_DATA_QUERY,
-      { slug: "john-doe", after: null, first: 5 },
+      { slug: "john-doe", first: 5 },
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.NONE,
-        tags: ["country:ng", "section:authors", "author:john-doe"],
+        operationName: "AuthorData",
+        routeContext: { route: "/author/[slug]", surface: "author_profile" },
+        tags: [cacheTags.edition("ng"), cacheTags.author("ng", "john-doe")],
       }),
     )
     expect(result).not.toBeNull()
@@ -114,40 +127,57 @@ describe("wordpress authors GraphQL helpers", () => {
     expect(result?.posts.pageInfo).toMatchObject({ endCursor: null, hasNextPage: true })
   })
 
+  it("passes the cursor only when one is provided", async () => {
+    mockFetchFromWpGraphQL.mockResolvedValueOnce(graphqlSuccess({ user: null }) as any)
+
+    await fetchAuthorData("john-doe", "cursor-1", "ng", 5)
+
+    expect(mockFetchFromWpGraphQL).toHaveBeenCalledWith(
+      "ng",
+      AUTHOR_DATA_QUERY,
+      { slug: "john-doe", first: 5, after: "cursor-1" },
+      expect.any(Object),
+    )
+  })
+
   it("returns normalized author lookup results", async () => {
-    mockFetchFromWpGraphQL.mockResolvedValueOnce({
-      user: {
-        id: Buffer.from("user:9").toString("base64"),
-        databaseId: null,
-        name: "Alex Smith",
-        slug: "alex-smith",
-        description: "Reporter",
-        avatar: { url: "https://example.com/alex.jpg" },
-        posts: {
-          nodes: [
-            {
-              databaseId: 210,
-              id: "cG9zdDoyMTA=",
-              slug: "breaking-news",
-              title: "Breaking News",
-              excerpt: "Excerpt",
-              content: "Content",
-            },
-          ],
-          pageInfo: { endCursor: "cursor", hasNextPage: false },
+    mockFetchFromWpGraphQL.mockResolvedValueOnce(
+      graphqlSuccess({
+        user: {
+          id: Buffer.from("user:9").toString("base64"),
+          databaseId: null,
+          name: "Alex Smith",
+          slug: "alex-smith",
+          description: "Reporter",
+          avatar: { url: "https://example.com/alex.jpg" },
+          posts: {
+            nodes: [
+              {
+                databaseId: 210,
+                id: "cG9zdDoyMTA=",
+                slug: "breaking-news",
+                title: "Breaking News",
+                excerpt: "Excerpt",
+                content: "Content",
+              },
+            ],
+            pageInfo: { endCursor: "cursor", hasNextPage: false },
+          },
         },
-      },
-    } as any)
+      }) as any,
+    )
 
     const result = await getAuthorBySlug("alex-smith", { countryCode: "za", postLimit: 2 })
 
     expect(mockFetchFromWpGraphQL).toHaveBeenCalledWith(
       "za",
       AUTHOR_DATA_QUERY,
-      { slug: "alex-smith", after: null, first: 2 },
+      { slug: "alex-smith", first: 2 },
       expect.objectContaining({
         revalidate: CACHE_DURATIONS.NONE,
-        tags: ["country:za", "section:authors", "author:alex-smith"],
+        operationName: "AuthorData",
+        routeContext: { route: "/author/[slug]", surface: "author_profile" },
+        tags: [cacheTags.edition("za"), cacheTags.author("za", "alex-smith")],
       }),
     )
     expect(result).not.toBeNull()
@@ -157,7 +187,7 @@ describe("wordpress authors GraphQL helpers", () => {
   })
 
   it("returns null when no author is found", async () => {
-    mockFetchFromWpGraphQL.mockResolvedValueOnce({ user: null } as any)
+    mockFetchFromWpGraphQL.mockResolvedValueOnce(graphqlSuccess({ user: null }) as any)
 
     const result = await getAuthorBySlug("missing")
 
