@@ -54,6 +54,8 @@ function normalizeForwardedFor(request: NextRequest): string | undefined {
 function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayload | null {
   const cacheKey = readOptionalString(data, "cacheKey")
   const status = readOptionalString(data, "status")
+  const cacheName = readOptionalString(data, "cacheName")
+  const metadata = readOptionalRecord(data, "metadata")
 
   if (!cacheKey || (status !== "hit" && status !== "miss")) {
     return null
@@ -63,8 +65,8 @@ function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayloa
     event: "cache",
     cacheKey,
     status,
-    ...(readOptionalString(data, "cacheName") ? { cacheName: readOptionalString(data, "cacheName") } : {}),
-    ...(readOptionalRecord(data, "metadata") ? { metadata: readOptionalRecord(data, "metadata") } : {}),
+    ...(cacheName ? { cacheName } : {}),
+    ...(metadata ? { metadata } : {}),
   }
 }
 
@@ -73,6 +75,10 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
   const name = readOptionalString(data, "name")
   const value = readOptionalNumber(data, "value")
   const rating = readOptionalString(data, "rating")
+  const delta = readOptionalNumber(data, "delta")
+  const navigationType = readOptionalString(data, "navigationType")
+  const page = readOptionalString(data, "page")
+  const href = readOptionalString(data, "href")
 
   if (!id || !name || value == null || (rating !== "good" && rating !== "needs-improvement" && rating !== "poor")) {
     return null
@@ -84,10 +90,10 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
     name,
     value,
     rating,
-    ...(readOptionalNumber(data, "delta") != null ? { delta: readOptionalNumber(data, "delta") } : {}),
-    ...(readOptionalString(data, "navigationType") ? { navigationType: readOptionalString(data, "navigationType") } : {}),
-    ...(readOptionalString(data, "page") ? { page: readOptionalString(data, "page") } : {}),
-    ...(readOptionalString(data, "href") ? { href: readOptionalString(data, "href") } : {}),
+    ...(delta != null ? { delta } : {}),
+    ...(navigationType ? { navigationType } : {}),
+    ...(page ? { page } : {}),
+    ...(href ? { href } : {}),
   }
 }
 
