@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { useUserPreferences } from "@/contexts/UserPreferencesClient"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useCommentsQuery } from "@/hooks/useCommentsQuery"
-import { useOptimisticComments } from "@/hooks/useOptimisticComments"
 import { useCommentsRealtimeSync } from "@/hooks/useCommentsRealtimeSync"
 
 interface CommentListProps {
@@ -40,7 +39,6 @@ export function CommentList({ postId, editionCode, initialComments = [], initial
     initialHasMore,
     initialTotal,
   })
-  const { renderedComments, failedCommentSet, addOptimisticComment, rollbackOptimisticComment } = useOptimisticComments(comments)
 
   const isInitialLoad = loading && !hasHydratedInitial.current
   const isLoadingMore = loading && !isInitialLoad
@@ -104,7 +102,7 @@ export function CommentList({ postId, editionCode, initialComments = [], initial
             </div>
           ))}
         </div>
-      ) : renderedComments.length === 0 ? (
+      ) : comments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-gray-500">
           <MessageSquare className="mx-auto mb-3 h-8 w-8 text-gray-400" />
           <p>No comments yet. Be the first to share your thoughts.</p>
@@ -112,12 +110,12 @@ export function CommentList({ postId, editionCode, initialComments = [], initial
       ) : (
         <Virtuoso
           useWindowScroll
-          data={renderedComments}
+          data={comments}
           endReached={() => {
             if (paginationRef.current.hasMore && !isLoadingMore) loadMoreComments()
           }}
           itemContent={(_, comment) => (
-            <CommentItem key={comment.id} comment={comment} isFailed={failedCommentSet.has(comment.id)} onRetry={() => addOptimisticComment(comment)} onRemove={() => rollbackOptimisticComment(comment.id)} />
+            <CommentItem key={comment.id} comment={comment} postId={postId} editionCode={editionCode} onCommentUpdated={refreshComments} />
           )}
         />
       )}
