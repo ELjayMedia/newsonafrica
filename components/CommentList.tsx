@@ -97,7 +97,7 @@ export function CommentList({
   const sortOptions: { value: CommentSortOption; label: string }[] = [
     { value: "newest", label: "Newest" },
     { value: "oldest", label: "Oldest" },
-    { value: "most_liked", label: "Most Liked" },
+    { value: "popular", label: "Most Liked" },
   ]
 
   if (error) {
