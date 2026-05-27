@@ -69,7 +69,7 @@ const respondWithSearch = (request: NextRequest, body: unknown, init?: ResponseI
   return response
 }
 
-export async function GET(request: NextRequest) {
+export async function searchGET(request: NextRequest) {
   logRequest(request)
   const startTime = Date.now()
 
@@ -111,7 +111,6 @@ export async function GET(request: NextRequest) {
       page,
       perPage,
     })
-
     return respondWithSearch(request, {
       ...result,
       query: baseParams.query,
@@ -142,3 +141,5 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export { searchGET as GET }
