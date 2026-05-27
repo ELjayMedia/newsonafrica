@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { fetchCommentsPageAction } from "@/app/(public)/[countryCode]/article/[slug]/actions"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -24,60 +24,27 @@ interface UseCommentsQueryOptions {
   sleep?: (ms: number) => Promise<void>
 }
 
-interface LoadCommentsOptions {
-  append?: boolean
-  cursorOverride?: string | null
-}
-
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-const mergeAppendComments = (current: Comment[][], incoming: Comment[]) => {
-  if (incoming.length === 0) {
-    return current
-  }
+const mergeComments = (current: Comment[], incoming: Comment[]) => {
+  if (incoming.length === 0) return current
 
-  const nextPages = current.map((page) => [...page])
-  const existingIds = new Set(nextPages.flat().map((comment) => comment.id))
+  const existingIds = new Set(current.map((comment) => comment.id))
   const updatesById = new Map(incoming.map((comment) => [comment.id, comment]))
+  const updatedCurrent = current.map((comment) => updatesById.get(comment.id) ?? comment)
+  const newComments = incoming.filter((comment) => !existingIds.has(comment.id))
 
-  for (let pageIndex = 0; pageIndex < nextPages.length; pageIndex++) {
-    nextPages[pageIndex] = nextPages[pageIndex].map((comment) => updatesById.get(comment.id) ?? comment)
-  }
-
-  const appendedNew = incoming.filter((comment) => !existingIds.has(comment.id))
-  if (appendedNew.length > 0) {
-    nextPages.push(appendedNew)
-  }
-
-  return nextPages
+  return [...updatedCurrent, ...newComments]
 }
 
-const hasComment = (pages: Comment[][], commentId: string) => pages.some((page) => page.some((comment) => comment.id === commentId))
+const replaceOrPrependComment = (comments: Comment[], incoming: Comment) => {
+  const existingIndex = comments.findIndex((comment) => comment.id === incoming.id)
+  if (existingIndex === -1) return [incoming, ...comments]
 
-const patchCommentInPages = (pages: Comment[][], incoming: Comment) => {
-  let found = false
-  const nextPages = pages.map((page) =>
-    page.map((comment) => {
-      if (comment.id !== incoming.id) {
-        return comment
-      }
-
-      found = true
-      return incoming
-    }),
-  )
-
-  if (!found) {
-    return [[incoming], ...nextPages]
-  }
-
-  return nextPages
+  const next = [...comments]
+  next[existingIndex] = incoming
+  return next
 }
-
-const removeCommentFromPages = (pages: Comment[][], commentId: string) =>
-  pages
-    .map((page) => page.filter((comment) => comment.id !== commentId))
-    .filter((page) => page.length > 0)
 
 export function useCommentsQuery({
   postId,
@@ -92,14 +59,13 @@ export function useCommentsQuery({
   retryDelayMs = 300,
   sleep = defaultSleep,
 }: UseCommentsQueryOptions) {
-  const [pages, setPages] = useState<Comment[][]>(initialComments.length > 0 ? [initialComments] : [])
+  const [comments, setComments] = useState<Comment[]>(initialComments)
   const [pagination, setPagination] = useState<PaginationState>({ cursor: initialCursor, hasMore: initialHasMore })
   const [loading, setLoading] = useState(initialComments.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [totalComments, setTotalComments] = useState(
     typeof initialTotal === "number" ? initialTotal : initialComments.length,
   )
-  const [isPending, startTransition] = useTransition()
 
   const paginationRef = useRef(pagination)
   const hasHydratedInitial = useRef(initialComments.length > 0)
@@ -109,76 +75,53 @@ export function useCommentsQuery({
     paginationRef.current = pagination
   }, [pagination])
 
-  const comments = useMemo(() => pages.flat(), [pages])
+  const fetchComments = useCallback(
+    async (append = false) => {
+      if (append && !paginationRef.current.hasMore) return
 
-  const loadComments = useCallback(
-    async ({ append = false, cursorOverride }: LoadCommentsOptions = {}) => {
       setLoading(true)
 
-      try {
-        const currentPagination = paginationRef.current
-        const cursorValue = cursorOverride ?? (append ? currentPagination.cursor : null)
+      const cursor = append ? paginationRef.current.cursor : null
+      let lastError: unknown = null
 
-        let attempt = 0
-        let lastError: unknown = null
+      for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+        try {
+          const response = await fetchCommentsPageAction({
+            postId,
+            editionCode,
+            page: append ? 1 : 0,
+            pageSize,
+            sortOption,
+            cursor,
+          })
 
-        while (attempt < maxRetries) {
-          try {
-            const response = await fetchCommentsPageAction({
-              postId,
-              editionCode,
-              page: append ? 1 : 0,
-              pageSize,
-              sortOption,
-              cursor: cursorValue ?? null,
-            })
+          setComments((current) => (append ? mergeComments(current, response.comments) : response.comments))
+          setPagination({ cursor: response.nextCursor ?? null, hasMore: response.hasMore })
 
-            startTransition(() => {
-              setPages((currentPages) =>
-                append ? mergeAppendComments(currentPages, response.comments) : (response.comments.length > 0 ? [response.comments] : []),
-              )
-              setPagination({
-                cursor: response.nextCursor ?? null,
-                hasMore: response.hasMore,
-              })
+          if (typeof response.total === "number") {
+            setTotalComments(response.total)
+          } else if (!append) {
+            setTotalComments(response.comments.length)
+          }
 
-              if (typeof response.total === "number") {
-                setTotalComments(response.total)
-              } else if (!append && response.comments.length === 0) {
-                setTotalComments(0)
-              }
-
-              setError(null)
-              hasHydratedInitial.current = true
-            })
-
-            return
-          } catch (fetchError) {
-            lastError = fetchError
-            attempt += 1
-
-            if (attempt >= maxRetries) {
-              break
-            }
-
-            await sleep(retryDelayMs * 2 ** (attempt - 1))
+          setError(null)
+          hasHydratedInitial.current = true
+          setLoading(false)
+          return
+        } catch (fetchError) {
+          lastError = fetchError
+          if (attempt < maxRetries - 1) {
+            await sleep(retryDelayMs * 2 ** attempt)
           }
         }
-
-        console.error("Error loading comments:", lastError)
-        setError("Failed to load comments. Please try refreshing the page.")
-      } finally {
-        setLoading(false)
       }
+
+      console.error("Error loading comments:", lastError)
+      setError("Failed to load comments. Please try refreshing the page.")
+      setLoading(false)
     },
-    [editionCode, maxRetries, pageSize, postId, retryDelayMs, sleep, sortOption, startTransition],
+    [editionCode, maxRetries, pageSize, postId, retryDelayMs, sleep, sortOption],
   )
-
-  const loadCommentsRef = useRef(loadComments)
-
-  useEffect(() => {
-    loadCommentsRef.current = loadComments
-  }, [loadComments])
 
   useEffect(() => {
     if (skipInitialFetchRef.current) {
@@ -187,57 +130,53 @@ export function useCommentsQuery({
     }
 
     hasHydratedInitial.current = false
-    void loadCommentsRef.current({ append: false })
-  }, [postId, sortOption])
+    void fetchComments(false)
+  }, [fetchComments])
 
   const loadMoreComments = useCallback(() => {
-    if (!paginationRef.current.hasMore || loading || isPending) {
-      return
-    }
-
-    void loadComments({ append: true })
-  }, [isPending, loading, loadComments])
+    void fetchComments(true)
+  }, [fetchComments])
 
   const refreshComments = useCallback(() => {
     setError(null)
-    void loadComments({ append: false })
-  }, [loadComments])
+    void fetchComments(false)
+  }, [fetchComments])
 
   const upsertComment = useCallback((comment: Comment) => {
-    setPages((currentPages) => {
-      const exists = hasComment(currentPages, comment.id)
-      const nextPages = patchCommentInPages(currentPages, comment)
+    setComments((currentComments) => {
+      const exists = currentComments.some((current) => current.id === comment.id)
       if (!exists) {
         setTotalComments((total) => total + 1)
       }
-      return nextPages
+      return replaceOrPrependComment(currentComments, comment)
     })
   }, [])
 
   const removeComment = useCallback((commentId: string) => {
-    setPages((currentPages) => {
-      const exists = hasComment(currentPages, commentId)
-      const nextPages = removeCommentFromPages(currentPages, commentId)
+    setComments((currentComments) => {
+      const exists = currentComments.some((comment) => comment.id === commentId)
       if (exists) {
         setTotalComments((total) => Math.max(0, total - 1))
       }
-      return nextPages
+      return currentComments.filter((comment) => comment.id !== commentId)
     })
   }, [])
 
-  return {
-    comments,
-    loading,
-    isPending,
-    error,
-    totalComments,
-    pagination,
-    hasHydratedInitial,
-    loadComments,
-    loadMoreComments,
-    refreshComments,
-    setError,
-    upsertComment,
-    removeComment,
-  }
+  return useMemo(
+    () => ({
+      comments,
+      loading,
+      isPending: false,
+      error,
+      totalComments,
+      pagination,
+      hasHydratedInitial,
+      loadMoreComments,
+      refreshComments,
+      setError,
+      upsertComment,
+      removeComment,
+    }),
+    [comments, error, loadMoreComments, loading, pagination, refreshComments, removeComment, totalComments, upsertComment],
+  )
 }
