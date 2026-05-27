@@ -5,14 +5,23 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase/browser-helpers"
 import type { Comment } from "@/lib/supabase-schema"
+import type { CommentStatus } from "@/types/comments"
 
 interface UseCommentsRealtimeSyncOptions {
   postId: string
   upsertComment: (comment: Comment) => void
   removeComment: (commentId: string) => void
+  onStatusChange?: () => void | Promise<void>
 }
 
-export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }: UseCommentsRealtimeSyncOptions) {
+const getCommentStatus = (value: Partial<Comment> | null | undefined): CommentStatus | undefined => value?.status
+
+export function useCommentsRealtimeSync({
+  postId,
+  upsertComment,
+  removeComment,
+  onStatusChange,
+}: UseCommentsRealtimeSyncOptions) {
   useEffect(() => {
     const channel = supabase
       .channel(`comments-${postId}`)
@@ -28,6 +37,15 @@ export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }
           if ((payload.eventType === "INSERT" || payload.eventType === "UPDATE") && payload.new) {
             upsertComment(payload.new)
           }
+
+          if (payload.eventType === "UPDATE" && onStatusChange) {
+            const previousStatus = getCommentStatus(payload.old)
+            const nextStatus = getCommentStatus(payload.new)
+
+            if (previousStatus && nextStatus && previousStatus !== nextStatus) {
+              void onStatusChange()
+            }
+          }
         },
       )
       .subscribe()
@@ -35,5 +53,5 @@ export function useCommentsRealtimeSync({ postId, upsertComment, removeComment }
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [postId, removeComment, upsertComment])
+  }, [postId, removeComment, onStatusChange, upsertComment])
 }
