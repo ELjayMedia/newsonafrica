@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { normalizeMetricsPayload } from "@/lib/metrics/adapters/normalize-payload"
 import { sendToMetricsSink } from "@/lib/metrics/sink"
-import type { MetricsEnvelope, MetricsEventPayload } from "@/types/metrics"
+import type { MetricsEnvelope } from "@/types/metrics"
 
 export const runtime = "edge"
 
@@ -27,13 +27,11 @@ export async function POST(request: NextRequest) {
     return badRequest(request, "Unsupported metrics payload")
   }
 
-  const { userAgent, forwardedFor, ...eventPayload } = normalized
-
   try {
-    const envelope: MetricsEnvelope = await sendToMetricsSink(eventPayload as MetricsEventPayload, {
+    const envelope: MetricsEnvelope = await sendToMetricsSink(normalized.eventPayload, {
       source: "client",
-      userAgent,
-      forwardedFor,
+      userAgent: normalized.userAgent,
+      forwardedFor: normalized.forwardedFor,
     })
 
     return jsonWithCors(request, { ok: true, received: envelope.event }, { status: 202 })
