@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { CommentItem } from "@/components/CommentItem"
 import type { Comment, CommentSortOption } from "@/lib/supabase-schema"
@@ -21,6 +21,12 @@ interface CommentListProps {
   initialTotal?: number
 }
 
+const sortOptions: { value: CommentSortOption; label: string }[] = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "popular", label: "Most liked" },
+]
+
 export function CommentList({
   postId,
   editionCode,
@@ -35,12 +41,10 @@ export function CommentList({
   const {
     comments,
     loading,
-    isPending,
     error,
     totalComments,
     pagination,
     hasHydratedInitial,
-    loadComments,
     loadMoreComments,
     refreshComments,
     upsertComment,
@@ -57,23 +61,12 @@ export function CommentList({
   const { renderedComments, failedCommentSet, addOptimisticComment, rollbackOptimisticComment } =
     useOptimisticComments(comments)
 
-  const isFetching = loading || isPending
-  const isInitialLoad = isFetching && !hasHydratedInitial.current
-  const isLoadingMore = isFetching && !isInitialLoad
+  const isInitialLoad = loading && !hasHydratedInitial.current
+  const isLoadingMore = loading && !isInitialLoad
 
   useEffect(() => {
     paginationRef.current = pagination
   }, [pagination])
-
-  const totalRenderableComments = renderedComments.length
-
-  const getCommentAtIndex = useCallback((index: number): Comment | undefined => renderedComments[index], [renderedComments])
-
-  const sortOptions: { value: CommentSortOption; label: string }[] = [
-    { value: "newest", label: "Newest" },
-    { value: "oldest", label: "Oldest" },
-    { value: "popular", label: "Most liked" },
-  ]
 
   useCommentsRealtimeSync({
     postId,
@@ -140,7 +133,7 @@ export function CommentList({
             </div>
           ))}
         </div>
-      ) : totalRenderableComments === 0 ? (
+      ) : renderedComments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-gray-500">
           <MessageSquare className="mx-auto mb-3 h-8 w-8 text-gray-400" />
           <p>No comments yet. Be the first to share your thoughts.</p>
@@ -154,20 +147,15 @@ export function CommentList({
               loadMoreComments()
             }
           }}
-          itemContent={(index) => {
-            const comment = getCommentAtIndex(index)
-            if (!comment) return null
-
-            return (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                isFailed={failedCommentSet.has(comment.id)}
-                onRetry={() => addOptimisticComment(comment)}
-                onRemove={() => rollbackOptimisticComment(comment.id)}
-              />
-            )
-          }}
+          itemContent={(_, comment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              isFailed={failedCommentSet.has(comment.id)}
+              onRetry={() => addOptimisticComment(comment)}
+              onRemove={() => rollbackOptimisticComment(comment.id)}
+            />
+          )}
         />
       )}
 
