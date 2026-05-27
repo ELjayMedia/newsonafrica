@@ -2,16 +2,16 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { jsonWithCors, logRequest } from "@/lib/api-utils"
 import { sendToMetricsSink } from "@/lib/metrics/sink"
-import type { CacheMetricPayload, MetricsEventPayload, MetricsEnvelope } from "@/types/metrics"
+import type { MetricsEnvelope, MetricsEventPayload } from "@/types/metrics"
 
 export const runtime = "edge"
 
-const ACCEPTED_EVENTS = new Set(["web-vitals", "cache"] as const)
-
-type NormalizedPayload = MetricsEventPayload & {
+type MetricExtras = {
   forwardedFor?: string
   userAgent?: string
 }
+
+type NormalizedPayload = MetricsEventPayload & MetricExtras
 
 function badRequest(request: NextRequest, message: string) {
   return jsonWithCors(request, { error: message }, { status: 400 })
@@ -23,83 +23,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function normalizeForwardedFor(request: NextRequest): string | undefined {
   const forwardedFor = request.headers.get("x-forwarded-for")
-  if (forwardedFor && forwardedFor.trim()) return forwardedFor
+  if (forwardedFor?.trim()) return forwardedFor
 
   const realIp = request.headers.get("x-real-ip")
-  if (realIp && realIp.trim()) return realIp
+  if (realIp?.trim()) return realIp
 
   return undefined
-}
-
-function normalizeCachePayload(data: Record<string, unknown>): CacheMetricPayload | null {
-  const cacheKey = typeof data.cacheKey === "string" ? data.cacheKey : undefined
-  const status = data.status === "hit" || data.status === "miss" ? data.status : undefined
-  if (!cacheKey || !status) return null
-
-  const cacheName = typeof data.cacheName === "string" ? data.cacheName : undefined
-  const metadata = isRecord(data.metadata) ? (data.metadata as Record<string, unknown>) : undefined
-
-  return {
-    event: "cache",
-    cacheKey,
-    status,
-    ...(cacheName ? { cacheName } : {}),
-    ...(metadata ? { metadata } : {}),
-  }
-}
-
-function normalizeWebVitalsPayload(data: Record<string, unknown>): MetricsEventPayload | null {
-  const id = typeof data.id === "string" ? data.id : undefined
-  const startTime = typeof data.startTime === "number" ? data.startTime : undefined
-  const value = typeof data.value === "number" ? data.value : undefined
-  const label = data.label === "web-vital" || data.label === "custom" ? data.label : undefined
-  const name = typeof data.name === "string" ? data.name : undefined
-
-  if (!id || typeof startTime !== "number" || typeof value !== "number" || !label || !name) {
-    return null
-  }
-
-  const attribution = isRecord(data.attribution) ? (data.attribution as Record<string, unknown>) : undefined
-
-  return {
-    event: "web-vitals",
-    id,
-    startTime,
-    value,
-    label: label as any,
-    name: name as any,
-    ...(attribution ? { attribution } : {}),
-    ...(typeof data.page === "string" ? { page: data.page } : {}),
-    ...(typeof data.href === "string" ? { href: data.href } : {}),
-  } as MetricsEventPayload
 }
 
 function normalizePayload(request: NextRequest, data: unknown): NormalizedPayload | null {
   if (!isRecord(data)) return null
 
-  const event = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : null
-
-  if (!event || !ACCEPTED_EVENTS.has(event as any)) return null
-
-  if (event === "web-vitals") {
-    const payload = normalizeWebVitalsPayload(data)
-    if (!payload) return null
-
-    return {
-      ...payload,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      forwardedFor: normalizeForwardedFor(request),
-    }
-  }
-
-  const cachePayload = normalizeCachePayload(data)
-  if (!cachePayload) return null
+  const event = typeof data.event === "string" ? data.event : typeof data.type === "string" ? data.type : ""
+  if (event !== "web-vitals" && event !== "cache") return null
 
   return {
-    ...cachePayload,
+    ...data,
+    event,
     userAgent: request.headers.get("user-agent") ?? undefined,
     forwardedFor: normalizeForwardedFor(request),
-  }
+  } as NormalizedPayload
 }
 
 export async function POST(request: NextRequest) {
@@ -118,11 +61,10 @@ export async function POST(request: NextRequest) {
     return badRequest(request, "Unsupported metrics payload")
   }
 
-  const { userAgent, forwardedFor, ...rest } = normalized
-  const eventPayload = rest as MetricsEventPayload
+  const { userAgent, forwardedFor, ...eventPayload } = normalized
 
   try {
-    const envelope: MetricsEnvelope = await sendToMetricsSink(eventPayload, {
+    const envelope: MetricsEnvelope = await sendToMetricsSink(eventPayload as MetricsEventPayload, {
       source: "client",
       userAgent,
       forwardedFor,
