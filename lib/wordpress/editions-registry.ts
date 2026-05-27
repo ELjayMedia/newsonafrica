@@ -13,6 +13,8 @@ export interface EditionEndpoints {
 
 const BASE_URL = "https://newsonafrica.com"
 
+const warnedMissingOptionalEndpoints = new Set<string>()
+
 type EndpointEnvKey =
   | "NEXT_PUBLIC_WP_SZ_GRAPHQL"
   | "NEXT_PUBLIC_WP_ZA_GRAPHQL"
@@ -48,19 +50,27 @@ const logInvalidEndpoint = (params: {
   })
 }
 
-
 const warnMissingOptionalEndpoint = (edition: EditionCode, envKey: EndpointEnvKey, fallback: string) => {
   if (edition === "sz") {
     return
   }
 
-  if (!ENV[envKey]) {
-    console.warn("[wp-editions-registry] Optional edition endpoint missing; using fallback", {
-      edition,
-      envKey,
-      fallback,
-    })
+  if (ENV[envKey]) {
+    return
   }
+
+  const warningKey = `${edition}:${envKey}`
+
+  if (warnedMissingOptionalEndpoints.has(warningKey)) {
+    return
+  }
+
+  warnedMissingOptionalEndpoints.add(warningKey)
+  console.warn("[wp-editions-registry] Optional edition endpoint missing; using fallback", {
+    edition,
+    envKey,
+    fallback,
+  })
 }
 
 const resolveEndpoint = (params: {

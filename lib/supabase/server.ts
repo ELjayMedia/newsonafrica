@@ -12,6 +12,15 @@ export interface SupabaseConfig {
   supabaseKey: string
 }
 
+function isDynamicServerUsageError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    (error as { digest?: unknown }).digest === "DYNAMIC_SERVER_USAGE"
+  )
+}
+
 export function getSupabaseConfig(): SupabaseConfig | null {
   const env = getSupabaseBrowserEnvOrNull()
 
@@ -53,7 +62,9 @@ export async function createServerClient(): Promise<SupabaseClient<Database> | n
       },
     })
   } catch (error) {
-    console.error("Failed to create Supabase server client", error)
+    if (!isDynamicServerUsageError(error)) {
+      console.error("Failed to create Supabase server client", error)
+    }
     return null
   }
 }
