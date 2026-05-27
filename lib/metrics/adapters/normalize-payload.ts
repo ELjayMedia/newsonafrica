@@ -79,7 +79,7 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
 
   const attribution = isRecord(data.attribution) ? data.attribution : undefined
 
-  return {
+  const payload = {
     event: "web-vitals",
     id,
     startTime,
@@ -90,6 +90,8 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
     ...(typeof data.page === "string" ? { page: data.page } : {}),
     ...(typeof data.href === "string" ? { href: data.href } : {}),
   }
+
+  return payload as WebVitalsMetricPayload
 }
 
 export function normalizeMetricsPayload(request: NextRequest, data: unknown): NormalizedMetricsPayload | null {
