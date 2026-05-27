@@ -54,7 +54,7 @@ export function CommentList({
     initialHasMore,
     initialTotal,
   })
-  const { renderedComments, failedCommentSet, addOptimisticComment, clearOptimisticComments, rollbackOptimisticComment } =
+  const { renderedComments, failedCommentSet, addOptimisticComment, rollbackOptimisticComment } =
     useOptimisticComments(comments)
 
   const isFetching = loading || isPending
@@ -69,44 +69,32 @@ export function CommentList({
 
   const getCommentAtIndex = useCallback((index: number): Comment | undefined => renderedComments[index], [renderedComments])
 
-  // For rate limiting
-  const lastCommentTime = useRef<number | null>(null)
-  const RATE_LIMIT_MS = 10000 // 10 seconds
+  const sortOptions: { value: CommentSortOption; label: string }[] = [
+    { value: "newest", label: "Newest" },
+    { value: "oldest", label: "Oldest" },
+    { value: "popular", label: "Most liked" },
+  ]
 
   useCommentsRealtimeSync({
     postId,
     upsertComment,
     removeComment,
-    onStatusChange: refreshComments,
+    onRefreshNeeded: refreshComments,
   })
 
   const handleSortChange = async (newSort: CommentSortOption) => {
+    if (newSort === sortOption) return
+
     setSortOption(newSort)
     await setCommentSortPreference(newSort)
-    await loadComments(newSort, true)
   }
-
-  const canComment = () => {
-    const now = Date.now()
-    if (lastCommentTime.current && now - lastCommentTime.current < RATE_LIMIT_MS) {
-      return false
-    }
-    lastCommentTime.current = now
-    return true
-  }
-
-  const sortOptions: { value: CommentSortOption; label: string }[] = [
-    { value: "newest", label: "Newest" },
-    { value: "oldest", label: "Oldest" },
-    { value: "most_liked", label: "Most Liked" },
-  ]
 
   if (error) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
         <p className="font-medium">Unable to load comments</p>
         <p className="mt-1 text-sm">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => loadComments(sortOption, true)} className="mt-3">
+        <Button variant="outline" size="sm" onClick={refreshComments} className="mt-3">
           Try Again
         </Button>
       </div>
@@ -175,13 +163,8 @@ export function CommentList({
                 key={comment.id}
                 comment={comment}
                 isFailed={failedCommentSet.has(comment.id)}
-                onRetry={() => {
-                  if (!canComment()) return
-                  addOptimisticComment(comment)
-                }}
-                onRemove={() => {
-                  rollbackOptimisticComment(comment.id)
-                }}
+                onRetry={() => addOptimisticComment(comment)}
+                onRemove={() => rollbackOptimisticComment(comment.id)}
               />
             )
           }}
@@ -189,10 +172,6 @@ export function CommentList({
       )}
 
       {isLoadingMore && <p className="mt-4 text-center text-sm text-gray-500">Loading more comments…</p>}
-
-      <div className="sr-only" aria-live="polite">
-        {clearOptimisticComments ? "" : ""}
-      </div>
     </section>
   )
 }
