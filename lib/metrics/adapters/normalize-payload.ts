@@ -3,6 +3,19 @@ import type { NextRequest } from "next/server"
 import type { CacheMetricPayload, MetricsEventPayload, WebVitalsMetricPayload } from "@/types/metrics"
 
 type AcceptedEvent = MetricsEventPayload["event"]
+type WebVitalsMetricName = WebVitalsMetricPayload["name"]
+
+const WEB_VITALS_METRIC_NAMES = new Set<WebVitalsMetricName>([
+  "CLS",
+  "FCP",
+  "FID",
+  "INP",
+  "LCP",
+  "TTFB",
+  "Next.js-hydration",
+  "Next.js-route-change-to-render",
+  "Next.js-render",
+])
 
 export type NormalizedMetricsPayload = {
   eventPayload: MetricsEventPayload
@@ -20,6 +33,10 @@ function isAcceptedEvent(value: unknown): value is AcceptedEvent {
 
 function isWebVitalLabel(value: unknown): value is WebVitalsMetricPayload["label"] {
   return value === "web-vital" || value === "custom"
+}
+
+function isWebVitalsMetricName(value: unknown): value is WebVitalsMetricName {
+  return typeof value === "string" && WEB_VITALS_METRIC_NAMES.has(value as WebVitalsMetricName)
 }
 
 function normalizeForwardedFor(request: NextRequest): string | undefined {
@@ -54,7 +71,7 @@ function normalizeWebVitalsPayload(data: Record<string, unknown>): WebVitalsMetr
   const startTime = typeof data.startTime === "number" ? data.startTime : undefined
   const value = typeof data.value === "number" ? data.value : undefined
   const label = isWebVitalLabel(data.label) ? data.label : undefined
-  const name = typeof data.name === "string" ? data.name : undefined
+  const name = isWebVitalsMetricName(data.name) ? data.name : undefined
 
   if (!id || typeof startTime !== "number" || typeof value !== "number" || !label || !name) {
     return null
