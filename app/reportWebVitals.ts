@@ -1,40 +1,53 @@
-import type { NextWebVitalsMetric } from "next/app"
-
 const METRICS_ENDPOINT = "/api/metrics"
 
-type MetricExtras = {
+type WebVitalsMetric = {
+  id: string
+  name: string
+  value: number
   delta?: number
   entries?: unknown
-  rating?: string
+  rating?: "good" | "needs-improvement" | "poor"
   startTime?: number
   navigationType?: string
   label?: string
 }
 
-function buildPayload(metric: NextWebVitalsMetric) {
-  // Next's type is stricter in some versions; treat these fields as optional extras.
-  const m = metric as NextWebVitalsMetric & MetricExtras
+type WebVitalsPayload = {
+  event: "web-vitals"
+  id: string
+  name: string
+  value: number
+  delta?: number
+  entries?: unknown
+  rating?: "good" | "needs-improvement" | "poor"
+  startTime?: number
+  navigationType?: string
+  label?: string
+  page?: string
+  href?: string
+}
 
-  const { id, name, value } = m
+function buildPayload(metric: WebVitalsMetric): WebVitalsPayload {
+  const { id, name, value, delta, entries, rating, startTime, navigationType, label } = metric
   const location = typeof window !== "undefined" ? window.location : undefined
 
   return {
-    event: "web-vitals" as const,
+    event: "web-vitals",
     id,
     name,
-    label: m.label,
     value,
-    delta: m.delta,
-    entries: m.entries,
-    rating: m.rating,
-    startTime: m.startTime,
-    navigationType: m.navigationType,
-    page: location?.pathname,
-    href: location?.href,
+    ...(delta != null ? { delta } : {}),
+    ...(entries ? { entries } : {}),
+    ...(rating ? { rating } : {}),
+    ...(startTime != null ? { startTime } : {}),
+    ...(navigationType ? { navigationType } : {}),
+    ...(label ? { label } : {}),
+    ...(location?.pathname ? { page: location.pathname } : {}),
+    ...(location?.href ? { href: location.href } : {}),
   }
 }
 
-function sendMetric(payload: ReturnType<typeof buildPayload>) {
+function sendMetric(payload: WebVitalsPayload) {
   const body = JSON.stringify(payload)
 
   if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
@@ -55,7 +68,7 @@ function sendMetric(payload: ReturnType<typeof buildPayload>) {
   })
 }
 
-export function reportWebVitals(metric: NextWebVitalsMetric) {
+export function reportWebVitals(metric: WebVitalsMetric) {
   try {
     const payload = buildPayload(metric)
     sendMetric(payload)
