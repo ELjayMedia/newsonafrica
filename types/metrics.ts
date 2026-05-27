@@ -1,9 +1,13 @@
-import type { NextWebVitalsMetric } from "next/app"
-
 type MetricSource = "client" | "server"
 
-export type WebVitalsMetricPayload = NextWebVitalsMetric & {
+export type WebVitalsMetricPayload = {
   event: "web-vitals"
+  id: string
+  name: string
+  value: number
+  rating: "good" | "needs-improvement" | "poor"
+  delta?: number
+  navigationType?: string
   page?: string
   href?: string
 }
