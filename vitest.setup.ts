@@ -9,6 +9,16 @@ expect.extend(matchers)
 // in app/production builds.
 vi.mock('server-only', () => ({}))
 
+vi.mock('next/cache', () => ({
+  unstable_cache:
+    <T extends (...args: any[]) => any>(fn: T) =>
+    (...args: Parameters<T>): ReturnType<T> =>
+      fn(...args),
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_noStore: vi.fn(),
+}))
+
 vi.mock('isomorphic-dompurify', () => ({
   default: {
     sanitize: (html: string) =>
