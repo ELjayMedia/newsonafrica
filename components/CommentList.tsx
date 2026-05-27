@@ -27,29 +27,11 @@ const sortOptions: { value: CommentSortOption; label: string }[] = [
   { value: "popular", label: "Most liked" },
 ]
 
-export function CommentList({
-  postId,
-  editionCode,
-  initialComments = [],
-  initialCursor = null,
-  initialHasMore = false,
-  initialTotal,
-}: CommentListProps) {
+export function CommentList({ postId, editionCode, initialComments = [], initialCursor = null, initialHasMore = false, initialTotal }: CommentListProps) {
   const paginationRef = useRef({ cursor: initialCursor, hasMore: initialHasMore })
   const { preferences, setCommentSortPreference } = useUserPreferences()
   const [sortOption, setSortOption] = useState<CommentSortOption>(preferences.commentSort)
-  const {
-    comments,
-    loading,
-    error,
-    totalComments,
-    pagination,
-    hasHydratedInitial,
-    loadMoreComments,
-    refreshComments,
-    upsertComment,
-    removeComment,
-  } = useCommentsQuery({
+  const { comments, loading, error, totalComments, pagination, hasHydratedInitial, loadMoreComments, refreshComments, upsertComment, removeComment } = useCommentsQuery({
     postId,
     editionCode,
     sortOption,
@@ -58,8 +40,7 @@ export function CommentList({
     initialHasMore,
     initialTotal,
   })
-  const { renderedComments, failedCommentSet, addOptimisticComment, rollbackOptimisticComment } =
-    useOptimisticComments(comments)
+  const { renderedComments, failedCommentSet, addOptimisticComment, rollbackOptimisticComment } = useOptimisticComments(comments)
 
   const isInitialLoad = loading && !hasHydratedInitial.current
   const isLoadingMore = loading && !isInitialLoad
@@ -68,16 +49,10 @@ export function CommentList({
     paginationRef.current = pagination
   }, [pagination])
 
-  useCommentsRealtimeSync({
-    postId,
-    upsertComment,
-    removeComment,
-    onRefreshNeeded: refreshComments,
-  })
+  useCommentsRealtimeSync({ postId, upsertComment, removeComment })
 
   const handleSortChange = async (newSort: CommentSortOption) => {
     if (newSort === sortOption) return
-
     setSortOption(newSort)
     await setCommentSortPreference(newSort)
   }
@@ -111,11 +86,7 @@ export function CommentList({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {sortOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => handleSortChange(option.value)}
-                className={sortOption === option.value ? "font-semibold" : ""}
-              >
+              <DropdownMenuItem key={option.value} onClick={() => handleSortChange(option.value)} className={sortOption === option.value ? "font-semibold" : ""}>
                 {option.label}
               </DropdownMenuItem>
             ))}
@@ -143,18 +114,10 @@ export function CommentList({
           useWindowScroll
           data={renderedComments}
           endReached={() => {
-            if (paginationRef.current.hasMore && !isLoadingMore) {
-              loadMoreComments()
-            }
+            if (paginationRef.current.hasMore && !isLoadingMore) loadMoreComments()
           }}
           itemContent={(_, comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              isFailed={failedCommentSet.has(comment.id)}
-              onRetry={() => addOptimisticComment(comment)}
-              onRemove={() => rollbackOptimisticComment(comment.id)}
-            />
+            <CommentItem key={comment.id} comment={comment} isFailed={failedCommentSet.has(comment.id)} onRetry={() => addOptimisticComment(comment)} onRemove={() => rollbackOptimisticComment(comment.id)} />
           )}
         />
       )}
