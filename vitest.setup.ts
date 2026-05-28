@@ -28,17 +28,19 @@ vi.mock('isomorphic-dompurify', () => ({
   },
 }))
 
-// Provide deterministic environment variables required by config/env.ts.
-// CI may expose real WordPress endpoints for every edition; unit tests should
-// opt into those explicitly via vi.stubEnv instead of inheriting them globally.
-process.env.NEXT_PUBLIC_SITE_URL = 'https://example.com'
-process.env.NEXT_PUBLIC_DEFAULT_SITE = 'sz'
-process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = 'https://wp.example.com/sz/graphql'
-process.env.NEXT_PUBLIC_WP_NG_GRAPHQL = ''
-process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = ''
+// Provide default environment variables required by config/env.ts
+process.env.NEXT_PUBLIC_SITE_URL ||= 'https://example.com'
+process.env.NEXT_PUBLIC_DEFAULT_SITE ||= 'sz'
+
+const defaultSite = process.env.NEXT_PUBLIC_DEFAULT_SITE ?? 'sz'
+const graphQLKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_GRAPHQL`
+
+process.env[graphQLKey] ||= `https://wp.example.com/${defaultSite}/graphql`
+process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
+
+// Keep article fallback unit tests deterministic when CI exposes feature flags.
 process.env.FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK = ''
 process.env.ARTICLE_CROSS_POST_POLICY = ''
-process.env.ANALYTICS_API_BASE_URL = 'https://analytics.example.com'
 
 class ResizeObserver {
   observe() {}
