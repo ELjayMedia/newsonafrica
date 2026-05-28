@@ -1,4 +1,4 @@
-import { beforeEach, expect, vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
@@ -37,21 +37,6 @@ const graphQLKey = `NEXT_PUBLIC_WP_${defaultSite.toUpperCase()}_GRAPHQL`
 
 process.env[graphQLKey] ||= `https://wp.example.com/${defaultSite}/graphql`
 process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
-
-// Keep article fallback unit tests deterministic when CI exposes real edition
-// endpoints or fallback feature flags. Other test files keep the normal setup.
-beforeEach((context) => {
-  const filePath = context.task?.file?.filepath ?? ''
-
-  if (!filePath.endsWith('article-data.test.ts')) {
-    return
-  }
-
-  vi.stubEnv('FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK', '')
-  vi.stubEnv('ARTICLE_CROSS_POST_POLICY', '')
-  vi.stubEnv('NEXT_PUBLIC_WP_NG_GRAPHQL', '')
-  vi.stubEnv('NEXT_PUBLIC_WP_ZA_GRAPHQL', '')
-})
 
 class ResizeObserver {
   observe() {}
