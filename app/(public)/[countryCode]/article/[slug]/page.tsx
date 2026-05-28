@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { unstable_noStore as noStore } from "next/cache"
 import { draftMode } from "next/headers"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { MessageSquare, Gift } from "lucide-react"
 
 import { ENV } from "@/config/env"
@@ -43,6 +43,9 @@ const buildDynamicOgUrl = (baseUrl: string, countryCode: string, slug: string) =
 
 const buildPlaceholderUrl = (baseUrl: string) => `${baseUrl}${PLACEHOLDER_IMAGE_PATH}`
 
+const buildArticleRouteUrl = (baseUrl: string, countryCode: string, slug: string) =>
+  `${baseUrl}/${countryCode}/article/${slug}`
+
 const resolveRenderedText = (value: unknown): string => {
   if (typeof value === "string") return value
   if (value && typeof value === "object" && "rendered" in value && typeof (value as { rendered?: unknown }).rendered === "string") {
@@ -54,20 +57,23 @@ const resolveRenderedText = (value: unknown): string => {
 export async function generateMetadata({ params }: RouteParamsPromise): Promise<Metadata> {
   const { countryCode, slug } = await params
   const routeCountryAlias = normalizeRouteCountry(countryCode)
-  const parsedSlug = slug.toLowerCase()
+  const routeSlug = slug.toLowerCase()
   const { isEnabled: preview } = await draftMode()
   const resolved = await resolveArticle({ countryCode, slug, preview })
+  const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
+  const requestedUrl = buildArticleRouteUrl(baseUrl, routeCountryAlias, routeSlug)
+  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountryAlias, routeSlug)
 
   if (resolved.status === "not_found" && !resolved.articleData && !resolved.resolvedSourceCountry) {
-    const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
-    const dynamicOgUrl = buildDynamicOgUrl(baseUrl, routeCountryAlias, parsedSlug)
     const placeholderImage = buildPlaceholderUrl(baseUrl)
 
     return {
       title: "Article not found - News On Africa",
       description: "We couldn't find the requested article.",
       robots: { index: false, follow: false },
+      alternates: { canonical: requestedUrl },
       openGraph: {
+        url: requestedUrl,
         images: [{ url: dynamicOgUrl }, { url: placeholderImage }],
       },
       twitter: {
@@ -77,7 +83,6 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
     }
   }
 
-  const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
   const placeholderImage = buildPlaceholderUrl(baseUrl)
   const article = resolved.articleData
   const fallbackImage = article?.featuredImage?.node?.sourceUrl || placeholderImage
@@ -102,16 +107,13 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
       ? "We hit a temporary issue loading this story. Please try again in a moment."
       : "Latest stories from News On Africa.")
 
-  const canonicalUrl = resolved.canonicalUrl
-  const dynamicOgUrl = buildDynamicOgUrl(baseUrl, resolved.targetCountry, resolved.canonicalSlug)
-
   return {
     title: `${title} - News On Africa`,
     description,
-    alternates: { canonical: canonicalUrl },
+    alternates: { canonical: requestedUrl },
     openGraph: {
       type: "article",
-      url: canonicalUrl,
+      url: requestedUrl,
       title,
       description,
       images: [{ url: dynamicOgUrl }, { url: fallbackImage }],
@@ -128,6 +130,7 @@ export async function generateMetadata({ params }: RouteParamsPromise): Promise<
 export default async function ArticlePage({ params }: RouteParamsPromise) {
   const { countryCode, slug } = await params
   const routeCountry = normalizeRouteCountry(countryCode)
+  const routeSlug = slug.toLowerCase()
   const { isEnabled: preview } = await draftMode()
   const resolved = await resolveArticle({ countryCode, slug, preview })
 
@@ -167,30 +170,26 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
     })
   }
 
-  const targetCountry = resolved.targetCountry
-  const canonicalSlug = resolved.canonicalSlug
-
-  if (targetCountry !== routeCountry || canonicalSlug !== slug.toLowerCase()) {
-    redirect(`/${targetCountry}/article/${canonicalSlug}`)
-  }
+  const sourceCountry = resolved.targetCountry
+  const sourceSlug = resolved.canonicalSlug
 
   const formattedBody = await formatArticleBodyCached({
-    country: targetCountry,
-    canonicalSlug,
+    country: sourceCountry,
+    canonicalSlug: sourceSlug,
     version: resolved.articleVersion,
     html: resolveRenderedText(articleData.content),
     preview,
   })
 
   const baseUrl = sanitizeBaseUrl(ENV.NEXT_PUBLIC_SITE_URL)
-  const canonicalUrl = `${baseUrl}/${targetCountry}/article/${canonicalSlug}`
+  const requestedArticleUrl = buildArticleRouteUrl(baseUrl, routeCountry, routeSlug)
   const articleExcerpt = stripHtml(resolveRenderedText(articleData.excerpt))
   const shouldPrioritizeFeaturedImage = !articleExcerpt
 
   return (
     <>
       <Suspense fallback={null}>
-        <ArticleJsonLd post={articleData} url={canonicalUrl} />
+        <ArticleJsonLd post={articleData} url={requestedArticleUrl} />
       </Suspense>
       <ArticlePageLayout>
         <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
@@ -216,7 +215,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                   </a>
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href={`/subscribe?intent=gift&article=${canonicalSlug}&country=${targetCountry}`}>
+                  <Link href={`/subscribe?intent=gift&article=${routeSlug}&country=${routeCountry}`}>
                     <Gift className="mr-2 h-4 w-4" />Gift article
                   </Link>
                 </Button>
@@ -224,10 +223,10 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                   postId={
                     typeof articleData.databaseId === "number"
                       ? String(articleData.databaseId)
-                      : (articleData.id ?? canonicalSlug)
+                      : (articleData.id ?? routeSlug)
                   }
-                  editionCode={targetCountry}
-                  slug={canonicalSlug}
+                  editionCode={routeCountry}
+                  slug={routeSlug}
                   title={stripHtml(resolveRenderedText(articleData.title)) || "Untitled Post"}
                   excerpt={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
                   featuredImage={articleData.featuredImage?.node?.sourceUrl}
@@ -258,9 +257,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 postId={
                   typeof articleData.databaseId === "number"
                     ? String(articleData.databaseId)
-                    : (articleData.id ?? canonicalSlug)
+                    : (articleData.id ?? routeSlug)
                 }
-                countryCode={targetCountry}
+                countryCode={sourceCountry}
               />
             </Suspense>
 
