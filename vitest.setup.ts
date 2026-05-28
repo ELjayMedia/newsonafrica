@@ -41,7 +41,7 @@ process.env.ANALYTICS_API_BASE_URL ||= 'https://analytics.example.com'
 // Keep article fallback unit tests deterministic when CI exposes real edition
 // endpoints or fallback feature flags. Other test files keep the normal setup.
 beforeEach((context) => {
-  const filePath = context.task.file?.filepath ?? ''
+  const filePath = context.task?.file?.filepath ?? ''
 
   if (!filePath.endsWith('article-data.test.ts')) {
     return
