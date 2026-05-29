@@ -91,7 +91,7 @@ export async function GET() {
 
       sitemap += `
   <url>
-    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}</loc>
+    <loc>${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post), post.databaseId)}</loc>
     ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

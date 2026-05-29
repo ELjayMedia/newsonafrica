@@ -69,12 +69,13 @@ describe("Paystack webhook handlers", () => {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
+        upsert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handleSubscriptionCreated(subCreateData as any, client)
-    expect(client.from("subscriptions").insert).toHaveBeenCalledWith(
+    expect(client.from("subscriptions").upsert).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: "user1" }),
+      expect.objectContaining({ onConflict: "id" }),
     )
   })
 
@@ -121,17 +122,17 @@ describe("Paystack webhook handlers", () => {
   }
 
   it("handlePaymentFailed updates transaction", async () => {
+    const txChain = { update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) }
+    const subChain = { update: vi.fn().mockReturnThis(), or: vi.fn().mockResolvedValue({ error: null }) }
     const client = createClient({
       users: {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
-      transactions: {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      },
+      transactions: txChain,
+      subscriptions: subChain,
     })
     await handlers.handlePaymentFailed(paymentFailedData as any, client)
-    expect(client.from("transactions").update).toHaveBeenCalled()
+    expect(txChain.update).toHaveBeenCalled()
   })
 
   it("handlePaymentFailed throws on update error", async () => {

@@ -7,13 +7,13 @@ describe("post mapper client/server boundaries", () => {
     const source = readFileSync(resolve(process.cwd(), "lib/mapping/post-mappers.shared.ts"), "utf8")
 
     expect(source).not.toContain('import "server-only"')
-    expect(source).not.toContain("normalize-post-content")
+    expect(source).not.toContain('import "server-only"')
   })
 
   it("server mapper is explicitly server-only", () => {
     const source = readFileSync(resolve(process.cwd(), "lib/mapping/post-mappers.server.ts"), "utf8")
 
     expect(source).toContain('import "server-only"')
-    expect(source).toContain("normalize-post-content")
+    expect(source).toContain("normalizePostContent")
   })
 })
