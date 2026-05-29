@@ -109,7 +109,7 @@ export async function fetchPendingComments(
     )
 
     if (!data.ok) {
-      log.error("[v0] Pending comments query failed", { countryCode, response: data })
+      log.error("Pending comments query failed", { countryCode, response: data })
       return []
     }
 
@@ -119,7 +119,7 @@ export async function fetchPendingComments(
       .map((node) => mapGraphqlCommentToWordPressComment(node))
       .filter((comment): comment is WordPressComment => Boolean(comment))
   } catch (error) {
-    log.error("[v0] Failed to fetch pending comments via GraphQL", {
+    log.error("Failed to fetch pending comments via GraphQL", {
       countryCode,
       error,
     })
@@ -142,7 +142,7 @@ export async function approveComment(
     )
 
     if (!data.ok) {
-      log.error("[v0] Approve comment mutation failed", {
+      log.error("Approve comment mutation failed", {
         countryCode,
         commentId,
         response: data,
@@ -154,7 +154,7 @@ export async function approveComment(
     const mapped = mapGraphqlCommentToWordPressComment(comment)
 
     if (!mapped) {
-      log.error("[v0] Approve comment mutation did not return comment", {
+      log.error("Approve comment mutation did not return comment", {
         countryCode,
         commentId,
         response: data,
@@ -164,7 +164,7 @@ export async function approveComment(
 
     return mapped
   } catch (error) {
-    log.error(`[v0] Failed to approve comment ${commentId} via GraphQL`, {
+    log.error(`Failed to approve comment ${commentId} via GraphQL`, {
       countryCode,
       error,
     })
@@ -187,7 +187,7 @@ export async function deleteComment(
     )
 
     if (!data.ok) {
-      log.error("[v0] Delete comment mutation failed", {
+      log.error("Delete comment mutation failed", {
         countryCode,
         commentId,
         response: data,
@@ -198,7 +198,7 @@ export async function deleteComment(
     const comment = mapGraphqlCommentToWordPressComment(data.data?.deleteComment?.comment)
 
     if (!comment) {
-      log.error("[v0] Delete comment mutation did not return comment", {
+      log.error("Delete comment mutation did not return comment", {
         countryCode,
         commentId,
         response: data,
@@ -208,7 +208,7 @@ export async function deleteComment(
 
     return comment
   } catch (error) {
-    log.error(`[v0] Failed to delete comment ${commentId} via GraphQL`, {
+    log.error(`Failed to delete comment ${commentId} via GraphQL`, {
       countryCode,
       error,
     })

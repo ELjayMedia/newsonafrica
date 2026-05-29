@@ -314,7 +314,7 @@ export function fetchWordPressGraphQL<T>(
   const base = getGraphQLEndpoint(countryCode)
 
   if (!base || base === "") {
-    console.error("[v0] GraphQL endpoint not configured for country:", countryCode)
+    console.error("GraphQL endpoint not configured for country:", countryCode)
     const error = new Error(`GraphQL endpoint not configured for country: ${countryCode}`)
     return Promise.resolve({
       ok: false,
@@ -422,7 +422,7 @@ export function fetchWordPressGraphQL<T>(
   const requestPromise: Promise<WordPressGraphQLResult<T>> = fetchWithRetry(requestUrl, fetchOptions)
     .then(async (res) => {
       if (!res.ok) {
-        console.error("[v0] GraphQL request failed:", {
+        console.error("GraphQL request failed:", {
           country: countryCode,
           endpoint: base,
           status: res.status,
@@ -436,7 +436,7 @@ export function fetchWordPressGraphQL<T>(
       try {
         rawBody = await res.text()
       } catch (bodyError) {
-        console.error("[v0] GraphQL response body read failed:", bodyError)
+        console.error("GraphQL response body read failed:", bodyError)
         removeMemoizedEntry()
         throw bodyError
       }
@@ -445,13 +445,13 @@ export function fetchWordPressGraphQL<T>(
       try {
         parsedPayload = rawBody ? JSON.parse(rawBody) : {}
       } catch (parseError) {
-        console.error("[v0] GraphQL response JSON parse failed")
+        console.error("GraphQL response JSON parse failed")
         removeMemoizedEntry()
         return buildInvalidPayloadFailureResult(res, rawBody, parseError)
       }
 
       if (!parsedPayload || typeof parsedPayload !== "object" || Array.isArray(parsedPayload)) {
-        console.error("[v0] GraphQL response payload was not an object")
+        console.error("GraphQL response payload was not an object")
         removeMemoizedEntry()
         return buildInvalidPayloadFailureResult(res, rawBody)
       }
@@ -462,7 +462,7 @@ export function fetchWordPressGraphQL<T>(
       }
 
       if (json.errors && json.errors.length > 0) {
-        console.error("[v0] GraphQL errors:", json.errors)
+        console.error("GraphQL errors:", json.errors)
         removeMemoizedEntry()
         return buildGraphQLFailureResult(json.errors)
       }
@@ -485,7 +485,7 @@ export function fetchWordPressGraphQL<T>(
       return buildSuccessResult<T>((json.data ?? null) as T)
     })
     .catch((error) => {
-      console.error("[v0] GraphQL request exception:", {
+      console.error("GraphQL request exception:", {
         country: countryCode,
         endpoint: base,
         error: error instanceof Error ? error.message : String(error),

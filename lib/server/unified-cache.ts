@@ -58,11 +58,11 @@ export async function cachedFetch<T>(
 
     return await cachedFn()
   } catch (error) {
-    console.error(`[v0] Cache fetch failed for ${key}:`, error)
+    console.error(`Cache fetch failed for ${key}:`, error)
 
     // Return fallback or rethrow
     if (fallback !== undefined) {
-      console.log(`[v0] Using fallback value for ${key}`)
+      console.log(`Using fallback value for ${key}`)
       return fallback
     }
 

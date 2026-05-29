@@ -210,7 +210,7 @@ export function ArticleListCard({
   try {
     data = normalizeArticleData(article)
   } catch (error) {
-    console.error("[v0] Error normalizing article data:", error, article)
+    console.error("Error normalizing article data:", error, article)
     // Return a minimal error card
     return (
       <Card className={cn("group", className)}>
@@ -387,7 +387,7 @@ export function ArticleListCard({
                 sizes="80px"
                 quality={75}
                 onError={(e) => {
-                  console.error("[v0] Image load error:", imageUrl)
+                  console.error("Image load error:", imageUrl)
                   e.currentTarget.src = fallbackImage
                 }}
               />
@@ -434,7 +434,7 @@ export function ArticleListCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 448px"
             quality={85}
             onError={(e) => {
-              console.error("[v0] Image load error:", imageUrl)
+              console.error("Image load error:", imageUrl)
               e.currentTarget.src = fallbackImage
             }}
           />
@@ -480,7 +480,7 @@ export function ArticleListCard({
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 320px"
           quality={80}
           onError={(e) => {
-            console.error("[v0] Image load error:", imageUrl)
+            console.error("Image load error:", imageUrl)
             e.currentTarget.src = fallbackImage
           }}
         />

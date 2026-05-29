@@ -120,11 +120,11 @@ async function fetchAggregatedForCountry(
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         console.debug(
-          `[v0] getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
+          `getFrontPageSlicesForCountry timed out after ${timeout}ms for ${countryCode}`,
         )
       } else {
         console.error(
-          `[v0] getFrontPageSlicesForCountry error for ${countryCode}:`,
+          `getFrontPageSlicesForCountry error for ${countryCode}:`,
           error,
         )
       }
@@ -140,7 +140,7 @@ async function fetchAggregatedForCountry(
         timeout,
       })
     } catch (error) {
-      console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
+      console.debug(`loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
       return null
     }
   })
@@ -152,7 +152,7 @@ async function fetchAggregatedForCountry(
         timeout,
       })
     } catch (error) {
-      console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
+      console.debug(`loadTagPosts timed out or failed for ${countryCode}:`, error)
       return null
     }
   })

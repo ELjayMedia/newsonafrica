@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
     return response
   } catch (error) {
-    console.error("[v0] Suggestion error:", error)
+    console.error("Suggestion error:", error)
     const response = jsonWithCors(request, { suggestions: [] })
     response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
     return response

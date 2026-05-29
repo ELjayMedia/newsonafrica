@@ -36,7 +36,7 @@ export async function getUserActiveSubscription(userId: string): Promise<Subscri
       .maybeSingle()
 
     if (error) {
-      console.error("[v0] Error fetching subscription:", error)
+      console.error("Error fetching subscription:", error)
       return null
     }
 
@@ -44,14 +44,14 @@ export async function getUserActiveSubscription(userId: string): Promise<Subscri
     if (data && data.renewal_date) {
       const renewalDate = new Date(data.renewal_date)
       if (renewalDate < new Date()) {
-        console.log("[v0] Subscription expired:", data.id)
+        console.log("Subscription expired:", data.id)
         return null
       }
     }
 
     return data
   } catch (error) {
-    console.error("[v0] Subscription check failed:", error)
+    console.error("Subscription check failed:", error)
     return null
   }
 }

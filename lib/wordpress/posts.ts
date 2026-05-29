@@ -140,7 +140,7 @@ export async function getLatestPostsForCountry(
   const request = options?.request
 
   try {
-    console.log("[v0] Fetching latest posts for:", countryCode)
+    console.log("Fetching latest posts for:", countryCode)
     const posts: WordPressPost[] = []
     let afterCursor = cursor ?? null
     let lastPageInfo: NonNullable<LatestPostsQuery["posts"]>["pageInfo"] | null = null
@@ -165,7 +165,7 @@ export async function getLatestPostsForCountry(
       )
 
       if (!gqlData.ok) {
-        console.error("[v0] Failed to fetch latest posts:", gqlData)
+        console.error("Failed to fetch latest posts:", gqlData)
         break
       }
 
@@ -195,7 +195,7 @@ export async function getLatestPostsForCountry(
       endCursor: lastPageInfo?.endCursor ?? null,
     }
   } catch (error) {
-    console.error("[v0] Failed to fetch latest posts:", error)
+    console.error("Failed to fetch latest posts:", error)
     return {
       posts: [],
       hasNextPage: false,
@@ -322,7 +322,7 @@ export const getRelatedPosts = async (
     )
 
     if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch related posts by tags:", gqlData)
+      console.error("Failed to fetch related posts by tags:", gqlData)
       return []
     }
 
@@ -485,7 +485,7 @@ const buildMostReadRequestUrl = (countryCode: string, limit: number, requestUrl?
       try {
         candidateBases.push(new URL(requestUrl).origin)
       } catch (error) {
-        console.warn("[v0] Failed to derive request origin for most-read URL", {
+        console.warn("Failed to derive request origin for most-read URL", {
           countryCode,
           relativePath,
           requestUrl,
@@ -498,7 +498,7 @@ const buildMostReadRequestUrl = (countryCode: string, limit: number, requestUrl?
       try {
         return new URL(relativePath, baseUrl).toString()
       } catch (error) {
-        console.warn("[v0] Failed to build absolute most-read URL", {
+        console.warn("Failed to build absolute most-read URL", {
           countryCode,
           relativePath,
           baseUrl,
@@ -545,7 +545,7 @@ export const fetchRecentPosts = async (limit = 20, countryCode = DEFAULT_COUNTRY
     const { posts } = await getLatestPostsForCountry(countryCode, limit)
     return posts
   } catch (error) {
-    console.error("[v0] Failed to fetch recent posts during build:", error)
+    console.error("Failed to fetch recent posts during build:", error)
     return []
   }
 }
@@ -591,7 +591,7 @@ export const fetchTaggedPosts = async ({
     )
 
     if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch tagged posts via GraphQL", {
+      console.error("Failed to fetch tagged posts via GraphQL", {
         slug,
         countryCode,
         error: gqlData,
@@ -616,7 +616,7 @@ export const fetchTaggedPosts = async ({
       }
     }
   } catch (error) {
-    console.error("[v0] Failed to fetch tagged posts via GraphQL", {
+    console.error("Failed to fetch tagged posts via GraphQL", {
       slug,
       countryCode,
       error: toErrorDetails(error),
@@ -731,7 +731,7 @@ export const fetchPosts = async (
   )
 
   if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch posts:", gqlData)
+    console.error("Failed to fetch posts:", gqlData)
     return { data: [], total: 0 }
   }
 
@@ -756,7 +756,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
     )
 
     if (!gqlData.ok) {
-      console.error("[v0] Failed to fetch tags during build:", gqlData)
+      console.error("Failed to fetch tags during build:", gqlData)
       return []
     }
 
@@ -765,7 +765,7 @@ export const fetchTags = async (countryCode = DEFAULT_COUNTRY) => {
       .map((node) => mapGraphqlTagNode(node))
       .filter((tag): tag is WordPressTag => Boolean(tag))
   } catch (error) {
-    console.error("[v0] Failed to fetch tags during build:", error)
+    console.error("Failed to fetch tags during build:", error)
     return []
   }
 }
@@ -785,7 +785,7 @@ export const fetchSingleTag = async (slug: string, countryCode = DEFAULT_COUNTRY
   )
 
   if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch tag by slug:", gqlData)
+    console.error("Failed to fetch tag by slug:", gqlData)
     return null
   }
 
@@ -802,7 +802,7 @@ export const fetchAllTags = async (countryCode = DEFAULT_COUNTRY) => {
   )
 
   if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch all tags:", gqlData)
+    console.error("Failed to fetch all tags:", gqlData)
     return []
   }
 
@@ -833,7 +833,7 @@ export async function fetchPost({
   )
 
   if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch post by slug:", gqlData)
+    console.error("Failed to fetch post by slug:", gqlData)
     return null
   }
 
@@ -907,7 +907,7 @@ export async function getFeaturedPosts(countryCode = DEFAULT_COUNTRY, limit = 10
     },
   )
   if (!gqlData.ok) {
-    console.error("[v0] Failed to fetch featured posts:", gqlData)
+    console.error("Failed to fetch featured posts:", gqlData)
     return []
   }
 

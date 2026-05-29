@@ -6,7 +6,7 @@ import { cacheTags } from "./cacheTags"
  */
 
 export async function invalidatePost(editionCode: string, postId: string) {
-  console.log(`[v0] Invalidating post cache: ${editionCode}:${postId}`)
+  console.log(`Invalidating post cache: ${editionCode}:${postId}`)
 
   // Invalidate specific post
   revalidateTag(cacheTags.post(editionCode, postId))
@@ -19,7 +19,7 @@ export async function invalidatePost(editionCode: string, postId: string) {
 }
 
 export async function invalidateCategory(editionCode: string, categorySlug: string) {
-  console.log(`[v0] Invalidating category cache: ${editionCode}:${categorySlug}`)
+  console.log(`Invalidating category cache: ${editionCode}:${categorySlug}`)
 
   revalidateTag(cacheTags.category(editionCode, categorySlug))
   revalidateTag(cacheTags.edition(editionCode))
@@ -27,7 +27,7 @@ export async function invalidateCategory(editionCode: string, categorySlug: stri
 }
 
 export async function invalidateEdition(editionCode: string) {
-  console.log(`[v0] Invalidating edition cache: ${editionCode}`)
+  console.log(`Invalidating edition cache: ${editionCode}`)
 
   revalidateTag(cacheTags.edition(editionCode))
   revalidatePath(`/${editionCode}`, "page")
@@ -35,7 +35,7 @@ export async function invalidateEdition(editionCode: string) {
 }
 
 export async function invalidateSearch() {
-  console.log(`[v0] Invalidating search cache`)
+  console.log(`Invalidating search cache`)
 
   revalidateTag(cacheTags.edition("all"))
   revalidatePath("/search", "page")

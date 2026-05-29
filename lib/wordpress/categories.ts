@@ -105,7 +105,7 @@ export async function getPostsForCategories(
       }
     })
   } catch (error) {
-    console.error("[v0] Failed to fetch category posts via GraphQL:", error)
+    console.error("Failed to fetch category posts via GraphQL:", error)
   }
 
   normalizedSlugs.forEach((slug) => ensureEntry(results, slug))
@@ -158,7 +158,7 @@ export async function getPostsByCategoryForCountry(
       }
     }
   } catch (error) {
-    console.error(`[v0] Failed to fetch posts by category for ${categorySlug} (${countryCode}) via GraphQL:`, error)
+    console.error(`Failed to fetch posts by category for ${categorySlug} (${countryCode}) via GraphQL:`, error)
   }
 
   return { category: null, posts: [], hasNextPage: false, endCursor: null }
@@ -278,7 +278,7 @@ export async function getCategoriesForCountry(countryCode: string) {
       return rootNodes.map((node) => buildCategoryTree(node)).filter((category) => Boolean(category.slug))
     }
   } catch (error) {
-    console.error(`[v0] Failed to fetch categories via GraphQL for ${countryCode}:`, error)
+    console.error(`Failed to fetch categories via GraphQL for ${countryCode}:`, error)
   }
 
   return []
@@ -335,7 +335,7 @@ export const fetchCategories = async (countryCode = DEFAULT_COUNTRY) => {
   try {
     return await getCategoriesForCountry(countryCode)
   } catch (error) {
-    console.error("[v0] Failed to fetch categories during build:", error)
+    console.error("Failed to fetch categories during build:", error)
     return []
   }
 }

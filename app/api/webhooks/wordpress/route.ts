@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
               featured_image_url: featuredImageUrl,
             })
 
-            console.log(`[v0] Synced post ${postId} to search index for ${resolvedCountry}`)
+            console.log(`Synced post ${postId} to search index for ${resolvedCountry}`)
           }
 
           const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
 
           if (resolvedCountry && postId) {
             await deletePostFromIndex(resolvedCountry, Number.parseInt(postId, 10))
-            console.log(`[v0] Deleted post ${postId} from search index for ${resolvedCountry}`)
+            console.log(`Deleted post ${postId} from search index for ${resolvedCountry}`)
           }
 
           // Revalidate pages that might have referenced this post

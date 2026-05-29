@@ -56,7 +56,7 @@ function useClientBootstrap(
       } = await supabase.auth.getSession()
 
       if (sessionError) {
-        console.error("[v0] Bootstrap session error:", sessionError)
+        console.error("Bootstrap session error:", sessionError)
         return
       }
 
@@ -77,7 +77,7 @@ function useClientBootstrap(
         .single<ProfileAuthRow>()
 
       if (profileError && profileError.code !== "PGRST116") {
-        console.error("[v0] Bootstrap profile error:", profileError)
+        console.error("Bootstrap profile error:", profileError)
       }
 
       setAuthState({
@@ -93,7 +93,7 @@ function useClientBootstrap(
         .single<UserPreferencesBootstrapRow>()
 
       if (prefsError && prefsError.code !== "PGRST116") {
-        console.error("[v0] Bootstrap preferences error:", prefsError)
+        console.error("Bootstrap preferences error:", prefsError)
       }
 
       setPreferences({
@@ -113,7 +113,7 @@ function useClientBootstrap(
         profilePreferences: parseProfilePreferences(profile?.preferences),
       })
     } catch (error) {
-      console.error("[v0] Bootstrap error:", error)
+      console.error("Bootstrap error:", error)
     } finally {
       setIsBootstrapping(false)
     }

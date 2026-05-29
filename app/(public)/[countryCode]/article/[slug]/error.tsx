@@ -21,7 +21,7 @@ export default function ArticleError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[v0] Article route error:', error)
+    console.error('Article route error:', error)
   }, [error])
 
   const staleArticle = error?.staleArticle ?? null

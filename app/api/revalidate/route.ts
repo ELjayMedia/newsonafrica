@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     )
   } catch (error) {
-    console.error("[v0] Revalidation error:", error)
+    console.error("Revalidation error:", error)
     return NextResponse.json({ error: "Revalidation failed" }, { status: 500 })
   }
 }

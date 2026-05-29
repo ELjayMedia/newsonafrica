@@ -45,7 +45,7 @@ export default function CommentsModeration() {
       const data = await res.json()
       setComments(data)
     } catch (error) {
-      console.error("[v0] Failed to fetch comments:", error)
+      console.error("Failed to fetch comments:", error)
     } finally {
       setLoading(false)
     }
@@ -61,7 +61,7 @@ export default function CommentsModeration() {
       if (!res.ok) throw new Error("Failed to update comment")
       fetchComments()
     } catch (error) {
-      console.error("[v0] Failed to update comment:", error)
+      console.error("Failed to update comment:", error)
     }
   }
 

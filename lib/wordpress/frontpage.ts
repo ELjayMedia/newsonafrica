@@ -124,7 +124,7 @@ export async function getFrontPageSlicesForCountry(
   const tags = [cacheTags.home(countryCode), cacheTags.edition(countryCode)]
 
   try {
-    console.log("[v0] Fetching frontpage slices for:", countryCode)
+    console.log("Fetching frontpage slices for:", countryCode)
 
     const gqlData = await fetchWordPressGraphQL<FrontPageSlicesQueryResult>(
       countryCode,
@@ -170,9 +170,9 @@ export async function getFrontPageSlicesForCountry(
       }
     }
 
-    console.log("[v0] GraphQL returned no data for frontpage slices")
+    console.log("GraphQL returned no data for frontpage slices")
   } catch (error) {
-    console.error("[v0] Failed to fetch frontpage slices via GraphQL:", error)
+    console.error("Failed to fetch frontpage slices via GraphQL:", error)
   }
 
   return createEmptyFrontPageSlices()
@@ -190,7 +190,7 @@ export async function getFpTaggedPostsForCountry(
   ]
 
   try {
-    console.log("[v0] Fetching FP tagged posts for:", countryCode)
+    console.log("Fetching FP tagged posts for:", countryCode)
 
     const gqlData = await fetchWordPressGraphQL<FpTaggedPostsQuery>(
       countryCode,
@@ -208,7 +208,7 @@ export async function getFpTaggedPostsForCountry(
     )
 
     if (!gqlData.ok) {
-      console.log("[v0] GraphQL failed for FP tagged posts")
+      console.log("GraphQL failed for FP tagged posts")
       return []
     }
 
@@ -217,14 +217,14 @@ export async function getFpTaggedPostsForCountry(
     )
 
     if (nodes && nodes.length > 0) {
-      console.log("[v0] Found", nodes.length, "FP tagged posts via GraphQL")
+      console.log("Found", nodes.length, "FP tagged posts via GraphQL")
       return nodes.map((node) => mapGraphqlNodeToHomePost(node, countryCode))
     }
 
-    console.log("[v0] No GraphQL results for FP tagged posts")
+    console.log("No GraphQL results for FP tagged posts")
     return []
   } catch (error) {
-    console.error("[v0] Failed to fetch FP tagged posts:", error)
+    console.error("Failed to fetch FP tagged posts:", error)
   }
 
   return []
@@ -256,7 +256,7 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
         aggregatedPosts.push(...result.value)
       } else {
         const failedCountry = SUPPORTED_COUNTRY_EDITIONS[index]
-        log.error("[v0] Failed to fetch aggregated latest posts", {
+        log.error("Failed to fetch aggregated latest posts", {
           country: failedCountry?.code,
           error: result.reason instanceof Error ? result.reason.message : result.reason,
         })
@@ -290,7 +290,7 @@ export async function getAggregatedLatestHome(limitPerCountry = 6): Promise<Aggr
       remainingPosts,
     }
   } catch (error) {
-    log.error("[v0] Aggregated latest posts request failed", {
+    log.error("Aggregated latest posts request failed", {
       error: error instanceof Error ? error.message : String(error),
     })
     return fallback

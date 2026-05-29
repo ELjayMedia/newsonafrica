@@ -73,7 +73,7 @@ export const getFpTagForCountry = async (
 
     if (!gqlResult.ok) {
       console.error(
-        `[v0] Failed to fetch FP tag via GraphQL for ${slug} (${countryCode}):`,
+        `Failed to fetch FP tag via GraphQL for ${slug} (${countryCode}):`,
         gqlResult,
       )
       return null
@@ -82,7 +82,7 @@ export const getFpTagForCountry = async (
     return mapGraphqlTagNode(gqlResult.data?.tag ?? null)
   } catch (error) {
     console.error(
-      `[v0] Failed to fetch FP tag via GraphQL for ${slug} (${countryCode}):`,
+      `Failed to fetch FP tag via GraphQL for ${slug} (${countryCode}):`,
       error,
     )
     return null

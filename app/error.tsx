@@ -9,9 +9,8 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  // Log error details for debugging
   if (typeof window !== "undefined") {
-    console.error("[v0] Error boundary caught:", error)
+    console.error("Error boundary caught:", error)
   }
 
   return (

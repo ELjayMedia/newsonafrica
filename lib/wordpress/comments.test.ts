@@ -73,7 +73,7 @@ describe("fetchPendingComments", () => {
     const result = await fetchPendingComments("ng")
 
     expect(result).toEqual([])
-    expect(errorMock).toHaveBeenCalledWith("[v0] Pending comments query failed", {
+    expect(errorMock).toHaveBeenCalledWith("Pending comments query failed", {
       countryCode: "ng",
       response,
     })
@@ -121,7 +121,7 @@ describe("approveComment", () => {
 
     await expect(approveComment(42, "ng")).rejects.toThrowError("Failed to approve comment 42")
 
-    expect(errorMock).toHaveBeenNthCalledWith(1, "[v0] Approve comment mutation did not return comment", {
+    expect(errorMock).toHaveBeenNthCalledWith(1, "Approve comment mutation did not return comment", {
       countryCode: "ng",
       commentId: 42,
       response: { ok: true, data: { updateComment: { comment: null } } },
@@ -134,7 +134,7 @@ describe("approveComment", () => {
 
     await expect(approveComment(42, "ng")).rejects.toThrowError("Failed to approve comment 42")
 
-    expect(errorMock).toHaveBeenCalledWith("[v0] Approve comment mutation failed", {
+    expect(errorMock).toHaveBeenCalledWith("Approve comment mutation failed", {
       countryCode: "ng",
       commentId: 42,
       response,
@@ -185,7 +185,7 @@ describe("deleteComment", () => {
 
     await expect(deleteComment(42, "ng")).rejects.toThrowError("Failed to delete comment 42")
 
-    expect(errorMock).toHaveBeenNthCalledWith(1, "[v0] Delete comment mutation did not return comment", {
+    expect(errorMock).toHaveBeenNthCalledWith(1, "Delete comment mutation did not return comment", {
       countryCode: "ng",
       commentId: 42,
       response,
@@ -198,7 +198,7 @@ describe("deleteComment", () => {
 
     await expect(deleteComment(42, "ng")).rejects.toThrowError("Failed to delete comment 42")
 
-    expect(errorMock).toHaveBeenCalledWith("[v0] Delete comment mutation failed", {
+    expect(errorMock).toHaveBeenCalledWith("Delete comment mutation failed", {
       countryCode: "ng",
       commentId: 42,
       response,
