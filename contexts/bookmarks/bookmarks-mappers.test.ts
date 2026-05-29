@@ -22,7 +22,7 @@ describe("bookmarks-mappers", () => {
     const row: BookmarkListRow = {
       id: "b1",
       userId: "u1",
-      postId: "p1",
+      postId: 42,
       slug: null,
       editionCode: null,
       collectionId: null,
@@ -37,7 +37,7 @@ describe("bookmarks-mappers", () => {
     }
 
     const bookmark = formatBookmarkRow(row, {
-      id: "p1",
+      id: "42",
       country: "ZW",
       slug: "from-meta",
       title: { rendered: "Meta title" } as unknown as string,
@@ -48,15 +48,15 @@ describe("bookmarks-mappers", () => {
     expect(bookmark.title).toBe("Meta title")
     expect(bookmark.slug).toBe("from-meta")
     expect(bookmark.editionCode).toBe("zw")
-    expect(bookmark.postId).toBe("p1")
+    expect(bookmark.postId).toBe("42")
   })
 
   it("buildHydrationPayload groups unique ids by country", () => {
     const payload = buildHydrationPayload([
-      { ...rowFixture, postId: "1", editionCode: "SZ" },
-      { ...rowFixture, postId: "2", editionCode: "sz" },
-      { ...rowFixture, postId: "3", editionCode: "ZW" },
-      { ...rowFixture, postId: "2", editionCode: "sz" },
+      { ...rowFixture, postId: 1, editionCode: "SZ" },
+      { ...rowFixture, postId: 2, editionCode: "sz" },
+      { ...rowFixture, postId: 3, editionCode: "ZW" },
+      { ...rowFixture, postId: 2, editionCode: "sz" },
     ])
 
     expect(payload).toEqual([
@@ -69,7 +69,7 @@ describe("bookmarks-mappers", () => {
 const rowFixture: BookmarkListRow = {
   id: "fixture",
   userId: "user",
-  postId: "fixture-post",
+  postId: 999,
   slug: null,
   editionCode: null,
   collectionId: null,
