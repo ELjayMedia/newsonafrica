@@ -37,6 +37,12 @@ jobs:
           CI: "1"
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Authenticated journey smoke tests (opt-in — skipped if secrets are absent)
+          NOA_E2E_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NOA_E2E_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NOA_E2E_USER_EMAIL: ${{ secrets.NOA_E2E_USER_EMAIL }}
+          NOA_E2E_USER_PASSWORD: ${{ secrets.NOA_E2E_USER_PASSWORD }}
 
       - name: Upload Playwright report
         if: failure()
