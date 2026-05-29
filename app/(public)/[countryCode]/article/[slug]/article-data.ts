@@ -12,8 +12,6 @@ import type { PostFieldsFragment } from "@/types/wpgraphql"
 
 export const PLACEHOLDER_IMAGE_PATH = "/news-placeholder.png"
 
-const ARTICLE_CACHE_KEY_PREFIX = "article"
-
 export const normalizeCountryCode = (countryCode: string): string => countryCode.toLowerCase()
 
 export const normalizeSlug = (value: string): string => value.toLowerCase()

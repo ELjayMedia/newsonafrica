@@ -137,49 +137,6 @@ const deriveCountryFromPost = (post: any): string | null => {
   return null
 }
 
-const normalizeSlug = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-  return normalized || null
-}
-
-const derivePrimaryCategorySlug = (post: any, categorySlugs: string[]): string | null => {
-  const candidates: unknown[] = [
-    post?.primary_category,
-    post?.primaryCategory,
-    post?.primary_category_slug,
-    post?.primaryCategorySlug,
-    post?.yoast_head_json?.primary_category,
-    post?.yoast_head_json?.primary_category_slug,
-    post?.meta?._primary_category,
-    post?.meta?._primary_category_slug,
-    post?.meta?._yoast_wpseo_primary_category_slug,
-  ]
-
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate === "object" && "slug" in candidate) {
-      const normalized = normalizeSlug((candidate as { slug?: string }).slug)
-      if (normalized) {
-        return normalized
-      }
-    }
-
-    const normalized = normalizeSlug(candidate)
-    if (normalized) {
-      return normalized
-    }
-  }
-
-  if (categorySlugs.length > 0) {
-    return categorySlugs[0]
-  }
-
-  return null
-}
-
 function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
@@ -229,7 +186,6 @@ export async function POST(request: NextRequest) {
           const postIdentifier = postId ?? post.slug
 
           const resolvedCountry = deriveCountryFromPost(post)
-          const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
 
           if (resolvedCountry && postId) {
             const title = post?.title?.rendered || post?.title || "Untitled"

@@ -18,14 +18,6 @@ export type ProfileDetailsRow = Pick<
 const PROFILE_DETAILS_SELECT_COLUMNS =
   "id, username, handle, full_name, avatar_url, website, email, bio, country, location, interests, preferences, updated_at, created_at, is_admin, onboarded, role"
 
-function toSerializable<T>(value: T): T {
-  if (value === null || value === undefined) {
-    return value
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T
-}
-
 export async function getProfileById(userId: string): Promise<ActionResult<ProfileDetailsRow | null>> {
   return withSupabaseSession(async ({ supabase, session }) => {
     if (!session?.user) {

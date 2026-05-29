@@ -4,11 +4,10 @@
 1. [Local Development](#local-development)
 2. [Environment Configuration](#environment-configuration)
 3. [Preview Environment](#preview-environment)
-4. [Design Editing with v0](#design-editing-with-v0)
-5. [Testing](#testing)
-6. [Deployment to Vercel](#deployment-to-vercel)
-7. [Monitoring and Debugging](#monitoring-and-debugging)
-8. [Troubleshooting](#troubleshooting)
+4. [Testing](#testing)
+5. [Deployment to Vercel](#deployment-to-vercel)
+6. [Monitoring and Debugging](#monitoring-and-debugging)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -197,78 +196,6 @@ The Vercel preview environment is a temporary deployment created for every pull 
 ### Preview URL Structure
 ```
 https://newsonafrica-{branch-name}-{repo-owner}.vercel.app
-```
-
----
-
-## Design Editing with v0
-
-### Using v0 Design Mode
-
-1. **Access v0 Design Mode:**
-   - Open your v0 project
-   - Click "Design" in settings (top right)
-   - Click "Enter Design Mode"
-
-2. **Editing CSS Variables:**
-   Design mode allows editing of theme colors dynamically:
-   
-   ```css
-   /* Located in app/globals.css :root */
-   --primary: 142.1 76.2% 36.3%;        /* Change brand color */
-   --foreground: 240 10% 3.9%;          /* Text color */
-   --background: 0 0% 100%;             /* Background color */
-   /* ... 15+ more design tokens ... */
-   ```
-
-3. **Live Preview:**
-   - Changes apply immediately to preview
-   - See theme updates in real-time
-   - Test dark mode switching
-
-4. **Component Styling:**
-   - All components use semantic classes:
-     ```html
-     <button className="bg-primary text-primary-foreground">
-       Click me
-     </button>
-     ```
-   - Never use hard-coded colors (e.g., `bg-blue-600`)
-   - Colors automatically respect dark mode
-
-5. **Typography Editing:**
-   Use semantic typography classes:
-   ```html
-   <h1 className="display-xl">Page Title</h1>
-   <p className="body-md">Content text</p>
-   ```
-
-### Design System Reference
-
-**Color Tokens:**
-- `--primary` - Brand color (green: #36a64f)
-- `--secondary` - Secondary color (light gray)
-- `--accent` - Accent color (light gray)
-- `--destructive` - Error/danger red
-- `--muted` - Disabled/secondary text background
-- `--border` - Border color
-- `--ring` - Focus ring color
-
-**Typography Classes:**
-- **Display:** `display-2xl`, `display-xl`, `display-lg` (responsive)
-- **Heading:** `heading-lg`, `heading-md`, `heading-sm`
-- **Body:** `body-lg`, `body-md`, `body-sm`
-- **UI:** `ui-md`, `ui-sm`
-
-### Committing Design Changes
-
-```bash
-# After editing in v0 design mode
-git add app/globals.css
-git commit -m "Update design tokens for brand refresh"
-git push origin feature/design-update
-
-# Create PR for review before merging to main
 ```
 
 ---
@@ -640,11 +567,6 @@ pnpm build            # Build for production
 **Deployment Flow:**
 ```
 Feature branch → PR → Preview URL → Merge → Production
-```
-
-**Design Editing:**
-```
-v0 Design Mode → Edit tokens → Live preview → Commit → Deploy
 ```
 
 All systems are ready for seamless development, testing, and deployment!

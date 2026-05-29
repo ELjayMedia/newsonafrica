@@ -68,7 +68,7 @@ class Logger {
     }
   }
 
-  private forwardToExternalServices(entry: LogEntry) {
+  private forwardToExternalServices(_entry: LogEntry) {
     // Placeholder for Sentry, DataDog, etc.
     // Will be implemented when SENTRY_DSN is configured
   }

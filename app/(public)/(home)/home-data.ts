@@ -19,7 +19,6 @@ import {
   getFrontPageSlicesForCountry as wpGetFrontPageSlicesForCountry,
   getLatestPostsForCountry as wpGetLatestPostsForCountry,
   getFpTaggedPostsForCountry as wpGetFpTaggedPostsForCountry,
-  getCategoriesForCountry as wpGetCategoriesForCountry,
   getPostsForCategories as wpGetPostsForCategories,
   getAggregatedLatestHome as wpGetAggregatedLatestHome,
   type AggregatedHomeData,
@@ -195,7 +194,7 @@ type HomeContentInitialData = {
   categoryPosts?: Record<string, HomePost[]>
 }
 
-type Category = Awaited<ReturnType<typeof getCategoriesForCountry>>[number]
+type Category = WordPressCategory
 type CountryPosts = Record<string, HomePost[]>
 
 // DEFAULT_TAGS_BY_COUNTRY is now derived from appConfig at the top of the file
@@ -444,8 +443,6 @@ async function buildHomeContentPropsForEditionUncached(
   }
 }
 
-type HomeContentFetcher = (_baseUrl: string) => Promise<HomeContentServerProps>
-
 // createCachedFetcher imported from @/lib/utils/cache
 // Wrapper to use centralized config for revalidate time
 const createHomeContentCachedFetcher = <T>(
@@ -546,10 +543,6 @@ async function getFpTaggedPostsForCountry(
     timeout: options.timeout,
     signal: options.signal,
   })
-}
-
-async function getCategoriesForCountry(countryCode: string): Promise<WordPressCategory[]> {
-  return wpGetCategoriesForCountry(countryCode)
 }
 
 async function getPostsForCategories(
