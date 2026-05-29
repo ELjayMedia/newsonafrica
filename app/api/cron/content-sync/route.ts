@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { EDITION_CODES } from "@/lib/wordpress/editions-registry"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
-
-const EDITION_CODES = ["sz", "za", "ng"] as const
 
 const getSecret = () =>
   process.env.CRON_SECRET?.trim() || process.env.CONTENT_SYNC_SECRET?.trim() || ""

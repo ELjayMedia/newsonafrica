@@ -20,11 +20,12 @@ export const appConfig = {
 
   // Supported African Countries
   countries: {
-    supported: ["sz", "za"],
-    default: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || "sz",
+    supported: ["sz", "za", "ng"],
+    default: process.env.NEXT_PUBLIC_DEFAULT_SITE || "sz",
     fallbacks: {
-      sz: ["za"],
-      za: ["sz"],
+      sz: ["za", "ng"],
+      za: ["sz", "ng"],
+      ng: ["sz", "za"],
     },
   },
 
