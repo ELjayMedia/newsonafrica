@@ -61,6 +61,13 @@ function getCountryFromRequest(request: NextRequest): string {
   return DEFAULT_COUNTRY
 }
 
+// Check whether the request carries a Supabase auth cookie. Skipping
+// getUser() for anonymous visitors avoids an outbound Supabase network call
+// on every public page view (home, articles, categories).
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  return request.cookies.getAll().some(({ name }) => name.startsWith("sb-") && name.includes("-auth-token"))
+}
+
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const { pathname } = url
@@ -98,35 +105,40 @@ export async function middleware(request: NextRequest) {
     response = NextResponse.next()
   }
 
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Only refresh the Supabase session when the user has an auth cookie.
+  // Anonymous public readers skip this call entirely — no outbound network
+  // overhead on article / category / home page views.
+  if (hasSupabaseAuthCookie(request)) {
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
+      if (supabaseUrl && supabaseAnonKey) {
+        const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll()
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value, options }) => response!.cookies.set(name, value, options))
+            },
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => response!.cookies.set(name, value, options))
-          },
-        },
-      })
-      // Use getUser() (not getSession()) so the Supabase Auth server is contacted
-      // and expired access tokens are refreshed — required for the SSR cookie
-      // sync pattern. getSession() only decodes the cookie locally.
-      await supabase.auth.getUser()
+        })
+        // Use getUser() (not getSession()) so the Supabase Auth server is contacted
+        // and expired access tokens are refreshed — required for the SSR cookie
+        // sync pattern. getSession() only decodes the cookie locally.
+        await supabase.auth.getUser()
+      }
+    } catch (error) {
+      console.warn("Supabase middleware session refresh skipped", error)
     }
-  } catch (error) {
-    console.warn("Supabase middleware session refresh skipped", error)
   }
 
   return response
 }
 
 // Run on all routes except Next.js internals and static files so Supabase
-// session tokens are refreshed on every navigation.
+// session tokens are refreshed on every navigation and legacy redirects work.
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",

@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import type { SearchRecord } from "@/types/search"
 
 export interface SupabaseSearchResult {
@@ -44,37 +44,38 @@ function mapToSearchRecord(result: SupabaseSearchResult): SearchRecord {
   }
 }
 
+const EMPTY_SEARCH: SearchResponse = {
+  results: [],
+  total: 0,
+  totalPages: 0,
+  currentPage: 1,
+  hasMore: false,
+  suggestions: [],
+}
+
 export async function searchContent(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
   const { edition, category, page = 1, perPage = 20 } = options
   const offset = (page - 1) * perPage
 
-  const supabase = await createClient()
+  const supabase = await createServerClient()
+  if (!supabase) return { ...EMPTY_SEARCH, currentPage: page }
 
-  // Call the search function
   const { data, error } = await supabase.rpc("search_content", {
     search_query: query,
-    edition_filter: edition || null,
-    category_filter: category || null,
+    edition_filter: edition || undefined,
+    category_filter: category || undefined,
     limit_count: perPage,
     offset_count: offset,
   })
 
   if (error) {
-    console.error("[v0] Supabase search error:", error)
-    return {
-      results: [],
-      total: 0,
-      totalPages: 0,
-      currentPage: page,
-      hasMore: false,
-      suggestions: [],
-    }
+    console.error("Supabase search error:", error)
+    return { ...EMPTY_SEARCH, currentPage: page }
   }
 
   const results = (data || []) as SupabaseSearchResult[]
   const mappedResults = results.map(mapToSearchRecord)
 
-  // Get total count for pagination
   let total = results.length
   if (results.length === perPage) {
     const { count } = await supabase
@@ -99,20 +100,19 @@ export async function searchContent(query: string, options: SearchOptions = {}):
 }
 
 export async function getSearchSuggestions(query: string, edition?: string, limit = 10): Promise<string[]> {
-  if (query.length < 2) {
-    return []
-  }
+  if (query.length < 2) return []
 
-  const supabase = await createClient()
+  const supabase = await createServerClient()
+  if (!supabase) return []
 
   const { data, error } = await supabase.rpc("search_suggestions", {
     search_query: query,
-    edition_filter: edition || null,
+    edition_filter: edition || undefined,
     limit_count: limit,
   })
 
   if (error) {
-    console.error("[v0] Supabase suggestions error:", error)
+    console.error("Supabase suggestions error:", error)
     return []
   }
 
@@ -133,7 +133,8 @@ export async function syncPostToIndex(post: {
   url_path: string
   featured_image_url?: string
 }): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
+  if (!supabase) return { success: false, error: "Supabase unavailable" }
 
   const { error } = await supabase.from("content_index").upsert(
     {
@@ -156,7 +157,7 @@ export async function syncPostToIndex(post: {
   )
 
   if (error) {
-    console.error("[v0] Sync post to index error:", error)
+    console.error("Sync post to index error:", error)
     return { success: false, error: error.message }
   }
 
@@ -167,12 +168,13 @@ export async function deletePostFromIndex(
   edition_code: string,
   wp_post_id: number,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
+  if (!supabase) return { success: false, error: "Supabase unavailable" }
 
   const { error } = await supabase.from("content_index").delete().match({ edition_code, wp_post_id })
 
   if (error) {
-    console.error("[v0] Delete post from index error:", error)
+    console.error("Delete post from index error:", error)
     return { success: false, error: error.message }
   }
 
