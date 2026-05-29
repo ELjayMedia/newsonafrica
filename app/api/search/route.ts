@@ -206,7 +206,7 @@ export async function searchGET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[v0] Search error:", error)
+    console.error("Search error:", error)
 
     return respondWithSearch(
       request,

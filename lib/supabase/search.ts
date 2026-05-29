@@ -1,5 +1,4 @@
 import { createServerClient } from "@/lib/supabase/server"
-import type { SearchRecord } from "@/types/search"
 
 export interface SupabaseSearchResult {
   id: string
@@ -15,108 +14,6 @@ export interface SupabaseSearchResult {
   url_path: string
   featured_image_url: string | null
   rank?: number
-}
-
-export interface SearchOptions {
-  edition?: string
-  category?: string
-  page?: number
-  perPage?: number
-}
-
-export interface SearchResponse {
-  results: SearchRecord[]
-  total: number
-  totalPages: number
-  currentPage: number
-  hasMore: boolean
-  suggestions: string[]
-}
-
-function mapToSearchRecord(result: SupabaseSearchResult): SearchRecord {
-  return {
-    objectID: `${result.edition_code}:${result.slug}`,
-    title: result.title,
-    excerpt: result.excerpt || "",
-    categories: result.categories,
-    country: result.edition_code,
-    published_at: result.published_at,
-  }
-}
-
-const EMPTY_SEARCH: SearchResponse = {
-  results: [],
-  total: 0,
-  totalPages: 0,
-  currentPage: 1,
-  hasMore: false,
-  suggestions: [],
-}
-
-export async function searchContent(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
-  const { edition, category, page = 1, perPage = 20 } = options
-  const offset = (page - 1) * perPage
-
-  const supabase = await createServerClient()
-  if (!supabase) return { ...EMPTY_SEARCH, currentPage: page }
-
-  const { data, error } = await supabase.rpc("search_content", {
-    search_query: query,
-    edition_filter: edition || undefined,
-    category_filter: category || undefined,
-    limit_count: perPage,
-    offset_count: offset,
-  })
-
-  if (error) {
-    console.error("Supabase search error:", error)
-    return { ...EMPTY_SEARCH, currentPage: page }
-  }
-
-  const results = (data || []) as SupabaseSearchResult[]
-  const mappedResults = results.map(mapToSearchRecord)
-
-  let total = results.length
-  if (results.length === perPage) {
-    const { count } = await supabase
-      .from("content_index")
-      .select("*", { count: "exact", head: true })
-      .textSearch("search_vector", query)
-      .eq(edition ? "edition_code" : "", edition || "")
-
-    total = count || results.length
-  }
-
-  const totalPages = Math.ceil(total / perPage)
-
-  return {
-    results: mappedResults,
-    total,
-    totalPages: Math.max(1, totalPages),
-    currentPage: page,
-    hasMore: page < totalPages,
-    suggestions: Array.from(new Set(mappedResults.map((r) => r.title))).slice(0, 10),
-  }
-}
-
-export async function getSearchSuggestions(query: string, edition?: string, limit = 10): Promise<string[]> {
-  if (query.length < 2) return []
-
-  const supabase = await createServerClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase.rpc("search_suggestions", {
-    search_query: query,
-    edition_filter: edition || undefined,
-    limit_count: limit,
-  })
-
-  if (error) {
-    console.error("Supabase suggestions error:", error)
-    return []
-  }
-
-  return (data || []).map((item: { title: string }) => item.title)
 }
 
 export async function syncPostToIndex(post: {
