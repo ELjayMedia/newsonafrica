@@ -37,6 +37,10 @@ async function isModerator(supabase: SupabaseClient<Database>, session: Session 
   return Boolean((data as { is_admin?: boolean | null } | null)?.is_admin)
 }
 
+// Statuses that are publicly visible to any reader (including unauthenticated).
+// Both 'active' and 'approved' are display-ready states after migration NOA-22.
+const PUBLIC_VISIBLE_STATUSES = ["active", "approved"] as const
+
 function applyVisibility(
   query: any,
   status: CommentStatus,
@@ -44,19 +48,25 @@ function applyVisibility(
   moderator: boolean,
 ): any {
   if (!session?.user) {
-    return query.eq("status", status === "all" ? "active" : status)
+    // Unauthenticated: only public-visible statuses.
+    if (status === "all" || status === "active" || status === "approved") {
+      return query.or(PUBLIC_VISIBLE_STATUSES.map((s) => `status.eq.${s}`).join(","))
+    }
+    return query.eq("status", status)
   }
 
   if (moderator) {
     return status === "all" ? query : query.eq("status", status)
   }
 
+  // Authenticated non-moderator: show public-visible comments + their own regardless of status.
   if (status === "all") {
-    return query.or(`status.eq.active,user_id.eq.${session.user.id}`)
+    const publicFilter = PUBLIC_VISIBLE_STATUSES.map((s) => `status.eq.${s}`).join(",")
+    return query.or(`${publicFilter},user_id.eq.${session.user.id}`)
   }
 
-  if (status === "active") {
-    return query.eq("status", "active")
+  if (status === "active" || status === "approved") {
+    return query.or(PUBLIC_VISIBLE_STATUSES.map((s) => `status.eq.${s}`).join(","))
   }
 
   return query.eq("status", status).eq("user_id", session.user.id)
@@ -311,6 +321,19 @@ export async function applyCommentActionService(
 
   const { error } = await supabase.from("comments").update(updates).eq("id", params.id)
   if (error) throw new Error(`Failed to ${params.action} comment: ${error.message}`)
+
+  // For report actions, also insert a row into comment_reports for audit trail / moderation queue.
+  if (params.action === "report") {
+    const { error: reportError } = await supabase.from("comment_reports").insert({
+      comment_id: params.id,
+      reporter_id: params.userId,
+      reason: params.reason ?? null,
+    })
+    // Non-fatal: log but don't throw — the status update already succeeded.
+    if (reportError) {
+      console.error(`Failed to insert comment_report for comment ${params.id}:`, reportError.message)
+    }
+  }
 
   return { cacheTag: cacheTags.comments(comment.edition_code, String(comment.wp_post_id)) }
 }

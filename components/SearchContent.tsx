@@ -224,7 +224,7 @@ export function SearchContent({
       cancelled = true
       controller.abort()
     }
-  }, [searchQuery, country, sort, requestedPage, currentPage])
+  }, [searchQuery, country, sort, requestedPage])
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim()
@@ -309,6 +309,16 @@ export function SearchContent({
     setRequestedPage((previous) => previous + 1)
   }, [hasMore, status])
 
+  const handleRetry = useCallback(() => {
+    setError(null)
+    setResults([])
+    setTotal(0)
+    setTotalPages(0)
+    setHasMore(false)
+    setRequestedPage(1)
+    setCurrentPage(1)
+  }, [])
+
   const isSearching = status === "loading" || status === "loadingMore"
 
   return (
@@ -341,6 +351,7 @@ export function SearchContent({
         totalPages={totalPages}
         hasMore={hasMore}
         onLoadMore={handleLoadMore}
+        onRetry={handleRetry}
         fallbackCountry={country}
       />
     </div>
@@ -587,6 +598,7 @@ interface SearchResultsPanelProps {
   totalPages: number
   hasMore: boolean
   onLoadMore: () => void
+  onRetry: () => void
   fallbackCountry: string
 }
 
@@ -600,6 +612,7 @@ function SearchResultsPanel({
   totalPages,
   hasMore,
   onLoadMore,
+  onRetry,
   fallbackCountry,
 }: SearchResultsPanelProps) {
   const [isClient, setIsClient] = useState(false)
@@ -622,9 +635,19 @@ function SearchResultsPanel({
 
   if (status === "error") {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        <h3 className="mb-2 font-semibold">We couldn't complete your search.</h3>
-        <p>{error || "Please try again in a few moments."}</p>
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+        <h3 className="mb-2 font-semibold text-red-800">Search is temporarily unavailable.</h3>
+        <p className="mb-4 text-sm text-red-700">
+          We couldn&apos;t reach our search service right now. Please check your connection and try again.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-red-300 text-red-700 hover:bg-red-100 bg-transparent"
+          onClick={onRetry}
+        >
+          Try again
+        </Button>
       </div>
     )
   }
@@ -644,9 +667,12 @@ function SearchResultsPanel({
 
   if (results.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-6 text-center">
+      <div className="rounded-lg border bg-white p-8 text-center">
+        <SearchIcon className="mx-auto mb-4 h-10 w-10 text-gray-300" aria-hidden="true" />
         <h3 className="mb-2 text-lg font-medium text-gray-900">No results found</h3>
-        <p className="text-gray-500">We couldn't find any matches for "{trimmedQuery}". Try a different search term.</p>
+        <p className="text-gray-500">
+          We couldn&apos;t find any matches for &ldquo;{trimmedQuery}&rdquo;. Try a different search term or broaden your filters.
+        </p>
       </div>
     )
   }
