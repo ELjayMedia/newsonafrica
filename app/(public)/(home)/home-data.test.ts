@@ -202,25 +202,9 @@ describe("fetchAggregatedHomeForCountry", () => {
         }),
       }),
     )
-    expect(fpTagSpy).toHaveBeenCalledWith(
-      "za",
-      expect.any(Number),
-      expect.objectContaining({
-        timeout: 900,
-        signal: expect.any(Object),
-      }),
-    )
-    expect(latestSpy).toHaveBeenCalledWith(
-      "za",
-      expect.any(Number),
-      null,
-      expect.objectContaining({
-        request: expect.objectContaining({
-          timeout: 1200,
-          signal: expect.any(Object),
-        }),
-      }),
-    )
+    // NOA-47: fallback fetches are skipped when frontpage returns content
+    expect(fpTagSpy).not.toHaveBeenCalled()
+    expect(latestSpy).not.toHaveBeenCalled()
     expect(result.heroPost?.slug).toBe("lead-story")
     expect(result.secondaryPosts.map((post) => post.slug)).toEqual([
       "secondary-story",
@@ -395,16 +379,10 @@ describe("fetchAggregatedHomeForCountry", () => {
     expect(second.heroPost?.slug).toBe("lead-story")
 
     expect(limiterMetrics.instances).toBe(1)
-    expect(limiterMetrics.scheduled).toBe(6)
+    // NOA-47: only frontpage tasks are scheduled (1 per country); fallback
+    // fetches are skipped because the frontpage mock returns content.
+    expect(limiterMetrics.scheduled).toBe(2)
     expect(limiterMetrics.maxActive).toBe(1)
-
-    latestSpy.mock.calls.forEach(([, , , options]) => {
-      expect(options?.request?.timeout).toBe(1200)
-    })
-
-    fpTagSpy.mock.calls.forEach(([, , options]) => {
-      expect(options?.timeout).toBe(900)
-    })
 
     vi.unmock("p-limit")
   })
@@ -623,8 +601,9 @@ describe("buildHomeContentProps", () => {
 
     expect(aggregatedSpy).not.toHaveBeenCalled()
     expect(frontPageSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(latestSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
+    // NOA-47: fallback fetches are skipped when frontpage returns content
+    expect(fpSpy).not.toHaveBeenCalled()
+    expect(latestSpy).not.toHaveBeenCalled()
     expect(categoriesSpy).toHaveBeenCalledTimes(1)
 
     const expectedInitialPosts = SUPPORTED_COUNTRIES.flatMap(
