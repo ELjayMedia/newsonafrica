@@ -107,7 +107,11 @@ async function fetchAggregatedForCountry(
 ): Promise<AggregatedHomeData> {
   const defaultTag = DEFAULT_TAGS_BY_COUNTRY[countryCode] || null
 
-  const frontPagePromise = scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {
+  // NOA-47 optimization: attempt frontpage first.
+  // The frontpage candidate always wins (score 1000+) when non-empty, so firing
+  // recent + tagged fetches in parallel with it is wasteful on the happy path.
+  // Only fall back to recent/tagged when frontpage returns no posts.
+  const frontPageResult = await scheduleHomeFeedTask(FRONT_PAGE_TIMEOUT_MS, async ({ signal, timeout }) => {
     try {
       const frontPageSlices = await getFrontPageSlicesForCountry(countryCode, {
         signal,
@@ -134,33 +138,38 @@ async function fetchAggregatedForCountry(
     }
   })
 
-  const recentPromise = scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
-    try {
-      return await loadPostsByMostRecent(countryCode, limit, {
-        signal,
-        timeout,
-      })
-    } catch (error) {
-      console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
-      return null
-    }
-  })
+  // Happy path: frontpage has content — skip fallback fetches entirely.
+  if (frontPageResult && frontPageResult.posts.length > 0) {
+    return buildAggregatedHomeFromPosts(frontPageResult.posts)
+  }
 
-  const taggedPromise = scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
-    try {
-      return await loadTagPosts(countryCode, defaultTag, limit, {
-        signal,
-        timeout,
-      })
-    } catch (error) {
-      console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
-      return null
-    }
-  })
+  // Frontpage was empty or failed; fire fallback fetches in parallel to minimise latency.
+  const [recentResult, taggedResult] = await Promise.all([
+    scheduleHomeFeedTask(RECENT_TIMEOUT_MS, async ({ signal, timeout }) => {
+      try {
+        return await loadPostsByMostRecent(countryCode, limit, {
+          signal,
+          timeout,
+        })
+      } catch (error) {
+        console.debug(`[v0] loadPostsByMostRecent timed out or failed for ${countryCode}:`, error)
+        return null
+      }
+    }),
+    scheduleHomeFeedTask(TAG_TIMEOUT_MS, async ({ signal, timeout }) => {
+      try {
+        return await loadTagPosts(countryCode, defaultTag, limit, {
+          signal,
+          timeout,
+        })
+      } catch (error) {
+        console.debug(`[v0] loadTagPosts timed out or failed for ${countryCode}:`, error)
+        return null
+      }
+    }),
+  ])
 
-  const candidates = (await Promise.all([frontPagePromise, recentPromise, taggedPromise])) as Array<
-    HomeFeedCandidate | null
-  >
+  const candidates = [frontPageResult, recentResult, taggedResult] as Array<HomeFeedCandidate | null>
   const bestCandidate = selectBestHomeFeedCandidate(candidates)
 
   return buildAggregatedHomeFromPosts(bestCandidate?.posts ?? [])
@@ -388,22 +397,34 @@ const mapWordPressPostToHomePost = (post: WordPressPost, countryCode: string): H
 const mapPostsToHomePosts = (posts: WordPressPost[], countryCode: string): HomePost[] =>
   posts.map((post) => mapWordPressPostToHomePost(post, countryCode))
 
+// NOA-47: buildHomeContentPropsUncached parallelises category loading with country aggregation.
+// Previously categories were fetched sequentially after country aggregation completed.
 async function buildHomeContentPropsUncached(
   _baseUrl: string,
 ): Promise<HomeContentServerProps> {
-  const { countryPosts, africanAggregate } =
-    (await buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
+  // NOA-47: run country aggregation and category post loading in parallel.
+  // Category slugs are statically known at module load time so we can fire
+  // the category request immediately alongside country aggregation.
+  const [countryResult, categoryPosts] = await Promise.all([
+    buildCountryPosts(SUPPORTED_COUNTRIES, {}, {
       includeAggregates: true,
       includeAfricanAggregate: true,
-    })) as BuildCountryPostsResult
+    }) as Promise<BuildCountryPostsResult>,
+    configuredCategorySlugs.length > 0 && CATEGORY_POST_LIMIT > 0
+      ? loadCategoryPostsForHome(DEFAULT_COUNTRY)
+      : Promise.resolve({} as Record<string, HomePost[]>),
+  ])
+
+  const { countryPosts, africanAggregate } = countryResult
 
   const aggregatedFromCountries = africanAggregate ?? createEmptyAggregatedHome()
+  // NOA-47: only call fetchAggregatedHome (which re-fetches FP-tagged posts for
+  // all countries) when country aggregation truly returned nothing.
   const aggregatedHome = hasAggregatedHomeContent(aggregatedFromCountries)
     ? aggregatedFromCountries
     : await fetchAggregatedHome()
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
-  const categoryPosts = await loadCategoryPostsForHome(DEFAULT_COUNTRY)
   const enrichedInitialData = { ...initialData, categoryPosts }
 
   return {
@@ -414,13 +435,26 @@ async function buildHomeContentPropsUncached(
   }
 }
 
+// NOA-47: buildHomeContentPropsForEditionUncached also parallelises category loading.
 async function buildHomeContentPropsForEditionUncached(
   _baseUrl: string,
   edition: SupportedEdition,
 ): Promise<HomeContentServerProps> {
-  const aggregatedHome = isAfricanEdition(edition)
-    ? await fetchAggregatedHome()
-    : await fetchAggregatedHomeForCountry(edition.code)
+  const categoryCountry = isCountryEdition(edition)
+    ? edition.code
+    : isAfricanEdition(edition)
+      ? AFRICAN_EDITION.code
+      : DEFAULT_COUNTRY
+
+  // NOA-47: fire aggregate and category fetches in parallel.
+  const [aggregatedHome, categoryPostsResult] = await Promise.all([
+    isAfricanEdition(edition)
+      ? fetchAggregatedHome()
+      : fetchAggregatedHomeForCountry(edition.code),
+    configuredCategorySlugs.length > 0 && CATEGORY_POST_LIMIT > 0
+      ? loadCategoryPostsForHome(categoryCountry)
+      : Promise.resolve({} as Record<string, HomePost[]>),
+  ])
 
   const { initialPosts, featuredPosts, initialData } = deriveHomeContentState(aggregatedHome)
 
@@ -428,12 +462,6 @@ async function buildHomeContentPropsForEditionUncached(
     ? await buildCountryPosts([edition.code], { [edition.code]: aggregatedHome })
     : { [AFRICAN_EDITION.code]: initialPosts }
 
-  const categoryCountry = isCountryEdition(edition)
-    ? edition.code
-    : isAfricanEdition(edition)
-      ? AFRICAN_EDITION.code
-      : DEFAULT_COUNTRY
-  const categoryPostsResult = await loadCategoryPostsForHome(categoryCountry)
   const enrichedInitialData = { ...initialData, categoryPosts: categoryPostsResult }
 
   return {
