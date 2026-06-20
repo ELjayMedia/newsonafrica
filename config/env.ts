@@ -16,6 +16,7 @@ export const ENV_SCHEMA = z
     NEXT_PUBLIC_DEFAULT_SITE: z.enum(["sz", "za", "ng"]).default("sz"),
     WORDPRESS_WEBHOOK_SECRET: z.string().optional(),
     REVALIDATION_SECRET: z.string().optional(),
+    CRON_SECRET: z.string().optional(),
   })
   .passthrough()
 
@@ -26,3 +27,4 @@ export type EnvConfig = z.infer<typeof ENV_SCHEMA>
 // Export commonly used env variables
 export const REVALIDATION_SECRET = ENV.REVALIDATION_SECRET || ""
 export const WORDPRESS_WEBHOOK_SECRET = ENV.WORDPRESS_WEBHOOK_SECRET || ""
+export const CRON_SECRET = ENV.CRON_SECRET || ""
