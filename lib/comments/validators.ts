@@ -3,7 +3,7 @@ import { AFRICAN_EDITION, SUPPORTED_EDITIONS } from "@/lib/editions"
 import { ValidationError, addValidationError, hasValidationErrors, type FieldErrors } from "@/lib/validation"
 import { validateRichTextFormatting } from "@/lib/comments/rich-text"
 
-export const COMMENT_STATUSES = ["active", "pending", "flagged", "deleted", "all"] as const
+export const COMMENT_STATUSES = ["active", "pending", "flagged", "hidden", "approved", "spam", "deleted", "all"] as const
 export const COMMENT_ACTIONS = ["report", "delete", "approve"] as const
 export const COMMENT_SORT_OPTIONS = ["newest", "oldest", "popular"] as const
 export type CommentStatus = (typeof COMMENT_STATUSES)[number]

@@ -58,6 +58,16 @@ export function CommentItem({
   const isOptimistic = comment.isOptimistic === true
   const formattedDate = new Date(comment.created_at).toLocaleString()
 
+  // Derive a visible status badge for non-active comments visible to the author.
+  const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+    pending:  { label: "Pending review",      className: "bg-yellow-100 text-yellow-800" },
+    flagged:  { label: "Flagged",             className: "bg-orange-100 text-orange-800" },
+    hidden:   { label: "Hidden",              className: "bg-gray-200 text-gray-600" },
+    spam:     { label: "Marked as spam",      className: "bg-red-100 text-red-700" },
+    approved: { label: "Approved",            className: "bg-green-100 text-green-800" },
+  }
+  const statusBadge = comment.status && comment.status !== "active" ? STATUS_BADGE[comment.status] ?? null : null
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -192,10 +202,15 @@ export function CommentItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-semibold text-sm flex items-center">
+              <h4 className="font-semibold text-sm flex items-center flex-wrap gap-1">
                 {comment.profile?.username || "Anonymous"}
                 {isAuthor && (
-                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-full">You</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-full">You</span>
+                )}
+                {statusBadge && (
+                  <span className={cn("text-xs px-1.5 py-0.5 rounded-full", statusBadge.className)}>
+                    {statusBadge.label}
+                  </span>
                 )}
               </h4>
               <p className="text-xs text-gray-500">{formattedDate}</p>
