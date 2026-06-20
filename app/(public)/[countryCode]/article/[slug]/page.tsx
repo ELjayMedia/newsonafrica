@@ -5,7 +5,7 @@ import Link from "next/link"
 import { unstable_noStore as noStore } from "next/cache"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
-import { MessageSquare, Gift } from "lucide-react"
+import { MessageSquare, Gift, Share2 } from "lucide-react"
 
 import { ENV } from "@/config/env"
 import { stripHtml } from "@/lib/search"
@@ -21,6 +21,12 @@ import {
   normalizeRouteCountry,
   sanitizeBaseUrl,
 } from "./article-data"
+
+function estimateReadingTime(html: string): number {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+  const wordCount = text ? text.split(" ").length : 0
+  return Math.max(1, Math.ceil(wordCount / 200))
+}
 
 import { ArticleComments } from "./ArticleComments"
 import { ArticleServerFallback } from "./ArticleServerFallback"
@@ -185,6 +191,9 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
   const requestedArticleUrl = buildArticleRouteUrl(baseUrl, routeCountry, routeSlug)
   const articleExcerpt = stripHtml(resolveRenderedText(articleData.excerpt))
   const shouldPrioritizeFeaturedImage = !articleExcerpt
+  const articleTitle = stripHtml(resolveRenderedText(articleData.title)) || "Untitled article"
+  const readingTime = estimateReadingTime(resolveRenderedText(articleData.content))
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(`${articleTitle} ${requestedArticleUrl}`)}`
 
   return (
     <>
@@ -195,8 +204,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
         <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
           <article className="mb-8 space-y-6">
             <ArticleHeader
-              title={stripHtml(resolveRenderedText(articleData.title)) || "Untitled article"}
-              excerpt={stripHtml(resolveRenderedText(articleData.excerpt))}
+              title={articleTitle}
+              excerpt={articleExcerpt}
               category={articleData.categories?.nodes?.[0]?.name}
               author={
                 resolveRenderedText(articleData.author?.node?.name ?? articleData.author?.name) ||
@@ -205,6 +214,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                 "News On Africa"
               }
               publishedDate={articleData.date}
+              readingTime={readingTime}
             />
 
             <div className="flex items-center justify-end">
@@ -219,6 +229,11 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                     <Gift className="mr-2 h-4 w-4" />Gift article
                   </Link>
                 </Button>
+                <Button asChild variant="outline" className="rounded-full">
+                  <a href={whatsappShareUrl} target="_blank" rel="noopener noreferrer">
+                    <Share2 className="mr-2 h-4 w-4" />Share
+                  </a>
+                </Button>
                 <BookmarkButton
                   postId={
                     typeof articleData.databaseId === "number"
@@ -227,8 +242,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
                   }
                   editionCode={routeCountry}
                   slug={routeSlug}
-                  title={stripHtml(resolveRenderedText(articleData.title)) || "Untitled Post"}
-                  excerpt={stripHtml(resolveRenderedText(articleData.excerpt) || resolveRenderedText(articleData.title))}
+                  title={articleTitle}
+                  excerpt={articleExcerpt || articleTitle}
                   featuredImage={articleData.featuredImage?.node?.sourceUrl}
                 />
               </div>
@@ -237,7 +252,7 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
             {articleData.featuredImage?.node?.sourceUrl ? (
               <Image
                 src={articleData.featuredImage.node.sourceUrl}
-                alt={articleData.featuredImage.node.altText || stripHtml(resolveRenderedText(articleData.title)) || "Article image"}
+                alt={articleData.featuredImage.node.altText || articleTitle}
                 width={1200}
                 height={675}
                 sizes="(min-width: 1280px) 784px, (min-width: 1024px) calc((100vw - 6rem) * 0.6667), 100vw"
