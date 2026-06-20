@@ -58,7 +58,14 @@ export async function GET(request: NextRequest) {
     return acc
   }, {})
 
-  const editions = (cursors ?? []).map((cursor) => ({
+  const editions: {
+    editionCode: string
+    syncStatus: string | null
+    lastSyncedAt: string | null
+    errorMessage: string | null
+    updatedAt: string | null
+    indexedCount: number
+  }[] = (cursors ?? []).map((cursor) => ({
     editionCode: cursor.edition_code,
     syncStatus: cursor.sync_status,
     lastSyncedAt: cursor.last_synced_at,
