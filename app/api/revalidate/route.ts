@@ -1,9 +1,10 @@
 import { revalidatePath, revalidateTag } from "next/cache"
 import { NextRequest, NextResponse } from "next/server"
-import { REVALIDATION_SECRET, WORDPRESS_WEBHOOK_SECRET } from "@/config/env"
+import { CRON_SECRET, REVALIDATION_SECRET, WORDPRESS_WEBHOOK_SECRET } from "@/config/env"
 import { isValidCountry } from "@/lib/countries"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
 import { cacheTags } from "@/lib/cache/cacheTags"
+import { EDITION_CODES } from "@/lib/wordpress/editions-registry"
 
 type RevalidatePayload = {
   secret?: unknown
@@ -95,6 +96,50 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("[v0] Revalidation error:", error)
+    return NextResponse.json({ error: "Revalidation failed" }, { status: 500 })
+  }
+}
+
+// GET handler used by the Vercel cron job (vercel.json → "0 5 * * *").
+// Vercel automatically sends Authorization: Bearer ${CRON_SECRET} for cron requests.
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") ?? ""
+  const token = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice("bearer ".length).trim()
+    : ""
+
+  const validSecret = CRON_SECRET || REVALIDATION_SECRET || WORDPRESS_WEBHOOK_SECRET
+
+  if (!validSecret || token !== validSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get("type")
+
+  try {
+    if (type === "all") {
+      // Revalidate home and all country edition pages
+      revalidatePath("/")
+      for (const code of EDITION_CODES) {
+        revalidatePath(`/${code}`)
+        revalidateTag(cacheTags.edition(code))
+        revalidateTag(cacheTags.home(code))
+      }
+      revalidatePath("/sitemap.xml")
+      revalidatePath("/sitemap-index.xml")
+
+      return NextResponse.json({
+        revalidated: true,
+        type: "all",
+        editions: Array.from(EDITION_CODES),
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    return NextResponse.json({ error: "Unknown type; use ?type=all" }, { status: 400 })
+  } catch (error) {
+    console.error("[revalidate-cron] Revalidation error:", error)
     return NextResponse.json({ error: "Revalidation failed" }, { status: 500 })
   }
 }

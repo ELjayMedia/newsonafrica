@@ -40,7 +40,11 @@ export function ArticleHeader({
 
   return (
     <div className={cn("space-y-4 border-b border-border pb-4", className)}>
-      {category && <p className="text-xs font-bold uppercase tracking-wider text-[#e2001a]">{category}</p>}
+      {category && (
+        <span className="inline-block rounded-full bg-[#e2001a] px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-white">
+          {category}
+        </span>
+      )}
 
       {/* Title */}
       <h1 className="font-sans text-2xl font-bold leading-snug md:text-3xl">{title}</h1>
