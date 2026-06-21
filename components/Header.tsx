@@ -1,23 +1,24 @@
 import type { HeaderCategory } from "@/components/HeaderClient"
 import { HeaderInteractive } from "@/components/HeaderInteractive"
 import { DEFAULT_COUNTRY } from "@/lib/utils/routing"
-import { getCategoriesForCountry } from "@/lib/wordpress/service"
-import type { WordPressCategory } from "@/types/wp"
+import { getNavigationItemsForCountry } from "@/lib/wordpress/navigation"
+import type { WordPressNavigationItem } from "@/lib/wordpress/navigation"
 
-function mapCategoryToHeaderCategory(category: WordPressCategory): HeaderCategory | null {
-  const slug = category?.slug?.trim()
-  const name = category?.name?.trim()
+function mapNavigationItemToHeaderCategory(item: WordPressNavigationItem): HeaderCategory | null {
+  const slug = item?.slug?.trim()
+  const name = item?.name?.trim()
 
   if (!slug || !name) {
     return null
   }
 
   return {
-    id: category.id ?? category.databaseId ?? 0,
+    id: item.id ?? item.databaseId ?? 0,
     name,
     slug,
-    description: category.description ?? undefined,
-    count: category.count ?? undefined,
+    href: item.href,
+    description: item.description ?? undefined,
+    count: item.count ?? undefined,
   }
 }
 
@@ -27,9 +28,9 @@ interface HeaderProps {
 
 export async function Header({ countryCode }: HeaderProps = {}) {
   const resolvedCountry = (countryCode ?? DEFAULT_COUNTRY).toLowerCase()
-  const categories = await getCategoriesForCountry(resolvedCountry)
-  const normalizedCategories = categories
-    .map((category: WordPressCategory) => mapCategoryToHeaderCategory(category))
+  const navigationItems = await getNavigationItemsForCountry(resolvedCountry)
+  const normalizedCategories = navigationItems
+    .map((item: WordPressNavigationItem) => mapNavigationItemToHeaderCategory(item))
     .filter((category: HeaderCategory | null): category is HeaderCategory => Boolean(category))
 
   return <HeaderInteractive categories={normalizedCategories} countryCode={resolvedCountry} />
