@@ -18,7 +18,6 @@ type WordPressMenuItemResponse = {
   url?: string
   attr_title?: string
   description?: string
-  object?: string
   object_id?: number
   object_slug?: string
   slug?: string
@@ -32,7 +31,7 @@ const stripHtml = (value: string): string => value.replace(/<[^>]*>/g, "").trim(
 
 const normalizeRestBase = (restBase: string): string => restBase.replace(/\/+$/, "")
 
-const normalizeMenuUrl = (rawUrl: string | undefined, countryCode: string): string | undefined => {
+const normalizeMenuUrl = (rawUrl: string | undefined): string | undefined => {
   const url = rawUrl?.trim()
 
   if (!url) {
@@ -150,10 +149,10 @@ async function fetchMenuItems(restBase: string, menuId: number, countryCode: str
   }
 }
 
-const mapMenuItem = (item: WordPressMenuItemResponse, countryCode: string): WordPressNavigationItem | null => {
+const mapMenuItem = (item: WordPressMenuItemResponse): WordPressNavigationItem | null => {
   const rawTitle = typeof item.title === "string" ? item.title : item.title?.rendered
   const name = stripHtml(rawTitle ?? item.attr_title ?? "")
-  const href = normalizeMenuUrl(item.url, countryCode)
+  const href = normalizeMenuUrl(item.url)
   const slug = item.object_slug ?? item.slug ?? slugFromHref(href)
 
   if (!name || !slug) {
@@ -179,7 +178,7 @@ export async function getNavigationItemsForCountry(countryCode: string): Promise
     const normalizedMenuItems = menuItems
       .filter((item) => !item.parent)
       .sort((a, b) => (a.menu_order ?? 0) - (b.menu_order ?? 0))
-      .map((item) => mapMenuItem(item, countryCode))
+      .map((item) => mapMenuItem(item))
       .filter((item): item is WordPressNavigationItem => Boolean(item))
 
     if (normalizedMenuItems.length > 0) {
