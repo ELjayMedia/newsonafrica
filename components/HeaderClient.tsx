@@ -15,6 +15,7 @@ export interface HeaderCategory {
   id: number
   name: string
   slug: string
+  href?: string
   description?: string
   count?: number
 }
@@ -114,9 +115,9 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
             <div className="overflow-x-auto">
               <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-border">
                 {sortedCategories.map((category) => {
-                  const url = getCategoryUrl(category.slug, countryCode)
+                  const url = category.href ?? getCategoryUrl(category.slug, countryCode)
                   return (
-                    <li key={category.slug}>
+                    <li key={`${category.slug}-${url}`}>
                       <Link
                         href={url}
                         className={`block px-3 py-3 text-ui-sm font-semibold transition-colors duration-200 ${
