@@ -19,19 +19,19 @@ describe("sortCategoriesByPreference", () => {
     { id: 4, name: "Culture", slug: "culture" },
   ]
 
-  it("returns alphabetical order when no sections are provided", () => {
+  it("preserves WordPress category order when no sections are provided", () => {
     const result = sortCategoriesByPreference(categories, [])
-    expect(result.map((category) => category.slug)).toEqual(["business", "culture", "news", "sport"])
+    expect(result.map((category) => category.slug)).toEqual(["business", "news", "sport", "culture"])
   })
 
-  it("prioritizes sections while keeping alphabetical order for the rest", () => {
+  it("prioritizes sections while preserving WordPress order for the rest", () => {
     const result = sortCategoriesByPreference(categories, ["sport", "news"])
     expect(result.map((category) => category.slug)).toEqual(["sport", "news", "business", "culture"])
   })
 
-  it("ignores unknown sections without affecting ordering", () => {
+  it("ignores unknown sections without affecting WordPress ordering", () => {
     const result = sortCategoriesByPreference(categories, ["unknown", "sport"])
-    expect(result.map((category) => category.slug)).toEqual(["sport", "business", "culture", "news"])
+    expect(result.map((category) => category.slug)).toEqual(["sport", "business", "news", "culture"])
   })
 })
 
