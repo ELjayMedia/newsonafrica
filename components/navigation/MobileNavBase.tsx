@@ -6,12 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { getHomeHref } from "@/lib/utils/routing"
-import { Home, Search, Grid, Bookmark, User, Sparkles, Globe } from "lucide-react"
+import { Home, Search, Bookmark, User } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import type { Profile } from "@/app/actions/auth"
 
-export type MobileNavItemKey = "home" | "search" | "discover" | "bookmarks" | "profile" | "for-you" | "edition"
+export type MobileNavItemKey = "home" | "search" | "bookmarks" | "profile"
 
 interface NavItemDefinition {
   key: MobileNavItemKey
@@ -78,12 +78,6 @@ const NAV_ITEM_DEFINITIONS: Record<MobileNavItemKey, NavItemDefinition> = {
     icon: Search,
     getHref: () => "/search",
   },
-  discover: {
-    key: "discover",
-    label: "Discover",
-    icon: Grid,
-    getHref: () => "/discover",
-  },
   bookmarks: {
     key: "bookmarks",
     label: "Bookmarks",
@@ -98,22 +92,9 @@ const NAV_ITEM_DEFINITIONS: Record<MobileNavItemKey, NavItemDefinition> = {
     getHref: ({ user }) => (user ? "/profile" : "/auth"),
     getActivePaths: () => ["/profile", "/auth"],
   },
-  "for-you": {
-    key: "for-you",
-    label: "For You",
-    icon: Sparkles,
-    getHref: () => "/for-you",
-  },
-  edition: {
-    key: "edition",
-    label: "Edition",
-    icon: Globe,
-    getHref: ({ homeHref }) => homeHref || "/",
-    getActivePaths: ({ href }) => [href],
-  },
 }
 
-const DEFAULT_ITEM_ORDER: MobileNavItemKey[] = ["home", "search", "discover", "bookmarks", "profile"]
+const DEFAULT_ITEM_ORDER: MobileNavItemKey[] = ["home", "search", "bookmarks", "profile"]
 
 function buildDisplayName(user: SupabaseUser | null, profile: Profile | null) {
   return (
