@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
@@ -18,12 +18,29 @@ export const metadata: Metadata = {
   authors: [{ name: "News On Africa Team" }],
   creator: "News On Africa",
   publisher: "News On Africa",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "News On Africa",
+  },
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   generator: "v0.app",
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+  ],
 }
 
 export default function RootLayout({

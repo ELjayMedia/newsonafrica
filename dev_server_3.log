@@ -1,0 +1,19 @@
+
+> my-v0-project@0.1.0 dev /app
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+   ▲ Next.js 15.2.8
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.0.2:3002
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ✓ scrollRestoration
+     · largePageDataBytes: 12800000
+
+ ✓ Starting...
+ ⚠ Duplicate page detected. app/robots.ts and app/robots.txt/route.ts resolve to /robots.txt
+ ⚠ Duplicate page detected. app/robots.ts and app/robots.txt/route.ts resolve to /robots.txt
+ ✓ Ready in 2.5s
+ ⚠ Duplicate page detected. app/robots.ts and app/robots.txt/route.ts resolve to /robots.txt

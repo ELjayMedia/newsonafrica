@@ -1,3 +1,6 @@
+const CACHE_NAME = "news-on-africa-v1"
+const ASSET_CACHE_NAME = "news-on-africa-assets-v1"
+
 const BOOKMARK_QUEUE_NAME = "bookmarks-write-queue"
 const BOOKMARK_SYNC_TAG = "bookmarks-write-queue-sync"
 const DB_NAME = "bookmark-sync-db"
@@ -376,7 +379,7 @@ async function enqueueRequest(request) {
   }, 5000)
 }
 
-function shouldHandleRequest(request) {
+function shouldHandleSyncRequest(request) {
   if (!MUTATION_METHODS.has(request.method.toUpperCase())) {
     return false
   }
@@ -550,7 +553,7 @@ async function replayQueue() {
   }
 }
 
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   self.skipWaiting()
 })
 
@@ -558,6 +561,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       await self.clients.claim()
+      // Clean up old caches
+      const cacheNames = await caches.keys()
+      await Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME && name !== ASSET_CACHE_NAME)
+          .map((name) => caches.delete(name)),
+      )
       await replayQueue()
     })(),
   )
@@ -565,22 +575,55 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event
-  if (!shouldHandleRequest(request)) {
+  const url = new URL(request.url)
+
+  // Handle bookmark sync mutations
+  if (shouldHandleSyncRequest(request)) {
+    event.respondWith(
+      (async () => {
+        const networkRequest = request.clone()
+        const queuedRequest = request.clone()
+        try {
+          return await fetch(networkRequest)
+        } catch (error) {
+          await enqueueRequest(queuedRequest)
+          throw error
+        }
+      })(),
+    )
     return
   }
 
-  event.respondWith(
-    (async () => {
-      const networkRequest = request.clone()
-      const queuedRequest = request.clone()
-      try {
-        return await fetch(networkRequest)
-      } catch (error) {
-        await enqueueRequest(queuedRequest)
-        throw error
-      }
-    })(),
-  )
+  // Cache-first strategy for static assets
+  const isStaticAsset =
+    request.method === "GET" &&
+    (url.pathname.startsWith("/_next/static/") ||
+      url.pathname.match(/\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$/) ||
+      url.hostname === "fonts.googleapis.com" ||
+      url.hostname === "fonts.gstatic.com")
+
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse
+        }
+
+        return fetch(request).then((response) => {
+          if (!response || response.status !== 200 || response.type !== "basic" && response.type !== "cors") {
+            return response
+          }
+
+          const responseToCache = response.clone()
+          caches.open(ASSET_CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache)
+          })
+
+          return response
+        })
+      }),
+    )
+  }
 })
 
 self.addEventListener("sync", (event) => {
