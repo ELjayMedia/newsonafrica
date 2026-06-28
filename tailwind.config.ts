@@ -75,23 +75,46 @@ const config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Brand green scale — the signature colour (brand, links, CTAs)
+        brand: {
+          50: "#E8F6EE",
+          200: "#A6E2BE",
+          500: "#1BB257", // CTA
+          600: "#15994A", // Primary
+          900: "#0B5E2D",
+          DEFAULT: "#15994A",
+          foreground: "#FFFFFF",
+        },
+        // Functional — used sparingly, never decorative
+        live: {
+          DEFAULT: "#D62828", // Breaking / Live
+          foreground: "#FFFFFF",
+        },
+        sponsored: {
+          DEFAULT: "#A9791A", // Sponsored / paid partnership (gold)
+          foreground: "#FFFFFF",
+        },
+        ad: {
+          DEFAULT: "#F2F1EE", // Ad surface
+          foreground: "#8A8A8A", // Ad label text
+        },
         success: {
-          DEFAULT: "hsl(142 76% 36%)",
-          foreground: "hsl(0 0% 98%)",
-          light: "hsl(142 69% 58%)",
-          dark: "hsl(142 72% 29%)",
+          DEFAULT: "#15994A",
+          foreground: "hsl(0 0% 100%)",
+          light: "#1BB257",
+          dark: "#0B5E2D",
         },
         warning: {
-          DEFAULT: "hsl(38 92% 50%)",
-          foreground: "hsl(0 0% 9%)",
-          light: "hsl(43 96% 56%)",
-          dark: "hsl(32 95% 44%)",
+          DEFAULT: "#A9791A",
+          foreground: "hsl(0 0% 100%)",
+          light: "hsl(40 73% 48%)",
+          dark: "hsl(40 73% 30%)",
         },
         info: {
-          DEFAULT: "hsl(217 91% 60%)",
-          foreground: "hsl(0 0% 98%)",
-          light: "hsl(213 93% 68%)",
-          dark: "hsl(221 83% 53%)",
+          DEFAULT: "#1E6FD6",
+          foreground: "hsl(0 0% 100%)",
+          light: "hsl(214 75% 58%)",
+          dark: "hsl(214 75% 38%)",
         },
         surface: {
           DEFAULT: "hsl(var(--card))",
@@ -109,24 +132,27 @@ const config = {
         xl: "calc(var(--radius) + 4px)",
       },
       fontFamily: {
-        sans: ["Funnel Sans", "system-ui", "sans-serif"],
+        // Source Sans 3 — body & decks
+        sans: ["var(--font-source-sans)", "Source Sans 3", "system-ui", "sans-serif"],
+        // Archivo — display, headlines & UI
+        display: ["var(--font-archivo)", "Archivo", "system-ui", "sans-serif"],
       },
       fontSize: {
-        // Display sizes - for hero sections and large headings
-        "display-2xl": ["clamp(3rem, 8vw, 4.5rem)", { lineHeight: "1.1", letterSpacing: "-0.025em", fontWeight: "800" }],
-        "display-xl": ["clamp(2.25rem, 6vw, 3.75rem)", { lineHeight: "1.1", letterSpacing: "-0.025em", fontWeight: "700" }],
-        "display-lg": ["clamp(1.875rem, 5vw, 3rem)", { lineHeight: "1.2", letterSpacing: "-0.025em", fontWeight: "700" }],
-        // Heading sizes - for page and section titles
-        "heading-lg": ["1.5rem", { lineHeight: "1.4", letterSpacing: "-0.015em", fontWeight: "600" }],
-        "heading-md": ["1.25rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "600" }],
-        "heading-sm": ["1.125rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "600" }],
-        // Body sizes - for main content
-        "body-lg": ["1rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
+        // Display sizes - hero sections & large headings (Archivo) — scale tops out at 64px
+        "display-2xl": ["clamp(2.625rem, 7vw, 4rem)", { lineHeight: "1.05", letterSpacing: "-0.03em", fontWeight: "800" }],
+        "display-xl": ["clamp(2.125rem, 5.5vw, 3.125rem)", { lineHeight: "1.08", letterSpacing: "-0.025em", fontWeight: "700" }],
+        "display-lg": ["clamp(1.75rem, 4.5vw, 2.625rem)", { lineHeight: "1.12", letterSpacing: "-0.02em", fontWeight: "700" }],
+        // Heading sizes - page & section titles (Archivo)
+        "heading-lg": ["1.875rem", { lineHeight: "1.2", letterSpacing: "-0.015em", fontWeight: "700" }], // Headline 30
+        "heading-md": ["1.5rem", { lineHeight: "1.25", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "heading-sm": ["1.25rem", { lineHeight: "1.3", letterSpacing: "0em", fontWeight: "600" }], // Card title 20
+        // Body sizes - main content (Source Sans 3) — base reading size 17px
+        "body-lg": ["1.0625rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }], // Body 17
         "body-md": ["0.9375rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
-        "body-sm": ["0.875rem", { lineHeight: "1.6", letterSpacing: "0em", fontWeight: "400" }],
-        // UI sizes - for labels, captions, badges
-        "ui-md": ["0.875rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "500" }],
-        "ui-sm": ["0.75rem", { lineHeight: "1.4", letterSpacing: "0.025em", fontWeight: "500" }],
+        "body-sm": ["0.8125rem", { lineHeight: "1.55", letterSpacing: "0em", fontWeight: "400" }],
+        // UI sizes - labels, captions, badges, eyebrows
+        "ui-md": ["0.8125rem", { lineHeight: "1.4", letterSpacing: "0em", fontWeight: "500" }],
+        "ui-sm": ["0.75rem", { lineHeight: "1.4", letterSpacing: "0.06em", fontWeight: "600" }], // Eyebrow 12
       },
       typography: ({ theme }) => ({
         DEFAULT: {

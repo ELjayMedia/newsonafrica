@@ -33,73 +33,74 @@ export const BORDER_RADIUS = {
 // ============================================================================
 // TYPOGRAPHY SYSTEM
 // ============================================================================
+// Display & headings use Archivo (font-display); body uses Source Sans 3.
 export const TYPOGRAPHY = {
-  // Display - Hero sections
+  // Display - Hero sections (Archivo)
   'display-lg': {
-    size: '2.25rem',
-    weight: 700,
-    lineHeight: 1.2,
-    class: 'text-3xl font-bold leading-tight',
+    size: '2.625rem', // up to 64px via clamp
+    weight: 800,
+    lineHeight: 1.05,
+    class: 'font-display display-lg',
   },
   'display-md': {
-    size: '1.875rem',
+    size: '2.125rem',
+    weight: 700,
+    lineHeight: 1.1,
+    class: 'font-display display-xl',
+  },
+
+  // Headings - Section titles, article headlines (Archivo)
+  'heading-lg': {
+    size: '1.875rem', // Headline 30
     weight: 700,
     lineHeight: 1.2,
-    class: 'text-2xl font-bold leading-tight',
-  },
-
-  // Headings - Section titles, article headlines
-  'heading-lg': {
-    size: '1.5rem',
-    weight: 600,
-    lineHeight: 1.4,
-    class: 'text-xl font-semibold leading-snug',
+    class: 'font-display heading-lg',
   },
   'heading-md': {
-    size: '1.25rem',
+    size: '1.5rem',
     weight: 600,
-    lineHeight: 1.4,
-    class: 'text-lg font-semibold leading-snug',
+    lineHeight: 1.25,
+    class: 'font-display heading-md',
   },
   'heading-sm': {
-    size: '1.125rem',
+    size: '1.25rem', // Card title 20
     weight: 600,
-    lineHeight: 1.4,
-    class: 'text-base font-semibold leading-snug',
+    lineHeight: 1.3,
+    class: 'font-display heading-sm',
   },
 
-  // Body - Main content
+  // Body - Main content (Source Sans 3)
   'body-lg': {
-    size: '1rem',
+    size: '1.0625rem', // Body 17
     weight: 400,
     lineHeight: 1.6,
-    class: 'text-base leading-relaxed',
+    class: 'body-lg',
   },
   'body-md': {
     size: '0.9375rem',
     weight: 400,
     lineHeight: 1.6,
-    class: 'text-sm leading-relaxed',
+    class: 'body-md',
   },
   'body-sm': {
-    size: '0.875rem',
+    size: '0.8125rem',
     weight: 400,
-    lineHeight: 1.6,
-    class: 'text-xs leading-relaxed',
+    lineHeight: 1.55,
+    class: 'body-sm',
   },
 
-  // UI - Labels, captions
+  // UI - Labels, captions, eyebrows
   'ui-sm': {
-    size: '0.75rem',
-    weight: 500,
+    size: '0.75rem', // Eyebrow 12 (uppercase)
+    weight: 600,
     lineHeight: 1.4,
-    class: 'text-xs font-medium',
+    class: 'text-ui-sm font-display font-semibold uppercase tracking-wide',
   },
   'ui-md': {
-    size: '0.875rem',
+    size: '0.8125rem',
     weight: 500,
     lineHeight: 1.4,
-    class: 'text-sm font-medium',
+    class: 'text-ui-md font-medium',
   },
 } as const
 
@@ -218,16 +219,34 @@ export const SHADOWS = {
 // ============================================================================
 export const COLOR_REFERENCE = {
   light: {
-    primary: 'hsl(142.1 76.2% 36.3%)',      // Green - primary actions
-    secondary: 'hsl(240 4.8% 95.9%)',       // Light gray - secondary UI
-    success: 'hsl(142 76% 36%)',            // Green - success states
-    warning: 'hsl(38 92% 50%)',             // Amber - warning states
-    info: 'hsl(217 91% 60%)',               // Blue - info states
-    destructive: 'hsl(0 84.2% 60.2%)',      // Red - destructive actions
-    background: 'hsl(0 0% 100%)',           // White
-    foreground: 'hsl(240 10% 3.9%)',        // Dark charcoal
-    border: 'hsl(240 5.9% 90%)',
-    muted: 'hsl(240 4.8% 95.9%)',
+    primary: '#15994A',        // Green 600 - brand, links, primary actions
+    cta: '#1BB257',            // Green 500 - calls to action
+    secondary: 'hsl(40 13% 94%)', // Warm light grey - secondary UI
+    success: '#15994A',        // Green - success states
+    warning: '#A9791A',        // Gold - warning / sponsored
+    info: '#1E6FD6',           // Blue - info / link states
+    destructive: '#D62828',    // Red - destructive / live / breaking
+    background: '#FAFAF9',     // Surface - warm paper
+    foreground: '#161412',     // Ink
+    border: '#ECEAE7',         // Hairline
+    muted: 'hsl(40 13% 94%)',  // Warm muted surface
+    mutedForeground: '#6E6A66',// Muted text
+  },
+  // Brand green scale
+  green: {
+    50: '#E8F6EE',  // Tint
+    200: '#A6E2BE',
+    500: '#1BB257', // CTA
+    600: '#15994A', // Primary
+    900: '#0B5E2D',
+  },
+  // Functional — used sparingly, never decorative
+  functional: {
+    live: '#D62828',       // Breaking / live
+    sponsored: '#A9791A',  // Sponsored (gold)
+    adSurface: '#F2F1EE',  // Ad surface
+    adText: '#8A8A8A',     // Ad label text
+    info: '#1E6FD6',       // Info / link
   },
 } as const
 

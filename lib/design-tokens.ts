@@ -14,26 +14,51 @@ export const designTokens = {
       "secondary-foreground": "hsl(var(--secondary-foreground))",
     },
 
+    // Brand green scale — the signature colour
+    green: {
+      50: "#E8F6EE", // Tint
+      200: "#A6E2BE",
+      500: "#1BB257", // CTA
+      600: "#15994A", // Primary
+      900: "#0B5E2D",
+    },
+
+    // Functional colours — used sparingly, never decorative
+    live: {
+      DEFAULT: "#D62828", // Breaking / Live
+      foreground: "#FFFFFF",
+    },
+
+    sponsored: {
+      DEFAULT: "#A9791A", // Sponsored / paid partnership (gold)
+      foreground: "#FFFFFF",
+    },
+
+    ad: {
+      DEFAULT: "#F2F1EE", // Ad surface
+      foreground: "#8A8A8A", // Ad label text
+    },
+
     // Semantic Colors
     success: {
-      DEFAULT: "hsl(142 76% 36%)", // Green-600
-      foreground: "hsl(0 0% 98%)",
-      light: "hsl(142 69% 58%)", // Green-500
-      dark: "hsl(142 72% 29%)", // Green-700
+      DEFAULT: "#15994A", // Green 600
+      foreground: "#FFFFFF",
+      light: "#1BB257", // Green 500
+      dark: "#0B5E2D", // Green 900
     },
 
     warning: {
-      DEFAULT: "hsl(38 92% 50%)", // Amber-500
-      foreground: "hsl(0 0% 9%)",
-      light: "hsl(43 96% 56%)", // Amber-400
-      dark: "hsl(32 95% 44%)", // Amber-600
+      DEFAULT: "#A9791A", // Sponsored gold
+      foreground: "#FFFFFF",
+      light: "hsl(40 73% 48%)",
+      dark: "hsl(40 73% 30%)",
     },
 
     info: {
-      DEFAULT: "hsl(217 91% 60%)", // Blue-500
-      foreground: "hsl(0 0% 98%)",
-      light: "hsl(213 93% 68%)", // Blue-400
-      dark: "hsl(221 83% 53%)", // Blue-600
+      DEFAULT: "#1E6FD6", // Info / link
+      foreground: "#FFFFFF",
+      light: "hsl(214 75% 58%)",
+      dark: "hsl(214 75% 38%)",
     },
 
     // Surface Colors

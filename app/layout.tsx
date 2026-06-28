@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Archivo, Source_Sans_3 } from "next/font/google"
 
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { getNewsMediaOrganizationSchema, getWebSiteSchema } from "@/lib/schema"
@@ -8,6 +9,22 @@ import { validateRequiredEnv } from "@/lib/env"
 import "./globals.css"
 
 validateRequiredEnv()
+
+// Archivo — display & UI (headlines, nav, buttons). Squarer, heavier weights for tabloid punch.
+const archivo = Archivo({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-archivo",
+  weight: ["400", "500", "600", "700", "800", "900"],
+})
+
+// Source Sans 3 — body & decks. Highly legible at small sizes in dense layouts.
+const sourceSans = Source_Sans_3({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-source-sans",
+  weight: ["400", "500", "600", "700"],
+})
 
 export const metadata: Metadata = {
   title: "News On Africa",
@@ -34,7 +51,11 @@ export default function RootLayout({
   const baseSchemas = [getNewsMediaOrganizationSchema(), getWebSiteSchema()]
 
   return (
-    <html lang="en" className="font-sans" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sourceSans.variable} ${archivo.variable} font-sans`}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="preconnect" href="https://cdn-lfdfp.nitrocdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn-lfdfp.nitrocdn.com" />

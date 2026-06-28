@@ -28,75 +28,88 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
+/**
+ * News On Africa — Design System v1.0 (June 2026)
+ *
+ * Brand green carries brand, links and CTAs. Neutrals are warm-grey for a
+ * paper-like read. Functional colours are used sparingly and never for
+ * decoration: red means live/breaking, gold means sponsored.
+ *
+ *   Green 900  #0B5E2D   Green 600/Primary #15994A   Green 500/CTA #1BB257
+ *   Green 200  #A6E2BE   Green 50/Tint     #E8F6EE
+ *   Ink #161412  Body #2B2825  Muted #6E6A66  Faint #9A9591
+ *   Hairline #ECEAE7  Surface #FAFAF9
+ *   Live #D62828  Sponsored #A9791A  Ad surface #F2F1EE/#8A8A8A  Info #1E6FD6
+ */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --background: 60 9% 98%; /* Surface #FAFAF9 — warm paper */
+  --foreground: 30 10% 8%; /* Ink #161412 */
+  --card: 0 0% 100%; /* White — cards sit on surface */
+  --card-foreground: 30 10% 8%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 142.1 76.2% 36.3%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 10% 3.9%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 7% 40%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 10% 3.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 142.1 76.2% 36.3%;
-  --chart-1: 142.1 76.2% 36.3%;
-  --chart-2: 159 84% 45%;
-  --chart-3: 134 61% 41%;
-  --chart-4: 120 100% 25%;
-  --chart-5: 103 43% 50%;
-  --radius: 0.625rem;
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 10% 3.9%;
-  --sidebar-primary: 240 10% 3.9%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 97%;
-  --sidebar-accent-foreground: 240 10% 3.9%;
-  --sidebar-border: 240 5.9% 92%;
-  --sidebar-ring: 240 5.9% 70%;
+  --popover-foreground: 30 10% 8%;
+  --primary: 144 76% 34%; /* Green 600 #15994A */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 13% 94%; /* Warm light grey */
+  --secondary-foreground: 30 8% 16%; /* Body #2B2825 */
+  --muted: 40 13% 94%;
+  --muted-foreground: 30 4% 42%; /* Muted #6E6A66 */
+  --accent: 146 44% 94%; /* Green 50 tint #E8F6EE — selected/hover */
+  --accent-foreground: 145 79% 21%; /* Green 900 #0B5E2D */
+  --destructive: 0 69% 50%; /* Live #D62828 */
+  --destructive-foreground: 0 0% 100%;
+  --border: 36 12% 92%; /* Hairline #ECEAE7 */
+  --input: 36 12% 92%;
+  --ring: 144 76% 34%;
+  --chart-1: 144 76% 34%; /* Green 600 */
+  --chart-2: 144 74% 40%; /* Green 500 */
+  --chart-3: 144 51% 77%; /* Green 200 */
+  --chart-4: 145 79% 21%; /* Green 900 */
+  --chart-5: 214 75% 48%; /* Info */
+  --radius: 0.625rem; /* 10px — card radius */
+  --sidebar: 60 9% 98%;
+  --sidebar-foreground: 30 10% 8%;
+  --sidebar-primary: 144 76% 34%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 146 44% 94%;
+  --sidebar-accent-foreground: 145 79% 21%;
+  --sidebar-border: 36 12% 92%;
+  --sidebar-ring: 144 76% 34%;
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 10% 3.9%;
-  --secondary: 240 5% 26%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 5% 26%;
-  --muted-foreground: 240 5% 65%;
-  --accent: 240 5% 26%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 50.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5% 26%;
-  --input: 240 5% 26%;
-  --ring: 240 5.9% 56%;
-  --chart-1: 240 5.9% 56%;
-  --chart-2: 159 68% 45%;
-  --chart-3: 134 70% 41%;
-  --chart-4: 120 100% 25%;
-  --chart-5: 103 43% 50%;
-  --sidebar: 240 10% 3.9%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 240 5.9% 56%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 5% 26%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 240 5% 26%;
-  --sidebar-ring: 240 5.9% 56%;
+  --background: 30 10% 8%; /* Ink */
+  --foreground: 60 9% 98%; /* Surface */
+  --card: 30 8% 12%;
+  --card-foreground: 60 9% 98%;
+  --popover: 30 8% 12%;
+  --popover-foreground: 60 9% 98%;
+  --primary: 144 74% 45%; /* Brighter green for dark surfaces */
+  --primary-foreground: 30 10% 8%;
+  --secondary: 30 6% 18%;
+  --secondary-foreground: 60 9% 98%;
+  --muted: 30 6% 18%;
+  --muted-foreground: 27 6% 64%; /* Faint, lightened */
+  --accent: 145 40% 18%; /* Deep green tint */
+  --accent-foreground: 144 51% 77%; /* Green 200 */
+  --destructive: 0 69% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 6% 20%;
+  --input: 30 6% 20%;
+  --ring: 144 74% 45%;
+  --chart-1: 144 74% 45%;
+  --chart-2: 144 51% 77%;
+  --chart-3: 144 76% 34%;
+  --chart-4: 144 44% 60%;
+  --chart-5: 214 75% 58%;
+  --sidebar: 30 10% 8%;
+  --sidebar-foreground: 60 9% 98%;
+  --sidebar-primary: 144 74% 45%;
+  --sidebar-primary-foreground: 30 10% 8%;
+  --sidebar-accent: 145 40% 18%;
+  --sidebar-accent-foreground: 144 51% 77%;
+  --sidebar-border: 30 6% 20%;
+  --sidebar-ring: 144 74% 45%;
 }
 
 @theme inline {
@@ -129,7 +142,12 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-inter), Inter, system-ui, sans-serif;
+    /* Source Sans 3 — body & decks */
+    font-family: var(--font-source-sans), "Source Sans 3", system-ui, sans-serif;
+  }
+  /* Archivo — display & headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-archivo), Archivo, system-ui, sans-serif;
   }
 }
 
@@ -138,30 +156,30 @@
      DISPLAY TYPOGRAPHY - Hero sections
      ========================================== */
   .display-2xl {
-    @apply text-display-2xl font-bold tracking-tight text-balance;
+    @apply font-display text-display-2xl font-extrabold tracking-tight text-balance;
   }
 
   .display-xl {
-    @apply text-display-xl font-bold tracking-tight text-balance;
+    @apply font-display text-display-xl font-bold tracking-tight text-balance;
   }
 
   .display-lg {
-    @apply text-display-lg font-bold tracking-tight text-balance;
+    @apply font-display text-display-lg font-bold tracking-tight text-balance;
   }
 
   /* ==========================================
      HEADING TYPOGRAPHY - Titles & subtitles
      ========================================== */
   .heading-lg {
-    @apply text-heading-lg font-semibold text-foreground leading-snug;
+    @apply font-display text-heading-lg font-bold text-foreground leading-snug;
   }
 
   .heading-md {
-    @apply text-heading-md font-semibold text-foreground leading-snug;
+    @apply font-display text-heading-md font-semibold text-foreground leading-snug;
   }
 
   .heading-sm {
-    @apply text-heading-sm font-semibold text-foreground leading-snug;
+    @apply font-display text-heading-sm font-semibold text-foreground leading-snug;
   }
 
   /* ==========================================
@@ -188,6 +206,11 @@
 
   .ui-sm {
     @apply text-ui-sm font-medium text-muted-foreground;
+  }
+
+  /* Category eyebrow — uppercase label above headlines (12px, green) */
+  .eyebrow {
+    @apply font-display text-ui-sm font-semibold uppercase tracking-wide text-primary;
   }
 
   /* ==========================================

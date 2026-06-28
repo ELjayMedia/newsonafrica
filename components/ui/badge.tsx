@@ -14,6 +14,10 @@ const badgeVariants = cva(
         success: "border-transparent bg-success text-success-foreground hover:bg-success/80",
         warning: "border-transparent bg-warning text-warning-foreground hover:bg-warning/80",
         info: "border-transparent bg-info text-info-foreground hover:bg-info/80",
+        // Functional — breaking / live coverage (red)
+        live: "border-transparent bg-live text-live-foreground uppercase tracking-wide hover:bg-live/90",
+        // Functional — sponsored / paid partnership (gold)
+        sponsored: "border-transparent bg-sponsored text-sponsored-foreground uppercase tracking-wide hover:bg-sponsored/90",
         outline: "text-foreground",
         surface: "border-transparent bg-surface-elevated text-surface-elevated-foreground hover:bg-surface-elevated/80",
         muted: "border-transparent bg-muted text-muted-foreground hover:bg-muted/80",
