@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { WP_AUTH_HEADERS } from "@/config/env"
 import { CACHE_DURATIONS } from "@/lib/cache/constants"
 import { getGraphQLEndpoint } from "@/lib/wp-endpoints"
 import { fetchWithRetry, type FetchWithRetryOptions } from "@/lib/utils/fetchWithRetry"
@@ -386,6 +387,7 @@ export function fetchWordPressGraphQL<T>(
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(typeof window === "undefined" ? WP_AUTH_HEADERS : {}),
   }
 
   if (typeof window === "undefined" && options.authHeaders) {

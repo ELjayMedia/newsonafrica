@@ -10,6 +10,7 @@ const resetBaseEnv = () => {
 
   delete process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL
   delete process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL
+  delete process.env.NEXT_PUBLIC_WP_NG_GRAPHQL
   delete process.env.WORDPRESS_GRAPHQL_AUTH_HEADER
   delete process.env.WORDPRESS_REQUEST_TIMEOUT_MS
 }
@@ -39,12 +40,12 @@ describe("config/env", () => {
 
   it("parses GraphQL overrides when provided", async () => {
     process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://override.example.com/sz/graphql/"
+    process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://override.example.com/za/graphql/"
+    process.env.NEXT_PUBLIC_WP_NG_GRAPHQL = "https://override.example.com/ng/graphql/"
 
     const { ENV } = await import("./env")
 
-    expect(ENV.NEXT_PUBLIC_WP_SZ_GRAPHQL).toBe(
-      "https://override.example.com/sz/graphql/",
-    )
+    expect(ENV.NEXT_PUBLIC_WP_SZ_GRAPHQL).toBe("https://override.example.com/sz/graphql/")
   })
 
   it("throws when a GraphQL override is missing the country slug", async () => {
@@ -58,6 +59,9 @@ describe("config/env", () => {
       Authorization: "Bearer token",
       "X-Custom": " custom-value ",
     })
+    process.env.NEXT_PUBLIC_WP_SZ_GRAPHQL = "https://override.example.com/sz/graphql/"
+    process.env.NEXT_PUBLIC_WP_ZA_GRAPHQL = "https://override.example.com/za/graphql/"
+    process.env.NEXT_PUBLIC_WP_NG_GRAPHQL = "https://override.example.com/ng/graphql/"
 
     const { WP_AUTH_HEADERS } = await import("./env")
 

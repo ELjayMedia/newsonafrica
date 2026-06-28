@@ -19,6 +19,7 @@ export default defineConfig({
         'middleware.ts',
       ],
       exclude: [
+        'e2e/**',
         '**/*.test.{ts,tsx}',
         '**/__tests__/**',
         '**/*.d.ts',
