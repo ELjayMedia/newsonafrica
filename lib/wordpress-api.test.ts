@@ -45,6 +45,7 @@ describe("fetchPost", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -70,6 +71,7 @@ describe("fetchPost", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -88,6 +90,7 @@ describe("fetchWordPressGraphQL", () => {
         ok: true,
         status: 200,
         json: async () => ({ data: mockData }),
+        text: async () => JSON.stringify({ data: mockData }),
       }),
     )
 
@@ -98,7 +101,12 @@ describe("fetchWordPressGraphQL", () => {
   it("does not memoize or cache requests when revalidate is disabled", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: {} }),
+        text: async () => JSON.stringify({ data: {} }),
+      })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
@@ -125,7 +133,12 @@ describe("fetchWordPressGraphQL", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: {} }),
+        text: async () => JSON.stringify({ data: {} }),
+      })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
     const originalWindow = (globalThis as { window?: unknown }).window
@@ -169,6 +182,7 @@ describe("getRelatedPosts", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -207,6 +221,7 @@ describe("getPostsForCategories", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -310,6 +325,7 @@ describe("getFrontPageSlicesForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -322,8 +338,8 @@ describe("getFrontPageSlicesForCountry", () => {
     expect(result.latest.posts).toHaveLength(20)
     expect(fetchMock).toHaveBeenCalled()
     fetchMock.mock.calls.forEach(([, init]) => {
-      expect(init?.cache).toBe("no-store")
-      expect(init?.next).toBeUndefined()
+      expect(init?.cache).toBeUndefined()
+      expect(init?.next).toMatchObject({ revalidate: CACHE_DURATIONS.SHORT })
     })
   })
 })
@@ -344,6 +360,7 @@ describe("getFpTaggedPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -355,8 +372,8 @@ describe("getFpTaggedPostsForCountry", () => {
     expect(result[0].slug).toBe("fp-201")
     expect(fetchMock).toHaveBeenCalled()
     fetchMock.mock.calls.forEach(([, init]) => {
-      expect(init?.cache).toBe("no-store")
-      expect(init?.next).toBeUndefined()
+      expect(init?.cache).toBeUndefined()
+      expect(init?.next).toMatchObject({ revalidate: CACHE_DURATIONS.SHORT })
     })
   })
 })
@@ -378,6 +395,7 @@ describe("getLatestPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -390,8 +408,8 @@ describe("getLatestPostsForCountry", () => {
     expect(result.endCursor).toBe("cursor-2")
     expect(fetchMock).toHaveBeenCalled()
     fetchMock.mock.calls.forEach(([, init]) => {
-      expect(init?.cache).toBe("no-store")
-      expect(init?.next).toBeUndefined()
+      expect(init?.cache).toBeUndefined()
+      expect(init?.next).toMatchObject({ revalidate: CACHE_DURATIONS.SHORT })
     })
   })
 
@@ -408,6 +426,7 @@ describe("getLatestPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -418,8 +437,8 @@ describe("getLatestPostsForCountry", () => {
     expect(result).toEqual({ posts: [], hasNextPage: false, endCursor: null })
     expect(fetchMock).toHaveBeenCalled()
     fetchMock.mock.calls.forEach(([, init]) => {
-      expect(init?.cache).toBe("no-store")
-      expect(init?.next).toBeUndefined()
+      expect(init?.cache).toBeUndefined()
+      expect(init?.next).toMatchObject({ revalidate: CACHE_DURATIONS.SHORT })
     })
   })
 })
