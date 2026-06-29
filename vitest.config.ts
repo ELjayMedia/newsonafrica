@@ -5,8 +5,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    // e2e/* are Playwright specs (run via `playwright test`), not vitest.
-    exclude: [...configDefaults.exclude, 'e2e/**', '**/*.spec.ts'],
+    // e2e/* are Playwright specs (run via `playwright test`); supabase/functions/*
+    // are Deno edge-function tests (run via `deno test`). Neither runs under vitest.
+    exclude: [...configDefaults.exclude, 'e2e/**', '**/*.spec.ts', 'supabase/functions/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json-summary'],
