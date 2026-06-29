@@ -5,7 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { Bookmark, BookmarkCheck, Clock, Heart, Share2 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from "@/lib/utils"
 import { DESIGN_TOKENS } from "@/lib/design-tokens-extended"
 
@@ -104,7 +103,7 @@ export function ArticleCard({
     <Link href={href} className={cn("group block h-full", className)}>
       <article
         className={cn(
-          "flex h-full overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+          "flex h-full overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
           isHorizontal ? "flex-row" : "flex-col",
           articleClassName
         )}
@@ -144,7 +143,7 @@ export function ArticleCard({
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-2">
               {category ? (
-                <Badge className={cn("w-fit uppercase tracking-wide", variantConfig.category, categoryClassName)}>{category}</Badge>
+                <span className={cn("eyebrow block w-fit", categoryClassName)}>{category}</span>
               ) : null}
 
               <h3
