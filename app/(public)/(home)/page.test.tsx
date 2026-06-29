@@ -113,16 +113,25 @@ describe("HomePage", () => {
       .spyOn(wordpressApi, "getFpTaggedPostsForCountry")
       .mockImplementation(async (countryCode: string) => countryPosts[countryCode] ?? [])
 
-    const expected = await homeDataModule.buildHomeContentProps("https://example.com")
-
     const { default: Page } = await import("./page")
     const ui = await Page()
     const { getByTestId } = render(ui)
 
+    // This Page() render is the first home build in the test, so its fetch/spy
+    // counts reflect a full, uncached build. Each country fetches the frontpage
+    // GraphQL endpoint once; because the stubbed payload is not frontpage-shaped
+    // the frontpage slices come back empty and the recent-posts fallback fires a
+    // second fetch per country (the tagged fallback is served from fpSpy). That
+    // is `SUPPORTED_COUNTRIES.length * 2` country fetches plus one shared
+    // category-posts fetch for the default edition.
     const expectedFetchCalls = SUPPORTED_COUNTRIES.length * 2 + 1
 
     expect(fetchMock).toHaveBeenCalledTimes(expectedFetchCalls)
     expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
+
+    // Build the expected props after the assertions above so the extra build
+    // does not inflate the fetch/spy call counts under test.
+    const expected = await homeDataModule.buildHomeContentProps("https://example.com")
     const [props] = homeContentMock.mock.calls.at(-1) ?? []
 
     expect(props).toMatchObject({

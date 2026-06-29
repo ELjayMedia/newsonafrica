@@ -76,7 +76,10 @@ describe("TagPage", () => {
     expect(result.props).toMatchObject({
       slug: "tech",
       countryCode: DEFAULT_COUNTRY,
-      tag: { name: "Tech", slug: "tech" },
+      // The page normalizes the tag via normalizeTagForClient, which projects
+      // it down to { name, description? } and passes the slug separately as the
+      // top-level `slug` prop, so the forwarded tag object carries no slug.
+      tag: { name: "Tech" },
       initialData: {
         nodes: [{ id: "1", slug: "post-1" }],
         pageInfo: { hasNextPage: false, endCursor: null },
