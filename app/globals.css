@@ -155,31 +155,32 @@
   /* ==========================================
      DISPLAY TYPOGRAPHY - Hero sections
      ========================================== */
+  /* Bold Punch — heavy, condensed, tabloid headlines */
   .display-2xl {
-    @apply font-display text-display-2xl font-extrabold tracking-tight text-balance;
+    @apply font-display text-display-2xl font-black tracking-tighter text-balance;
   }
 
   .display-xl {
-    @apply font-display text-display-xl font-bold tracking-tight text-balance;
+    @apply font-display text-display-xl font-extrabold tracking-tighter text-balance;
   }
 
   .display-lg {
-    @apply font-display text-display-lg font-bold tracking-tight text-balance;
+    @apply font-display text-display-lg font-extrabold tracking-tight text-balance;
   }
 
   /* ==========================================
      HEADING TYPOGRAPHY - Titles & subtitles
      ========================================== */
   .heading-lg {
-    @apply font-display text-heading-lg font-bold text-foreground leading-snug;
+    @apply font-display text-heading-lg font-extrabold tracking-tight text-foreground leading-tight;
   }
 
   .heading-md {
-    @apply font-display text-heading-md font-semibold text-foreground leading-snug;
+    @apply font-display text-heading-md font-bold tracking-tight text-foreground leading-tight;
   }
 
   .heading-sm {
-    @apply font-display text-heading-sm font-semibold text-foreground leading-snug;
+    @apply font-display text-heading-sm font-bold text-foreground leading-snug;
   }
 
   /* ==========================================
@@ -208,9 +209,9 @@
     @apply text-ui-sm font-medium text-muted-foreground;
   }
 
-  /* Category eyebrow — uppercase label above headlines (12px, green) */
+  /* Category eyebrow — heavy uppercase label above headlines (12px, green) */
   .eyebrow {
-    @apply font-display text-ui-sm font-semibold uppercase tracking-wide text-primary;
+    @apply font-display text-ui-sm font-bold uppercase tracking-wide text-primary;
   }
 
   /* ==========================================

@@ -216,7 +216,8 @@ export function HomeContentClient({
     </div>
   ) : null
 
-  const sectionSpacing = "py-8 md:py-12"
+  // Bold Punch — max density: tighter section rhythm
+  const sectionSpacing = "py-5 md:py-7"
 
   const hasSpotlight = useMemo(
     () =>

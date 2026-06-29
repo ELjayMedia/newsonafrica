@@ -45,7 +45,8 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please try again later.</div>}>
-      <header className="bg-white mx-auto max-w-[980px] shadow-md z-10">
+      {/* Bold Punch — black masthead, reversed lockup, tabloid energy */}
+      <header className="bg-foreground text-background mx-auto max-w-[980px] shadow-md z-10">
         <div className="w-full md:mx-auto -mb-4">
           {/* Top Bar */}
           <div className="px-3 sm:px-4 pt-3 pb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -80,7 +81,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://twitter.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                    className="text-background/70 hover:text-background transition-colors duration-200"
                     aria-label="Twitter"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -91,7 +92,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
                     href="https://facebook.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                    className="text-background/70 hover:text-background transition-colors duration-200"
                     aria-label="Facebook"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -103,7 +104,7 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
 
               <div className="flex items-center gap-2 text-sm sm:ml-2 md:ml-4">
                 {typeof WeatherWidget !== "undefined" && <WeatherWidget />}
-                <div className="hidden md:flex flex-col items-start text-muted-foreground text-sm">
+                <div className="hidden md:flex flex-col items-start text-background/70 text-sm">
                   <span>{currentDate}</span>
                 </div>
               </div>
@@ -111,19 +112,19 @@ export function HeaderClient({ categories, countryCode }: HeaderClientProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-4 md:mt-0 bg-background">
+          <nav className="mt-4 md:mt-0 bg-foreground">
             <div className="overflow-x-auto">
-              <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-border">
+              <ul className="flex whitespace-nowrap px-3 sm:px-4 border-t border-background/15">
                 {sortedCategories.map((category) => {
                   const url = category.href ?? getCategoryUrl(category.slug, countryCode)
                   return (
                     <li key={`${category.slug}-${url}`}>
                       <Link
                         href={url}
-                        className={`block px-3 py-3 text-ui-sm font-semibold transition-colors duration-200 ${
+                        className={`block px-3 py-3 font-display text-ui-sm font-bold tracking-wide transition-colors duration-200 ${
                           pathname === url
                             ? "text-primary border-b-2 border-primary"
-                            : "text-muted-foreground hover:text-primary hover:border-b-2 hover:border-primary"
+                            : "text-background/75 hover:text-primary hover:border-b-2 hover:border-primary"
                         }`}
                       >
                         {category.name.toUpperCase()}

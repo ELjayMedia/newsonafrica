@@ -154,24 +154,25 @@ export const BREAKPOINTS = {
 
 // Article Card Variants (existing pattern to formalize)
 // Uses semantic typography classes for consistency
+// Bold Punch — heavy condensed headlines, dense padding, tabloid scannability.
 export const ARTICLE_VARIANTS = {
   featured: {
-    headline: 'heading-md md:heading-lg font-semibold leading-snug',
+    headline: 'font-display heading-md md:heading-lg font-extrabold tracking-tight leading-tight',
     excerpt: 'body-sm text-muted-foreground/90 md:body-md',
-    content: 'gap-4 p-4 md:p-5',
-    category: 'text-ui-sm font-semibold uppercase tracking-wide',
+    content: 'gap-2.5 p-4',
+    category: 'text-ui-sm font-bold uppercase tracking-wide',
   },
   default: {
-    headline: 'body-lg md:heading-md font-semibold leading-snug',
+    headline: 'font-display body-lg md:heading-md font-bold tracking-tight leading-tight',
     excerpt: 'body-sm text-muted-foreground/90',
-    content: 'gap-3 p-4',
-    category: 'text-ui-sm font-semibold uppercase tracking-wide',
+    content: 'gap-2 p-3.5',
+    category: 'text-ui-sm font-bold uppercase tracking-wide',
   },
   compact: {
-    headline: 'body-sm md:body-lg font-semibold leading-snug',
+    headline: 'font-display body-sm md:body-lg font-bold tracking-tight leading-tight',
     excerpt: 'text-ui-sm text-muted-foreground/80',
-    content: 'gap-2.5 p-3 md:p-4',
-    category: 'text-ui-sm font-semibold uppercase tracking-wide',
+    content: 'gap-2 p-3',
+    category: 'text-ui-sm font-bold uppercase tracking-wide',
   },
 } as const
 
