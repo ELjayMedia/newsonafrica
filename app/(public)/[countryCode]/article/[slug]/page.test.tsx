@@ -447,40 +447,44 @@ describe('ArticlePage', () => {
 
   it('passes the preview flag to the article loader when draft mode is enabled', async () => {
     vi.mocked(draftMode).mockReturnValue({ isEnabled: true })
-    const loadSpy = vi.spyOn(articleDataModule, 'loadArticleWithFallback')
-    loadSpy.mockResolvedValue({
-      status: 'found',
-      article: createArticleNode(),
-      tags: [],
-      version: null,
-      canonicalCountry: 'sz',
-      sourceCountry: 'sz',
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [createArticleNode()] } }) as any
+      }
+
+      return graphqlSuccess({}) as any
     })
 
     await Page({ params: { countryCode: 'sz', slug: 'test' } })
 
-    expect(loadSpy).toHaveBeenCalledWith('test', expect.any(Array), true)
-
-    loadSpy.mockRestore()
+    // Draft mode must reach the loader: getArticleBySlug forwards preview as the
+    // asPreview GraphQL variable and skips the cache (revalidate, no tags).
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'sz',
+      POST_BY_SLUG_DIRECT_QUERY,
+      expect.objectContaining({ asPreview: true }),
+      expect.objectContaining({ revalidate: expect.anything() }),
+    )
   })
 
   it('passes the preview flag to the article loader when generating metadata in draft mode', async () => {
     vi.mocked(draftMode).mockReturnValue({ isEnabled: true })
-    const loadSpy = vi.spyOn(articleDataModule, 'loadArticleWithFallback')
-    loadSpy.mockResolvedValue({
-      status: 'found',
-      article: createArticleNode(),
-      tags: [],
-      version: null,
-      canonicalCountry: 'sz',
-      sourceCountry: 'sz',
+    vi.mocked(fetchWordPressGraphQL).mockImplementation(async (_country, query) => {
+      if (query === POST_BY_SLUG_DIRECT_QUERY) {
+        return graphqlSuccess({ posts: { nodes: [createArticleNode()] } }) as any
+      }
+
+      return graphqlSuccess({}) as any
     })
 
     await generateMetadata({ params: Promise.resolve({ countryCode: 'sz', slug: 'test' }) })
 
-    expect(loadSpy).toHaveBeenCalledWith('test', expect.any(Array), true)
-
-    loadSpy.mockRestore()
+    expect(fetchWordPressGraphQL).toHaveBeenCalledWith(
+      'sz',
+      POST_BY_SLUG_DIRECT_QUERY,
+      expect.objectContaining({ asPreview: true }),
+      expect.objectContaining({ revalidate: expect.anything() }),
+    )
   })
 
   it('generates metadata that prefers the dynamic OG image', async () => {

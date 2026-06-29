@@ -1,7 +1,15 @@
-import { expect, vi } from 'vitest'
+import { afterEach, expect, vi } from 'vitest'
+import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
 expect.extend(matchers)
+
+// Unmount React trees after every test. Without globals:true, Testing Library
+// does not auto-register cleanup, so rendered DOM leaks between tests and
+// queries like getByAltText find duplicates from earlier tests.
+afterEach(() => {
+  cleanup()
+})
 
 // The `server-only` package intentionally throws at import time outside of a
 // Server Component. In tests we run server-scoped modules under jsdom, so
