@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { ArticleBody } from "@/components/article/ArticleBody"
 import { ArticleHeader } from "@/components/article/ArticleHeader"
 import { ArticlePageLayout } from "@/components/article/ArticlePageLayout"
+import { AdSlot } from "@/components/ui/ad-slot"
 
 import {
   PLACEHOLDER_IMAGE_PATH,
@@ -202,6 +203,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
       </Suspense>
       <ArticlePageLayout>
         <div className="container mx-auto px-1 sm:px-2 md:px-4 pb-6 bg-white">
+          {/* Leaderboard — above the first screen, never interrupting the lede */}
+          <AdSlot format="leaderboard" className="mb-6" />
           <article className="mb-8 space-y-6">
             <ArticleHeader
               title={articleTitle}
@@ -265,6 +268,8 @@ export default async function ArticlePage({ params }: RouteParamsPromise) {
               html={formattedBody.sanitizedHtml}
               blocks={formattedBody.blocks}
               className="prose prose-lg max-w-none mb-8 text-sm text-black"
+              // In-article unit dropped after the 3rd paragraph and onward — never inside the lede
+              renderAd={() => <AdSlot format="in-content" />}
             />
 
             <Suspense fallback={null}>

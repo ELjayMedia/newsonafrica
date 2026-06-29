@@ -7,6 +7,7 @@ import { FeaturedHeroClient as FeaturedHero } from "@/components/client/Featured
 import { SecondaryStoriesClient as SecondaryStories } from "@/components/client/SecondaryStoriesClient"
 import { NewsGridClient as NewsGrid } from "@/components/client/NewsGridClient"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import { AdSlot } from "@/components/ui/ad-slot"
 import { SchemaOrg } from "@/components/SchemaOrg"
 import { CountryNavigation, CountrySpotlight } from "@/components/CountryNavigation"
 import { SectionHeader } from "@/components/SectionHeader"
@@ -261,6 +262,11 @@ export function HomeContentClient({
           <div className="pt-4 md:pt-6">{offlineNotification}</div>
         ) : null}
 
+        {/* Leaderboard — highest-value above-the-fold inventory, above the first story */}
+        <div className="pt-4 md:pt-6">
+          <AdSlot format="leaderboard" />
+        </div>
+
         <section className={sectionSpacing}>
           <SectionHeader
             title="Top Stories"
@@ -298,6 +304,11 @@ export function HomeContentClient({
             </div>
           </section>
         ) : null}
+
+        {/* In-feed unit — reserved slot between editorial sections */}
+        <div className="flex justify-center pb-4">
+          <AdSlot format="leaderboard" />
+        </div>
 
         <section className={sectionSpacing}>
           <SectionHeader
