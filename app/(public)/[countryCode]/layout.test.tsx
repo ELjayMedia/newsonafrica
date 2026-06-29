@@ -20,11 +20,13 @@ describe("[countryCode] layout", () => {
   it("reads the edition from params", async () => {
     const { default: CountryLayout } = await import("./layout")
 
-    const ui = (
-      <CountryLayout params={{ countryCode: "ng" }}>
-        <div>Country page</div>
-      </CountryLayout>
-    )
+    // CountryLayout is an async server component whose `params` is a promise
+    // (Next.js 15). Invoke it directly and await the resolved element rather
+    // than letting React try to render the un-awaited async component.
+    const ui = await CountryLayout({
+      params: Promise.resolve({ countryCode: "ng" }),
+      children: <div>Country page</div>,
+    })
 
     const { getByTestId } = render(ui)
 

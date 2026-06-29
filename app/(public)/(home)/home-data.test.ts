@@ -202,25 +202,10 @@ describe("fetchAggregatedHomeForCountry", () => {
         }),
       }),
     )
-    expect(fpTagSpy).toHaveBeenCalledWith(
-      "za",
-      expect.any(Number),
-      expect.objectContaining({
-        timeout: 900,
-        signal: expect.any(Object),
-      }),
-    )
-    expect(latestSpy).toHaveBeenCalledWith(
-      "za",
-      expect.any(Number),
-      null,
-      expect.objectContaining({
-        request: expect.objectContaining({
-          timeout: 1200,
-          signal: expect.any(Object),
-        }),
-      }),
-    )
+    // Happy path: frontpage returned content, so the recent/tagged fallback
+    // fetches are skipped entirely (NOA-47 optimisation in home-data.ts).
+    expect(fpTagSpy).not.toHaveBeenCalled()
+    expect(latestSpy).not.toHaveBeenCalled()
     expect(result.heroPost?.slug).toBe("lead-story")
     expect(result.secondaryPosts.map((post) => post.slug)).toEqual([
       "secondary-story",
@@ -394,8 +379,13 @@ describe("fetchAggregatedHomeForCountry", () => {
     expect(first.heroPost?.slug).toBe("lead-story")
     expect(second.heroPost?.slug).toBe("lead-story")
 
+    // The home feed scheduler is created once at module load and shared across
+    // every country request, so only a single limiter instance exists.
     expect(limiterMetrics.instances).toBe(1)
-    expect(limiterMetrics.scheduled).toBe(6)
+    // Frontpage returns content for both countries, so each country schedules a
+    // single frontpage task and skips the recent/tagged fallbacks (NOA-47):
+    // 2 countries x 1 task = 2 scheduled tasks.
+    expect(limiterMetrics.scheduled).toBe(2)
     expect(limiterMetrics.maxActive).toBe(1)
 
     latestSpy.mock.calls.forEach(([, , , options]) => {
@@ -623,8 +613,10 @@ describe("buildHomeContentProps", () => {
 
     expect(aggregatedSpy).not.toHaveBeenCalled()
     expect(frontPageSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(fpSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
-    expect(latestSpy).toHaveBeenCalledTimes(SUPPORTED_COUNTRIES.length)
+    // Frontpage returns content for every country, so the tagged/recent fallback
+    // fetches are skipped entirely (NOA-47 happy path).
+    expect(fpSpy).not.toHaveBeenCalled()
+    expect(latestSpy).not.toHaveBeenCalled()
     expect(categoriesSpy).toHaveBeenCalledTimes(1)
 
     const expectedInitialPosts = SUPPORTED_COUNTRIES.flatMap(
