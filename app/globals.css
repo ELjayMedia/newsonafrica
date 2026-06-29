@@ -1,0 +1,207 @@
+/**
+ * News on Africa - Design Tokens & Global Styles
+ * (NOA-82)
+ *
+ * Single source of truth for the visual language of the site. Tokens are
+ * declared as CSS custom properties on :root (light) and .dark, then exposed
+ * to Tailwind v4 utilities through the @theme inline block below. Components
+ * should reference semantic tokens (bg-primary, text-foreground, ...) and the
+ * typography utility classes defined here rather than hard-coded colours/sizes.
+ *
+ * Colour direction is carried over from the previous app: a green editorial
+ * brand (primary ~142deg) on a neutral grey scale, with full dark-mode parity.
+ */
+
+@import "tailwindcss";
+
+/* Enable class-based dark mode (used by next-themes) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Surfaces & text */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+
+  /* Brand & semantic colours */
+  --primary: 142.1 76.2% 36.3%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 7% 40%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 10% 3.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 9%;
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  /* Lines & focus */
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 142.1 76.2% 36.3%;
+
+  /* Radius scale */
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 142.1 70.6% 45.3%;
+  --primary-foreground: 144 80% 10%;
+  --secondary: 240 5% 26%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 5% 26%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 240 5% 26%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 50.6%;
+  --destructive-foreground: 0 0% 98%;
+  --success: 142 69% 58%;
+  --success-foreground: 144 80% 10%;
+  --warning: 43 96% 56%;
+  --warning-foreground: 0 0% 9%;
+  --info: 213 93% 68%;
+  --info-foreground: 0 0% 9%;
+  --border: 240 5% 26%;
+  --input: 240 5% 26%;
+  --ring: 142.1 70.6% 45.3%;
+}
+
+/**
+ * Tailwind v4 theme mapping. Exposes the tokens above as utilities, e.g.
+ * `bg-background`, `text-foreground`, `border-border`, `rounded-lg`,
+ * `font-sans`, plus the typography scale used by the .display-* / .heading-*
+ * helper classes.
+ */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans:
+    "Funnel Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/**
+ * Semantic typography scale (NOA-82).
+ * Prefer these helper classes over ad-hoc text-* sizing so headings stay
+ * consistent across the news site.
+ */
+@layer components {
+  .display-2xl {
+    font-size: clamp(3rem, 8vw, 4.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-weight: 800;
+  }
+  .display-xl {
+    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+  .display-lg {
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+  .heading-lg {
+    font-size: 1.5rem;
+    line-height: 1.4;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+  .heading-md {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .heading-sm {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .body-lg {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .body-md {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+  .body-sm {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .ui-md {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  .ui-sm {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    letter-spacing: 0.025em;
+    font-weight: 500;
+  }
+}
