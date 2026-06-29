@@ -69,12 +69,13 @@ describe("Paystack webhook handlers", () => {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
-        insert: vi.fn().mockResolvedValue({ error: null }),
+        upsert: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handleSubscriptionCreated(subCreateData as any, client)
-    expect(client.from("subscriptions").insert).toHaveBeenCalledWith(
+    expect(client.from("subscriptions").upsert).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: "user1" }),
+      expect.objectContaining({ onConflict: "id" }),
     )
   })
 
@@ -84,7 +85,7 @@ describe("Paystack webhook handlers", () => {
         select: () => ({ eq: () => ({ single: () => Promise.resolve(userResult) }) }),
       },
       subscriptions: {
-        insert: vi.fn().mockResolvedValue({ error: new Error("fail") }),
+        upsert: vi.fn().mockResolvedValue({ error: new Error("fail") }),
       },
     })
     await expect(handlers.handleSubscriptionCreated(subCreateData as any, client)).rejects.toThrow()
@@ -128,6 +129,10 @@ describe("Paystack webhook handlers", () => {
       transactions: {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
+      },
+      subscriptions: {
+        update: vi.fn().mockReturnThis(),
+        or: vi.fn().mockResolvedValue({ error: null }),
       },
     })
     await handlers.handlePaymentFailed(paymentFailedData as any, client)
