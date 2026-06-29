@@ -45,6 +45,7 @@ describe("fetchPost", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -70,6 +71,7 @@ describe("fetchPost", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -88,6 +90,7 @@ describe("fetchWordPressGraphQL", () => {
         ok: true,
         status: 200,
         json: async () => ({ data: mockData }),
+        text: async () => JSON.stringify({ data: mockData }),
       }),
     )
 
@@ -96,9 +99,12 @@ describe("fetchWordPressGraphQL", () => {
   })
 
   it("does not memoize or cache requests when revalidate is disabled", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: {} }),
+      text: async () => JSON.stringify({ data: {} }),
+    })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
@@ -123,9 +129,12 @@ describe("fetchWordPressGraphQL", () => {
       JSON.stringify({ Authorization: "Bearer secret", "X-Role": "editor" }),
     )
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: {} }),
+      text: async () => JSON.stringify({ data: {} }),
+    })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
     const originalWindow = (globalThis as { window?: unknown }).window
@@ -169,6 +178,7 @@ describe("getRelatedPosts", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -207,6 +217,7 @@ describe("getPostsForCategories", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -310,6 +321,7 @@ describe("getFrontPageSlicesForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -344,6 +356,7 @@ describe("getFpTaggedPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -378,6 +391,7 @@ describe("getLatestPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -408,6 +422,7 @@ describe("getLatestPostsForCountry", () => {
         ok: true,
         status: 200,
         json: async () => graphqlResponse,
+        text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 

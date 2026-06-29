@@ -9,7 +9,7 @@ export function BottomNavigation() {
       items={["home", "search", "bookmarks", "profile"]}
       itemOverrides={{ bookmarks: { label: "Saved" } }}
       styles={{
-        container: "fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 py-2 px-3 md:hidden",
+        container: "fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 py-2 px-3 pb-[env(safe-area-inset-bottom)] md:hidden",
         inner: "flex justify-around items-center",
         item: "flex flex-col items-center",
         itemActive: "text-blue-600",

@@ -13,52 +13,62 @@
   "categories": ["news", "magazines", "lifestyle"],
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "type": "image/png",
-      "sizes": "72x72",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-96x96.png",
+      "src": "/apple-icon.png",
       "type": "image/png",
-      "sizes": "96x96",
+      "sizes": "180x180",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-128x128.png",
+      "src": "/icon-light-32x32.png",
       "type": "image/png",
-      "sizes": "128x128",
+      "sizes": "32x32",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-144x144.png",
-      "type": "image/png",
-      "sizes": "144x144",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "type": "image/png",
-      "sizes": "152x152",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "type": "image/png",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
       "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "type": "image/png",
-      "sizes": "384x384",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.png",
-      "type": "image/png",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/news-collage.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "form_factor": "wide",
+      "label": "News On Africa Homepage"
+    },
+    {
+      "src": "/editorial-image.png",
+      "type": "image/png",
+      "sizes": "390x844",
+      "form_factor": "narrow",
+      "label": "News On Africa Mobile View"
     }
   ],
   "shortcuts": [
@@ -69,8 +79,8 @@
       "url": "/",
       "icons": [
         {
-          "src": "/icons/shortcut-news.png",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "any"
         }
       ]
     },
@@ -81,8 +91,8 @@
       "url": "/category/business",
       "icons": [
         {
-          "src": "/icons/shortcut-business.png",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "any"
         }
       ]
     },
@@ -93,8 +103,8 @@
       "url": "/category/sport",
       "icons": [
         {
-          "src": "/icons/shortcut-sports.png",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "any"
         }
       ]
     },
@@ -105,26 +115,10 @@
       "url": "/category/entertainment",
       "icons": [
         {
-          "src": "/icons/shortcut-entertainment.png",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "any"
         }
       ]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop-home.png",
-      "type": "image/png",
-      "sizes": "1280x720",
-      "form_factor": "wide",
-      "label": "News On Africa Homepage"
-    },
-    {
-      "src": "/screenshots/mobile-home.png",
-      "type": "image/png",
-      "sizes": "390x844",
-      "form_factor": "narrow",
-      "label": "News On Africa Mobile View"
     }
   ],
   "related_applications": [
