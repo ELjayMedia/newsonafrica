@@ -44,7 +44,7 @@ describe("fetchPost", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -69,7 +69,7 @@ describe("fetchPost", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -87,7 +87,7 @@ describe("fetchWordPressGraphQL", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({ data: mockData }),
+        json: async () => ({ data: mockData }), text: async () => JSON.stringify(({ data: mockData })),
       }),
     )
 
@@ -98,7 +98,7 @@ describe("fetchWordPressGraphQL", () => {
   it("does not memoize or cache requests when revalidate is disabled", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }), text: async () => JSON.stringify(({ data: {} })) })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
@@ -125,7 +125,7 @@ describe("fetchWordPressGraphQL", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) })
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }), text: async () => JSON.stringify(({ data: {} })) })
 
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
     const originalWindow = (globalThis as { window?: unknown }).window
@@ -168,7 +168,7 @@ describe("getRelatedPosts", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -206,7 +206,7 @@ describe("getPostsForCategories", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -271,7 +271,7 @@ describe("fetchMostReadPosts", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => payload,
+        json: async () => payload, text: async () => JSON.stringify(payload),
       }),
     )
 
@@ -309,7 +309,7 @@ describe("getFrontPageSlicesForCountry", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -343,7 +343,7 @@ describe("getFpTaggedPostsForCountry", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -377,7 +377,7 @@ describe("getLatestPostsForCountry", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
@@ -407,7 +407,7 @@ describe("getLatestPostsForCountry", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => graphqlResponse,
+        json: async () => graphqlResponse, text: async () => JSON.stringify(graphqlResponse),
       }),
     )
 
